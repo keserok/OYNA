@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── iOS Safe Area Desteği ─────────────────────────────────────────────────
+   iPhone X ve sonrası (notch / Dynamic Island) için gerekli.
+   viewport-fit=cover ile birlikte çalışır.
+────────────────────────────────────────────────────────────────────────────── */
+:root {
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+}
+
+/* Yardımcı sınıflar — BottomNav ve Header'da kullanılır */
+.safe-top    { padding-top:    var(--safe-top); }
+.safe-bottom { padding-bottom: var(--safe-bottom); }
+.pb-safe     { padding-bottom: calc(var(--safe-bottom) + 1rem); }
+.pt-safe     { padding-top:    calc(var(--safe-top) + 1rem); }
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Hide Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Base styles */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0A0E14;
+  color: white;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* Mesh Gradient Background */
+.mesh-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  background-color: #0A0E14;
+  overflow: hidden;
+}
+
+.mesh-blob {
+  position: absolute;
+  opacity: 0.5;
+  animation: float 20s infinite ease-in-out alternate;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.mesh-blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(20, 30, 60, 0.8) 0%, rgba(10, 14, 20, 0) 70%);
+  animation-delay: 0s;
+}
+
+.mesh-blob-2 {
+  bottom: -20%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(40, 10, 60, 0.6) 0%, rgba(10, 14, 20, 0) 70%);
+  animation-delay: -5s;
+}
+
+.mesh-blob-3 {
+  top: 40%;
+  left: 60%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, rgba(10, 60, 40, 0.5) 0%, rgba(10, 14, 20, 0) 70%);
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5%, 10%) scale(1.1); }
+  66% { transform: translate(-5%, 5%) scale(0.9); }
+  100% { transform: translate(0, -5%) scale(1.05); }
+}
+
+/* Breathing Glows */
+.breathing-glow {
+  position: relative;
+}
+
+.breathing-glow::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: inherit;
+  filter: blur(15px);
+  opacity: 0.6;
+  z-index: -1;
+  border-radius: inherit;
+  animation: breathe 4s infinite ease-in-out alternate;
+}
+
+@keyframes breathe {
+  0% { opacity: 0.3; transform: scale(0.98); }
+  100% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Ripple Effect */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-animation 600ms linear;
+  background-color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Particles */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background-color: white;
+  pointer-events: none;
+  animation: particle-float 3s ease-in forwards;
+}
+
+@keyframes particle-float {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100px) scale(0); opacity: 0; }
+}
+
+/* ─── Premium Micro-animations ──────────────────────────────────────────────── */
+
+/* Shimmer scan line */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.animate-shimmer { animation: shimmer 1.4s ease-in-out; }
+
+/* Neon pulse ring */
+@keyframes neon-ring {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50%       { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+}
+.neon-ring { animation: neon-ring 1.8s ease-in-out infinite; }
+
+/* Smooth counter bounce */
+@keyframes count-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.count-pop { animation: count-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+/* Slide up enter */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.slide-up { animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* Fade in with blur */
+@keyframes fade-blur-in {
+  from { opacity: 0; filter: blur(8px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+.fade-blur-in { animation: fade-blur-in 0.4s ease-out forwards; }
+
+/* Stagger children helper */
+.stagger-children > * { opacity: 0; animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.stagger-children > *:nth-child(1)  { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2)  { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3)  { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4)  { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5)  { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6)  { animation-delay: 0.30s; }
+
+/* Card hover lift */
+.card-lift { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease; }
+.card-lift:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+.card-lift:active { transform: scale(0.97); }
+
+/* Glow pulse for CTA buttons */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.15); }
+  50%       { box-shadow: 0 0 20px 4px rgba(255,255,255,0.06); }
+}
+.cta-glow { animation: glow-pulse 2.5s ease-in-out infinite; }
+
+/* Text reveal (char by char simulation with clip) */
+@keyframes text-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+.text-reveal { animation: text-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* View container — ensures absolute positioned pages stack correctly */
+#view-root {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Smooth font rendering */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Global tap highlight removal on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Input base polish */
+input {
+  caret-color: currentColor;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0d1420 inset;
+  -webkit-text-fill-color: #fff;
+}

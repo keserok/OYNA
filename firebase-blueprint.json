@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Tactic": {
+      "title": "Tactic",
+      "description": "A football tactic plan.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "mode": { "type": "string", "enum": ["FARAZI", "GERCEK"] },
+        "size": { "type": "string" },
+        "formation": { "type": "string" },
+        "slots": { "type": "array" },
+        "subs": { "type": "array" },
+        "captainId": { "type": "string" },
+        "notes": { "type": "string" },
+        "opponents": { "type": "array" },
+        "mentality": { "type": "string" },
+        "tempo": { "type": "string" },
+        "identity": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "mode", "size", "formation", "slots", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles."
+    },
+    "/tactics/{tacticId}": {
+      "schema": { "$ref": "#/entities/Tactic" },
+      "description": "Tactic plans created by users."
+    }
+  }
+}
