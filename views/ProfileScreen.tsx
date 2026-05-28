@@ -14,27 +14,33 @@ interface ProfileScreenProps {
     isPro?: boolean;
 }
 
-const CardBack: React.FC = () => {
+const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze' }> = ({ tier }) => {
     const last5 = MATCH_HISTORY.slice(0, 5);
     const wins = MATCH_HISTORY.filter(m => m.result === 'WIN').length;
     const total = MATCH_HISTORY.length;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
+    const colors = {
+        gold: { border: '#d4a84b', text: '#ffd54f', label: '#c8962a' },
+        silver: { border: '#8a96c0', text: '#c5cef5', label: '#7888b8' },
+        bronze: { border: '#b07840', text: '#d4986a', label: '#8a5c28' }
+    }[tier];
+
     return (
-        <div className="w-full h-full rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(160deg, #0a0e14 0%, #161B22 50%, #0a0e14 100%)', border: '2px solid #d4a84b' }}>
+        <div className="w-full h-full rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(160deg, #0a0e14 0%, #161B22 50%, #0a0e14 100%)', border: `2px solid ${colors.border}` }}>
             <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none">
                 <svg width="100%" height="100%"><defs><pattern id="hcb" width="22" height="38" patternUnits="userSpaceOnUse"><path d="M11 0l11 6.35v12.7L11 25.4 0 19.05V6.35z" fill="none" stroke="white" strokeWidth="0.7" /></pattern></defs><rect width="100%" height="100%" fill="url(#hcb)" /></svg>
             </div>
             <div className="relative z-10 h-full flex flex-col justify-between p-5">
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, transparent, #d4a84b66)' }} />
-                        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#c8962a]">Scouting Raporu</span>
-                        <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, #d4a84b66)' }} />
+                        <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${colors.border}66)` }} />
+                        <span className="text-[8px] font-black uppercase tracking-[0.3em]" style={{ color: colors.label }}>Scouting Raporu</span>
+                        <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${colors.border}66)` }} />
                     </div>
                 </div>
                 <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-[#c8962a] mb-2">Son 5 Maç</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest mb-2" style={{ color: colors.label }}>Son 5 Maç</p>
                     <div className="flex gap-2 justify-center">
                         {last5.map((m, i) => (
                             <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border ${m.result === 'WIN' ? 'bg-green-500/20 text-green-400 border-green-500/30' : m.result === 'LOSS' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
@@ -45,24 +51,24 @@ const CardBack: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black text-[#ffd54f]">18</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest text-[#c8962a]">Gol</p>
+                        <span className="text-lg font-black" style={{ color: colors.text }}>18</span>
+                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>Gol</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black text-[#ffd54f]">12</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest text-[#c8962a]">Asist</p>
+                        <span className="text-lg font-black" style={{ color: colors.text }}>12</span>
+                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>Asist</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black text-[#ffd54f]">9.2</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest text-[#c8962a]">En İyi Puan</p>
+                        <span className="text-lg font-black" style={{ color: colors.text }}>9.2</span>
+                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>En İyi Puan</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black text-[#ffd54f]">{winRate}%</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest text-[#c8962a]">Galibiyet</p>
+                        <span className="text-lg font-black" style={{ color: colors.text }}>{winRate}%</span>
+                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>Galibiyet</p>
                     </div>
                 </div>
                 <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-[#c8962a] mb-1.5">Performans Trendi</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest mb-1.5" style={{ color: colors.label }}>Performans Trendi</p>
                     <div className="flex items-end gap-[3px] h-8 justify-center">
                         {[7.2, 8.1, 6.5, 8.8, 9.2, 7.8, 8.5, 9.0, 7.5, 8.2].map((v, i) => (
                             <div key={i} className="w-3 rounded-sm" style={{ height: `${(v / 10) * 100}%`, background: v >= 8 ? 'linear-gradient(to top, #22c55e, #4ade80)' : v >= 7 ? 'linear-gradient(to top, #eab308, #facc15)' : 'linear-gradient(to top, #ef4444, #f87171)' }} />
@@ -70,9 +76,9 @@ const CardBack: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                    <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, transparent, #d4a84b44)' }} />
-                    <span className="text-[7px] font-black uppercase tracking-[0.2em] text-[#c8962a]/50">OYNA</span>
-                    <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, #d4a84b44)' }} />
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${colors.border}44)` }} />
+                    <span className="text-[7px] font-black uppercase tracking-[0.2em]" style={{ color: `${colors.label}80` }}>OYNA</span>
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${colors.border}44)` }} />
                 </div>
             </div>
         </div>
@@ -153,14 +159,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     return (
         <div className="fixed inset-0 bg-[#0A0E14] flex flex-col h-screen overflow-hidden selection:bg-[#FFFF00] selection:text-black">
             {/* ═══ FIXED TOP BAR ═══ */}
-            <div className="px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/5 z-50 bg-[#0A0E14]/90 backdrop-blur-md">
-                <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all">
-                    <ArrowLeft size={18} />
-                </button>
-                <span className="text-sm font-black text-white tracking-widest uppercase italic">PROFİL</span>
-                <button onClick={() => onNavigate && onNavigate('SETTINGS')} className="w-10 h-10 flex items-center justify-center bg-[#161B22] rounded-full text-gray-400 hover:text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all">
-                    <Settings size={18} />
-                </button>
+            <div className="px-6 pb-4 pt-safe flex justify-between items-center shrink-0 border-b border-white/5 z-50 bg-[#0A0E14]/90 backdrop-blur-md">
+                <div className="flex items-center justify-between w-full pt-4">
+                    <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all">
+                        <ArrowLeft size={18} />
+                    </button>
+                    <span className="text-sm font-black text-white tracking-widest uppercase italic">PROFİL</span>
+                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} className="w-10 h-10 flex items-center justify-center bg-[#161B22] rounded-full text-gray-400 hover:text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all">
+                        <Settings size={18} />
+                    </button>
+                </div>
             </div>
 
             {/* ═══ NATURAL SCROLLABLE BODY ═══ */}
@@ -168,30 +176,34 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 
                 {/* Flitable Player Card */}
                 <div className="flex flex-col items-center gap-6">
-                    <div className="w-full max-w-[260px] cursor-pointer" style={{ perspective: '1200px' }} onClick={() => setIsFlipped(!isFlipped)}>
+                    <div className="w-full max-w-[240px] cursor-pointer" style={{ perspective: '1200px' }} onClick={() => setIsFlipped(!isFlipped)}>
                         <motion.div
                             animate={{ rotateY: isFlipped ? 180 : 0 }}
                             transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
                             style={{ transformStyle: 'preserve-3d' }}
                             className="relative w-full"
                         >
+                            {/* Front */}
                             <div style={{ backfaceVisibility: 'hidden' }}>
                                 <PlayerCard name="Burak Kaptan" photo="/player_card_photo.png" position="OS" cardData={mockCardData} />
-                                <div className="flex justify-center gap-3 -mt-1 relative z-50">
-                                    <div className="px-3 py-1 bg-[#161B22] border border-[#d4a84b]/30 rounded-full flex items-center gap-1.5 shadow-2xl">
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-[#c8962a]">Yaş</span>
-                                        <span className="text-xs font-black text-[#ffd54f]">26</span>
-                                    </div>
-                                    <div className="px-3 py-1 bg-[#161B22] border border-[#d4a84b]/30 rounded-full flex items-center gap-1.5 shadow-2xl">
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-[#c8962a]">Ayak</span>
-                                        <span className="text-xs font-black text-[#ffd54f]">Sağ</span>
-                                    </div>
-                                </div>
                             </div>
+                            {/* Back */}
                             <div className="absolute inset-0 w-full" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                                <div style={{ aspectRatio: '2 / 3' }}><CardBack /></div>
+                                <div style={{ aspectRatio: '2 / 3' }}><CardBack tier={mockCardData.tier} /></div>
                             </div>
                         </motion.div>
+                    </div>
+
+                    {/* Static Info Badges under Card */}
+                    <div className="flex justify-center gap-3 relative z-50">
+                        <div className="px-3 py-1 bg-[#161B22]/80 backdrop-blur-md border border-[#d4a84b]/30 rounded-full flex items-center gap-1.5 shadow-2xl">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-[#c8962a]">Yaş</span>
+                            <span className="text-xs font-black text-[#ffd54f]">26</span>
+                        </div>
+                        <div className="px-3 py-1 bg-[#161B22]/80 backdrop-blur-md border border-[#d4a84b]/30 rounded-full flex items-center gap-1.5 shadow-2xl">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-[#c8962a]">Ayak</span>
+                            <span className="text-xs font-black text-[#ffd54f]">Sağ</span>
+                        </div>
                     </div>
 
                     {/* Quick Stats Grid */}
@@ -222,7 +234,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         {/* Wins filter button */}
                         <button 
                             onClick={() => setActiveFilter(activeFilter === 'WIN' ? 'ALL' : 'WIN')}
-                            className={`col-span-1 border rounded-[32px] p-5 flex flex-col justify-between h-32 relative overflow-hidden group text-left transition-all ${
+                            className={`col-span-1 border rounded-[28px] p-5 flex flex-col justify-between h-32 relative overflow-hidden group text-left transition-all ${
                                 activeFilter === 'WIN' 
                                     ? 'bg-[#39FF14]/10 border-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
                                     : 'bg-[#161B22]/50 border-white/5 hover:border-white/20'
@@ -241,7 +253,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         {/* Performance/All filter button */}
                         <button 
                             onClick={() => setActiveFilter(activeFilter === 'PERFORMANCE' ? 'ALL' : 'PERFORMANCE')}
-                            className={`col-span-1 border rounded-[32px] p-5 flex flex-col justify-between h-32 relative overflow-hidden group text-left transition-all ${
+                            className={`col-span-1 border rounded-[28px] p-5 flex flex-col justify-between h-32 relative overflow-hidden group text-left transition-all ${
                                 activeFilter === 'PERFORMANCE' 
                                     ? 'bg-[#FFFF00]/10 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.2)]' 
                                     : 'bg-[#161B22]/50 border-white/5 hover:border-white/20'
@@ -320,7 +332,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             </div>
 
             {/* ═══ FIXED BOTTOM BAR ═══ */}
-            <div className="px-6 py-4 border-t border-white/5 flex items-center justify-around shrink-0 bg-[#0A0E14] z-50">
+            <div className="px-6 pt-4 pb-safe border-t border-white/5 flex items-center justify-around shrink-0 bg-[#0A0E14]/90 backdrop-blur-xl z-50">
                 <button onClick={() => { if (navigator.share) navigator.share({ title: 'OYNA', url: window.location.href }).catch(() => {}); }} className="flex flex-col items-center gap-1.5 group">
                     <div className="w-11 h-11 bg-[#161B22] border border-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#d4a84b] transition-all shadow-lg">
                         <Share2 size={18} />

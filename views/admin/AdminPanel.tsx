@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AdminLogin from './AdminLogin';
-import GodViewPanel from './GodViewPanel';
+import AdminDashboard from '../AdminDashboard';
 
 interface Props { onBack: () => void; }
 
@@ -9,7 +9,7 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
 
     if (!unlocked) return <AdminLogin onUnlock={() => setUnlocked(true)} onBack={onBack} />;
 
-    return <GodViewPanel onBack={onBack} onNavigate={() => {}} />;
+    return <AdminDashboard onBack={onBack} />;
 };
 
 export default AdminPanel;

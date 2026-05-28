@@ -173,7 +173,7 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
     <div className="min-h-screen bg-[#070B10] text-white flex flex-col font-sans overflow-hidden">
 
       {/* ══ HERO HEADER ════════════════════════════════════════════════════ */}
-      <div className="relative pt-12 pb-5 px-5 overflow-hidden flex-shrink-0">
+      <div className="relative pt-safe pb-5 px-5 overflow-hidden flex-shrink-0">
         {/* Animated mesh gradient background */}
         <motion.div
           animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.25, 0.15] }}

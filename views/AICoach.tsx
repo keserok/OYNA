@@ -71,7 +71,7 @@ const AICoach: React.FC<AICoachProps> = ({ onBack }) => {
   return (
     <div className="h-screen flex flex-col bg-[#0A0E14]">
       {/* Header */}
-      <header className="p-4 bg-[#161B22] border-b border-white/5 flex items-center justify-between sticky top-0 z-10">
+      <header className="p-4 pt-safe bg-[#161B22] border-b border-white/5 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
             <ArrowLeft size={20} />

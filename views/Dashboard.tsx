@@ -334,7 +334,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     <div className="flex flex-col min-h-screen pb-6 bg-[#0A0E14] text-white font-sans selection:bg-[#FFFF00] selection:text-black">
 
       {/* Header */}
-      <header className="px-6 pt-8 pb-4 flex justify-between items-center bg-transparent z-30">
+      <header className="px-6 pt-safe pb-4 flex justify-between items-center bg-transparent z-30">
         <div className="flex items-center gap-3">
           <motion.button
             whileHover={{ scale: 1.05 }}

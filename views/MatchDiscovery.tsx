@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Shield,
-  Zap, ChevronRight, Target, CheckCircle2, Feather
+  Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing } from '../types';
 import { useAppStore } from '../store';
+import { auth } from '../firebase';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -32,7 +33,11 @@ const MENTALITY_OPTIONS = [
 ];
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
-  const { adminMatches } = useAppStore();
+  const { adminMatches, adminUsers } = useAppStore();
+  const currentUserUid = auth.currentUser?.uid || 'u1';
+  const currentUser = adminUsers.find(u => u.id === currentUserUid) || adminUsers[0];
+  const trustScore = currentUser?.rating || 4.2;
+
   const [showWizard, setShowWizard] = useState(false);
   const [dna, setDna] = useState({
     format: '',
@@ -177,7 +182,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             className="absolute inset-0 z-50 flex flex-col h-full bg-[#0A0E14]"
           >
             {/* 1. ÜST BAR */}
-            <div className="px-5 pt-10 pb-3 flex items-center justify-between shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-lg">
+            <div className="px-5 pt-safe pb-4 flex items-center justify-between shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-lg">
               <button onClick={() => setShowWizard(false)} className="w-10 h-10 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">
                 <ArrowLeft size={18} className="text-white drop-shadow-md" />
               </button>
@@ -377,7 +382,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           className="absolute inset-0 flex flex-col z-40 bg-[#0A0E14]"
         >
           {/* HEADER */}
-          <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/5 px-5 pt-12 pb-3">
+          <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/5 px-5 pt-safe pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all hover:bg-white/10">
@@ -433,12 +438,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   ) : (
                     <div className="space-y-6 mb-8">
                       {matchingMatches.map((match, index) => (
-                        <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
+                        <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
                       ))}
                     </div>
                   )}
                 </div>
-
+ 
                 {/* Tüm Diğer Maçlar Section */}
                 {otherMatches.length > 0 && (
                   <div>
@@ -448,21 +453,21 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                     </h2>
                     <div className="space-y-6">
                       {otherMatches.map((match, index) => (
-                        <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} />
+                        <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} trustScore={trustScore} />
                       ))}
                     </div>
                   </div>
                 )}
               </>
             )}
-
+ 
             {!isFilterActive && (
               <div className="space-y-6">
                 {otherMatches.length === 0 ? (
                   <div className="text-center py-20 text-white/50 font-bold uppercase tracking-widest text-xs">Aktif maç bulunamadı.</div>
                 ) : (
                   otherMatches.map((match, index) => (
-                    <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
+                    <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
                   ))
                 )}
               </div>
@@ -479,10 +484,14 @@ const MatchCard: React.FC<{
   index: number;
   onSelect: (match: MatchListing) => void;
   dna: any;
-}> = ({ match, index, onSelect, dna }) => {
+  trustScore: number;
+}> = ({ match, index, onSelect, dna, trustScore }) => {
   const roleMap: Record<string, string> = { 'HÜC': 'FW', 'ORT': 'MID', 'SAV': 'DEF', 'KL': 'GK' };
   const myRole = roleMap[dna.role];
   const glowColor = match.mentalityColor;
+  
+  // Güven skoru 3.0'ın altındakiler veya minRating'i karşılayamayanlar için kilitli premium kart mantığı
+  const isLocked = match.minRating && match.minRating > trustScore;
   
   return (
     <motion.div
@@ -490,7 +499,10 @@ const MatchCard: React.FC<{
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay: index * 0.05, type: 'spring', damping: 25 }}
-      onClick={() => onSelect(match)}
+      onClick={() => {
+        if (isLocked) return; // Kilitliyse tıklanamaz
+        onSelect(match);
+      }}
       className="relative w-full h-[400px] rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl"
     >
       {/* Arka Plan Posteri */}
@@ -503,7 +515,7 @@ const MatchCard: React.FC<{
       
       {/* Karizma Sınır Çizgisi (İç Glow) */}
       <div className="absolute inset-0 border-[1.5px] rounded-[32px] pointer-events-none transition-all duration-500" style={{ borderColor: `${glowColor}30`, boxShadow: `inset 0 0 30px ${glowColor}15` }} />
-
+ 
       {/* ── ÜST KISIM (SAAT & BİLET) ── */}
       <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-10">
         {/* Dijital Saat */}
@@ -511,7 +523,7 @@ const MatchCard: React.FC<{
           <Clock size={12} className="text-[#39FF14]" />
           <span className="text-xs font-black text-white tracking-[0.1em] drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{match.time}</span>
         </div>
-
+ 
         {/* VIP Ücret Tag */}
         {match.price === 0 ? (
           <div className="px-4 py-2 bg-gradient-to-br from-[#39FF14]/20 to-[#10b981]/10 backdrop-blur-xl border border-[#39FF14]/50 rounded-xl shadow-[0_0_25px_rgba(57,255,20,0.3)]">
@@ -523,7 +535,7 @@ const MatchCard: React.FC<{
           </div>
         )}
       </div>
-
+ 
       {/* ── ORTA KISIM (EKSİK POZİSYONLAR Taktik Rozetleri) ── */}
       <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2 z-10">
         {match.missingPositions?.map((pos: any, i: number) => {
@@ -544,7 +556,7 @@ const MatchCard: React.FC<{
           )
         })}
       </div>
-
+ 
       {/* ── ALT KISIM (SAHA BİLGİSİ & AKSİYON) ── */}
       <div className="absolute bottom-0 left-0 right-0 p-6 z-20 flex flex-col justify-end">
         
@@ -579,18 +591,48 @@ const MatchCard: React.FC<{
               )}
             </div>
           </div>
-
+ 
           {/* Katıl Butonu */}
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all group-hover:bg-white/10"
+            disabled={isLocked}
+            className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all group-hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: 'rgba(255,255,255,0.05)', boxShadow: `0 0 30px ${glowColor}20` }}
           >
             <ChevronRight size={24} className="text-white drop-shadow-lg group-hover:translate-x-1 transition-transform" />
           </motion.button>
         </div>
       </div>
+
+      {/* ── PREMIUM DİNAMİK KİLİT & BLUR KAPLAMASI ── */}
+      {isLocked && (
+        <div className="absolute inset-0 bg-black/75 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-300">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', delay: 0.1 }}
+            className="flex flex-col items-center gap-4"
+          >
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-600/20 to-amber-600/10 border-2 border-red-500/50 flex items-center justify-center shadow-[0_0_25px_rgba(239,68,68,0.4)]">
+              <ShieldAlert size={32} className="text-red-500 animate-pulse" />
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="text-lg font-black italic uppercase tracking-widest text-[#FFFF00] drop-shadow-[0_0_10px_rgba(255,255,0,0.4)]">
+                KİLİTLİ PREMİUM MAÇ
+              </h4>
+              <p className="text-[10px] text-white/80 font-black uppercase tracking-widest leading-relaxed max-w-[240px] mx-auto">
+                Bu maça katılabilmek için minimum <span className="text-[#39FF14]">★ {match.minRating}</span> yetenek puanı gerekmektedir.
+              </p>
+              <div className="w-24 h-px bg-white/10 mx-auto my-3" />
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                Senin Yetenek Puanın: <span className="text-red-400">★ {trustScore}</span>
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };

@@ -286,8 +286,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
             </div>
 
             {/* ═══════════════════════════════════ */}
-            {/* ZONE 2 — PLAYER PHOTO (hero image) */}
-            {/* ═══════════════════════════════════ */}
+            {/* ── ZONE 2 — PLAYER PHOTO (hero image) ── */}
             {/* Bottom gradient so photo transitions nicely */}
             <div className="absolute bottom-0 left-0 w-full h-[55%] z-20 pointer-events-none"
               style={{ background: `linear-gradient(to top, ${t.cardBg.split(',')[0].replace('linear-gradient(160deg, ', '')} 0%, transparent 100%)` }} />
@@ -296,12 +295,32 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
               className="absolute top-0 left-0 w-full h-[68%] z-10 pointer-events-none flex items-end justify-center"
               style={{ translateZ: 14 }}
             >
-              <img
-                src={photo} alt={name}
-                className="w-[95%] h-full object-contain object-bottom"
-                style={{ filter: 'drop-shadow(0 20px 28px rgba(0,0,0,0.9)) drop-shadow(0 0 1px rgba(0,0,0,0.9))' }}
-                referrerPolicy="no-referrer"
-              />
+              {!photo || photo === '/player_card_photo.png' || photo.includes('placeholder') ? (
+                <div className="w-full h-full flex flex-col items-center justify-center select-none pt-12">
+                  <motion.div
+                    animate={{ scale: [1, 1.03, 1], opacity: [0.8, 1, 0.8] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="flex flex-col items-center justify-center"
+                  >
+                    <span 
+                      className="text-5xl font-black italic uppercase tracking-tighter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                      style={{ color: t.overall, textShadow: `0 0 20px ${t.border}80, 0 0 40px ${t.border}30` }}
+                    >
+                      {name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: t.pos }}>
+                      SİLÜET YOK
+                    </span>
+                  </motion.div>
+                </div>
+              ) : (
+                <img
+                  src={photo} alt={name}
+                  className="w-[95%] h-full object-contain object-bottom"
+                  style={{ filter: 'drop-shadow(0 20px 28px rgba(0,0,0,0.9)) drop-shadow(0 0 1px rgba(0,0,0,0.9))' }}
+                  referrerPolicy="no-referrer"
+                />
+              )}
             </motion.div>
 
             {/* ═══════════════════════════════════ */}

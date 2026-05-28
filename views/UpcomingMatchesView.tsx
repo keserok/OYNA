@@ -74,8 +74,8 @@ const UpcomingMatchesView: React.FC<UpcomingMatchesViewProps> = ({ onBack, onNav
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay pointer-events-none" />
 
       {/* 1. Header */}
-      <header className="sticky top-0 z-30 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5">
-        <div className="p-4 flex items-center justify-between relative z-10">
+      <header className="sticky top-0 z-30 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 pt-safe">
+        <div className="p-4 pb-3 flex items-center justify-between relative z-10">
           <button 
             onClick={onBack} 
             className="p-2 bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 transition-colors"

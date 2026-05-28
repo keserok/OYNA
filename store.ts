@@ -4,6 +4,7 @@ import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER
 import * as FB from './firebaseMutations';
 import { auth, db } from './firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { supabase } from './supabaseClient';
 
 export interface Friend {
   id: string;
@@ -14,6 +15,13 @@ export interface Friend {
   style: string;
   status: 'FRIEND' | 'PENDING_SENT' | 'PENDING_RECEIVED';
   tags?: string[];
+  isFavorite?: boolean;
+  group?: string;
+  pos?: string;
+  fp?: number;
+  online?: boolean;
+  wins?: number;
+  losses?: number;
 }
 
 // ─── Admin-only types ────────────────────────────────────────────────
@@ -283,6 +291,10 @@ interface AppState {
   updateReferee: (ref: Referee) => void;
   deleteReferee: (id: string) => void;
 
+  // ─── Supabase Plei Architecture ───────────────────────────────
+  joinMatchPleiAction: (matchId: string, slotId: string, role: string) => Promise<void>;
+  initSupabaseRealtime: () => void;
+
   // ─── Match CRUD ────────────────────────────────────────────────
   addMatch: (match: MatchListing) => void;
   updateMatch: (match: MatchListing) => void;
@@ -541,6 +553,67 @@ export const useAppStore = create<AppState>((set, get) => ({
   addMatch: (match) => FB.fbAddMatch(match),
   updateMatch: (match) => FB.fbUpdateMatch(match),
   deleteMatch: (id) => FB.fbDeleteMatch(id),
+
+  // Supabase Plei/Fubles Hybrid
+  joinMatchPleiAction: async (matchId, slotId, role) => {
+    const state = get();
+    const match = state.adminMatches.find(m => m.id === matchId);
+    if (!match) return;
+    
+    // 1. Optimistic Update
+    const previousSlots = match.slots ? [...match.slots] : [];
+    
+    const currentUserUid = auth.currentUser?.uid || 'u1';
+    const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: 'u1', name: 'Oyuncu', avatar: 'https://i.pravatar.cc/150' };
+
+    const joinedPlayer: Player = {
+      id: currentUserProfile.id || 'u1',
+      name: currentUserProfile.name || 'Oyuncu',
+      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+      rating: (currentUserProfile as any).rating || 4.5,
+      position: role,
+      x: 50,
+      y: 50,
+    };
+    
+    const updatedSlots = previousSlots.map(s => 
+      s?.id === slotId ? { ...s, status: 'TAKEN' as const, player: joinedPlayer } : s
+    );
+    
+    set({ adminMatches: state.adminMatches.map(m => m.id === matchId ? { ...m, slots: updatedSlots } : m) });
+
+    try {
+      // 2. Gerçek RPC çağrısı
+      const { error } = await supabase.rpc('join_match_slot', {
+        p_match_id: matchId,
+        p_user_id: currentUserUid,
+        p_slot_id: slotId,
+        p_slot_role: role
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Supabase join failed:', error);
+      // 3. Rollback
+      set({ adminMatches: get().adminMatches.map(m => m.id === matchId ? { ...m, slots: previousSlots } : m) });
+      throw error; 
+    }
+  },
+
+  initSupabaseRealtime: () => {
+    supabase
+      .channel('public:match_registrations')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_registrations' }, (payload) => {
+        console.log('Realtime Match Registration Update:', payload);
+      })
+      .subscribe();
+      
+    supabase
+      .channel('public:waitlist')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'waitlist' }, (payload) => {
+        console.log('Realtime Waitlist Update:', payload);
+      })
+      .subscribe();
+  },
 
   // User
   updateUser: (user) => FB.fbUpdateUser(user),

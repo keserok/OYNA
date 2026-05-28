@@ -7,7 +7,7 @@ import {
     Search, MapPin, UserCheck, Calendar,
     Swords, Type, UserPlus, GripHorizontal, Settings2,
     MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
-    Layers, Gauge, Crosshair, Share2, Play, Square, List, ChevronRight, RotateCw
+    Layers, Gauge, Crosshair, Share2, Play, Square, List, ChevronRight, RotateCw, Hash
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { auth, db } from '../firebase';
@@ -409,6 +409,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [customPlayerName, setCustomPlayerName] = useState('');
     const [customPlayerRole, setCustomPlayerRole] = useState('-');
 
+    // Modal selection tabs & groups state (matching CommunityView)
+    const [modalTab, setModalTab] = useState<'FRIENDS' | 'TEAMS' | 'CUSTOM'>('FRIENDS');
+    const [selectedGroup, setSelectedGroup] = useState('Tümü');
+    const [groups, setGroups] = useState(['Favorilerim', 'Lise Tayfası', 'Üniversite', 'İş Arkadaşları', 'Tümü']);
+    const [selectedTeamRosterId, setSelectedTeamRosterId] = useState<string | null>(null);
+
     // IQ Academy State
     const [academyState, setAcademyState] = useState<'MENU' | 'LESSON'>('MENU');
     const [lessonPhase, setLessonPhase] = useState<'ANIMATION' | 'QUIZ' | 'DRAG' | 'SUCCESS'>('ANIMATION');
@@ -433,7 +439,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
 
     // Global Store
-    const { myTeams, activeStudioTeam } = useAppStore();
+    const { myTeams, activeStudioTeam, friends } = useAppStore();
 
     // Fetch tactics from Firestore
     
@@ -1717,7 +1723,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         className="flex flex-col min-h-[calc(100vh-6rem)]"
                     >
                         {/* Header */}
-                        <header className="px-6 py-4 flex justify-between items-center sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
+                        <header className="px-6 pt-safe pb-4 flex justify-between items-center sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
                             <div className="flex items-center gap-3">
                                 <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10">
                                     <ChevronLeft size={20} />
@@ -2624,83 +2630,268 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex flex-col"
                     >
-                        <div className="flex-1 overflow-y-auto p-6 pt-20">
+                        <div className="flex-1 overflow-y-auto p-6 pt-20 max-w-md mx-auto w-full">
                             <div className="flex justify-between items-center mb-6">
                                 <div>
-                                    <h2 className="text-xl font-black text-white uppercase tracking-widest">Oyuncu Seç</h2>
-                                    <p className={`text-xs font-mono text-[#39FF14]`}>
-                                        Topluluk Havuzu & Hayali
+                                    <h2 className="text-xl font-black text-white uppercase tracking-widest italic">Oyuncu Seç</h2>
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest text-[#39FF14]`}>
+                                        Kayıtlı Arkadaşlar & Takımlar
                                     </p>
                                 </div>
                                 <button 
-                                    onClick={() => setShowPlayerSelect(null)}
+                                    onClick={() => {
+                                        setShowPlayerSelect(null);
+                                        setSelectedTeamRosterId(null);
+                                    }}
                                     className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
 
-                            {/* Custom Player Creation */}
-                            <div className="mb-6 bg-purple-900/20 border border-purple-500/30 rounded-2xl p-4">
-                                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
-                                        <Type size={16} /> Hayali Oyuncu Yarat
-                                    </h3>
-                                    <div className="flex gap-2 mb-3">
-                                        <input 
-                                            type="text"
-                                            placeholder="Oyuncu Adı (Örn: X Oyuncusu)"
-                                            value={customPlayerName}
-                                            onChange={(e) => setCustomPlayerName(e.target.value)}
-                                            className="flex-1 bg-[#161B22] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
-                                        />
-                                        <select 
-                                            value={customPlayerRole}
-                                            onChange={(e) => setCustomPlayerRole(e.target.value)}
-                                            className="bg-[#161B22] border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
-                                        >
-                                            <option value="-">-</option>
-                                            <option value="FWD">FWD</option>
-                                            <option value="MID">MID</option>
-                                            <option value="DEF">DEF</option>
-                                            <option value="GK">GK</option>
-                                        </select>
-                                    </div>
+                            {/* Navigation Tabs (Friends / Teams / Custom) */}
+                            <div className="flex bg-black/40 backdrop-blur-md rounded-2xl p-1 border border-white/10 mb-6 relative z-10">
+                                {[
+                                  { id: 'FRIENDS', label: 'Arkadaşlarım', icon: Users },
+                                  { id: 'TEAMS', label: 'Takımlarım', icon: Swords },
+                                  { id: 'CUSTOM', label: 'Hayali', icon: Type }
+                                ].map(tab => {
+                                  const Icon = tab.icon;
+                                  return (
                                     <button 
-                                        onClick={handleCreateCustomPlayer}
-                                        disabled={!customPlayerName.trim()}
-                                        className="w-full bg-purple-600 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                                      key={tab.id}
+                                      onClick={() => setModalTab(tab.id as any)}
+                                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all relative ${modalTab === tab.id ? 'text-[#39FF14]' : 'text-gray-500 hover:text-gray-300'}`}
                                     >
-                                        <UserPlus size={16} /> Yarat ve Ekle
+                                      {modalTab === tab.id && (
+                                        <motion.div layoutId="modalNav" className="absolute inset-0 bg-white/10 border border-white/5 rounded-xl" />
+                                      )}
+                                      <Icon size={14} className="relative z-10" />
+                                      <span className="relative z-10">{tab.label}</span>
                                     </button>
-                                </div>
-
-                            <div className="space-y-3">
-                                {MOCK_POOL.map(player => (
-                                    <button 
-                                        key={player.id}
-                                        onClick={() => handleSelectPlayer(player)}
-                                        className={`w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all group hover:border-[#39FF14]/50`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white font-black text-lg transition-colors group-hover:bg-[#39FF14] group-hover:text-black`}>
-                                                {player.name.charAt(0)}
-                                            </div>
-                                            <div className="text-left">
-                                                <h4 className="text-white font-bold">{player.name}</h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-white/10 text-gray-300">{player.role}</span>
-                                                    <span className="text-[10px] font-bold text-yellow-400 flex items-center gap-1">
-                                                        <Star size={10} className="fill-current" /> {player.rating}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className={`w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14]`}>
-                                            <Plus size={16} />
-                                        </div>
-                                    </button>
-                                ))}
+                                  );
+                                })}
                             </div>
+
+                            {/* TAB 1: FRIENDS */}
+                            {modalTab === 'FRIENDS' && (
+                                <div className="space-y-4">
+                                    {/* Groups list switcher (from CommunityView) */}
+                                    <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar items-center">
+                                        {groups.map(group => (
+                                            <button 
+                                                key={group} 
+                                                onClick={() => setSelectedGroup(group)}
+                                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 ${selectedGroup === group ? (group === 'Favorilerim' ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-white text-black border-white shadow-lg') : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30'}`}
+                                            >
+                                                {group === 'Favorilerim' && <Star size={12} fill={selectedGroup === group ? "black" : "currentColor"} className={selectedGroup === group ? 'text-black' : 'text-gray-500'} />}
+                                                {group}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Friends list (from CommunityView style) */}
+                                    <div className="grid gap-3">
+                                        {friends && friends.filter(f => {
+                                            if (selectedGroup === 'Tümü') return true;
+                                            if (selectedGroup === 'Favorilerim') return f.isFavorite;
+                                            return f.group === selectedGroup;
+                                        }).length === 0 ? (
+                                            <div className="text-center py-8 bg-[#161B22]/50 border border-white/5 rounded-2xl">
+                                                <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">Arkadaş Bulunamadı</p>
+                                            </div>
+                                        ) : (
+                                            friends && friends.filter(f => {
+                                                if (selectedGroup === 'Tümü') return true;
+                                                if (selectedGroup === 'Favorilerim') return f.isFavorite;
+                                                return f.group === selectedGroup;
+                                            }).map(friend => (
+                                                <button 
+                                                    key={friend.id} 
+                                                    onClick={() => {
+                                                        const p: Player = {
+                                                            id: friend.id,
+                                                            name: friend.name,
+                                                            role: friend.pos || 'CM',
+                                                            rating: friend.fp || 80,
+                                                            isCustom: false
+                                                        };
+                                                        handleSelectPlayer(p);
+                                                    }}
+                                                    className="w-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:border-[#39FF14]/50 transition-all text-left relative group overflow-hidden"
+                                                >
+                                                    <div className="flex items-center gap-4 pointer-events-none">
+                                                        <div className="relative">
+                                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-black text-lg border border-white/10 shadow-lg group-hover:bg-[#39FF14] group-hover:text-black transition-all">
+                                                                {friend.name.charAt(0)}
+                                                            </div>
+                                                            {friend.online && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#39FF14] rounded-full border-[3px] border-[#0A0E14] shadow-[0_0_10px_rgba(57,255,20,0.5)]" />}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-base font-black text-white tracking-tight flex items-center gap-2 group-hover:text-[#39FF14] transition-colors">
+                                                                {friend.name}
+                                                                {friend.isFavorite && <Star size={12} className="text-[#FFFF00]" fill="#FFFF00" />}
+                                                            </h4>
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                <Hash size={10} className="text-gray-500" />
+                                                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{friend.group}</span>
+                                                                <span className="text-gray-700 text-[10px]">•</span>
+                                                                <span className="text-[10px] font-bold text-gray-500">{friend.pos}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 pointer-events-none">
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <div className="flex items-end gap-[3px] h-4">
+                                                                {[1, 2, 3, 4, 5].map(level => {
+                                                                    const matches = (friend.wins || 0) + (friend.losses || 0);
+                                                                    const activityLevel = Math.min(5, Math.max(1, Math.ceil(matches / 6)));
+                                                                    const isActive = level <= activityLevel;
+                                                                    const colors = ['bg-[#FFFF00]', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500', 'bg-red-600'];
+                                                                    return (
+                                                                        <div 
+                                                                            key={level} 
+                                                                            className={`w-1.5 rounded-sm transition-colors duration-500 ${isActive ? colors[activityLevel - 1] : 'bg-white/10'}`} 
+                                                                            style={{ height: `${40 + level * 15}%` }} 
+                                                                        />
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">Aktiflik</span>
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] transition-all ml-2">
+                                                            <Plus size={16} />
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 2: TEAMS */}
+                            {modalTab === 'TEAMS' && (
+                                <div className="space-y-4">
+                                    {selectedTeamRosterId === null ? (
+                                        <div className="grid gap-3">
+                                            {myTeams && myTeams.length === 0 ? (
+                                                <div className="text-center py-8 bg-[#161B22]/50 border border-white/5 rounded-2xl">
+                                                    <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">Takım Bulunamadı</p>
+                                                </div>
+                                            ) : (
+                                                myTeams && myTeams.map(team => (
+                                                    <div 
+                                                        key={team.id} 
+                                                        onClick={() => setSelectedTeamRosterId(team.id)} 
+                                                        className="bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-[#39FF14]/50 transition-all group"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-xl shadow-lg transition-transform group-hover:scale-105" style={{ backgroundColor: team.color1 || '#10B981' }}>
+                                                                {team.shortName ? team.shortName.charAt(0) : team.name.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <h3 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{team.name}</h3>
+                                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{team.players?.length || team.roster?.length || 0} Oyuncu • {team.location}</p>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight className="text-gray-500 group-hover:translate-x-1 transition-transform" />
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 animate-fade-blur-in">
+                                            <button 
+                                                onClick={() => setSelectedTeamRosterId(null)}
+                                                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 border border-white/10 px-3 py-1.5 rounded-xl bg-white/5 w-max"
+                                            >
+                                                <ChevronLeft size={16} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Takımlara Dön</span>
+                                            </button>
+                                            
+                                            <h3 className="text-[10px] font-black text-[#39FF14] mb-3 uppercase tracking-widest">
+                                                {myTeams.find(t => t.id === selectedTeamRosterId)?.name} KADROSU
+                                            </h3>
+                                            
+                                            {myTeams.find(t => t.id === selectedTeamRosterId)?.roster.map(p => (
+                                                <button 
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        const matchedFriend = (friends || []).find(f => f.id === p.id);
+                                                        const player: Player = {
+                                                            id: p.id,
+                                                            name: p.name,
+                                                            role: matchedFriend?.pos || p.position || 'CM',
+                                                            rating: matchedFriend?.fp || p.rating || 80,
+                                                            isCustom: false
+                                                        };
+                                                        handleSelectPlayer(player);
+                                                    }}
+                                                    className="w-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:border-[#39FF14]/50 transition-all text-left group"
+                                                >
+                                                    <div className="flex items-center gap-4 pointer-events-none">
+                                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-black text-lg border border-white/10 shadow-lg group-hover:bg-[#39FF14] group-hover:text-black transition-all">
+                                                            {p.name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{p.name}</h4>
+                                                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">
+                                                                {p.position || 'OYUNCU'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] transition-all pointer-events-none">
+                                                        <Plus size={16} />
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* TAB 3: CUSTOM PLAYER */}
+                            {modalTab === 'CUSTOM' && (
+                                <div className="space-y-4">
+                                    <div className="bg-purple-900/20 border border-purple-500/30 rounded-[24px] p-5">
+                                        <h3 className="text-sm font-black text-purple-400 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                                            <Type size={16} /> Hayali Oyuncu Yarat
+                                        </h3>
+                                        <p className="text-xs text-purple-300/70 mb-4 leading-relaxed">
+                                            Taktik tahtasında simüle etmek istediğiniz herhangi bir hayali oyuncuyu adlandırın ve mevkisini seçin.
+                                        </p>
+                                        <div className="flex gap-2 mb-3">
+                                            <input 
+                                                type="text"
+                                                placeholder="Oyuncu Adı (Örn: X Oyuncusu)"
+                                                value={customPlayerName}
+                                                onChange={(e) => setCustomPlayerName(e.target.value)}
+                                                className="flex-1 bg-[#161B22] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+                                            />
+                                            <select 
+                                                value={customPlayerRole}
+                                                onChange={(e) => setCustomPlayerRole(e.target.value)}
+                                                className="bg-[#161B22] border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+                                            >
+                                                <option value="-">-</option>
+                                                <option value="FWD">FWD</option>
+                                                <option value="MID">MID</option>
+                                                <option value="DEF">DEF</option>
+                                                <option value="GK">GK</option>
+                                            </select>
+                                        </div>
+                                        <button 
+                                            onClick={handleCreateCustomPlayer}
+                                            disabled={!customPlayerName.trim()}
+                                            className="w-full bg-purple-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-purple-700 active:scale-95 transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+                                        >
+                                            <UserPlus size={16} /> Yarat ve Ekle
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     </motion.div>
                 )}

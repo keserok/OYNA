@@ -274,85 +274,57 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-3 mb-6 cursor-pointer group bg-[#161B22]/60 backdrop-blur-sm rounded-[32px] p-2.5 border border-white/5 hover:border-white/10 transition-all shadow-xl"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="flex flex-col cursor-pointer group bg-[#121620]/60 backdrop-blur-xl rounded-[28px] border border-white/5 hover:border-[#39FF14]/30 transition-all shadow-lg overflow-hidden h-[196px]"
       onClick={() => onClick(pitch)}
     >
-      {/* Image Container */}
-      <div className="relative w-full aspect-[16/9] rounded-3xl overflow-hidden shadow-lg bg-[#0A0E14]">
+      {/* Upper part: Image with gradients & badges */}
+      <div className="relative w-full h-[110px] bg-[#0A0E14] overflow-hidden shrink-0">
         <img
           src={pitch.image}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           alt={pitch.name}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E14]/90 via-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121620] via-[#121620]/20 to-transparent pointer-events-none" />
         
-        {/* Favorite Button */}
-        <button 
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center hover:scale-110 transition-transform z-10 border border-white/10"
-        >
-          <Heart 
-            size={18} 
-            className={isFavorite ? 'fill-[#FF385C] text-[#FF385C]' : 'fill-black/30 text-white'} 
-            strokeWidth={2}
-          />
-        </button>
-
-        {/* Grade Badge */}
-        <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2 shadow-2xl">
-          <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Saha Notu</span>
-          <div className="w-1 h-3 rounded-full bg-white/20"></div>
-          <span className={`text-base font-black ${gradeColor} drop-shadow-[0_0_8px_currentColor]`}>{grade}</span>
+        {/* Floating Grade Badge on Image */}
+        <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center shadow-md">
+          <span className={`text-[9px] font-black tracking-wider ${gradeColor}`}>{grade}</span>
         </div>
-
-        {/* Floating Quick Info */}
-        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-            <div className="flex gap-2">
-                {pitch.amenities?.slice(0, 2).map((amenity, idx) => (
-                    <span key={idx} className="px-2.5 py-1 bg-white/10 backdrop-blur-md border border-white/10 rounded-lg text-[9px] font-black text-white uppercase tracking-widest shadow-sm">
-                        {amenity}
-                    </span>
-                ))}
-            </div>
-            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/10 shadow-lg">
-                <Star size={12} className="fill-[#FFFF00] text-[#FFFF00]" />
-                <span className="text-[12px] font-black text-white">{pitch.rating}</span>
-                <span className="text-[10px] text-gray-400 font-bold ml-1 tracking-widest">({pitch.googleReviews})</span>
-            </div>
+        
+        {/* Floating Star Rating */}
+        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-md">
+          <Star size={9} className="fill-[#FFFF00] text-[#FFFF00]" />
+          <span className="text-[9px] font-black text-white">{pitch.rating.toFixed(1)}</span>
         </div>
       </div>
 
-      {/* Info Container */}
-      <div className="flex flex-col px-3 pb-2 pt-1">
-        <div className="flex justify-between items-start mb-1.5">
-          <h3 className="text-xl font-black text-white truncate pr-4 italic tracking-tighter">{pitch.name}</h3>
+      {/* Lower part: Info & Prices */}
+      <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
+        <div>
+          <h3 className="text-[11px] font-black text-white truncate italic uppercase tracking-tight leading-none">{pitch.name}</h3>
+          
+          <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-1.5 flex items-center gap-1">
+            <MapPin size={8} className="text-[#39FF14] shrink-0" /> 
+            <span className="truncate">{pitch.district} • {pitch.distance}</span>
+          </p>
         </div>
-        
-        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-            <MapPin size={12} className="text-[#39FF14]" /> {pitch.district} <span className="opacity-30 mx-1">•</span> {pitch.distance}
-        </p>
-        
-        <div className="flex gap-2">
-            {/* Day Price */}
-            <div className="flex-1 bg-[#0A0E14] border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-white/10 transition-colors shadow-inner">
-                <Sun size={24} className="text-yellow-400/10 absolute -top-1 -left-1" strokeWidth={3} />
-                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 z-10">Gündüz Fiyatı</span>
-                <div className="flex items-baseline gap-1 z-10">
-                    <span className="text-lg font-black text-white tracking-tighter">{dayPrice}₺</span>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase">/saat</span>
-                </div>
-            </div>
-            {/* Night Price */}
-            <div className="flex-1 bg-[#0A0E14] border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-white/10 transition-colors shadow-inner">
-                <Moon size={24} className="text-blue-400/10 absolute -top-1 -left-1" strokeWidth={3} />
-                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 z-10">Gece Fiyatı</span>
-                <div className="flex items-baseline gap-1 z-10">
-                    <span className="text-lg font-black text-[#FFFF00] tracking-tighter">{nightPrice}₺</span>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase">/saat</span>
-                </div>
-            </div>
+
+        {/* Pricing Row */}
+        <div className="flex gap-1.5 mt-2">
+          {/* Day Price */}
+          <div className="flex-1 bg-black/20 border border-white/5 rounded-xl py-1 px-1.5 flex flex-col items-center justify-center">
+            <span className="text-[6px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Gündüz</span>
+            <span className="text-[10px] font-black text-white tracking-tighter leading-none">₺{dayPrice}</span>
+          </div>
+          {/* Night Price */}
+          <div className="flex-1 bg-black/20 border border-white/5 rounded-xl py-1 px-1.5 flex flex-col items-center justify-center">
+            <span className="text-[6px] font-black text-gray-500 uppercase tracking-widest mb-0.5 text-[#FFFF00]">Gece</span>
+            <span className="text-[10px] font-black text-[#FFFF00] tracking-tighter leading-none">₺{nightPrice}</span>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -506,7 +478,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">
 
       {/* Header Section */}
-      <header className="px-6 pt-8 pb-4 space-y-6 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
+      <header className="px-6 pt-safe pb-4 space-y-6 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -593,9 +565,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
             </div>
 
             <AnimatePresence mode="popLayout">
-              {filteredPitches.map((pitch) => (
-                <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />
-              ))}
+              <div className="grid grid-cols-2 gap-3.5 pb-8">
+                {filteredPitches.map((pitch) => (
+                  <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />
+                ))}
+              </div>
             </AnimatePresence>
 
             {filteredPitches.length === 0 && (
