@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Shield,
-  Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert
+  Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MatchListing } from '../types';
+import { MatchListing, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../firebase';
 
@@ -33,12 +34,19 @@ const MENTALITY_OPTIONS = [
 ];
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
-  const { adminMatches, adminUsers } = useAppStore();
+  const { adminMatches, adminUsers, playerSeekAds, toggleJoinPlayerSeekAd, acceptPlayerSeekAdRequest, setChatTarget, setView } = useAppStore();
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUser = adminUsers.find(u => u.id === currentUserUid) || adminUsers[0];
   const trustScore = currentUser?.rating || 4.2;
 
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const [showWizard, setShowWizard] = useState(false);
+  const [activeSection, setActiveSection] = useState<'bireysel' | 'takim'>('bireysel');
   const [dna, setDna] = useState({
     format: '',
     budget: '',
@@ -389,7 +397,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   <ArrowLeft size={18} />
                 </button>
                 <div>
-                  <h1 className="text-xl font-black text-white italic uppercase tracking-tight leading-none drop-shadow-lg">Oyun Alanı</h1>
+                  <h1 className="text-xl font-black text-white italic uppercase tracking-tight leading-none drop-shadow-lg">Top Oyna</h1>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -411,72 +419,365 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             </div>
           </header>
 
+          {/* TAB SELECTION */}
+          <div className="flex px-5 py-2.5 bg-black/20 backdrop-blur-md border-b border-white/5 gap-3 shrink-0">
+            <button 
+              onClick={() => setActiveSection('bireysel')}
+              className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                activeSection === 'bireysel' 
+                  ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-white shadow-[0_0_20px_rgba(57,255,20,0.1)]' 
+                  : 'bg-white/[0.02] border-white/5 text-white/50 hover:bg-white/5'
+              }`}
+            >
+              Bireysel Maç Bul
+            </button>
+            <button 
+              onClick={() => setActiveSection('takim')}
+              className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                activeSection === 'takim' 
+                  ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 text-white shadow-[0_0_20px_rgba(255,255,0,0.1)]' 
+                  : 'bg-white/[0.02] border-white/5 text-white/50 hover:bg-white/5'
+              }`}
+            >
+              Takıma Katıl
+            </button>
+          </div>
+
+          {/* QUICK FILTERS */}
+          {activeSection === 'bireysel' && (
+            <div className="flex overflow-x-auto no-scrollbar gap-3 px-5 py-3 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md shrink-0">
+              <div className="flex gap-2 items-center shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FFFF00]/70 mr-1">FORMAT</span>
+                {['Tümü', '5v5', '6v6', '7v7', '8v8', '11v11'].map(f => {
+                  const isSelected = (f === 'Tümü' && !dna.format) || (dna.format === f);
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setDna({ ...dna, format: f === 'Tümü' ? '' : f })}
+                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all border ${
+                        isSelected 
+                          ? 'bg-[#39FF14]/15 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.2)]' 
+                          : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="w-px h-4 bg-white/10 shrink-0 self-center" />
+
+              <div className="flex gap-2 items-center shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FFFF00]/70 mr-1">MANTALİTE</span>
+                {['Tümü', 'Ciddi', 'Taktiksel', 'Rahat'].map(m => {
+                  const isSelected = (m === 'Tümü' && !dna.mentality) || (dna.mentality.toLowerCase() === m.toLowerCase());
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setDna({ ...dna, mentality: m === 'Tümü' ? '' : m })}
+                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all border ${
+                        isSelected 
+                          ? 'bg-[#FFFF00]/15 border-[#FFFF00]/50 text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)]' 
+                          : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
+                      }`}
+                    >
+                      {m.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="w-px h-4 bg-white/10 shrink-0 self-center" />
+
+              <div className="flex gap-2 items-center shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FFFF00]/70 mr-1">POZİSYON</span>
+                {['Tümü', 'KL', 'SAV', 'ORT', 'HÜC'].map(r => {
+                  const isSelected = (r === 'Tümü' && !dna.role) || (dna.role === r);
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setDna({ ...dna, role: r === 'Tümü' ? '' : r })}
+                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all border ${
+                        isSelected 
+                          ? 'bg-[#39FF14]/15 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.2)]' 
+                          : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* MATCH CARDS (POSTERS) */}
           <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 relative z-10 custom-scrollbar">
-            {isFilterActive && (
+            {activeSection === 'bireysel' && (
               <>
-                {/* Filtreye Uygun Maçlar Section */}
-                <div>
-                  <h2 className="text-sm font-black italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
-                    <span className="inline-block w-1.5 h-3 bg-[#39FF14] rounded-sm" />
-                    Filtreye Uygun Maçlar
-                  </h2>
-                  
-                  {matchingMatches.length === 0 ? (
-                    <div className="bg-[#ef4444]/10 border border-[#ef4444]/20 backdrop-blur-md rounded-[24px] p-6 flex flex-col items-center justify-center text-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)] mb-8">
-                      <p className="text-white font-black italic uppercase tracking-tighter text-base">Filtrelere Uygun Maç Bulunamadı</p>
-                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider max-w-sm">
-                        Seçtiğin kriterlere uyan aktif bir maç bulunmuyor. Diğer maçları inceleyebilir ya da filtrelerini sıfırlayabilirsin.
-                      </p>
-                      <button 
-                        onClick={handleClearFilters} 
-                        className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95"
-                      >
-                        Filtreleri Temizle
-                      </button>
+                {isFilterActive && (
+                  <>
+                    {/* Filtreye Uygun Maçlar Section */}
+                    <div>
+                      <h2 className="text-sm font-black italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
+                        <span className="inline-block w-1.5 h-3 bg-[#39FF14] rounded-sm" />
+                        Filtreye Uygun Maçlar
+                      </h2>
+                      
+                      {matchingMatches.length === 0 ? (
+                        <div className="bg-[#ef4444]/10 border border-[#ef4444]/20 backdrop-blur-md rounded-[24px] p-6 flex flex-col items-center justify-center text-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)] mb-8">
+                          <p className="text-white font-black italic uppercase tracking-tighter text-base">Filtrelere Uygun Maç Bulunamadı</p>
+                          <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider max-w-sm">
+                            Seçtiğin kriterlere uyan aktif bir maç bulunmuyor. Diğer maçları inceleyebilir ya da filtrelerini sıfırlayabilirsin.
+                          </p>
+                          <button 
+                            onClick={handleClearFilters} 
+                            className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95"
+                          >
+                            Filtreleri Temizle
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-6 mb-8">
+                          {matchingMatches.map((match, index) => (
+                            <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-6 mb-8">
-                      {matchingMatches.map((match, index) => (
+     
+                    {/* Tüm Diğer Maçlar Section */}
+                    {otherMatches.length > 0 && (
+                      <div>
+                        <h2 className="text-sm font-black italic uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
+                          <span className="inline-block w-1.5 h-3 bg-white/20 rounded-sm" />
+                          Tüm Maçlar
+                        </h2>
+                        <div className="space-y-6">
+                          {otherMatches.map((match, index) => (
+                            <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} trustScore={trustScore} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+     
+                {!isFilterActive && (
+                  <div className="space-y-6">
+                    {otherMatches.length === 0 ? (
+                      <div className="text-center py-20 text-white/50 font-bold uppercase tracking-widest text-xs">Aktif maç bulunamadı.</div>
+                    ) : (
+                      otherMatches.map((match, index) => (
                         <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
-                      ))}
-                    </div>
-                  )}
-                </div>
- 
-                {/* Tüm Diğer Maçlar Section */}
-                {otherMatches.length > 0 && (
-                  <div>
-                    <h2 className="text-sm font-black italic uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
-                      <span className="inline-block w-1.5 h-3 bg-white/20 rounded-sm" />
-                      Tüm Maçlar
-                    </h2>
-                    <div className="space-y-6">
-                      {otherMatches.map((match, index) => (
-                        <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} trustScore={trustScore} />
-                      ))}
-                    </div>
+                      ))
+                    )}
                   </div>
                 )}
               </>
             )}
- 
-            {!isFilterActive && (
+
+            {activeSection === 'takim' && (
               <div className="space-y-6">
-                {otherMatches.length === 0 ? (
-                  <div className="text-center py-20 text-white/50 font-bold uppercase tracking-widest text-xs">Aktif maç bulunamadı.</div>
+                {playerSeekAds.length === 0 ? (
+                  <div className="text-center py-20 text-white/50 font-black uppercase tracking-widest text-xs">
+                    Aktif oyuncu ilanı bulunamadı.
+                  </div>
                 ) : (
-                  otherMatches.map((match, index) => (
-                    <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
-                  ))
+                  playerSeekAds.map((ad, index) => {
+                    const isJoined = ad.joinedPlayers?.includes(currentUserUid);
+                    const isAccepted = ad.acceptedPlayers?.includes(currentUserUid);
+                    let accentColor = '#FFFF00'; // Neon Yellow for Ciddi
+                    if (ad.difficulty === 'Taktiksel') accentColor = '#3b82f6';
+                    if (ad.difficulty === 'Rahat') accentColor = '#10b981';
+
+                    return (
+                      <motion.div
+                        key={ad.id}
+                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.5, delay: index * 0.05, type: 'spring', damping: 25 }}
+                        className="relative w-full bg-[#161B22]/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-6 shadow-2xl overflow-hidden group"
+                      >
+                        {/* Dynamic background glow */}
+                        <div className="absolute top-0 right-0 w-32 h-32 opacity-10 blur-3xl pointer-events-none rounded-full" style={{ backgroundColor: accentColor }} />
+                        
+                        {/* Inner Glow Border */}
+                        <div className="absolute inset-0 border-[1.5px] rounded-[32px] pointer-events-none transition-all duration-500" style={{ borderColor: `${accentColor}20` }} />
+
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Captain Info */}
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <img src={ad.creatorAvatar} className="w-12 h-12 rounded-full border-2 border-white/10 shadow-lg object-cover" alt={ad.creatorName} referrerPolicy="no-referrer" />
+                              <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-[#FFFF00] to-yellow-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full border border-black uppercase tracking-wider">
+                                KPT
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-white uppercase italic tracking-tight">{ad.creatorName}</h4>
+                              <p className="text-[9px] text-[#39FF14] font-black tracking-widest uppercase">Kaptan Bildirisi</p>
+                            </div>
+                          </div>
+
+                          {/* Difficulty / Mentality Indicator */}
+                          <div className="px-3.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest" style={{ borderColor: `${accentColor}40`, backgroundColor: `${accentColor}10`, color: accentColor }}>
+                            {ad.difficulty}
+                          </div>
+                        </div>
+
+                        {/* Middle Match Details */}
+                        <div className="mt-6 space-y-3">
+                          <h3 className="text-xl font-black text-white italic uppercase leading-none tracking-tighter">
+                            {ad.pitchName}
+                          </h3>
+                          
+                          <div className="flex items-center gap-4 text-xs font-black text-white/60 tracking-wider">
+                            <span className="flex items-center gap-1.5">
+                              <Clock size={12} className="text-[#39FF14]" />
+                              {ad.date} • {ad.time}
+                            </span>
+                          </div>
+
+                          {/* Positions Needed badges */}
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {ad.positionsNeeded.map((pos, i) => (
+                              <span key={i} className="px-3 py-1.5 bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.1)]">
+                                <Shield size={10} className="text-red-500 animate-pulse" /> {pos} ARANIYOR
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Rules Pill Grid */}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-5 border-t border-white/5 pt-4">
+                          <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
+                            {ad.format} FORMAT
+                          </span>
+                          <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
+                            {ad.duration}
+                          </span>
+                          <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
+                            {ad.gender}
+                          </span>
+                          {ad.ageGroup && ad.ageGroup !== 'Tümü' && (
+                            <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
+                              {ad.ageGroup} YAŞ
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Request/Join Action */}
+                        <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                            {ad.joinedPlayers?.length || 0} OYUNCU TALEPTE BULUNDU
+                          </span>
+
+                          {isAccepted ? (
+                            <motion.button
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => {
+                                setChatTarget({
+                                  name: ad.creatorName,
+                                  role: 'Takım Kaptanı',
+                                  avatar: ad.creatorAvatar
+                                });
+                                setView('CHAT');
+                              }}
+                              className="px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-gradient-to-r from-emerald-500 to-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.5)] border-2 border-white/30 hover:brightness-110 flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <MessageSquare size={12} /> KAPTANLA MESAJLAŞ
+                            </motion.button>
+                          ) : (
+                            <motion.button
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => {
+                                toggleJoinPlayerSeekAd(ad.id, currentUserUid);
+                                if (!isJoined) {
+                                  // Simulate captain accepting after 2.5 seconds
+                                  setTimeout(() => {
+                                    acceptPlayerSeekAdRequest(ad.id, currentUserUid);
+                                    showToast('Talebiniz Kabul Edildi! Kaptanla mesajlaşabilirsiniz. 💬', 'success');
+                                  }, 2500);
+                                }
+                              }}
+                              className={`px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer ${
+                                isJoined 
+                                  ? 'bg-emerald-500/10 border border-emerald-500/50 text-[#39FF14] shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
+                                  : 'bg-[#FFFF00] hover:bg-yellow-300 text-black shadow-[0_0_20px_rgba(255,255,0,0.3)]'
+                              }`}
+                            >
+                              {isJoined ? (
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle2 size={12} /> TALEP GÖNDERİLDİ
+                                </span>
+                              ) : (
+                                'KATILMA TALEBİ GÖNDER'
+                              )}
+                            </motion.button>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })
                 )}
               </div>
             )}
           </div>
         </motion.div>
       )}
+
+      {/* Premium Toast Overlay */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl border border-[#39FF14]/30 bg-[#0A0E14]/90 backdrop-blur-xl shadow-[0_8px_32px_rgba(57,255,20,0.25)]"
+          >
+            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-[#39FF14] flex items-center justify-center text-xs font-black">
+              ✓
+            </div>
+            <p className="text-white text-xs font-bold tracking-wide">{toast.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
+};
+
+const getMatchTargetDate = (dateStr: string, timeStr: string): Date => {
+  const now = new Date();
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  
+  let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+  
+  const cleanDateStr = dateStr.toLowerCase().trim();
+  if (cleanDateStr === 'yarın') {
+    targetDate.setDate(targetDate.getDate() + 1);
+  } else if (cleanDateStr !== 'bugün') {
+    const daysOfWeek: Record<string, number> = {
+      'pazartesi': 1,
+      'salı': 2,
+      'çarşamba': 3,
+      'perşembe': 4,
+      'cuma': 5,
+      'cumartesi': 6,
+      'pazar': 0
+    };
+    const targetDayNum = daysOfWeek[cleanDateStr];
+    if (targetDayNum !== undefined) {
+      const currentDayNum = now.getDay();
+      let diff = targetDayNum - currentDayNum;
+      if (diff <= 0) diff += 7; // Next occurrence
+      targetDate.setDate(targetDate.getDate() + diff);
+    }
+  }
+  return targetDate;
 };
 
 const MatchCard: React.FC<{
@@ -492,6 +793,40 @@ const MatchCard: React.FC<{
   
   // Güven skoru 3.0'ın altındakiler veya minRating'i karşılayamayanlar için kilitli premium kart mantığı
   const isLocked = match.minRating && match.minRating > trustScore;
+
+  // Maça kalan süre ticking timer state & effect
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    const target = getMatchTargetDate(match.date, match.time);
+    
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const diff = target.getTime() - now;
+      
+      if (diff <= 0) {
+        setTimeLeft('BAŞLADI');
+        return;
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      const pad = (n: number) => String(n).padStart(2, '0');
+      
+      if (hours > 24) {
+        const days = Math.floor(hours / 24);
+        setTimeLeft(`${days} GÜN KALDI`);
+      } else {
+        setTimeLeft(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+      }
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [match.date, match.time]);
   
   return (
     <motion.div
@@ -503,75 +838,77 @@ const MatchCard: React.FC<{
         if (isLocked) return; // Kilitliyse tıklanamaz
         onSelect(match);
       }}
-      className="relative w-full h-[400px] rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl"
+      className="relative w-full h-[400px] rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
     >
       {/* Arka Plan Posteri */}
-      <img src={match.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.title} referrerPolicy="no-referrer" />
+      <img src={match.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.location} referrerPolicy="no-referrer" />
       
       {/* Renk Tonu ve Güçlü Karartma (Gradient) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-transparent" />
       <div className="absolute inset-0 opacity-20 mix-blend-overlay" style={{ background: `radial-gradient(circle at center, transparent 0%, ${glowColor} 100%)` }} />
       
       {/* Karizma Sınır Çizgisi (İç Glow) */}
       <div className="absolute inset-0 border-[1.5px] rounded-[32px] pointer-events-none transition-all duration-500" style={{ borderColor: `${glowColor}30`, boxShadow: `inset 0 0 30px ${glowColor}15` }} />
  
-      {/* ── ÜST KISIM (SAAT & BİLET) ── */}
+      {/* ── ÜST KISIM (SAAT & GERİ SAYIM) ── */}
       <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-10">
-        {/* Dijital Saat */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-xl border border-white/20 shadow-lg">
+        {/* Dijital Saat (Sol Üst) */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 shadow-lg">
           <Clock size={12} className="text-[#39FF14]" />
           <span className="text-xs font-black text-white tracking-[0.1em] drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{match.time}</span>
         </div>
  
-        {/* VIP Ücret Tag */}
-        {match.price === 0 ? (
-          <div className="px-4 py-2 bg-gradient-to-br from-[#39FF14]/20 to-[#10b981]/10 backdrop-blur-xl border border-[#39FF14]/50 rounded-xl shadow-[0_0_25px_rgba(57,255,20,0.3)]">
-            <span className="text-[10px] font-black italic uppercase tracking-widest text-[#39FF14] drop-shadow-[0_0_10px_rgba(57,255,20,0.8)]">ÜCRETSİZ</span>
-          </div>
-        ) : (
-          <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl">
-            <span className="text-[13px] font-black text-white drop-shadow-md">{match.price} ₺</span>
-          </div>
-        )}
+        {/* Maça Kalan Süre Ticking Geri Sayım (Sağ Üst) */}
+        <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-black/70 backdrop-blur-md border border-[#39FF14]/30 rounded-xl shadow-[0_0_15px_rgba(57,255,20,0.1)]">
+          <span className="w-1.5 h-1.5 bg-[#39FF14] rounded-full animate-ping shrink-0" />
+          <span className="text-[10px] font-black tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]">
+            {timeLeft}
+          </span>
+        </div>
       </div>
  
-      {/* ── ORTA KISIM (EKSİK POZİSYONLAR Taktik Rozetleri) ── */}
-      <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2 z-10">
+      {/* ── ORTA KISIM (EKSİK POZİSYONLAR - Net ve Şık) ── */}
+      <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2.5 z-10">
         {match.missingPositions?.map((pos: any, i: number) => {
           const isUrgent = pos.role === myRole;
-          const roleNameMap: Record<string, string> = { 'FW': 'HÜC', 'MID': 'ORT', 'DEF': 'SAV', 'GK': 'KL' };
+          const roleNameMap: Record<string, string> = { 'FW': 'HÜCUM', 'MID': 'ORTA', 'DEF': 'SAVUNMA', 'GK': 'KALECİ' };
           const localizedRole = roleNameMap[pos.role] || pos.role;
           
           return (
-            <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-r-xl rounded-l-md backdrop-blur-xl border-y border-r transition-all ${isUrgent ? 'bg-[#ef4444]/20 border-[#ef4444]/60 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-black/40 border-white/10'}`} style={{ borderLeft: `3px solid ${isUrgent ? '#ef4444' : 'white'}` }}>
-              <Shield size={12} className={isUrgent ? 'text-[#ef4444]' : 'text-white/60'} />
-              <span className={`text-[10px] font-black uppercase tracking-widest ${isUrgent ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-white/70'}`}>
-                {localizedRole}
-              </span>
-              <span className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-black ${isUrgent ? 'bg-[#ef4444] text-white' : 'bg-white/10 text-white'}`}>
-                {pos.count}
+            <div 
+              key={i} 
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-xl border transition-all ${
+                isUrgent 
+                  ? 'bg-red-500/15 border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
+                  : 'bg-black/60 border-white/10'
+              }`}
+              style={{ borderLeft: `4px solid ${isUrgent ? '#ef4444' : '#39FF14'}` }}
+            >
+              <Shield size={12} className={isUrgent ? 'text-[#ef4444]' : 'text-[#39FF14]'} />
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isUrgent ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-white/80'}`}>
+                {pos.count} {localizedRole} ARANIYOR
               </span>
             </div>
-          )
+          );
         })}
       </div>
  
-      {/* ── ALT KISIM (SAHA BİLGİSİ & AKSİYON) ── */}
+      {/* ── ALT KISIM (TESİS, TARİH, SAAT & FİYAT + KATIL AKSİYONU) ── */}
       <div className="absolute bottom-0 left-0 right-0 p-6 z-20 flex flex-col justify-end">
-        
         <div className="flex items-end justify-between gap-4">
           <div className="flex-1">
-            {/* Sahanın Adı Devasa */}
-            <h3 className="text-3xl font-black text-white italic uppercase leading-[0.9] tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2">
-              {match.title}
+            {/* Tesis ve Lokasyon İsmi Devasa (Üst Karakter) */}
+            <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2">
+              {match.location.toUpperCase()}
             </h3>
+
+            {/* Tarih ve Saat (Üst Karakter) */}
+            <div className="text-[10px] font-black text-[#FFFF00] italic uppercase tracking-widest mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              {match.date.toUpperCase()} • {match.time.toUpperCase()}
+            </div>
             
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="flex items-center gap-1.5 text-[9px] text-white/60 font-bold uppercase tracking-widest drop-shadow-md mr-1">
-                <MapPin size={11} className="text-white/40" />
-                {match.location}
-              </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
                 {match.matchMentality}
               </span>
@@ -592,16 +929,28 @@ const MatchCard: React.FC<{
             </div>
           </div>
  
-          {/* Katıl Butonu */}
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            disabled={isLocked}
-            className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all group-hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: 'rgba(255,255,255,0.05)', boxShadow: `0 0 30px ${glowColor}20` }}
-          >
-            <ChevronRight size={24} className="text-white drop-shadow-lg group-hover:translate-x-1 transition-transform" />
-          </motion.button>
+          {/* Fiyat (Sağ Altta) & Katıl Aksiyon Butonu */}
+          <div className="flex flex-col items-end gap-2.5 shrink-0">
+            {match.price === 0 ? (
+              <div className="px-3.5 py-1.5 bg-gradient-to-br from-[#39FF14]/20 to-[#10b981]/10 backdrop-blur-xl border border-[#39FF14]/50 rounded-xl shadow-[0_0_20px_rgba(57,255,20,0.25)]">
+                <span className="text-[10px] font-black italic uppercase tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">ÜCRETSİZ</span>
+              </div>
+            ) : (
+              <div className="px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl shadow-lg">
+                <span className="text-[13px] font-black text-[#FFFF00] tracking-wider drop-shadow-md">{match.price} ₺</span>
+              </div>
+            )}
+
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              disabled={isLocked}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all bg-white/[0.05] hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+              style={{ boxShadow: `0 0 35px ${glowColor}25` }}
+            >
+              <ChevronRight size={24} className="text-white drop-shadow-lg group-hover:translate-x-1 transition-transform" />
+            </motion.button>
+          </div>
         </div>
       </div>
 

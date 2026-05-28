@@ -118,6 +118,7 @@ const App: React.FC = () => {
     setImpersonatedUser,
     originalRole,
     setOriginalRole,
+    chatTarget,
   } = useAppStore();
 
   useEffect(() => {
@@ -391,7 +392,12 @@ const App: React.FC = () => {
           }}
         />;
       case 'CHAT':
-        return <ChatScreen onBack={() => setView('DASHBOARD')} />;
+        return <ChatScreen 
+          targetName={chatTarget?.name} 
+          targetRole={chatTarget?.role} 
+          targetAvatar={chatTarget?.avatar} 
+          onBack={() => setView('MATCH_DISCOVERY')} 
+        />;
       case 'MATCH_TICKET':
         return <MatchTicket onBack={() => setView('DASHBOARD')} />;
       case 'SCOUT_DASHBOARD':

@@ -202,6 +202,19 @@ const inferSquadSize = (slotCount: number): string => {
   return '11v11';
 };
 
+const checkAndGetStatus = (slots: PositionSlot[], awaySlots?: PositionSlot[]): 'ACTIVE' | 'LIVE' => {
+  const allHomeFilled = slots.filter(s => s.status === 'TAKEN').length === slots.length;
+  const allHomePaid = slots.every(s => s.status !== 'TAKEN' || s.player?.paymentStatus === 'PAID');
+  
+  if (awaySlots && awaySlots.length > 0) {
+    const allAwayFilled = awaySlots.filter(s => s.status === 'TAKEN').length === awaySlots.length;
+    const allAwayPaid = awaySlots.every(s => s.status !== 'TAKEN' || s.player?.paymentStatus === 'PAID');
+    return (allHomeFilled && allHomePaid && allAwayFilled && allAwayPaid) ? 'LIVE' : 'ACTIVE';
+  }
+  
+  return (allHomeFilled && allHomePaid) ? 'LIVE' : 'ACTIVE';
+};
+
 // Studio ile %100 Uyumlu Kanonik Koordinat Atayıcı (Rol ve Yatay Simetri Odaklı Eşleme)
 const applyCanonicalCoords = (slots: PositionSlot[]): PositionSlot[] => {
   if (!slots || slots.length === 0) return [];
@@ -350,6 +363,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   const [showCriteria, setShowCriteria] = useState(false);
   const [activeTab, setActiveTab] = useState<'pitch' | 'rules' | 'finance'>('pitch');
 
+  // Lobi Sekmesi & Sohbet & Taktik Kenarı
+  const [lobbyTab, setLobbyTab] = useState<'squad' | 'chat'>('squad');
+  const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
+  const [chatInputText, setChatInputText] = useState('');
+
   // Dolu slot — VIP Diamond kart
   const [activePlayerSlotId, setActivePlayerSlotId] = useState<string | null>(null);
 
@@ -366,8 +384,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
+  // Rakip Modalları
+  const [showOpponentModal, setShowOpponentModal] = useState(false);
+  const [showJoinOpponentModal, setShowJoinOpponentModal] = useState(false);
+
   // ── Store ─────────────────────────────────────────────────────────────────
-  const { adminUsers, friends, updateMatch, addUserNotification, adminPitches } = useAppStore();
+  const { 
+    adminUsers, friends, updateMatch, addUserNotification, adminPitches, 
+    userTeams, myTeams, setView, setMarketplaceReturnView, setSelectedMatch 
+  } = useAppStore();
 
   if (!match) return null;
 
@@ -410,6 +435,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
 
   const communityName = getCommunityName(match.communityId);
 
+  // Home & Away Teams derived from store
+  const homeTeam = (userTeams || []).find(t => t.id === match.homeTeamId) || (userTeams || [])[0];
+  const awayTeam = (userTeams || []).find(t => t.id === match.awayTeamId);
+
   // ── Kullanıcı ─────────────────────────────────────────────────────────────
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUserProfile = (adminUsers || []).find(u => u?.id === currentUserUid)
@@ -419,10 +448,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   const isCaptain = currentUserProfile?.role === UserRole.CAPTAIN
     || match.creatorId === currentUserProfile?.id;
 
+  const isHomeCaptain = match.creatorId === currentUserProfile.id || homeTeam?.captain === currentUserProfile.id || homeTeam?.captains?.includes(currentUserProfile.id);
+  const isAwayCaptain = !!awayTeam && (awayTeam.captain === currentUserProfile.id || awayTeam.captains?.includes(currentUserProfile.id));
+
   // ── Kanonik Simetrik Slotlar (Studio ile aynı koordinatlar) ───────────────
   const canonicalSlots = applyCanonicalCoords(match.slots || []);
 
-  // Profil fotoğrafını DB'den çek
+  // Profil fotoğrafını DB'den çek (Ev Sahibi Roster)
   const enrichedSlots = canonicalSlots.map((slot, idx) => {
     if (!slot) return slot;
     if (slot.status !== 'TAKEN') return slot;
@@ -441,6 +473,34 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
           position: slot.role || 'OYUNCU',
           x: slot.x,
           y: slot.y,
+          paymentStatus: orig?.paymentStatus || 'UNPAID',
+        } as Player,
+      };
+    }
+    return slot;
+  });
+
+  // Deplasman Roster Zenginleştirme
+  const canonicalAwaySlots = applyCanonicalCoords(match.awaySlots || []);
+  const enrichedAwaySlots = canonicalAwaySlots.map((slot, idx) => {
+    if (!slot) return slot;
+    if (slot.status !== 'TAKEN') return slot;
+    const orig = slot.player;
+    const dbUser = orig
+      ? (adminUsers || []).find(u => u?.id === orig.id || (orig.name && u?.name && u.name.toLowerCase() === orig.name.toLowerCase()))
+      : (adminUsers && adminUsers[idx % Math.max(adminUsers.length, 1)]);
+    if (dbUser) {
+      return {
+        ...slot,
+        player: {
+          id: dbUser.id,
+          name: dbUser.name || 'Oyuncu',
+          avatar: dbUser.avatar || `https://i.pravatar.cc/150?u=${dbUser.id}`,
+          rating: dbUser.rating || 4.5,
+          position: slot.role || 'OYUNCU',
+          x: slot.x,
+          y: slot.y,
+          paymentStatus: orig?.paymentStatus || 'PAID',
         } as Player,
       };
     }
@@ -448,11 +508,20 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   });
 
   // ── Derived State ─────────────────────────────────────────────────────────
-  const isAlreadyJoined = (match.slots || []).some(
+  const isAlreadyJoinedHome = (match.slots || []).some(
     s => s?.player?.id === currentUserProfile?.id
   );
+  const isAlreadyJoinedAway = (match.awaySlots || []).some(
+    s => s?.player?.id === currentUserProfile?.id
+  );
+  const isAlreadyJoined = isAlreadyJoinedHome || isAlreadyJoinedAway;
+
+  const isAlreadyJoinedReserve = (match.reservePlayers || []).some(
+    p => p?.id === currentUserProfile?.id
+  );
+
   const mySlot = isAlreadyJoined
-    ? enrichedSlots.find(s => s?.player?.id === currentUserProfile?.id)
+    ? [...enrichedSlots, ...enrichedAwaySlots].find(s => s?.player?.id === currentUserProfile?.id)
     : null;
 
   const assignedIds = (match.slots || []).filter(s => s?.player).map(s => s.player!.id);
@@ -473,6 +542,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
 
   const handleSlotClick = (slot: any) => {
     if (!slot) return;
+
+    if (pitchSide === 'away') {
+      if (slot.status === 'TAKEN') {
+        setActivePlayerSlotId(slot.id);
+      }
+      return;
+    }
 
     if (slot.status === 'TAKEN') {
       // Kendi slotum tıklandı
@@ -507,7 +583,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
     if (!selectedSlotId || isAlreadyJoined) return;
     setIsProcessing(true);
     
-    const targetSlot = (match.slots || []).find(s => s?.id === selectedSlotId);
+    const isAway = pitchSide === 'away';
+    const slotsSource = isAway ? (match.awaySlots || []) : (match.slots || []);
+    const targetSlot = slotsSource.find(s => s?.id === selectedSlotId);
     if (!targetSlot) { setIsProcessing(false); return; }
 
     const joinedPlayer: Player = {
@@ -518,21 +596,120 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
       position: targetSlot.role || 'OYUNCU',
       x: targetSlot.x,
       y: targetSlot.y,
+      paymentStatus: 'UNPAID',
     };
 
-    const updatedSlots = (match.slots || []).map(s =>
-      s?.id === selectedSlotId
-        ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-        : s
-    );
+    let updatedSlots = match.slots || [];
+    let updatedAwaySlots = match.awaySlots || [];
+
+    if (isAway) {
+      updatedAwaySlots = slotsSource.map(s =>
+        s?.id === selectedSlotId
+          ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
+          : s
+      );
+    } else {
+      updatedSlots = slotsSource.map(s =>
+        s?.id === selectedSlotId
+          ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
+          : s
+      );
+    }
+
+    const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
 
     try {
-      await updateMatch({ ...match, slots: updatedSlots });
+      await updateMatch({ 
+        ...match, 
+        slots: updatedSlots, 
+        awaySlots: updatedAwaySlots, 
+        status: nextStatus 
+      });
       setSelectedSlotId(null);
       setIsProcessing(false);
       onJoin();
     } catch (e) {
       console.error('Join error:', e);
+      setIsProcessing(false);
+    }
+  };
+
+  const fillVacatedSlot = (
+    slots: PositionSlot[],
+    reserves: Player[],
+    vacatedSlotId: string
+  ): { updatedSlots: PositionSlot[]; remainingReserves: Player[]; promotedPlayer?: Player } => {
+    let promotedPlayer: Player | undefined = undefined;
+    let remainingReserves = [...reserves];
+
+    const updatedSlots = slots.map(s => {
+      if (s.id === vacatedSlotId) {
+        if (remainingReserves.length > 0) {
+          const rawPlayer = remainingReserves.shift()!;
+          promotedPlayer = {
+            ...rawPlayer,
+            position: s.role || 'OYUNCU',
+            x: s.x,
+            y: s.y,
+            paymentStatus: 'UNPAID',
+          };
+          return {
+            ...s,
+            status: 'TAKEN' as const,
+            player: promotedPlayer,
+          };
+        } else {
+          const newSlot = { ...s, status: 'OPEN' as const };
+          delete newSlot.player;
+          return newSlot;
+        }
+      }
+      return s;
+    });
+
+    return { updatedSlots, remainingReserves, promotedPlayer };
+  };
+
+  const handleJoinAsReserve = async () => {
+    if (isAlreadyJoined || isAlreadyJoinedReserve) return;
+    setIsProcessing(true);
+
+    const reservePlayer: Player = {
+      id: currentUserProfile.id || 'u1',
+      name: currentUserProfile.name || 'Oyuncu',
+      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+      rating: (currentUserProfile as any).rating || 4.5,
+      position: 'YEDEK',
+      x: 50,
+      y: 50,
+      paymentStatus: 'UNPAID',
+    };
+
+    const updatedReserves = [...(match.reservePlayers || []), reservePlayer];
+
+    try {
+      await updateMatch({ ...match, reservePlayers: updatedReserves });
+      setIsProcessing(false);
+    } catch (e) {
+      console.error('Join reserve error:', e);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleLeaveReserves = async () => {
+    if (!isAlreadyJoinedReserve) return;
+    setIsProcessing(true);
+
+    const updatedReserves = (match.reservePlayers || []).filter(
+      p => p.id !== currentUserProfile.id
+    );
+
+    try {
+      await updateMatch({ ...match, reservePlayers: updatedReserves });
+      setIsProcessing(false);
+      setShowLeaveConfirm(false);
+    } catch (e) {
+      console.error('Leave reserves error:', e);
       setIsProcessing(false);
     }
   };
@@ -577,35 +754,114 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   };
 
   const handleRemovePlayer = async (slotId: string) => {
-    const updatedSlots = (match.slots || []).map(s => {
-      if (s?.id === slotId) {
-        const newSlot = { ...s, status: 'OPEN' as const };
-        delete newSlot.player;
-        return newSlot;
+    const isHomeSlot = (match.slots || []).some(s => s.id === slotId);
+    const reserves = match.reservePlayers || [];
+
+    if (isHomeSlot) {
+      const { updatedSlots, remainingReserves } = fillVacatedSlot(match.slots || [], reserves, slotId);
+      const nextStatus = checkAndGetStatus(updatedSlots, match.awaySlots);
+      try {
+        await updateMatch({
+          ...match,
+          slots: updatedSlots,
+          reservePlayers: remainingReserves,
+          status: nextStatus
+        });
+        setActivePlayerSlotId(null);
+      } catch (e) {
+        console.error(e);
       }
-      return s;
-    });
-    try {
-      await updateMatch({ ...match, slots: updatedSlots });
-      setActivePlayerSlotId(null);
-    } catch (e) { console.error(e); }
+    } else {
+      const { updatedSlots, remainingReserves } = fillVacatedSlot(match.awaySlots || [], reserves, slotId);
+      const nextStatus = checkAndGetStatus(match.slots || [], updatedSlots);
+      try {
+        await updateMatch({
+          ...match,
+          awaySlots: updatedSlots,
+          reservePlayers: remainingReserves,
+          status: nextStatus
+        });
+        setActivePlayerSlotId(null);
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
   const handleLeaveMatch = async () => {
     if (!isAlreadyJoined || !currentUserProfile?.id) return;
     setIsProcessing(true);
-    
-    const updatedSlots = (match.slots || []).map(s => {
-      if (s?.player?.id === currentUserProfile.id) {
-        const newSlot = { ...s, status: 'OPEN' as const };
-        delete newSlot.player;
-        return newSlot;
+
+    const reserves = match.reservePlayers || [];
+    const isHomePlayer = (match.slots || []).some(s => s.player?.id === currentUserProfile.id);
+    const isAwayPlayer = (match.awaySlots || []).some(s => s.player?.id === currentUserProfile.id);
+
+    let updatedSlots = match.slots || [];
+    let updatedAwaySlots = match.awaySlots || [];
+    let remainingReserves = reserves;
+
+    if (isHomePlayer) {
+      const slotId = (match.slots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
+      if (slotId) {
+        const res = fillVacatedSlot(match.slots || [], remainingReserves, slotId);
+        updatedSlots = res.updatedSlots;
+        remainingReserves = res.remainingReserves;
       }
-      return s;
-    });
+    } else if (isAwayPlayer) {
+      const slotId = (match.awaySlots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
+      if (slotId) {
+        const res = fillVacatedSlot(match.awaySlots || [], remainingReserves, slotId);
+        updatedAwaySlots = res.updatedSlots;
+        remainingReserves = res.remainingReserves;
+      }
+    }
+
+    // Halef Kaptan Belirleme Mantığı (Reliability Score Tabanlı)
+    let newCreatorId = match.creatorId;
+    const isCreatorLeaving = match.creatorId === currentUserProfile.id;
+    if (isCreatorLeaving) {
+      const remainingPlayers = updatedSlots
+        .map(s => s?.player)
+        .filter((p): p is Player => !!p && p.id !== currentUserProfile.id);
+      if (remainingPlayers.length > 0) {
+        let bestScore = -1;
+        let bestPlayerId = remainingPlayers[0].id;
+        remainingPlayers.forEach(p => {
+          const dbUser = (adminUsers || []).find(u => u?.id === p.id);
+          const score = dbUser?.reliabilityScore ?? 100;
+          if (score > bestScore) {
+            bestScore = score;
+            bestPlayerId = p.id;
+          }
+        });
+        newCreatorId = bestPlayerId;
+        
+        // Notify new captain
+        addUserNotification({
+          id: `succ_${newCreatorId}_${Date.now()}`,
+          type: 'system',
+          title: '👑 Yeni Kaptan Sensin!',
+          desc: `Eski kaptan ayrıldığı için yüksek güvenilirlik skorunla bu maçın yeni kaptanı seçildin.`,
+          time: 'Şimdi',
+          iconName: 'Award',
+          color: '#39FF14',
+          textColor: '#39FF14',
+          read: false,
+        });
+      }
+    }
+
+    const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
 
     try {
-      await updateMatch({ ...match, slots: updatedSlots });
+      await updateMatch({
+        ...match,
+        slots: updatedSlots,
+        awaySlots: updatedAwaySlots,
+        reservePlayers: remainingReserves,
+        creatorId: newCreatorId,
+        status: nextStatus
+      });
       setIsProcessing(false);
       setShowLeaveConfirm(false);
       onBack();
@@ -629,7 +885,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
     return (friend as any)?.fp || Math.floor(Math.random() * 15) + 85;
   };
 
-  const activePlayerSlot = activePlayerSlotId ? enrichedSlots.find(s => s?.id === activePlayerSlotId) : null;
+  const activePlayerSlot = activePlayerSlotId ? (pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).find(s => s?.id === activePlayerSlotId) : null;
   const activePlayer = activePlayerSlot?.player || null;
 
   // ─── RENDER ─────────────────────────────────────────────────────────────────
@@ -784,6 +1040,62 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                         ))}
                       </div>
 
+                      {/* Kapora ve Ödeme Bölümü */}
+                      <div className="w-full mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col gap-3 relative overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">KAPORA DURUMU</span>
+                          {activePlayer.paymentStatus === 'PAID' ? (
+                            <span className="text-[#39FF14] text-[9px] font-black tracking-wider bg-[#39FF14]/10 border border-[#39FF14]/20 px-2.5 py-1 rounded-full uppercase flex items-center gap-1 shadow-[0_0_10px_rgba(57,255,20,0.15)]">
+                              <CheckCircle2 size={10} /> TAMAMLANDI
+                            </span>
+                          ) : (
+                            <span className="text-amber-500 text-[9px] font-black tracking-wider bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full uppercase flex items-center gap-1">
+                              <Clock size={10} /> BEKLENİYOR (50 ₺)
+                            </span>
+                          )}
+                        </div>
+
+                        {activePlayer.id === currentUserProfile.id && activePlayer.paymentStatus !== 'PAID' && (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={async () => {
+                              try {
+                                setIsProcessing(true);
+                                const updatedSlots = (match.slots || []).map(s => {
+                                  if (s?.player?.id === currentUserProfile.id) {
+                                    return {
+                                      ...s,
+                                      player: {
+                                        ...s.player!,
+                                        paymentStatus: 'PAID' as const
+                                      }
+                                    };
+                                  }
+                                  return s;
+                                });
+                                const nextStatus = checkAndGetStatus(updatedSlots);
+                                await updateMatch({
+                                  ...match,
+                                  slots: updatedSlots,
+                                  status: nextStatus
+                                });
+                                setActivePlayerSlotId(null);
+                                alert("Kapora ödemesi başarıyla gerçekleştirildi! ⚽");
+                              } catch (e) {
+                                console.error(e);
+                              } finally {
+                                setIsProcessing(false);
+                              }
+                            }}
+                            className="w-full py-3 rounded-xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                          >
+                            <DollarSign size={13} />
+                            <span>KAPORAYI ÖDE (50 ₺)</span>
+                          </motion.button>
+                        )}
+                      </div>
+
                       {/* Kaptan Çıkarma */}
                       {isCaptain && !isMySlot && (
                         <button onClick={() => handleRemovePlayer(activePlayerSlot!.id)}
@@ -832,11 +1144,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
               </div>
               
               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">
-                Maçtan Ayrıl
+                {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
               </h3>
               
               <p className="text-sm text-gray-400 mb-6">
-                Maçtan ayrılmak istediğinize emin misiniz? Kadrodaki yeriniz boşaltılacaktır.
+                {isAlreadyJoinedReserve 
+                  ? 'Yedek listesinden çıkmak istediğinize emin misiniz?' 
+                  : 'Maçtan ayrılmak istediğinize emin misiniz? Kadrodaki yeriniz boşaltılacaktır.'}
               </p>
               
               <div className="flex gap-3">
@@ -847,7 +1161,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                   İPTAL
                 </button>
                 <button 
-                  onClick={handleLeaveMatch}
+                  onClick={isAlreadyJoinedReserve ? handleLeaveReserves : handleLeaveMatch}
                   disabled={isProcessing}
                   className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
                   {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'AYRIL'}
@@ -953,6 +1267,215 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
         )}
       </AnimatePresence>
 
+      {/* ── Rakip Ekle (Meydan Okuma) Modalı ────────────────────────────────── */}
+      <AnimatePresence>
+        {showOpponentModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center"
+            onClick={() => setShowOpponentModal(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#161B22] border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
+            >
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+              
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Rakip Meydan Okuma</h3>
+                  <p className="text-[9px] text-[#FFFF00] font-black uppercase tracking-widest mt-0.5">
+                    Aktif kulüplere maç daveti gönder
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowOpponentModal(false)} 
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar">
+                {(userTeams || [])
+                  .filter(t => t.id !== homeTeam?.id)
+                  .map(t => {
+                    const winRate = t.wins + t.losses > 0 ? Math.round((t.wins / (t.wins + t.losses)) * 100) : 50;
+                    return (
+                      <div
+                        key={t.id}
+                        className="bg-black/30 border border-white/5 p-4 rounded-2xl flex items-center gap-4 transition-all hover:border-white/10"
+                      >
+                        <div className="w-12 h-12 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center text-2xl relative shadow-inner overflow-hidden">
+                          {t.logo ? (
+                            t.logo.startsWith('http') ? (
+                              <img src={t.logo} alt={t.name} className="w-full h-full object-cover" />
+                            ) : (
+                              t.logo
+                            )
+                          ) : (
+                            '🛡️'
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{t.name}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[8px] font-black text-[#FFFF00] bg-[#FFFF00]/10 border border-[#FFFF00]/20 px-1.5 py-0.5 rounded uppercase">OVR {t.teamValue ? Math.round(parseInt(t.teamValue)/1000) : 80}</span>
+                            <span className="text-[8px] font-black text-white/40 uppercase">% {winRate} WR</span>
+                          </div>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={async () => {
+                            try {
+                              // Initialize away slots
+                              const awaySlots = (t.roster || []).map((p, index) => ({
+                                id: `away_${index}`,
+                                role: p.position || 'OYUNCU',
+                                x: p.x || 50,
+                                y: p.y || 50,
+                                status: 'TAKEN' as const,
+                                player: p
+                              }));
+                              await updateMatch({ ...match, awayTeamId: t.id, awaySlots });
+                              addUserNotification({
+                                id: `chal_${t.id}_${Date.now()}`,
+                                type: 'challenge',
+                                title: '⚡ Meydan Okuma Kabul Edildi',
+                                desc: `"${t.name}" takımı meydan okumanızı kabul etti! Derbi zamanı!`,
+                                time: 'Az önce',
+                                iconName: 'Shield',
+                                color: '#FF007F',
+                                textColor: '#FF007F',
+                                read: false,
+                              });
+                              setShowOpponentModal(false);
+                              alert(`${t.name} takımına meydan okuma daveti gönderildi!`);
+                            } catch (err) {
+                              console.error(err);
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-pink-600 text-white font-black text-[10px] uppercase tracking-widest shadow-[0_0_15px_rgba(236,72,153,0.3)] hover:bg-pink-500 active:scale-95 transition-all"
+                        >
+                          Meydan Oku
+                        </motion.button>
+                      </div>
+                    );
+                  })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Rakip Olarak Katıl Modalı ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {showJoinOpponentModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center"
+            onClick={() => setShowJoinOpponentModal(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#161B22] border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
+            >
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+              
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Rakip Olarak Katıl</h3>
+                  <p className="text-[9px] text-[#00F2FE] font-black uppercase tracking-widest mt-0.5">
+                    Kendi kulübünü deplasman takımı olarak ata
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowJoinOpponentModal(false)} 
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {(!myTeams || myTeams.length === 0) ? (
+                <div className="text-center py-10 space-y-3">
+                  <Shield size={36} className="text-white/20 mx-auto" />
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Kayıtlı takımınız bulunmamaktadır.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                  {myTeams.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={async () => {
+                        try {
+                          // Initialize away slots
+                          const awaySlots = (t.roster || []).map((p, index) => ({
+                            id: `away_${index}`,
+                            role: p.position || 'OYUNCU',
+                            x: p.x || 50,
+                            y: p.y || 50,
+                            status: 'TAKEN' as const,
+                            player: p
+                          }));
+                          await updateMatch({ ...match, awayTeamId: t.id, awaySlots });
+                          addUserNotification({
+                            id: `join_opp_${t.id}_${Date.now()}`,
+                            type: 'join',
+                            title: '⚽ Deplasman Takımı Katıldı',
+                            desc: `"${t.name}" takımınız bu maça rakip olarak katıldı!`,
+                            time: 'Az önce',
+                            iconName: 'Users',
+                            color: '#00F2FE',
+                            textColor: '#00F2FE',
+                            read: false,
+                          });
+                          setShowJoinOpponentModal(false);
+                          alert(`Takımınız (${t.name}) başarıyla maça rakip olarak kaydedildi!`);
+                        } catch (err) {
+                          console.error(err);
+                        } finally {
+                          setIsProcessing(false);
+                        }
+                      }}
+                      className="w-full bg-black/30 border border-white/5 hover:border-[#00F2FE]/30 p-4 rounded-2xl flex items-center gap-4 text-left active:scale-[0.98] transition-all group"
+                    >
+                      <div className="w-12 h-12 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center text-2xl shadow-inner group-hover:border-[#00F2FE]/40 transition-colors overflow-hidden">
+                        {t.logo ? (
+                          t.logo.startsWith('http') ? (
+                            <img src={t.logo} alt={t.name} className="w-full h-full object-cover" />
+                          ) : (
+                            t.logo
+                          )
+                        ) : (
+                          '🛡️'
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{t.name}</h4>
+                        <span className="text-[10px] text-gray-500 font-bold block mt-0.5">{t.wins || 0} Galibiyet · {t.losses || 0} Mağlubiyet</span>
+                      </div>
+                      <div className="w-7 h-7 rounded-full bg-[#00F2FE]/10 border border-[#00F2FE]/20 flex items-center justify-center text-[#00F2FE] group-hover:bg-[#00F2FE] group-hover:text-black transition-all">
+                        <Plus size={14} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-2xl border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         {/* Navigasyon Satırı */}
@@ -970,11 +1493,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
             </p>
           </div>
           {/* Sağ Aksiyon: Doluluk Göstergesi veya Maçtan Ayrıl Butonu */}
-          {isAlreadyJoined ? (
+          {(isAlreadyJoined || isAlreadyJoinedReserve) ? (
             <button 
               onClick={() => setShowLeaveConfirm(true)}
               className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
-              Maçtan Ayrıl
+              {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
             </button>
           ) : (
             <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
@@ -987,36 +1510,128 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
         {/* Maç Bilgi Şeridi */}
         <div className="px-5 pb-4">
           <div className="bg-[#161B22]/80 backdrop-blur-md rounded-2xl border border-white/5 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-            <div className="flex items-start gap-3 mb-3">
-              {/* Sol — Konum ve Zaman */}
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-[#39FF14] italic drop-shadow-[0_0_12px_rgba(57,255,20,0.8)] truncate">{match.location || 'Konum Belirtilmemiş'}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">{match.date || '—'}</span>
+            {/* VS Matchup Row */}
+            <div className="flex flex-col gap-4 mb-3">
+              <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-2xl p-4 relative overflow-hidden">
+                {/* Diagonal background glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-red-500/5 pointer-events-none" />
+                
+                {/* Ev Sahibi Takım */}
+                <button
+                  onClick={() => setPitchSide('home')}
+                  className={`flex-1 flex flex-col items-center text-center min-w-0 p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                    pitchSide === 'home'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                      : 'bg-transparent border-transparent opacity-50 hover:opacity-80'
+                  }`}
+                >
+                  <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(16,185,129,0.15)] mb-1 overflow-hidden">
+                    {homeTeam?.logo ? (
+                      homeTeam.logo.startsWith('http') ? (
+                        <img src={homeTeam.logo} alt={homeTeam.name} className="w-full h-full object-cover" />
+                      ) : (
+                        homeTeam.logo
+                      )
+                    ) : (
+                      '🛡️'
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-black text-[#FFFF00] drop-shadow-[0_0_8px_rgba(255,255,0,0.6)]">{match.time || '—'}</span>
+                  <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block leading-tight">EV SAHİBİ</span>
+                  <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">{homeTeam?.name || 'Takım A'}</h4>
+                  <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
+                    <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
+                    <span className="text-[9px] text-[#FFFF00] font-black italic">{homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue)/1000) : 80}</span>
+                  </div>
+                </button>
+
+                {/* VS Badge */}
+                <div className="flex flex-col items-center justify-center px-2 z-10">
+                  <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-[#FFFF00] font-black italic text-[10px] shadow-[0_0_15px_rgba(255,255,0,0.2)]">
+                    VS
                   </div>
                 </div>
+
+                {/* Deplasman Takımı */}
+                <button
+                  onClick={() => {
+                    if (awayTeam) {
+                      setPitchSide('away');
+                    } else {
+                      setShowJoinOpponentModal(true);
+                    }
+                  }}
+                  className={`flex-1 flex flex-col items-center text-center min-w-0 p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                    pitchSide === 'away'
+                      ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+                      : 'bg-transparent border-transparent opacity-50 hover:opacity-80'
+                  }`}
+                >
+                  {awayTeam ? (
+                    <>
+                      <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)] mb-1 overflow-hidden">
+                        {awayTeam.logo ? (
+                          awayTeam.logo.startsWith('http') ? (
+                            <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
+                          ) : (
+                            awayTeam.logo
+                          )
+                        ) : (
+                          '🛡️'
+                        )}
+                      </div>
+                      <span className="text-[8px] font-black text-red-400 uppercase tracking-widest block leading-tight">DEPLASMAN</span>
+                      <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">{awayTeam.name}</h4>
+                      <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
+                        <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
+                        <span className="text-[9px] text-[#FFFF00] font-black italic">{awayTeam.teamValue ? Math.round(parseInt(awayTeam.teamValue)/1000) : 78}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-11 h-11 rounded-xl bg-red-950/20 border border-red-500/30 flex items-center justify-center text-red-500 font-black text-base animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.2)] mb-1">
+                        ?
+                      </div>
+                      <span className="text-[8px] font-black text-red-500/70 uppercase tracking-widest block leading-tight animate-pulse">RAKİP ARANIYOR</span>
+                      <span className="text-[7px] text-white/40 font-bold uppercase tracking-wider mt-1 block">Tıkla Meydan Oku</span>
+                    </>
+                  )}
+                </button>
               </div>
-              {/* Sağ — Badgeler */}
-              <div className="flex flex-col items-end gap-1.5">
-                {/* Ciddiyet */}
-                <div className="px-2.5 py-1 rounded-full font-black text-[9px] uppercase tracking-widest border"
-                  style={{
-                    color: diffConf.color,
-                    borderColor: diffConf.color + '40',
-                    background: diffConf.color + '15',
-                    boxShadow: `0 0 10px ${diffConf.glow}`,
-                  }}>
-                  {diffConf.label}
+
+              {/* Detay Bilgileri Şeridi */}
+              <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1 text-white/60 text-[9px] font-bold uppercase tracking-widest">
+                    <MapPin size={9} className="text-[#39FF14]" />
+                    <span className="truncate max-w-[200px]">{match.location || 'Konum Belirtilmemiş'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/40 text-[9px] font-bold uppercase tracking-widest">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={9} />
+                      <span>{match.date || '—'}</span>
+                    </div>
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <Clock size={9} />
+                      <span className="text-[#FFFF00]">{match.time || '—'}</span>
+                    </div>
+                  </div>
                 </div>
-                {/* Format */}
-                <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 font-black text-[9px] uppercase tracking-widest text-white/60">
-                  {squadSize.toUpperCase()}
+
+                {/* Badgeler */}
+                <div className="flex items-center gap-1.5">
+                  <div className="px-2 py-0.5 rounded-full font-black text-[8px] uppercase tracking-widest border"
+                    style={{
+                      color: diffConf.color,
+                      borderColor: diffConf.color + '40',
+                      background: diffConf.color + '15',
+                      boxShadow: `0 0 10px ${diffConf.glow}`,
+                    }}>
+                    {diffConf.label}
+                  </div>
+                  <div className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 font-black text-[8px] uppercase tracking-widest text-white/60">
+                    {squadSize.toUpperCase()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1049,16 +1664,212 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
       {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
       <main className="flex-1 px-4 overflow-y-auto custom-scrollbar pb-36 pt-4">
 
-        {/* Kadro Durumu Mesajı */}
-        {isAlreadyJoined && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-4 flex items-center gap-3 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-2xl px-4 py-3">
-            <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" />
-            <p className="text-xs font-bold text-[#39FF14]">
-              Kadroya alındın! Boş pozisyonlara <span className="font-black">+</span> basarak arkadaşlarını davet edebilirsin.
-            </p>
-          </motion.div>
-        )}
+        {/* Lobi Sekme Seçici */}
+        <div className="flex bg-[#161B22]/80 backdrop-blur-md rounded-2xl border border-white/5 p-1 mb-4">
+          <button
+            onClick={() => setLobbyTab('squad')}
+            className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer ${
+              lobbyTab === 'squad'
+                ? 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            KADRO / DİZİLİŞ
+          </button>
+          <button
+            onClick={() => setLobbyTab('chat')}
+            className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer relative ${
+              lobbyTab === 'chat'
+                ? 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            LOBİ SOHBETİ
+            {match.chatMessages && match.chatMessages.length > 0 && lobbyTab !== 'chat' && (
+              <span className="absolute top-1.5 right-3 w-2.5 h-2.5 rounded-full bg-[#39FF14] animate-ping" />
+            )}
+          </button>
+        </div>
+
+        {lobbyTab === 'chat' ? (
+          /* ── LOBİ SOHBETİ SEKME İÇERİĞİ ───────────────────────────────── */
+          <div className="bg-[#161B22]/80 border border-white/5 rounded-3xl p-5 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex flex-col h-[520px] relative overflow-hidden">
+            {/* Ambiyans glow */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#39FF14]/5 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Mesaj Listesi */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide">
+              {(match.chatMessages || [
+                {
+                  id: 'm1',
+                  senderId: 'mock_1',
+                  senderName: 'Mert H. (KL)',
+                  senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
+                  text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
+                  timestamp: '10:42'
+                },
+                {
+                  id: 'm2',
+                  senderId: 'mock_2',
+                  senderName: 'Burak Y. (STP)',
+                  senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
+                  text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
+                  timestamp: '10:45'
+                },
+                {
+                  id: 'm3',
+                  senderId: 'mock_3',
+                  senderName: 'Arda G. (SNT)',
+                  senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
+                  text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
+                  timestamp: '10:48'
+                }
+              ]).map((msg) => {
+                const isMe = msg.senderId === currentUserProfile.id;
+                return (
+                  <div key={msg.id} className={`flex gap-3 items-start ${isMe ? 'flex-row-reverse' : ''}`}>
+                    <img src={msg.senderAvatar} alt={msg.senderName} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                    <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                      <div className="flex items-center gap-1.5 mb-1 px-1">
+                        <span className="text-[9px] font-black text-white/50 uppercase tracking-wider">{msg.senderName}</span>
+                        <span className="text-[7px] text-white/30 font-semibold">{msg.timestamp}</span>
+                      </div>
+                      <div className={`p-3.5 rounded-2xl text-xs font-medium leading-relaxed ${
+                        isMe 
+                          ? 'bg-[#39FF14] text-black rounded-tr-none shadow-[0_0_15px_rgba(57,255,20,0.25)]' 
+                          : 'bg-black/50 border border-white/5 text-white/90 rounded-tl-none'
+                      }`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Gönderme Alanı */}
+            <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
+              <input
+                type="text"
+                value={chatInputText}
+                onChange={(e) => setChatInputText(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    if (!chatInputText.trim()) return;
+                    const now = new Date();
+                    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    const newMsg = {
+                      id: `chat_${Date.now()}`,
+                      senderId: currentUserProfile.id,
+                      senderName: currentUserProfile.name,
+                      senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
+                      text: chatInputText.trim(),
+                      timestamp: timeStr
+                    };
+                    const defaultChatMessages = [
+                      {
+                        id: 'm1',
+                        senderId: 'mock_1',
+                        senderName: 'Mert H. (KL)',
+                        senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
+                        text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
+                        timestamp: '10:42'
+                      },
+                      {
+                        id: 'm2',
+                        senderId: 'mock_2',
+                        senderName: 'Burak Y. (STP)',
+                        senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
+                        text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
+                        timestamp: '10:45'
+                      },
+                      {
+                        id: 'm3',
+                        senderId: 'mock_3',
+                        senderName: 'Arda G. (SNT)',
+                        senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
+                        text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
+                        timestamp: '10:48'
+                      }
+                    ];
+                    const updatedMessages = [...(match.chatMessages || defaultChatMessages), newMsg];
+                    try {
+                      await updateMatch({ ...match, chatMessages: updatedMessages });
+                      setChatInputText('');
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }
+                }}
+                placeholder="Takıma mesaj yaz..."
+                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#39FF14]/40"
+              />
+              <button
+                onClick={async () => {
+                  if (!chatInputText.trim()) return;
+                  const now = new Date();
+                  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                  const newMsg = {
+                    id: `chat_${Date.now()}`,
+                    senderId: currentUserProfile.id,
+                    senderName: currentUserProfile.name,
+                    senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
+                    text: chatInputText.trim(),
+                    timestamp: timeStr
+                  };
+                  const defaultChatMessages = [
+                    {
+                      id: 'm1',
+                      senderId: 'mock_1',
+                      senderName: 'Mert H. (KL)',
+                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
+                      text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
+                      timestamp: '10:42'
+                    },
+                    {
+                      id: 'm2',
+                      senderId: 'mock_2',
+                      senderName: 'Burak Y. (STP)',
+                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
+                      text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
+                      timestamp: '10:45'
+                    },
+                    {
+                      id: 'm3',
+                      senderId: 'mock_3',
+                      senderName: 'Arda G. (SNT)',
+                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
+                      text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
+                      timestamp: '10:48'
+                    }
+                  ];
+                  const updatedMessages = [...(match.chatMessages || defaultChatMessages), newMsg];
+                  try {
+                    await updateMatch({ ...match, chatMessages: updatedMessages });
+                    setChatInputText('');
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                className="p-3 bg-[#39FF14] text-black rounded-xl hover:shadow-[0_0_12px_rgba(57,255,20,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+              >
+                <Send size={15} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* ── KADRO / DİZİLİŞ SEKME İÇERİĞİ ────────────────────────────── */
+          <>
+            {/* Kadro Durumu Mesajı */}
+            {isAlreadyJoined && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                className="mb-4 flex items-center gap-3 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-2xl px-4 py-3">
+                <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" />
+                <p className="text-xs font-bold text-[#39FF14]">
+                  Kadroya alındın! Boş pozisyonlara <span className="font-black">+</span> basarak arkadaşlarını davet edebilirsin.
+                </p>
+              </motion.div>
+            )}
 
         {/* ── MAÇ KRİTERLERİ & KURALLAR ───────────────────────────────────── */}
         <AnimatePresence>
@@ -1092,7 +1903,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                   {/* Hakem Durumu */}
                   <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center col-span-2 shadow-inner">
                     <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">HAKEM</span>
-                    <span className="text-base font-serif italic text-purple-300 drop-shadow-[0_0_12px_rgba(168,85,247,0.8)] block">
+                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">
                       {hasReferee ? 'Lisanslı Hakem' : 'Kaptan Yönetimi'}
                     </span>
                   </div>
@@ -1100,7 +1911,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                   {/* Katılım Ücreti */}
                   <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
                     <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">ÜCRET</span>
-                    <span className="text-base font-serif italic text-[#39FF14] drop-shadow-[0_0_12px_rgba(57,255,20,0.8)] block">
+                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">
                       {match.price > 0 ? `${match.price} ₺` : 'Ücretsiz'}
                     </span>
                   </div>
@@ -1108,19 +1919,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                   {/* Süre */}
                   <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
                     <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">SÜRE</span>
-                    <span className="text-base font-serif italic text-red-400 drop-shadow-[0_0_12px_rgba(248,113,113,0.8)] block">{durationRule}</span>
+                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">{durationRule}</span>
                   </div>
 
                   {/* Yaş Sınırı */}
                   <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
                     <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">YAŞ GRUBU</span>
-                    <span className="text-base font-serif italic text-orange-300 drop-shadow-[0_0_12px_rgba(253,186,116,0.8)] block">{ageLimit}</span>
+                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">{ageLimit}</span>
                   </div>
 
                   {/* Cinsiyet */}
                   <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
                     <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">CİNSİYET</span>
-                    <span className="text-base font-serif italic text-pink-300 drop-shadow-[0_0_12px_rgba(244,114,182,0.8)] block">{genderRule}</span>
+                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">{genderRule}</span>
                   </div>
                 </div>
               </div>
@@ -1134,16 +1945,42 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.9)] animate-pulse" />
               <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
-                Maç Lobisi
+                {pitchSide === 'home' ? 'Ev Sahibi Kadrosu' : 'Deplasman Kadrosu'}
               </p>
             </div>
-            {selectedSlotId && (
+            {selectedSlotId && pitchSide === 'home' && (
               <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                 className="text-[9px] font-black text-[#39FF14] uppercase tracking-widest bg-[#39FF14]/10 px-2.5 py-1 rounded-full border border-[#39FF14]/30 animate-pulse">
                 Pozisyon Seçildi ✓
               </motion.span>
             )}
           </div>
+
+          {/* Deplasman Kadrosu Seçim Paneli */}
+          {awayTeam && (
+            <div className="flex bg-black/40 border border-white/5 rounded-2xl p-1 mb-4 max-w-[380px] mx-auto">
+              <button
+                onClick={() => setPitchSide('home')}
+                className={`flex-1 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all cursor-pointer ${
+                  pitchSide === 'home'
+                    ? 'bg-white/10 text-white border border-white/10 shadow-[0_2px_8px_rgba(255,255,255,0.05)]'
+                    : 'text-white/40 hover:text-white'
+                }`}
+              >
+                EV SAHİBİ
+              </button>
+              <button
+                onClick={() => setPitchSide('away')}
+                className={`flex-1 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all cursor-pointer ${
+                  pitchSide === 'away'
+                    ? 'bg-white/10 text-white border border-white/10 shadow-[0_2px_8px_rgba(255,255,255,0.05)]'
+                    : 'text-white/40 hover:text-white'
+                }`}
+              >
+                DEPLASMAN
+              </button>
+            </div>
+          )}
 
           {/* Saha Kapsayıcısı */}
           <div className="relative w-full max-w-[380px] mx-auto rounded-[28px] overflow-hidden aspect-[3/4] border-4 border-[#161B22] shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_80px_rgba(0,0,0,0.6)]"
@@ -1182,7 +2019,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
             </div>
 
             {/* SLOTLAR — Kanonik Koordinatlarla */}
-            {enrichedSlots.map((slot) => {
+            {(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).map((slot) => {
               if (!slot) return null;
               const isSelected = selectedSlotId === slot.id;
               const isTaken = slot.status === 'TAKEN';
@@ -1307,46 +2144,205 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
               ? '+ butonuna basarak arkadaşlarını davet et'
               : 'Pozisyona dokun — ardından aşağıdan "Sahaya Çık"'}
           </p>
+
+          {/* Yedek Kulübesi (Reserve List) */}
+          <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.25em]">
+                Yedek Kulübesi ({match.reservePlayers?.length || 0})
+              </span>
+              {isAlreadyJoinedReserve && (
+                <span className="text-[8px] font-black text-[#FFFF00] uppercase tracking-widest animate-pulse">
+                  Sıranız: {(match.reservePlayers || []).findIndex(p => p.id === currentUserProfile.id) + 1}
+                </span>
+              )}
+            </div>
+            {(!match.reservePlayers || match.reservePlayers.length === 0) ? (
+              <p className="text-[9px] text-white/25 italic px-1">Yedek listesinde kimse yok. Sıra boş.</p>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {match.reservePlayers.map((player, idx) => (
+                  <div key={player.id} className="flex flex-col items-center gap-1 shrink-0 bg-black/40 border border-white/5 rounded-2xl p-2.5 min-w-[75px] relative overflow-hidden group">
+                    <div className="relative">
+                      <img src={player.avatar} alt={player.name} className="w-9 h-9 rounded-full object-cover border border-white/10" />
+                      <div className="absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-full bg-amber-500 border border-black flex items-center justify-center text-[8px] font-black text-black">
+                        {idx + 1}
+                      </div>
+                    </div>
+                    <span className="text-[8px] font-bold text-white/70 truncate max-w-[65px]">{player.name.split(' ')[0]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Taktik / Diziliş Seçimi (Yalnızca Kaptanlara Özel) */}
+          {((pitchSide === 'home' && isHomeCaptain) || (pitchSide === 'away' && isAwayCaptain)) && (
+            <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto">
+              <span className="block text-[8px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 px-1">
+                TAKIM DİZİLİŞİNİ GÜNCELLE
+              </span>
+              <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                {Object.keys(FORMATIONS[pitchSide === 'home' ? squadSize : inferSquadSize(match.awaySlots?.length || match.slots.length)] || {}).map(fName => (
+                  <button
+                    key={fName}
+                    onClick={async () => {
+                      try {
+                        setIsProcessing(true);
+                        const sizeVal = pitchSide === 'home' ? squadSize : inferSquadSize(match.awaySlots?.length || match.slots.length);
+                        const coords = FORMATIONS[sizeVal]?.[fName];
+                        if (coords) {
+                          if (pitchSide === 'home') {
+                            const updatedSlots = (match.slots || []).map((s, index) => {
+                              const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
+                              return {
+                                ...s,
+                                x: coord.x,
+                                y: coord.y,
+                                role: coord.role,
+                                player: s.player ? { ...s.player, position: coord.role, x: coord.x, y: coord.y } : undefined
+                              };
+                            });
+                            await updateMatch({ ...match, slots: updatedSlots });
+                          } else {
+                            const updatedAwaySlots = (match.awaySlots || []).map((s, index) => {
+                              const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
+                              return {
+                                ...s,
+                                x: coord.x,
+                                y: coord.y,
+                                role: coord.role,
+                                player: s.player ? { ...s.player, position: coord.role, x: coord.x, y: coord.y } : undefined
+                              };
+                            });
+                            await updateMatch({ ...match, awaySlots: updatedAwaySlots });
+                          }
+                          if (navigator.vibrate) navigator.vibrate(30);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 hover:border-[#39FF14]/40 text-white hover:text-[#39FF14] text-[10px] font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 cursor-pointer"
+                  >
+                    {fName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ── EKSTRA DESTEK SERVİSLERİ ──────────────────────────────────── */}
-        <div className="space-y-3">
-          <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Ekstra Destek</p>
+        {/* ── KULÜP VE DESTEK SERVİSLERİ (2x2 Grid) ─────────────────────────── */}
+        <div className="space-y-3 mt-6">
+          <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Kulüp & Destek Servisleri</p>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {/* Kaleci Kirala */}
+            <motion.button
+              whileHover={hiringState.gk === 'BROADCASTING' ? {} : { scale: 1.02 }}
+              whileTap={hiringState.gk === 'BROADCASTING' ? {} : { scale: 0.97 }}
+              disabled={hiringState.gk === 'BROADCASTING'}
+              onClick={() => {
+                setHiringState(p => ({ ...p, gk: 'IDLE' }));
+                setHireModalType('GK');
+              }}
+              className={`p-4 rounded-2xl bg-[#161B22]/80 border transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden ${
+                hiringState.gk === 'BROADCASTING' 
+                  ? 'border-[#39FF14]/30 shadow-[0_0_20px_rgba(57,255,20,0.15)] opacity-90' 
+                  : 'border-white/5 hover:border-[#39FF14]/30'
+              }`}
+            >
+              <div className={`absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl pointer-events-none ${hiringState.gk === 'BROADCASTING' ? 'from-[#39FF14]/20' : 'from-[#39FF14]/10'} to-transparent`} />
+              <div className={`p-2.5 rounded-xl border transition-all ${
+                hiringState.gk === 'BROADCASTING' 
+                  ? 'bg-[#39FF14]/20 text-[#39FF14] border-[#39FF14]/30 shadow-[0_0_12px_rgba(57,255,20,0.3)]' 
+                  : 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/20 group-hover:shadow-[0_0_12px_rgba(57,255,20,0.4)]'
+              }`}>
+                {hiringState.gk === 'BROADCASTING' ? <Loader2 size={16} className="animate-spin" /> : <Hand size={16} />}
+              </div>
+              <div>
+                <h4 className={`font-black text-xs uppercase tracking-wider ${hiringState.gk === 'BROADCASTING' ? 'text-[#39FF14]' : 'text-white'}`}>
+                  {hiringState.gk === 'BROADCASTING' ? 'Teklif Yayında ⚡' : 'Kaleci Kirala'}
+                </h4>
+                <p className="text-[8px] text-white/40 font-bold mt-0.5 uppercase tracking-wide">
+                  {hiringState.gk === 'BROADCASTING' ? 'Kaleciler İnceliyor...' : 'Pro Eldiven Çağır'}
+                </p>
+              </div>
+            </motion.button>
 
-          <button onClick={() => { setHiringState(p => ({ ...p, gk: 'IDLE' })); setHireModalType('GK'); }}
-            disabled={hiringState.gk === 'BROADCASTING'}
-            className="w-full p-4 rounded-[22px] bg-[#161B22] border border-white/5 flex items-center gap-4 transition-all hover:bg-white/[0.025] active:scale-[0.98] group">
-            <div className={`p-3 rounded-2xl transition-colors ${hiringState.gk === 'BROADCASTING' ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'bg-white/5 text-white/50 group-hover:bg-[#39FF14]/10 group-hover:text-[#39FF14]'}`}>
-              {hiringState.gk === 'BROADCASTING' ? <Loader2 size={18} className="animate-spin" /> : <Hand size={18} />}
-            </div>
-            <div className="text-left flex-1">
-              <h4 className={`font-black text-sm uppercase tracking-tight ${hiringState.gk === 'BROADCASTING' ? 'text-[#39FF14]' : 'text-white'}`}>
-                {hiringState.gk === 'BROADCASTING' ? 'Teklif Yayında ⚡' : 'Kiralık Kaleci'}
-              </h4>
-              <p className="text-[10px] text-white/35 mt-0.5">
-                {hiringState.gk === 'BROADCASTING' ? 'Bölgedeki kaleciler inceliyor...' : 'Kalede açık varsa profesyonel çağır'}
-              </p>
-            </div>
-            <ChevronRight size={16} className="text-white/20 group-hover:text-white/40 transition-colors" />
-          </button>
+            {/* Hakem Kirala */}
+            <motion.button
+              whileHover={hiringState.ref === 'BROADCASTING' ? {} : { scale: 1.02 }}
+              whileTap={hiringState.ref === 'BROADCASTING' ? {} : { scale: 0.97 }}
+              disabled={hiringState.ref === 'BROADCASTING'}
+              onClick={() => {
+                setHireModalType('REF');
+              }}
+              className={`p-4 rounded-2xl bg-[#161B22]/80 border transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden ${
+                hiringState.ref === 'BROADCASTING' 
+                  ? 'border-[#FFFF00]/30 shadow-[0_0_20px_rgba(255,255,0,0.15)] opacity-90' 
+                  : 'border-white/5 hover:border-[#FFFF00]/30'
+              }`}
+            >
+              <div className={`absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl pointer-events-none ${hiringState.ref === 'BROADCASTING' ? 'from-[#FFFF00]/20' : 'from-[#FFFF00]/10'} to-transparent`} />
+              <div className={`p-2.5 rounded-xl border transition-all ${
+                hiringState.ref === 'BROADCASTING' 
+                  ? 'bg-[#FFFF00]/20 text-[#FFFF00] border-[#FFFF00]/30 shadow-[0_0_12px_rgba(255,255,0,0.3)]' 
+                  : 'bg-[#FFFF00]/10 text-[#FFFF00] border-[#FFFF00]/20 group-hover:shadow-[0_0_12px_rgba(255,255,0,0.4)]'
+              }`}>
+                {hiringState.ref === 'BROADCASTING' ? <Loader2 size={16} className="animate-spin" /> : <Scale size={16} />}
+              </div>
+              <div>
+                <h4 className={`font-black text-xs uppercase tracking-wider ${hiringState.ref === 'BROADCASTING' ? 'text-[#FFFF00]' : 'text-white'}`}>
+                  {hiringState.ref === 'BROADCASTING' ? 'Hakem Aranıyor ⚡' : 'Hakem Kirala'}
+                </h4>
+                <p className="text-[8px] text-white/40 font-bold mt-0.5 uppercase tracking-wide">
+                  {hiringState.ref === 'BROADCASTING' ? 'Onay Bekleniyor...' : 'Lisanslı Hakem İste'}
+                </p>
+              </div>
+            </motion.button>
 
-          <button onClick={() => hiringState.ref !== 'BROADCASTING' && setHireModalType('REF')}
-            className="w-full p-4 rounded-[22px] bg-[#161B22] border border-white/5 flex items-center gap-4 transition-all hover:bg-white/[0.025] active:scale-[0.98] group">
-            <div className={`p-3 rounded-2xl transition-colors ${hiringState.ref === 'BROADCASTING' ? 'bg-[#FFFF00]/15 text-[#FFFF00]' : 'bg-white/5 text-white/50 group-hover:bg-[#FFFF00]/10 group-hover:text-[#FFFF00]'}`}>
-              {hiringState.ref === 'BROADCASTING' ? <Loader2 size={18} className="animate-spin" /> : <Scale size={18} />}
-            </div>
-            <div className="text-left flex-1">
-              <h4 className={`font-black text-sm uppercase tracking-tight ${hiringState.ref === 'BROADCASTING' ? 'text-[#FFFF00]' : 'text-white'}`}>
-                {hiringState.ref === 'BROADCASTING' ? 'Hakem Aranıyor ⚡' : 'Resmi Hakem'}
-              </h4>
-              <p className="text-[10px] text-white/35 mt-0.5">
-                {hiringState.ref === 'BROADCASTING' ? 'Onaylı hakemlere iletildi' : 'Maçı otoriteye teslim et'}
-              </p>
-            </div>
-            <ChevronRight size={16} className="text-white/20 group-hover:text-white/40 transition-colors" />
-          </button>
+            {/* Rakip Ekle */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowOpponentModal(true)}
+              className="p-4 rounded-2xl bg-[#161B22]/80 border border-white/5 hover:border-pink-500/30 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-pink-500/10 to-transparent pointer-events-none" />
+              <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-500 border border-pink-500/20 group-hover:shadow-[0_0_12px_rgba(236,72,153,0.4)] transition-all">
+                <Shield size={16} />
+              </div>
+              <div>
+                <h4 className="font-black text-xs text-white uppercase tracking-wider">Rakip Ekle</h4>
+                <p className="text-[8px] text-white/40 font-bold mt-0.5 uppercase tracking-wide">Meydan Oku / Davet</p>
+              </div>
+            </motion.button>
+
+            {/* Rakip Olarak Katıl */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowJoinOpponentModal(true)}
+              className="p-4 rounded-2xl bg-[#161B22]/80 border border-white/5 hover:border-[#00F2FE]/30 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-[#00F2FE]/10 to-transparent pointer-events-none" />
+              <div className="p-2.5 rounded-xl bg-[#00F2FE]/10 text-[#00F2FE] border border-[#00F2FE]/20 group-hover:shadow-[0_0_12px_rgba(0,242,254,0.4)] transition-all">
+                <Users size={16} />
+              </div>
+              <div>
+                <h4 className="font-black text-xs text-white uppercase tracking-wider">Rakip Katıl</h4>
+                <p className="text-[8px] text-white/40 font-bold mt-0.5 uppercase tracking-wide">Deplasman Olarak Gir</p>
+              </div>
+            </motion.button>
+          </div>
         </div>
-      </main>
+      </>
+    )}
+  </main>
 
       {/* ── DİNAMİK NEON AKSİYON BARI ─────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 w-full z-30 pointer-events-none">
@@ -1360,73 +2356,141 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                 <CheckCircle2 size={20} className="text-[#39FF14]" />
                 <span className="font-black text-sm text-[#39FF14] uppercase tracking-widest">KADRODASIN</span>
               </motion.div>
-            ) : isCaptain && selectedSlotId ? (
-              /* ── Kaptan Split CTA ─────────────────────────────────────── */
-              <div className="flex gap-3">
-                {/* Sahaya Çık */}
-                <motion.button
-                  onClick={handleJoin}
-                  disabled={isProcessing}
-                  animate={{ scale: [1, 1.015, 1] }}
-                  transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-[60%] h-16 rounded-[22px] font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 transition-all text-black cursor-pointer"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)',
-                    boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
-                  }}>
-                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <><span>SAHAYA ÇIK</span><ChevronRight size={17} /></>}
-                </motion.button>
-                {/* Oyuncu Ekle */}
-                <motion.button
-                  onClick={() => {
-                    const s = (match.slots || []).find(sl => sl?.id === selectedSlotId);
-                    if (s) setInviteModalSlotId(selectedSlotId);
-                  }}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-[40%] h-16 rounded-[22px] font-black text-xs uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 text-white transition-all cursor-pointer"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(0,242,254,0.15) 0%, rgba(79,172,254,0.10) 100%)',
-                    border: '1px solid rgba(0,242,254,0.3)',
-                    boxShadow: '0 0 20px rgba(0,242,254,0.25)',
-                  }}>
-                  <UserPlus size={15} />
-                  <span>OYUNCU</span>
-                </motion.button>
-              </div>
-            ) : (
-              /* ── Standart CTA ─────────────────────────────────────────── */
-              <motion.button
-                disabled={!selectedSlotId || isProcessing}
-                onClick={handleJoin}
-                animate={selectedSlotId ? { scale: [1, 1.018, 1] } : { opacity: [0.75, 1, 0.75] }}
-                transition={selectedSlotId ? { repeat: Infinity, duration: 2, ease: 'easeInOut' } : { repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-400 cursor-pointer"
-                style={selectedSlotId ? {
-                  background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)',
-                  boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
-                  color: '#000',
-                  border: 'none',
-                } : {
-                  background: 'rgba(255, 255, 0, 0.03)',
-                  border: '1.5px dashed rgba(255, 255, 0, 0.35)',
-                  color: '#FFFF00',
-                  boxShadow: '0 0 15px rgba(255, 255, 0, 0.1)',
-                }}>
-                {isProcessing ? (
-                  <><Loader2 size={20} className="animate-spin" /><span>KAYIT EDİLİYOR...</span></>
-                ) : selectedSlotId ? (
-                  <><span>SAHAYA ÇIK</span><ChevronRight size={20} /></>
-                ) : (
-                  <>
-                    <Zap size={14} className="animate-bounce" />
-                    <span>ÖNCE POZİSYON SEÇ</span>
-                  </>
-                )}
-              </motion.button>
-            )}
+            ) : isAlreadyJoinedReserve ? (
+              /* ── Zaten Yedek Kulübesindeyim ─────────────────────────── */
+              (() => {
+                const reserveIndex = (match.reservePlayers || []).findIndex(p => p.id === currentUserProfile.id);
+                return (
+                  <div className="flex gap-3 w-full">
+                    <div className="flex-1 flex items-center justify-center gap-2 h-16 rounded-[24px] border border-amber-500/20 bg-amber-500/5">
+                      <Clock size={16} className="text-amber-500 animate-pulse" />
+                      <span className="font-black text-xs text-amber-500 uppercase tracking-widest">
+                        YEDEK LİSTESİNDESİN (SIRA: {reserveIndex + 1})
+                      </span>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setShowLeaveConfirm(true)}
+                      className="px-6 h-16 rounded-[24px] bg-red-500/10 border border-red-500/20 text-red-500 font-black text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                    >
+                      AYRIL
+                    </motion.button>
+                  </div>
+                );
+              })()
+            ) : (() => {
+              const activeSlots = pitchSide === 'home' ? (match.slots || []) : (match.awaySlots || []);
+              const isActiveSideFull = activeSlots.length > 0 && activeSlots.every(s => s.status === 'TAKEN');
+              
+              if (isActiveSideFull) {
+                return (
+                  <motion.button
+                    onClick={handleJoinAsReserve}
+                    disabled={isProcessing}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full h-16 rounded-[24px] bg-amber-500 text-black font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(245,158,11,0.4)] cursor-pointer"
+                  >
+                    {isProcessing ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      <>
+                        <Clock size={18} />
+                        <span>KADRO DOLU - YEDEK OLARAK KATIL</span>
+                      </>
+                    )}
+                  </motion.button>
+                );
+              }
+
+              if (selectedSlotId) {
+                if (isCaptain) {
+                  return (
+                    <div className="flex gap-3">
+                      {/* Sahaya Çık */}
+                      <motion.button
+                        onClick={handleJoin}
+                        disabled={isProcessing}
+                        animate={{ scale: [1, 1.015, 1] }}
+                        transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-[60%] h-16 rounded-[22px] font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 transition-all text-black cursor-pointer"
+                        style={{
+                          background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)',
+                          boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
+                        }}>
+                        {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <><span>SAHAYA ÇIK</span><ChevronRight size={17} /></>}
+                      </motion.button>
+                      {/* Oyuncu Ekle */}
+                      <motion.button
+                        onClick={() => {
+                          setInviteModalSlotId(selectedSlotId);
+                        }}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-[40%] h-16 rounded-[22px] font-black text-xs uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 text-white transition-all cursor-pointer"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(0,242,254,0.15) 0%, rgba(79,172,254,0.10) 100%)',
+                          border: '1px solid rgba(0,242,254,0.3)',
+                          boxShadow: '0 0 20px rgba(0,242,254,0.25)',
+                        }}>
+                        <UserPlus size={15} />
+                        <span>OYUNCU</span>
+                      </motion.button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <motion.button
+                    disabled={isProcessing}
+                    onClick={handleJoin}
+                    animate={{ scale: [1, 1.018, 1] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-400 cursor-pointer"
+                    style={{
+                      background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)',
+                      boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
+                      color: '#000',
+                      border: 'none',
+                    }}>
+                    {isProcessing ? (
+                      <><Loader2 size={20} className="animate-spin" /><span>KAYIT EDİLİYOR...</span></>
+                    ) : (
+                      <><span>SAHAYA ÇIK</span><ChevronRight size={20} /></>
+                    )}
+                  </motion.button>
+                );
+              }
+
+              // Selected slot is NOT set and squad is NOT full
+              return (
+                <div className="flex gap-3">
+                  <div className="w-[55%] h-16 rounded-[24px] bg-white/[0.02] border border-dashed border-white/20 text-white/40 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                    <Zap size={13} className="text-white/20" />
+                    <span>POZİSYON SEÇ</span>
+                  </div>
+                  <motion.button
+                    onClick={handleJoinAsReserve}
+                    disabled={isProcessing}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-[45%] h-16 rounded-[24px] border border-[#FFFF00]/30 hover:border-[#FFFF00] bg-black/40 text-[#FFFF00] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-[0_0_15px_rgba(255,255,0,0.05)]"
+                  >
+                    {isProcessing ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <>
+                        <Plus size={14} />
+                        <span>YEDEK KATIL</span>
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

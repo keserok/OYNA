@@ -87,60 +87,162 @@ const BookingAddons: React.FC<BookingAddonsProps> = ({
 
        <main className="flex-1 p-6 space-y-6 overflow-y-auto custom-scrollbar pb-40">
             
-            {/* Section 1: Talent Modules (Side-by-Side Buttons) */}
+            {/* Section 1: Talent Modules (Side-by-Side Premium Cards) */}
             <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <Users size={16} className="text-[#FFFF00]" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Profesyonel Destek</h3>
+                <div className="flex items-center gap-2 mb-1">
+                    <Users size={14} className="text-[#FFFF00] drop-shadow-[0_0_8px_rgba(255,255,0,0.5)]" />
+                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Profesyonel Destek</h3>
                 </div>
                 
                 <div className="flex gap-3">
-                  <button 
-                    onClick={() => onNavigate('MARKETPLACE_GK')}
-                    className={`flex-1 h-24 rounded-3xl border flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden ${selectedGk ? 'bg-green-500/10 border-green-500 text-green-400' : 'bg-[#161B22] border-white/5 text-gray-400 hover:border-white/20'}`}
-                  >
-                    <Hand size={24} className={selectedGk ? 'text-green-400' : 'text-gray-500'} />
-                    <span className="text-xs font-black uppercase tracking-widest">KALECİ</span>
-                    {selectedGk && <CheckCircle2 size={14} className="absolute top-2 right-2 text-green-400" />}
-                  </button>
+                  {selectedGk ? (
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => onNavigate('MARKETPLACE_GK')}
+                      className="flex-1 min-h-[125px] rounded-[24px] border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 to-black/85 p-3.5 flex flex-col justify-between relative overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.15)] group cursor-pointer"
+                    >
+                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 pointer-events-none" />
+                      
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                          <Hand size={10} className="text-emerald-400" />
+                          <span className="text-[8px] font-black text-emerald-400 tracking-wider">KALECİ</span>
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onRemoveGk(); }}
+                          className="w-5 h-5 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
 
-                  <button 
-                    onClick={() => onNavigate('MARKETPLACE_REF')}
-                    className={`flex-1 h-24 rounded-3xl border flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden ${selectedRef ? 'bg-yellow-500/10 border-yellow-500 text-yellow-400' : 'bg-[#161B22] border-white/5 text-gray-400 hover:border-white/20'}`}
-                  >
-                    <Scale size={24} className={selectedRef ? 'text-yellow-400' : 'text-gray-500'} />
-                    <span className="text-xs font-black uppercase tracking-widest">HAKEM</span>
-                    {selectedRef && <CheckCircle2 size={14} className="absolute top-2 right-2 text-yellow-400" />}
-                  </button>
+                      <div className="flex items-center gap-2.5 my-2 relative z-10">
+                        <div className="relative w-10 h-10 shrink-0">
+                          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-[#39FF14] opacity-80 blur-[2px]" />
+                          <img src={selectedGk.avatar} className="relative w-full h-full rounded-full object-cover border border-black" referrerPolicy="no-referrer" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black text-white uppercase italic tracking-tight truncate">{selectedGk.name}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Star size={8} className="text-[#FFFF00] fill-[#FFFF00]" />
+                            <span className="text-[9px] font-black text-[#FFFF00]">{selectedGk.rating.toFixed(1)}</span>
+                            <span className="text-[8px] font-bold text-white/40">•</span>
+                            <span className="text-[8px] font-black text-white/60 tracking-wider">REF: {selectedGk.stats.reflexes}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between relative z-10 pt-1.5 border-t border-white/5">
+                        <span className="text-[8px] font-black text-white/40 tracking-wider uppercase">ÜCRET</span>
+                        <span className="text-[10px] font-black text-[#39FF14]">+{selectedGk.fee} ₺</span>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.button 
+                      whileHover={{ scale: 1.02, borderColor: 'rgba(57,255,20,0.5)', backgroundColor: 'rgba(57,255,20,0.03)' }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => onNavigate('MARKETPLACE_GK')}
+                      className="flex-1 min-h-[125px] rounded-[24px] border border-dashed border-emerald-500/30 bg-[#161B22]/40 p-3.5 flex flex-col justify-between text-left relative overflow-hidden transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#39FF14]" />
+                          <span className="text-[8px] font-black text-emerald-400/80 tracking-widest uppercase">KADRO EKSİK</span>
+                        </div>
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                          <Plus size={12} />
+                        </div>
+                      </div>
+
+                      <div className="my-2">
+                        <h4 className="text-[11px] font-black text-white uppercase italic tracking-tight">KİRALIK KALECİ</h4>
+                        <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Sahanı Kilitle</p>
+                      </div>
+
+                      <div className="flex items-center justify-between w-full pt-1.5 border-t border-white/5">
+                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-wider">BAŞLANGIÇ</span>
+                        <span className="text-[9px] font-black text-white/80">150 ₺</span>
+                      </div>
+                    </motion.button>
+                  )}
+
+                  {selectedRef ? (
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => onNavigate('MARKETPLACE_REF')}
+                      className="flex-1 min-h-[125px] rounded-[24px] border border-yellow-500/40 bg-gradient-to-b from-yellow-950/20 to-black/85 p-3.5 flex flex-col justify-between relative overflow-hidden shadow-[0_0_20px_rgba(255,255,0,0.15)] group cursor-pointer"
+                    >
+                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 pointer-events-none" />
+                      
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+                          <Scale size={10} className="text-yellow-400" />
+                          <span className="text-[8px] font-black text-yellow-400 tracking-wider">HAKEM</span>
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onRemoveRef(); }}
+                          className="w-5 h-5 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 my-2 relative z-10">
+                        <div className="relative w-10 h-10 shrink-0">
+                          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-[#FFFF00] opacity-80 blur-[2px]" />
+                          <img src={selectedRef.avatar} className="relative w-full h-full rounded-full object-cover border border-black" referrerPolicy="no-referrer" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black text-white uppercase italic tracking-tight truncate">{selectedRef.name}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Star size={8} className="text-[#FFFF00] fill-[#FFFF00]" />
+                            <span className="text-[9px] font-black text-[#FFFF00]">{selectedRef.rating.toFixed(1)}</span>
+                            <span className="text-[8px] font-bold text-white/40">•</span>
+                            <span className="text-[8px] font-black text-white/60 tracking-wider">OTO: {selectedRef.stats.authority}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between relative z-10 pt-1.5 border-t border-white/5">
+                        <span className="text-[8px] font-black text-white/40 tracking-wider uppercase">ÜCRET</span>
+                        <span className="text-[10px] font-black text-[#FFFF00]">+{selectedRef.fee} ₺</span>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.button 
+                      whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,0,0.5)', backgroundColor: 'rgba(255,255,0,0.03)' }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => onNavigate('MARKETPLACE_REF')}
+                      className="flex-1 min-h-[125px] rounded-[24px] border border-dashed border-yellow-500/30 bg-[#161B22]/40 p-3.5 flex flex-col justify-between text-left relative overflow-hidden transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#FFFF00]" />
+                          <span className="text-[8px] font-black text-yellow-400/80 tracking-widest uppercase">OTORİTE EKSİK</span>
+                        </div>
+                        <div className="w-6 h-6 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400">
+                          <Plus size={12} />
+                        </div>
+                      </div>
+
+                      <div className="my-2">
+                        <h4 className="text-[11px] font-black text-white uppercase italic tracking-tight">RESMİ HAKEM</h4>
+                        <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Adil Yönetim</p>
+                      </div>
+
+                      <div className="flex items-center justify-between w-full pt-1.5 border-t border-white/5">
+                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-wider">BAŞLANGIÇ</span>
+                        <span className="text-[9px] font-black text-white/80">200 ₺</span>
+                      </div>
+                    </motion.button>
+                  )}
                 </div>
-
-                {/* Status Indicators */}
-                {(selectedGk || selectedRef) && (
-                  <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5 space-y-2">
-                    {selectedGk && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full overflow-hidden border border-green-500/30">
-                            <img src={selectedGk.avatar} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                          <span className="text-[10px] font-bold text-white uppercase">{selectedGk.name} Atandı</span>
-                        </div>
-                        <button onClick={onRemoveGk} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
-                      </div>
-                    )}
-                    {selectedRef && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full overflow-hidden border border-yellow-500/30">
-                            <img src={selectedRef.avatar} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                          <span className="text-[10px] font-bold text-white uppercase">{selectedRef.name} Atandı</span>
-                        </div>
-                        <button onClick={onRemoveRef} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
-                      </div>
-                    )}
-                  </div>
-                )}
             </div>
 
            {/* Section 2: Essentials */}

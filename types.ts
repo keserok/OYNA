@@ -253,7 +253,7 @@ export interface MatchListing {
   badges: string[];
   missingPositions: { role: string; count: number }[];
   slots: PositionSlot[];
-  status?: 'DRAFT' | 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+  status?: 'DRAFT' | 'ACTIVE' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
   creatorId?: string;
   communityId?: string;
   format?: string;
@@ -267,6 +267,9 @@ export interface MatchListing {
   homeScore?: number;
   awayScore?: number;
   scoreEnteredAt?: string; // Timestamp when referee entered score
+  chatMessages?: { id: string; senderId: string; senderName: string; senderAvatar: string; text: string; timestamp: string }[];
+  awaySlots?: PositionSlot[];
+  reservePlayers?: Player[];
 }
 
 export interface PositionSlot {
@@ -562,3 +565,24 @@ export interface FriendRequest {
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   timestamp: string;
 }
+
+export interface PlayerSeekAnnouncement {
+  id: string;
+  creatorId: string;
+  creatorName: string;
+  creatorAvatar: string;
+  pitchName: string;
+  date: string;
+  time: string;
+  positionsNeeded: string[];
+  difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
+  format: string;
+  duration: string;
+  gender: string;
+  ageGroup: string;
+  status: 'ACTIVE' | 'CLOSED';
+  joinedPlayers?: string[]; // IDs of users who clicked to join/requested
+  acceptedPlayers?: string[]; // IDs of users whose requests were accepted by captain
+  createdAt?: string;
+}
+

@@ -11,7 +11,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate }) => {
   const navItems = [
     { id: 'DASHBOARD', icon: Home, label: 'Ana Sayfa' },
-    { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Maçlar' },
+    { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Top Oyna' },
     { id: 'STUDIO', icon: Target, label: 'Taktik', isCenter: true },
     { id: 'PITCH_DISCOVERY', icon: Users, label: 'Sahalar' },
     { id: 'PROFILE', icon: User, label: 'Profil' },

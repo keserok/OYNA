@@ -10,7 +10,7 @@ const AdminLogin: React.FC<Props> = ({ onUnlock, onBack }) => {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (pw === 'YE') { onUnlock(); return; }
+        if (pw.toUpperCase() === 'YE') { onUnlock(); return; }
         setErr(true); setTimeout(() => setErr(false), 500); setPw('');
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     };

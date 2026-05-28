@@ -6,6 +6,7 @@ import { Player, AppView } from '../types';
 import { MY_TEAM, PITCHES } from '../constants';
 import { useAppStore } from '../store';
 import LiveTacticBoard from '../components/LiveTacticBoard';
+import { TeamLineupBoard } from '../components/TeamLineupBoard';
 
 interface MatchLobbyProps {
     onBack: () => void;
@@ -37,7 +38,7 @@ const INITIAL_ROSTER: Player[] = MY_TEAM.roster.map((p, i) => ({
 }));
 
 const MatchLobby: React.FC<MatchLobbyProps> = ({ onBack, onNavigate }) => {
-    const [activeTab, setActiveTab] = useState<'LOBI' | 'KADRO' | 'TAKTİK'>('TAKTİK');
+    const [activeTab, setActiveTab] = useState<'LOBI' | 'KADRO' | 'DİZİLİŞ' | 'TAKTİK'>('DİZİLİŞ');
     const [roster, setRoster] = useState<Player[]>(INITIAL_ROSTER);
     const [isEditing, setIsEditing] = useState(false);
     const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
@@ -126,6 +127,7 @@ const MatchLobby: React.FC<MatchLobbyProps> = ({ onBack, onNavigate }) => {
     const TABS = [
         { id: 'LOBI' as const, label: 'Lobi' },
         { id: 'KADRO' as const, label: 'Kadro' },
+        { id: 'DİZİLİŞ' as const, label: 'Diziliş' },
         { id: 'TAKTİK' as const, label: 'Taktik' },
     ];
 
@@ -212,6 +214,22 @@ const MatchLobby: React.FC<MatchLobbyProps> = ({ onBack, onNavigate }) => {
             </header>
 
             <main className="p-4 flex-1 overflow-y-auto custom-scrollbar">
+
+                {/* ── DİZİLİŞ TAB ────────────────────────────────────── */}
+                {activeTab === 'DİZİLİŞ' && (
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="p-2.5 bg-[#39FF14]/10 rounded-xl">
+                                <Users size={18} className="text-[#39FF14]" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-white italic uppercase tracking-tight leading-none">Takım Dizilişleri</h2>
+                                <p className="text-[10px] text-gray-500 mt-0.5">İki takımın taktiksel dizilişleri ve kadroları</p>
+                            </div>
+                        </div>
+                        <TeamLineupBoard />
+                    </motion.div>
+                )}
 
                 {/* ── TAKTİK TAB ─────────────────────────────────────── */}
                 {activeTab === 'TAKTİK' && (

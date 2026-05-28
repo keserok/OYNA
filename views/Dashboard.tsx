@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, MapPin, Users, User, Scale, Shield, Swords,
-  Clock, Check, Wallet, Sparkles, ArrowLeft, ArrowRight, ChevronLeft,
-  Target, MousePointer2, X, Trophy, Activity, Calendar, Star, TrendingUp, Flame, Zap
+  Clock, Check, Wallet, Sparkles,
+  Target, MousePointer2, Trophy, Activity, Calendar, Star, TrendingUp, Flame, Zap
 } from 'lucide-react';
 import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
@@ -66,9 +66,10 @@ interface MatchCountdownProps {
   matchDate: Date;
   isDraft?: boolean;
   isCancelled?: boolean;
+  isLive?: boolean;
 }
 
-const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, matchLocation, matchTime, matchDate, isDraft, isCancelled }) => {
+const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, matchLocation, matchTime, matchDate, isDraft, isCancelled, isLive }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
@@ -95,19 +96,27 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
   const format = (num: number) => num.toString().padStart(2, '0');
 
   const hasDays = timeLeft.days > 0;
-  const themeColor = isCancelled ? 'text-red-500 font-extrabold animate-pulse' : isDraft ? 'text-amber-400' : hasDays ? 'text-green-400' : 'text-red-500';
-  const themeBg = isCancelled ? 'bg-red-500' : isDraft ? 'bg-amber-500' : hasDays ? 'bg-green-500' : 'bg-red-500';
-  const themeBorder = isCancelled ? 'border-red-500/30' : isDraft ? 'border-amber-500/30' : hasDays ? 'border-green-500/30' : 'border-red-500/30';
-  const themeGlow = isCancelled ? 'bg-red-500/20' : isDraft ? 'bg-amber-500/20' : hasDays ? 'bg-green-500/20' : 'bg-red-500/20';
+  const themeColor = isCancelled 
+    ? 'text-red-500 font-extrabold animate-pulse' 
+    : isLive 
+      ? 'text-[#39FF14] font-black drop-shadow-[0_0_8px_rgba(57,255,20,0.5)] animate-pulse' 
+      : isDraft 
+        ? 'text-amber-400' 
+        : hasDays 
+          ? 'text-green-400' 
+          : 'text-red-500';
+  const themeBg = isCancelled ? 'bg-red-500' : isLive ? 'bg-[#39FF14]' : isDraft ? 'bg-amber-500' : hasDays ? 'bg-green-500' : 'bg-red-500';
+  const themeBorder = isCancelled ? 'border-red-500/30' : isLive ? 'border-[#39FF14]/50' : isDraft ? 'border-amber-500/30' : hasDays ? 'border-green-500/30' : 'border-red-500/30';
+  const themeGlow = isCancelled ? 'bg-red-500/20' : isLive ? 'bg-[#39FF14]/25' : isDraft ? 'bg-amber-500/20' : hasDays ? 'bg-green-500/20' : 'bg-red-500/20';
 
   const TimerBox = ({ value, label, color, pulse }: { value: string, label: string, color: string, pulse?: boolean }) => (
     <div className="flex-1 max-w-[75px] aspect-square bg-[#06080A]/60 backdrop-blur-xl border border-white/10 rounded-[20px] flex flex-col items-center justify-center shadow-[inset_0_2px_10px_rgba(255,255,255,0.03)] relative overflow-hidden group-hover:border-white/20 transition-colors">
        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50" />
        <motion.span 
-          animate={pulse || isDraft ? { opacity: [1, 0.6, 1], scale: [1, 1.03, 1] } : {}} 
-          transition={pulse || isDraft ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
+          animate={pulse || isDraft || isLive ? { opacity: [1, 0.6, 1], scale: [1, 1.03, 1] } : {}} 
+          transition={pulse || isDraft || isLive ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
           className="font-black text-[26px] sm:text-[32px] leading-none tabular-nums tracking-tighter" 
-          style={{ color, textShadow: pulse || isDraft ? `0 0 15px ${color}80` : 'none' }}
+          style={{ color, textShadow: pulse || isDraft || isLive ? `0 0 15px ${color}80` : 'none' }}
        >
           {value}
        </motion.span>
@@ -125,11 +134,13 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
         scale: 1,
         boxShadow: isCancelled
            ? '0 12px 40px -10px rgba(239,68,68,0.55), inset 0 1px 0 rgba(255,255,255,0.1)'
-           : isDraft
-              ? '0 12px 40px -10px rgba(245,158,11,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
-              : hasDays 
-                 ? '0 12px 40px -10px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
-                 : '0 12px 40px -10px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.1)'
+           : isLive
+              ? '0 12px 50px -10px rgba(57,255,20,0.6), inset 0 1px 0 rgba(255,255,255,0.2)'
+              : isDraft
+                 ? '0 12px 40px -10px rgba(245,158,11,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+                 : hasDays 
+                    ? '0 12px 40px -10px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
+                    : '0 12px 40px -10px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.1)'
       }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       whileHover={{ scale: 1.01 }}
@@ -149,23 +160,25 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
            style={{
              backgroundImage: isCancelled
                 ? 'radial-gradient(circle at 50% -20%, rgba(239,68,68,0.75) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(220,38,38,0.55) 0%, transparent 50%)'
-                : isDraft
-                   ? 'radial-gradient(circle at 50% -20%, rgba(245,158,11,0.5) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(217,119,6,0.3) 0%, transparent 50%)'
-                   : hasDays 
-                      ? 'radial-gradient(circle at 50% -20%, rgba(34,197,94,0.5) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(16,185,129,0.3) 0%, transparent 50%)'
-                      : 'radial-gradient(circle at 50% -20%, rgba(239,68,68,0.6) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(220,38,38,0.4) 0%, transparent 50%)',
+                : isLive
+                   ? 'radial-gradient(circle at 50% -20%, rgba(57,255,20,0.85) 0%, transparent 65%), radial-gradient(circle at 10% 120%, rgba(57,255,20,0.45) 0%, transparent 55%)'
+                   : isDraft
+                      ? 'radial-gradient(circle at 50% -20%, rgba(245,158,11,0.5) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(217,119,6,0.3) 0%, transparent 50%)'
+                      : hasDays 
+                         ? 'radial-gradient(circle at 50% -20%, rgba(34,197,94,0.5) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(16,185,129,0.3) 0%, transparent 50%)'
+                         : 'radial-gradient(circle at 50% -20%, rgba(239,68,68,0.6) 0%, transparent 60%), radial-gradient(circle at 10% 120%, rgba(220,38,38,0.4) 0%, transparent 50%)',
              backgroundSize: '200% 200%'
            }}
          />
          {/* Glass Overlay */}
          <div className="absolute inset-0 bg-black/20 backdrop-blur-[12px]" />
-         {/* Radar Scan Line (when starting soon, draft action, or cancelled) */}
-         {(isCancelled || isDraft || !hasDays) && (
+         {/* Radar Scan Line (when starting soon, draft action, cancelled, or live) */}
+         {(isCancelled || isDraft || isLive || !hasDays) && (
            <motion.div
              animate={{ y: ['-100%', '200%'] }}
              transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
-             className="absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent to-red-500/20 pointer-events-none"
-             style={{ borderBottom: isDraft ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(239,68,68,0.5)' }}
+             className={`absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent pointer-events-none ${isLive ? 'to-[#39FF14]/15' : isDraft ? 'to-amber-500/20' : 'to-red-500/20'}`}
+             style={{ borderBottom: isLive ? '1.5px solid rgba(57,255,20,0.8)' : isDraft ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(239,68,68,0.5)' }}
            />
          )}
       </div>
@@ -179,10 +192,10 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
               <motion.div
                 animate={{ opacity: [1, 0.4, 1], scale: [1, 1.2, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
-                className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]' : isDraft ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.9)]' : hasDays ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]'}`}
+                className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]' : isLive ? 'bg-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.9)] animate-pulse' : isDraft ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.9)]' : hasDays ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]'}`}
               />
               <span className={`text-[10px] sm:text-[12px] font-black uppercase tracking-[0.25em] ${themeColor}`}>
-                {isCancelled ? 'MAÇ İPTAL EDİLDİ - YETERLİ OYUNCU BULUNAMADI' : isDraft ? 'DRAFT MAÇIN VAR - KADROYU KUR' : hasDays ? 'SIRADAKİ MAÇ' : 'BAŞLIYOR'}
+                {isCancelled ? 'MAÇ İPTAL EDİLDİ - YETERLİ OYUNCU BULUNAMADI' : isLive ? 'MAÇ ONAYLANDI - LIVE' : isDraft ? 'DRAFT MAÇIN VAR - KADROYU KUR' : hasDays ? 'SIRADAKİ MAÇ' : 'BAŞLIYOR'}
               </span>
             </div>
             
@@ -206,20 +219,20 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
            </div>
          ) : (
            <div className="flex items-center justify-center gap-2 sm:gap-4 w-full pt-1">
-              <TimerBox value={format(timeLeft.days)} label="GÜN" color={isDraft ? '#FFB800' : hasDays ? '#22c55e' : '#fff'} />
+              <TimerBox value={format(timeLeft.days)} label="GÜN" color={isLive ? '#39FF14' : isDraft ? '#FFB800' : hasDays ? '#22c55e' : '#fff'} />
               <span className="text-white/20 font-black text-2xl mb-4">:</span>
-              <TimerBox value={format(timeLeft.hours)} label="SAAT" color={isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={!hasDays || isDraft} />
+              <TimerBox value={format(timeLeft.hours)} label="SAAT" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
               <span className="text-white/20 font-black text-2xl mb-4">:</span>
-              <TimerBox value={format(timeLeft.minutes)} label="DAKİKA" color={isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={!hasDays || isDraft} />
+              <TimerBox value={format(timeLeft.minutes)} label="DAKİKA" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
            </div>
          )}
 
          {/* Match Info Footer */}
          <div className="mt-1 w-full bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col gap-1 relative overflow-hidden group-hover:bg-white/5 transition-colors">
-            <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${isCancelled ? 'from-red-500' : isDraft ? 'from-amber-500' : 'from-[#FFB800]'} to-transparent opacity-80`} />
+            <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${isCancelled ? 'from-red-500' : isLive ? 'from-[#39FF14]' : isDraft ? 'from-amber-500' : 'from-[#FFB800]'} to-transparent opacity-80`} />
             <h3 className="text-white font-black text-[15px] sm:text-[17px] tracking-tight leading-none truncate pl-3">{matchTitle}</h3>
             <p className="text-gray-400 font-bold text-[10px] sm:text-[11px] truncate pl-3">
-              {isCancelled ? `❌ Bu maç için yeterli doluluk sağlanamadı.` : isDraft ? `⚡ ${matchLocation} • Eksik mevkileri seçip davet gönder!` : matchLocation}
+              {isCancelled ? `❌ Bu maç için yeterli doluluk sağlanamadı.` : isLive ? `✓ Tüm ödemeler yapıldı, maç yayında!` : isDraft ? `⚡ ${matchLocation} • Eksik mevkileri seçip davet gönder!` : matchLocation}
             </p>
          </div>
          
@@ -246,15 +259,11 @@ const itemVariants = {
 
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, selectedRef }) => {
-  const { initialLoadComplete, globalTexts, unreadNotificationsCount, adminMatches, myTeams, setActiveStudioTeam, setActiveDraftId, setSelectedMatch, updateMatch, addUserNotification } = useAppStore();
+  const { initialLoadComplete, globalTexts, unreadNotificationsCount, adminMatches, myTeams, setActiveStudioTeam, setActiveDraftId, setSelectedMatch, updateMatch, addUserNotification, setMatchJoinReturnView } = useAppStore();
   const [isLoading, setIsLoading] = useState(!initialLoadComplete);
-  const [showPlaySheet, setShowPlaySheet] = useState(false);
-  const [playStep, setPlayStep] = useState<1 | 2 | 3>(1);
-  const [selectedPlayTeam, setSelectedPlayTeam] = useState<string | null>(null);
   const myDrafts = React.useMemo(() => adminMatches.filter(m => m.status === 'DRAFT'), [adminMatches]);
   const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
 
-  const resetPlayWizard = () => { setShowPlaySheet(false); setPlayStep(1); setSelectedPlayTeam(null); };
 
   // ─── En yakın gelecek maçı veya iptal edilen maçı bul ─────────────────────────────────────────
   const upcomingMatch = React.useMemo(() => {
@@ -383,7 +392,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           >
             <MatchCountdown
               onClick={() => {
-                onNavigate('UPCOMING_MATCHES');
+                if (upcomingMatch.match.status === 'DRAFT') {
+                  setActiveDraftId(upcomingMatch.match.id);
+                  onNavigate('MATCH_CREATE');
+                } else {
+                  setSelectedMatch(upcomingMatch.match);
+                  setMatchJoinReturnView('DASHBOARD');
+                  onNavigate('MATCH_JOIN');
+                }
               }}
               matchTitle={upcomingMatch.match.title}
               matchLocation={upcomingMatch.match.location}
@@ -391,6 +407,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               matchDate={upcomingMatch.date}
               isDraft={upcomingMatch.match.status === 'DRAFT'}
               isCancelled={upcomingMatch.match.status === 'CANCELLED'}
+              isLive={upcomingMatch.match.status === 'LIVE'}
             />
           </motion.div>
         )}
@@ -416,7 +433,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           variants={itemVariants}
           whileHover={{ scale: 1.02, y: -3 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => { resetPlayWizard(); setShowPlaySheet(true); }}
+          onClick={() => onNavigate('MATCH_DISCOVERY')}
           className="col-span-2 h-44 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
           style={{ boxShadow: '0 0 60px rgba(255,255,0,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
@@ -451,7 +468,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">Sahaya Çık</span>
               </div>
               <h2 className="text-5xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,255,0,0.3)' }}>Top<br />Oyna</h2>
-              <p className="text-[10px] text-black/60 mt-2 font-bold">Bireysel katıl ya da rakip bul.</p>
+              <p className="text-[10px] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
             </div>
 
             {/* OYNA LOGO — sağ taraf, siyah zemin üzerinde parlak sarı */}
@@ -488,195 +505,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             </div>
           </div>
         </AnimatedButton>
-
-        {/* ═══ TOP OYNA — FULL SCREEN PORTAL ═══ */}
-        <AnimatePresence>
-          {showPlaySheet && (
-            <div className="fixed inset-0 z-[100] bg-black overflow-hidden font-sans">
-              <AnimatePresence mode="wait">
-                
-                {/* ── ADIM 1: ÇAPRAZ BÖLÜNMÜŞ SEÇİM EKRANI ── */}
-                {playStep === 1 && (
-                  <motion.div 
-                    key="step1" 
-                    initial={{ opacity: 0, scale: 1.1 }} 
-                    animate={{ opacity: 1, scale: 1 }} 
-                    exit={{ opacity: 0, scale: 0.9 }} 
-                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    className="absolute inset-0"
-                  >
-                    {/* Kapat Butonu */}
-                    <button 
-                      onClick={resetPlayWizard} 
-                      className="absolute top-12 left-6 z-50 w-12 h-12 bg-black/40 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/20 text-white hover:bg-white/20 transition-all shadow-[0_0_20px_rgba(0,0,0,0.5)] active:scale-90"
-                    >
-                      <X size={24} />
-                    </button>
-                    
-                    {/* MAÇA KATIL (Mavi - Sol Üst Üçgen) */}
-                    <motion.button 
-                      onClick={() => { resetPlayWizard(); onNavigate('MATCH_DISCOVERY'); }}
-                      className="absolute inset-0 w-full h-full text-left group focus:outline-none"
-                      style={{ 
-                        clipPath: 'polygon(0 0, 100% 0, 0 100%)', 
-                        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 40%, #000000 100%)' 
-                      }}
-                    >
-                      {/* Arka plan deseni */}
-                      <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-                      <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      
-                      {/* İçerik */}
-                      <div className="absolute top-0 left-0 w-[65%] h-[65%] flex flex-col items-center justify-center p-4 text-center z-10 pointer-events-none">
-                        <motion.h2 
-                          className="text-5xl sm:text-6xl md:text-7xl font-black italic uppercase text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] tracking-tighter leading-none mb-3 transition-transform duration-500 group-hover:scale-110"
-                        >
-                          Maça<br/>Katıl
-                        </motion.h2>
-                        <p className="text-blue-300 font-black tracking-widest text-[10px] sm:text-xs uppercase drop-shadow-md">Oynamak için maç bul</p>
-                      </div>
-                    </motion.button>
-
-                    {/* RAKİP BUL (Kırmızı - Sağ Alt Üçgen) */}
-                    <motion.button 
-                      onClick={() => setPlayStep(2)}
-                      className="absolute inset-0 w-full h-full text-right group focus:outline-none"
-                      style={{ 
-                        clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', 
-                        background: 'linear-gradient(315deg, #7f1d1d 0%, #ef4444 40%, #000000 100%)' 
-                      }}
-                    >
-                      {/* Arka plan deseni */}
-                      <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-                      <div className="absolute inset-0 bg-red-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      
-                      {/* İçerik */}
-                      <div className="absolute bottom-0 right-0 w-[65%] h-[65%] flex flex-col items-center justify-center p-4 text-center z-10 pointer-events-none">
-                        <motion.h2 
-                          className="text-5xl sm:text-6xl md:text-7xl font-black italic uppercase text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] tracking-tighter leading-none mb-3 transition-transform duration-500 group-hover:scale-110"
-                        >
-                          Rakip<br/>Bul
-                        </motion.h2>
-                        <p className="text-red-300 font-black tracking-widest text-[10px] sm:text-xs uppercase drop-shadow-md">Oynamak istediğin rakipleri bul</p>
-                      </div>
-                    </motion.button>
-
-                  </motion.div>
-                )}
-
-                {/* ── ADIM 2: TAKIM SEÇİMİ (Kırmızı Tema Üzerine) ── */}
-                {playStep === 2 && (
-                  <motion.div 
-                    key="step2" 
-                    initial={{ opacity: 0, x: 100 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    exit={{ opacity: 0, x: -100 }} 
-                    className="absolute inset-0 bg-[#0A0E14] flex flex-col z-50"
-                  >
-                    {/* Arka Plan Ambient */}
-                    <div className="absolute inset-0 bg-red-500/5 mix-blend-screen pointer-events-none" />
-                    
-                    <div className="px-6 pt-14 pb-4 flex items-center justify-between border-b border-white/5 relative z-10">
-                      <button onClick={() => setPlayStep(1)} className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-colors">
-                        <ChevronLeft size={18} />
-                      </button>
-                      <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">Takımını Seç</h3>
-                      <button onClick={resetPlayWizard} className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
-                        <X size={16} />
-                      </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto px-6 py-8 relative z-10">
-                      {myTeams.length === 0 ? (
-                        <div className="text-center py-20 space-y-4">
-                          <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center mx-auto"><Users size={32} className="text-gray-500" /></div>
-                          <p className="text-base font-bold text-gray-400">Henüz bir takımın yok</p>
-                          <button onClick={() => { resetPlayWizard(); onNavigate('COMMUNITY_VIEW'); }} className="px-8 py-4 bg-[#ef4444] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-red-500 transition-colors shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                            Takım Kur
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">Sahaya Çıkacak Kadro</p>
-                          {myTeams.map(t => (
-                            <motion.button 
-                              key={t.id} 
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => setSelectedPlayTeam(t.id)}
-                              className={`w-full flex items-center gap-5 p-5 rounded-[24px] border transition-all ${selectedPlayTeam === t.id ? 'bg-[#ef4444]/10 border-[#ef4444]/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'bg-white/[0.02] border-white/5 hover:border-white/20'}`}
-                            >
-                              <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl text-white border border-white/20 shadow-inner" style={{ background: `linear-gradient(135deg, ${t.color1}80, ${t.color1}20)` }}>
-                                {t.shortName?.charAt(0) || t.name.charAt(0)}
-                              </div>
-                              <div className="flex-1 text-left min-w-0">
-                                <h4 className="text-lg font-black text-white truncate italic uppercase tracking-tight">{t.name}</h4>
-                                <p className="text-xs text-gray-400 font-bold">{t.players?.length || 0} Oyuncu · {t.wins || 0}G {t.losses || 0}M</p>
-                              </div>
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedPlayTeam === t.id ? 'bg-[#ef4444] border-[#ef4444]' : 'border-white/20'}`}>
-                                {selectedPlayTeam === t.id && <Check size={12} className="text-white" />}
-                              </div>
-                            </motion.button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {myTeams.length > 0 && (
-                      <div className="px-6 pb-10 pt-4 bg-gradient-to-t from-[#0A0E14] to-transparent relative z-10">
-                        <motion.button
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                          disabled={!selectedPlayTeam}
-                          onClick={() => {
-                            const team = myTeams.find(t => t.id === selectedPlayTeam);
-                            if (team) { setActiveStudioTeam(team); setPlayStep(3); }
-                          }}
-                          className="w-full py-5 rounded-2xl bg-[#ef4444] text-white font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(239,68,68,0.4)]"
-                        >
-                          Rakip Aramaya Başla <ArrowRight size={18} />
-                        </motion.button>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* ── ADIM 3: EŞLEŞTİRME (Kırmızı Tema) ── */}
-                {playStep === 3 && (
-                  <motion.div 
-                    key="step3" 
-                    initial={{ opacity: 0, scale: 0.9 }} 
-                    animate={{ opacity: 1, scale: 1 }} 
-                    className="absolute inset-0 bg-[#0A0E14] flex flex-col items-center justify-center z-50"
-                  >
-                    <div className="absolute inset-0 bg-red-500/10 mix-blend-screen pointer-events-none" />
-                    
-                    {(() => { const t = myTeams.find(x => x.id === selectedPlayTeam); return (
-                      <div className="relative z-10 text-center flex flex-col items-center">
-                        <motion.div 
-                          animate={{ scale: [1, 1.2, 1], boxShadow: [`0 0 40px ${t?.color1 || '#ef4444'}40`, `0 0 80px ${t?.color1 || '#ef4444'}80`, `0 0 40px ${t?.color1 || '#ef4444'}40`] }} 
-                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          className="w-32 h-32 rounded-[32px] flex items-center justify-center mb-8 border-2 border-white/20 backdrop-blur-md" 
-                          style={{ background: `linear-gradient(135deg, ${t?.color1 || '#ef4444'}60, ${t?.color1 || '#ef4444'}20)` }}
-                        >
-                          <span className="text-5xl font-black text-white">{t?.shortName?.substring(0, 3) || '?'}</span>
-                        </motion.div>
-                        <h4 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2 drop-shadow-md">{t?.name}</h4>
-                        <p className="text-xs text-red-400 font-black uppercase tracking-[0.3em] mb-8">Uygun Rakipler Taranıyor</p>
-                        <div className="flex gap-2">
-                          {[0, 1, 2].map(i => (
-                            <motion.div key={i} animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-                          ))}
-                        </div>
-                      </div>
-                    ); })()}
-                    {/* Auto-navigate after delay */}
-                    {(() => { setTimeout(() => { resetPlayWizard(); onNavigate('OPPONENT_FINDER'); }, 2000); return null; })()}
-                  </motion.div>
-                )}
-
-              </AnimatePresence>
-            </div>
-          )}
-        </AnimatePresence>
 
         {/* ═══════════════════════════════════════════════════════════════════
             MAÇ OLUŞTUR — VERSİYON A (AKTİF)

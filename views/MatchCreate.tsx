@@ -9,7 +9,7 @@ import {
   Filter, Map as MapIcon, LayoutGrid, Heart, Thermometer, Wind, Sun, Moon, Radio,
   Target, Feather, CheckCircle2, ArrowRight
 } from 'lucide-react';
-import { Pitch, Goalkeeper, Referee, AppView } from '../types';
+import { Pitch, Goalkeeper, Referee, AppView, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
@@ -1853,7 +1853,24 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
   const [customPositions, setCustomPositions] = useState<Record<string, {x: number, y: number, role: string}>>({});
 
-  const { addOpponentAd, incrementUnreadNotifications, addUserNotification, friends, userTeams, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId } = useAppStore();
+  const { addOpponentAd, incrementUnreadNotifications, addUserNotification, friends, userTeams, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, addPlayerSeekAd } = useAppStore();
+
+  const bookedMatchesMock = [
+    { id: 'bm1', pitchName: 'Arena Sport Center', date: 'Bugün', time: '21:00', format: '7v7', image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&q=80&w=600' },
+    { id: 'bm2', pitchName: 'BJK RAMADA Futbol Sahası', date: 'Yarın', time: '22:00', format: '6v6', image: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=600' },
+    { id: 'bm3', pitchName: 'Ortaköy Halı Saha', date: '30 Mayıs Cuma', time: '20:00', format: '7v7', image: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&q=80&w=600' },
+  ];
+
+  const [showPlayerSeekModal, setShowPlayerSeekModal] = useState(false);
+  const [seekSaha, setSeekSaha] = useState('');
+  const [seekTarih, setSeekTarih] = useState('');
+  const [seekSaat, setSeekSaat] = useState('');
+  const [seekPositions, setSeekPositions] = useState<string[]>([]);
+  const [seekDifficulty, setSeekDifficulty] = useState<'Ciddi' | 'Taktiksel' | 'Rahat'>('Ciddi');
+  const [seekFormat, setSeekFormat] = useState('7v7');
+  const [seekDuration, setSeekDuration] = useState('90 Dakika');
+  const [seekGender, setSeekGender] = useState('Karma');
+  const [seekAge, setSeekAge] = useState('Tümü');
 
   const draftMatch = React.useMemo(() => adminMatches.find(m => m.id === activeDraftId), [activeDraftId, adminMatches]);
   const isDraftMode = !!draftMatch;
@@ -2000,7 +2017,58 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         </button>
       </header>
 
-
+      {/* HORIZONTAL BOOKED MATCHES BAR (OYUNCU BUL İLANI İÇİN) */}
+      <div className="relative z-30 px-5 pt-2 pb-2">
+         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5 drop-shadow-sm">
+           <Radio size={12} className="text-[#39FF14] animate-pulse" /> HIZLI OYUNCU İLANI VER (AYARLANMIŞ MAÇLARIN)
+         </p>
+         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+           {bookedMatchesMock.map((match) => (
+             <motion.div 
+               key={match.id}
+               whileHover={{ scale: 1.02 }}
+               whileTap={{ scale: 0.98 }}
+               className="shrink-0 w-64 bg-[#161B22]/80 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex flex-col justify-between shadow-lg relative overflow-hidden group transition-all"
+             >
+               {/* Ambient Glow */}
+               <div className="absolute top-0 right-0 w-16 h-16 bg-[#FFFF00]/5 blur-xl pointer-events-none rounded-full" />
+               
+               <div>
+                 <div className="flex items-center justify-between mb-1.5">
+                   <span className="text-[8px] font-black uppercase text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-0.5 rounded border border-[#FFFF00]/20 tracking-wider">
+                     {match.format} FORMAT
+                   </span>
+                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                     {match.time}
+                   </span>
+                 </div>
+                 
+                 <h4 className="text-xs font-black text-white uppercase italic truncate tracking-tight drop-shadow-sm">
+                   {match.pitchName}
+                 </h4>
+                 
+                 <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wide mt-1">
+                   {match.date}
+                 </p>
+               </div>
+               
+               <button
+                 onClick={() => {
+                   setSeekSaha(match.pitchName);
+                   setSeekTarih(match.date);
+                   setSeekSaat(match.time);
+                   setSeekFormat(match.format);
+                   setSeekPositions([]);
+                   setShowPlayerSeekModal(true);
+                 }}
+                 className="mt-3 w-full py-2 bg-gradient-to-r from-[#FFFF00] to-[#39FF14] text-black font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-1 shadow-[0_0_25px_rgba(57,255,20,0.7)] border-2 border-white/40 hover:shadow-[0_0_35px_rgba(255,255,0,0.9)] hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+               >
+                 <UserPlus size={12} /> OYUNCU BUL
+               </button>
+             </motion.div>
+           ))}
+         </div>
+      </div>
 
       {/* CENTER: PITCH */}
       <div className="flex-1 relative flex flex-col items-center justify-center p-4 pt-10 pb-[260px] z-10 overflow-hidden">
@@ -2516,6 +2584,284 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     </div>
                 </div>
             </motion.div>
+        )}
+
+        {showPlayerSeekModal && (
+          <motion.div 
+            initial={{ y: '100%' }} 
+            animate={{ y: 0 }} 
+            exit={{ y: '100%' }} 
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }} 
+            className="fixed inset-0 z-[70] bg-[#0A0E14]/98 backdrop-blur-2xl flex flex-col pt-10"
+          >
+            <header className="flex items-center justify-between px-6 pb-4 border-b border-white/5">
+              <div>
+                <h2 className="text-lg font-black text-white italic tracking-tighter uppercase drop-shadow-md">
+                  OYUNCU BUL İLANI OLUŞTUR
+                </h2>
+                <p className="text-[9px] text-[#39FF14] font-black tracking-widest uppercase mt-0.5">
+                  Takımın Eksik Bölgelerine Oyuncu Bul
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowPlayerSeekModal(false)} 
+                className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"
+              >
+                <X size={18} />
+              </button>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar pb-36">
+              
+              {/* Saha Adı */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                  Oynanacak Saha
+                </label>
+                <input 
+                  type="text" 
+                  value={seekSaha} 
+                  onChange={(e) => setSeekSaha(e.target.value)}
+                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-sm text-white font-bold placeholder-white/20 focus:border-[#39FF14]/50 focus:outline-none transition-colors"
+                  placeholder="Saha adı girin..."
+                />
+              </div>
+
+              {/* Tarih ve Saat */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                    Tarih
+                  </label>
+                  <input 
+                    type="text" 
+                    value={seekTarih} 
+                    onChange={(e) => setSeekTarih(e.target.value)}
+                    className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-sm text-white font-bold focus:border-[#39FF14]/50 focus:outline-none transition-colors"
+                    placeholder="Örn: Bugün, Yarın"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                    Saat
+                  </label>
+                  <input 
+                    type="text" 
+                    value={seekSaat} 
+                    onChange={(e) => setSeekSaat(e.target.value)}
+                    className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-sm text-white font-bold focus:border-[#39FF14]/50 focus:outline-none transition-colors"
+                    placeholder="Örn: 21:00"
+                  />
+                </div>
+              </div>
+
+              {/* İhtiyaç Duyulan Pozisyonlar */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                  Hangi Pozisyonda İhtiyaç Var? (Çoklu Seçim)
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {ROLE_OPTIONS.map((role) => {
+                    const isSelected = seekPositions.includes(role.label);
+                    return (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSeekPositions(seekPositions.filter(p => p !== role.label));
+                          } else {
+                            setSeekPositions([...seekPositions, role.label]);
+                          }
+                        }}
+                        className={`h-16 rounded-xl border flex flex-col items-center justify-center transition-all backdrop-blur-xl cursor-pointer ${
+                          isSelected 
+                            ? 'bg-white/20 text-white border-2 shadow-lg font-black' 
+                            : 'bg-white/[0.12] border-white/20 text-white/95 hover:bg-white/[0.22] hover:border-white/45'
+                        }`}
+                        style={isSelected ? { borderColor: role.color, boxShadow: `0 0 20px ${role.color}60`, backgroundColor: `${role.color}35` } : {}}
+                      >
+                        <Shield size={16} style={isSelected ? { color: role.color } : {}} className="mb-1" />
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-white font-black' : ''}`}>
+                          {role.id}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Maç Kuralları / Oyun DNA'sı (Filtreler şeklinde) */}
+              <div className="space-y-4 pt-2 border-t border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FFFF00]">
+                  Maçın Kuralları & DNA
+                </p>
+
+                {/* Zorluk / Mentalite */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+                    Oyun Ruhun / Mantalite
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'Ciddi', title: 'CİDDİ', color: '#FFFF00' },
+                      { id: 'Taktiksel', title: 'TAKTİKSEL', color: '#3b82f6' },
+                      { id: 'Rahat', title: 'RAHAT', color: '#10b981' }
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSeekDifficulty(m.id as any)}
+                        className={`py-2.5 rounded-xl text-[10px] font-black tracking-widest border transition-all cursor-pointer ${
+                          seekDifficulty === m.id 
+                            ? 'text-white font-black shadow-md' 
+                            : 'bg-white/[0.12] border-white/20 text-white/90 hover:bg-white/[0.22] hover:border-white/45'
+                        }`}
+                        style={seekDifficulty === m.id ? { backgroundColor: `${m.color}50`, borderColor: m.color, borderWidth: '2.5px', boxShadow: `0 0 20px ${m.color}60` } : {}}
+                      >
+                        {m.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Format */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+                    Takım Formatı
+                  </label>
+                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                    {['5v5', '6v6', '7v7', '8v8', '11v11'].map(f => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setSeekFormat(f)}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-wider border transition-all cursor-pointer ${
+                          seekFormat === f 
+                            ? 'bg-[#39FF14]/40 border-2 border-[#39FF14] text-white shadow-[0_0_20px_rgba(57,255,20,0.6)]' 
+                            : 'bg-white/[0.12] border-white/20 text-white/90 hover:bg-white/[0.22] hover:border-white/45'
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Süre */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+                    Maç Süresi
+                  </label>
+                  <div className="flex gap-2">
+                    {['60 Dakika', '90 Dakika', '120 Dakika'].map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setSeekDuration(d)}
+                        className={`flex-1 py-2.5 rounded-xl text-[10px] font-black tracking-wider border transition-all cursor-pointer ${
+                          seekDuration === d 
+                            ? 'bg-[#39FF14]/40 border-2 border-[#39FF14] text-white shadow-[0_0_20px_rgba(57,255,20,0.6)]' 
+                            : 'bg-white/[0.12] border-white/20 text-white/90 hover:bg-white/[0.22] hover:border-white/45'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cinsiyet & Yaş */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+                      Cinsiyet
+                    </label>
+                    <div className="flex bg-white/[0.04] p-1.5 rounded-xl border border-white/15 backdrop-blur-md">
+                      {['Karma', 'Erkek', 'Kadın'].map(g => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setSeekGender(g)}
+                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                            seekGender === g ? 'bg-white/40 text-white border-2 border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.25)]' : 'text-white/70 hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+                      Yaş Grubu
+                    </label>
+                    <div className="flex bg-white/[0.04] p-1.5 rounded-xl border border-white/15 backdrop-blur-md overflow-x-auto no-scrollbar">
+                      {['18-22', '23-27', '28-35', 'Tümü'].map(a => (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => setSeekAge(a)}
+                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shrink-0 px-2.5 cursor-pointer ${
+                            seekAge === a ? 'bg-[#FFFF00]/50 text-black border-2 border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.5)] font-black' : 'text-white/70 hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Yayınla Button */}
+            <div className="p-6 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/90 to-transparent sticky bottom-0 z-20 pb-12 pt-16 border-t border-white/5">
+              <motion.button 
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (!seekSaha.trim()) {
+                    alert('Lütfen saha adını girin.');
+                    return;
+                  }
+                  if (seekPositions.length === 0) {
+                    alert('Lütfen en az bir ihtiyaç duyulan pozisyon seçin.');
+                    return;
+                  }
+                  
+                  const newAd: PlayerSeekAnnouncement = {
+                    id: 'psa_' + Math.random().toString(36).substr(2, 9),
+                    creatorId: 'u1', // Kerem Yılmaz
+                    creatorName: 'Kerem Yılmaz',
+                    creatorAvatar: 'https://i.pravatar.cc/150?u=kerem2024',
+                    pitchName: seekSaha,
+                    date: seekTarih || 'Bugün',
+                    time: seekSaat || '21:00',
+                    positionsNeeded: seekPositions,
+                    difficulty: seekDifficulty,
+                    format: seekFormat,
+                    duration: seekDuration,
+                    gender: seekGender,
+                    ageGroup: seekAge,
+                    status: 'ACTIVE',
+                    createdAt: new Date().toISOString(),
+                    joinedPlayers: []
+                  };
+
+                  addPlayerSeekAd(newAd);
+                  setShowPlayerSeekModal(false);
+                  alert(`${seekPositions.join(', ')} mevkileri için oyuncu ilanı yayınlandı!`);
+                }}
+                className="w-full h-16 bg-gradient-to-r from-[#FFFF00] to-[#39FF14] text-black font-black text-sm uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 border-2 border-white/50 shadow-[0_0_45px_rgba(57,255,20,0.8)] hover:shadow-[0_0_60px_rgba(255,255,0,1)] hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+              >
+                <Check size={20} strokeWidth={3} /> OYUNCU BUL İLANINI YAYINLA
+              </motion.button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
