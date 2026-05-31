@@ -6,7 +6,7 @@ import { UPCOMING_JOBS, WALLET_HISTORY, DIRECT_OFFERS_MOCK } from '../constants'
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
-import { auth, db } from '../supabaseAuth';
+import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
@@ -189,7 +189,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           .eq('status', 'PENDING');
         if (!error && data) {
           const mappedOffers = data.map((o: any) => {
-            const match = adminMatches.find((m: any) => m.id === o.match_id);
+            const match: any = adminMatches.find((m: any) => m.id === o.match_id);
             return {
               id: o.id,
               matchId: o.match_id,

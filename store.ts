@@ -378,9 +378,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       await Promise.allSettled([
         withTimeout(supabase.auth.getSession()),
-        withTimeout(supabase.from('pitches').select('*').limit(20)),
-        withTimeout(supabase.from('matches').select('*').limit(20)),
-        withTimeout(supabase.from('teams').select('*').limit(20)),
+        withTimeout(supabase.from('pitches').select('*').limit(20) as unknown as Promise<unknown>),
+        withTimeout(supabase.from('matches').select('*').limit(20) as unknown as Promise<unknown>),
+        withTimeout(supabase.from('teams').select('*').limit(20) as unknown as Promise<unknown>),
         withTimeout(get().loadServices(), 4000),
       ]);
     } catch (e) {

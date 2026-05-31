@@ -115,7 +115,9 @@ export const MatchModal: React.FC<{
                         name: user.name,
                         avatar: user.avatar,
                         rating: user.rating,
-                        position: s.role
+                        position: s.role,
+                        x: s.x,
+                        y: s.y
                     }
                 };
             }

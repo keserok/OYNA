@@ -4,8 +4,6 @@ export const auth = {
   currentUser: null as any
 };
 
-export const db = null as any;
-
 // Initialize currentUser synchronously if possible, but mostly rely on listener
 supabase.auth.getSession().then(({ data: { session } }) => {
   if (session?.user) {

@@ -745,8 +745,8 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                                                 className="flex items-center gap-1.5 px-3 h-7 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[9px] font-bold text-gray-400 hover:text-white transition-all">
                                                 <Download size={10} /> Export CSV
                                             </button>
-                                            <button onClick={async () => { const { seedFirestore } = await import('../../firebaseSync'); await seedFirestore(); }}
-                                                className="flex items-center gap-1.5 px-3 h-7 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 rounded-lg text-[9px] font-bold text-red-500 hover:text-white transition-all">
+                                            <button onClick={() => { showToast('Seed işlemi kaldırıldı — veri Supabase üzerinden yönetilir.'); }}
+                                                className="flex items-center gap-1.5 px-3 h-7 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 rounded-lg text-[9px] font-bold text-red-500 hover:text-white transition-all opacity-50 cursor-not-allowed">
                                                 💥 DB SEED
                                             </button>
                                             <button onClick={() => { setRefreshKey(k => k + 1); showToast('Veriler yenilendi ✓'); }}
