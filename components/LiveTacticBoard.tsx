@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Wifi, ChevronDown, X, Check, MapPin, Calendar, Clock, Plus, Star, Shield } from 'lucide-react';
-import { db, auth } from '../supabaseAuth';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SlotPlayer { id: string; name: string; avatar: string; role: string; rating: number; }
@@ -57,30 +57,44 @@ const LiveTacticBoard: React.FC<LiveTacticBoardProps> = ({ matchId }) => {
   const [lastEditor, setLastEditor] = useState<string | null>(null);
   const [showFormPicker, setShowFormPicker] = useState(false);
   const pitchRef = useRef<HTMLDivElement>(null);
-  const docRef = doc(db, 'matchTactics', matchId);
 
-  // ── Firestore real-time listener ──────────────────────────────────────────
+  // ── Supabase real-time listener ──────────────────────────────────────────
   useEffect(() => {
-    const unsub = onSnapshot(docRef, snap => {
-      if (snap.exists()) {
-        const d = snap.data();
-        setFormation(d.formation);
-        setSlots(JSON.parse(d.slots));
-        setLastEditor(d.editorName || null);
+    const fetchTactic = async () => {
+      const { data } = await supabase.from('match_tactics').select('*').eq('match_id', matchId).single();
+      if (data) {
+        setFormation(data.formation);
+        setSlots(JSON.parse(data.slots));
+        setLastEditor(data.editor_name || null);
         setSynced(true);
       }
-    }, () => setSynced(false));
-    return () => unsub();
+    };
+    fetchTactic();
+
+    const channel = supabase.channel(`tactics_${matchId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_tactics', filter: `match_id=eq.${matchId}` }, (payload) => {
+        const d = payload.new as any;
+        if (d) {
+          setFormation(d.formation);
+          setSlots(JSON.parse(d.slots));
+          setLastEditor(d.editor_name || null);
+          setSynced(true);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [matchId]);
 
   const push = async (newFormation: string, newSlots: TacticSlot[]) => {
     try {
-      await setDoc(docRef, {
+      await supabase.from('match_tactics').upsert({
+        match_id: matchId,
         formation: newFormation,
         slots: JSON.stringify(newSlots),
-        editorName: auth.currentUser?.displayName || 'Sen',
-        updatedAt: Date.now(),
-      }, { merge: true });
+        editor_name: auth.currentUser?.displayName || 'Sen',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'match_id' });
       setSynced(true);
     } catch { setSynced(false); }
   };

@@ -10,9 +10,9 @@ import {
     Layers, Gauge, Crosshair, Share2, Play, Square, List, ChevronRight, RotateCw, Hash
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { auth, db } from '../supabaseAuth';
+import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
-import { query, collection, where, onSnapshot, updateDoc, doc, addDoc } from 'firebase/firestore';
 
 
 // --- Types ---
@@ -453,38 +453,46 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     useEffect(() => {
         if (!auth.currentUser) return;
-        
-        const q = query(collection(db, 'tactics'), where('userId', '==', auth.currentUser.uid));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedTactics: TacticState[] = [];
-            
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                const tactic: TacticState = {
-                    id: doc.id,
-                    name: data.name,
-                    teamName: data.teamName,
-                    size: data.size,
-                    formation: data.formation,
-                    slots: JSON.parse(data.slots || '[]'),
-                    subs: JSON.parse(data.subs || '[]'),
-                    captainId: data.captainId || null,
-                    notes: data.notes || '',
-                    opponents: JSON.parse(data.opponents || '[]'),
-                    mentality: data.mentality || 'Balanced',
-                    tempo: data.tempo || 'Normal',
-                    identity: data.identity || 'BALANCED',
-                    drawings: JSON.parse(data.drawings || '[]')
-                };
-                fetchedTactics.push(tactic);
-            });
-            
+
+        const fetchTactics = async () => {
+            const { data, error } = await supabase
+                .from('tactics')
+                .select('*')
+                .eq('user_id', auth.currentUser.uid);
+
+            if (error) {
+                console.error("Error fetching tactics:", error);
+                return;
+            }
+
+            const fetchedTactics: TacticState[] = (data || []).map((d: any) => ({
+                id: d.id,
+                name: d.name,
+                teamName: d.team_name,
+                size: d.size,
+                formation: d.formation,
+                slots: JSON.parse(d.slots || '[]'),
+                subs: JSON.parse(d.subs || '[]'),
+                captainId: d.captain_id || null,
+                notes: d.notes || '',
+                opponents: JSON.parse(d.opponents || '[]'),
+                mentality: d.mentality || 'Balanced',
+                tempo: d.tempo || 'Normal',
+                identity: d.identity || 'BALANCED',
+                drawings: JSON.parse(d.drawings || '[]')
+            }));
+
             setDbTactics(fetchedTactics);
-        }, (error) => {
-            console.error("Error fetching tactics:", error);
-        });
-        
-        return () => unsubscribe();
+        };
+        fetchTactics();
+
+        const channel = supabase.channel(`tactics_${auth.currentUser.uid}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tactics', filter: `user_id=eq.${auth.currentUser.uid}` }, () => {
+                fetchTactics();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
     }, []);
 
 
@@ -815,15 +823,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             };
 
             if (activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)) {
-                await updateDoc(doc(db, 'tactics', activeTactic.id), tacticData);
+                await supabase.from('tactics').update(tacticData).eq('id', activeTactic.id);
                 showToast("Taktik güncellendi!");
                 setActiveTactic({ ...activeTactic, name: saveTacticName, teamName: saveTeamName });
             } else {
-                const docRef = await addDoc(collection(db, 'tactics'), {
+                const { data: inserted, error: insertErr } = await supabase.from('tactics').insert({
                     ...tacticData,
-                    createdAt: new Date().toISOString()
-                });
-                const savedTactic = { ...activeTactic, id: docRef.id, name: saveTacticName, teamName: saveTeamName };
+                    created_at: new Date().toISOString()
+                }).select().single();
+                if (insertErr) throw insertErr;
+                const savedTactic = { ...activeTactic, id: inserted.id, name: saveTacticName, teamName: saveTeamName };
                 setActiveTactic(savedTactic);
                 showToast("Taktik başarıyla kaydedildi!");
             }
