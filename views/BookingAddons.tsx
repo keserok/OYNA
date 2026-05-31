@@ -28,10 +28,11 @@ const BookingAddons: React.FC<BookingAddonsProps> = ({
   onRemoveGk,
   onRemoveRef
 }) => {
-  // Equipment State
   const [bootsCount, setBootsCount] = useState(0);
   const [vestsCount, setVestsCount] = useState(0);
   const [waterCount, setWaterCount] = useState(0);
+  
+  const [showCancelPolicy, setShowCancelPolicy] = useState(false);
 
   const prices = {
       boots: 50,
@@ -49,6 +50,15 @@ const BookingAddons: React.FC<BookingAddonsProps> = ({
   };
 
   const handleContinue = () => {
+      if (selectedGk || selectedRef) {
+          setShowCancelPolicy(true);
+      } else {
+          onContinue(calculateTotal());
+      }
+  };
+
+  const handleConfirmPolicy = () => {
+      setShowCancelPolicy(false);
       onContinue(calculateTotal());
   };
 
@@ -283,6 +293,70 @@ const BookingAddons: React.FC<BookingAddonsProps> = ({
                <ArrowRight size={20} />
            </button>
        </div>
+
+       {/* Cancellation Policy Modal */}
+       <AnimatePresence>
+         {showCancelPolicy && (
+           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+             <motion.div 
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+               onClick={() => setShowCancelPolicy(false)}
+             />
+             <motion.div 
+               initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }}
+               className="bg-[#161B22] border border-red-500/30 rounded-3xl p-6 w-full max-w-md relative z-10 overflow-hidden"
+             >
+               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+               <div className="flex items-center gap-3 mb-4">
+                 <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                   <Shield size={24} />
+                 </div>
+                 <div>
+                   <h3 className="text-lg font-black text-white">Güvenli Ödeme & İptal Politikası</h3>
+                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Lütfen Okuyun</p>
+                 </div>
+               </div>
+               
+               <div className="space-y-3 mb-6">
+                 <div className="bg-[#0A0E14] rounded-xl p-4 border border-white/5 flex gap-3 items-start">
+                   <CreditCard size={16} className="text-[#39FF14] shrink-0 mt-0.5" />
+                   <p className="text-xs text-gray-300 font-medium leading-relaxed">
+                     <strong className="text-white">Escrow (Havuz) Sistemi:</strong> Ödemeniz OYNA havuzunda güvence altında tutulur. Maç sorunsuz bittiğinde hizmet verene (kaleci/hakem) aktarılır.
+                   </p>
+                 </div>
+                 <div className="bg-[#0A0E14] rounded-xl p-4 border border-white/5 flex gap-3 items-start">
+                   <Info size={16} className="text-orange-400 shrink-0 mt-0.5" />
+                   <p className="text-xs text-gray-300 font-medium leading-relaxed">
+                     <strong className="text-white">İptal Kesintisi:</strong> Maça <strong className="text-orange-400">12 saatten az</strong> kala iptal ederseniz, mağduriyet önleme bedeli olarak tutarın %50'si kaleciye/hakeme aktarılır.
+                   </p>
+                 </div>
+                 <div className="bg-[#0A0E14] rounded-xl p-4 border border-white/5 flex gap-3 items-start">
+                   <CheckCircle2 size={16} className="text-blue-400 shrink-0 mt-0.5" />
+                   <p className="text-xs text-gray-300 font-medium leading-relaxed">
+                     <strong className="text-white">Tam İade:</strong> Hizmet veren (kaleci/hakem) maça gelmezse veya iptal ederse %100 kesintisiz iade + OYNA Kuponu kazanırsınız.
+                   </p>
+                 </div>
+               </div>
+
+               <div className="flex gap-3">
+                 <button 
+                   onClick={() => setShowCancelPolicy(false)}
+                   className="flex-1 py-3.5 rounded-xl font-bold text-sm text-gray-400 bg-white/5 hover:bg-white/10 transition-colors"
+                 >
+                   Vazgeç
+                 </button>
+                 <button 
+                   onClick={handleConfirmPolicy}
+                   className="flex-1 py-3.5 rounded-xl font-black text-sm text-black bg-[#FFFF00] hover:bg-yellow-400 transition-colors shadow-[0_0_20px_rgba(255,255,0,0.2)]"
+                 >
+                   OKUDUM, ONAYLIYORUM
+                 </button>
+               </div>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
     </div>
   );
 };

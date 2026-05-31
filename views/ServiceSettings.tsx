@@ -6,6 +6,8 @@ import {
   ArrowLeft, Bell, Lock, Shield, Globe, Moon, Sun, HelpCircle,
   ChevronRight, LogOut, Star
 } from 'lucide-react';
+import { auth } from '../supabaseAuth';
+import { useAppStore } from '../store';
 
 interface ServiceSettingsProps {
   role: UserRole;
@@ -21,19 +23,18 @@ const ToggleRow = React.memo(({
 }: {
   label: string; desc?: string; checked: boolean; onChange: () => void; accentColor: string;
 }) => (
-  <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-    <div className="flex-1 pr-4">
+  <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 gap-4">
+    <div className="flex-1">
       <p className="text-sm font-bold text-white">{label}</p>
-      {desc && <p className="text-[10px] text-gray-500 mt-0.5">{desc}</p>}
+      {desc && <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{desc}</p>}
     </div>
     <button
       onClick={onChange}
-      className="shrink-0 w-12 h-6 rounded-full relative transition-colors duration-300 focus:outline-none"
+      className="shrink-0 w-11 h-6 rounded-full relative transition-colors duration-300 outline-none focus:outline-none"
       style={{ background: checked ? accentColor : 'rgba(255,255,255,0.1)' }}
     >
       <span
-        className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300"
-        style={{ transform: checked ? 'translateX(26px)' : 'translateX(2px)' }}
+        className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 ${checked ? 'right-1' : 'left-1'}`}
       />
     </button>
   </div>
@@ -44,25 +45,39 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   const accentColor = isRef ? '#ef4444' : '#22c55e';
   const accentBg = isRef ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)';
 
+  const { adminGoalkeepers, adminReferees, updateGoalkeeper, updateReferee } = useAppStore();
+  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
+  
+  const savedSettings = me?.settings || {};
+
   const [openSection, setOpenSection] = useState<SectionKey>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  // Notification toggles — individual state keys to avoid full re-render
-  const [notifNewOffer, setNotifNewOffer] = useState(true);
-  const [notifReminder, setNotifReminder] = useState(true);
-  const [notifPayment, setNotifPayment] = useState(true);
-  const [notifMarketing, setNotifMarketing] = useState(false);
-  const [notifWeekly, setNotifWeekly] = useState(true);
+  // Notification toggles
+  const [notifNewOffer, setNotifNewOffer] = useState(savedSettings.notifNewOffer ?? true);
+  const [notifReminder, setNotifReminder] = useState(savedSettings.notifReminder ?? true);
+  const [notifPayment, setNotifPayment] = useState(savedSettings.notifPayment ?? true);
+  const [notifMarketing, setNotifMarketing] = useState(savedSettings.notifMarketing ?? false);
+  const [notifWeekly, setNotifWeekly] = useState(savedSettings.notifWeekly ?? true);
 
   // Privacy
-  const [showProfile, setShowProfile] = useState(true);
-  const [showRating, setShowRating] = useState(true);
-  const [hidePhone, setHidePhone] = useState(false);
-  const [allowOffer, setAllowOffer] = useState(true);
+  const [showProfile, setShowProfile] = useState(savedSettings.showProfile ?? true);
+  const [showRating, setShowRating] = useState(savedSettings.showRating ?? true);
+  const [hidePhone, setHidePhone] = useState(savedSettings.hidePhone ?? false);
+  const [allowOffer, setAllowOffer] = useState(savedSettings.allowOffer ?? true);
 
   // Appearance
-  const [darkMode, setDarkMode] = useState(true);
-  const [language, setLanguage] = useState<'TR' | 'EN'>('TR');
+  const [darkMode, setDarkMode] = useState(savedSettings.darkMode ?? true);
+  const [language, setLanguage] = useState<'TR' | 'EN'>(savedSettings.language ?? 'TR');
+
+  // Save changes to DB
+  const updateSettings = (key: string, value: any) => {
+    if (!me) return;
+    const newSettings = { ...savedSettings, [key]: value };
+    const update = { id: me.id, settings: newSettings };
+    if (isRef) updateReferee(update as any);
+    else updateGoalkeeper(update as any);
+  };
 
   // Apply dark/light mode to document
   useEffect(() => {
@@ -185,15 +200,15 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           color="#f59e0b"
         >
           <ToggleRow label="Yeni Teklif" desc="Kaptanlardan gelen tekliflerde bildir"
-            checked={notifNewOffer} onChange={() => setNotifNewOffer(v => !v)} accentColor={accentColor} />
+            checked={notifNewOffer} onChange={() => { setNotifNewOffer(!notifNewOffer); updateSettings('notifNewOffer', !notifNewOffer); }} accentColor={accentColor} />
           <ToggleRow label="Maç Hatırlatıcı" desc="Maçtan 2 saat önce bildir"
-            checked={notifReminder} onChange={() => setNotifReminder(v => !v)} accentColor={accentColor} />
+            checked={notifReminder} onChange={() => { setNotifReminder(!notifReminder); updateSettings('notifReminder', !notifReminder); }} accentColor={accentColor} />
           <ToggleRow label="Ödeme Bildirimi" desc="Para transferlerinde anında bildir"
-            checked={notifPayment} onChange={() => setNotifPayment(v => !v)} accentColor={accentColor} />
+            checked={notifPayment} onChange={() => { setNotifPayment(!notifPayment); updateSettings('notifPayment', !notifPayment); }} accentColor={accentColor} />
           <ToggleRow label="Haftalık Rapor" desc="Kazanç ve performans özeti"
-            checked={notifWeekly} onChange={() => setNotifWeekly(v => !v)} accentColor={accentColor} />
+            checked={notifWeekly} onChange={() => { setNotifWeekly(!notifWeekly); updateSettings('notifWeekly', !notifWeekly); }} accentColor={accentColor} />
           <ToggleRow label="Kampanyalar" desc="Özel fırsatlar ve duyurular"
-            checked={notifMarketing} onChange={() => setNotifMarketing(v => !v)} accentColor="#6b7280" />
+            checked={notifMarketing} onChange={() => { setNotifMarketing(!notifMarketing); updateSettings('notifMarketing', !notifMarketing); }} accentColor="#6b7280" />
         </SectionCard>
 
         {/* Gizlilik */}
@@ -205,13 +220,13 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           color="#8b5cf6"
         >
           <ToggleRow label="Profilimi Göster" desc="Kaptanlar profilini görebilir"
-            checked={showProfile} onChange={() => setShowProfile(v => !v)} accentColor={accentColor} />
+            checked={showProfile} onChange={() => { setShowProfile(!showProfile); updateSettings('showProfile', !showProfile); }} accentColor={accentColor} />
           <ToggleRow label="Puan Görünsün" desc="Reyting puanını herkese göster"
-            checked={showRating} onChange={() => setShowRating(v => !v)} accentColor={accentColor} />
+            checked={showRating} onChange={() => { setShowRating(!showRating); updateSettings('showRating', !showRating); }} accentColor={accentColor} />
           <ToggleRow label="Telefon Gizle" desc="Telefon numarasını sakla"
-            checked={hidePhone} onChange={() => setHidePhone(v => !v)} accentColor={accentColor} />
+            checked={hidePhone} onChange={() => { setHidePhone(!hidePhone); updateSettings('hidePhone', !hidePhone); }} accentColor={accentColor} />
           <ToggleRow label="Direkt Teklif Al" desc="Kaptanlar sana doğrudan teklif gönderebilir"
-            checked={allowOffer} onChange={() => setAllowOffer(v => !v)} accentColor={accentColor} />
+            checked={allowOffer} onChange={() => { setAllowOffer(!allowOffer); updateSettings('allowOffer', !allowOffer); }} accentColor={accentColor} />
         </SectionCard>
 
         {/* Görünüm */}
@@ -222,20 +237,20 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           subtitle={darkMode ? 'Karanlık mod aktif' : 'Aydınlık mod aktif'}
           color="#3b82f6"
         >
-          <div className="flex items-center justify-between py-3 border-b border-white/5">
-            <div>
+          <div className="flex items-center justify-between py-3 border-b border-white/5 gap-4">
+            <div className="flex-1">
               <p className="text-sm font-bold">Karanlık Mod</p>
               <p className="text-[10px] text-gray-500">{darkMode ? 'Koyu tema aktif' : 'Açık tema aktif'}</p>
             </div>
             <button
-              onClick={() => setDarkMode(v => !v)}
-              className="w-14 h-7 rounded-full relative transition-colors duration-400 focus:outline-none"
+              onClick={() => { setDarkMode(!darkMode); updateSettings('darkMode', !darkMode); }}
+              className="shrink-0 w-14 h-7 rounded-full relative transition-colors duration-400 focus:outline-none"
               style={{ background: darkMode ? '#3b82f6' : '#e5e7eb' }}
             >
               <motion.span
-                animate={{ x: darkMode ? 30 : 2 }}
+                animate={{ x: darkMode ? 28 : 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="absolute top-1 w-5 h-5 rounded-full shadow-md flex items-center justify-center text-[9px]"
+                className="absolute left-1 top-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px]"
                 style={{ background: darkMode ? '#fff' : '#3b82f6' }}
               >
                 {darkMode ? '🌙' : '☀️'}
@@ -251,7 +266,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               {(['TR', 'EN'] as const).map(lang => (
                 <button
                   key={lang}
-                  onClick={() => setLanguage(lang)}
+                  onClick={() => { setLanguage(lang); updateSettings('language', lang); }}
                   className="px-3 py-1 rounded-lg text-xs font-black transition-all"
                   style={{
                     background: language === lang ? '#3b82f6' : 'transparent',

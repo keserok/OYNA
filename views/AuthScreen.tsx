@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check } from 'lucide-react';
 import { UserRole } from '../types';
-import { loginWithGoogle } from '../firebase';
+import { loginWithGoogle } from '../supabaseAuth';
 
 interface AuthScreenProps {
   onSuccess: () => void;
@@ -131,17 +131,37 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const { color, orb1, orb2, tagline, badge } = theme;
   const [agreed, setAgreed] = React.useState(true);
 
-  const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    if (!agreed) return;
+  const [isLoading, setIsLoading] = React.useState<'google' | 'apple' | 'guest' | null>(null);
+
+  const handleGoogleLogin = async () => {
+    if (!agreed || isLoading) return;
+    setIsLoading('google');
     try {
-      if (provider === 'google') {
-        await loginWithGoogle();
-      }
-      // Mock Apple sign in
+      await loginWithGoogle();
+      // OAuth yönlendirmesi başlar — onSuccess auth listener'dan tetiklenir
+    } catch (err) {
+      console.error('Authentication error:', err);
+      setIsLoading(null);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    if (!agreed || isLoading) return;
+    setIsLoading('apple');
+    try {
+      // Apple Sign In henüz bağlı değil — misafir akışıyla devam
       onSuccess();
     } catch (err) {
-      console.error("Authentication error:", err);
+      console.error('Authentication error:', err);
+    } finally {
+      setIsLoading(null);
     }
+  };
+
+  const handleGuestLogin = () => {
+    if (!agreed || isLoading) return;
+    setIsLoading('guest');
+    onSuccess();
   };
 
   return (
@@ -215,28 +235,39 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => handleSocialLogin('google')}
-              disabled={!agreed}
+              onClick={handleGoogleLogin}
+              disabled={!agreed || isLoading !== null}
               className="w-full h-15 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-white text-black hover:bg-gray-100 transition-colors shadow-2xl disabled:opacity-50"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3 0-3.478 2.822-6.3 6.3-6.3 1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z"/>
               </svg>
-              <span>GOOGLE İLE DEVAM ET</span>
+              <span>{isLoading === 'google' ? 'YÖNLENDİRİLİYOR...' : 'GOOGLE İLE DEVAM ET'}</span>
             </motion.button>
 
             {/* Apple Sign In */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => handleSocialLogin('apple')}
-              disabled={!agreed}
+              onClick={handleAppleLogin}
+              disabled={!agreed || isLoading !== null}
               className="w-full h-15 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-black text-white hover:bg-black/80 border border-white/10 transition-colors shadow-2xl disabled:opacity-50"
             >
               <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z"/>
               </svg>
-              <span>APPLE İLE DEVAM ET</span>
+              <span>{isLoading === 'apple' ? 'GİRİŞ YAPILIYOR...' : 'APPLE İLE DEVAM ET'}</span>
+            </motion.button>
+
+            {/* Guest Sign In */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleGuestLogin}
+              disabled={!agreed || isLoading !== null}
+              className="w-full h-15 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-[#FFFF00]/10 text-[#FFFF00] border border-[#FFFF00]/20 hover:bg-[#FFFF00]/20 transition-colors shadow-2xl disabled:opacity-50 mt-2"
+            >
+              <span>{isLoading === 'guest' ? 'DEVAM EDİLİYOR...' : 'MİSAFİR OLARAK TEST ET'}</span>
             </motion.button>
           </div>
         </div>

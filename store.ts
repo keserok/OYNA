@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement } from './types';
 import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER_TEAMS } from './constants';
-import * as FB from './firebaseMutations';
-import { auth, db } from './firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import * as FB from './supabaseMutations';
+import { auth } from './supabaseAuth';
+
 import { supabase } from './supabaseClient';
+import type { NotificationPreferences } from './notifications/pushService';
+import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
 
 export interface Friend {
   id: string;
@@ -184,6 +186,8 @@ const INITIAL_SETTINGS: AppSettings = {
 };
 
 interface AppState {
+  isHydrated: boolean;
+  initApp: () => Promise<void>;
   view: AppView;
   role: UserRole | null;
   isAuthReady: boolean;
@@ -207,6 +211,14 @@ interface AppState {
 
   // Global text overrides
   globalTexts: Record<string, string>;
+
+  // ─── Location & Matching ─────────────────────────────────────────
+  userLocation: { lat: number; lng: number } | null;
+  setUserLocation: (location: { lat: number; lng: number } | null) => void;
+  locationPermissionStatus: 'GRANTED' | 'DENIED' | 'NOT_REQUESTED';
+  setLocationPermissionStatus: (status: 'GRANTED' | 'DENIED' | 'NOT_REQUESTED') => void;
+  searchRadius: number;
+  setSearchRadius: (radius: number) => void;
 
   // Admin CRUD Data (live, reflected across whole app)
   adminPitches: Pitch[];
@@ -300,6 +312,7 @@ interface AppState {
   addReferee: (ref: Referee) => void;
   updateReferee: (ref: Referee) => void;
   deleteReferee: (id: string) => void;
+  loadServices: () => Promise<void>;
 
   // ─── Supabase Plei Architecture ───────────────────────────────
   joinMatchPleiAction: (matchId: string, slotId: string, role: string) => Promise<void>;
@@ -312,11 +325,13 @@ interface AppState {
 
   // ─── User CRUD ─────────────────────────────────────────────────
   updateUser: (user: AdminUser) => void;
+  setNewMatchBadge: (val: boolean) => void;
   banUser: (id: string) => void;
   unbanUser: (id: string) => void;
   toggleUserPro: (id: string) => void;
   verifyUser: (id: string) => void;
   addUser: (user: AdminUser) => void;
+  deleteUser: (id: string) => void;
 
   // ─── Notifications ─────────────────────────────────────────────
   addNotification: (n: AdminNotification) => void;
@@ -330,16 +345,52 @@ interface AppState {
   userNotifications: UserNotificationItem[];
   addUserNotification: (notif: UserNotificationItem) => void;
   removeUserNotification: (id: string) => void;
+  isNotificationsOpen: boolean;
+  setIsNotificationsOpen: (open: boolean) => void;
+  markAllNotificationsAsRead: () => void;
   acceptMatchInvite: (notificationId: string) => void;
   rejectMatchInvite: (notificationId: string) => void;
   unreadNotificationsCount: number;
   incrementUnreadNotifications: () => void;
   clearUnreadNotifications: () => void;
+
+  // ─── Push Notification State ───────────────────────────────────
+  pushToken: string | null;
+  setPushToken: (token: string | null) => void;
+  notificationPreferences: NotificationPreferences;
+  setNotificationPreferences: (prefs: NotificationPreferences) => void;
+  updateSingleNotificationPref: (key: keyof NotificationPreferences, enabled: boolean) => void;
 }
 
+const IS_LOCAL_DEV =
+  import.meta.env.VITE_DEV_MODE === 'true' ||
+  !import.meta.env.VITE_SUPABASE_URL;
+
 export const useAppStore = create<AppState>((set, get) => ({
-  view: 'DASHBOARD',
-  role: UserRole.PLAYER,
+  isHydrated: true,
+  initApp: async () => {
+    const withTimeout = <T,>(promise: Promise<T>, ms = 3000): Promise<T | null> =>
+      Promise.race([
+        promise,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+      ]);
+
+    try {
+      await Promise.allSettled([
+        withTimeout(supabase.auth.getSession()),
+        withTimeout(supabase.from('pitches').select('*').limit(20)),
+        withTimeout(supabase.from('matches').select('*').limit(20)),
+        withTimeout(supabase.from('teams').select('*').limit(20)),
+        withTimeout(get().loadServices(), 4000),
+      ]);
+    } catch (e) {
+      console.error('Hydration error:', e);
+    } finally {
+      set({ isHydrated: true, initialLoadComplete: true });
+    }
+  },
+  view: IS_LOCAL_DEV ? 'DASHBOARD' : 'SPLASH',
+  role: IS_LOCAL_DEV ? UserRole.CAPTAIN : UserRole.PLAYER,
   isAuthReady: true,
   addOnTotal: 0,
   hasMotmCoupon: false,
@@ -371,6 +422,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     opponentFinderTitle: 'RAKİP BUL',
     studioTitle: 'TAKTİK ZEKA',
   },
+  
+  // Location defaults
+  userLocation: null,
+  setUserLocation: (userLocation) => set({ userLocation }),
+  locationPermissionStatus: 'NOT_REQUESTED',
+  setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
+  searchRadius: 50,
+  setSearchRadius: (searchRadius) => set({ searchRadius }),
   adminPitches: PITCHES,
   adminGoalkeepers: GOALKEEPERS,
   adminReferees: REFEREES,
@@ -471,7 +530,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = [...state.friends, friend];
     const uid = auth.currentUser?.uid;
     if (uid) {
-      updateDoc(doc(db, 'users', uid), { friends: next }).catch(err => console.warn("Failed to sync friend:", err));
+      // Firebase sync removed for now
     }
     return { friends: next };
   }),
@@ -479,7 +538,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = state.friends.filter(f => f.id !== id);
     const uid = auth.currentUser?.uid;
     if (uid) {
-      updateDoc(doc(db, 'users', uid), { friends: next }).catch(err => console.warn("Failed to sync remove friend:", err));
+      // Firebase sync removed for now
     }
     return { friends: next };
   }),
@@ -487,7 +546,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = state.friends.map(f => f.id === id ? { ...f, status: 'FRIEND' as const } : f);
     const uid = auth.currentUser?.uid;
     if (uid) {
-      updateDoc(doc(db, 'users', uid), { friends: next }).catch(err => console.warn("Failed to sync accept friend:", err));
+      // Firebase sync removed for now
     }
     return { friends: next };
   }),
@@ -495,7 +554,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = [...state.friends, { ...friend, status: 'PENDING_SENT' as const }];
     const uid = auth.currentUser?.uid;
     if (uid) {
-      updateDoc(doc(db, 'users', uid), { friends: next }).catch(err => console.warn("Failed to sync pending friend:", err));
+      // Firebase sync removed for now
     }
     return { friends: next };
   }),
@@ -613,24 +672,72 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAdminTeams: (adminTeams) => set({ adminTeams }),
 
   // Pitch
-  addPitch: (pitch) => FB.fbAddPitch(pitch),
-  updatePitch: (pitch) => FB.fbUpdatePitch(pitch),
-  deletePitch: (id) => FB.fbDeletePitch(id),
+  addPitch: (pitch) => {
+    set((state) => ({ adminPitches: [pitch, ...state.adminPitches] }));
+    FB.fbAddPitch(pitch);
+  },
+  updatePitch: (pitch) => {
+    set((state) => ({ adminPitches: state.adminPitches.map(p => p.id === pitch.id ? pitch : p) }));
+    FB.fbUpdatePitch(pitch);
+  },
+  deletePitch: (id) => {
+    set((state) => ({ adminPitches: state.adminPitches.filter(p => p.id !== id) }));
+    FB.fbDeletePitch(id);
+  },
 
   // Goalkeeper
-  addGoalkeeper: (gk) => FB.fbAddGoalkeeper(gk),
-  updateGoalkeeper: (gk) => FB.fbUpdateGoalkeeper(gk),
-  deleteGoalkeeper: (id) => FB.fbDeleteGoalkeeper(id),
+  addGoalkeeper: (gk) => {
+    set((state) => ({ adminGoalkeepers: [gk, ...state.adminGoalkeepers] }));
+    FB.fbAddGoalkeeper(gk);
+  },
+  updateGoalkeeper: (gk) => {
+    set((state) => ({ adminGoalkeepers: state.adminGoalkeepers.map(g => g.id === gk.id ? gk : g) }));
+    FB.fbUpdateGoalkeeper(gk);
+  },
+  deleteGoalkeeper: (id) => {
+    set((state) => ({ adminGoalkeepers: state.adminGoalkeepers.filter(g => g.id !== id) }));
+    FB.fbDeleteGoalkeeper(id);
+  },
 
   // Referee
-  addReferee: (ref) => FB.fbAddReferee(ref),
-  updateReferee: (ref) => FB.fbUpdateReferee(ref),
-  deleteReferee: (id) => FB.fbDeleteReferee(id),
+  addReferee: (ref) => {
+    set((state) => ({ adminReferees: [ref, ...state.adminReferees] }));
+    FB.fbAddReferee(ref);
+  },
+  updateReferee: (ref) => {
+    set((state) => ({ adminReferees: state.adminReferees.map(r => r.id === ref.id ? ref : r) }));
+    FB.fbUpdateReferee(ref);
+  },
+  deleteReferee: (id) => {
+    set((state) => ({ adminReferees: state.adminReferees.filter(r => r.id !== id) }));
+    FB.fbDeleteReferee(id);
+  },
+
+  // Load Services from DB
+  loadServices: async () => {
+    try {
+      const gks = await FB.fbGetGoalkeepers();
+      if (gks && gks.length > 0) set({ adminGoalkeepers: gks });
+      const refs = await FB.fbGetReferees();
+      if (refs && refs.length > 0) set({ adminReferees: refs });
+    } catch (err) {
+      console.error('Error loading services', err);
+    }
+  },
 
   // Match
-  addMatch: (match) => FB.fbAddMatch(match),
-  updateMatch: (match) => FB.fbUpdateMatch(match),
-  deleteMatch: (id) => FB.fbDeleteMatch(id),
+  addMatch: (match) => {
+    set((state) => ({ adminMatches: [match, ...state.adminMatches] }));
+    FB.fbAddMatch(match as any);
+  },
+  updateMatch: (match) => {
+    set((state) => ({ adminMatches: state.adminMatches.map(m => m.id === match.id ? match : m) }));
+    FB.fbUpdateMatch(match as any);
+  },
+  deleteMatch: (id) => {
+    set((state) => ({ adminMatches: state.adminMatches.filter(m => m.id !== id) }));
+    FB.fbDeleteMatch(id);
+  },
 
   // Supabase Plei/Fubles Hybrid
   joinMatchPleiAction: async (matchId, slotId, role) => {
@@ -694,15 +801,63 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // User
-  updateUser: (user) => FB.fbUpdateUser(user),
-  banUser: (id) => FB.fbBanUser(id, true),
-  unbanUser: (id) => FB.fbBanUser(id, false),
+  updateUser: (user) => {
+    set((state) => ({
+      adminUsers: state.adminUsers.map(u => u.id === user.id ? user : u)
+    }));
+    FB.fbUpdateUser(user);
+  },
+  setNewMatchBadge: (val) => {
+    const uid = auth.currentUser?.uid || 'u1';
+    const user = get().adminUsers.find(u => u.id === uid);
+    if (user) {
+      set((state) => ({
+        adminUsers: state.adminUsers.map(u => u.id === uid ? { ...u, newMatchBadge: val } : u)
+      }));
+      FB.fbUpdateUser({ ...user, newMatchBadge: val }).catch(err => {
+        console.warn("Failed to sync user newMatchBadge:", err);
+      });
+    }
+  },
+  banUser: (id) => {
+    set((state) => ({
+      adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isBanned: true } : u)
+    }));
+    FB.fbBanUser(id, true);
+  },
+  unbanUser: (id) => {
+    set((state) => ({
+      adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isBanned: false } : u)
+    }));
+    FB.fbBanUser(id, false);
+  },
   toggleUserPro: (id) => {
     const user = get().adminUsers.find(u => u.id === id);
-    if (user) FB.fbToggleUserPro(id, !user.isPro);
+    if (user) {
+      set((state) => ({
+        adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isPro: !u.isPro } : u)
+      }));
+      FB.fbToggleUserPro(id, !user.isPro);
+    }
   },
-  verifyUser: (id) => FB.fbVerifyUser(id),
-  addUser: (user) => FB.fbAddUser(user),
+  verifyUser: (id) => {
+    set((state) => ({
+      adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isVerified: true } : u)
+    }));
+    FB.fbVerifyUser(id);
+  },
+  addUser: (user) => {
+    set((state) => ({
+      adminUsers: [user, ...state.adminUsers]
+    }));
+    FB.fbAddUser(user);
+  },
+  deleteUser: (id) => {
+    set((state) => ({
+      adminUsers: state.adminUsers.filter(u => u.id !== id)
+    }));
+    FB.fbDeleteUser(id);
+  },
 
   // Notifications
   addNotification: (n) => FB.fbAddNotification(n),
@@ -717,8 +872,19 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // User Notifications
   userNotifications: [],
-  addUserNotification: (notif) => set((state) => ({ userNotifications: [notif, ...state.userNotifications] })),
+  isNotificationsOpen: false,
+  setIsNotificationsOpen: (open) => set({ isNotificationsOpen: open }),
+  addUserNotification: (notif) => set((state) => {
+    const updatedList = [
+      { id: Date.now().toString(), read: false, ...notif } as any,
+      ...state.userNotifications
+    ];
+    return { userNotifications: updatedList };
+  }),
   removeUserNotification: (id) => set((state) => ({ userNotifications: state.userNotifications.filter((n) => n.id !== id) })),
+  markAllNotificationsAsRead: () => set((state) => ({
+    userNotifications: state.userNotifications.map(n => ({ ...n, read: true }))
+  })),
   acceptMatchInvite: (id) => {
     const state = get();
     const notif = state.userNotifications.find((n) => n.id === id);
@@ -726,6 +892,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { matchId, slotId } = notif.payload;
       const match = state.adminMatches.find((m) => m.id === matchId);
       if (match) {
+        const slot = (match.slots || []).find(s => s?.id === slotId);
+        
+        // Race condition: Eğer slot başkası tarafından doldurulmuşsa
+        if (slot && slot.status === 'TAKEN') {
+          // Kabul edemez, hata bildirimi atalım
+          const errorNotif = {
+            id: `err_slot_${Date.now()}`,
+            type: 'alert',
+            title: 'Slot Doldu',
+            desc: 'Davet edildiğiniz pozisyona maalesef başka bir oyuncu katılmış.',
+            time: 'Az önce',
+            iconName: 'AlertCircle',
+            color: '#ef4444', // Red
+            textColor: '#fff',
+            read: false,
+          };
+          set((state) => ({ 
+            userNotifications: [errorNotif, ...state.userNotifications.filter((n) => n.id !== id)] 
+          }));
+          return; // İşlemi iptal et
+        }
+
         const currentUserUid = auth.currentUser?.uid || 'u1';
         const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1' };
 
@@ -752,4 +940,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   unreadNotificationsCount: 0,
   incrementUnreadNotifications: () => set((state) => ({ unreadNotificationsCount: state.unreadNotificationsCount + 1 })),
   clearUnreadNotifications: () => set({ unreadNotificationsCount: 0 }),
+
+  // ─── Push Notification State ───────────────────────────────────
+  pushToken: null,
+  setPushToken: (token) => set({ pushToken: token }),
+  notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
+  setNotificationPreferences: (prefs) => set({ notificationPreferences: prefs }),
+  updateSingleNotificationPref: (key, enabled) => set((state) => {
+    const current = state.notificationPreferences[key];
+    // Zorunlu bildirimleri kapatamayız
+    if (current?.mandatory) return state;
+    return {
+      notificationPreferences: {
+        ...state.notificationPreferences,
+        [key]: { ...current, enabled },
+      },
+    };
+  }),
 }));

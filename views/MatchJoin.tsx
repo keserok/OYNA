@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Calendar, Zap, Hand, Scale,
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
@@ -9,7 +9,41 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player } from '../types';
 import { useAppStore } from '../store';
-import { auth } from '../firebase';
+import { auth } from '../supabaseAuth';
+import { joinMatchSlot, subscribeToMatchUpdates } from '../services/matchService';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix leaflet default icon path issues
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  });
+}
+
+const AIRBNB_MAP_CSS = `
+  .leaflet-popup-content-wrapper { background: transparent !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
+  .leaflet-popup-tip-container { display: none !important; }
+  .leaflet-popup-content { margin: 0 !important; }
+  .leaflet-container { background: #060B12 !important; font-family: inherit; }
+  .leaflet-control-attribution { display: none !important; }
+  .leaflet-control-zoom { display: none !important; }
+  .leaflet-tile-pane { filter: brightness(0.9) saturate(0.6); }
+`;
+
+const ChangeView = ({ center }: { center: [number, number] | null }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -349,9 +383,30 @@ const getCommunityName = (id?: string): string => {
   return 'İTÜ Futbol';
 };
 
+const generateDefaultSlots = (size: string, prefixId: string): PositionSlot[] => {
+  const formationsForSize = FORMATIONS[size];
+  if (!formationsForSize) return [];
+  const firstFormation = Object.values(formationsForSize)[0];
+  if (!firstFormation) return [];
+  
+  return firstFormation.map((coord, idx) => ({
+    id: `${prefixId}_slot_${idx}`,
+    role: coord.role,
+    x: coord.x,
+    y: coord.y,
+    status: 'OPEN'
+  }));
+};
+
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 
-const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
+const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJoin }) => {
+  const matchFormatStr = originalMatch?.format || originalMatch?.badges?.find(b => b.includes('v') || b.includes('V'))?.toLowerCase() || '5v5';
+  const match = originalMatch ? {
+    ...originalMatch,
+    slots: (originalMatch.slots && originalMatch.slots.length > 0) ? originalMatch.slots : generateDefaultSlots(matchFormatStr, originalMatch.id + '_home'),
+    awaySlots: (originalMatch.awaySlots && originalMatch.awaySlots.length > 0) ? originalMatch.awaySlots : generateDefaultSlots(matchFormatStr, originalMatch.id + '_away')
+  } : null as any;
 
   // ── State ────────────────────────────────────────────────────────────────
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -377,9 +432,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   const [invitesSent, setInvitesSent] = useState<Record<string, SlotInviteStatus>>({}); // slotId → status
   const [invitedFriendNames, setInvitedFriendNames] = useState<Record<string, string>>({}); // slotId → name
 
-  // Kaptan için hayali oyuncu
-  const [customPlayerName, setCustomPlayerName] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
+  // Arkadaş daveti kategorisi
+  const [inviteCategory, setInviteCategory] = useState('Tümü');
 
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -388,11 +442,45 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   const [showOpponentModal, setShowOpponentModal] = useState(false);
   const [showJoinOpponentModal, setShowJoinOpponentModal] = useState(false);
 
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
+  const [customPlayerName, setCustomPlayerName] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
   // ── Store ─────────────────────────────────────────────────────────────────
   const { 
     adminUsers, friends, updateMatch, addUserNotification, adminPitches, 
-    userTeams, myTeams, setView, setMarketplaceReturnView, setSelectedMatch 
+    userTeams, myTeams, setView, setMarketplaceReturnView, setSelectedMatch,
+    setNewMatchBadge
   } = useAppStore();
+
+  useEffect(() => {
+    if (match?.location) {
+        const foundPitch = adminPitches?.find(p => (p.name || '').toLowerCase().includes(match.location.toLowerCase()) || match.location.toLowerCase().includes((p.name || '').toLowerCase()));
+        if (foundPitch && foundPitch.coordinates) {
+            setPitchCoordinates([foundPitch.coordinates.lat, foundPitch.coordinates.lng]);
+        } else {
+            setPitchCoordinates([41.0433, 29.0057]);
+        }
+    }
+  }, [match, adminPitches]);
+
+  // ── Supabase Realtime: Lobideki değişiklikleri canlı dinle ──────────────
+  useEffect(() => {
+    if (!originalMatch?.id) return;
+    const unsubscribe = subscribeToMatchUpdates(originalMatch.id, (updatedMatch) => {
+      // Supabase'den gelen snake_case verileri MatchListing formatına dönüştür
+      const mapped: Partial<MatchListing> = {
+        ...updatedMatch,
+        slots: (updatedMatch as any).slots || [],
+        awaySlots: (updatedMatch as any).away_slots || (updatedMatch as any).awaySlots || [],
+        homeTeamId: (updatedMatch as any).home_team_id || (updatedMatch as any).homeTeamId,
+        awayTeamId: (updatedMatch as any).away_team_id || (updatedMatch as any).awayTeamId,
+      };
+      updateMatch({ ...originalMatch, ...mapped } as MatchListing);
+    });
+    return () => { unsubscribe(); };
+  }, [originalMatch?.id]);
 
   if (!match) return null;
 
@@ -436,8 +524,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
   const communityName = getCommunityName(match.communityId);
 
   // Home & Away Teams derived from store
-  const homeTeam = (userTeams || []).find(t => t.id === match.homeTeamId) || (userTeams || [])[0];
-  const awayTeam = (userTeams || []).find(t => t.id === match.awayTeamId);
+  const homeTeam = match.homeTeamId ? (userTeams || []).find(t => t.id === match.homeTeamId) : null;
+  const awayTeam = match.awayTeamId ? (userTeams || []).find(t => t.id === match.awayTeamId) : null;
 
   // ── Kullanıcı ─────────────────────────────────────────────────────────────
   const currentUserUid = auth.currentUser?.uid || 'u1';
@@ -525,11 +613,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
     : null;
 
   const assignedIds = (match.slots || []).filter(s => s?.player).map(s => s.player!.id);
-  const filteredFriends = (friends || []).filter(f =>
-    f && f.id && f.name &&
-    !assignedIds.includes(f.id) &&
-    f.name.toLowerCase().includes((friendSearch || '').toLowerCase())
-  );
+  const filteredFriends = (friends || []).filter(f => {
+    if (!f || !f.id || !f.name) return false;
+    if (assignedIds.includes(f.id)) return false;
+    if (friendSearch && !f.name.toLowerCase().includes(friendSearch.toLowerCase())) return false;
+    if (inviteCategory !== 'Tümü') {
+      if (inviteCategory === 'Favorilerim') {
+        if (!(f as any).isFavorite) return false;
+      } else {
+        if (f.group !== inviteCategory) return false;
+      }
+    }
+    return true;
+  });
   const onlineFriends = filteredFriends.filter(f => (f as any).online);
   const offlineFriends = filteredFriends.filter(f => !(f as any).online);
 
@@ -618,6 +714,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
 
     const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
 
+    // ── Optimistic UI: Anında lokal state'i güncelle ──
     try {
       await updateMatch({ 
         ...match, 
@@ -627,7 +724,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
       });
       setSelectedSlotId(null);
       setIsProcessing(false);
-      onJoin();
+      setNewMatchBadge(true);
+      setLobbyTab('chat');
+
+      // ── Arka planda Supabase'e kaydet ──
+      try {
+        await joinMatchSlot(match.id, isAway ? updatedAwaySlots : updatedSlots, isAway);
+      } catch (dbErr) {
+        console.warn('Supabase kayıt hatası (rollback yapılıyor):', dbErr);
+        // Rollback: Eski state'e geri dön
+        await updateMatch({ ...match });
+      }
     } catch (e) {
       console.error('Join error:', e);
       setIsProcessing(false);
@@ -1185,7 +1292,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                     <h2 className="text-xl font-black text-white uppercase italic tracking-tight">ARKADAŞINI DAVET ET</h2>
                     <p className="text-[10px] text-[#39FF14] font-bold uppercase tracking-widest mt-1">Boş Pozisyona Çağır</p>
                   </div>
-                  <button onClick={() => { setInviteModalSlotId(null); setFriendSearch(''); setShowCustomInput(false); }}
+                  <button onClick={() => { setInviteModalSlotId(null); setFriendSearch(''); setInviteCategory('Tümü'); }}
                     className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10">
                     <X size={18} />
                   </button>
@@ -1201,29 +1308,23 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
 
               <div className="px-6 py-4 max-w-lg mx-auto w-full">
 
-                {/* Kaptan — Hayali Oyuncu */}
-                {isCaptain && (
-                  <div className="mb-6 bg-purple-950/20 border border-purple-500/15 rounded-3xl p-5">
-                    <button onClick={() => setShowCustomInput(v => !v)}
-                      className="flex items-center gap-2 w-full text-left mb-3">
-                      <UserPlus size={14} className="text-purple-400" />
-                      <span className="text-xs font-black text-purple-400 uppercase tracking-widest">Hayali Oyuncu Ekle</span>
-                      <span className="ml-auto text-[9px] text-purple-400/60 uppercase tracking-widest font-bold">{showCustomInput ? '▲ KAPAT' : '▼ AÇ'}</span>
+                {/* Kategori Sekmeleri */}
+                <div className="flex gap-2 mb-4 overflow-x-auto custom-scrollbar pb-2">
+                  {['Tümü', 'Favorilerim', 'Lise Tayfası', 'Üniversite', 'İş Arkadaşları'].map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => setInviteCategory(cat)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                        inviteCategory === cat 
+                          ? (cat === 'Favorilerim' ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
+                          : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {cat === 'Favorilerim' && <Star size={10} fill={inviteCategory === cat ? "black" : "currentColor"} />}
+                      {cat}
                     </button>
-                    {showCustomInput && (
-                      <div className="flex gap-2">
-                        <input type="text" placeholder="Oyuncu Adı..." value={customPlayerName}
-                          onChange={e => setCustomPlayerName(e.target.value)}
-                          className="flex-1 bg-[#161B22] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors" />
-                        <button onClick={handleAddCustomPlayer}
-                          disabled={!customPlayerName.trim()}
-                          className="bg-purple-600 hover:bg-purple-500 text-white px-5 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-40 active:scale-95 transition-all">
-                          EKLE
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  ))}
+                </div>
 
                 {/* Çevrimiçi Arkadaşlar */}
                 {onlineFriends.length > 0 && (
@@ -1516,16 +1617,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                 {/* Diagonal background glow */}
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-red-500/5 pointer-events-none" />
                 
-                {/* Ev Sahibi Takım */}
+                {/* Ev Sahibi Takım / Beyaz Takım */}
                 <button
                   onClick={() => setPitchSide('home')}
                   className={`flex-1 flex flex-col items-center text-center min-w-0 p-3.5 rounded-2xl border transition-all cursor-pointer ${
                     pitchSide === 'home'
-                      ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                      ? (homeTeam ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'bg-white/10 border-white/30 shadow-[0_0_20px_rgba(255,255,255,0.2)]')
                       : 'bg-transparent border-transparent opacity-50 hover:opacity-80'
                   }`}
                 >
-                  <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(16,185,129,0.15)] mb-1 overflow-hidden">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl mb-1 overflow-hidden ${
+                    homeTeam ? 'bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'bg-white/10 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)]'
+                  }`}>
                     {homeTeam?.logo ? (
                       homeTeam.logo.startsWith('http') ? (
                         <img src={homeTeam.logo} alt={homeTeam.name} className="w-full h-full object-cover" />
@@ -1533,11 +1636,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                         homeTeam.logo
                       )
                     ) : (
-                      '🛡️'
+                      <Shield className="w-6 h-6 text-white" />
                     )}
                   </div>
-                  <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block leading-tight">EV SAHİBİ</span>
-                  <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">{homeTeam?.name || 'Takım A'}</h4>
+                  <span className={`text-[8px] font-black uppercase tracking-widest block leading-tight ${homeTeam ? 'text-emerald-400' : 'text-white'}`}>
+                    {homeTeam ? 'EV SAHİBİ' : 'BEYAZ TAKIM'}
+                  </span>
+                  <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">
+                    {homeTeam?.name || 'BEYAZ TAKIM'}
+                  </h4>
                   <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
                     <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
                     <span className="text-[9px] text-[#FFFF00] font-black italic">{homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue)/1000) : 80}</span>
@@ -1551,76 +1658,62 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                   </div>
                 </div>
 
-                {/* Deplasman Takımı */}
+                {/* Deplasman Takımı / Kırmızı Takım */}
                 <button
-                  onClick={() => {
-                    if (awayTeam) {
-                      setPitchSide('away');
-                    } else {
-                      setShowJoinOpponentModal(true);
-                    }
-                  }}
+                  onClick={() => setPitchSide('away')}
                   className={`flex-1 flex flex-col items-center text-center min-w-0 p-3.5 rounded-2xl border transition-all cursor-pointer ${
                     pitchSide === 'away'
                       ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
                       : 'bg-transparent border-transparent opacity-50 hover:opacity-80'
                   }`}
                 >
-                  {awayTeam ? (
-                    <>
-                      <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)] mb-1 overflow-hidden">
-                        {awayTeam.logo ? (
-                          awayTeam.logo.startsWith('http') ? (
-                            <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
-                          ) : (
-                            awayTeam.logo
-                          )
-                        ) : (
-                          '🛡️'
-                        )}
-                      </div>
-                      <span className="text-[8px] font-black text-red-400 uppercase tracking-widest block leading-tight">DEPLASMAN</span>
-                      <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">{awayTeam.name}</h4>
-                      <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
-                        <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
-                        <span className="text-[9px] text-[#FFFF00] font-black italic">{awayTeam.teamValue ? Math.round(parseInt(awayTeam.teamValue)/1000) : 78}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-11 h-11 rounded-xl bg-red-950/20 border border-red-500/30 flex items-center justify-center text-red-500 font-black text-base animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.2)] mb-1">
-                        ?
-                      </div>
-                      <span className="text-[8px] font-black text-red-500/70 uppercase tracking-widest block leading-tight animate-pulse">RAKİP ARANIYOR</span>
-                      <span className="text-[7px] text-white/40 font-bold uppercase tracking-wider mt-1 block">Tıkla Meydan Oku</span>
-                    </>
-                  )}
+                  <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)] mb-1 overflow-hidden">
+                    {awayTeam?.logo ? (
+                      awayTeam.logo.startsWith('http') ? (
+                        <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
+                      ) : (
+                        awayTeam.logo
+                      )
+                    ) : (
+                      <Shield className="w-6 h-6 text-red-500" />
+                    )}
+                  </div>
+                  <span className="text-[8px] font-black text-red-400 uppercase tracking-widest block leading-tight">
+                    {awayTeam ? 'DEPLASMAN' : 'KIRMIZI TAKIM'}
+                  </span>
+                  <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">
+                    {awayTeam?.name || 'KIRMIZI TAKIM'}
+                  </h4>
+                  <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
+                    <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
+                    <span className="text-[9px] text-[#FFFF00] font-black italic">{awayTeam?.teamValue ? Math.round(parseInt(awayTeam.teamValue)/1000) : 78}</span>
+                  </div>
                 </button>
               </div>
 
               {/* Detay Bilgileri Şeridi */}
               <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1 text-white/60 text-[9px] font-bold uppercase tracking-widest">
-                    <MapPin size={9} className="text-[#39FF14]" />
-                    <span className="truncate max-w-[200px]">{match.location || 'Konum Belirtilmemiş'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/40 text-[9px] font-bold uppercase tracking-widest">
+                <div className="flex flex-col gap-1.5">
+                  <button onClick={() => setShowMapModal(true)} className="flex items-center gap-1.5 text-white text-[11px] font-black uppercase tracking-widest hover:text-[#39FF14] transition-colors cursor-pointer group text-left">
+                    <MapPin size={11} className="text-[#39FF14] group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="truncate max-w-[200px] border-b border-dashed border-white/20 group-hover:border-[#39FF14]/50">{match.location || 'Konum Belirtilmemiş'}</span>
+                  </button>
+                  <div className="flex items-center gap-2 text-white text-[11px] font-black uppercase tracking-widest">
                     <div className="flex items-center gap-1">
-                      <Calendar size={9} />
+                      <Calendar size={11} className="text-white/80" />
                       <span>{match.date || '—'}</span>
                     </div>
-                    <span>•</span>
+                    <span className="text-white/40">•</span>
                     <div className="flex items-center gap-1">
-                      <Clock size={9} />
-                      <span className="text-[#FFFF00]">{match.time || '—'}</span>
+                      <Clock size={11} className="text-white/80" />
+                      <span>{match.time || '—'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Badgeler */}
                 <div className="flex items-center gap-1.5">
-                  <div className="px-2 py-0.5 rounded-full font-black text-[8px] uppercase tracking-widest border"
+                  <div className="px-2.5 py-1 rounded-full font-black text-[10px] uppercase tracking-widest border"
                     style={{
                       color: diffConf.color,
                       borderColor: diffConf.color + '40',
@@ -1629,7 +1722,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
                     }}>
                     {diffConf.label}
                   </div>
-                  <div className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 font-black text-[8px] uppercase tracking-widest text-white/60">
+                  <div className="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 font-black text-[10px] uppercase tracking-widest text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
                     {squadSize.toUpperCase()}
                   </div>
                 </div>
@@ -1693,12 +1786,35 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
 
         {lobbyTab === 'chat' ? (
           /* ── LOBİ SOHBETİ SEKME İÇERİĞİ ───────────────────────────────── */
-          <div className="bg-[#161B22]/80 border border-white/5 rounded-3xl p-5 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex flex-col h-[520px] relative overflow-hidden">
+          <div className="bg-[#161B22]/80 border border-white/5 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex flex-col h-[560px] relative overflow-hidden">
+            
+            {/* ── Geçici Maç Odası Sabit Bilgi Kartı (Pinned Header) ── */}
+            <div className="bg-black/60 backdrop-blur-xl border-b border-white/10 p-4 sticky top-0 z-20 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/30 flex items-center justify-center">
+                    <MapPin size={14} className="text-[#39FF14]" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Saha Konumu</p>
+                    <p className="text-xs font-bold text-white truncate max-w-[180px]">{match.location || 'Oyna Arena'}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Tarih & Saat</p>
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={12} className="text-[#00F2FE]" />
+                    <p className="text-xs font-bold text-[#00F2FE]">{match.date} • {match.time}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Ambiyans glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#39FF14]/5 rounded-full blur-3xl pointer-events-none" />
 
             {/* Mesaj Listesi */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide">
+            <div className="flex-1 overflow-y-auto space-y-4 p-4 scrollbar-hide">
               {(match.chatMessages || [
                 {
                   id: 'm1',
@@ -1748,7 +1864,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
             </div>
 
             {/* Gönderme Alanı */}
-            <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
+            <div className="p-4 bg-black/40 border-t border-white/5 flex gap-2">
               <input
                 type="text"
                 value={chatInputText}
@@ -1943,44 +2059,28 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.9)] animate-pulse" />
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                pitchSide === 'home' 
+                  ? (homeTeam ? 'bg-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.9)]' : 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]')
+                  : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]'
+              }`} />
               <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
-                {pitchSide === 'home' ? 'Ev Sahibi Kadrosu' : 'Deplasman Kadrosu'}
+                {pitchSide === 'home' 
+                  ? (homeTeam ? 'Ev Sahibi Kadrosu' : 'Beyaz Takım Kadrosu') 
+                  : (awayTeam ? 'Deplasman Kadrosu' : 'Kırmızı Takım Kadrosu')}
               </p>
             </div>
-            {selectedSlotId && pitchSide === 'home' && (
+            {selectedSlotId && (
               <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                className="text-[9px] font-black text-[#39FF14] uppercase tracking-widest bg-[#39FF14]/10 px-2.5 py-1 rounded-full border border-[#39FF14]/30 animate-pulse">
+                className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border animate-pulse ${
+                  pitchSide === 'home'
+                    ? (homeTeam ? 'text-[#39FF14] bg-[#39FF14]/10 border-[#39FF14]/30' : 'text-white bg-white/10 border-white/30')
+                    : 'text-red-500 bg-red-500/10 border-red-500/30'
+                }`}>
                 Pozisyon Seçildi ✓
               </motion.span>
             )}
           </div>
-
-          {/* Deplasman Kadrosu Seçim Paneli */}
-          {awayTeam && (
-            <div className="flex bg-black/40 border border-white/5 rounded-2xl p-1 mb-4 max-w-[380px] mx-auto">
-              <button
-                onClick={() => setPitchSide('home')}
-                className={`flex-1 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all cursor-pointer ${
-                  pitchSide === 'home'
-                    ? 'bg-white/10 text-white border border-white/10 shadow-[0_2px_8px_rgba(255,255,255,0.05)]'
-                    : 'text-white/40 hover:text-white'
-                }`}
-              >
-                EV SAHİBİ
-              </button>
-              <button
-                onClick={() => setPitchSide('away')}
-                className={`flex-1 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all cursor-pointer ${
-                  pitchSide === 'away'
-                    ? 'bg-white/10 text-white border border-white/10 shadow-[0_2px_8px_rgba(255,255,255,0.05)]'
-                    : 'text-white/40 hover:text-white'
-                }`}
-              >
-                DEPLASMAN
-              </button>
-            </div>
-          )}
 
           {/* Saha Kapsayıcısı */}
           <div className="relative w-full max-w-[380px] mx-auto rounded-[28px] overflow-hidden aspect-[3/4] border-4 border-[#161B22] shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_80px_rgba(0,0,0,0.6)]"
@@ -2494,6 +2594,52 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match, onBack, onJoin }) => {
           </div>
         </div>
       </div>
+
+      {/* ── MAP MODAL (SAHA KONUMU) ── */}
+      <AnimatePresence>
+        {showMapModal && pitchCoordinates && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md bg-[#0A0E14] border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative"
+            >
+              <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
+                <h3 className="text-sm font-black text-white italic uppercase flex items-center gap-2">
+                  <MapPin size={16} className="text-[#39FF14]" />
+                  {match?.location} KONUMU
+                </h3>
+                <button onClick={() => setShowMapModal(false)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="h-64 relative">
+                <style>{AIRBNB_MAP_CSS}</style>
+                {pitchCoordinates && (
+                  <MapContainer center={pitchCoordinates} zoom={15} className="w-full h-full" zoomControl={false}>
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="" />
+                      <ChangeView center={pitchCoordinates} />
+                      <Marker position={pitchCoordinates}>
+                          <Popup closeButton={false}>
+                              <div className="bg-[#161B22]/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl text-center min-w-[120px]">
+                                  <h4 className="text-white font-black text-[10px] uppercase tracking-widest mb-1">{match?.location}</h4>
+                                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${pitchCoordinates[0]},${pitchCoordinates[1]}`} target="_blank" rel="noreferrer" className="inline-block mt-2 px-3 py-1.5 bg-[#39FF14]/20 border border-[#39FF14]/50 text-[#39FF14] text-[9px] font-black uppercase rounded-lg">Yol Tarifi Al</a>
+                              </div>
+                          </Popup>
+                      </Marker>
+                  </MapContainer>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Detaylı Maç Bilgileri Modalı ─────────────────────────────────── */}
       <AnimatePresence>

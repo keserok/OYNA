@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, Bell, Shield, Clock, Star, CheckCircle, AlertTriangle, Zap, DollarSign, Calendar, Award, TrendingUp, ChevronRight, ArrowLeft } from 'lucide-react';
+import { X, Bell, Shield, Clock, Star, CheckCircle, AlertTriangle, Zap, DollarSign, Calendar, Award, TrendingUp, ChevronRight, ArrowLeft, MapPin, CreditCard, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserRole } from '../types';
+import { UserRole, AppView } from '../types';
 import { useAppStore } from '../store';
+import { PITCHES } from '../constants';
 
 interface NotificationsProps {
   onBack: () => void;
@@ -139,7 +140,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   const rawNotifs = isGK ? GK_NOTIFICATIONS : isRef ? REF_NOTIFICATIONS : GENERAL_NOTIFICATIONS;
   
-  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification } = useAppStore();
+  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, setSelectedMatch, setView, clearUnreadNotifications, markAllNotificationsAsRead } = useAppStore();
   
   const storeNotifs = userNotifications.map(n => ({
     id: n.id,
@@ -158,6 +159,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   const notifications = [...storeNotifs, ...localNotifications];
   
   const [allRead, setAllRead] = useState(false);
+  const [selectedInvite, setSelectedInvite] = useState<any>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paySuccess, setPaySuccess] = useState(false);
 
   const unread = notifications.filter(n => !n.read && !allRead).length;
 
@@ -170,10 +174,29 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   }, [removeUserNotification]);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#07090F' }}>
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+      {/* Backdrop */}
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        exit={{ opacity: 0 }} 
+        onClick={onBack}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
 
-      {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      {/* Sheet */}
+      <motion.div 
+        initial={{ y: '100%' }} 
+        animate={{ y: 0 }} 
+        exit={{ y: '100%' }} 
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="relative w-full h-[85vh] bg-[#0A0E14] rounded-t-3xl overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10"
+      >
+        {/* Notch */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-30 pointer-events-none" />
+
+        {/* Ambient glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div
           className="absolute rounded-full blur-[120px]"
           style={{ width: 320, height: 320, top: '-10%', right: '-10%', background: accentColor, opacity: 0.08 }}
@@ -183,12 +206,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
       </div>
 
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-        className="sticky top-0 z-20 px-5 pt-12 pb-4 flex items-center gap-3 border-b border-white/5"
-        style={{ background: 'rgba(7,9,15,0.9)', backdropFilter: 'blur(24px)' }}
+      <div
+        className="sticky top-0 z-20 px-5 pt-8 pb-4 flex items-center gap-3 border-b border-white/5"
+        style={{ background: 'rgba(10,14,20,0.95)', backdropFilter: 'blur(24px)' }}
       >
         <motion.button
           whileTap={{ scale: 0.92 }}
@@ -224,14 +244,19 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
         {unread > 0 && (
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => setAllRead(true)}
+            onClick={() => {
+              setAllRead(true);
+              setLocalNotifications(prev => prev.map(n => ({ ...n, read: true })));
+              if (markAllNotificationsAsRead) markAllNotificationsAsRead();
+              if (clearUnreadNotifications) clearUnreadNotifications();
+            }}
             className="px-3 py-2 rounded-xl text-[10px] font-black border border-white/10 text-gray-400"
             style={{ background: 'rgba(255,255,255,0.04)' }}
           >
             Tümünü Oku
           </motion.button>
         )}
-      </motion.header>
+      </div>
 
       {/* Notification list */}
       <div className="flex-1 px-4 py-4 pb-28">
@@ -263,6 +288,17 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     variants={item}
                     exit="exit"
                     layout
+                    onClick={() => {
+                      if (n.type === 'invite') {
+                        setSelectedInvite(n);
+                      } else if (n.payload?.matchId) {
+                        const m = adminMatches.find(x => x.id === n.payload?.matchId);
+                        if (m) {
+                          setSelectedMatch(m);
+                          setView('MATCH_JOIN' as AppView);
+                        }
+                      }
+                    }}
                     className="relative rounded-[22px] overflow-hidden cursor-pointer group"
                     style={{
                       background: isUnread
@@ -291,30 +327,23 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-start justify-between gap-2 mb-1 pr-6">
                           <h4 className="font-black text-white text-sm leading-snug">{n.title}</h4>
-                          <span className="text-[10px] text-gray-500 font-medium shrink-0 mt-0.5">{n.time}</span>
+                          <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                            {isUnread && (
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ background: accentColor, boxShadow: `0 0 8px ${accentColor}` }}
+                              />
+                            )}
+                            <span className="text-[10px] text-gray-500 font-medium">{n.time}</span>
+                          </div>
                         </div>
                         <p className="text-[11px] text-gray-400 leading-relaxed">{n.desc}</p>
 
                         {n.type === 'invite' ? (
-                          <div className="mt-3 flex gap-2">
-                            <motion.button
-                              whileTap={{ scale: 0.95 }}
-                              onClick={(e) => { e.stopPropagation(); acceptMatchInvite(n.id as string); }}
-                              className="px-4 py-1.5 rounded-xl text-[11px] font-black uppercase text-black"
-                              style={{ background: '#39FF14', boxShadow: '0 0 10px rgba(57,255,20,0.4)' }}
-                            >
-                              KABUL ET
-                            </motion.button>
-                            <motion.button
-                              whileTap={{ scale: 0.95 }}
-                              onClick={(e) => { e.stopPropagation(); rejectMatchInvite(n.id as string); }}
-                              className="px-4 py-1.5 rounded-xl text-[11px] font-black uppercase text-white border border-red-500/50"
-                              style={{ background: 'rgba(239,68,68,0.1)' }}
-                            >
-                              REDDET
-                            </motion.button>
+                          <div className="mt-3 flex items-center gap-1 text-[11px] font-black uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
+                            Daveti İncele <ChevronRight size={14} />
                           </div>
                         ) : n.cta && (
                           <motion.button
@@ -327,13 +356,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                         )}
                       </div>
 
-                      {/* Unread dot */}
-                      {isUnread && (
-                        <div
-                          className="absolute top-4 right-10 w-2 h-2 rounded-full"
-                          style={{ background: accentColor, boxShadow: `0 0 8px ${accentColor}` }}
-                        />
-                      )}
+
 
                       {/* Dismiss on hover */}
                       <motion.button
@@ -352,6 +375,121 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           )}
         </AnimatePresence>
       </div>
+      </motion.div>
+
+      {/* Invite Modal */}
+      <AnimatePresence>
+        {selectedInvite && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-2xl flex flex-col"
+          >
+            {(() => {
+              const match = adminMatches.find(m => m.id === selectedInvite.payload?.matchId) as any;
+              const pitch = PITCHES.find(p => p.id === match?.pitchId);
+              const cost = match?.costPerPerson || match?.price || 150;
+              
+              return (
+                <div className="flex-1 overflow-y-auto flex flex-col relative pb-32">
+                  <div className="w-full h-64 relative shrink-0">
+                    <img src={pitch?.image || 'https://images.unsplash.com/photo-1518605368461-1ee12522c070?auto=format&fit=crop&q=80'} className="w-full h-full object-cover opacity-50" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-[#0A0E14]/60 to-[#0A0E14]" />
+                    <button onClick={() => setSelectedInvite(null)} className="absolute top-12 right-5 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20"><X size={20} /></button>
+                    
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-black uppercase tracking-widest mb-3">
+                        <CheckCircle size={12} /> Davet Edildin
+                      </div>
+                      <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg">{match?.title || 'Dostluk Maçı'}</h2>
+                      <div className="flex items-center gap-4 mt-2">
+                        <span className="flex items-center gap-1.5 text-xs text-white/70 font-medium"><Calendar size={14} className="text-[#39FF14]" /> {match?.date || 'Belirtilmedi'}</span>
+                        <span className="flex items-center gap-1.5 text-xs text-white/70 font-medium"><Clock size={14} className="text-[#39FF14]" /> {match?.time || '20:00'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-6 py-6 flex-1 flex flex-col gap-6">
+                    <div className="bg-[#161B22] border border-white/5 rounded-3xl p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-[#39FF14]/10 flex items-center justify-center text-[#39FF14]"><MapPin size={24} /></div>
+                      <div>
+                        <h4 className="text-sm font-black text-white">{pitch?.name || 'Saha Seçilmemiş'}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{pitch?.location || 'İstanbul'}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#161B22] border border-white/5 rounded-3xl p-5">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-white/50 mb-4">Ödeme Detayları</h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-white/80">Kişi Başı Ücret</span>
+                        <span className="text-sm font-black text-white">{cost}₺</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/5">
+                        <span className="text-sm text-white/80">Hizmet Bedeli</span>
+                        <span className="text-sm font-black text-white">0₺</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-base font-black text-white uppercase">Toplam</span>
+                        <span className="text-xl font-black text-[#39FF14]">{cost}₺</span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-[11px] text-gray-500 text-center px-4 leading-relaxed mt-auto">
+                      Bu daveti kabul ederek OYNA kurallarını ve iade politikalarını onaylamış olursunuz.
+                    </p>
+                  </div>
+
+                  <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent z-20">
+                    <div className="flex gap-3">
+                      <button 
+                        disabled={isPaying || paySuccess}
+                        onClick={() => {
+                          rejectMatchInvite(selectedInvite.id as string);
+                          setSelectedInvite(null);
+                        }}
+                        className="w-16 h-[64px] rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:bg-red-500/10 hover:text-red-400 transition-all shrink-0"
+                      >
+                        <X size={24} />
+                      </button>
+                      <button 
+                        disabled={isPaying || paySuccess}
+                        onClick={() => {
+                          setIsPaying(true);
+                          setTimeout(() => {
+                            setPaySuccess(true);
+                            setTimeout(() => {
+                              acceptMatchInvite(selectedInvite.id as string);
+                              setSelectedInvite(null);
+                              setIsPaying(false);
+                              setPaySuccess(false);
+                              onBack();
+                              setView('UPCOMING_MATCHES' as AppView);
+                            }, 1500);
+                          }, 1500);
+                        }}
+                        className={`flex-1 h-[64px] rounded-2xl font-black italic uppercase tracking-tighter transition-all flex items-center justify-center gap-2 overflow-hidden relative ${paySuccess ? 'bg-[#39FF14] text-black' : isPaying ? 'bg-[#FFFF00] text-black' : 'bg-[#39FF14] text-black shadow-[0_0_30px_rgba(57,255,20,0.3)] hover:shadow-[0_0_40px_rgba(57,255,20,0.5)]'}`}
+                      >
+                        {paySuccess ? (
+                          <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2">
+                            <CheckCircle2 size={24} strokeWidth={3} /> ÖDEME ALINDI
+                          </motion.div>
+                        ) : isPaying ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> İŞLENİYOR...
+                          </div>
+                        ) : (
+                          <>
+                            <CreditCard size={20} /> KABUL ET VE {cost}₺ ÖDE
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

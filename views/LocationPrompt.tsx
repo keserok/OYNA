@@ -1,6 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MapPin, Navigation, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
+import { fbUpdateUserLocation } from '../supabaseMutations';
 
 interface LocationPromptProps {
   onPermissionGranted: () => void;
@@ -9,6 +12,7 @@ interface LocationPromptProps {
 
 const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, onSkip }) => {
   const [status, setStatus] = useState<'IDLE' | 'SCANNING' | 'FOUND' | 'DENIED'>('IDLE');
+  const { setUserLocation, setLocationPermissionStatus } = useAppStore();
 
   const handleGrantPermission = () => {
     setStatus('SCANNING');
@@ -17,21 +21,40 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                // Success
-                setTimeout(() => {
-                    setStatus('FOUND');
-                    if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
-                    setTimeout(onPermissionGranted, 1500);
-                }, 2000); // Fake scan time
+                // Konumu kaydet
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+                setLocationPermissionStatus('GRANTED');
+
+                // Eğer kullanıcı giriş yapmışsa veritabanına da kaydet
+                if (auth.currentUser) {
+                    fbUpdateUserLocation(auth.currentUser.uid, position.coords.latitude, position.coords.longitude).catch(err => {
+                        console.error('Konum DB kaydı başarısız:', err);
+                    });
+                }
+                
+                setStatus('FOUND');
+                if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
+                setTimeout(onPermissionGranted, 1500);
             },
             (error) => {
-                console.error(error);
+                console.error('Konum alınamadı:', error);
                 setStatus('DENIED');
-            }
+                setLocationPermissionStatus('DENIED');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     } else {
         setStatus('DENIED');
+        setLocationPermissionStatus('DENIED');
     }
+  };
+
+  const handleSkip = () => {
+    setLocationPermissionStatus('DENIED');
+    onSkip();
   };
 
   return (
@@ -91,7 +114,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
       <div className="p-6 pb-10 relative z-10 w-full max-w-md mx-auto">
           {status === 'DENIED' ? (
               <button 
-                onClick={onSkip}
+                onClick={handleSkip}
                 className="w-full h-14 bg-[#161B22] text-white font-bold rounded-2xl border border-white/10 hover:bg-white/5 transition-colors"
               >
                   MANUEL DEVAM ET
@@ -106,14 +129,13 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                       {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ...'}
                   </button>
                   {status === 'IDLE' && (
-                      <button onClick={onSkip} className="w-full py-3 text-xs font-bold text-gray-500 hover:text-white transition-colors">
+                      <button onClick={handleSkip} className="w-full py-3 text-xs font-bold text-gray-500 hover:text-white transition-colors">
                           ŞİMDİ DEĞİL
                       </button>
                   )}
               </div>
           )}
       </div>
-
     </div>
   );
 };

@@ -1,54 +1,74 @@
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
-import { User as FirebaseUser } from 'firebase/auth';
+import { supabase } from '../supabaseClient';
+import { User } from '@supabase/supabase-js';
 
 export interface OynaUser {
-  uid: string;
+  id: string;
   email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
   role: 'PLAYER' | 'GOALKEEPER' | 'REFEREE' | 'ADMIN';
   walletBalance: number;
   stats: {
     matchesPlayed: number;
     rating: number;
   };
-  createdAt: any;
-  updatedAt: any;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
- * Kullanıcı sisteme girdiğinde veritabanında (Firestore) kaydı olup olmadığını kontrol eder.
- * Eğer yeni bir kullanıcıysa, OYNA sistemine varsayılan özellikleriyle (Oyuncu rolü ve 0₺ bakiye) kaydeder.
+ * Kullanıcı sisteme girdiğinde veritabanında (Supabase PostgreSQL) kaydı olup olmadığını kontrol eder.
+ * Eğer yeni bir kullanıcıysa, OYNA sistemine varsayılan özellikleriyle kaydeder.
  */
-export const syncUserToFirestore = async (firebaseUser: FirebaseUser): Promise<OynaUser | null> => {
-  if (!firebaseUser) return null;
+export const syncUserToSupabase = async (supabaseUser: User | null): Promise<OynaUser | null> => {
+  if (!supabaseUser) return null;
 
-  const userRef = doc(db, 'users', firebaseUser.uid);
-  const userSnap = await getDoc(userRef);
+  try {
+    const { data: userSnap, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single();
 
-  if (!userSnap.exists()) {
-    // Yeni kullanıcı, profilini oluşturuyoruz.
-    const newUser: OynaUser = {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email,
-      displayName: firebaseUser.displayName,
-      photoURL: firebaseUser.photoURL,
-      role: 'PLAYER', // Standart kayıt olan herkes varsayılan olarak oyuncudur
-      walletBalance: 0, // Cüzdan başlangıç bakiyesi
-      stats: {
-        matchesPlayed: 0,
-        rating: 5.0, // Başlangıç reytingi
-      },
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: no rows returned
+      console.error('Kullanıcı çekerken hata:', fetchError);
+      return null;
+    }
 
-    await setDoc(userRef, newUser);
-    return newUser;
-  } else {
-    // Zaten kayıtlı bir kullanıcı, son aktif olma tarihini güncelleyip bilgilerini döndür
-    await setDoc(userRef, { updatedAt: serverTimestamp() }, { merge: true });
-    return userSnap.data() as OynaUser;
+    if (!userSnap) {
+      // Yeni kullanıcı, profilini oluşturuyoruz.
+      const newUser = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        full_name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
+        avatar_url: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture || '',
+        role: 'PLAYER',
+        walletBalance: 0,
+        stats: {
+          matchesPlayed: 0,
+          rating: 5.0,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const { error: insertError } = await supabase.from('profiles').insert([newUser]);
+      if (insertError) {
+        console.error('Kullanıcı yaratılırken hata:', insertError);
+        return null;
+      }
+      return newUser as OynaUser;
+    } else {
+      // Zaten kayıtlı bir kullanıcı, son aktif olma tarihini güncelleyip bilgilerini döndür
+      await supabase
+        .from('profiles')
+        .update({ updatedAt: new Date().toISOString() })
+        .eq('id', supabaseUser.id);
+      
+      return userSnap as OynaUser;
+    }
+  } catch (err) {
+    console.error('Senkronizasyon hatası:', err);
+    return null;
   }
 };

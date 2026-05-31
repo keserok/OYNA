@@ -233,7 +233,8 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
   });
 
   const handleCardClick = (role: UserRole) => {
-    onSelect(role, formData);
+    setSelectedRole(role);
+    setStep(2);
   };
 
   const handleBack = () => {

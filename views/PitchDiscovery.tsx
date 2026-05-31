@@ -348,6 +348,7 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = {
 };
 
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime }) => {
+  const { userLocation, adminPitches, addUserNotification } = useAppStore();
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -375,8 +376,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
   });
   const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC'>('DEFAULT');
 
-  // User Proximity Center Coordinates (default to Beşiktaş Meydan)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([41.0433, 29.0057]);
+  // User Proximity Center Coordinates (default to Beşiktaş Meydan or user location)
+  const [mapCenter, setMapCenter] = useState<[number, number]>(userLocation ? [userLocation.lat, userLocation.lng] : [41.0433, 29.0057]);
+
+  // Sync map center with userLocation
+  useEffect(() => {
+    if (userLocation) {
+      setMapCenter([userLocation.lat, userLocation.lng]);
+    }
+  }, [userLocation]);
 
   // Sync map center with district filters
   useEffect(() => {
@@ -433,7 +441,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     return selectedCourt.price;
   };
 
-  const { adminPitches, addUserNotification } = useAppStore();
   const districts = useMemo(() => ['Tümü', ...Array.from(new Set(adminPitches.map(p => p.district)))], [adminPitches]);
 
   const filteredPitches = useMemo(() => {

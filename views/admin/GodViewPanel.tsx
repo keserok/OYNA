@@ -14,7 +14,6 @@ import {
 } from './GodViewModals';
 import { GodViewDataTables } from './GodViewDataTables';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
-import { fbDeletePitch, fbDeleteUser } from '../../firebaseMutations';
 import { MatchesTab, NotificationsTab } from './MatchNotifTabs';
 import { SettingsTab, ContentTab } from './SettingsContentTabs';
 
@@ -93,7 +92,8 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
         adminPitches, adminGoalkeepers, adminReferees, adminMatches,
         adminUsers, appSettings, updatePitch, deleteMatch, updateAppSettings,
         impersonatedUser, setImpersonatedUser, originalRole, setOriginalRole,
-        globalTexts, setGlobalText, role, setRole, setView
+        globalTexts, setGlobalText, role, setRole, setView,
+        deletePitch, deleteUser, deleteGoalkeeper, deleteReferee
     } = useAppStore();
 
     // ── UI State ────────────────────────────────────────────────────
@@ -627,14 +627,18 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                         {/* ── METRICS ──────────────────────────────────────────── */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'CANLI MAÇLAR', value: adminMatches.length, unit: 'aktif maç', color: '#ef4444', data: mkSpark(adminMatches.length), action: () => nav('MATCHES') },
-                                { label: 'EKSİK OYUNCU ALARMLAR', value: missingAlerts, unit: 'eksik kadrolu', color: '#eab308', data: mkSpark(missingAlerts + 1), action: () => nav('MATCHES') },
-                                { label: 'CANLI KOMİSYON', value: `₺${Math.round(liveRevenue).toLocaleString('tr')}`, unit: 'son 5dk', color: '#22c55e', data: mkSpark(18), action: () => setModal({ type: 'revenue' }) },
-                                { label: 'YENİ SAHA KAYITLAR', value: 3, unit: 'onay bekliyor', color: '#3b82f6', data: mkSpark(3), action: () => nav('PITCHES') },
-                            ].map(({ label, value, unit, color, data, action }) => (
-                                <button key={label} onClick={action} className="bg-[#161B22] border border-white/5 rounded-2xl p-4 flex flex-col gap-2 hover:border-white/15 transition-all text-left group">
+                                { label: 'CANLI MAÇLAR', value: adminMatches.length, unit: 'aktif maç', color: '#ef4444', data: mkSpark(adminMatches.length), action: () => nav('MATCHES'), shadowColor: 'hover:shadow-[0_8px_30px_rgba(239,68,68,0.15)] hover:border-red-500/20' },
+                                { label: 'EKSİK OYUNCU ALARMLAR', value: missingAlerts, unit: 'eksik kadrolu', color: '#eab308', data: mkSpark(missingAlerts + 1), action: () => nav('MATCHES'), shadowColor: 'hover:shadow-[0_8px_30px_rgba(234,179,8,0.15)] hover:border-yellow-500/20' },
+                                { label: 'CANLI KOMİSYON', value: `₺${Math.round(liveRevenue).toLocaleString('tr')}`, unit: 'son 5dk', color: '#22c55e', data: mkSpark(18), action: () => setModal({ type: 'revenue' }), shadowColor: 'hover:shadow-[0_8px_30px_rgba(34,197,94,0.15)] hover:border-green-500/20' },
+                                { label: 'YENİ SAHA KAYITLAR', value: 3, unit: 'onay bekliyor', color: '#3b82f6', data: mkSpark(3), action: () => nav('PITCHES'), shadowColor: 'hover:shadow-[0_8px_30px_rgba(59,130,246,0.15)] hover:border-blue-500/20' },
+                            ].map(({ label, value, unit, color, data, action, shadowColor }) => (
+                                <button 
+                                    key={label} 
+                                    onClick={action} 
+                                    className={`bg-[#161B22]/70 backdrop-blur-md border border-white/5 rounded-2xl p-4 flex flex-col gap-2 transition-all duration-300 hover:scale-[1.02] hover:bg-[#161B22] active:scale-[0.98] text-left group ${shadowColor}`}
+                                >
                                     <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest">{label}</p>
-                                    <p className="text-2xl font-black text-white group-hover:text-white">{value}</p>
+                                    <p className="text-2xl font-black text-white">{value}</p>
                                     <div className="flex items-end justify-between">
                                         <p className="text-[9px] text-gray-600 font-mono">{unit}</p>
                                         <Spark data={data} color={color} />
@@ -1699,10 +1703,10 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                                     onEditUser={(user) => setModal({ type: 'deepEditUser', data: user })}
                                     onEditGk={(gk) => setModal({ type: 'deepEditProvider', typeParam: 'GK', data: gk })}
                                     onEditRef={(ref) => setModal({ type: 'deepEditProvider', typeParam: 'REF', data: ref })}
-                                    onDeletePitch={fbDeletePitch}
-                                    onDeleteUser={fbDeleteUser}
-                                    onDeleteGk={() => showToast('Gk deletion coming soon')}
-                                    onDeleteRef={() => showToast('Ref deletion coming soon')}
+                                    onDeletePitch={deletePitch}
+                                    onDeleteUser={deleteUser}
+                                    onDeleteGk={deleteGoalkeeper}
+                                    onDeleteRef={deleteReferee}
                                     onAddPitch={() => setModal({ type: 'addPitch' })}
                                 />
                             </div>

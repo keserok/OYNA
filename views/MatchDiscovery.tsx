@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, MapPin, Clock, Shield,
+  ArrowLeft, MapPin, Clock, Shield, Circle,
   Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert,
   MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
-import { auth } from '../firebase';
+import { auth } from '../supabaseAuth';
+import { subscribeToOpenMatches, fetchNearbyMatches } from '../services/matchService';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -34,7 +35,18 @@ const MENTALITY_OPTIONS = [
 ];
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
-  const { adminMatches, adminUsers, playerSeekAds, toggleJoinPlayerSeekAd, acceptPlayerSeekAdRequest, setChatTarget, setView } = useAppStore();
+  const { 
+    adminMatches, 
+    adminUsers, 
+    playerSeekAds, 
+    toggleJoinPlayerSeekAd, 
+    acceptPlayerSeekAdRequest, 
+    setChatTarget, 
+    setView,
+    userLocation,
+    searchRadius,
+    setSearchRadius
+  } = useAppStore();
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUser = adminUsers.find(u => u.id === currentUserUid) || adminUsers[0];
   const trustScore = currentUser?.rating || 4.2;
@@ -57,8 +69,34 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     mentality: ''
   });
 
+  const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (userLocation) {
+        fetchNearbyMatches(userLocation.lat, userLocation.lng, searchRadius).then((results) => {
+            if (results && results.length > 0) {
+                const mapped = results.map((m: any) => ({
+                    id: m.match_id,
+                    title: `${m.pitch_name} Maçı`,
+                    pitchName: m.pitch_name,
+                    date: new Date(m.start_time).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }),
+                    time: new Date(m.start_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+                    format: m.format || '7v7',
+                    price: 200,
+                    difficulty: m.difficulty || 'Ciddi',
+                    distance: m.distance_meters,
+                    creatorName: m.captain_name || 'Kaptan',
+                    creatorAvatar: 'https://i.pravatar.cc/150'
+                }));
+                setNearbyMatches(mapped);
+            }
+        });
+    }
+  }, [userLocation, searchRadius]);
+
   const enhancedMatches = useMemo(() => {
-    return adminMatches.map((m, i) => {
+    const sourceMatches = (userLocation && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
+    return sourceMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price
       const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
       const diffStr = (m.difficulty || '').toLowerCase().trim();
@@ -84,9 +122,21 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       const duration = m.duration || '90 Dakika';
       const gender = m.gender || 'Karma';
       const ageGroup = m.ageGroup || 'Tümü';
+      
+      const mappedMissingPositions = (m.missingPositions || []).map((pos: any) => {
+        let role = pos.role;
+        if (['GK', 'KALECİ'].includes(role)) role = 'KALECİ';
+        else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK'].includes(role)) role = 'SAVUNMA';
+        else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(role)) role = 'ORTA SAHA';
+        else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(role)) role = 'HÜCUM';
+        return { ...pos, role };
+      });
 
       return {
         ...m,
+        date: m.date || '18.05.2026',
+        time: m.time || '22:00 - 23:00',
+        missingPositions: mappedMissingPositions,
         price,
         difficulty: (m.difficulty || (matchMentality === 'CİDDİ' ? 'Ciddi' : matchMentality === 'TAKTİKSEL' ? 'Taktiksel' : 'Rahat')) as 'Ciddi' | 'Taktiksel' | 'Rahat',
         matchMentality,
@@ -95,9 +145,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         duration,
         gender,
         ageGroup,
+        distance: m.distance
       };
     });
-  }, [adminMatches]);
+  }, [adminMatches, nearbyMatches, userLocation]);
 
   const isFilterActive = useMemo(() => {
     return !!(dna.format || dna.budget || dna.duration || (dna.age && dna.age !== 'Tümü') || dna.gender || dna.role || dna.mentality);
@@ -135,7 +186,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       return false;
     }
     if (dna.role) {
-      const roleMap: Record<string, string> = { 'HÜC': 'FW', 'ORT': 'MID', 'SAV': 'DEF', 'KL': 'GK' };
+      const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
       const targetRole = roleMap[dna.role];
       const hasMissingSlot = match.missingPositions?.some((p: any) => p.role === targetRole && p.count > 0);
       if (!hasMissingSlot) {
@@ -206,6 +257,27 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             <div className="flex-1 flex flex-col px-5 py-2 gap-4 justify-between relative z-10 overflow-y-auto no-scrollbar">
               <div className="space-y-3">
               
+                {/* Yarıçap (Radius) Slider */}
+                {userLocation && (
+                  <div className="space-y-3 mb-2 p-4 bg-[#161B22] border border-[#39FF14]/30 rounded-2xl shadow-[0_0_15px_rgba(57,255,20,0.1)]">
+                    <div className="flex justify-between items-center">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#39FF14]">Arama Çapı (Mesafe)</p>
+                        <span className="text-[#39FF14] text-xs font-black drop-shadow-md">{searchRadius} KM</span>
+                    </div>
+                    <input 
+                        type="range" 
+                        min="1" max="100" 
+                        value={searchRadius} 
+                        onChange={(e) => setSearchRadius(Number(e.target.value))}
+                        className="w-full h-2 bg-black rounded-lg appearance-none cursor-pointer border border-white/10"
+                        style={{
+                          background: `linear-gradient(to right, #39FF14 0%, #39FF14 ${(searchRadius / 100) * 100}%, #161B22 ${(searchRadius / 100) * 100}%, #161B22 100%)`
+                        }}
+                    />
+                    <p className="text-[9px] text-white/50 italic">Mevcut konumuna göre <span className="text-white font-bold">{searchRadius} KM</span> çapındaki sahalarda olan maçlar listelenir.</p>
+                  </div>
+                )}
+
                 {/* Takım Formatı */}
                 <div className="space-y-2">
                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Takım Formatı</p>
@@ -448,7 +520,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             <div className="flex overflow-x-auto no-scrollbar gap-3 px-5 py-3 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md shrink-0">
               <div className="flex gap-2 items-center shrink-0">
                 <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FFFF00]/70 mr-1">FORMAT</span>
-                {['Tümü', '5v5', '6v6', '7v7', '8v8', '11v11'].map(f => {
+                {['Tümü', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'].map(f => {
                   const isSelected = (f === 'Tümü' && !dna.format) || (dna.format === f);
                   return (
                     <button
@@ -552,7 +624,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                       <div>
                         <h2 className="text-sm font-black italic uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
                           <span className="inline-block w-1.5 h-3 bg-white/20 rounded-sm" />
-                          Tüm Maçlar
+                          {userLocation ? `${searchRadius} KM ÇAPINDAKİ DİĞER MAÇLAR` : 'Tüm Maçlar'}
                         </h2>
                         <div className="space-y-6">
                           {otherMatches.map((match, index) => (
@@ -566,6 +638,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
      
                 {!isFilterActive && (
                   <div className="space-y-6">
+                    {userLocation && (
+                        <h2 className="text-sm font-black italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
+                          <MapPin size={16} />
+                          {searchRadius} KM ÇAPINDAKİ MAÇLAR
+                        </h2>
+                    )}
                     {otherMatches.length === 0 ? (
                       <div className="text-center py-20 text-white/50 font-bold uppercase tracking-widest text-xs">Aktif maç bulunamadı.</div>
                     ) : (
@@ -636,17 +714,25 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                           <div className="flex items-center gap-4 text-xs font-black text-white/60 tracking-wider">
                             <span className="flex items-center gap-1.5">
                               <Clock size={12} className="text-[#39FF14]" />
-                              {ad.date} • {ad.time}
+                              18.05.2026 • 22:00 - 23:00
                             </span>
                           </div>
 
                           {/* Positions Needed badges */}
                           <div className="flex flex-wrap gap-2 pt-1">
-                            {ad.positionsNeeded.map((pos, i) => (
-                              <span key={i} className="px-3 py-1.5 bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.1)]">
-                                <Shield size={10} className="text-red-500 animate-pulse" /> {pos} ARANIYOR
-                              </span>
-                            ))}
+                            {ad.positionsNeeded.map((pos, i) => {
+                              let mappedPos = pos;
+                              if (['GK', 'KALECİ'].includes(mappedPos)) mappedPos = 'KALECİ';
+                              else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK'].includes(mappedPos)) mappedPos = 'SAVUNMA';
+                              else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(mappedPos)) mappedPos = 'ORTA SAHA';
+                              else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(mappedPos)) mappedPos = 'HÜCUM';
+                              
+                              return (
+                                <span key={i} className="px-3 py-1.5 bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.1)]">
+                                  <Circle size={10} className="text-red-500 animate-pulse" /> {mappedPos} ARANIYOR
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -787,7 +873,7 @@ const MatchCard: React.FC<{
   dna: any;
   trustScore: number;
 }> = ({ match, index, onSelect, dna, trustScore }) => {
-  const roleMap: Record<string, string> = { 'HÜC': 'FW', 'ORT': 'MID', 'SAV': 'DEF', 'KL': 'GK' };
+  const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
   const myRole = roleMap[dna.role];
   const glowColor = match.mentalityColor;
   
@@ -872,8 +958,7 @@ const MatchCard: React.FC<{
       <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2.5 z-10">
         {match.missingPositions?.map((pos: any, i: number) => {
           const isUrgent = pos.role === myRole;
-          const roleNameMap: Record<string, string> = { 'FW': 'HÜCUM', 'MID': 'ORTA', 'DEF': 'SAVUNMA', 'GK': 'KALECİ' };
-          const localizedRole = roleNameMap[pos.role] || pos.role;
+          const localizedRole = pos.role;
           
           return (
             <div 
@@ -885,7 +970,7 @@ const MatchCard: React.FC<{
               }`}
               style={{ borderLeft: `4px solid ${isUrgent ? '#ef4444' : '#39FF14'}` }}
             >
-              <Shield size={12} className={isUrgent ? 'text-[#ef4444]' : 'text-[#39FF14]'} />
+              <Circle size={12} className={isUrgent ? 'text-[#ef4444]' : 'text-[#39FF14]'} />
               <span className={`text-[10px] font-black uppercase tracking-widest ${isUrgent ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-white/80'}`}>
                 {pos.count} {localizedRole} ARANIYOR
               </span>

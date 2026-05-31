@@ -24,9 +24,7 @@ const letterVariants = {
 
 export default function SplashScreen({ onStart }: SplashScreenProps) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onStart();
-    }, 2600);
+    const timer = setTimeout(onStart, 1200);
     return () => clearTimeout(timer);
   }, [onStart]);
 
@@ -39,7 +37,8 @@ export default function SplashScreen({ onStart }: SplashScreenProps) {
         initial={{ opacity: 1 }}
         exit={{ opacity: 0, scale: 1.05 }}
         transition={{ duration: 0.4 }}
-        className="fixed inset-0 flex flex-col items-center justify-center bg-[#040814] overflow-hidden z-50 select-none"
+        className="fixed inset-0 flex flex-col items-center justify-center bg-[#040814] overflow-hidden z-50 select-none cursor-pointer"
+        onClick={onStart}
       >
         {/* ── Arka Plan: Yavaş Hareket Eden Neon Halkalar ── */}
         <motion.div

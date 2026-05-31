@@ -9,6 +9,15 @@ import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { MarketplaceMap } from '../components/Marketplace/MarketplaceMap';
 
+const getNormalizedDifficulty = (diff?: string): string => {
+  if (!diff) return 'Rahat';
+  const d = diff.trim().toLowerCase();
+  if (d === 'ciddi' || d === 'pro') return 'Ciddi';
+  if (d === 'taktiksel' || d === 'yarı-pro' || d === 'yari-pro' || d === 'yarı pro' || d === 'yari pro') return 'Taktiksel';
+  if (d === 'rahat' || d === 'amatör' || d === 'amator' || d === 'eğlence' || d === 'eglence') return 'Rahat';
+  return diff.charAt(0).toUpperCase() + diff.slice(1);
+};
+
 interface MarketplaceProps {
     type: 'REF' | 'GK';
     onBack: () => void;
@@ -48,6 +57,20 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     const { adminGoalkeepers, adminReferees, adminMatches, setAdminMatches, updateMatch } = useAppStore();
     const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
 
+    const [filterDistrict, setFilterDistrict] = useState<string>('Tümü');
+    const [filterDay, setFilterDay] = useState<string>('Tümü');
+    const [filterTime, setFilterTime] = useState<string>('Tümü');
+
+    const filteredProfiles = useMemo(() => {
+        return profiles.filter(p => {
+            const matchesDistrict = filterDistrict === 'Tümü' || (p.preferredZones && p.preferredZones.includes(filterDistrict));
+            const matchesDay = filterDay === 'Tümü' || (p.workingHours && p.workingHours.activeDays && p.workingHours.activeDays.includes(filterDay));
+            // Check if activeHours contains the time (it might be a string "18:00 - 23:00" or an array)
+            const matchesTime = filterTime === 'Tümü' || (p.workingHours && p.workingHours.activeHours && p.workingHours.activeHours.includes(filterTime));
+            return matchesDistrict && matchesDay && matchesTime;
+        });
+    }, [profiles, filterDistrict, filterDay, filterTime]);
+
     const myMatches = useMemo(() => {
         return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);
     }, [adminMatches]);
@@ -83,27 +106,33 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
         setSelectedMatchForHire(match);
         setIsHiring(true);
         
-        let updatedMatch = { ...match };
-        if (activeTab === 'GK') {
-            const slots = match.slots ? [...match.slots] : [];
-            const gkSlotIndex = slots.findIndex((s: any) => s.role === 'GK' && s.status === 'OPEN');
-            if (gkSlotIndex !== -1) {
-                slots[gkSlotIndex] = { ...slots[gkSlotIndex], status: 'TAKEN' };
-                updatedMatch.slots = slots;
+        if (hireMode === 'DIRECT') {
+            let updatedMatch = { ...match };
+            if (activeTab === 'GK') {
+                const slots = match.slots ? [...match.slots] : [];
+                const gkSlotIndex = slots.findIndex((s: any) => s.role === 'GK' && s.status === 'OPEN');
+                if (gkSlotIndex !== -1) {
+                    slots[gkSlotIndex] = { ...slots[gkSlotIndex], status: 'TAKEN' };
+                    updatedMatch.slots = slots;
+                }
+                if (updatedMatch.missingPositions) {
+                    updatedMatch.missingPositions = updatedMatch.missingPositions.map((pos: any) =>
+                        pos.role === 'GK' ? { ...pos, count: Math.max(0, pos.count - 1) } : pos
+                    );
+                }
+            } else {
+                updatedMatch.refereeId = selectedProfile?.id;
             }
-            if (updatedMatch.missingPositions) {
-                updatedMatch.missingPositions = updatedMatch.missingPositions.map((pos: any) =>
-                    pos.role === 'GK' ? { ...pos, count: Math.max(0, pos.count - 1) } : pos
-                );
-            }
-        } else {
-            updatedMatch.refereeId = selectedProfile?.id;
-        }
 
-        if (updateMatch) {
-            updateMatch(updatedMatch);
+            if (updateMatch) {
+                updateMatch(updatedMatch);
+            } else {
+                setAdminMatches(adminMatches.map(m => m.id === match.id ? updatedMatch : m));
+            }
         } else {
-            setAdminMatches(adminMatches.map(m => m.id === match.id ? updatedMatch : m));
+            // BID Mode: Don't update the match. Instead, create an offer.
+            // Example: await supabase.from('offers').insert({...})
+            console.log(`Bid created for Match: ${match.id}, Profile: ${selectedProfile?.id}, Amount: ${bidAmount}`);
         }
 
         setTimeout(() => {
@@ -171,24 +200,78 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                 </div>
             )}
 
+            {/* Filters */}
+            <div className="px-6 pb-2 pt-2 bg-[#0A0E14] flex gap-2 overflow-x-auto custom-scrollbar">
+                <select 
+                    value={filterDistrict} 
+                    onChange={e => setFilterDistrict(e.target.value)}
+                    className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
+                >
+                    <option value="Tümü">Tüm İlçeler</option>
+                    <option value="Kadıköy">Kadıköy</option>
+                    <option value="Beşiktaş">Beşiktaş</option>
+                    <option value="Şişli">Şişli</option>
+                    <option value="Ümraniye">Ümraniye</option>
+                    <option value="Maltepe">Maltepe</option>
+                    <option value="Üsküdar">Üsküdar</option>
+                    <option value="Bağcılar">Bağcılar</option>
+                    <option value="Pendik">Pendik</option>
+                    <option value="Sarıyer">Sarıyer</option>
+                    <option value="Bakırköy">Bakırköy</option>
+                </select>
+                <select 
+                    value={filterDay} 
+                    onChange={e => setFilterDay(e.target.value)}
+                    className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
+                >
+                    <option value="Tümü">Tüm Günler</option>
+                    <option value="Pzt">Pazartesi</option>
+                    <option value="Sal">Salı</option>
+                    <option value="Çar">Çarşamba</option>
+                    <option value="Per">Perşembe</option>
+                    <option value="Cum">Cuma</option>
+                    <option value="Cmt">Cumartesi</option>
+                    <option value="Paz">Pazar</option>
+                </select>
+                <select 
+                    value={filterTime} 
+                    onChange={e => setFilterTime(e.target.value)}
+                    className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
+                >
+                    <option value="Tümü">Tüm Saatler</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                    <option value="21:00">21:00</option>
+                    <option value="22:00">22:00</option>
+                    <option value="23:00">23:00</option>
+                </select>
+            </div>
+
             {/* 3. Main Content */}
             <div className="flex-1 relative overflow-hidden">
                 {viewMode === 'LIST' ? (
                     <div className="h-full px-6 pb-24 overflow-y-auto custom-scrollbar">
                         <div className="grid grid-cols-1 gap-6 pt-2">
-                            {profiles.map(p => (
-                                <MarketplaceCard
-                                    key={p.id}
-                                    item={p}
-                                    type={activeTab}
-                                    onClick={() => handleSelect(p)}
-                                />
-                            ))}
+                            {filteredProfiles.length === 0 ? (
+                                <div className="text-center py-10">
+                                    <p className="text-white/40 text-xs font-black uppercase tracking-widest">Bu kriterlere uygun profil bulunamadı.</p>
+                                </div>
+                            ) : (
+                                filteredProfiles.map(p => (
+                                    <MarketplaceCard
+                                        key={p.id}
+                                        item={p}
+                                        type={activeTab}
+                                        onClick={() => handleSelect(p)}
+                                    />
+                                ))
+                            )}
                         </div>
                     </div>
                 ) : (
                     <MarketplaceMap
-                        items={profiles}
+                        items={filteredProfiles}
                         type={activeTab}
                         onSelect={handleSelect}
                     />
@@ -339,7 +422,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                                                 {m.format}
                                                             </span>
                                                             <span className="text-[8px] font-black bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-white/60">
-                                                                {m.difficulty}
+                                                                {getNormalizedDifficulty(m.difficulty)}
                                                             </span>
                                                         </div>
                                                     </div>

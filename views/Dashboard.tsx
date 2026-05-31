@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, MapPin, Users, User, Scale, Shield, Swords,
-  Clock, Check, Wallet, Sparkles,
+  Clock, Check, Wallet, Sparkles, ChevronRight,
   Target, MousePointer2, Trophy, Activity, Calendar, Star, TrendingUp, Flame, Zap
 } from 'lucide-react';
 import { OynaLogo } from '../components/OynaLogo';
@@ -171,71 +171,90 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
            }}
          />
          {/* Glass Overlay */}
-         <div className="absolute inset-0 bg-black/20 backdrop-blur-[12px]" />
-         {/* Radar Scan Line (when starting soon, draft action, cancelled, or live) */}
-         {(isCancelled || isDraft || isLive || !hasDays) && (
-           <motion.div
-             animate={{ y: ['-100%', '200%'] }}
-             transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
-             className={`absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent pointer-events-none ${isLive ? 'to-[#39FF14]/15' : isDraft ? 'to-amber-500/20' : 'to-red-500/20'}`}
-             style={{ borderBottom: isLive ? '1.5px solid rgba(57,255,20,0.8)' : isDraft ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(239,68,68,0.5)' }}
-           />
-         )}
+         <div className="absolute inset-0 bg-black/20 backdrop-blur">
+          {/* Radar Scan Line / Thin Red Laser (when starting soon, draft action, cancelled, or live) */}
+          {isCancelled ? (
+            <motion.div
+              animate={{ y: ['-100%', '250%'] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+              className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-500 to-transparent pointer-events-none z-10"
+              style={{
+                boxShadow: '0 0 10px 2px rgba(239, 68, 68, 0.8), 0 0 20px 4px rgba(239, 68, 68, 0.4)'
+              }}
+            />
+          ) : (isDraft || isLive || !hasDays) && (
+            <motion.div
+              animate={{ y: ['-100%', '200%'] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+              className={`absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent pointer-events-none ${isLive ? 'to-[#39FF14]/15' : isDraft ? 'to-amber-500/20' : 'to-red-500/20'}`}
+              style={{ borderBottom: isLive ? '1.5px solid rgba(57,255,20,0.8)' : isDraft ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(239,68,68,0.5)' }}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 p-5 flex flex-col gap-5">
-         
-         {/* Header Row */}
-         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/5 backdrop-blur-md">
-              <motion.div
-                animate={{ opacity: [1, 0.4, 1], scale: [1, 1.2, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]' : isLive ? 'bg-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.9)] animate-pulse' : isDraft ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.9)]' : hasDays ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]'}`}
-              />
-              <span className={`text-[10px] sm:text-[12px] font-black uppercase tracking-[0.25em] ${themeColor}`}>
-                {isCancelled ? 'MAÇ İPTAL EDİLDİ - YETERLİ OYUNCU BULUNAMADI' : isLive ? 'MAÇ ONAYLANDI - LIVE' : isDraft ? 'DRAFT MAÇIN VAR - KADROYU KUR' : hasDays ? 'SIRADAKİ MAÇ' : 'BAŞLIYOR'}
-              </span>
-            </div>
-            
-            {!isCancelled && (
-              <div className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md flex items-center gap-1.5 shadow-inner">
-                <Clock size={13} className="text-[#FFB800]" />
-                <span className="text-white text-[11px] sm:text-[12px] font-black tracking-widest">{matchTime}</span>
+       {/* Content */}
+       <div className="relative z-10 p-5 flex flex-col gap-5">
+          
+          {/* Header Row */}
+          <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/5 backdrop-blur-md">
+               <motion.div
+                 animate={{ opacity: [1, 0.4, 1], scale: [1, 1.2, 1] }}
+                 transition={{ duration: 1.5, repeat: Infinity }}
+                 className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]' : isLive ? 'bg-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.9)] animate-pulse' : isDraft ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.9)]' : hasDays ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]'}`}
+               />
+               <span className={`text-[10px] sm:text-[12px] font-black uppercase tracking-[0.25em] ${themeColor}`}>
+                 {isCancelled ? 'MAÇ İPTAL EDİLDİ' : isLive ? 'MAÇ ONAYLANDI - LIVE' : isDraft ? 'DRAFT MAÇIN VAR - KADROYU KUR' : hasDays ? 'SIRADAKİ MAÇ' : 'BAŞLIYOR'}
+               </span>
+             </div>
+             
+             {!isCancelled && (
+               <div className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md flex items-center gap-1.5 shadow-inner">
+                 <Clock size={13} className="text-[#FFB800]" />
+                 <span className="text-white text-[11px] sm:text-[12px] font-black tracking-widest">{matchTime}</span>
+               </div>
+             )}
+          </div>
+
+          {/* Timers Row or Cancelled Banner */}
+          {isCancelled ? (
+            <div className="flex flex-col gap-1.5 py-3.5 px-4 bg-red-950/20 border border-red-500/10 rounded-2xl relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 opacity-80" />
+              <h3 className="text-white font-black text-[16px] sm:text-[18px] tracking-tight uppercase italic leading-none pl-2">{matchTitle}</h3>
+              <p className="text-gray-400 font-bold text-[10px] sm:text-[11px] pl-2 uppercase tracking-wide">
+                {matchLocation}
+              </p>
+              <p className="text-red-400 font-bold text-[11px] sm:text-xs pl-2">
+                Bu maç için yeterli doluluk sağlanamadı.
+              </p>
+              <div className="flex items-center gap-1.5 mt-1 pl-2">
+                <Shield size={12} className="text-red-500" />
+                <span className="text-gray-300 font-black text-[10px] sm:text-[11px] uppercase tracking-wider">
+                  Ücret alınmadı
+                </span>
               </div>
-            )}
-         </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center gap-2 sm:gap-4 w-full pt-1">
+                 <TimerBox value={format(timeLeft.days)} label="GÜN" color={isLive ? '#39FF14' : isDraft ? '#FFB800' : hasDays ? '#22c55e' : '#fff'} />
+                 <span className="text-white/20 font-black text-2xl mb-4">:</span>
+                 <TimerBox value={format(timeLeft.hours)} label="SAAT" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
+                 <span className="text-white/20 font-black text-2xl mb-4">:</span>
+                 <TimerBox value={format(timeLeft.minutes)} label="DAKİKA" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
+              </div>
 
-         {/* Timers Row or Cancelled Banner */}
-         {isCancelled ? (
-           <div className="flex flex-col items-center justify-center py-5 px-3 bg-red-950/20 border border-red-500/25 rounded-2xl animate-pulse">
-             <span className="text-red-500 font-black text-center text-sm sm:text-base uppercase tracking-widest italic leading-tight">
-               YETERLİ OYUNCU BULUNAMADI - MAÇ OTOMATİK İPTAL EDİLDİ
-             </span>
-             <span className="text-gray-400 font-bold text-[10px] sm:text-xs mt-1 uppercase text-center tracking-wider">
-               Ödemeler Param altyapısı ile kesintisiz iade edilmiştir
-             </span>
-           </div>
-         ) : (
-           <div className="flex items-center justify-center gap-2 sm:gap-4 w-full pt-1">
-              <TimerBox value={format(timeLeft.days)} label="GÜN" color={isLive ? '#39FF14' : isDraft ? '#FFB800' : hasDays ? '#22c55e' : '#fff'} />
-              <span className="text-white/20 font-black text-2xl mb-4">:</span>
-              <TimerBox value={format(timeLeft.hours)} label="SAAT" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
-              <span className="text-white/20 font-black text-2xl mb-4">:</span>
-              <TimerBox value={format(timeLeft.minutes)} label="DAKİKA" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
-           </div>
-         )}
-
-         {/* Match Info Footer */}
-         <div className="mt-1 w-full bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col gap-1 relative overflow-hidden group-hover:bg-white/5 transition-colors">
-            <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${isCancelled ? 'from-red-500' : isLive ? 'from-[#39FF14]' : isDraft ? 'from-amber-500' : 'from-[#FFB800]'} to-transparent opacity-80`} />
-            <h3 className="text-white font-black text-[15px] sm:text-[17px] tracking-tight leading-none truncate pl-3">{matchTitle}</h3>
-            <p className="text-gray-400 font-bold text-[10px] sm:text-[11px] truncate pl-3">
-              {isCancelled ? `❌ Bu maç için yeterli doluluk sağlanamadı.` : isLive ? `✓ Tüm ödemeler yapıldı, maç yayında!` : isDraft ? `⚡ ${matchLocation} • Eksik mevkileri seçip davet gönder!` : matchLocation}
-            </p>
-         </div>
-         
+              {/* Match Info Footer */}
+              <div className="mt-1 w-full bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col gap-1 relative overflow-hidden group-hover:bg-white/5 transition-colors">
+                 <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${isCancelled ? 'from-red-500' : isLive ? 'from-[#39FF14]' : isDraft ? 'from-amber-500' : 'from-[#FFB800]'} to-transparent opacity-80`} />
+                 <h3 className="text-white font-black text-[15px] sm:text-[17px] tracking-tight leading-none truncate pl-3">{matchTitle}</h3>
+                 <p className="text-gray-400 font-bold text-[10px] sm:text-[11px] truncate pl-3">
+                   {isLive ? `✓ Tüm ödemeler yapıldı, maç yayında!` : isDraft ? `⚡ ${matchLocation} • Eksik mevkileri seçip davet gönder!` : matchLocation}
+                 </p>
+              </div>
+            </>
+          )}
       </div>
     </motion.div>
   );
@@ -259,40 +278,87 @@ const itemVariants = {
 
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, selectedRef }) => {
-  const { initialLoadComplete, globalTexts, unreadNotificationsCount, adminMatches, myTeams, setActiveStudioTeam, setActiveDraftId, setSelectedMatch, updateMatch, addUserNotification, setMatchJoinReturnView } = useAppStore();
+  const { 
+    initialLoadComplete, 
+    globalTexts, 
+    unreadNotificationsCount, 
+    adminMatches, 
+    myTeams, 
+    setActiveStudioTeam, 
+    setActiveDraftId, 
+    setSelectedMatch, 
+    updateMatch, 
+    addUserNotification, 
+    setMatchJoinReturnView,
+    adminUsers,
+    setNewMatchBadge,
+    setIsNotificationsOpen
+  } = useAppStore();
   const [isLoading, setIsLoading] = useState(!initialLoadComplete);
   const myDrafts = React.useMemo(() => adminMatches.filter(m => m.status === 'DRAFT'), [adminMatches]);
   const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
 
+  const currentUserUid = React.useMemo(() => {
+    return 'u1'; // Default / local testing user
+  }, []);
 
-  // ─── En yakın gelecek maçı veya iptal edilen maçı bul ─────────────────────────────────────────
-  const upcomingMatch = React.useMemo(() => {
+  const currentUserProfile = React.useMemo(() => {
+    return adminUsers.find(u => u.id === currentUserUid);
+  }, [adminUsers, currentUserUid]);
+
+  const userMatches = React.useMemo(() => {
+    return adminMatches.filter(m => {
+      // 1. If draft, show
+      if (m.status === 'DRAFT') return true;
+      // 2. If cancelled, show
+      if (m.status === 'CANCELLED') return true;
+      // 3. If user u1 is in it
+      const userInMatch = m.slots?.some(s => s.player?.id === currentUserUid) || m.awaySlots?.some(s => s.player?.id === currentUserUid);
+      return userInMatch;
+    });
+  }, [adminMatches, currentUserUid]);
+
+  const closestMatchPulse = React.useMemo(() => {
     const now = new Date();
+    let minDiffMs = Infinity;
 
-    // First check if there is an active match that has status 'CANCELLED'
-    const cancelledMatch = adminMatches.find(m => m.status === 'CANCELLED');
-    if (cancelledMatch) {
-      const matchDate = parseMatchDate(cancelledMatch.date, cancelledMatch.time) || new Date();
-      return { match: cancelledMatch, date: matchDate };
+    const activeUpcoming = userMatches.filter(m => m.status !== 'CANCELLED');
+
+    activeUpcoming.forEach(m => {
+      const matchDate = parseMatchDate(m.date, m.time);
+      if (matchDate) {
+        const diffMs = matchDate.getTime() - now.getTime();
+        if (diffMs > 0 && diffMs < minDiffMs) {
+          minDiffMs = diffMs;
+        }
+      }
+    });
+
+    if (minDiffMs === Infinity) return 1.8;
+
+    const diffHours = minDiffMs / (1000 * 60 * 60);
+    if (diffHours < 2) return 0.4; // fast
+    if (diffHours < 6) return 0.8; // medium
+    return 1.8; // slow
+  }, [userMatches]);
+
+  const closestMatch = React.useMemo(() => {
+    const activeUpcoming = userMatches.filter(m => m.status !== 'CANCELLED');
+    if (activeUpcoming.length === 0) return null;
+    return activeUpcoming.map(m => {
+      const matchDate = parseMatchDate(m.date, m.time);
+      return { match: m, date: matchDate };
+    })
+    .filter((entry): entry is { match: typeof adminMatches[0]; date: Date } => entry.date !== null)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())[0]?.match;
+  }, [userMatches, adminMatches]);
+
+  const buttonSubtitle = React.useMemo(() => {
+    if (closestMatch) {
+      return `Sıradaki: ${closestMatch.title} • ${closestMatch.time}`;
     }
-
-    const allMatches = adminMatches
-      .map(m => {
-        const matchDate = parseMatchDate(m.date, m.time);
-        return matchDate ? { match: m, date: matchDate } : null;
-      })
-      .filter((entry): entry is { match: typeof adminMatches[0]; date: Date } =>
-        entry !== null && entry.date.getTime() > now.getTime()
-      );
-
-    // Prioritize draft matches so users can complete their kadro immediately!
-    const drafts = allMatches.filter(e => e.match.status === 'DRAFT');
-    if (drafts.length > 0) {
-      return drafts.sort((a, b) => a.date.getTime() - b.date.getTime())[0];
-    }
-
-    return allMatches.sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null;
-  }, [adminMatches]);
+    return 'Kadro ve maç lobileri merkezi';
+  }, [closestMatch]);
 
   const COMMUNITIES = [
     { id: 'c1', name: 'Boğaziçi Üni', short: 'BOUN' },
@@ -364,7 +430,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => onNavigate('NOTIFICATIONS')}
+            onClick={() => setIsNotificationsOpen(true)}
             className="w-12 h-12 flex items-center justify-center rounded-full bg-[#161B22]/80 backdrop-blur-md border border-white/5 text-gray-300 relative hover:bg-white/10 transition-colors shadow-lg"
           >
             <Bell size={20} />
@@ -379,39 +445,118 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         </div>
       </header>
 
-      {/* 2. Top Banner Grid — Gerçek maç varsa göster, yoksa kaldır */}
-      <AnimatePresence>
-        {upcomingMatch && (
+      {/* 2. MAÇLARIM Pulsing Button */}
+      {userMatches.length > 0 && (
+        <div className="px-6 mb-6 relative z-20">
           <motion.div
-            key="countdown-banner"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="px-6 mb-6 relative z-20"
+            onClick={() => {
+              // Dismiss badge
+              setNewMatchBadge(false);
+              // Navigate to upcoming matches
+              onNavigate('UPCOMING_MATCHES');
+            }}
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              boxShadow: [
+                `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`,
+                `0 0 45px rgba(239, 68, 68, ${0.35 + (1.8 - closestMatchPulse) * 0.35})`,
+                `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`
+              ]
+            }}
+            transition={{
+              boxShadow: {
+                duration: closestMatchPulse,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }
+            }}
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.985 }}
+            className="w-full relative rounded-[28px] cursor-pointer group overflow-hidden border border-white/10 hover:border-white/20 transition-all bg-[#0F1319] bg-gradient-to-r from-[#0F1319] to-[#141A22]"
           >
-            <MatchCountdown
-              onClick={() => {
-                if (upcomingMatch.match.status === 'DRAFT') {
-                  setActiveDraftId(upcomingMatch.match.id);
-                  onNavigate('MATCH_CREATE');
-                } else {
-                  setSelectedMatch(upcomingMatch.match);
-                  setMatchJoinReturnView('DASHBOARD');
-                  onNavigate('MATCH_JOIN');
-                }
+            {/* Full button background pulsing red glow (acts like counter, increases with match closeness) */}
+            <motion.div
+              animate={{
+                opacity: [0.03, 0.15 + (1.8 - closestMatchPulse) * 0.12, 0.03]
               }}
-              matchTitle={upcomingMatch.match.title}
-              matchLocation={upcomingMatch.match.location}
-              matchTime={upcomingMatch.match.time}
-              matchDate={upcomingMatch.date}
-              isDraft={upcomingMatch.match.status === 'DRAFT'}
-              isCancelled={upcomingMatch.match.status === 'CANCELLED'}
-              isLive={upcomingMatch.match.status === 'LIVE'}
+              transition={{
+                duration: closestMatchPulse,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }}
+              className="absolute inset-0 bg-[#ef4444] pointer-events-none z-0"
             />
+
+            {/* Glowing pulsing border effect */}
+            <motion.div
+              animate={{
+                opacity: [0.15, 0.45, 0.15],
+                boxShadow: [
+                  'inset 0 0 15px rgba(239, 68, 68, 0.1)',
+                  'inset 0 0 25px rgba(239, 68, 68, 0.25)',
+                  'inset 0 0 15px rgba(239, 68, 68, 0.1)'
+                ]
+              }}
+              transition={{
+                duration: closestMatchPulse,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }}
+              className="absolute inset-0 rounded-[28px] pointer-events-none z-0"
+            />
+
+            {/* Red Laser Scan Line (sweeps full button height smoothly up and down) */}
+            <motion.div
+              animate={{ top: ['-40px', '100%', '-40px'] }}
+              transition={{
+                duration: 3.5,
+                repeat: Infinity,
+                ease: 'linear'
+              }}
+              className="absolute left-0 right-0 h-10 bg-gradient-to-b from-transparent via-red-500/30 to-transparent pointer-events-none z-10 top-0"
+              style={{
+                borderBottom: '3.5px solid rgba(239, 68, 68, 0.95)',
+                boxShadow: '0 8px 35px 4px rgba(239, 68, 68, 0.75)'
+              }}
+            />
+
+            <div className="relative z-10 py-6 px-7 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Pulsing radar indicator */}
+                <div className="relative flex h-4 w-4 items-center justify-center shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                </div>
+                
+                <div className="flex flex-col">
+                  <h3 className="text-white font-black text-lg sm:text-xl tracking-tighter italic uppercase leading-none">
+                    MAÇLARIM
+                  </h3>
+                  <span className="text-xs sm:text-sm text-gray-300 font-medium uppercase tracking-wider mt-2 leading-none">
+                    {buttonSubtitle}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                {currentUserProfile?.newMatchBadge && (
+                  <motion.span
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                    className="px-3 py-1.5 text-[10px] font-black tracking-widest text-[#0A0E14] bg-[#FFFF00] rounded-xl shadow-[0_0_15px_rgba(255,255,0,0.6)] uppercase italic shrink-0"
+                  >
+                    YENİ MAÇ EKLENDİ
+                  </motion.span>
+                )}
+                <ChevronRight size={20} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       {/* BENTO GRID LAYOUT */}
       <motion.main

@@ -13,6 +13,21 @@ interface ServiceProfileProps {
   onBack: () => void;
 }
 
+import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
+import { Goalkeeper, Referee } from '../types';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from 'react-leaflet';
+
+// Fix leaflet default icon path issues
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 // Uğurcan Çakır tarzı kaleci fotoğrafları
 const GOALKEEPER_PHOTOS = [
   'https://images.unsplash.com/photo-1544966614-05a04dd69d0c?auto=format&fit=crop&q=80&w=400',
@@ -30,50 +45,84 @@ const REFEREE_PHOTOS = [
 
 const GK_STYLES = ['Panter', 'Duvar', 'Libero', 'Atak', 'Dengeli'];
 const REF_STYLES = ['Otoriter', 'Diyalogcu', 'Teknisyen', 'Hızlı Karar'];
-const DISTRICTS = ['Kadıköy', 'Beşiktaş', 'Şişli', 'Ümraniye', 'Maltepe', 'Üsküdar', 'Bağcılar', 'Pendik'];
+const REGIONS = [
+  { city: 'İstanbul', districts: ['Kadıköy', 'Beşiktaş', 'Şişli', 'Ümraniye', 'Maltepe', 'Üsküdar', 'Bağcılar', 'Pendik', 'Sarıyer', 'Bakırköy'] },
+  { city: 'Ankara', districts: ['Çankaya', 'Keçiören', 'Yenimahalle', 'Mamak', 'Etimesgut'] },
+  { city: 'İzmir', districts: ['Karşıyaka', 'Bornova', 'Buca', 'Konak', 'Çiğli'] }
+];
 
 const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
   const photoPool = isRef ? REFEREE_PHOTOS : GOALKEEPER_PHOTOS;
 
+  const { adminGoalkeepers, adminReferees } = useAppStore();
+  const currentUser = auth.currentUser;
+  
+  const userProfile = React.useMemo(() => {
+      if (!currentUser) return null;
+      if (isRef) {
+          return adminReferees.find(r => r.authUid === currentUser.uid || r.id === currentUser.uid) as Referee | undefined;
+      } else {
+          return adminGoalkeepers.find(g => g.id === currentUser.uid) as Goalkeeper | undefined;
+      }
+  }, [adminGoalkeepers, adminReferees, currentUser, isRef]);
+
+  const defaultName = userProfile?.name || (isRef ? 'CÜNEYT A.' : 'UĞURCAN Ç.');
+  const defaultBio = userProfile?.bio || (isRef
+      ? 'FIFA lisanslı hakem. 150+ maç deneyimi. Pozisyon odaklı, diyalog temelli yaklaşım.'
+      : 'Saha kalecisi. Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40.');
+  const defaultFee = userProfile?.fee || (isRef ? 350 : 250);
+  const defaultStyle = typeof userProfile?.style === 'string' ? userProfile.style : (isRef ? 'Otoriter' : 'Panter');
+
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [customPhoto, setCustomPhoto] = useState<string | null>(null);
+  const [customPhoto, setCustomPhoto] = useState<string | null>(userProfile?.avatar || null);
   const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
-  const [bio, setBio] = useState(
-    isRef
-      ? 'FIFA lisanslı hakem. 150+ maç deneyimi. Pozisyon odaklı, diyalog temelli yaklaşım.'
-      : 'Saha kalecisi. Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40.'
-  );
+  const [bio, setBio] = useState(defaultBio);
   const [tempBio, setTempBio] = useState(bio);
-  const [selectedStyle, setSelectedStyle] = useState(isRef ? 'Otoriter' : 'Panter');
-  const [selectedDistricts, setSelectedDistricts] = useState(['Kadıköy', 'Beşiktaş']);
-  const [displayName, setDisplayName] = useState(isRef ? 'CÜNEYT A.' : 'UĞURCAN Ç.');
+  const [selectedStyle, setSelectedStyle] = useState(defaultStyle);
+  
+  const defaultCenter: [number, number] = [41.0082, 28.9784]; // Istanbul
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    userProfile?.coordinates ? [userProfile.coordinates.lat, userProfile.coordinates.lng] : defaultCenter
+  );
+  const [radiusKm, setRadiusKm] = useState(15);
+  
+  const MapEventsComponent = () => {
+    useMapEvents({
+      moveend: (e) => {
+        const center = e.target.getCenter();
+        setMapCenter([center.lat, center.lng]);
+      }
+    });
+    return null;
+  };
+  
+  const [displayName, setDisplayName] = useState(defaultName);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(displayName);
-  const [fee, setFee] = useState(isRef ? 350 : 250);
+  const [fee, setFee] = useState(defaultFee);
   const [editingFee, setEditingFee] = useState(false);
+
+  React.useEffect(() => {
+      if (userProfile) {
+          if (userProfile.name) setDisplayName(userProfile.name);
+          if (userProfile.bio) setBio(userProfile.bio);
+          if (userProfile.fee) setFee(userProfile.fee);
+          if (userProfile.style) setSelectedStyle(typeof userProfile.style === 'string' ? userProfile.style : 'Dengeli');
+          if (userProfile.avatar) setCustomPhoto(userProfile.avatar);
+      }
+  }, [userProfile]);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // All 24 hours selectable
-  const ALL_HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2,'0')}:00`);
-  const [selectedHours, setSelectedHours] = useState<string[]>(['19:00','20:00','21:00','22:00']);
-  const toggleHour = useCallback((h: string) => {
-    setSelectedHours(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
-  }, []);
+
 
   const currentPhoto = customPhoto ?? photoPool[photoIndex];
 
   const accentColor = isRef ? '#ef4444' : '#22c55e';
   const accentBg = isRef ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
   const gradientFrom = isRef ? 'from-red-950' : 'from-green-950';
-
-  const toggleDistrict = (d: string) => {
-    setSelectedDistricts(prev =>
-      prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
-    );
-  };
 
   const handleSave = () => {
     setBio(tempBio);
@@ -97,16 +146,16 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
 
   const stats = isRef
     ? [
-        { label: 'Yönetim', value: '150', icon: <Scale size={14} /> },
-        { label: 'VAR %', value: '98', icon: <Target size={14} /> },
-        { label: 'Puan', value: '4.9', icon: <Star size={14} /> },
-        { label: 'Sarı Kart Ort.', value: '2.1', icon: <Award size={14} /> },
+        { label: 'Yönetim', value: (userProfile as Referee)?.stats?.authority?.toString() || '95', icon: <Scale size={14} /> },
+        { label: 'VAR %', value: (userProfile as Referee)?.stats?.varCallAccuracy || '98', icon: <Target size={14} /> },
+        { label: 'Puan', value: userProfile?.rating?.toString() || '4.9', icon: <Star size={14} /> },
+        { label: 'Sarı Kart Ort.', value: (userProfile as Referee)?.stats?.avgCards?.toString() || '2.1', icon: <Award size={14} /> },
       ]
     : [
-        { label: 'Maç', value: '42', icon: <Shield size={14} /> },
-        { label: 'CS', value: '12', icon: <Trophy size={14} /> },
-        { label: 'Refleks %', value: '94', icon: <Zap size={14} /> },
-        { label: 'Puan', value: '9.2', icon: <Star size={14} /> },
+        { label: 'Maç', value: userProfile?.matchCount?.toString() || '42', icon: <Shield size={14} /> },
+        { label: 'CS', value: (userProfile as Goalkeeper)?.stats?.cleanSheets?.toString() || '12', icon: <Trophy size={14} /> },
+        { label: 'Refleks %', value: (userProfile as Goalkeeper)?.stats?.savePercentage?.toString() || '94', icon: <Zap size={14} /> },
+        { label: 'Puan', value: userProfile?.rating?.toString() || '9.2', icon: <Star size={14} /> },
       ];
 
   return (
@@ -376,91 +425,75 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           </div>
         </motion.div>
 
-        {/* ─── Bölge Tercihleri ─── */}
+        {/* ─── Bölge Tercihleri (Harita) ─── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.21 }}
-          className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
+          className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420] overflow-hidden"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <MapPin size={14} style={{ color: accentColor }} />
-            <h3 className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
-              Bölge Tercihleri
-            </h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {DISTRICTS.map(d => {
-              const active = selectedDistricts.includes(d);
-              return (
-                <motion.button
-                  key={d}
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => toggleDistrict(d)}
-                  className="px-3 py-1.5 rounded-xl text-[11px] font-black border transition-all"
-                  style={{
-                    background: active ? accentBg : 'rgba(255,255,255,0.03)',
-                    color: active ? accentColor : '#6b7280',
-                    borderColor: active ? accentColor : 'rgba(255,255,255,0.08)',
-                  }}
-                >
-                  {active ? <Check size={10} className="inline mr-1" /> : null}
-                  {d}
-                </motion.button>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-gray-600 mt-2">
-            {selectedDistricts.length} bölge seçili • Kaptanlar bu bölgelerde seni önce görür
-          </p>
-        </motion.div>
-
-        {/* ─── Müsaitlik Saatleri ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
-        >
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Clock size={14} style={{ color: accentColor }} />
+              <MapPin size={14} style={{ color: accentColor }} />
               <h3 className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
-                Müsait Saatler
+                Çalışma Alanı (Yarıçap)
               </h3>
             </div>
-            <button
-              onClick={() => setSelectedHours(selectedHours.length === 24 ? [] : ALL_HOURS)}
-              className="text-[10px] font-black px-2 py-1 rounded-lg border transition-all"
-              style={{ color: accentColor, borderColor: accentColor + '40', background: accentBg }}
-            >
-              {selectedHours.length === 24 ? 'Temizle' : 'Tümü'}
-            </button>
+            <span className="text-xs font-black text-white">{radiusKm} km</span>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {ALL_HOURS.map(t => {
-              const active = selectedHours.includes(t);
-              return (
-                <motion.button
-                  key={t}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => toggleHour(t)}
-                  className="py-2.5 rounded-xl text-center text-xs font-black border transition-all"
-                  style={{
-                    background: active ? accentBg : 'rgba(255,255,255,0.03)',
-                    color: active ? accentColor : '#4b5563',
-                    borderColor: active ? accentColor + '60' : 'rgba(255,255,255,0.06)',
-                    boxShadow: active ? `0 0 8px ${accentColor}30` : 'none'
-                  }}
-                >
-                  {t}
-                </motion.button>
-              );
-            })}
+
+          <div className="mb-4">
+            <input 
+              type="range" 
+              min="5" max="50" step="5"
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(parseInt(e.target.value))}
+              className="w-full h-1 bg-white/20 rounded-full appearance-none outline-none"
+              style={{ accentColor: accentColor }}
+            />
+            <div className="flex justify-between text-[9px] text-gray-500 font-bold mt-1">
+              <span>5 km</span>
+              <span>50 km</span>
+            </div>
           </div>
-          <p className="text-[10px] text-gray-600 mt-2 font-bold">
-            {selectedHours.length} saat seçili
-          </p>
+
+          <div className="h-[200px] w-full rounded-2xl overflow-hidden border border-white/5 relative z-0">
+            <MapContainer center={mapCenter} zoom={10} style={{ height: '100%', width: '100%', zIndex: 0 }}>
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+              />
+              <MapEventsComponent />
+              <Marker position={mapCenter} />
+              <Circle 
+                center={mapCenter} 
+                radius={radiusKm * 1000} 
+                pathOptions={{ fillColor: accentColor, color: accentColor, fillOpacity: 0.2 }}
+              />
+            </MapContainer>
+            {/* Map overlay pointer block */}
+            <div className="absolute inset-0 z-[400] flex items-center justify-center pointer-events-none">
+                <div className="w-4 h-4 rounded-full border-2 border-white bg-transparent pointer-events-none opacity-50" />
+            </div>
+            <p className="absolute bottom-2 left-2 text-[10px] bg-black/60 px-2 py-1 rounded-md text-gray-300 z-[400] font-bold">
+              Haritayı hareket ettirerek merkezi belirle
+            </p>
+          </div>
+          
+          <button 
+            className="w-full mt-4 py-3 rounded-xl font-black text-sm text-black transition-colors"
+            style={{ background: accentColor }}
+            onClick={() => {
+                // Burada veritabanına kayıt işlemi olacak
+                if (userProfile?.id) {
+                    const update = { id: userProfile.id, coordinates: { lat: mapCenter[0], lng: mapCenter[1] }, settings: { ...(userProfile.settings || {}), radiusKm } };
+                    if (isRef) useAppStore.getState().updateReferee(update as any);
+                    else useAppStore.getState().updateGoalkeeper(update as any);
+                }
+            }}
+          >
+            LOKASYONU KAYDET
+          </button>
         </motion.div>
 
       </div>

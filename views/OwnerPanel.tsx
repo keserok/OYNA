@@ -3,13 +3,11 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
-  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, ChevronDown, BarChart3, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard
+  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard
 } from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar
-} from 'recharts';
+
 import { OWNER_TRANSACTIONS, PITCHES } from '../constants';
+import { useAppStore } from '../store';
 
 interface OwnerPanelProps {
   onBack: () => void;
@@ -173,6 +171,7 @@ interface CalendarBooking {
     paid: number;
     note?: string;
     pitchId: string;
+    date?: string;
 }
 
 const CALENDAR_BOOKINGS: CalendarBooking[] = [
@@ -230,10 +229,10 @@ const HEATMAP_DATA = [
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS';
 
-type WidgetType = 'QUICK_STATS' | 'QUICK_ACTIONS' | 'OCCUPANCY_ANALYSIS' | 'PENDING_REQUESTS';
+type WidgetType = 'QUICK_STATS' | 'QUICK_ACTIONS' | 'OCCUPANCY_ANALYSIS' | 'PENDING_REQUESTS' | 'WEATHER_INFO' | 'STAFF_STATUS' | 'MAINTENANCE_ALERTS';
 
 const WIDGETS: { id: WidgetType; title: string; description: string; icon: any }[] = [
-    { id: 'QUICK_STATS', title: 'Hızlı İstatistikler', description: 'Günlük ciro ve doluluk oranını gösterir.', icon: BarChart3 },
+    { id: 'QUICK_STATS', title: 'Hızlı İstatistikler', description: 'Günlük ciro ve doluluk oranını gösterir.', icon: BarChartIcon },
     { id: 'QUICK_ACTIONS', title: 'Hızlı İşlemler', description: 'QR okutma ve yeni kayıt oluşturma butonları.', icon: Zap },
     { id: 'OCCUPANCY_ANALYSIS', title: 'Saha Doluluk Analizi', description: 'Sahaların saatlik doluluk durumunu gösterir.', icon: Activity },
     { id: 'PENDING_REQUESTS', title: 'Onay Bekleyen Talepler', description: 'Bekleyen rezervasyon taleplerini listeler.', icon: Clock }
@@ -896,7 +895,8 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     const [pitches, setPitches] = useState(INTERNAL_PITCHES.map(p => ({
         ...p,
         description: '',
-        images: [] as string[]
+        images: [] as string[],
+        isActive: true
     })));
     const [selectedPitchId, setSelectedPitchId] = useState(INTERNAL_PITCHES[0].id);
 
@@ -961,6 +961,10 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     // --- Pitch Handlers ---
     const updatePitchDescription = (id: string, desc: string) => {
         setPitches(pitches.map(p => p.id === id ? { ...p, description: desc } : p));
+    };
+
+    const togglePitchActive = (id: string) => {
+        setPitches(pitches.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p));
     };
 
     const handleSave = async () => {
@@ -1111,13 +1115,21 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
                     </button>
                     <h2 className="text-white font-bold text-lg">Tesis Yönetimi</h2>
                 </div>
-                <button 
-                    onClick={handleSave} 
-                    disabled={isSaving}
-                    className="px-6 py-2.5 rounded-xl bg-[#FFFF00] text-black font-bold text-sm flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(255,255,0,0.3)]"
-                >
-                    {isSaving ? 'KAYDEDİLİYOR...' : <><Save size={18} /> DEĞİŞİKLİKLERİ KAYDET</>}
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => alert("Kullanıcı Önizlemesi (Müşteri ekranında nasıl göründüğünüzü test edin) yakında aktif olacak.")}
+                        className="px-4 py-2.5 rounded-xl border border-blue-500/30 text-blue-400 font-bold text-sm flex items-center gap-2 hover:bg-blue-500/10 transition-colors"
+                    >
+                        <UserCheck size={18} /> ÖNİZLEME
+                    </button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={isSaving}
+                        className="px-6 py-2.5 rounded-xl bg-[#FFFF00] text-black font-bold text-sm flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(255,255,0,0.3)]"
+                    >
+                        {isSaving ? 'KAYDEDİLİYOR...' : <><Save size={18} /> DEĞİŞİKLİKLERİ KAYDET</>}
+                    </button>
+                </div>
             </div>
 
             {/* Tabs */}
@@ -1266,10 +1278,23 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
                         {pitches.map(pitch => pitch.id === selectedPitchId && (
                             <div key={pitch.id} className="bg-[#161B22] p-6 rounded-3xl border border-white/5 space-y-8 animate-in fade-in">
                                 <div>
-                                    <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                        <ImageIcon size={20} className="text-blue-400" /> 
-                                        {pitch.name} Fotoğrafları
-                                    </h4>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                                            <ImageIcon size={20} className="text-blue-400" /> 
+                                            {pitch.name} Fotoğrafları
+                                        </h4>
+                                        <div className="flex items-center gap-3 bg-black/30 p-2 pr-4 rounded-full border border-white/5">
+                                            <button 
+                                                onClick={() => togglePitchActive(pitch.id)}
+                                                className={`w-12 h-6 rounded-full relative transition-all duration-300 ${pitch.isActive ? 'bg-emerald-500' : 'bg-red-500/50'}`}
+                                            >
+                                                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all duration-300 ${pitch.isActive ? 'right-0.5' : 'left-0.5'}`} />
+                                            </button>
+                                            <span className={`text-xs font-black uppercase tracking-wider ${pitch.isActive ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {pitch.isActive ? 'Saha Aktif' : 'Bakımda (Gizli)'}
+                                            </span>
+                                        </div>
+                                    </div>
                                     {renderImageGallery(pitch.images, pitch.id)}
                                 </div>
 
@@ -1314,7 +1339,9 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
     // New states for reservation creation
     const [bookings, setBookings] = useState<CalendarBooking[]>(CALENDAR_BOOKINGS);
     const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
     const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'PARTIAL' | 'PENDING'>('PENDING');
+    const [isRecurringPrice, setIsRecurringPrice] = useState(false);
 
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}.00`);
@@ -1324,7 +1351,13 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
         setRealTimeSlots([]);
     }, [facilityId]);
 
-    const currentBookings = useMemo(() => bookings.filter(b => b.pitchId === selectedPitchId), [bookings, selectedPitchId]);
+    const currentBookings = useMemo(() => {
+        return bookings.filter(b => {
+            const pitchMatch = b.pitchId === selectedPitchId;
+            const dateMatch = b.date ? b.date === (24 + selectedDate).toString() : true; // Mock date matching
+            return pitchMatch && dateMatch;
+        });
+    }, [bookings, selectedPitchId, selectedDate]);
     
     // Combine mock bookings with real slots (for visualization)
     const displaySlots = useMemo(() => {
@@ -1352,6 +1385,7 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
     const handleQuickCreate = async (time: string) => {
         setIsQuickCreateOpen(time);
         setCustomerName('');
+        setCustomerPhone('');
         setPaymentStatus('PENDING');
     };
 
@@ -1616,16 +1650,29 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                         </div>
 
                         <div className="space-y-4 mb-6">
-                            <div className="bg-[#0A0E14] flex items-center px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FFFF00] transition-colors">
-                                <User size={18} className="text-gray-500 mr-3" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Müşteri Adı / Tel" 
-                                    value={customerName}
-                                    onChange={(e) => setCustomerName(e.target.value)}
-                                    className="bg-transparent text-white font-bold w-full outline-none" 
-                                    autoFocus 
-                                />
+                            <div className="bg-[#0A0E14] flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FFFF00] transition-colors gap-3">
+                                <div className="flex items-center w-full">
+                                  <User size={18} className="text-gray-500 mr-3" />
+                                  <input 
+                                      type="text" 
+                                      placeholder="Müşteri Adı / Takım Adı" 
+                                      value={customerName}
+                                      onChange={(e) => setCustomerName(e.target.value)}
+                                      className="bg-transparent text-white font-bold w-full outline-none" 
+                                      autoFocus 
+                                  />
+                                </div>
+                                <div className="h-px w-full bg-white/5" />
+                                <div className="flex items-center w-full">
+                                  <Phone size={18} className="text-gray-500 mr-3" />
+                                  <input 
+                                      type="tel" 
+                                      placeholder="Telefon Numarası (Opsiyonel)" 
+                                      value={customerPhone}
+                                      onChange={(e) => setCustomerPhone(e.target.value)}
+                                      className="bg-transparent text-gray-300 font-mono text-sm w-full outline-none" 
+                                  />
+                                </div>
                             </div>
                             <div className="flex gap-2">
                                 <button 
@@ -1654,22 +1701,25 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
 
                         <button 
                             onClick={() => {
+                                if (!isQuickCreateOpen) return;
                                 const rateVal = specialRates[isQuickCreateOpen] || 2000;
                                 const newBooking: CalendarBooking = {
                                     id: `new-${Date.now()}`,
                                     pitchId: selectedPitchId,
                                     time: isQuickCreateOpen,
+                                    date: (24 + selectedDate).toString(), // Store the selected date
                                     duration: 1,
                                     user: customerName.trim() || 'Misafir Oyuncu',
                                     status: paymentStatus,
                                     price: rateVal,
                                     paid: paymentStatus === 'PAID' ? rateVal : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25) : 0,
                                     type: 'DAILY',
-                                    note: paymentStatus === 'PARTIAL' ? 'Kapora Alındı' : paymentStatus === 'PAID' ? 'Tam Ödendi' : 'Ödeme Bekliyor'
+                                    note: customerPhone ? `Tel: ${customerPhone}` : (paymentStatus === 'PARTIAL' ? 'Kapora Alındı' : paymentStatus === 'PAID' ? 'Tam Ödendi' : 'Ödeme Bekliyor')
                                 };
                                 setBookings(prev => [...prev, newBooking]);
                                 setIsQuickCreateOpen(null);
                                 setCustomerName('');
+                                setCustomerPhone('');
                                 setPaymentStatus('PENDING');
                             }}
                             className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all"
@@ -1723,6 +1773,19 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                 className="py-3 bg-gray-800 border border-white/10 text-gray-400 rounded-xl text-xs font-bold hover:bg-white/10 hover:text-white transition-colors flex flex-col items-center gap-1"
                             >
                                 <RefreshCw size={14} /> Standart
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6">
+                            <div>
+                                <p className="text-xs font-black text-white uppercase tracking-wide">DÜZENLİ FİYAT YAP</p>
+                                <p className="text-[9px] text-gray-500 font-bold mt-1">Sadece bu güne mi, her haftaya mı özel?</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsRecurringPrice(!isRecurringPrice)}
+                                className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isRecurringPrice ? 'bg-[#FFFF00]' : 'bg-white/10'}`}
+                            >
+                                <div className={`absolute top-0.5 w-5 h-5 bg-black rounded-full transition-all duration-300 ${isRecurringPrice ? 'right-0.5' : 'left-0.5'}`} />
                             </button>
                         </div>
 
@@ -2195,40 +2258,36 @@ const FinanceView: React.FC<{ hasDebt: boolean; isPayingDebt: boolean; onPayDebt
                 
                 {financeTab === 'DATA' && (
                     <div className="space-y-6">
-                        {/* Weekly Revenue Line Chart */}
-                        <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6 shadow-xl">
+                        {/* Weekly Revenue Bar Chart */}
+                        <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6 shadow-xl h-80">
                             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                                 <TrendingUp size={16} className="text-[#00F5FF]" /> HAFTALIK GELİR TRENDİ
                             </h3>
-                            <div className="h-64 w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={WEEKLY_REVENUE_DATA}>
-                                        <defs>
-                                            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                                        <XAxis 
-                                            dataKey="day" 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 900 }} 
-                                        />
-                                        <YAxis hide />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="revenue" 
-                                            stroke="#10b981" 
-                                            strokeWidth={4}
-                                            fillOpacity={1} 
-                                            fill="url(#colorRev)" 
-                                            animationDuration={2000}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            <div className="h-48 w-full flex items-end justify-between px-2 gap-3">
+                                {WEEKLY_REVENUE_DATA.map((item, idx) => {
+                                    const maxVal = 30000;
+                                    const pct = (item.revenue / maxVal) * 100;
+                                    return (
+                                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                                            <div className="relative w-full flex flex-col justify-end h-full">
+                                                {/* Tooltip */}
+                                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 border border-white/10 shadow-lg">
+                                                    {item.revenue.toLocaleString()}₺
+                                                </div>
+                                                {/* Bar */}
+                                                <div 
+                                                    className="w-full rounded-t-xl transition-all duration-1000 ease-out cursor-pointer hover:brightness-125 animate-in fade-in slide-in-from-bottom-4"
+                                                    style={{ 
+                                                        height: `${pct}%`, 
+                                                        background: 'linear-gradient(to top, #005080 0%, #00F5FF 100%)',
+                                                        boxShadow: '0 0 15px rgba(0, 245, 255, 0.2)'
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">{item.day}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -2239,25 +2298,36 @@ const FinanceView: React.FC<{ hasDebt: boolean; isPayingDebt: boolean; onPayDebt
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                                     <PieChartIcon size={16} className="text-[#FF00FF]" /> GİDER DAĞILIMI
                                 </h3>
-                                <div className="h-48 w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={expenseDistribution}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={8}
-                                                dataKey="value"
-                                                animationDuration={1500}
-                                            >
-                                                {expenseDistribution.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                                ))}
-                                            </Pie>
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                <div className="h-48 w-full relative flex items-center justify-center">
+                                    <div className="relative w-40 h-40">
+                                        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                                            {expenseDistribution.map((entry, index) => {
+                                                const total = expenseDistribution.reduce((sum, e) => sum + e.value, 0);
+                                                const prevTotal = expenseDistribution.slice(0, index).reduce((sum, e) => sum + e.value, 0);
+                                                const percentage = (entry.value / total) * 100;
+                                                const prevPercentage = (prevTotal / total) * 100;
+                                                const dashArray = `${percentage} ${100 - percentage}`;
+                                                const dashOffset = -prevPercentage;
+                                                
+                                                return (
+                                                    <circle
+                                                        key={index}
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="40"
+                                                        fill="transparent"
+                                                        stroke={entry.color}
+                                                        strokeWidth="15"
+                                                        strokeDasharray={dashArray}
+                                                        strokeDashoffset={dashOffset}
+                                                        className="transition-all duration-1000 ease-out hover:stroke-width-20 cursor-pointer"
+                                                    />
+                                                );
+                                            })}
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none bg-[#161B22] rounded-full m-8 border border-white/5 shadow-inner">
+                                        </div>
+                                    </div>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                         <span className="text-[10px] font-black text-gray-500 uppercase">Toplam</span>
                                         <span className="text-lg font-black text-white">{totalExpense.toLocaleString()}₺</span>
@@ -2413,19 +2483,24 @@ const FinanceView: React.FC<{ hasDebt: boolean; isPayingDebt: boolean; onPayDebt
                                 </button>
                             </div>
                             <div className="h-40 w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={expenseDistribution}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 900 }} />
-                                        <YAxis hide />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Bar dataKey="value" radius={[8, 8, 0, 0]} animationDuration={1500}>
-                                            {expenseDistribution.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <div className="h-full w-full flex items-end gap-3">
+                                    {expenseDistribution.map((entry, index) => {
+                                        const maxVal = Math.max(...expenseDistribution.map(d => d.value));
+                                        const heightPct = (entry.value / maxVal) * 100;
+                                        return (
+                                            <div key={index} className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                                                <div className="absolute -top-8 bg-black/80 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                                    {entry.value.toLocaleString()}₺
+                                                </div>
+                                                <div 
+                                                    className="w-full rounded-t-lg transition-all duration-500 hover:brightness-125"
+                                                    style={{ height: `${heightPct}%`, backgroundColor: entry.color }}
+                                                ></div>
+                                                <span className="text-[9px] font-bold text-gray-500 mt-2 truncate w-full text-center">{entry.name}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                         
@@ -3131,6 +3206,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 };
 
 const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
+  const { setIsNotificationsOpen } = useAppStore();
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
   const [pendingRequests, setPendingRequests] = useState(() => {
       const saved = localStorage.getItem('owner_pendingRequests');
@@ -3281,7 +3357,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
                   </div>
               </div>
               <button 
-                onClick={() => onNavigate('NOTIFICATIONS')}
+                onClick={() => setIsNotificationsOpen(true)}
                 className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 relative"
               >
                   <Bell size={20} />
@@ -3350,7 +3426,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
               {activeWidgets.includes('OCCUPANCY_ANALYSIS') && (
                   <div className="bg-[#161B22] border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
                     <h3 className="font-bold text-white text-base flex items-center gap-2 mb-6">
-                        <BarChart3 size={18} className="text-indigo-500" /> Saha Doluluk Analizi
+                        <BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi
                     </h3>
                     <PitchOccupancyGrid data={HOURLY_DATA} />
                   </div>

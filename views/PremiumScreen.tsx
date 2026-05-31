@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, Crown, Zap, BarChart3, Tv, Shield, Star, Play, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Crown, Zap, BarChart, Tv, Shield, Star, Play, X } from 'lucide-react';
 
 interface PremiumScreenProps {
   onBack: () => void;
@@ -116,7 +116,7 @@ const PremiumScreen: React.FC<PremiumScreenProps> = ({ onBack, onUpgrade }) => {
 
                 <div className="bg-[#161B22] p-5 rounded-[24px] border border-white/5 flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                        <BarChart3 size={24} />
+                        <BarChart size={24} />
                     </div>
                     <div>
                         <h3 className="font-bold text-white">Maç Analizi</h3>

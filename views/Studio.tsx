@@ -10,9 +10,10 @@ import {
     Layers, Gauge, Crosshair, Share2, Play, Square, List, ChevronRight, RotateCw, Hash
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { auth, db } from '../firebase';
+import { auth, db } from '../supabaseAuth';
 import { useAppStore } from '../store';
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { query, collection, where, onSnapshot, updateDoc, doc, addDoc } from 'firebase/firestore';
+
 
 // --- Types ---
 interface Player {

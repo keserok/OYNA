@@ -40,13 +40,13 @@ const Select: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { childre
 export const MatchesTab: React.FC = () => {
     const { adminMatches, addMatch, updateMatch, deleteMatch } = useAppStore();
     const [modal, setModal] = useState<{ show: boolean; type: 'add' | 'edit'; match?: MatchListing }>({ show: false, type: 'add' });
-    const [f, setF] = useState({ title: '', location: '', time: '', date: 'Bugün', price: '', difficulty: 'Amatör', minRating: '3.0', image: '' });
+    const [f, setF] = useState({ title: '', location: '', time: '', date: 'Bugün', price: '', difficulty: 'Rahat', minRating: '3.0', image: '' });
     const { uploadImage, uploading, progress } = useImageUpload('matches');
     const { show: toast, Toast } = useToast();
 
-    const difficultyColors: Record<string, string> = { 'Amatör': 'text-green-400', 'Yarı-Pro': 'text-yellow-400', 'Pro': 'text-red-400', 'Eğlence': 'text-blue-400' };
+    const difficultyColors: Record<string, string> = { 'Ciddi': 'text-red-400', 'Taktiksel': 'text-yellow-400', 'Rahat': 'text-green-400' };
 
-    const openAdd = () => { setF({ title: '', location: '', time: '20:00', date: 'Bugün', price: '', difficulty: 'Amatör', minRating: '3.0', image: '' }); setModal({ show: true, type: 'add' }); };
+    const openAdd = () => { setF({ title: '', location: '', time: '20:00', date: 'Bugün', price: '', difficulty: 'Rahat', minRating: '3.0', image: '' }); setModal({ show: true, type: 'add' }); };
     const openEdit = (m: MatchListing) => {
         setF({ title: m.title, location: m.location, time: m.time, date: m.date, price: String(m.price), difficulty: m.difficulty, minRating: String(m.minRating), image: m.image });
         setModal({ show: true, type: 'edit', match: m });
@@ -115,7 +115,7 @@ export const MatchesTab: React.FC = () => {
                             <F label="Katılım (₺)"><Input type="number" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} /></F>
                             <F label="Min. Rating"><Input type="number" step="0.1" value={f.minRating} onChange={e => setF({ ...f, minRating: e.target.value })} /></F>
                         </div>
-                        <F label="Zorluk"><Select value={f.difficulty} onChange={e => setF({ ...f, difficulty: e.target.value })}><option>Eğlence</option><option>Amatör</option><option>Yarı-Pro</option><option>Pro</option></Select></F>
+                        <F label="Zorluk"><Select value={f.difficulty} onChange={e => setF({ ...f, difficulty: e.target.value })}><option value="Rahat">Rahat</option><option value="Taktiksel">Taktiksel</option><option value="Ciddi">Ciddi</option></Select></F>
 
                         <F label="Kapak Görseli">
                             <div className="relative group">

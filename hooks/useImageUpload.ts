@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
 
 export const useImageUpload = (folder: string = 'uploads') => {
     const [uploading, setUploading] = useState(false);
@@ -14,33 +12,15 @@ export const useImageUpload = (folder: string = 'uploads') => {
             }
 
             setUploading(true);
-            const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(fileRef, file);
-
-            uploadTask.on(
-                'state_changed',
-                (snapshot) => {
-                    const prog = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setProgress(prog);
-                },
-                (error) => {
-                    console.error('Upload error:', error);
-                    setUploading(false);
-                    reject(error);
-                },
-                async () => {
-                    try {
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        setUploading(false);
-                        setProgress(0);
-                        resolve(downloadURL);
-                    } catch (error) {
-                        console.error('Download URL error:', error);
-                        setUploading(false);
-                        reject(error);
-                    }
-                }
-            );
+            setProgress(0);
+            
+            // Mock upload process since firebase is removed
+            setTimeout(() => {
+                setProgress(100);
+                setUploading(false);
+                // Return a generic placeholder or object URL for now
+                resolve(URL.createObjectURL(file));
+            }, 1000);
         });
     };
 

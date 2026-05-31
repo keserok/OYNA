@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Wifi, ChevronDown, X, Check, MapPin, Calendar, Clock, Plus, Star, Shield } from 'lucide-react';
-import { db, auth } from '../firebase';
+import { db, auth } from '../supabaseAuth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { Pitch, Goalkeeper, Referee, AdminUser } from '../../types';
+import { Pitch, Goalkeeper, Referee, AdminUser, UserRole } from '../../types';
 import { useAppStore } from '../../store';
-import * as FB from '../../firebaseMutations';
-import { X, Save, Image as ImageIcon, UploadCloud, Loader2, Check, Wallet, Star, Shield, Phone, Mail, AlertTriangle, Plus, Zap } from 'lucide-react';
+import * as FB from '../../supabaseMutations';
+import { X, Save, Image as ImageIcon, UploadCloud, Loader2, Check, Wallet, Star, Shield, Phone, Mail, AlertTriangle, Plus, Zap, MapPin, Clock } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FifaCard } from '../../components/FifaCard';
 
 interface ModalProps { onClose: () => void; }
 
@@ -101,7 +102,7 @@ const Shell: React.FC<{ title: string; onClose: () => void; children: React.Reac
     <motion.div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}>
-        <motion.div className="bg-[#0D1117] border border-white/10 w-full max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh]"
+        <motion.div className="bg-[#0D1117] border border-white/10 w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[95vh]"
             initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
             onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-white/10 flex justify-between items-center bg-[#121820] rounded-t-3xl shrink-0">
@@ -132,7 +133,7 @@ const GradePicker: React.FC<{ label: string; desc?: string; value?: 'A' | 'B' | 
         <div className="flex gap-2">
             {(['A', 'B', 'C'] as const).map(g => (
                 <button key={g} onClick={() => onChange(g)}
-                    className={`flex-1 h-10 rounded-xl font-black text-base border-2 transition-all ${
+                    className={`flex-1 h-10 rounded-xl font-black text-xs border-2 transition-all ${
                         value === g ? GRADE_ACTIVE[g] : (GRADE_COLORS[g] + ' border-opacity-30')
                     }`}>
                     {g}
@@ -190,6 +191,15 @@ export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pi
                 </div>
                 <FI label="Tam Adres"><I value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
 
+                {/* GPS Coordinates Override */}
+                <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><MapPin size={11} /> GPS HARİTA KOORDİNATLARI (OVERRIDE)</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <FI label="Enlem (Latitude)"><I type="number" step="0.000001" value={edit.coordinates?.lat || 41.058} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 29.002 } })} /></FI>
+                        <FI label="Boylam (Longitude)"><I type="number" step="0.000001" value={edit.coordinates?.lng || 29.002} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 41.058, lng: +e.target.value } })} /></FI>
+                    </div>
+                </div>
+
                 {/* Pricing */}
                 <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> FİYATLANDIRMA</p>
@@ -210,6 +220,42 @@ export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pi
                         <FI label="Rating (0-5)" hint="Yıldız puanı"><I type="number" step="0.1" min="0" max="5" value={edit.rating} onChange={e => setEdit({ ...edit, rating: +e.target.value })} /></FI>
                         <FI label="Zemin (0-100)" hint="Çim kalitesi"><I type="number" min="0" max="100" value={edit.grassQuality} onChange={e => setEdit({ ...edit, grassQuality: +e.target.value })} /></FI>
                         <FI label="Işıklandırma (0-100)" hint="Aydınlatma"><I type="number" min="0" max="100" value={edit.lighting} onChange={e => setEdit({ ...edit, lighting: +e.target.value })} /></FI>
+                    </div>
+                </div>
+
+                {/* Slots Matrix Override */}
+                <div className="p-4 bg-[#161B22]/70 rounded-2xl border border-yellow-500/20">
+                    <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5"><Clock size={11} /> AKTİF SAAT SLOTU OVERRIDE MATRİSİ</p>
+                    <p className="text-[9px] text-gray-500 mb-4">Saha sahibinin doldurmayı unuttuğu saat dilimlerini el ile rezerve (dolu) veya müsait (boş) konumuna getirin.</p>
+                    <div className="grid grid-cols-4 gap-2">
+                        {['17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'].map(t => {
+                            const slot = edit.slots?.find(s => s.time === t);
+                            const isBooked = slot?.status === 'booked';
+                            return (
+                                <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => {
+                                        const existingSlots = [...(edit.slots || [])];
+                                        const idx = existingSlots.findIndex(s => s.time === t);
+                                        if (idx >= 0) {
+                                            existingSlots[idx] = { time: t, status: isBooked ? 'available' : 'booked' };
+                                        } else {
+                                            existingSlots.push({ time: t, status: 'booked' });
+                                        }
+                                        setEdit({ ...edit, slots: existingSlots });
+                                    }}
+                                    className={`py-2 px-1.5 rounded-xl border text-[10px] font-black transition-all flex flex-col items-center justify-center gap-0.5 ${
+                                        isBooked 
+                                        ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.05)]' 
+                                        : 'bg-green-500/10 border-green-500/30 text-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.05)]'
+                                    }`}
+                                >
+                                    <span>{t}</span>
+                                    <span className="text-[8px] font-bold uppercase">{isBooked ? 'DOLU' : 'BOŞ'}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -306,7 +352,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all">İptal</button>
                         <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-xl text-xs font-black transition-all disabled:opacity-50 hover:opacity-90">
-                            {saving ? <><Loader2 size={13} className="animate-spin" /> Ekleniyor...</> : <><Plus size={13} /> SAHAY EKLE</>}
+                            {saving ? <><Loader2 size={13} className="animate-spin" /> Ekleniyor...</> : <><Plus size={13} /> SAHAYI EKLE</>}
                         </button>
                     </div>
                 </div>
@@ -325,6 +371,16 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
                     <FI label="İlçe"><I placeholder="örn. Beşiktaş" value={edit.district} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
                 </div>
                 <FI label="Tam Adres *"><I placeholder="örn. Barbaros Bulvarı, Beşiktaş/İstanbul" value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
+                
+                {/* GPS Coordinates */}
+                <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><MapPin size={11} /> GPS KOORDİNATLARI</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <FI label="Enlem (Latitude)"><I type="number" step="0.000001" value={edit.coordinates?.lat} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 29.005 } })} /></FI>
+                        <FI label="Boylam (Longitude)"><I type="number" step="0.000001" value={edit.coordinates?.lng} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 41.0445, lng: +e.target.value } })} /></FI>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                     <FI label="Mesafe"><I placeholder="örn. 1.2 km" value={edit.distance} onChange={e => setEdit({ ...edit, distance: e.target.value })} /></FI>
                     <FI label="Google Değerlendirme Sayısı"><I type="number" value={edit.googleReviews} onChange={e => setEdit({ ...edit, googleReviews: +e.target.value })} /></FI>
@@ -380,6 +436,59 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
         setTimeout(onClose, 1000);
     };
 
+    // Sliders for dynamic FifaCard
+    const stats = {
+        pace: edit.playerCard?.stats?.pace || { value: 75, videoUrl: null },
+        shooting: edit.playerCard?.stats?.shooting || { value: 70, videoUrl: null },
+        passing: edit.playerCard?.stats?.passing || { value: 75, videoUrl: null },
+        dribbling: edit.playerCard?.stats?.dribbling || { value: 75, videoUrl: null },
+        defense: edit.playerCard?.stats?.defense || { value: 65, videoUrl: null },
+        physical: edit.playerCard?.stats?.physical || { value: 70, videoUrl: null }
+    };
+
+    const handleStatChange = (key: string, value: number) => {
+        const currentCard = edit.playerCard || {
+            overall: 75,
+            tier: 'gold',
+            isStatsVerified: true,
+            diamondValue: 0,
+            winCount: edit.matchCount || 0,
+            totalMatches: edit.matchCount || 0,
+            stats: {
+                pace: { value: 75, videoUrl: null },
+                shooting: { value: 70, videoUrl: null },
+                passing: { value: 75, videoUrl: null },
+                dribbling: { value: 75, videoUrl: null },
+                defense: { value: 65, videoUrl: null },
+                physical: { value: 70, videoUrl: null }
+            }
+        };
+        
+        const updatedStats = {
+            ...currentCard.stats,
+            [key]: { value, videoUrl: null }
+        };
+        
+        const overall = Math.round(
+            (updatedStats.pace.value +
+             updatedStats.shooting.value +
+             updatedStats.passing.value +
+             updatedStats.dribbling.value +
+             updatedStats.defense.value +
+             updatedStats.physical.value) / 6
+        );
+
+        setEdit(prev => ({
+            ...prev,
+            rating: Number((overall / 20).toFixed(1)),
+            playerCard: {
+                ...currentCard,
+                overall,
+                stats: updatedStats
+            }
+        }));
+    };
+
     return (
         <AnimatePresence>
             <Shell title={`Kullanıcı Düzenle — ${user.name}`} onClose={onClose} footer={
@@ -394,56 +503,113 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                 </div>
             }>
                 <Toast />
-                {/* Avatar */}
-                <div className="flex gap-4 items-start">
-                    <PhotoUploadZone currentUrl={edit.avatar} onChanged={url => setEdit({ ...edit, avatar: url })} folder="users" round />
-                    <div className="flex-1 space-y-3">
-                        <FI label="Avatar URL">
-                            <I value={edit.avatar} onChange={e => setEdit({ ...edit, avatar: e.target.value })} placeholder="https://..." />
-                        </FI>
-                        <FI label="İsim Soyisim">
-                            <I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} />
-                        </FI>
-                    </div>
-                </div>
+                
+                {/* 2-Column Grid Layout with Card Preview */}
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Column - Form Inputs */}
+                    <div className="flex-1 space-y-4">
+                        {/* Avatar */}
+                        <div className="flex gap-4 items-start bg-black/25 p-4 rounded-2xl border border-white/5">
+                            <PhotoUploadZone currentUrl={edit.avatar} onChanged={url => setEdit({ ...edit, avatar: url })} folder="users" round />
+                            <div className="flex-1 space-y-3">
+                                <FI label="Avatar Görseli"><I value={edit.avatar} onChange={e => setEdit({ ...edit, avatar: e.target.value })} placeholder="https://..." /></FI>
+                                <FI label="İsim Soyisim"><I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
+                            </div>
+                        </div>
 
-                {/* Contact */}
-                <div className="grid grid-cols-2 gap-4">
-                    <FI label="E-posta"><I value={edit.email} onChange={e => setEdit({ ...edit, email: e.target.value })} /></FI>
-                    <FI label="Telefon"><I value={edit.phone} onChange={e => setEdit({ ...edit, phone: e.target.value })} /></FI>
-                </div>
+                        {/* Contact */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FI label="E-posta"><I value={edit.email} onChange={e => setEdit({ ...edit, email: e.target.value })} /></FI>
+                            <FI label="Telefon"><I value={edit.phone || ''} onChange={e => setEdit({ ...edit, phone: e.target.value })} placeholder="+90 5..." /></FI>
+                        </div>
 
-                {/* Stats */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Star size={11} /> OYUNCU İSTATİSTİKLERİ</p>
-                    <div className="grid grid-cols-3 gap-4">
-                        <FI label="Rating (0-5)"><I type="number" step="0.1" min="0" max="5" value={edit.rating} onChange={e => setEdit({ ...edit, rating: +e.target.value })} /></FI>
-                        <FI label="Maç Sayısı"><I type="number" value={edit.matchCount} onChange={e => setEdit({ ...edit, matchCount: +e.target.value })} /></FI>
-                        <FI label="Katılım Tarihi"><I value={edit.joinDate} onChange={e => setEdit({ ...edit, joinDate: e.target.value })} /></FI>
-                    </div>
-                </div>
+                        {/* Role selection */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FI label="Sistem Rolü">
+                                <Sel value={edit.role} onChange={e => setEdit({ ...edit, role: e.target.value as UserRole })}>
+                                    {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
+                                </Sel>
+                            </FI>
+                            <FI label="Maç Sayısı"><I type="number" value={edit.matchCount} onChange={e => setEdit({ ...edit, matchCount: +e.target.value })} /></FI>
+                        </div>
 
-                {/* Wallet */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-yellow-500/20">
-                    <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN KONTROLÜ</p>
-                    <div className="grid grid-cols-2 gap-4 items-end">
-                        <FI label="Cüzdan Bakiyesi (₺)">
-                            <I type="number" value={edit.wallet} onChange={e => setEdit({ ...edit, wallet: +e.target.value })} className="text-yellow-400 font-mono text-lg" />
-                        </FI>
-                        <div className="flex gap-2">
-                            <button onClick={() => setEdit(prev => ({ ...prev, wallet: prev.wallet + 100 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺100</button>
-                            <button onClick={() => setEdit(prev => ({ ...prev, wallet: prev.wallet + 500 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺500</button>
-                            <button onClick={() => setEdit(prev => ({ ...prev, wallet: 0 }))} className="flex-1 h-11 bg-red-500/15 text-red-400 border border-red-500/20 rounded-xl text-xs font-black hover:bg-red-500/25 transition-all">SIFIRLA</button>
+                        {/* Sliders for FifaCard stats */}
+                        <div className="p-4 bg-black/30 rounded-2xl border border-purple-500/20 space-y-3">
+                            <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> TEKNİK KART YETENEK SÜRGÜLERİ (0-100)</p>
+                            
+                            {[
+                                { key: 'pace', label: 'Hız (PAC)', color: 'text-yellow-400' },
+                                { key: 'shooting', label: 'Şut (SHO)', color: 'text-red-400' },
+                                { key: 'passing', label: 'Pas (PAS)', color: 'text-blue-400' },
+                                { key: 'dribbling', label: 'Dripling (DRI)', color: 'text-purple-400' },
+                                { key: 'defense', label: 'Defans (DEF)', color: 'text-green-400' },
+                                { key: 'physical', label: 'Fizik (PHY)', color: 'text-orange-400' }
+                            ].map(item => (
+                                <div key={item.key} className="flex items-center gap-3">
+                                    <span className="text-[10px] font-bold text-gray-400 w-24 uppercase">{item.label}</span>
+                                    <input 
+                                        type="range" 
+                                        min="10" 
+                                        max="99" 
+                                        value={stats[item.key as keyof typeof stats].value}
+                                        onChange={e => handleStatChange(item.key, parseInt(e.target.value))}
+                                        className="flex-1 accent-red-500 cursor-pointer"
+                                    />
+                                    <span className={`text-xs font-black w-8 text-right ${item.color}`}>
+                                        {stats[item.key as keyof typeof stats].value}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Wallet */}
+                        <div className="p-4 bg-black/30 rounded-2xl border border-yellow-500/20">
+                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN KONTROLÜ</p>
+                            <div className="grid grid-cols-2 gap-4 items-end">
+                                <FI label="Cüzdan Bakiyesi (₺)">
+                                    <I type="number" value={edit.wallet || 0} onChange={e => setEdit({ ...edit, wallet: +e.target.value })} className="text-yellow-400 font-mono text-lg" />
+                                </FI>
+                                <div className="flex gap-2">
+                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: (prev.wallet || 0) + 100 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺100</button>
+                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: (prev.wallet || 0) + 500 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺500</button>
+                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: 0 }))} className="flex-1 h-11 bg-red-500/15 text-red-400 border border-red-500/20 rounded-xl text-xs font-black hover:bg-red-500/25 transition-all">SIFIRLA</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Status toggles */}
+                        <div className="space-y-2">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
+                            <Toggle label="PRO Üyelik" desc="Özel maçlar ve indirimler" value={edit.isPro} onChange={() => setEdit(prev => ({ ...prev, isPro: !prev.isPro }))} />
+                            <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
+                            <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
                         </div>
                     </div>
-                </div>
 
-                {/* Status toggles */}
-                <div className="space-y-2">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
-                    <Toggle label="PRO Üyelik" desc="Özel maçlar ve indirimler" value={edit.isPro} onChange={() => setEdit(prev => ({ ...prev, isPro: !prev.isPro }))} />
-                    <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
-                    <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
+                    {/* Right Column - FifaCard Interactive Preview */}
+                    <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 bg-[#121820] rounded-3xl border border-white/5 relative overflow-hidden self-start">
+                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
+                        <FifaCard 
+                            rating={edit.rating}
+                            role={edit.role}
+                            name={edit.name}
+                            avatar={edit.avatar}
+                            isElite={edit.isPro}
+                            stats={{
+                                label1: 'HIZ', val1: stats.pace.value,
+                                label2: 'DRB', val2: stats.dribbling.value,
+                                label3: 'ŞUT', val3: stats.shooting.value,
+                                label4: 'DEF', val4: stats.defense.value,
+                                label5: 'PAS', val5: stats.passing.value,
+                                label6: 'FİZ', val6: stats.physical.value
+                            }}
+                        />
+                        <div className="mt-4 px-4 text-center">
+                            <span className="text-[10px] text-gray-500 font-mono">
+                                Toplam FUT Puanı: <span className="text-white font-bold">{edit.playerCard?.overall || 75}</span> / 99
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </Shell>
         </AnimatePresence>
@@ -469,6 +635,72 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
         setTimeout(onClose, 1000);
     };
 
+    // GK Specific stats adjustments
+    const handleGkStatChange = (key: string, value: number) => {
+        const stats = edit.stats || {
+            savePercentage: '85',
+            cleanSheets: 0,
+            penaltySaveRate: '30',
+            reflexes: 80,
+            diving: 80,
+            positioning: 80,
+            distribution: 75,
+            oneOnOne: 80,
+            aerialReach: 80
+        };
+        const skills = edit.skills || {
+            reflexes: 80,
+            diving: 80,
+            handling: 80,
+            positioning: 80,
+            kicking: 75,
+            speed: 75
+        };
+
+        const updatedStats = { ...stats, [key]: value };
+        const updatedSkills = { ...skills, [key]: value };
+
+        const avgSkill = Math.round(
+            ((updatedStats.reflexes || 80) + 
+             (updatedStats.diving || 80) + 
+             (updatedStats.positioning || 80) + 
+             (updatedStats.distribution || 75) + 
+             (updatedStats.oneOnOne || 80) + 
+             (updatedStats.aerialReach || 80)) / 6
+        );
+
+        setEdit((prev: any) => ({
+            ...prev,
+            rating: Number((avgSkill / 20).toFixed(1)),
+            stats: updatedStats,
+            skills: updatedSkills
+        }));
+    };
+
+    // REF Specific stats adjustments
+    const handleRefStatChange = (key: string, value: number) => {
+        const stats = edit.stats || {
+            avgCards: 3.5,
+            avgDistance: '10km',
+            authority: 80,
+            fitness: 80,
+            communication: 80
+        };
+        const updatedStats = { ...stats, [key]: value };
+        
+        const avgSkill = Math.round(
+            ((updatedStats.authority || 80) + 
+             (updatedStats.fitness || 80) + 
+             (updatedStats.communication || 80)) / 3
+        );
+
+        setEdit((prev: any) => ({
+            ...prev,
+            rating: Number((avgSkill / 20).toFixed(1)),
+            stats: updatedStats
+        }));
+    };
+
     return (
         <AnimatePresence>
             <Shell title={`${label} Düzenle — ${item.name}`} onClose={onClose} footer={
@@ -483,63 +715,172 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                 </div>
             }>
                 <Toast />
-                {/* Avatar */}
-                <div className="flex gap-4 items-start">
-                    <PhotoUploadZone currentUrl={edit.avatar} onChanged={url => setEdit({ ...edit, avatar: url })} folder="providers" round />
-                    <div className="flex-1 space-y-3">
-                        <FI label="Profil Görseli URL">
-                            <I value={edit.avatar} onChange={e => setEdit({ ...edit, avatar: e.target.value })} />
-                        </FI>
-                        <FI label="İsim Soyisim">
-                            <I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} />
-                        </FI>
-                    </div>
-                </div>
 
-                {/* Pricing & Rating */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-green-500/20">
-                    <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> ÜCRET & PERFORMANS</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <FI label="Maç Başı Ücret (₺)" hint="Net gelir">
-                            <I type="number" value={edit.fee} onChange={e => setEdit({ ...edit, fee: +e.target.value })} className="text-green-400 font-mono" />
-                        </FI>
-                        <FI label="Rating (0-5)" hint="Kullanıcı değerlendirmesi">
-                            <I type="number" step="0.1" min="0" max="5" value={edit.rating} onChange={e => setEdit({ ...edit, rating: +e.target.value })} />
-                        </FI>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
+                {/* 2-Column Grid Layout with Card Preview */}
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Column - Form Inputs */}
+                    <div className="flex-1 space-y-4">
+                        {/* Avatar */}
+                        <div className="flex gap-4 items-start bg-black/25 p-4 rounded-2xl border border-white/5">
+                            <PhotoUploadZone currentUrl={edit.avatar} onChanged={url => setEdit({ ...edit, avatar: url })} folder="providers" round />
+                            <div className="flex-1 space-y-3">
+                                <FI label="Profil Görseli URL"><I value={edit.avatar} onChange={e => setEdit({ ...edit, avatar: e.target.value })} /></FI>
+                                <FI label="İsim Soyisim"><I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
+                            </div>
+                        </div>
+
+                        {/* Pricing & Rating */}
+                        <div className="p-4 bg-black/30 rounded-2xl border border-green-500/20">
+                            <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> ÜCRET & PERFORMANS</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FI label="Maç Başı Ücret (₺)" hint="Net gelir">
+                                    <I type="number" value={edit.fee} onChange={e => setEdit({ ...edit, fee: +e.target.value })} className="text-green-400 font-mono" />
+                                </FI>
+                                <FI label="Rating (0-5)" hint="Kullanıcı değerlendirmesi">
+                                    <I type="number" step="0.1" min="0" max="5" value={edit.rating} onChange={e => setEdit({ ...edit, rating: +e.target.value })} />
+                                </FI>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                {typeParam === 'GK' && (
+                                    <FI label="Oyun Stili">
+                                        <Sel value={edit.style || ''} onChange={e => setEdit({ ...edit, style: e.target.value })}>
+                                            <option>Sweeper</option>
+                                            <option>Shot-Stopper</option>
+                                            <option>Pençe</option>
+                                            <option>Komutan</option>
+                                        </Sel>
+                                    </FI>
+                                )}
+                                {typeParam === 'REF' && (
+                                    <FI label="Deneyim Seviyesi">
+                                        <Sel value={edit.level || ''} onChange={e => setEdit({ ...edit, level: e.target.value })}>
+                                            <option>Başlangıç</option>
+                                            <option>Orta Seviye</option>
+                                            <option>İleri Seviye</option>
+                                            <option>Profesyonel</option>
+                                        </Sel>
+                                    </FI>
+                                )}
+                                <FI label="Tamamlanan Maç">
+                                    <I type="number" value={edit.matchCount || 0} onChange={e => setEdit({ ...edit, matchCount: +e.target.value })} />
+                                </FI>
+                            </div>
+                        </div>
+
+                        {/* Interactive Sliders for Goalkeeper or Referee */}
                         {typeParam === 'GK' && (
-                            <FI label="Oyun Stili">
-                                <Sel value={edit.style || ''} onChange={e => setEdit({ ...edit, style: e.target.value })}>
-                                    <option>Sweeper</option>
-                                    <option>Shot-Stopper</option>
-                                    <option>Pençe</option>
-                                    <option>Komutan</option>
-                                </Sel>
-                            </FI>
+                            <div className="p-4 bg-[#161B22]/80 border border-emerald-500/20 rounded-2xl space-y-3">
+                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> KALECİ YETENEK KONTROLLERİ</p>
+                                {[
+                                    { key: 'reflexes', label: 'Refleksler (REF)', color: 'text-emerald-400' },
+                                    { key: 'diving', label: 'Dalış (DIV)', color: 'text-teal-400' },
+                                    { key: 'positioning', label: 'Pozisyon (POS)', color: 'text-cyan-400' },
+                                    { key: 'distribution', label: 'Dağıtım (DIS)', color: 'text-blue-400' },
+                                    { key: 'oneOnOne', label: 'Bire Bir (1v1)', color: 'text-indigo-400' },
+                                    { key: 'aerialReach:80', keyReal: 'aerialReach', label: 'Hava Hakimiyeti', color: 'text-purple-400' }
+                                ].map(item => {
+                                    const realKey = (item.keyReal || item.key) as any;
+                                    const val = edit.stats?.[realKey] || 80;
+                                    return (
+                                        <div key={item.key} className="flex items-center gap-3">
+                                            <span className="text-[10px] font-bold text-gray-400 w-28 uppercase">{item.label}</span>
+                                            <input 
+                                                type="range" 
+                                                min="10" 
+                                                max="99" 
+                                                value={val}
+                                                onChange={e => handleGkStatChange(realKey, parseInt(e.target.value))}
+                                                className="flex-1 accent-emerald-500 cursor-pointer"
+                                            />
+                                            <span className={`text-xs font-black w-8 text-right ${item.color}`}>{val}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
-                        {typeParam === 'REF' && (
-                            <FI label="Deneyim Seviyesi">
-                                <Sel value={edit.level || ''} onChange={e => setEdit({ ...edit, level: e.target.value })}>
-                                    <option>Başlangıç</option>
-                                    <option>Orta Seviye</option>
-                                    <option>İleri Seviye</option>
-                                    <option>Profesyonel</option>
-                                </Sel>
-                            </FI>
-                        )}
-                        <FI label="Tamamlanan Maç">
-                            <I type="number" value={edit.matchCount || 0} onChange={e => setEdit({ ...edit, matchCount: +e.target.value })} />
-                        </FI>
-                    </div>
-                </div>
 
-                {/* Status */}
-                <div className="space-y-2">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">STATÜ</p>
-                    <Toggle label="ELITE Statüsü" desc="Altın rozet göster, listedeki sıralamasını yükselt" value={!!edit.isElite} onChange={() => setEdit((prev: any) => ({ ...prev, isElite: !prev.isElite }))} />
-                    <Toggle label="Doğrulanmış" desc="Profil doğrulama rozeti" value={!!edit.isVerified} onChange={() => setEdit((prev: any) => ({ ...prev, isVerified: !prev.isVerified }))} />
-                    <Toggle label="Müsaitlik Durdur" desc="Bu kişiyi geçici olarak listeden kaldır" value={!!edit.isSuspended} onChange={() => setEdit((prev: any) => ({ ...prev, isSuspended: !prev.isSuspended }))} danger />
+                        {typeParam === 'REF' && (
+                            <div className="p-4 bg-[#161B22]/80 border border-blue-500/20 rounded-2xl space-y-3">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> HAKEM YETENEK KONTROLLERİ</p>
+                                {[
+                                    { key: 'authority', label: 'Otorite (OTO)', color: 'text-red-400' },
+                                    { key: 'fitness', label: 'Kondisyon (KON)', color: 'text-emerald-400' },
+                                    { key: 'communication', label: 'İletişim (İLE)', color: 'text-blue-400' }
+                                ].map(item => {
+                                    const val = edit.stats?.[item.key] || 80;
+                                    return (
+                                        <div key={item.key} className="flex items-center gap-3">
+                                            <span className="text-[10px] font-bold text-gray-400 w-28 uppercase">{item.label}</span>
+                                            <input 
+                                                type="range" 
+                                                min="10" 
+                                                max="99" 
+                                                value={val}
+                                                onChange={e => handleRefStatChange(item.key, parseInt(e.target.value))}
+                                                className="flex-1 accent-blue-500 cursor-pointer"
+                                            />
+                                            <span className={`text-xs font-black w-8 text-right ${item.color}`}>{val}</span>
+                                        </div>
+                                    );
+                                })}
+                                
+                                <div className="grid grid-cols-2 gap-4 mt-2">
+                                    <FI label="Ort. Kart Sayısı">
+                                        <I type="number" step="0.1" value={edit.stats?.avgCards || 3.5} onChange={e => setEdit({ ...edit, stats: { ...edit.stats, avgCards: +e.target.value } })} />
+                                    </FI>
+                                    <FI label="Ort. Koşu Mesafesi">
+                                        <I value={edit.stats?.avgDistance || '10km'} onChange={e => setEdit({ ...edit, stats: { ...edit.stats, avgDistance: e.target.value } })} />
+                                    </FI>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Status */}
+                        <div className="space-y-2">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">STATÜ</p>
+                            <Toggle label="ELITE Statüsü" desc="Altın rozet göster, listedeki sıralamasını yükselt" value={!!edit.isElite} onChange={() => setEdit((prev: any) => ({ ...prev, isElite: !prev.isElite }))} />
+                            <Toggle label="Doğrulanmış" desc="Profil doğrulama rozeti" value={!!edit.isVerified} onChange={() => setEdit((prev: any) => ({ ...prev, isVerified: !prev.isVerified }))} />
+                            <Toggle label="Müsaitlik Durdur" desc="Bu kişiyi geçici olarak listeden kaldır" value={!!edit.isSuspended} onChange={() => setEdit((prev: any) => ({ ...prev, isSuspended: !prev.isSuspended }))} danger />
+                        </div>
+                    </div>
+
+                    {/* Right Column - FifaCard Interactive Preview */}
+                    <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 bg-[#121820] rounded-3xl border border-white/5 self-start">
+                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
+                        {typeParam === 'GK' ? (
+                            <FifaCard
+                                rating={edit.rating}
+                                role="GOALKEEPER"
+                                name={edit.name}
+                                avatar={edit.avatar}
+                                isElite={edit.isElite}
+                                stats={{
+                                    label1: 'REF', val1: edit.stats?.reflexes || 80,
+                                    label2: 'DAL', val2: edit.stats?.diving || 80,
+                                    label3: 'POZ', val3: edit.stats?.positioning || 80,
+                                    label4: 'DAĞ', val4: edit.stats?.distribution || 75,
+                                    label5: 'BİR', val5: edit.stats?.oneOnOne || 80,
+                                    label6: 'HAY', val6: edit.stats?.aerialReach || 80
+                                }}
+                            />
+                        ) : (
+                            <FifaCard
+                                rating={edit.rating}
+                                role="REFEREE"
+                                name={edit.name}
+                                avatar={edit.avatar}
+                                isElite={edit.isElite}
+                                stats={{
+                                    label1: 'OTO', val1: edit.stats?.authority || 80,
+                                    label2: 'KON', val2: edit.stats?.fitness || 80,
+                                    label3: 'İLE', val3: edit.stats?.communication || 80,
+                                    label4: 'KRT', val4: Math.round((edit.stats?.avgCards || 3.5) * 10),
+                                    label5: 'MES', val5: Math.round(parseFloat(edit.stats?.avgDistance || '10') * 8),
+                                    label6: 'DEC', val6: 85
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
             </Shell>
         </AnimatePresence>

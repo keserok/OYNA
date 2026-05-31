@@ -228,6 +228,31 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     </div>
                 </div>
 
+                {/* ═══ WALLET CARD ═══ */}
+                <button 
+                    onClick={() => onNavigate && onNavigate('WALLET')}
+                    className="w-full bg-[#161B22]/60 backdrop-blur-md border border-[#39FF14]/30 rounded-3xl p-5 flex items-center justify-between group hover:bg-[#39FF14]/5 hover:border-[#39FF14]/50 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden"
+                >
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#39FF14]/10 blur-[40px] rounded-full group-hover:bg-[#39FF14]/20 transition-all" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 bg-[#39FF14]/20 rounded-2xl flex items-center justify-center border border-[#39FF14]/30 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(57,255,20,0.2)]">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                        </div>
+                        <div className="text-left">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">OYNA CÜZDAN</p>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black italic text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">1,250</span>
+                                <span className="text-sm font-bold text-[#39FF14]">₺</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="relative z-10 flex flex-col items-end gap-1">
+                        <span className="px-4 py-2 bg-[#39FF14] text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-[#32e612] transition-colors shadow-[0_0_15px_rgba(57,255,20,0.4)] hover:shadow-[0_0_25px_rgba(57,255,20,0.6)]">
+                            YÖNET
+                        </span>
+                    </div>
+                </button>
+
                 {/* ═══ BENTO STATISTICS & FILTERS ═══ */}
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">

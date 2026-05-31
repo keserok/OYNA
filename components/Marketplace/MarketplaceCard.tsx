@@ -39,21 +39,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
         style={{ backgroundColor: isGK ? '#39FF14' : '#FFFF00' }}
       />
 
-      {/* Favorite Button */}
-      <button 
-        onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-        className="absolute top-3 right-3 p-1.5 rounded-full hover:scale-110 active:scale-95 transition-all text-white/40 hover:text-rose-500 z-10"
-      >
-        <svg 
-          width="16" height="16" viewBox="0 0 24 24" 
-          fill={isFavorite ? '#FF385C' : 'none'} 
-          stroke={isFavorite ? '#FF385C' : 'currentColor'} 
-          strokeWidth="2" 
-          strokeLinecap="round" strokeLinejoin="round" 
-        >
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
-      </button>
+
 
       {/* Left Column: Avatar & Glow Circle & Rating Badge */}
       <div className="relative w-16 h-16 shrink-0">
@@ -146,8 +132,24 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
       </div>
 
       {/* Right Column: Fee & Call-to-action */}
-      <div className="flex flex-col justify-end items-end shrink-0 self-stretch border-l border-white/5 pl-3 pt-6 pb-0.5 min-h-[80px]">
-        <div className="text-right mb-2">
+      <div className="flex flex-col justify-between items-end shrink-0 self-stretch border-l border-white/5 pl-3 py-1.5 min-h-[90px]">
+        {/* Favorite Button */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+          className="p-1 rounded-full hover:scale-110 active:scale-95 transition-all text-white/40 hover:text-rose-500 z-10"
+        >
+          <svg 
+            width="16" height="16" viewBox="0 0 24 24" 
+            fill={isFavorite ? '#FF385C' : 'none'} 
+            stroke={isFavorite ? '#FF385C' : 'currentColor'} 
+            strokeWidth="2" 
+            strokeLinecap="round" strokeLinejoin="round" 
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
+
+        <div className="text-right">
           <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block leading-none">ÜCRET</span>
           <span className="text-[11px] font-black italic tracking-tight text-white block mt-1">
             {item.fee} ₺

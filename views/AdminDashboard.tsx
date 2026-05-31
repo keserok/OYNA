@@ -12,7 +12,7 @@ interface AdminDashboardProps {
   onBack: () => void;
 }
 
-const FORMATS = ['5v5', '6v6', '7v7', '8v8', '9v9', '11v11'];
+const FORMATS = ['5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
 const DIFFICULTIES = ['Ciddi', 'Taktiksel', 'Rahat'];
 
 const generateSlotsForFormat = (format: string): PositionSlot[] => {

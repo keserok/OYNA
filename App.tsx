@@ -1,10 +1,11 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './types';
-import { auth, db } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, onAuthStateChanged } from './supabaseAuth';
+import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
+import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
+import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 
 // ─── Page transition wrapper ─────────────────────────────────────────────────
 const PageTransition: React.FC<{ children: React.ReactNode; viewKey: string }> = ({ children, viewKey }) => (
@@ -26,6 +27,7 @@ import AuthScreen from './views/AuthScreen';
 import Dashboard from './views/Dashboard';
 import MatchDiscovery from './views/MatchDiscovery';
 import MatchJoin from './views/MatchJoin';
+import LocationPrompt from './views/LocationPrompt';
 
 // Lazy loaded views to reduce initial bundle size
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
@@ -52,7 +54,6 @@ const Studio = lazy(() => import('./views/Studio'));
 const WalletScreen = lazy(() => import('./views/WalletScreen'));
 // MatchLobby kaldırıldı — MatchJoin artık tek ekran
 const OpponentFinder = lazy(() => import('./views/OpponentFinder'));
-const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
 const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
@@ -81,11 +82,13 @@ const ViewLoader = () => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 🛠️  GELİŞTİRME MODU — Yayına geçmeden önce false yap
-// false yapınca: Splash → Auth → Location → Dashboard akışı
-// true yapınca:  Direkt Dashboard (zaman kazandırır)
+// 🛠️  GELİŞTİRME MODU
+// VITE_DEV_MODE=true  → direkt Dashboard
+// .env boşsa          → otomatik dev mod (Supabase yokken takılmayı önler)
 // ─────────────────────────────────────────────────────────────────────────────
-const DEV_MODE = true; // Kartı test etmek için geçici olarak true yapıldı
+const DEV_MODE =
+  import.meta.env.VITE_DEV_MODE === 'true' ||
+  !import.meta.env.VITE_SUPABASE_URL;
 
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
@@ -119,6 +122,11 @@ const App: React.FC = () => {
     originalRole,
     setOriginalRole,
     chatTarget,
+    isNotificationsOpen,
+    setIsNotificationsOpen,
+    addUserNotification,
+    setNotificationPreferences,
+    updateSingleNotificationPref,
   } = useAppStore();
 
   useEffect(() => {
@@ -133,47 +141,121 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    // Start syncing with Firestore
-    import('./firebaseSync').then(({ startFirebaseSync }) => startFirebaseSync());
+  const initApp = useAppStore(s => s.initApp);
+  const isHydrated = useAppStore(s => s.isHydrated);
 
+  useEffect(() => {
+    initApp();
+  }, [initApp]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Save user to Firestore
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          try {
-            await setDoc(userRef, {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName || '',
-              createdAt: new Date().toISOString()
-            });
-          } catch (error) {
-            console.error('Error creating user profile:', error);
+      try {
+        if (user) {
+          const { data: userSnap } = await supabase.from('profiles').select('*').eq('id', user.uid).single();
+          if (!userSnap) {
+            try {
+              await supabase.from('profiles').insert({
+                id: user.uid,
+                email: user.email,
+                full_name: user.displayName || '',
+                role: UserRole.PLAYER
+              });
+            } catch (error) {
+              console.error('Error creating user profile:', error);
+            }
+          } else if (userSnap.role) {
+            setRole(userSnap.role as UserRole);
           }
-        } else {
-          const userData = userSnap.data();
-          if (userData.role) {
-            setRole(userData.role as UserRole);
+          const currentView = useAppStore.getState().view;
+          if (['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(currentView)) {
+            setView('LOCATION_PROMPT');
           }
         }
-        // If they were on SPLASH or AUTH, move them forward
-        if (view === 'SPLASH' || view === 'AUTH') {
-          setView('LOCATION_PROMPT');
-        }
-      } else {
-        // User is logged out
-        // if (view !== 'SPLASH' && view !== 'AUTH') {
-        //   setView('SPLASH');
-        // }
+      } catch (error) {
+        console.error('Auth state error:', error);
+      } finally {
+        setIsAuthReady(true);
       }
-      setIsAuthReady(true);
     });
     return () => unsubscribe();
-  }, [view]);
+  }, [setRole, setView, setIsAuthReady]);
 
+  // ─── Push Notification Entegrasyonu ────────────────────────────────────────
+  useEffect(() => {
+    let unsubscribeRealtime: (() => void) | undefined;
+
+    const setupPush = async (uid: string) => {
+      // 1. Kullanıcı tercihlerini Supabase'den çek
+      const prefs = await fetchNotificationPreferences(uid);
+      setNotificationPreferences(prefs);
+
+      // 2. Capacitor Push başlat (native platformda)
+      await initPushNotifications(
+        uid,
+        // Uygulama ön plandayken gelen bildirim → in-app toast
+        (notification) => {
+          addUserNotification({
+            id: `push_${Date.now()}`,
+            type: (notification.data?.type_key as string) || 'system',
+            title: notification.title || 'Bildirim',
+            desc: notification.body || '',
+            time: 'Az önce',
+            iconName: 'Bell',
+            color: '#39FF14',
+            textColor: '#fff',
+            payload: notification.data?.match_id
+              ? { matchId: notification.data.match_id, slotId: '' }
+              : undefined,
+          });
+        },
+        // Deep link handler
+        (deepLink) => {
+          if (!deepLink) return;
+          const parts = deepLink.replace('oyna://', '').split('/');
+          if (parts[0] === 'match' && parts[1]) {
+            supabase.from('matches').select('*').eq('id', parts[1]).single().then(({ data }) => {
+              if (data) {
+                useAppStore.getState().setSelectedMatch(data as any);
+                setView('MATCH_JOIN');
+              }
+            });
+          }
+        },
+      );
+
+      // 3. Supabase Realtime ile in-app bildirimleri dinle
+      unsubscribeRealtime = subscribeToInAppNotifications(uid, (notif) => {
+        addUserNotification({
+          id: notif.id || `rt_${Date.now()}`,
+          type: notif.type_key || 'system',
+          title: notif.title,
+          desc: notif.body,
+          time: 'Az önce',
+          iconName: 'Bell',
+          color: '#39FF14',
+          textColor: '#fff',
+          payload: notif.match_id ? { matchId: notif.match_id, slotId: '' } : undefined,
+        });
+      });
+    };
+
+    const unsubscribeAuth = onAuthStateChanged(auth,
+      (user: any) => {
+        if (user?.uid) {
+          setupPush(user.uid);
+        } else {
+          // Çıkış yapılınca token’ı temizle
+          if (unsubscribeRealtime) unsubscribeRealtime();
+        }
+      }
+    );
+
+    return () => {
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeRealtime) unsubscribeRealtime();
+    };
+  }, []);
   const navigateBasedOnRole = (currentRole: UserRole | null): AppView => {
     if (currentRole === UserRole.OWNER) return 'OWNER_PANEL';
     if (currentRole === UserRole.REFEREE || currentRole === UserRole.GOALKEEPER) return 'SERVICE_DASHBOARD';
@@ -185,10 +267,10 @@ const App: React.FC = () => {
     setRole(selectedRole);
     if (auth.currentUser) {
       try {
-        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+        await supabase.from('profiles').update({
           role: selectedRole,
           ...data
-        });
+        }).eq('id', auth.currentUser.uid);
       } catch (error) {
         console.error('Error saving role:', error);
       }
@@ -199,19 +281,11 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
-    if (!isAuthReady) {
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-[#0A0E14]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#39FF14]"></div>
-        </div>
-      );
-    }
-
     switch (view) {
       case 'SPLASH':
         return <SplashScreen onStart={() => setView(auth.currentUser ? 'LOCATION_PROMPT' : 'ROLE_SELECTION')} />;
       case 'AUTH':
-        return <AuthScreen role={role} onSuccess={() => setView('LOCATION_PROMPT')} onBack={() => setView('ROLE_SELECTION')} />;
+        return <AuthScreen role={role} onSuccess={() => setView(navigateBasedOnRole(role))} onBack={() => setView('ROLE_SELECTION')} />;
       case 'LOCATION_PROMPT':
         return <LocationPrompt
           onPermissionGranted={() => setView(navigateBasedOnRole(role))}
@@ -340,20 +414,7 @@ const App: React.FC = () => {
           diaryId={selectedDiaryId}
           onBack={() => setView('PROFILE')}
         />;
-      case 'NOTIFICATIONS':
-        return <Notifications
-          role={role}
-          onBack={() => {
-            // Return to correct view based on role
-            if (role === UserRole.GOALKEEPER || role === UserRole.REFEREE) {
-              setView('SERVICE_DASHBOARD');
-            } else if (role === UserRole.OWNER) {
-              setView('OWNER_PANEL');
-            } else {
-              setView('DASHBOARD');
-            }
-          }}
-        />;
+
       case 'SETTINGS':
         return <SettingsScreen onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
       case 'VOTING':
@@ -465,6 +526,15 @@ const App: React.FC = () => {
       <AnimatePresence>
         {showBottomNav && (
           <BottomNav currentView={view} onNavigate={setView} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isNotificationsOpen && (
+          <Notifications 
+            role={role}
+            onBack={() => setIsNotificationsOpen(false)}
+          />
         )}
       </AnimatePresence>
 

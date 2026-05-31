@@ -57,37 +57,227 @@ export const PitchModal: React.FC<{ pitch: { name: string; fill: number; total: 
 );
 
 // ── MATCH DETAIL MODAL ─────────────────────────────────────────────
-export const MatchModal: React.FC<{ match: { id: string; pitch: string; time: string; fill: number; total: number; status: string; rev: number }; onClose: () => void; onNavigate: (tab: string) => void; onPush: () => void; onAddPlayer: () => void; onDelete: () => void }> = ({ match, onClose, onNavigate, onPush, onAddPlayer, onDelete }) => (
-    <ModalShell title={`MAÇ ${match.id}`} onClose={onClose} wide>
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-                {[['Saha', match.pitch], ['Başlangıç', match.time], ['Doluluk', `${match.fill}/${match.total}`], ['Gelir', `₺${match.rev.toLocaleString('tr')}`], ['Durum', match.status], ['Min Rating', '3.5']].map(([l, v]) => (
-                    <div key={l} className="bg-black/30 rounded-xl p-3 border border-white/5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest mb-1">{l}</p>
-                        <p className="text-xs font-black text-white">{v}</p>
+// ── MATCH DETAIL MODAL (LOBİ KONTROL MASASI) ──────────────────────
+export const MatchModal: React.FC<{ 
+    match: { id: string; matchId: string; pitch: string; time: string; fill: number; total: number; status: string; rev: number }; 
+    onClose: () => void; 
+    onNavigate: (tab: string) => void; 
+    onPush: () => void; 
+    onAddPlayer: () => void; 
+    onDelete: () => void; 
+}> = ({ match, onClose, onNavigate, onPush, onAddPlayer, onDelete }) => {
+    const { adminMatches, adminUsers, adminReferees, updateMatch } = useAppStore();
+    const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+
+    const realMatch = adminMatches.find(m => m.id === match.matchId || m.id === match.id);
+
+    if (!realMatch) {
+        return (
+            <ModalShell title="MAÇ BULUNAMADI" onClose={onClose}>
+                <p className="text-gray-400 text-xs">Uyuşan maç verisi bulunamadı. Lütfen daha sonra tekrar deneyin.</p>
+            </ModalShell>
+        );
+    }
+
+    // A Takımı ve B Takımı olarak slotları ikiye bölüyoruz (Örn: 14 slot varsa ilk 7 A, son 7 B)
+    const midPoint = Math.ceil(realMatch.slots.length / 2);
+    const teamASlots = realMatch.slots.slice(0, midPoint);
+    const teamBSlots = realMatch.slots.slice(midPoint);
+
+    const handleKickPlayer = (slotId: string) => {
+        const updatedSlots = realMatch.slots.map(s => {
+            if (s.id === slotId) {
+                return { ...s, status: 'OPEN' as const, player: undefined };
+            }
+            return s;
+        });
+        updateMatch({
+            ...realMatch,
+            slots: updatedSlots,
+            missingPositions: [
+                { role: 'GK', count: updatedSlots.filter(s => s.role === 'GK' && s.status === 'OPEN').length },
+                { role: 'DEF', count: updatedSlots.filter(s => s.role === 'DEF' && s.status === 'OPEN').length }
+            ]
+        });
+    };
+
+    const handleAssignPlayer = (slotId: string, userId: string) => {
+        const user = adminUsers.find(u => u.id === userId);
+        if (!user) return;
+
+        const updatedSlots = realMatch.slots.map(s => {
+            if (s.id === slotId) {
+                return {
+                    ...s,
+                    status: 'TAKEN' as const,
+                    player: {
+                        id: user.id,
+                        name: user.name,
+                        avatar: user.avatar,
+                        rating: user.rating,
+                        position: s.role
+                    }
+                };
+            }
+            return s;
+        });
+
+        updateMatch({
+            ...realMatch,
+            slots: updatedSlots,
+            missingPositions: [
+                { role: 'GK', count: updatedSlots.filter(s => s.role === 'GK' && s.status === 'OPEN').length },
+                { role: 'DEF', count: updatedSlots.filter(s => s.role === 'DEF' && s.status === 'OPEN').length }
+            ]
+        });
+        setSelectedSlotId(null);
+    };
+
+    const handleAssignReferee = (refId: string) => {
+        updateMatch({
+            ...realMatch,
+            refereeId: refId || undefined
+        });
+    };
+
+    return (
+        <ModalShell title={`LOBİ KONTROL MASASI — MAÇ #${realMatch.id.slice(-4)}`} onClose={onClose} wide>
+            <div className="space-y-5">
+                {/* Genel Bilgiler Matrisi */}
+                <div className="grid grid-cols-3 gap-3 bg-black/40 p-4 border border-white/5 rounded-2xl">
+                    <div className="text-center">
+                        <span className="text-[8px] text-gray-500 uppercase tracking-widest block mb-0.5">Saha / Tesis</span>
+                        <span className="text-xs font-black text-white block truncate">{realMatch.location}</span>
                     </div>
-                ))}
-            </div>
-            {/* Roster grid */}
-            <div>
-                <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-2">Kadro</p>
-                <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: match.total }).map((_, i) => (
-                        <div key={i} className={`h-8 rounded-lg flex items-center justify-center text-[8px] font-black border ${i < match.fill ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/20 border-dashed'}`}>
-                            {i < match.fill ? '●' : '+'}
+                    <div className="text-center">
+                        <span className="text-[8px] text-gray-500 uppercase tracking-widest block mb-0.5">Tarih & Saat</span>
+                        <span className="text-xs font-black text-red-400 block font-mono">{realMatch.date} {realMatch.time}</span>
+                    </div>
+                    <div className="text-center">
+                        <span className="text-[8px] text-gray-500 uppercase tracking-widest block mb-0.5">Maç Durumu</span>
+                        <span className="text-xs font-black text-[#39FF14] block uppercase tracking-wider">{realMatch.status || 'AKTİF'}</span>
+                    </div>
+                </div>
+
+                {/* Hakem & Kaleci Ataması */}
+                <div className="p-4 bg-[#121820] border border-white/5 rounded-2xl grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-[9px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">🏁 Görevli Hakem Ataması</label>
+                        <select 
+                            value={realMatch.refereeId || ''} 
+                            onChange={e => handleAssignReferee(e.target.value)}
+                            className="w-full h-10 bg-black/50 border border-white/10 rounded-xl px-3 text-xs text-white focus:outline-none"
+                        >
+                            <option value="">HAKEM ATANMADI</option>
+                            {adminReferees.map(r => (
+                                <option key={r.id} value={r.id}>{r.name} (Seviye: {r.level} | ₺{r.fee}/maç)</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-[9px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">🧤 Lobi Toplam Değeri</label>
+                        <div className="h-10 bg-black/40 border border-white/10 rounded-xl px-3 flex items-center justify-between">
+                            <span className="text-xs text-yellow-400 font-mono font-black">₺{(realMatch.price * 14).toLocaleString('tr')} Toplam</span>
+                            <span className="text-[8px] font-black bg-green-500/20 text-[#39FF14] border border-[#39FF14]/30 px-1.5 py-0.5 rounded uppercase">TAMAMLANDI</span>
                         </div>
-                    ))}
+                    </div>
+                </div>
+
+                {/* A Takımı vs B Takımı Kadro override */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* A TAKIMI */}
+                    <div className="bg-[#EF4444]/5 border border-red-500/10 p-4 rounded-2xl space-y-2">
+                        <div className="flex justify-between items-center pb-2 border-b border-red-500/10 mb-2">
+                            <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">🔴 A TAKIMI (KIRMIZI)</span>
+                            <span className="text-[10px] font-mono text-gray-500">{teamASlots.filter(s => s.status === 'TAKEN').length}/{teamASlots.length} Oyuncu</span>
+                        </div>
+                        {teamASlots.map((slot) => (
+                            <div key={slot.id} className="flex items-center justify-between p-2 bg-black/30 border border-white/5 rounded-xl text-xs gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-[9px] bg-red-600/20 text-red-400 font-black px-1.5 py-0.5 rounded shrink-0">{slot.role}</span>
+                                    {slot.status === 'TAKEN' && slot.player ? (
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <img src={slot.player.avatar} className="w-5 h-5 rounded-full object-cover shrink-0" />
+                                            <span className="font-bold text-white truncate">{slot.player.name}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-600 italic font-mono uppercase text-[10px]">BOŞ SLOT</span>
+                                    )}
+                                </div>
+                                <div className="shrink-0 flex gap-1">
+                                    {slot.status === 'TAKEN' ? (
+                                        <button onClick={() => handleKickPlayer(slot.id)} className="h-6 px-2 bg-red-900/20 text-red-400 border border-red-900/30 rounded text-[9px] font-black uppercase hover:bg-red-900/40">KİCK</button>
+                                    ) : selectedSlotId === slot.id ? (
+                                        <select 
+                                            onChange={e => handleAssignPlayer(slot.id, e.target.value)}
+                                            className="h-6 bg-black border border-white/15 text-[9px] rounded text-white px-1"
+                                            defaultValue=""
+                                        >
+                                            <option value="" disabled>SEÇİN</option>
+                                            {adminUsers.filter(u => !realMatch.slots.some(s => s.player?.id === u.id)).map(u => (
+                                                <option key={u.id} value={u.id}>{u.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <button onClick={() => setSelectedSlotId(slot.id)} className="h-6 px-2 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-black uppercase hover:bg-green-500/20">YERLEŞTİR</button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* B TAKIMI */}
+                    <div className="bg-blue-500/5 border border-blue-500/10 p-4 rounded-2xl space-y-2">
+                        <div className="flex justify-between items-center pb-2 border-b border-blue-500/10 mb-2">
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">🔵 B TAKIMI (MAVİ)</span>
+                            <span className="text-[10px] font-mono text-gray-500">{teamBSlots.filter(s => s.status === 'TAKEN').length}/{teamBSlots.length} Oyuncu</span>
+                        </div>
+                        {teamBSlots.map((slot) => (
+                            <div key={slot.id} className="flex items-center justify-between p-2 bg-black/30 border border-white/5 rounded-xl text-xs gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-[9px] bg-blue-600/20 text-blue-400 font-black px-1.5 py-0.5 rounded shrink-0">{slot.role}</span>
+                                    {slot.status === 'TAKEN' && slot.player ? (
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <img src={slot.player.avatar} className="w-5 h-5 rounded-full object-cover shrink-0" />
+                                            <span className="font-bold text-white truncate">{slot.player.name}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-600 italic font-mono uppercase text-[10px]">BOŞ SLOT</span>
+                                    )}
+                                </div>
+                                <div className="shrink-0 flex gap-1">
+                                    {slot.status === 'TAKEN' ? (
+                                        <button onClick={() => handleKickPlayer(slot.id)} className="h-6 px-2 bg-red-900/20 text-red-400 border border-red-900/30 rounded text-[9px] font-black uppercase hover:bg-red-900/40">KİCK</button>
+                                    ) : selectedSlotId === slot.id ? (
+                                        <select 
+                                            onChange={e => handleAssignPlayer(slot.id, e.target.value)}
+                                            className="h-6 bg-black border border-white/15 text-[9px] rounded text-white px-1"
+                                            defaultValue=""
+                                        >
+                                            <option value="" disabled>SEÇİN</option>
+                                            {adminUsers.filter(u => !realMatch.slots.some(s => s.player?.id === u.id)).map(u => (
+                                                <option key={u.id} value={u.id}>{u.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <button onClick={() => setSelectedSlotId(slot.id)} className="h-6 px-2 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-black uppercase hover:bg-green-500/20">YERLEŞTİR</button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Hızlı Eylemler & Modül Kontrol Butonları */}
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-white/5">
+                    <ActionBtn label="Duyuru & Push Gönder" color="bg-blue-500/10 text-blue-400 border-blue-500/20" icon={<Send size={12} />} onClick={() => { onClose(); onPush(); }} />
+                    <ActionBtn label="Hızlı Oyuncu Ekle" color="bg-green-500/10 text-green-400 border-green-500/20" icon={<UserPlus size={12} />} onClick={() => { onClose(); onAddPlayer(); }} />
+                    <ActionBtn label="Maçı İptal Et & İade Yap" color="bg-red-500/10 text-red-400 border-red-500/20" icon={<Trash2 size={12} />} onClick={() => { onDelete(); onClose(); }} />
                 </div>
             </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-                <ActionBtn label="Push Gönder" color="bg-blue-500/10 text-blue-400 border-blue-500/20" icon={<Send size={12} />} onClick={() => { onClose(); onPush(); }} />
-                <ActionBtn label="Oyuncu Ekle" color="bg-green-500/10 text-green-400 border-green-500/20" icon={<UserPlus size={12} />} onClick={() => { onClose(); onAddPlayer(); }} />
-                <ActionBtn label="Maç Düzenle" color="bg-white/5 text-gray-300 border-white/10" icon={<Edit3 size={12} />} onClick={() => { onNavigate('MATCHES'); onClose(); }} />
-                <ActionBtn label="Maçı İptal Et" color="bg-red-500/10 text-red-400 border-red-500/20" icon={<Trash2 size={12} />} onClick={() => { onDelete(); onClose(); }} />
-            </div>
-        </div>
-    </ModalShell>
-);
+        </ModalShell>
+    );
+};
 
 // ── BAN CONFIRM MODAL ──────────────────────────────────────────────
 export const BanModal: React.FC<{ userId: string; userName: string; onClose: () => void }> = ({ userId, userName, onClose }) => {

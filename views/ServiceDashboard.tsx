@@ -1,13 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment } from '../types';
-import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { UPCOMING_JOBS, WALLET_HISTORY, DIRECT_OFFERS_MOCK } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth, db } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
+import { useAppStore } from '../store';
+import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
 
 interface ServiceDashboardProps {
   role: UserRole;
@@ -17,22 +19,17 @@ interface ServiceDashboardProps {
 
 type Tab = 'HOME' | 'JOBS' | 'PRICING' | 'WALLET' | 'MENU' | 'PROFILE_VIEW' | 'SETTINGS_VIEW';
 
-// Mock Equipment Data for GK
-const MY_EQUIPMENT: Equipment[] = [
-    { id: '1', name: 'Predator Pro Eldiven', tier: 'ELITE', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&q=80&w=200', bonus: '+2 Refleks' },
-    { id: '2', name: 'Nike Phantom Bot', tier: 'PRO', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200', bonus: '+1 Hız' },
-    { id: '3', name: 'Kale Forması', tier: 'BASIC', image: 'https://images.unsplash.com/photo-1508098682722-e99c643e7f0b?auto=format&fit=crop&q=80&w=200', bonus: '+Moral' },
-];
-
-// Mock Equipment Data for REF
-const REF_EQUIPMENT: Equipment[] = [
-    { id: 'r1', name: 'Fox 40 Düdük', tier: 'ELITE', image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&q=80&w=200', bonus: '+Otorite' },
-    { id: 'r2', name: 'Kronos Saat', tier: 'PRO', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=200', bonus: '+Zamanlama' },
-    { id: 'r3', name: 'Kart Seti', tier: 'BASIC', image: 'https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=200', bonus: '+Disiplin' },
-];
+// Removed equipment mock data
 
 const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNavigate }) => {
   const isRef = role === UserRole.REFEREE;
+  const {
+    unreadNotificationsCount,
+    setIsNotificationsOpen,
+    updateGoalkeeper,
+    updateReferee,
+    adminMatches
+  } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>('HOME');
   const [isAvailable, setIsAvailable] = useState(true);
   const [openMatches, setOpenMatches] = useState<any[]>([]);
@@ -46,174 +43,223 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // New States
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [baseFee, setBaseFee] = useState(isRef ? 350 : 250);
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>(isRef ? REF_EQUIPMENT : MY_EQUIPMENT);
-  const [showAddEquip, setShowAddEquip] = useState(false);
-  const [newEquipName, setNewEquipName] = useState('');
-  const [newEquipPhoto, setNewEquipPhoto] = useState('');
+  const [showOnlineSetupModal, setShowOnlineSetupModal] = useState(false);
+  const DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+  const ALL_HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2,'0')}:00`);
+  const [setupDays, setSetupDays] = useState<string[]>(['Pzt', 'Sal', 'Çar']);
+  const [setupHours, setSetupHours] = useState<string[]>(['19:00', '20:00', '21:00']);
+  const [activeDays, setActiveDays] = useState<string[]>(['Bugün']);
+  const [activeHours, setActiveHours] = useState<string>('18:00 - 23:00');
   // Wallet card state
   const [showCardOptions, setShowCardOptions] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCardNo, setNewCardNo] = useState('');
+  
+  // UX Enhancements States
+  const [arrivedMatchId, setArrivedMatchId] = useState<string | null>(null);
+  const [showPostMatchReport, setShowPostMatchReport] = useState(false);
+  const [postMatchRating, setPostMatchRating] = useState(5);
   const [newCardHolder, setNewCardHolder] = useState('');
-  // Sample GK open matches
-  const GK_OPEN_MATCHES = [
-    { id: 'gk1', pitchName: 'Moda Spor Tesisi', captainName: 'Kerem B.', date: '2025-04-26', time: '20:00', location: 'Kadıköy', fee: 200, players: '9/10', missing: 'Kaleci' },
-    { id: 'gk2', pitchName: 'Beşiktaş Arena', captainName: 'Ahmet Y.', date: '2025-04-26', time: '21:00', location: 'Beşiktaş', fee: 250, players: '9/10', missing: 'Kaleci' },
-    { id: 'gk3', pitchName: 'Üsküdar Spor', captainName: 'Murat S.', date: '2025-04-27', time: '19:30', location: 'Üsküdar', fee: 180, players: '8/10', missing: 'Kaleci' },
-    { id: 'gk4', pitchName: 'Bakırköy Saha', captainName: 'Ercan D.', date: '2025-04-27', time: '22:00', location: 'Bakırköy', fee: 300, players: '9/10', missing: 'Kaleci' },
-  ];
+  
   const [flipCard, setFlipCard] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferSuccess, setTransferSuccess] = useState(false);
   const [showCardSelect, setShowCardSelect] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [myOffers, setMyOffers] = useState<any[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
 
-  // Mock countdown for next match
-  const [timeLeft, setTimeLeft] = useState('02:45:12');
+  const [timeLeft, setTimeLeft] = useState('--:--:--');
+
+  const myUpcomingMatches = useMemo(() => {
+      if (!userProfile) return [];
+      const upcoming = adminMatches.filter((m: any) => {
+          const isMyMatch = isRef 
+              ? m.refereeId === userProfile.id 
+              : (m.gkId === userProfile.id || m.gk_id === userProfile.id);
+          return isMyMatch && (m.status === 'CONFIRMED' || m.status === 'LIVE' || m.status === 'ACTIVE' || !m.status);
+      }).sort((a: any, b: any) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime());
+      
+      return upcoming.filter((m: any) => {
+          const matchTime = new Date(`${m.date} ${m.time}`).getTime();
+          return isNaN(matchTime) ? true : matchTime > new Date().getTime(); // If invalid date, keep it for now
+      });
+  }, [adminMatches, userProfile, isRef]);
+
+  useEffect(() => {
+      const timer = setInterval(() => {
+          if (myUpcomingMatches.length > 0) {
+              const match = myUpcomingMatches[0];
+              const matchDate = new Date(`${match.date} ${match.time}`);
+              const now = new Date();
+              const diff = matchDate.getTime() - now.getTime();
+              
+              if (isNaN(diff) || diff <= 0) {
+                  setTimeLeft("00:00:00");
+              } else {
+                  const hours = Math.floor(diff / (1000 * 60 * 60));
+                  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+                  setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+              }
+          } else {
+              setTimeLeft('--:--:--');
+          }
+      }, 1000);
+      return () => clearInterval(timer);
+  }, [myUpcomingMatches]);
+
+  const pendingApplications = useMemo(() => {
+      if (!userProfile) return [];
+      return adminMatches.filter((m: any) => {
+          return m.applicants && Array.isArray(m.applicants) && m.applicants.some((a: any) => a.userId === userProfile.id || a.userId === userProfile.uid) && m.status !== 'CONFIRMED' && m.status !== 'COMPLETED';
+      });
+  }, [adminMatches, userProfile]);
 
   useEffect(() => {
     let active = true;
     
     const loadProfile = async () => {
-        if (auth.currentUser) {
-            const uid = auth.currentUser.uid;
-            try {
-                // Fetch User info
-                const userRef = doc(db, 'users', uid);
-                const userSnap = await getDoc(userRef);
-                
-                // Fetch GK/REF info
-                const profileRef = doc(db, isRef ? 'referees' : 'goalkeepers', uid);
-                const profileSnap = await getDoc(profileRef);
-                
-                if (active) {
-                    if (userSnap.exists()) {
-                        const uData = userSnap.data();
-                        setUserProfile({
-                            uid: uid,
-                            fullName: uData.displayName || uData.name || auth.currentUser.displayName || 'İsimsiz Üye',
-                            role: role,
-                            email: uData.email || auth.currentUser.email || '',
-                            isAvailable: uData.isAvailable !== false,
-                            rating: uData.rating || 4.8,
-                            matchesPlayed: uData.matchesPlayed || 12,
-                            walletBalance: uData.walletBalance || 1250,
-                            createdAt: uData.createdAt || new Date()
-                        });
-                        setIsAvailable(uData.isAvailable !== false);
-                    } else {
-                        // Fallback using auth credentials if document doesn't exist yet
-                        setUserProfile({
-                            uid: uid,
-                            fullName: auth.currentUser.displayName || 'İsimsiz Üye',
-                            role: role,
-                            email: auth.currentUser.email || '',
-                            isAvailable: true,
-                            rating: 4.8,
-                            matchesPlayed: 12,
-                            walletBalance: 1250,
-                            createdAt: new Date()
-                        });
-                        setIsAvailable(true);
-                    }
-                    if (profileSnap.exists()) {
-                        const pData = profileSnap.data();
-                        setBaseFee(pData.fee || (isRef ? 350 : 250));
-                    } else {
-                        // Auto-create profile inside collection if it doesn't exist
-                        const initialProfile = {
-                            id: uid,
-                            name: auth.currentUser.displayName || 'İsimsiz Üye',
-                            avatar: auth.currentUser.photoURL || (isRef 
-                              ? "https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=400"
-                              : "https://images.unsplash.com/photo-1529516222410-a269c812ac8d?auto=format&fit=crop&q=80&w=400"),
-                            rating: 4.8,
-                            fee: isRef ? 350 : 250,
-                            distance: 1.2,
-                            stats: isRef 
-                              ? { authority: 90, fitness: 88, communication: 92 } 
-                              : { reflexes: 90, diving: 88, positioning: 82, distribution: 85, oneOnOne: 88 },
-                            preferredZones: ['Kadıköy', 'Ataşehir']
-                        };
-                        await setDoc(profileRef, initialProfile);
-                        setBaseFee(initialProfile.fee);
-                    }
-                }
-            } catch (err) {
-                console.error("Error loading profile from Firestore:", err);
-            }
-        } else {
-            // Fallback mock profile
-            const uid = 'mock-user-id';
-            const mockProfile = {
-              uid: uid,
-              fullName: 'Test Kullanıcısı',
-              role: role,
-              email: 'test@example.com',
-              isAvailable: true,
-              rating: 4.8,
-              matchesPlayed: 12,
-              walletBalance: 1250,
-              createdAt: new Date()
-            };
-            if (active) {
-                setUserProfile(mockProfile);
-                setIsAvailable(true);
+        // Fetch from global store for now
+        const { adminGoalkeepers, adminReferees } = useAppStore.getState();
+        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
+        
+        if (active && me) {
+            setUserProfile({
+                id: me.id,
+                uid: me.id,
+                fullName: me.name,
+                role: role,
+                email: auth.currentUser?.email || 'test@example.com',
+                isAvailable: me.isAvailable ?? true,
+                rating: me.rating,
+                matchesPlayed: me.matchCount || 42,
+                walletBalance: 1250,
+                createdAt: new Date(),
+                stats: me.stats,
+                workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
+            });
+            setIsAvailable(me.isAvailable ?? true);
+            setBaseFee(me.fee);
+            if (me.workingHours) {
+              setActiveDays(me.workingHours.activeDays || ['Bugün']);
+              setActiveHours(me.workingHours.activeHours || '18:00 - 23:00');
             }
         }
     };
 
     loadProfile();
 
+
+
+    const unsubscribe = subscribeToOpenMatches((matches) => {
+      // Map matches from Supabase to JobListing format needed here
+      const jobs = matches.map((m: any) => ({
+        id: m.id,
+        roleNeeded: role === UserRole.GOALKEEPER ? 'GK' : 'REF',
+        date: m.date || 'Bugün',
+        time: m.time || '21:00',
+        location: m.pitch_id || 'Bilinmiyor',
+        duration: '90 Dk',
+        fee: m.budget ? parseInt(m.budget) : 350,
+        teamName: 'Rakip Aranıyor',
+        format: m.format || '7v7',
+        difficulty: 'Ciddi',
+        status: m.status || 'OPEN',
+      }));
+      setOpenMatches(jobs);
+    });
+
     return () => {
         active = false;
+        unsubscribe();
     };
   }, [role, isRef]);
 
-  const toggleAvailability = async () => {
-      const newStatus = !isAvailable;
-      setIsAvailable(newStatus);
-      if (auth.currentUser) {
-          try {
-              const userRef = doc(db, 'users', auth.currentUser.uid);
-              await updateDoc(userRef, { isAvailable: newStatus });
-              console.log("Firestore: Availability updated to", newStatus);
-          } catch (err) {
-              console.error("Availability update failed:", err);
-          }
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    const fetchOffers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('service_offers')
+          .select('*')
+          .eq('provider_id', userProfile.id)
+          .eq('status', 'PENDING');
+        if (!error && data) {
+          const mappedOffers = data.map((o: any) => {
+            const match = adminMatches.find((m: any) => m.id === o.match_id);
+            return {
+              id: o.id,
+              matchId: o.match_id,
+              pitchName: match?.pitch_name || match?.location || 'Özel Maç Teklifi',
+              teamName: match?.captain_name ? `${match.captain_name} Takımı` : 'Özel Grup',
+              captainName: match?.captain_name || 'Kaptan',
+              offerAmount: o.amount,
+              time: match?.time || 'Belirsiz',
+              date: match?.date || 'Belirsiz',
+              message: o.message || 'Seni maçımızda görmek istiyoruz!',
+              expiresIn: '24s'
+            };
+          });
+          setMyOffers(mappedOffers);
+        }
+      } catch (err) {
+        console.error("Error fetching offers", err);
+      }
+    };
+    fetchOffers();
+
+    const fetchWallet = async () => {
+        const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', userProfile.id).single();
+        if (data) {
+            setWalletBalance(data.wallet_balance || 0);
+        }
+    };
+    fetchWallet();
+  }, [userProfile]);
+
+  const handleToggleClick = () => {
+      if (isAvailable) {
+          setOnlineStatus(false);
+      } else {
+          setShowOnlineSetupModal(true);
+      }
+  };
+
+  const setOnlineStatus = async (status: boolean) => {
+      setIsAvailable(status);
+      if (userProfile && userProfile.uid) {
+          const update = { id: userProfile.uid, isAvailable: status };
+          if (isRef) updateReferee(update as any);
+          else updateGoalkeeper(update as any);
       }
   };
 
   const handleUpdateFee = async (newFee: number) => {
       setBaseFee(newFee);
-      if (auth.currentUser) {
-          try {
-              const profileRef = doc(db, isRef ? 'referees' : 'goalkeepers', auth.currentUser.uid);
-              const profileSnap = await getDoc(profileRef);
-              if (profileSnap.exists()) {
-                  await updateDoc(profileRef, { fee: newFee });
-              } else {
-                  const initialProfile = {
-                      id: auth.currentUser.uid,
-                      name: auth.currentUser.displayName || 'İsimsiz Üye',
-                      avatar: auth.currentUser.photoURL || (isRef 
-                        ? "https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=400"
-                        : "https://images.unsplash.com/photo-1529516222410-a269c812ac8d?auto=format&fit=crop&q=80&w=400"),
-                      rating: 4.8,
-                      fee: newFee,
-                      distance: 1.2,
-                      stats: isRef 
-                        ? { authority: 90, fitness: 88, communication: 92 } 
-                        : { reflexes: 90, diving: 88, positioning: 82, distribution: 85, oneOnOne: 88 },
-                      preferredZones: ['Kadıköy', 'Ataşehir']
-                  };
-                  await setDoc(profileRef, initialProfile);
-              }
-              console.log("Firestore standard fee updated:", newFee);
-          } catch (err) {
-              console.error("Standard fee update failed:", err);
-          }
+      if (userProfile && userProfile.id) {
+          const update = { id: userProfile.id, fee: newFee };
+          if (isRef) updateReferee(update as any);
+          else updateGoalkeeper(update as any);
+          console.log("Supabase: Fee updated to:", newFee);
       }
+  };
+
+  const handleSaveOnlineSetup = () => {
+      setActiveDays(setupDays);
+      const activeHoursStr = setupHours.length > 0 ? `${setupHours[0]} - ${setupHours[setupHours.length-1]}` : 'Belirsiz';
+      setActiveHours(activeHoursStr);
+      
+      if (userProfile && userProfile.id) {
+          const workingHours = { activeDays: setupDays, activeHours: activeHoursStr };
+          const update = { id: userProfile.id, workingHours, isAvailable: true };
+          if (isRef) updateReferee(update as any);
+          else updateGoalkeeper(update as any);
+      }
+      setIsAvailable(true);
+      setShowOnlineSetupModal(false);
   };
 
   useEffect(() => {
@@ -233,13 +279,35 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   }, [activeTab]);
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
+      if (!userProfile?.id || walletBalance <= 0) return;
       setIsTransferring(true);
-      setTimeout(() => {
+      try {
+          const currentAmount = walletBalance;
+          const { error } = await supabase
+              .from('profiles')
+              .update({ wallet_balance: 0 })
+              .eq('id', userProfile.id);
+
+          if (!error) {
+              await supabase.from('wallet_transactions').insert({
+                  user_id: userProfile.id,
+                  amount: currentAmount,
+                  type: 'WITHDRAWAL',
+                  status: 'COMPLETED',
+                  description: 'Banka Hesabına Çekim'
+              });
+              setWalletBalance(0);
+              setTransferSuccess(true);
+              setTimeout(() => setTransferSuccess(false), 3000);
+          } else {
+              console.error("Error withdrawing:", error);
+          }
+      } catch (err) {
+          console.error("Transfer error:", err);
+      } finally {
           setIsTransferring(false);
-          setTransferSuccess(true);
-          setTimeout(() => setTransferSuccess(false), 3000);
-      }, 2000);
+      }
   };
 
   // Theme configuration based on role
@@ -257,20 +325,86 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       setBidAmount(offer.offerAmount);
   };
 
+  const acceptOffer = async () => {
+      if (!selectedOffer) return;
+
+      // Local double-booking/conflict check
+      const match = adminMatches.find(m => m.id === selectedOffer.matchId);
+      if (match) {
+          const hasConflict = myUpcomingMatches.some(um => um.date === match.date && um.time === match.time);
+          if (hasConflict) {
+              alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır. Lütfen teklifi reddedin.');
+              return;
+          }
+      }
+
+      setIsTransferring(true);
+      try {
+          const { error } = await supabase
+            .from('service_offers')
+            .update({ status: 'ACCEPTED' })
+            .eq('id', selectedOffer.id);
+          
+          if (!error) {
+              setMyOffers(prev => prev.filter(o => o.id !== selectedOffer.id));
+              console.log(`Accepted offer ${selectedOffer.id} for match ${selectedOffer.matchId}`);
+              setShowBidSuccess(true);
+              setTimeout(() => {
+                  setShowBidSuccess(false);
+                  setSelectedOffer(null);
+              }, 2000);
+          } else {
+              console.error("Error from supabase:", error);
+              if (error.message && error.message.includes('CONFLICT_DETECTED')) {
+                  alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır. Lütfen teklifi reddedin.');
+              } else {
+                  alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+              }
+          }
+      } catch (error: any) {
+          console.error("Error accepting offer:", error);
+          if (error.message && error.message.includes('CONFLICT_DETECTED')) {
+              alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır. Lütfen teklifi reddedin.');
+          }
+      } finally {
+          setIsTransferring(false);
+      }
+  };
+
   const submitBid = async () => {
       const uid = auth.currentUser?.uid || 'mock-user-id';
+      const displayName = userProfile?.fullName || 'İsimsiz Üye';
+      const photoURL = auth.currentUser?.photoURL || '';
+
+      if (selectedOffer) {
+          return acceptOffer();
+      }
+
       if (!uid || !selectedJob?.id) return;
       
-      setIsTransferring(true); // Re-using loading state for bid
+      // Local double-booking/conflict check
+      if (selectedJob) {
+          const hasConflict = myUpcomingMatches.some(um => um.date === selectedJob.date && um.time === selectedJob.time);
+          if (hasConflict) {
+              alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır.');
+              return;
+          }
+      }
+      
+      setIsTransferring(true);
       try {
-          // Mock application
-          console.log("Mock: Applied to match", selectedJob.id);
+          await applyToMatch(selectedJob.id, {
+            uid,
+            displayName,
+            role: isRef ? 'REFEREE' : 'GOALKEEPER',
+            photoURL
+          });
+          console.log("Applied to match:", selectedJob.id);
           
           setShowBidSuccess(true);
           setTimeout(() => {
               setShowBidSuccess(false);
               setSelectedJob(null);
-              setSelectedOffer(null);
           }, 2000);
       } catch (error) {
           console.error("Error submitting bid:", error);
@@ -318,15 +452,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="grid grid-cols-3 gap-2 mt-2">
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">MAÇ</p>
-                                  <p className="text-sm font-black text-white">42</p>
+                                  <p className="text-sm font-black text-white">{userProfile?.matchesPlayed || 42}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">CS</p>
-                                  <p className="text-sm font-black text-white">12</p>
+                                  <p className="text-[9px] text-gray-500 font-bold">REAKSİYON</p>
+                                  <p className="text-sm font-black text-white">{userProfile?.stats?.reflexes || 90}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">PUAN</p>
-                                  <p className="text-sm font-black text-green-400">9.2</p>
+                                  <p className="text-sm font-black text-green-400">{userProfile?.rating || 4.8}</p>
                               </div>
                           </div>
                       </div>
@@ -376,7 +510,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] mb-0.5">Genel Reyting</div>
                       <div className="text-6xl font-black leading-none relative"
                         style={{ color: '#22c55e', textShadow: '0 0 30px rgba(34,197,94,0.8), 0 0 60px rgba(34,197,94,0.4)' }}>
-                        9.2
+                        {userProfile?.rating || 4.8}
                       </div>
                       <div className="flex items-center justify-center gap-0.5 mt-1">
                         {[1,2,3,4,5].map(i => (
@@ -389,9 +523,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* Stats row */}
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: 'Kurtarış', value: '94%', glow: '#22c55e' },
-                      { label: 'MOTM', value: '14', glow: '#facc15' },
-                      { label: 'Clean Sheet', value: '12', glow: '#22c55e' },
+                      { label: 'Uçuş', value: userProfile?.stats?.diving || 88, glow: '#22c55e' },
+                      { label: 'Konum', value: userProfile?.stats?.positioning || 82, glow: '#facc15' },
+                      { label: 'Bire Bir', value: userProfile?.stats?.oneOnOne || 88, glow: '#22c55e' },
                     ].map(s => (
                       <div key={s.label} className="rounded-xl py-2 px-1 text-center border border-white/8"
                         style={{ background: 'rgba(0,0,0,0.5)' }}>
@@ -515,7 +649,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {/* Online/Offline Toggle — Premium Neon Design */}
       <div className="px-6 pt-2">
           <motion.button
-            onClick={toggleAvailability}
+            onClick={handleToggleClick}
             whileTap={{ scale: 0.97 }}
             className="w-full relative overflow-hidden rounded-[24px] border transition-all duration-500"
             style={{
@@ -628,29 +762,55 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
               </div>
               
-              {UPCOMING_JOBS.length > 0 ? (
+              {myUpcomingMatches.length > 0 ? (
                   <div className="bg-gradient-to-r from-green-900/40 to-[#161B22] border border-green-500/30 rounded-[24px] p-5 relative overflow-hidden">
                       <div className="flex justify-between items-start">
                           <div>
-                              <h4 className="font-black text-white text-lg">{UPCOMING_JOBS[0].pitchName}</h4>
-                              <p className="text-xs text-gray-400 font-bold">{UPCOMING_JOBS[0].teamName} • {UPCOMING_JOBS[0].time}</p>
+                              <h4 className="font-black text-white text-lg">{myUpcomingMatches[0].pitchName || myUpcomingMatches[0].location || 'Saha Bilinmiyor'}</h4>
+                              <p className="text-xs text-gray-400 font-bold">{myUpcomingMatches[0].title || 'Rakip Aranıyor'} • {myUpcomingMatches[0].time}</p>
                           </div>
                           <div className="text-right">
                               <p className="text-[10px] text-gray-500 font-bold uppercase">KALAN SÜRE</p>
                               <p className="text-xl font-black text-[#FFFF00] font-mono">{timeLeft}</p>
                           </div>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                              <MapPin size={12} className="text-gray-500" />
-                              <span className="text-[10px] text-gray-400 font-bold">{UPCOMING_JOBS[0].location}</span>
+                      <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-3">
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex items-center gap-2">
+                                <MapPin size={12} className="text-gray-500" />
+                                <span className="text-[10px] text-gray-400 font-bold">{myUpcomingMatches[0].location}</span>
+                            </div>
+                            <button 
+                              onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0])}
+                              className="text-[10px] font-black text-green-400 hover:text-white transition-colors"
+                            >
+                                DETAYLAR
+                            </button>
                           </div>
-                          <button 
-                            onClick={() => setSelectedUpcomingJob(UPCOMING_JOBS[0])}
-                            className="text-[10px] font-black text-green-400 hover:text-white transition-colors"
-                          >
-                              DETAYLAR
-                          </button>
+                          
+                          {/* Live Location / Arrived Logic */}
+                          <div className="flex items-center gap-2">
+                            {arrivedMatchId === myUpcomingMatches[0].id ? (
+                                <>
+                                  <button disabled className="flex-1 py-2 rounded-xl bg-white/10 text-white/50 text-[10px] font-black uppercase flex items-center justify-center gap-1">
+                                    <CheckCircle2 size={12} /> KAPTANA BİLDİRİLDİ
+                                  </button>
+                                  <button 
+                                    onClick={() => setShowPostMatchReport(true)}
+                                    className="flex-1 py-2 rounded-xl bg-blue-500 text-white text-[10px] font-black uppercase shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+                                  >
+                                    MAÇI BİTİR
+                                  </button>
+                                </>
+                            ) : (
+                                <button 
+                                  onClick={() => setArrivedMatchId(myUpcomingMatches[0].id)}
+                                  className="w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-black uppercase shadow-[0_0_15px_rgba(34,197,94,0.3)] flex items-center justify-center gap-2 hover:bg-green-400 transition-colors"
+                                >
+                                  <MapPin size={14} /> SAHAYA ULAŞTIM
+                                </button>
+                            )}
+                          </div>
                       </div>
                   </div>
               ) : (
@@ -677,7 +837,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <h3 className="font-black text-white text-sm tracking-wide uppercase">ÖZEL TEKLİFLER</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
-                  {DIRECT_OFFERS_MOCK.map(offer => (
+                  {myOffers.length > 0 ? myOffers.map(offer => (
                       <motion.div 
                         key={offer.id} 
                         whileHover={{ y: -5 }}
@@ -694,6 +854,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <div>
                                   <h4 className="font-bold text-white text-sm">{offer.pitchName}</h4>
                                   <p className="text-[10px] text-gray-400">{offer.teamName} • {offer.time}</p>
+                                  
+                                  {/* Team Reliability / Toxic Warning */}
+                                  {offer.captainName === 'Ali Y.' ? (
+                                      <div className="flex items-center gap-1 mt-1 text-[8px] font-black bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20 w-fit uppercase">
+                                          <AlertTriangle size={8} /> Düşük Centilmenlik (2.1/5.0)
+                                      </div>
+                                  ) : (
+                                      <div className="flex items-center gap-1 mt-1 text-[8px] font-black bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 w-fit uppercase">
+                                          <Shield size={8} /> Güvenilir Takım (4.9/5.0)
+                                      </div>
+                                  )}
                               </div>
                           </div>
                           
@@ -714,7 +885,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               </button>
                           </div>
                       </motion.div>
-                  ))}
+                  )) : (
+                    <div className="text-gray-500 text-[10px] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifiniz yok</div>
+                  )}
               </div>
           </div>
       </motion.div>
@@ -727,8 +900,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          <div className="flex items-center justify-between px-6 mb-2 mt-4">
             <div>
               <h3 className="font-black text-white text-sm flex items-center gap-2">
-                🧤 KALECİ ARAYAN MAÇLAR
-                <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{GK_OPEN_MATCHES.length}</span>
+                🧤 {isRef ? 'HAKEM' : 'KALECİ'} ARAYAN MAÇLAR
+                <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{openMatches.length}</span>
               </h3>
               <p className="text-[10px] text-gray-500 mt-0.5">Takımlar seni bekliyor — başvur, oyna, kazan</p>
             </div>
@@ -740,9 +913,70 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             </button>
          </div>
 
+         {/* Pending Applications Section */}
+         {pendingApplications.length > 0 && (
+             <div className="px-6 space-y-3 mb-6">
+                 <h3 className="font-black text-gray-400 text-xs flex items-center gap-2 uppercase tracking-widest">
+                     <Activity size={12} className="text-yellow-500" /> BEKLEYEN BAŞVURULARIM
+                 </h3>
+                 {pendingApplications.map(job => (
+                     <motion.div
+                         key={job.id}
+                         className="bg-[#161B22]/60 border border-yellow-500/30 rounded-[24px] overflow-hidden"
+                     >
+                         <div className="p-4 flex items-center justify-between opacity-70">
+                             <div>
+                                 <h4 className="font-black text-white text-sm">{job.pitchName || job.location || 'Saha Bilinmiyor'}</h4>
+                                 <p className="text-[10px] text-gray-400">{job.date} • {job.time}</p>
+                             </div>
+                             <div className="bg-yellow-500/20 text-yellow-500 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
+                                 Kaptan Onayı Bekleniyor
+                             </div>
+                         </div>
+                     </motion.div>
+                 ))}
+             </div>
+         )}
+
          {/* GK Match Cards */}
          <div className="px-6 space-y-3">
-            {GK_OPEN_MATCHES.map(job => (
+            
+            {/* SOS / Emergency Request Card */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-red-950/40 border-2 border-red-500/50 rounded-[24px] overflow-hidden relative shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+            >
+                <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-pulse" />
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 animate-pulse">
+                        <AlertTriangle size={16} />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-white text-sm">ACİL GÖREV (SOS)</h4>
+                        <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider">Son Dakika İptali • 1 Saat Kaldı</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-red-400">450₺</p>
+                      <p className="text-[8px] text-red-500/80 font-black uppercase">ÇİFT ÜCRET</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-black/40 rounded-xl p-2.5 border border-red-500/20 mb-3">
+                    <p className="text-xs text-red-200">
+                      <strong className="text-red-400">Moda Spor Tesisleri</strong>'nde acil {isRef ? 'hakem' : 'kaleci'} ihtiyacı. Eski {isRef ? 'hakem' : 'kaleci'} kaza yaptı, maç başlamak üzere!
+                    </p>
+                  </div>
+
+                  <button className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase shadow-lg shadow-red-500/30 transition-colors">
+                    Hemen Kabul Et (Sahaya Yakınım)
+                  </button>
+                </div>
+            </motion.div>
+            {openMatches.map(job => (
                 <motion.div
                     key={job.id}
                     initial={{ opacity: 0, y: 12 }}
@@ -791,95 +1025,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             ))}
          </div>
          
-         {/* Gear Showcase */}
-         <div className="px-6 mt-6">
-             <div className="flex items-center justify-between mb-4">
-                 <h3 className="font-black text-white text-sm flex items-center gap-2">
-                     <Briefcase size={16} className={isRef ? 'text-yellow-400' : 'text-blue-400'} /> EKİPMAN VİTRİNİ
-                 </h3>
-                 <span className="text-[10px] text-gray-500">Profilinde görünür</span>
-             </div>
 
-             <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar">
-                 {equipmentList.map(item => (
-                     <div key={item.id} className="shrink-0 w-36 bg-[#161B22] rounded-2xl p-1 border border-white/5 relative group hover:border-green-500/30 transition-all">
-                         <div className="bg-[#0A0E14] rounded-xl p-2 relative overflow-hidden">
-                             <div className="aspect-square rounded-lg mb-2 overflow-hidden flex items-center justify-center bg-black/30">
-                                 <img src={item.image} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity group-hover:scale-105" alt={item.name} onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
-                             </div>
-                             <div className="absolute top-2 right-2 bg-green-500/20 text-green-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-green-500/20">{item.bonus}</div>
-                         </div>
-                         <div className="p-2">
-                             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{item.tier}</p>
-                             <p className="text-xs font-bold text-white truncate">{item.name}</p>
-                         </div>
-                     </div>
-                 ))}
-                 {/* Add button */}
-                 <button
-                   onClick={() => setShowAddEquip(true)}
-                   className="shrink-0 w-24 bg-[#161B22] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-green-400 hover:border-green-500/30 transition-all"
-                 >
-                     <PlusCircle size={24} />
-                     <span className="text-[10px] font-bold">EKLE</span>
-                 </button>
-             </div>
-         </div>
-
-         {/* Add Equipment Modal */}
-         {showAddEquip && (
-           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end">
-             <motion.div
-               initial={{ y: 60, opacity: 0 }}
-               animate={{ y: 0, opacity: 1 }}
-               className="w-full bg-[#161B22] rounded-t-[32px] border-t border-white/10 p-6 space-y-4"
-             >
-               <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
-               <div className="flex justify-between items-center">
-                 <h3 className="font-black text-white text-lg">Ekipman Ekle</h3>
-                 <button onClick={() => setShowAddEquip(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
-               </div>
-               <div>
-                 <p className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-1.5">Ekipman Adı</p>
-                 <input
-                   value={newEquipName}
-                   onChange={e => setNewEquipName(e.target.value)}
-                   placeholder="Örn: Predator Elite Eldiven"
-                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-green-500/50 transition-colors"
-                 />
-               </div>
-               <div>
-                 <p className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-1.5">Fotoğraf Bağlantısı (URL)</p>
-                 <input
-                   value={newEquipPhoto}
-                   onChange={e => setNewEquipPhoto(e.target.value)}
-                   placeholder="https://..."
-                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-green-500/50 transition-colors"
-                 />
-                 {newEquipPhoto && (
-                   <img src={newEquipPhoto} className="mt-2 w-20 h-20 rounded-xl object-cover border border-white/10" onError={e => (e.target as HTMLImageElement).style.display='none'} />
-                 )}
-               </div>
-               <button
-                 disabled={!newEquipName}
-                 onClick={() => {
-                   setEquipmentList(prev => [...prev, {
-                     id: Date.now().toString(),
-                     name: newEquipName,
-                     tier: 'BASIC',
-                     image: newEquipPhoto || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200',
-                     bonus: '+Güç',
-                   }]);
-                   setNewEquipName(''); setNewEquipPhoto(''); setShowAddEquip(false);
-                 }}
-                 className="w-full py-4 rounded-2xl font-black text-black text-sm disabled:opacity-40"
-                 style={{ background: '#22c55e' }}
-               >
-                 EKİPMANI KAYDET
-               </button>
-             </motion.div>
-           </div>
-         )}
 
       </div>
   );
@@ -898,7 +1044,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <div className="mt-6 flex gap-4">
                   <div className="flex-1">
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Çekilebilir</p>
-                      <p className="text-xl font-bold text-green-400">3.450₺</p>
+                      <p className="text-xl font-bold text-green-400">{walletBalance}₺</p>
                   </div>
                   <div className="flex-1 border-l border-white/10 pl-4">
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Bekleyen</p>
@@ -1106,7 +1252,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
              </div>
          </div>
          <button 
-            onClick={() => onNavigate('NOTIFICATIONS')}
+            onClick={() => setIsNotificationsOpen(true)}
             className="p-2 bg-[#161B22] rounded-full text-gray-400 border border-white/5 relative hover:text-white transition-colors"
          >
              <Bell size={20} />
@@ -1355,6 +1501,80 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </div>
       )}
 
+      {/* HOURS SETTING MODAL */}
+      {showOnlineSetupModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-black text-white uppercase tracking-wide">AKTİFLİK AYARLARI</h3>
+                      <button onClick={() => setShowOnlineSetupModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+                  </div>
+                  
+                  <div className="space-y-6 mb-8">
+                      <div>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mb-3">Hangi Günler Aktifsin?</p>
+                          <div className="flex flex-wrap gap-2">
+                              {DAYS.map(day => (
+                                  <button 
+                                      key={day}
+                                      onClick={() => {
+                                          if(setupDays.includes(day)) {
+                                              setSetupDays(setupDays.filter(d => d !== day));
+                                          } else {
+                                              setSetupDays([...setupDays, day]);
+                                          }
+                                      }}
+                                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${setupDays.includes(day) ? (isRef ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-green-500/20 text-green-400 border-green-500/50') : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}
+                                  >
+                                      {day}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                      <div>
+                          <div className="flex items-center justify-between mb-3">
+                              <p className="text-[10px] text-gray-400 font-bold uppercase">Hangi Saat Aralığı?</p>
+                              <button
+                                onClick={() => setSetupHours(setupHours.length === 24 ? [] : ALL_HOURS)}
+                                className="text-[10px] font-black px-2 py-1 rounded-lg border transition-all bg-white/5 text-gray-400 border-white/10"
+                              >
+                                {setupHours.length === 24 ? 'Temizle' : 'Tümü'}
+                              </button>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                              {ALL_HOURS.map(t => {
+                                  const active = setupHours.includes(t);
+                                  return (
+                                      <button
+                                          key={t}
+                                          onClick={() => {
+                                              if(setupHours.includes(t)) {
+                                                  setSetupHours(setupHours.filter(h => h !== t));
+                                              } else {
+                                                  setSetupHours([...setupHours, t]);
+                                              }
+                                          }}
+                                          className={`py-2 rounded-lg text-center text-xs font-bold border transition-colors ${active ? (isRef ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-green-500/20 text-green-400 border-green-500/50') : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}
+                                      >
+                                          {t}
+                                      </button>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  </div>
+
+                  <button 
+                    onClick={handleSaveOnlineSetup}
+                    className="w-full py-4 text-black font-black text-sm rounded-2xl transition-colors shadow-lg uppercase tracking-wider flex items-center justify-center gap-2"
+                    style={{ background: isRef ? '#ef4444' : '#22c55e' }}
+                  >
+                      Sistemde Aktif Ol
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* Card Options: Ekle veya Seç */}
       {showCardOptions && (
           <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end">
@@ -1464,6 +1684,63 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
           </div>
       )}
+
+      {/* Post Match Report Modal (Two-way Rating) */}
+      <AnimatePresence>
+        {showPostMatchReport && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[#161B22] border border-white/10 rounded-3xl p-6 w-full max-w-sm relative z-10 overflow-hidden"
+            >
+              <div className={`absolute top-0 left-0 w-full h-1 ${theme.bg}`} />
+              
+              <div className="text-center mb-6">
+                <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 ${theme.secondaryBg} ${theme.primary}`}>
+                  <Award size={32} />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase italic">MAÇ SONU RAPORU</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Takımı ve Ortamı Değerlendir</p>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
+                  <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Centilmenlik ve Misafirperverlik</label>
+                  <div className="flex justify-between items-center px-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button 
+                        key={star}
+                        onClick={() => setPostMatchRating(star)}
+                        className="transition-transform hover:scale-110 active:scale-95"
+                      >
+                        <Star size={32} className={star <= postMatchRating ? 'text-[#FFFF00] fill-[#FFFF00]' : 'text-gray-700'} />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-center text-[10px] text-[#FFFF00] font-black mt-3 uppercase tracking-widest">
+                    {postMatchRating === 5 ? "Mükemmel Takım" : postMatchRating >= 3 ? "İyi Takım" : "Toksik Takım"}
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  setShowPostMatchReport(false);
+                  setArrivedMatchId(null);
+                  alert('Raporunuz başarıyla gönderildi. Kazancınız cüzdanınıza aktarıldı.');
+                }}
+                className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase`}
+              >
+                RAPORU GÖNDER VE BİTİR
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Custom Styles for 3D Flip */}
       <style>{`

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../store';
 import { Edit2, Search, Trash2, ShieldOff, Shield, Star, StarOff, CheckCircle, XCircle, Wallet } from 'lucide-react';
 import { Pitch, Goalkeeper, Referee, AdminUser } from '../../types';
-import { fbDeleteGoalkeeper, fbDeleteReferee, fbBanUser, fbToggleUserPro, fbVerifyUser } from '../../firebaseMutations';
+import { fbDeleteGoalkeeper, fbDeleteReferee, fbBanUser, fbToggleUserPro, fbVerifyUser } from '../../supabaseMutations';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface GodViewDataTablesProps {
@@ -164,7 +164,7 @@ export const GodViewDataTables: React.FC<GodViewDataTablesProps> = ({
                             <tr key={user.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${user.isBanned ? 'opacity-60' : ''}`}>
                                 <td className="px-4 py-3">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-red-600 to-orange-500 flex items-center justify-center text-white font-bold text-xs shadow-lg">
-                                        {user.name.charAt(0)}
+                                        {(user.name || '').charAt(0) || 'U'}
                                     </div>
                                 </td>
                                 <td className="px-4 py-3">
@@ -176,7 +176,7 @@ export const GodViewDataTables: React.FC<GodViewDataTablesProps> = ({
                                 <td className="px-4 py-3">{user.email}</td>
                                 <td className="px-4 py-3">
                                     <span className="flex items-center gap-1 text-yellow-400 font-mono text-xs">
-                                        <Wallet size={11} /> ₺{user.wallet.toLocaleString('tr')}
+                                        <Wallet size={11} /> ₺{(user.wallet ?? 0).toLocaleString('tr')}
                                     </span>
                                 </td>
                                 <td className="px-4 py-3">

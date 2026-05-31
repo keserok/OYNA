@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store';
 import { UserRole, AdminUser } from '../../types';
 import { useImageUpload } from '../../hooks/useImageUpload';
-import { fbBanUser, fbToggleUserPro } from '../../firebaseMutations';
+import { fbBanUser, fbToggleUserPro } from '../../supabaseMutations';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (p) => (
@@ -226,7 +226,7 @@ export const UsersTab: React.FC = () => {
                                         <Star size={10} className="text-yellow-400 fill-yellow-400" />
                                         <span className="text-xs font-black text-white">{u.rating}</span>
                                     </div>
-                                    <span className="text-[10px] text-yellow-400 font-mono font-black">₺{u.wallet.toLocaleString('tr')}</span>
+                                    <span className="text-[10px] text-yellow-400 font-mono font-black">₺{(u.wallet ?? 0).toLocaleString('tr')}</span>
                                 </div>
                             </div>
 
@@ -234,7 +234,7 @@ export const UsersTab: React.FC = () => {
                             <div className="grid grid-cols-4 gap-2 mt-3">
                                 {[
                                     { label: 'Maç', value: u.matchCount, icon: Activity },
-                                    { label: 'Cüzdan', value: `₺${u.wallet.toLocaleString('tr')}`, icon: Wallet, green: true },
+                                    { label: 'Cüzdan', value: `₺${(u.wallet ?? 0).toLocaleString('tr')}`, icon: Wallet, green: true },
                                     { label: 'Katılım', value: u.joinDate, icon: Calendar },
                                     { label: 'Rating', value: u.rating, icon: Star, yellow: true },
                                 ].map(s => (

@@ -1,5 +1,4 @@
-import { collection, addDoc, onSnapshot, query, where, Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../supabaseClient';
 
 export interface PitchSlot {
   id?: string;
@@ -8,37 +7,36 @@ export interface PitchSlot {
   time: string; // HH:MM
   status: 'AVAILABLE' | 'BOOKED';
   price: number;
-  createdAt?: any;
+  bookedBy?: string;
+  bookedAt?: string;
+  createdAt?: string;
 }
 
 // ============================================================================
 // 1. TESİS UYGULAMASININ KULLANACAĞI FONKSİYONLAR (YAZMA İŞLEMLERİ)
 // ============================================================================
 
-/**
- * Tesis sahibi yeni bir müsait saat eklediğinde bu fonksiyon çalışır.
- * Veriyi ortak veritabanı olan Firestore'a yazar.
- */
 export const addAvailableSlot = async (slotData: Omit<PitchSlot, 'id' | 'createdAt'>) => {
   try {
-    const docRef = await addDoc(collection(db, 'pitch_slots'), {
+    const { data, error } = await supabase.from('pitch_slots').insert([{
       ...slotData,
-      createdAt: Timestamp.now()
-    });
-    console.log("Yeni saat eklendi, ID: ", docRef.id);
-    return docRef.id;
+      status: 'AVAILABLE'
+    }]).select().single();
+
+    if (error) throw error;
+    
+    console.log("Yeni saat eklendi, ID: ", data.id);
+    return data.id;
   } catch (error) {
     console.error("Saat eklenirken hata oluştu: ", error);
     throw error;
   }
 };
 
-/**
- * Tesis sahibi bir saati sildiğinde veya iptal ettiğinde çalışır.
- */
 export const removeSlot = async (slotId: string) => {
   try {
-    await deleteDoc(doc(db, 'pitch_slots', slotId));
+    const { error } = await supabase.from('pitch_slots').delete().eq('id', slotId);
+    if (error) throw error;
     console.log("Saat silindi: ", slotId);
   } catch (error) {
     console.error("Saat silinirken hata oluştu: ", error);
@@ -46,19 +44,15 @@ export const removeSlot = async (slotId: string) => {
   }
 };
 
-
-/**
- * Oyuncu uygulaması bir saati kiraladığında (rezervasyon yaptığında) çalışır.
- * Saatin durumunu 'BOOKED' olarak günceller.
- */
 export const bookSlot = async (slotId: string, userId: string) => {
   try {
-    const slotRef = doc(db, 'pitch_slots', slotId);
-    await updateDoc(slotRef, {
+    const { error } = await supabase.from('pitch_slots').update({
       status: 'BOOKED',
       bookedBy: userId,
-      bookedAt: Timestamp.now()
-    });
+      bookedAt: new Date().toISOString()
+    }).eq('id', slotId);
+
+    if (error) throw error;
     console.log("Saat kiralandı: ", slotId);
   } catch (error) {
     console.error("Saat kiralanırken hata oluştu: ", error);
@@ -70,33 +64,31 @@ export const bookSlot = async (slotId: string, userId: string) => {
 // 2. OYUNCU UYGULAMASININ KULLANACAĞI FONKSİYONLAR (DİNLEME İŞLEMLERİ)
 // ============================================================================
 
-/**
- * Oyuncu uygulaması bu fonksiyonu çağırarak bir tesisin müsait saatlerini
- * "CANLI" (Real-time) olarak dinlemeye başlar.
- * Tesis uygulaması "addAvailableSlot" ile yeni bir saat eklediği an, 
- * bu fonksiyon otomatik olarak tetiklenir ve oyuncunun ekranı güncellenir.
- */
 export const subscribeToPitchSlots = (pitchId: string, callback: (slots: PitchSlot[]) => void) => {
-  // Sadece 'AVAILABLE' olan ve bu tesise ait saatleri getir
-  const q = query(
-    collection(db, 'pitch_slots'), 
-    where('pitchId', '==', pitchId),
-    where('status', '==', 'AVAILABLE')
-  );
-
-  // onSnapshot: Firestore'daki değişiklikleri anlık olarak yakalar
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const slots: PitchSlot[] = [];
-    querySnapshot.forEach((doc) => {
-      slots.push({ id: doc.id, ...doc.data() } as PitchSlot);
-    });
+  const fetchSlots = async () => {
+    const { data } = await supabase
+      .from('pitch_slots')
+      .select('*')
+      .eq('pitchId', pitchId)
+      .eq('status', 'AVAILABLE');
     
-    // Yeni veriyi callback ile React componentine (arayüze) gönder
-    callback(slots);
-  }, (error) => {
-    console.error("Saatleri dinlerken hata oluştu: ", error);
-  });
+    if (data) callback(data as PitchSlot[]);
+  };
 
-  // Dinlemeyi durdurmak için bu fonksiyonu döndürüyoruz (useEffect cleanup için)
-  return unsubscribe;
+  fetchSlots();
+
+  const channel = supabase.channel(`public:pitch_slots:${pitchId}`)
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'pitch_slots', 
+      filter: `pitchId=eq.${pitchId}` 
+    }, () => {
+      fetchSlots();
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 };

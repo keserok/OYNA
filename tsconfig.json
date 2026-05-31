@@ -25,5 +25,14 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "supabase",
+    "notifications",
+    "src",
+    "services/db.ts",
+    "services/geoService.ts"
+  ]
 }

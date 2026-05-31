@@ -44,6 +44,7 @@ const FORMATS = [
   { v: '7v7', label: '7v7', players: 14, popular: true  },
   { v: '8v8', label: '8v8', players: 16, popular: true  },
   { v: '9v9', label: '9v9', players: 18, popular: false },
+  { v: '10v10', label: '10v10', players: 20, popular: false },
   { v: '11v11', label: '11v11', players: 22, popular: false },
 ];
 
@@ -1544,8 +1545,8 @@ const ServicesStep: React.FC<{
                    setActiveService(null); 
                    showToast(`${activeCount} mevkii için ilan yayınlandı! Yakındaki oyuncular bildirim aldı. 🔔`, 'success');
                 }} 
-                 className={`w-full h-16 text-white font-black text-sm rounded-[24px] flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 uppercase tracking-widest border ${activeCount > 0 ? 'bg-purple-600 hover:bg-purple-500 shadow-[0_0_30px_rgba(147,51,234,0.4)] border-purple-400/50' : 'bg-[#161B22] border-white/5 text-gray-500 cursor-not-allowed'}`}>
-                 <Check size={20} /> İLANI YAYINLA {activeCount > 0 && `(${activeCount} OYUNCU)`}
+                 className={`w-full h-16 text-white font-black text-sm rounded-[24px] flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 uppercase tracking-widest border ${activeCount > 0 ? 'bg-[#9D00FF] hover:bg-[#8B00E6] shadow-[0_0_40px_rgba(157,0,255,0.8)] border-[#BF40FF] text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-[#161B22] border-white/5 text-gray-500 cursor-not-allowed'}`}>
+                 <Check size={20} className={activeCount > 0 ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" : ""} /> İLANI YAYINLA {activeCount > 0 && `(${activeCount} OYUNCU)`}
               </button>
             </div>
           </motion.div>
@@ -1832,15 +1833,25 @@ const PaymentStep: React.FC<{
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'BUDGET' | 'PLAYER_PICKER' | 'SUPPORT' | 'NONE'>('NONE');
   const [pickerTab, setPickerTab] = useState<'FRIENDS' | 'TEAMS'>('FRIENDS');
+  const [pickerCategory, setPickerCategory] = useState('Tümü');
+  const [friendSearch, setFriendSearch] = useState('');
+  const [selectedFriendsForPicker, setSelectedFriendsForPicker] = useState<string[]>([]);
   const [selectedSlotForPicker, setSelectedSlotForPicker] = useState<string | null>(null);
   
   const [format, setFormat] = useState<typeof FORMATS[0]>(FORMATS[4]);
-  const [dna, setDna] = useState({
+  const [dna, setDna] = useState<{
+      budget: string;
+      duration: string;
+      mentality: string;
+      gender: string;
+      age: string[];
+      role: string;
+  }>({
       budget: '',
       duration: '60 Dakika',
       mentality: 'ciddi',
       gender: 'Karma',
-      age: 'Tümü',
+      age: ['Tümü'],
       role: ''
   });
   const [manualBudget, setManualBudget] = useState<number | null>(null);
@@ -1855,22 +1866,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   const { addOpponentAd, incrementUnreadNotifications, addUserNotification, friends, userTeams, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, addPlayerSeekAd } = useAppStore();
 
-  const bookedMatchesMock = [
-    { id: 'bm1', pitchName: 'Arena Sport Center', date: 'Bugün', time: '21:00', format: '7v7', image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&q=80&w=600' },
-    { id: 'bm2', pitchName: 'BJK RAMADA Futbol Sahası', date: 'Yarın', time: '22:00', format: '6v6', image: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=600' },
-    { id: 'bm3', pitchName: 'Ortaköy Halı Saha', date: '30 Mayıs Cuma', time: '20:00', format: '7v7', image: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&q=80&w=600' },
-  ];
 
-  const [showPlayerSeekModal, setShowPlayerSeekModal] = useState(false);
-  const [seekSaha, setSeekSaha] = useState('');
-  const [seekTarih, setSeekTarih] = useState('');
-  const [seekSaat, setSeekSaat] = useState('');
-  const [seekPositions, setSeekPositions] = useState<string[]>([]);
-  const [seekDifficulty, setSeekDifficulty] = useState<'Ciddi' | 'Taktiksel' | 'Rahat'>('Ciddi');
-  const [seekFormat, setSeekFormat] = useState('7v7');
-  const [seekDuration, setSeekDuration] = useState('90 Dakika');
-  const [seekGender, setSeekGender] = useState('Karma');
-  const [seekAge, setSeekAge] = useState('Tümü');
 
   const draftMatch = React.useMemo(() => adminMatches.find(m => m.id === activeDraftId), [activeDraftId, adminMatches]);
   const isDraftMode = !!draftMatch;
@@ -1987,8 +1983,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       
       setOrientation(newOrient);
   };
-  const calculatedBudget = selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 100;
-  const costPerPerson = manualBudget !== null ? (manualBudget === -1 ? 0 : manualBudget) : calculatedBudget;
+  const calculatedBudget = selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
+  const costPerPerson = calculatedBudget;
 
   return (
     <div className="min-h-screen bg-[#06080A] flex flex-col font-sans relative overflow-hidden">
@@ -2017,75 +2013,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         </button>
       </header>
 
-      {/* HORIZONTAL BOOKED MATCHES BAR (OYUNCU BUL İLANI İÇİN) */}
-      <div className="relative z-30 px-5 pt-2 pb-2">
-         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5 drop-shadow-sm">
-           <Radio size={12} className="text-[#39FF14] animate-pulse" /> HIZLI OYUNCU İLANI VER (AYARLANMIŞ MAÇLARIN)
-         </p>
-         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-           {bookedMatchesMock.map((match) => (
-             <motion.div 
-               key={match.id}
-               whileHover={{ scale: 1.02 }}
-               whileTap={{ scale: 0.98 }}
-               className="shrink-0 w-64 bg-[#161B22]/80 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex flex-col justify-between shadow-lg relative overflow-hidden group transition-all"
-             >
-               {/* Ambient Glow */}
-               <div className="absolute top-0 right-0 w-16 h-16 bg-[#FFFF00]/5 blur-xl pointer-events-none rounded-full" />
-               
-               <div>
-                 <div className="flex items-center justify-between mb-1.5">
-                   <span className="text-[8px] font-black uppercase text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-0.5 rounded border border-[#FFFF00]/20 tracking-wider">
-                     {match.format} FORMAT
-                   </span>
-                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                     {match.time}
-                   </span>
-                 </div>
-                 
-                 <h4 className="text-xs font-black text-white uppercase italic truncate tracking-tight drop-shadow-sm">
-                   {match.pitchName}
-                 </h4>
-                 
-                 <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wide mt-1">
-                   {match.date}
-                 </p>
-               </div>
-               
-               <button
-                 onClick={() => {
-                   setSeekSaha(match.pitchName);
-                   setSeekTarih(match.date);
-                   setSeekSaat(match.time);
-                   setSeekFormat(match.format);
-                   setSeekPositions([]);
-                   setShowPlayerSeekModal(true);
-                 }}
-                 className="mt-3 w-full py-2 bg-gradient-to-r from-[#FFFF00] to-[#39FF14] text-black font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-1 shadow-[0_0_25px_rgba(57,255,20,0.7)] border-2 border-white/40 hover:shadow-[0_0_35px_rgba(255,255,0,0.9)] hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
-               >
-                 <UserPlus size={12} /> OYUNCU BUL
-               </button>
-             </motion.div>
-           ))}
-         </div>
-      </div>
-
       {/* CENTER: PITCH */}
-      <div className="flex-1 relative flex flex-col items-center justify-center p-4 pt-10 pb-[260px] z-10 overflow-hidden">
-          <div className="absolute top-24 right-5 z-30 flex flex-col gap-2">
-              <button 
-                onClick={() => setCustomPositions({})}
-                className="w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-md border border-white/10 rounded-full text-white hover:bg-white/10 transition-all shadow-lg group"
-              >
-                  <Activity size={16} className="group-hover:text-[#FFFF00] transition-colors" />
-              </button>
-              <button 
-                onClick={toggleOrientation}
-                className="w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-md border border-white/10 rounded-full text-white hover:bg-white/10 transition-all shadow-lg group"
-              >
-                  <ArrowLeft size={16} className={`transition-transform duration-300 ${orientation === 'horizontal' ? '-rotate-90' : 'rotate-0 group-hover:text-[#39FF14]'}`} />
-              </button>
-          </div>
+      <div className="flex-1 relative flex flex-col items-center justify-center p-4 pt-10 pb-[360px] z-10 overflow-hidden">
           <div className={`w-full relative transition-all duration-500 flex items-center justify-center drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] ${orientation === 'horizontal' ? 'w-[95vw] max-w-[550px]' : 'w-[85vw] max-w-[420px]'}`}>
               <SharedPitch 
                 mode="edit" 
@@ -2108,78 +2037,60 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       {/* Console Dashboard Bottom Area */}
       <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-16 bg-gradient-to-t from-[#06080A] via-[#06080A]/90 to-transparent">
           
-          {/* Asymmetric Tiles Grid */}
-          <div className="grid grid-cols-[1.4fr_1fr] gap-3 mb-5">
+          {/* Action Tiles */}
+          <div className="flex flex-col gap-3 mb-5">
               
-              {/* Location Large Tile */}
+              {/* Saha Seç Tile */}
               <motion.button 
-                  whileHover={!isDraftMode ? { scale: 1.02 } : {}}
-                  whileTap={!isDraftMode ? { scale: 0.98 } : {}}
+                  whileHover={!isDraftMode ? { scale: 1.01 } : {}}
+                  whileTap={!isDraftMode ? { scale: 0.99 } : {}}
                   onClick={() => { if (!isDraftMode) setActiveSheet('PITCH') }}
-                  className={`relative overflow-hidden bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/50 cursor-not-allowed opacity-90' : 'border-white/10 hover:border-[#39FF14]/50 cursor-pointer'} rounded-2xl p-4 flex flex-col justify-between shadow-[0_10px_30px_rgba(0,0,0,0.5)] group transition-colors h-full min-h-[100px]`}
+                  className={`relative overflow-hidden bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/50 cursor-not-allowed opacity-90' : 'border-white/10 hover:border-[#39FF14]/50 cursor-pointer'} rounded-2xl p-4 flex justify-between items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)] group transition-colors w-full min-h-[70px]`}
               >
-                  <div className={`absolute -top-4 -right-4 p-3 opacity-10 ${isDraftMode ? 'text-amber-500' : 'group-hover:opacity-30 group-hover:scale-110'} transition-opacity transform`}>
-                      {isDraftMode ? <Lock size={80} /> : <MapPin size={80} className="text-[#39FF14]" />}
+                  <div className={`absolute right-4 opacity-10 ${isDraftMode ? 'text-amber-500' : 'group-hover:opacity-30 group-hover:scale-110'} transition-all transform`}>
+                      {isDraftMode ? <Lock size={60} /> : <MapPin size={60} className="text-[#39FF14]" />}
                   </div>
-                  <div className="flex flex-col items-start gap-1 relative z-10">
+                  <div className="flex flex-col items-start gap-1 relative z-10 w-[80%]">
                       <span className={`text-[10px] font-black uppercase ${isDraftMode ? 'text-amber-400 bg-amber-500/20 border-amber-500/30' : 'text-gray-400 bg-black/40 border-white/5'} tracking-widest px-2 py-0.5 rounded border`}>
-                          {isDraftMode ? 'SABİT TESİS & KONUM' : 'Tesis & Konum'}
+                          {isDraftMode ? 'SABİT TESİS' : 'SAHA SEÇ'}
                       </span>
-                      <span className={`text-sm font-black uppercase italic text-left leading-tight mt-2 w-[85%] truncate drop-shadow-md ${isDraftMode ? 'text-amber-100' : 'text-white'}`}>
-                          {selectedPitch ? selectedPitch.name : 'TESİS SEÇ'}
+                      <span className={`text-sm font-black uppercase italic text-left leading-tight mt-1 w-full truncate drop-shadow-md ${isDraftMode ? 'text-amber-100' : 'text-white'}`}>
+                          {selectedPitch ? selectedPitch.name : 'Henüz Saha Seçilmedi'}
                       </span>
                   </div>
-                  <div className="w-full flex justify-end mt-2 relative z-10">
-                      <div className="w-6 h-6 rounded-full bg-black/40 border border-white/10 flex items-center justify-center group-hover:bg-[#39FF14] transition-colors">
-                          <ArrowRight size={12} className="text-white group-hover:text-black" />
-                      </div>
+                  <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center group-hover:bg-[#39FF14] transition-colors relative z-10">
+                      <ArrowRight size={14} className="text-white group-hover:text-black" />
                   </div>
               </motion.button>
               
-              {/* Right Stacked Tiles */}
-              <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                  {/* Kuralları Belirle Tile */}
                   <motion.button 
-                      whileHover={!isDraftMode ? { scale: 1.02 } : {}}
-                      whileTap={!isDraftMode ? { scale: 0.98 } : {}}
+                      whileHover={!isDraftMode ? { scale: 1.01 } : {}}
+                      whileTap={!isDraftMode ? { scale: 0.99 } : {}}
                       onClick={() => { if (!isDraftMode) setActiveSheet('RULES') }}
-                      className={`flex-1 bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/30 opacity-90 cursor-not-allowed' : 'border-white/10 hover:border-[#FFFF00]/50'} rounded-2xl p-3 flex flex-col justify-center items-start shadow-lg transition-colors group relative overflow-hidden`}
+                      className={`flex-1 bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/30 opacity-90 cursor-not-allowed' : 'border-white/10 hover:border-[#FFFF00]/50'} rounded-2xl p-4 flex flex-col justify-center items-start shadow-lg transition-colors group relative overflow-hidden`}
                   >
-                      <div className="absolute -right-2 -bottom-2 opacity-10 group-hover:opacity-20"><Activity size={40} className="text-[#FFFF00]" /></div>
-                      <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-0.5 flex items-center gap-1.5 z-10"><Activity size={10} className="text-[#FFFF00]"/> Kurallar</span>
-                      <span className="text-xs font-black text-white uppercase z-10 drop-shadow-md">{format.label}</span>
+                      <div className="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20"><Activity size={60} className="text-[#FFFF00]" /></div>
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 flex items-center gap-1.5 z-10"><Activity size={12} className="text-[#FFFF00]"/> KURALLARI BELİRLE</span>
+                      <span className="text-sm font-black text-white uppercase z-10 drop-shadow-md truncate">{format.label} • {dna.duration}</span>
                   </motion.button>
                   
-                  <motion.button 
-                      whileHover={!isDraftMode ? { scale: 1.02 } : {}}
-                      whileTap={!isDraftMode ? { scale: 0.98 } : {}}
-                      onClick={() => { if (!isDraftMode) setActiveSheet('BUDGET') }}
-                      className={`flex-1 bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/30 opacity-90 cursor-not-allowed' : 'border-white/10 hover:border-blue-400/50'} rounded-2xl p-3 flex flex-col justify-center items-start shadow-lg transition-colors group relative overflow-hidden`}
-                  >
-                      <div className="absolute -right-2 -bottom-2 opacity-10 group-hover:opacity-20"><CreditCard size={40} className="text-blue-400" /></div>
-                      <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-0.5 flex items-center gap-1.5 z-10"><CreditCard size={10} className="text-blue-400"/> Bütçe</span>
-                      <span className="text-xs font-black text-white uppercase z-10 drop-shadow-md">{manualBudget === -1 ? 'Belirsiz' : `${costPerPerson}₺ / Kişi`}</span>
-                  </motion.button>
+                  {/* Bütçe Auto-Calculated */}
+                  <div className="w-[110px] bg-[#06080A]/60 backdrop-blur-2xl border border-blue-500/30 rounded-2xl p-3 flex flex-col justify-center items-center shadow-[0_0_20px_rgba(59,130,246,0.1)] relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-t from-blue-500/10 to-transparent"></div>
+                      <span className="text-[9px] font-black uppercase text-blue-300 tracking-widest mb-1 text-center relative z-10">Kişi Başı<br/>Ücret</span>
+                      <div className="flex items-end gap-0.5 relative z-10 mt-1">
+                         <span className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{calculatedBudget > 0 ? calculatedBudget : '-'}</span>
+                         <span className="text-sm font-bold text-gray-400 mb-0.5">₺</span>
+                      </div>
+                  </div>
               </div>
           </div>
 
-          {/* Action Row: Service Pill & Publish Button */}
-          <div className="flex flex-col gap-2 relative z-20">
-             <div className="flex items-center justify-between px-2 mb-1">
-                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-md"><Users size={12} className={isReady ? 'text-[#39FF14]' : 'text-gray-500'}/> Kadro: {Object.keys(myPlayers).length}/{perTeam}</span>
-                 <span className={`text-[9px] font-black uppercase tracking-widest ${isReady ? 'text-[#39FF14] drop-shadow-[0_0_5px_rgba(57,255,20,0.5)]' : 'text-gray-500'}`}>{isReady ? 'Yayına Hazır' : 'Bekleniyor'}</span>
-             </div>
-             
-             <div className="flex items-center gap-3">
-                 <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setActiveSheet('SUPPORT')}
-                    className="h-[60px] w-[60px] shrink-0 bg-[#06080A]/80 backdrop-blur-xl border border-blue-500/30 rounded-[20px] flex flex-col items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:bg-blue-500/10 hover:border-blue-500 transition-all group"
-                 >
-                     <Shield size={20} className="text-blue-400 group-hover:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] mb-0.5" />
-                     <span className="text-[8px] font-black uppercase tracking-widest text-blue-300">Destek</span>
-                 </motion.button>
-                 
+          {/* Action Row: Publish Button */}
+          <div className="flex flex-col gap-2 relative z-20 mt-2">
+             <div className="flex items-center gap-3 w-full">
                  <motion.button 
                     whileTap={{ scale: 0.98 }}
                     onClick={async () => {
@@ -2265,7 +2176,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     }}
                     className={`flex-1 h-[60px] rounded-[20px] font-black text-lg italic uppercase tracking-tighter transition-all duration-300 flex items-center justify-center gap-2 shadow-2xl ${isReady ? 'bg-[#39FF14] text-black shadow-[0_0_30px_rgba(57,255,20,0.3)] hover:shadow-[0_0_40px_rgba(57,255,20,0.6)]' : 'bg-white/5 backdrop-blur-xl text-gray-400 border border-white/10 hover:bg-white/10'}`}
                  >
-                     {isReady ? (isDraftMode ? <><Check size={20} strokeWidth={3} /> DAVETLERİ GÖNDER & MAÇI YAYINLA</> : <><Check size={20} strokeWidth={3} /> YAYINLA & DAVET ET</>) : 'TESİS BEKLENİYOR'}
+                     {isReady ? (isDraftMode ? <><Check size={20} strokeWidth={3} /> DAVETLERİ GÖNDER & MAÇI YAYINLA</> : <><Check size={20} strokeWidth={3} /> YAYINLA & DAVET ET</>) : 'YAYINLA & DAVET ET'}
                  </motion.button>
              </div>
           </div>
@@ -2289,25 +2200,25 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         {activeSheet === 'RULES' && (
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-10">
                 <header className="flex items-center justify-between px-6 pb-4 border-b border-white/5">
-                    <h2 className="text-lg font-black text-white italic tracking-tighter uppercase drop-shadow-md">OYUN DNA'SI</h2>
+                    <h2 className="text-lg font-black text-white italic tracking-tighter uppercase drop-shadow-md">OYUN KURALLARI</h2>
                     <button onClick={() => setActiveSheet('NONE')} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
                 </header>
                 <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar">
                    {/* Takım Formatı */}
                    <div className="space-y-2">
                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Takım Formatı</p>
-                     <div className="flex gap-2">
-                       {['5v5', '7v7', '11v11'].map(f => (
+                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                       {FORMATS.map(f => (
                          <button
-                           key={f}
-                           onClick={() => setFormat(FORMATS.find(fmt => fmt.v === f) || FORMATS[4])}
-                           className={`flex-1 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
-                             format.v === f 
+                           key={f.v}
+                           onClick={() => setFormat(f)}
+                           className={`shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
+                             format.v === f.v 
                                ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
                                : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
                            }`}
                          >
-                           {f}
+                           {f.v}
                          </button>
                        ))}
                      </div>
@@ -2377,9 +2288,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                          {AGE_OPTIONS.map(a => (
                            <button
                              key={a}
-                             onClick={() => setDna({ ...dna, age: a })}
+                             onClick={() => setDna(prev => ({ ...prev, age: prev.age.includes(a) ? prev.age.filter(x => x !== a) : [...prev.age, a] }))}
                              className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-black transition-all backdrop-blur-md border ${
-                               dna.age === a ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'bg-white/[0.02] border-white/10 text-white'
+                               dna.age.includes(a) ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'bg-white/[0.02] border-white/10 text-white'
                              }`}
                            >
                              {a}
@@ -2418,6 +2329,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                      </div>
                    </div>
                    
+                   {/* Uyarı Metni */}
+                   <p className="text-[10px] text-gray-500 text-center mt-4">İstediğiniz kategorileri boş bırakabilirsiniz.</p>
+
                    <button onClick={() => setActiveSheet('NONE')} className="w-full h-[60px] mt-6 bg-[#FFFF00] text-black font-black italic uppercase text-lg rounded-[24px] transition-all shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer">
                        KURALLARI ONAYLA
                    </button>
@@ -2513,356 +2427,176 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
          )}
 
         {activeSheet === 'PLAYER_PICKER' && (
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex flex-col justify-end pointer-events-none">
-                <div className="w-full bg-[#0D1117]/95 backdrop-blur-xl border-t border-white/10 rounded-t-[32px] p-5 pb-8 pointer-events-auto shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative">
-                    <button onClick={() => setActiveSheet('NONE')} className="absolute top-4 right-4 p-2 bg-white/5 rounded-full text-white hover:bg-white/10"><X size={16} /></button>
-                    <div className="w-10 h-1.5 bg-white/20 rounded-full mx-auto mb-5" />
-                    
-                    <div className="flex items-center gap-4 border-b border-white/5 pb-4 mb-4">
-                        <button onClick={() => setPickerTab('FRIENDS')} className={`text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${pickerTab === 'FRIENDS' ? 'bg-white/10 text-white shadow-inner' : 'text-gray-500 hover:text-white'}`}>Arkadaşlarım</button>
-                        <button onClick={() => setPickerTab('TEAMS')} className={`text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${pickerTab === 'TEAMS' ? 'bg-white/10 text-white shadow-inner' : 'text-gray-500 hover:text-white'}`}>Takımlarım</button>
-                    </div>
-
-                    <div className="flex overflow-x-auto gap-3 pb-4 custom-scrollbar">
-                        {pickerTab === 'FRIENDS' && friends.map(f => (
-                            <div key={f.id}
-                                 draggable
-                                 onDragStart={e => e.dataTransfer.setData('application/json', JSON.stringify({ id: f.id, name: f.name, avatar: f.avatar }))}
-                                 onClick={() => {
-                                     if (selectedSlotForPicker) {
-                                         setMyPlayers(prev => {
-                                             const next = { ...prev };
-                                             for (const k in next) { if (next[k].id === f.id) delete next[k]; }
-                                             next[selectedSlotForPicker] = { id: f.id, name: f.name, avatar: f.avatar || '', status: 'PENDING' };
-                                             return next;
-                                         });
-                                         setActiveSheet('NONE');
-                                     }
-                                 }}
-                                 className="shrink-0 w-[100px] h-[140px] bg-gradient-to-b from-[#161B22] to-black rounded-2xl border border-white/5 flex flex-col items-center justify-center p-3 relative overflow-hidden group cursor-pointer hover:border-[#39FF14]/50 hover:shadow-[0_0_20px_rgba(57,255,20,0.2)] transition-all"
-                            >
-                                <div className="absolute top-0 right-0 bg-gradient-to-br from-[#39FF14] to-emerald-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-bl-lg z-10 shadow-sm">92 FP</div>
-                                <div className="w-12 h-12 rounded-full border-2 border-white/10 overflow-hidden mb-2 group-hover:scale-110 transition-transform">
-                                    {f.avatar ? <img src={f.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/5 flex items-center justify-center text-white font-black text-xs">{f.name.charAt(0)}</div>}
-                                </div>
-                                <span className="text-[10px] font-bold text-white text-center truncate w-full">{f.name.split(' ')[0]}</span>
-                                <span className="text-[8px] font-black text-[#39FF14] uppercase mt-1 opacity-70">SNT</span>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex flex-col">
+                <div className="flex-1 overflow-y-auto">
+                    {/* Modal Header */}
+                    <div className="sticky top-0 bg-[#0A0E14]/95 backdrop-blur-xl border-b border-white/5 px-6 pt-14 pb-5 z-10">
+                        <div className="flex justify-between items-start mb-5">
+                            <div>
+                                <h2 className="text-xl font-black text-white uppercase italic tracking-tight">KADROYA OYUNCU EKLE</h2>
+                                <p className="text-[10px] text-[#39FF14] font-bold uppercase tracking-widest mt-1">Arkadaşlarını Çağır</p>
                             </div>
-                        ))}
+                            <button onClick={() => { setActiveSheet('NONE'); setSelectedFriendsForPicker([]); setFriendSearch(''); }}
+                                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10">
+                                <X size={18} />
+                            </button>
+                        </div>
                         
-                        {pickerTab === 'TEAMS' && userTeams.map(t => (
-                            <div key={t.id} className="shrink-0 w-[240px] bg-gradient-to-b from-[#161B22] to-black rounded-2xl border border-white/5 p-4 flex flex-col justify-between hover:border-white/20 transition-all">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">{t.logo || '🛡️'}</div>
-                                    <div>
-                                        <h4 className="text-sm font-black text-white">{t.name}</h4>
-                                        <p className="text-[10px] text-gray-500">{t.players?.length || 0} Oyuncu</p>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        const newPlayers: typeof myPlayers = {};
-                                        t.players?.forEach((p, idx) => {
-                                            const slotId = `slot_${idx}`;
-                                            const friend = friends.find(f => f.id === p);
-                                            newPlayers[slotId] = { 
-                                                id: p, 
-                                                name: friend ? friend.name : `Oyuncu ${idx+1}`, 
-                                                avatar: friend?.avatar || '', 
-                                                status: 'PENDING' 
-                                            };
-                                        });
-                                        setMyPlayers(newPlayers);
-                                        setActiveSheet('NONE');
-                                    }}
-                                    className="w-full py-2 bg-[#FFFF00]/10 text-[#FFFF00] border border-[#FFFF00]/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FFFF00] hover:text-black hover:shadow-[0_0_15px_rgba(255,255,0,0.3)] transition-all"
-                                >
-                                    Kadroyu Sahaya Diz
-                                </button>
+                        {/* Arama */}
+                        <div className="relative mb-5">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+                            <input type="text" value={friendSearch} onChange={e => setFriendSearch(e.target.value)}
+                                placeholder="Arkadaş ara..."
+                                className="w-full bg-[#161B22] border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#39FF14]/50 transition-colors" />
+                        </div>
+
+                        {/* Tab and Categories */}
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setPickerTab('FRIENDS')} className={`text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${pickerTab === 'FRIENDS' ? 'bg-white/10 text-white shadow-inner border border-white/10' : 'text-gray-500 hover:text-white'}`}>Arkadaşlarım</button>
+                                <button onClick={() => setPickerTab('TEAMS')} className={`text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${pickerTab === 'TEAMS' ? 'bg-white/10 text-white shadow-inner border border-white/10' : 'text-gray-500 hover:text-white'}`}>Takımlarım</button>
                             </div>
-                        ))}
+
+                            {pickerTab === 'FRIENDS' && (
+                                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                                    {['Tümü', 'Favorilerim', 'Lise Tayfası', 'Üniversite', 'İş Arkadaşları'].map(cat => (
+                                    <button 
+                                        key={cat}
+                                        onClick={() => setPickerCategory(cat)}
+                                        className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                                        pickerCategory === cat 
+                                            ? (cat === 'Favorilerim' ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
+                                            : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {cat === 'Favorilerim' && <Star size={10} fill={pickerCategory === cat ? "black" : "currentColor"} />}
+                                        {cat}
+                                    </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="px-6 py-4 max-w-lg mx-auto w-full pb-24">
+                        {pickerTab === 'FRIENDS' && (
+                            <div className="space-y-2">
+                                {friends.filter(f => {
+                                    if (friendSearch && !f.name.toLowerCase().includes(friendSearch.toLowerCase())) return false;
+                                    if (pickerCategory !== 'Tümü') {
+                                        if (pickerCategory === 'Favorilerim') {
+                                            if (!(f as any).isFavorite) return false;
+                                        } else {
+                                            if (f.group !== pickerCategory) return false;
+                                        }
+                                    }
+                                    return true;
+                                }).map(f => {
+                                    const isSelected = selectedFriendsForPicker.includes(f.id);
+                                    return (
+                                        <div key={f.id} onClick={() => {
+                                            setSelectedFriendsForPicker(prev => prev.includes(f.id) ? prev.filter(id => id !== f.id) : [...prev, f.id]);
+                                        }} className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.1)]' : 'bg-[#161B22] border-white/5 hover:border-[#39FF14]/30'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden relative border border-white/10">
+                                                    {f.avatar ? <img src={f.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white font-black text-sm">{f.name.charAt(0)}</div>}
+                                                    {(f as any).isFavorite && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FFFF00] rounded-full flex items-center justify-center border-2 border-[#161B22]"><Star size={8} className="text-black" fill="black" /></div>}
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-black text-white drop-shadow-md">{f.name}</h3>
+                                                    <p className="text-[9px] text-[#39FF14] uppercase font-black tracking-widest mt-0.5">{f.group}</p>
+                                                </div>
+                                            </div>
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
+                                                {isSelected && <Check size={14} className="text-black" strokeWidth={3} />}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                        {pickerTab === 'TEAMS' && (
+                            <div className="space-y-3">
+                                {userTeams.map(t => (
+                                    <div key={t.id} className="bg-gradient-to-b from-[#161B22] to-black rounded-2xl border border-white/5 p-5 flex flex-col gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-full bg-black/60 border border-white/10 p-1 flex items-center justify-center text-2xl drop-shadow-lg shadow-inner overflow-hidden shrink-0">
+                                                {t.logo ? (
+                                                    <img src={t.logo} className="w-full h-full object-contain drop-shadow-md" alt="" />
+                                                ) : (
+                                                    '🛡️'
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base font-black text-white drop-shadow-md">{t.name}</h4>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{t.players?.length || 0} Oyuncu</p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                const newPlayers: typeof myPlayers = { ...myPlayers };
+                                                const emptySlots = pitchSlots.filter(s => !newPlayers[s.id]);
+                                                let slotIdx = 0;
+                                                t.players?.forEach((p) => {
+                                                    if (slotIdx < emptySlots.length) {
+                                                        const friend = friends.find(f => f.id === p);
+                                                        for (const k in newPlayers) { if (newPlayers[k].id === p) delete newPlayers[k]; }
+                                                        newPlayers[emptySlots[slotIdx].id] = { id: p, name: friend ? friend.name : `Oyuncu`, avatar: friend?.avatar || '', status: 'PENDING' };
+                                                        slotIdx++;
+                                                    }
+                                                });
+                                                setMyPlayers(newPlayers);
+                                                setActiveSheet('NONE');
+                                            }}
+                                            className="w-full py-3 bg-[#FFFF00]/10 text-[#FFFF00] border border-[#FFFF00]/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FFFF00] hover:text-black hover:shadow-[0_0_15px_rgba(255,255,0,0.3)] transition-all"
+                                        >
+                                            Kadroyu Sahaya Diz
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
+
+                {pickerTab === 'FRIENDS' && selectedFriendsForPicker.length > 0 && (
+                    <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent pointer-events-none z-20">
+                        <div className="pointer-events-auto">
+                            <button
+                                onClick={() => {
+                                    setMyPlayers(prev => {
+                                        const next = { ...prev };
+                                        const emptySlots = pitchSlots.filter(s => !next[s.id]);
+                                        let targetSlots = [...emptySlots];
+                                        if (selectedSlotForPicker && emptySlots.find(s => s.id === selectedSlotForPicker)) {
+                                            targetSlots = [emptySlots.find(s => s.id === selectedSlotForPicker)!, ...emptySlots.filter(s => s.id !== selectedSlotForPicker)];
+                                        }
+                                        let slotIdx = 0;
+                                        selectedFriendsForPicker.forEach(friendId => {
+                                            const friend = friends.find(f => f.id === friendId);
+                                            if (friend && slotIdx < targetSlots.length) {
+                                                for (const k in next) { if (next[k].id === friend.id) delete next[k]; }
+                                                next[targetSlots[slotIdx].id] = { id: friend.id, name: friend.name, avatar: friend.avatar || '', status: 'PENDING' };
+                                                slotIdx++;
+                                            }
+                                        });
+                                        return next;
+                                    });
+                                    setSelectedFriendsForPicker([]);
+                                    setFriendSearch('');
+                                    setActiveSheet('NONE');
+                                }}
+                                className="w-full h-[60px] bg-[#39FF14] text-black font-black uppercase tracking-widest text-base rounded-2xl shadow-[0_0_30px_rgba(57,255,20,0.3)] hover:shadow-[0_0_40px_rgba(57,255,20,0.5)] transition-all"
+                            >
+                                Seçili {selectedFriendsForPicker.length} Arkadaşı Ekle
+                            </button>
+                        </div>
+                    </div>
+                )}
             </motion.div>
         )}
 
-        {showPlayerSeekModal && (
-          <motion.div 
-            initial={{ y: '100%' }} 
-            animate={{ y: 0 }} 
-            exit={{ y: '100%' }} 
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }} 
-            className="fixed inset-0 z-[70] bg-[#0A0E14]/98 backdrop-blur-2xl flex flex-col pt-10"
-          >
-            <header className="flex items-center justify-between px-6 pb-4 border-b border-white/5">
-              <div>
-                <h2 className="text-lg font-black text-white italic tracking-tighter uppercase drop-shadow-md">
-                  OYUNCU BUL İLANI OLUŞTUR
-                </h2>
-                <p className="text-[9px] text-[#39FF14] font-black tracking-widest uppercase mt-0.5">
-                  Takımın Eksik Bölgelerine Oyuncu Bul
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowPlayerSeekModal(false)} 
-                className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"
-              >
-                <X size={18} />
-              </button>
-            </header>
-            
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar pb-36">
-              
-              {/* Saha Adı */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                  Oynanacak Saha
-                </label>
-                <input 
-                  type="text" 
-                  value={seekSaha} 
-                  onChange={(e) => setSeekSaha(e.target.value)}
-                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-sm text-white font-bold placeholder-white/20 focus:border-[#39FF14]/50 focus:outline-none transition-colors"
-                  placeholder="Saha adı girin..."
-                />
-              </div>
 
-              {/* Tarih ve Saat */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                    Tarih
-                  </label>
-                  <input 
-                    type="text" 
-                    value={seekTarih} 
-                    onChange={(e) => setSeekTarih(e.target.value)}
-                    className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-sm text-white font-bold focus:border-[#39FF14]/50 focus:outline-none transition-colors"
-                    placeholder="Örn: Bugün, Yarın"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                    Saat
-                  </label>
-                  <input 
-                    type="text" 
-                    value={seekSaat} 
-                    onChange={(e) => setSeekSaat(e.target.value)}
-                    className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-sm text-white font-bold focus:border-[#39FF14]/50 focus:outline-none transition-colors"
-                    placeholder="Örn: 21:00"
-                  />
-                </div>
-              </div>
-
-              {/* İhtiyaç Duyulan Pozisyonlar */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-                  Hangi Pozisyonda İhtiyaç Var? (Çoklu Seçim)
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {ROLE_OPTIONS.map((role) => {
-                    const isSelected = seekPositions.includes(role.label);
-                    return (
-                      <button
-                        key={role.id}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSeekPositions(seekPositions.filter(p => p !== role.label));
-                          } else {
-                            setSeekPositions([...seekPositions, role.label]);
-                          }
-                        }}
-                        className={`h-16 rounded-xl border flex flex-col items-center justify-center transition-all backdrop-blur-xl cursor-pointer ${
-                          isSelected 
-                            ? 'bg-white/20 text-white border-2 shadow-lg font-black' 
-                            : 'bg-white/[0.12] border-white/20 text-white/95 hover:bg-white/[0.22] hover:border-white/45'
-                        }`}
-                        style={isSelected ? { borderColor: role.color, boxShadow: `0 0 20px ${role.color}60`, backgroundColor: `${role.color}35` } : {}}
-                      >
-                        <Shield size={16} style={isSelected ? { color: role.color } : {}} className="mb-1" />
-                        <span className={`text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-white font-black' : ''}`}>
-                          {role.id}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Maç Kuralları / Oyun DNA'sı (Filtreler şeklinde) */}
-              <div className="space-y-4 pt-2 border-t border-white/5">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FFFF00]">
-                  Maçın Kuralları & DNA
-                </p>
-
-                {/* Zorluk / Mentalite */}
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
-                    Oyun Ruhun / Mantalite
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'Ciddi', title: 'CİDDİ', color: '#FFFF00' },
-                      { id: 'Taktiksel', title: 'TAKTİKSEL', color: '#3b82f6' },
-                      { id: 'Rahat', title: 'RAHAT', color: '#10b981' }
-                    ].map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setSeekDifficulty(m.id as any)}
-                        className={`py-2.5 rounded-xl text-[10px] font-black tracking-widest border transition-all cursor-pointer ${
-                          seekDifficulty === m.id 
-                            ? 'text-white font-black shadow-md' 
-                            : 'bg-white/[0.12] border-white/20 text-white/90 hover:bg-white/[0.22] hover:border-white/45'
-                        }`}
-                        style={seekDifficulty === m.id ? { backgroundColor: `${m.color}50`, borderColor: m.color, borderWidth: '2.5px', boxShadow: `0 0 20px ${m.color}60` } : {}}
-                      >
-                        {m.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Format */}
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
-                    Takım Formatı
-                  </label>
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                    {['5v5', '6v6', '7v7', '8v8', '11v11'].map(f => (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => setSeekFormat(f)}
-                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-wider border transition-all cursor-pointer ${
-                          seekFormat === f 
-                            ? 'bg-[#39FF14]/40 border-2 border-[#39FF14] text-white shadow-[0_0_20px_rgba(57,255,20,0.6)]' 
-                            : 'bg-white/[0.12] border-white/20 text-white/90 hover:bg-white/[0.22] hover:border-white/45'
-                        }`}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Süre */}
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
-                    Maç Süresi
-                  </label>
-                  <div className="flex gap-2">
-                    {['60 Dakika', '90 Dakika', '120 Dakika'].map(d => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => setSeekDuration(d)}
-                        className={`flex-1 py-2.5 rounded-xl text-[10px] font-black tracking-wider border transition-all cursor-pointer ${
-                          seekDuration === d 
-                            ? 'bg-[#39FF14]/40 border-2 border-[#39FF14] text-white shadow-[0_0_20px_rgba(57,255,20,0.6)]' 
-                            : 'bg-white/[0.12] border-white/20 text-white/90 hover:bg-white/[0.22] hover:border-white/45'
-                        }`}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Cinsiyet & Yaş */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
-                      Cinsiyet
-                    </label>
-                    <div className="flex bg-white/[0.04] p-1.5 rounded-xl border border-white/15 backdrop-blur-md">
-                      {['Karma', 'Erkek', 'Kadın'].map(g => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setSeekGender(g)}
-                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                            seekGender === g ? 'bg-white/40 text-white border-2 border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.25)]' : 'text-white/70 hover:bg-white/[0.08]'
-                          }`}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">
-                      Yaş Grubu
-                    </label>
-                    <div className="flex bg-white/[0.04] p-1.5 rounded-xl border border-white/15 backdrop-blur-md overflow-x-auto no-scrollbar">
-                      {['18-22', '23-27', '28-35', 'Tümü'].map(a => (
-                        <button
-                          key={a}
-                          type="button"
-                          onClick={() => setSeekAge(a)}
-                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shrink-0 px-2.5 cursor-pointer ${
-                            seekAge === a ? 'bg-[#FFFF00]/50 text-black border-2 border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.5)] font-black' : 'text-white/70 hover:bg-white/[0.08]'
-                          }`}
-                        >
-                          {a}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* Yayınla Button */}
-            <div className="p-6 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/90 to-transparent sticky bottom-0 z-20 pb-12 pt-16 border-t border-white/5">
-              <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (!seekSaha.trim()) {
-                    alert('Lütfen saha adını girin.');
-                    return;
-                  }
-                  if (seekPositions.length === 0) {
-                    alert('Lütfen en az bir ihtiyaç duyulan pozisyon seçin.');
-                    return;
-                  }
-                  
-                  const newAd: PlayerSeekAnnouncement = {
-                    id: 'psa_' + Math.random().toString(36).substr(2, 9),
-                    creatorId: 'u1', // Kerem Yılmaz
-                    creatorName: 'Kerem Yılmaz',
-                    creatorAvatar: 'https://i.pravatar.cc/150?u=kerem2024',
-                    pitchName: seekSaha,
-                    date: seekTarih || 'Bugün',
-                    time: seekSaat || '21:00',
-                    positionsNeeded: seekPositions,
-                    difficulty: seekDifficulty,
-                    format: seekFormat,
-                    duration: seekDuration,
-                    gender: seekGender,
-                    ageGroup: seekAge,
-                    status: 'ACTIVE',
-                    createdAt: new Date().toISOString(),
-                    joinedPlayers: []
-                  };
-
-                  addPlayerSeekAd(newAd);
-                  setShowPlayerSeekModal(false);
-                  alert(`${seekPositions.join(', ')} mevkileri için oyuncu ilanı yayınlandı!`);
-                }}
-                className="w-full h-16 bg-gradient-to-r from-[#FFFF00] to-[#39FF14] text-black font-black text-sm uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 border-2 border-white/50 shadow-[0_0_45px_rgba(57,255,20,0.8)] hover:shadow-[0_0_60px_rgba(255,255,0,1)] hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-              >
-                <Check size={20} strokeWidth={3} /> OYUNCU BUL İLANINI YAYINLA
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );

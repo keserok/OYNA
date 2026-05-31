@@ -39,6 +39,7 @@ export interface AdminUser {
   oynaId?: string; // Benzersiz OYNA Kimliği Örn: #ARD932
   friends?: string[]; // Onaylanmış arkadaşların User ID'leri
   isLookingForTeam?: boolean; // Transfer Merkezi Görünürlüğü
+  newMatchBadge?: boolean; // Yeni maç eklendi bildirim rozeti
 }
 
 export interface IUser {
@@ -105,7 +106,7 @@ export interface Match {
 }
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'BOOKING_ADDONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'PREMIUM' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'UPCOMING_MATCHES';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'BOOKING_ADDONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'PREMIUM' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'UPCOMING_MATCHES' | 'CARD_BUILDER';
 
 export interface PlayerStat {
   value: number;
@@ -270,6 +271,8 @@ export interface MatchListing {
   chatMessages?: { id: string; senderId: string; senderName: string; senderAvatar: string; text: string; timestamp: string }[];
   awaySlots?: PositionSlot[];
   reservePlayers?: Player[];
+  cancelReason?: string;
+  refundStatus?: string;
 }
 
 export interface PositionSlot {
@@ -362,6 +365,9 @@ export interface Referee {
     communication: number; // 0-100
   };
   reviews: ServiceReview[];
+  isAvailable?: boolean;
+  workingHours?: { activeDays: string[]; activeHours: string };
+  settings?: any;
 }
 
 export interface Equipment {
@@ -412,6 +418,9 @@ export interface Goalkeeper {
     jersey: string;
   };
   reviews: ServiceReview[];
+  isAvailable?: boolean;
+  workingHours?: { activeDays: string[]; activeHours: string };
+  settings?: any;
 }
 
 export interface ChatMessage {
