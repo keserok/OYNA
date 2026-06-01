@@ -1,60 +1,33 @@
-import { supabase } from './supabaseClient';
+// ─── DEPRECATED ─────────────────────────────────────────────────
+// Bu dosya geriye uyumluluk için korunuyor.
+// Yeni kod store/useAuthStore.ts kullanmalı.
+// ─────────────────────────────────────────────────────────────────
 
-export const auth = {
-  currentUser: null as any
-};
+import { useAuthStore, auth } from './store/useAuthStore';
+import type { AuthUser } from './store/useAuthStore';
 
-// Initialize currentUser synchronously if possible, but mostly rely on listener
-supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session?.user) {
-    auth.currentUser = {
-      uid: session.user.id,
-      email: session.user.email,
-      displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-      photoURL: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
-    };
-  }
-});
+export { auth, useAuthStore };
+export type { AuthUser };
 
-supabase.auth.onAuthStateChange((event, session) => {
-  if (session?.user) {
-    auth.currentUser = {
-      uid: session.user.id,
-      email: session.user.email,
-      displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-      photoURL: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
-    };
-  } else {
-    auth.currentUser = null;
-  }
-});
+/** @deprecated useAuthStore().loginWithGoogle() kullanın */
+export const loginWithGoogle = () => useAuthStore.getState().loginWithGoogle();
 
-export const loginWithGoogle = async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin
+/** @deprecated useAuthStore().logout() kullanın */
+export const logout = () => useAuthStore.getState().logout();
+
+/** @deprecated useAuthStore().initAuthListener() kullanın */
+export const onAuthStateChanged = (_authObj: any, callback: (user: AuthUser | null) => void) => {
+  // 1. Immediately fire with current state
+  callback(useAuthStore.getState().currentUser);
+
+  // 2. Subscribe to future changes (Zustand returns unsubscribe fn)
+  const unsubscribe = useAuthStore.subscribe(
+    (state, prevState) => {
+      if (state.currentUser !== prevState.currentUser) {
+        callback(state.currentUser);
+      }
     }
-  });
-  if (error) console.error("Error signing in with Google", error);
-};
+  );
 
-export const logout = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    console.error("Error signing out", error);
-  }
-};
-
-export const onAuthStateChanged = (authObj: any, callback: (user: any) => void) => {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    callback(session?.user ? auth.currentUser : null);
-  });
-  
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    callback(session?.user ? auth.currentUser : null);
-  });
-
-  return () => subscription.unsubscribe();
+  return unsubscribe;
 };

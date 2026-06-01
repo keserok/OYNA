@@ -42,6 +42,16 @@ export interface AdminUser {
   newMatchBadge?: boolean; // Yeni maç eklendi bildirim rozeti
 }
 
+export interface AdminLog {
+  id: string;
+  action: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE';
+  targetId: string;
+  targetName: string;
+  details: string;
+  timestamp: string;
+  adminId: string;
+}
+
 export interface IUser {
   id: string;
   name: string;
@@ -263,6 +273,9 @@ export interface MatchListing {
   ageGroup?: string;
   // Hakem ve Skor Otoritesi
   refereeId?: string; // Appointed referee
+  refereeStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı hakem takibi
+  gkStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı kaleci takibi
+  ownerCheckIn?: boolean; // Tesisin ekibi onaylama durumu
   homeTeamId?: string;
   awayTeamId?: string;
   homeScore?: number;
@@ -332,6 +345,40 @@ export interface Pitch {
   paramMerchantId?: string;
   paramApiKey?: string;
   paramClientId?: string;
+  ownerId?: string;
+  workingHours?: { open: string; close: string; slotDuration: number; activeDays?: string[] };
+  pricingPolicy?: any[];
+  surfaceType?: 'SUNİ ÇİM' | 'DOĞAL ÇİM' | 'PARKE' | 'TARTAN';
+  dimensions?: string; // e.g. "30x50"
+  facilityId?: string; // Link to the main facility
+}
+
+export interface Facility {
+  id: string;
+  ownerId: string;
+  name: string;
+  district: string;
+  location: string;
+  coverImage: string;
+  images: string[];
+  description: string;
+  amenities: string[];
+  coordinates: { lat: number; lng: number };
+  workingHours: { open: string; close: string; slotDuration: number; activeDays?: string[] };
+  pitches: Pitch[]; // Embedded or referenced pitches
+}
+
+export interface Customer {
+  id: string;
+  ownerId: string; // The facility owner who added this customer
+  name: string;
+  phone: string;
+  avatar?: string;
+  reliabilityScore: number;
+  balance: number; // Positive means debt (veresiye), negative means credit
+  totalMatches: number;
+  lastMatchDate?: string;
+  notes?: string;
 }
 
 export interface ServiceReview {
@@ -595,3 +642,42 @@ export interface PlayerSeekAnnouncement {
   createdAt?: string;
 }
 
+// ============================================================================
+// OWNER SAAS & UI CONFIGURATION (PATRON PANELİ)
+// ============================================================================
+
+export interface FacilityUIConfig {
+  id: string;
+  facilityId: string;
+  primaryColor: string; // Hex color for the facility's theme
+  secondaryColor: string;
+  cardStyle: 'GLASS' | 'SOLID' | 'MINIMAL';
+  badgeIcon: string; // Emoji or icon name
+  customGreetingText: string;
+  allowReferees: boolean;
+  allowGoalkeepers: boolean;
+}
+
+export interface RoleAppearanceRule {
+  id: string;
+  facilityId: string;
+  roleType: 'REF' | 'GK' | 'PLAYER';
+  tierOverride?: 'gold' | 'silver' | 'bronze' | 'custom';
+  customBadge?: string;
+  highlightColor?: string;
+}
+
+export interface CRMUser {
+  id: string;
+  facilityId: string;
+  userId: string;
+  name: string;
+  avatar: string;
+  role: 'PLAYER' | 'CAPTAIN' | 'GK' | 'REF';
+  loyaltyScore: number; // Tesis bazlı sadakat skoru
+  totalSpent: number; // Tesis bazlı harcama
+  isVip: boolean;
+  isBanned: boolean;
+  customNote: string;
+  lastVisit: string;
+}

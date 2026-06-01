@@ -44,6 +44,7 @@ const Sparkle: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, dela
 
 const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => {
   const [step, setStep] = useState(1);
+  const [showHandshake, setShowHandshake] = useState(true);
   const [fairPlay, setFairPlay] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [playerRatings, setPlayerRatings] = useState<Record<string, number>>({});
@@ -198,6 +199,59 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           >
             Lobiye Geri Dön
           </motion.button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (showHandshake) {
+    return (
+      <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+          animate={{ scale: 1, opacity: 1, y: 0 }} 
+          className="bg-[#121620]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-sm relative z-10 flex flex-col items-center text-center shadow-2xl"
+        >
+          <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center mb-4">
+            <Trophy size={32} className="text-blue-400" />
+          </div>
+          <h2 className="text-2xl font-black uppercase italic tracking-tight text-white mb-2">SKOR ONAYI</h2>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">Hakem Maç Skorunu Girdi</p>
+
+          <div className="flex items-center justify-center gap-6 mb-8 w-full">
+            <div className="text-center flex-1">
+              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">SİZİN TAKIM</span>
+              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">5</div>
+            </div>
+            <div className="text-3xl font-black text-gray-700">-</div>
+            <div className="text-center flex-1">
+              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">RAKİP</span>
+              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">3</div>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3">
+            <motion.button 
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setShowHandshake(false)}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2"
+            >
+              <ShieldCheck size={18} /> SKORU ONAYLA
+            </motion.button>
+            <motion.button 
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                alert('Skor itirazınız hakeme ve diğer kaptana iletildi.');
+                setShowHandshake(false);
+              }}
+              className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
+            >
+              SKORA İTİRAZ ET
+            </motion.button>
+          </div>
         </motion.div>
       </div>
     );

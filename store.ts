@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog } from './types';
 import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER_TEAMS } from './constants';
+import { MOCK_USERS } from './__mocks__/mockUsers';
 import * as FB from './supabaseMutations';
 import { auth } from './supabaseAuth';
 
@@ -70,101 +71,13 @@ export interface AppSettings {
 }
 // ─────────────────────────────────────────────────────────────────────
 
-export const INITIAL_USERS: AdminUser[] = [
-  // ── 5 OYUNCULAR ─────────────────────────────────────
-  {
-    id: 'u1', name: 'Kerem Yılmaz', email: 'kerem@oyna.app', phone: '+90 532 111 22 33',
-    avatar: 'https://i.pravatar.cc/150?u=kerem2024',
-    role: UserRole.CAPTAIN, rating: 4.9, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '15 Oca 2024', matchCount: 52, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'u2', name: 'Burak Demir', email: 'burak@oyna.app', phone: '+90 555 222 33 44',
-    avatar: 'https://i.pravatar.cc/150?u=burak2024',
-    role: UserRole.PLAYER, rating: 4.5, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '20 Oca 2024', matchCount: 34, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'u3', name: 'Mert Arslan', email: 'mert@oyna.app', phone: '+90 555 333 44 55',
-    avatar: 'https://i.pravatar.cc/150?u=mert2024',
-    role: UserRole.PLAYER, rating: 4.1, isVerified: true, isBanned: false, isPro: false,
-    joinDate: '03 Şub 2024', matchCount: 18, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'u4', name: 'Arda Kaya', email: 'arda@oyna.app', phone: '+90 533 444 55 66',
-    avatar: 'https://i.pravatar.cc/150?u=arda2024',
-    role: UserRole.PLAYER, rating: 3.8, isVerified: false, isBanned: false, isPro: false,
-    joinDate: '10 Şub 2024', matchCount: 9, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'u5', name: 'Emre Çelik', email: 'emre@oyna.app', phone: '+90 544 555 66 77',
-    avatar: 'https://i.pravatar.cc/150?u=emre2024',
-    role: UserRole.PLAYER, rating: 4.3, isVerified: true, isBanned: false, isPro: false,
-    joinDate: '18 Şub 2024', matchCount: 25, reliabilityScore: 100, banExpiresAt: null
-  },
-  // ── 5 KALECİLER ─────────────────────────────────────
-  {
-    id: 'ugk1', name: 'Fernando Muslera', email: 'muslera@oyna.app', phone: '+90 532 999 88 77',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/44062-1701163458.jpg?lm=1',
-    role: UserRole.GOALKEEPER, rating: 4.9, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '10 Oca 2024', matchCount: 31, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'ugk2', name: 'Dominik Livakovic', email: 'livakovic@oyna.app', phone: '+90 532 888 77 66',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/206386-1669112448.jpg?lm=1',
-    role: UserRole.GOALKEEPER, rating: 4.8, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '12 Oca 2024', matchCount: 27, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'ugk3', name: 'Uğurcan Çakır', email: 'ugurcan@oyna.app', phone: '+90 532 777 66 55',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/293279-1669112520.jpg?lm=1',
-    role: UserRole.GOALKEEPER, rating: 4.7, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '15 Oca 2024', matchCount: 22, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'ugk4', name: 'Mert Günok', email: 'gunok@oyna.app', phone: '+90 533 666 55 44',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/50582-1669112502.jpg?lm=1',
-    role: UserRole.GOALKEEPER, rating: 4.7, isVerified: true, isBanned: false, isPro: false,
-    joinDate: '20 Oca 2024', matchCount: 19, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'ugk5', name: 'Altay Bayındır', email: 'altay@oyna.app', phone: '+90 533 555 44 33',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/335820-1669112484.jpg?lm=1',
-    role: UserRole.GOALKEEPER, rating: 4.5, isVerified: true, isBanned: false, isPro: false,
-    joinDate: '25 Oca 2024', matchCount: 15, reliabilityScore: 100, banExpiresAt: null
-  },
-  // ── 5 HAKEMLER ──────────────────────────────────────
-  {
-    id: 'uref1', name: 'Cüneyt Çakır', email: 'cakir@oyna.app', phone: '+90 533 777 66 55',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/115821-1669112628.jpg?lm=1',
-    role: UserRole.REFEREE, rating: 4.9, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '05 Oca 2024', matchCount: 58, reliabilityScore: 100, banExpiresAt: null
-  },
-  {
-    id: 'uref2', name: 'Fırat Aydınus', email: 'aydin@oyna.app', phone: '+90 533 666 77 88',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/115822-1669112646.jpg?lm=1',
-    role: UserRole.REFEREE, rating: 4.7, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '08 Oca 2024', matchCount: 44,
-  },
-  {
-    id: 'uref3', name: 'Halil Umut Meler', email: 'meler@oyna.app', phone: '+90 534 555 66 77',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/115823-1669112664.jpg?lm=1',
-    role: UserRole.REFEREE, rating: 4.8, isVerified: true, isBanned: false, isPro: true,
-    joinDate: '11 Oca 2024', matchCount: 38,
-  },
-  {
-    id: 'uref4', name: 'Ali Palabıyık', email: 'palabiyik@oyna.app', phone: '+90 534 444 55 66',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/115824-1669112682.jpg?lm=1',
-    role: UserRole.REFEREE, rating: 4.4, isVerified: true, isBanned: false, isPro: false,
-    joinDate: '18 Oca 2024', matchCount: 29,
-  },
-  {
-    id: 'uref5', name: 'Abdulkadir Bitigen', email: 'bitigen@oyna.app', phone: '+90 534 333 44 55',
-    avatar: 'https://img.a.transfermarkt.technology/portrait/header/115825-1669112700.jpg?lm=1',
-    role: UserRole.REFEREE, rating: 4.5, isVerified: false, isBanned: false, isPro: false,
-    joinDate: '22 Oca 2024', matchCount: 21,
-  },
-];
+const IS_LOCAL_DEV =
+  import.meta.env.VITE_DEV_MODE === 'true' ||
+  !import.meta.env.VITE_SUPABASE_URL;
+
+// INITIAL_USERS artık __mocks__/mockUsers.ts'de (MOCK_USERS olarak).
+// Prod'da boş dizi, dev'de mock veriler yüklenir.
+export const INITIAL_USERS: AdminUser[] = IS_LOCAL_DEV ? MOCK_USERS : [];
 
 const INITIAL_NOTIFICATIONS: AdminNotification[] = [
   { id: 'n1', title: '🎉 Haftalık İndirim!', body: 'Bu hafta saha kiralarında %15 indirim var. Hemen rezerve et!', type: 'PROMO', targetAudience: 'ALL', sentAt: '2026-03-15 09:00', isActive: true },
@@ -227,8 +140,22 @@ interface AppState {
   adminMatches: MatchListing[];
   adminUsers: AdminUser[];
   adminNotifications: AdminNotification[];
+  adminLogs: AdminLog[];
   adminTeams: Team[];
   appSettings: AppSettings;
+
+  // ─── SaaS OwnerPanel (Patron Paneli) States ──────────────────────
+  facilityUIConfigs: import('./types').FacilityUIConfig[];
+  setFacilityUIConfigs: (configs: import('./types').FacilityUIConfig[]) => Promise<void>;
+  roleAppearanceRules: import('./types').RoleAppearanceRule[];
+  setRoleAppearanceRules: (rules: import('./types').RoleAppearanceRule[]) => Promise<void>;
+  crmUsers: import('./types').CRMUser[];
+  setCrmUsers: (users: import('./types').CRMUser[]) => void;
+  addCrmUser: (user: import('./types').CRMUser) => Promise<void>;
+  updateCrmUser: (user: import('./types').CRMUser) => Promise<void>;
+  deleteCrmUser: (id: string) => Promise<void>;
+  // ───────────────────────────────────────────────────────────────
+
 
   // App-wide toggles
   announcementBanner: string;
@@ -285,7 +212,6 @@ interface AppState {
   setSelectedRef: (ref: Referee | null) => void;
   setMarketplaceReturnView: (view: AppView) => void;
   setMatchJoinReturnView: (view: AppView) => void;
-  setGlobalText: (key: string, value: string) => void;
 
   // ─── Direct Setters for Firebase Listeners ─────────────────────
   setAdminPitches: (pitches: Pitch[]) => void;
@@ -299,44 +225,50 @@ interface AppState {
   initialLoadComplete: boolean;
 
   // ─── Pitch CRUD ────────────────────────────────────────────────
-  addPitch: (pitch: Pitch) => void;
-  updatePitch: (pitch: Pitch) => void;
-  deletePitch: (id: string) => void;
+  addPitch: (pitch: Pitch) => Promise<void>;
+  updatePitch: (pitch: Pitch) => Promise<void>;
+  deletePitch: (id: string) => Promise<void>;
 
   // ─── Goalkeeper CRUD ───────────────────────────────────────────
-  addGoalkeeper: (gk: Goalkeeper) => void;
-  updateGoalkeeper: (gk: Goalkeeper) => void;
-  deleteGoalkeeper: (id: string) => void;
+  addGoalkeeper: (gk: Goalkeeper) => Promise<void>;
+  updateGoalkeeper: (gk: Goalkeeper) => Promise<void>;
+  deleteGoalkeeper: (id: string) => Promise<void>;
 
   // ─── Referee CRUD ──────────────────────────────────────────────
-  addReferee: (ref: Referee) => void;
-  updateReferee: (ref: Referee) => void;
-  deleteReferee: (id: string) => void;
+  addReferee: (ref: Referee) => Promise<void>;
+  updateReferee: (ref: Referee) => Promise<void>;
+  deleteReferee: (id: string) => Promise<void>;
   loadServices: () => Promise<void>;
+  
+  // ─── Owner (SaaS) Data Load ─────────────────────────────────────
+  loadOwnerData: (facilityId?: string) => Promise<void>;
 
   // ─── Supabase Plei Architecture ───────────────────────────────
   joinMatchPleiAction: (matchId: string, slotId: string, role: string) => Promise<void>;
   initSupabaseRealtime: () => void;
 
   // ─── Match CRUD ────────────────────────────────────────────────
-  addMatch: (match: MatchListing) => void;
-  updateMatch: (match: MatchListing) => void;
-  deleteMatch: (id: string) => void;
+  addMatch: (match: MatchListing) => Promise<void>;
+  updateMatch: (match: MatchListing) => Promise<void>;
+  deleteMatch: (id: string) => Promise<void>;
 
   // ─── User CRUD ─────────────────────────────────────────────────
-  updateUser: (user: AdminUser) => void;
-  setNewMatchBadge: (val: boolean) => void;
-  banUser: (id: string) => void;
-  unbanUser: (id: string) => void;
-  toggleUserPro: (id: string) => void;
-  verifyUser: (id: string) => void;
-  addUser: (user: AdminUser) => void;
-  deleteUser: (id: string) => void;
+  updateUser: (user: AdminUser) => Promise<void>;
+  setNewMatchBadge: (val: boolean) => Promise<void>;
+  banUser: (id: string) => Promise<void>;
+  unbanUser: (id: string) => Promise<void>;
+  toggleUserPro: (id: string) => Promise<void>;
+  verifyUser: (id: string) => Promise<void>;
+  addUser: (user: AdminUser) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
 
   // ─── Notifications ─────────────────────────────────────────────
   addNotification: (n: AdminNotification) => void;
   deleteNotification: (id: string) => void;
   toggleNotification: (id: string) => void;
+
+  // ─── Logs ──────────────────────────────────────────────────────
+  addAdminLog: (log: Omit<AdminLog, 'id' | 'timestamp'>) => void;
 
   // ─── App Settings ──────────────────────────────────────────────
   updateAppSettings: (settings: Partial<AppSettings>) => void;
@@ -362,10 +294,6 @@ interface AppState {
   updateSingleNotificationPref: (key: keyof NotificationPreferences, enabled: boolean) => void;
 }
 
-const IS_LOCAL_DEV =
-  import.meta.env.VITE_DEV_MODE === 'true' ||
-  !import.meta.env.VITE_SUPABASE_URL;
-
 export const useAppStore = create<AppState>((set, get) => ({
   isHydrated: true,
   initApp: async () => {
@@ -376,13 +304,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
     try {
-      await Promise.allSettled([
+      const [sessionRes, pitchesRes, matchesRes, teamsRes, servicesRes] = await Promise.allSettled([
         withTimeout(supabase.auth.getSession()),
-        withTimeout(supabase.from('pitches').select('*').limit(20) as unknown as Promise<unknown>),
-        withTimeout(supabase.from('matches').select('*').limit(20) as unknown as Promise<unknown>),
-        withTimeout(supabase.from('teams').select('*').limit(20) as unknown as Promise<unknown>),
+        withTimeout(FB.fbGetPitches()),
+        withTimeout(FB.fbGetMatches()),
+        withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
       ]);
+
+      if (pitchesRes.status === 'fulfilled' && pitchesRes.value) {
+        set({ adminPitches: pitchesRes.value as Pitch[] });
+      }
+      if (matchesRes.status === 'fulfilled' && matchesRes.value) {
+        set({ adminMatches: matchesRes.value as MatchListing[] });
+      }
+      if (teamsRes.status === 'fulfilled' && teamsRes.value) {
+        set({ adminTeams: teamsRes.value as Team[] });
+      }
     } catch (e) {
       console.error('Hydration error:', e);
     } finally {
@@ -422,6 +360,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     opponentFinderTitle: 'RAKİP BUL',
     studioTitle: 'TAKTİK ZEKA',
   },
+  setGlobalText: (key, value) => set((state) => ({ globalTexts: { ...state.globalTexts, [key]: value } })),
   
   // Location defaults
   userLocation: null,
@@ -436,8 +375,45 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminMatches: MATCH_LISTINGS,
   adminUsers: INITIAL_USERS,
   adminNotifications: INITIAL_NOTIFICATIONS,
+  adminLogs: [],
   adminTeams: USER_TEAMS,
   appSettings: INITIAL_SETTINGS,
+  
+  facilityUIConfigs: [],
+  setFacilityUIConfigs: async (configs) => {
+    set({ facilityUIConfigs: configs });
+    for (const config of configs) {
+      await FB.fbSaveFacilityUIConfig(config).catch(e => console.error(e));
+    }
+  },
+  roleAppearanceRules: [],
+  setRoleAppearanceRules: async (rules) => {
+    set({ roleAppearanceRules: rules });
+    for (const rule of rules) {
+      await FB.fbSaveRoleAppearanceRule(rule).catch(e => console.error(e));
+    }
+  },
+  crmUsers: [],
+  setCrmUsers: (users) => set({ crmUsers: users }),
+  addCrmUser: async (user) => {
+    const prev = get().crmUsers;
+    set({ crmUsers: [user, ...prev] });
+    try { await FB.fbAddCRMUser(user); }
+    catch (e) { set({ crmUsers: prev }); throw e; }
+  },
+  updateCrmUser: async (user) => {
+    const prev = get().crmUsers;
+    set({ crmUsers: prev.map(u => u.id === user.id ? user : u) });
+    try { await FB.fbUpdateCRMUser(user); }
+    catch (e) { set({ crmUsers: prev }); throw e; }
+  },
+  deleteCrmUser: async (id) => {
+    const prev = get().crmUsers;
+    set({ crmUsers: prev.filter(u => u.id !== id) });
+    try { await FB.fbDeleteCRMUser(id); }
+    catch (e) { set({ crmUsers: prev }); throw e; }
+  },
+
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
   playerSeekAds: [
@@ -630,9 +606,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         captain: '3', teamValue: '95000', wins: 30, losses: 5
     }
   ] as any[],
-  addMyTeam: (team) => {
-      FB.fbAddTeam(team);
-      set((state) => ({ myTeams: [team, ...state.myTeams] }));
+  addMyTeam: async (team) => {
+      const prev = get().myTeams;
+      set({ myTeams: [team, ...prev] });
+      try { await FB.fbAddTeam(team); }
+      catch (e) { set({ myTeams: prev }); throw e; }
   },
   addTeam: (team) => FB.fbAddTeam(team),
 
@@ -658,7 +636,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedRef: (selectedRef) => set({ selectedRef }),
   setMarketplaceReturnView: (marketplaceReturnView) => set({ marketplaceReturnView }),
   setMatchJoinReturnView: (matchJoinReturnView) => set({ matchJoinReturnView }),
-  setGlobalText: (key, value) => set((state) => ({ globalTexts: { ...state.globalTexts, [key]: value } })),
 
   // Direct Firebase Listener Setters
   initialLoadComplete: false,
@@ -672,45 +649,63 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAdminTeams: (adminTeams) => set({ adminTeams }),
 
   // Pitch
-  addPitch: (pitch) => {
-    set((state) => ({ adminPitches: [pitch, ...state.adminPitches] }));
-    FB.fbAddPitch(pitch);
+  addPitch: async (pitch) => {
+    const prev = get().adminPitches;
+    set({ adminPitches: [pitch, ...prev] });
+    try { await FB.fbAddPitch(pitch); }
+    catch (e) { set({ adminPitches: prev }); throw e; }
   },
-  updatePitch: (pitch) => {
-    set((state) => ({ adminPitches: state.adminPitches.map(p => p.id === pitch.id ? pitch : p) }));
-    FB.fbUpdatePitch(pitch);
+  updatePitch: async (pitch) => {
+    const prev = get().adminPitches;
+    set({ adminPitches: prev.map(p => p.id === pitch.id ? pitch : p) });
+    try { await FB.fbUpdatePitch(pitch); }
+    catch (e) { set({ adminPitches: prev }); throw e; }
   },
-  deletePitch: (id) => {
-    set((state) => ({ adminPitches: state.adminPitches.filter(p => p.id !== id) }));
-    FB.fbDeletePitch(id);
+  deletePitch: async (id) => {
+    const prev = get().adminPitches;
+    set({ adminPitches: prev.filter(p => p.id !== id) });
+    try { await FB.fbDeletePitch(id); }
+    catch (e) { set({ adminPitches: prev }); throw e; }
   },
 
   // Goalkeeper
-  addGoalkeeper: (gk) => {
-    set((state) => ({ adminGoalkeepers: [gk, ...state.adminGoalkeepers] }));
-    FB.fbAddGoalkeeper(gk);
+  addGoalkeeper: async (gk) => {
+    const prev = get().adminGoalkeepers;
+    set({ adminGoalkeepers: [gk, ...prev] });
+    try { await FB.fbAddGoalkeeper(gk); }
+    catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
-  updateGoalkeeper: (gk) => {
-    set((state) => ({ adminGoalkeepers: state.adminGoalkeepers.map(g => g.id === gk.id ? gk : g) }));
-    FB.fbUpdateGoalkeeper(gk);
+  updateGoalkeeper: async (gk) => {
+    const prev = get().adminGoalkeepers;
+    set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? gk : g) });
+    try { await FB.fbUpdateGoalkeeper(gk); }
+    catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
-  deleteGoalkeeper: (id) => {
-    set((state) => ({ adminGoalkeepers: state.adminGoalkeepers.filter(g => g.id !== id) }));
-    FB.fbDeleteGoalkeeper(id);
+  deleteGoalkeeper: async (id) => {
+    const prev = get().adminGoalkeepers;
+    set({ adminGoalkeepers: prev.filter(g => g.id !== id) });
+    try { await FB.fbDeleteGoalkeeper(id); }
+    catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
 
   // Referee
-  addReferee: (ref) => {
-    set((state) => ({ adminReferees: [ref, ...state.adminReferees] }));
-    FB.fbAddReferee(ref);
+  addReferee: async (ref) => {
+    const prev = get().adminReferees;
+    set({ adminReferees: [ref, ...prev] });
+    try { await FB.fbAddReferee(ref); }
+    catch (e) { set({ adminReferees: prev }); throw e; }
   },
-  updateReferee: (ref) => {
-    set((state) => ({ adminReferees: state.adminReferees.map(r => r.id === ref.id ? ref : r) }));
-    FB.fbUpdateReferee(ref);
+  updateReferee: async (ref) => {
+    const prev = get().adminReferees;
+    set({ adminReferees: prev.map(r => r.id === ref.id ? ref : r) });
+    try { await FB.fbUpdateReferee(ref); }
+    catch (e) { set({ adminReferees: prev }); throw e; }
   },
-  deleteReferee: (id) => {
-    set((state) => ({ adminReferees: state.adminReferees.filter(r => r.id !== id) }));
-    FB.fbDeleteReferee(id);
+  deleteReferee: async (id) => {
+    const prev = get().adminReferees;
+    set({ adminReferees: prev.filter(r => r.id !== id) });
+    try { await FB.fbDeleteReferee(id); }
+    catch (e) { set({ adminReferees: prev }); throw e; }
   },
 
   // Load Services from DB
@@ -725,18 +720,42 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Load Owner Data (SaaS)
+  loadOwnerData: async (facilityId?: string) => {
+    try {
+      const [uiConfigs, roleRules, crmUsers] = await Promise.all([
+        FB.fbGetFacilityUIConfigs(facilityId),
+        FB.fbGetRoleAppearanceRules(facilityId),
+        FB.fbGetCRMUsers(facilityId)
+      ]);
+      set({ 
+        facilityUIConfigs: uiConfigs,
+        roleAppearanceRules: roleRules,
+        crmUsers: crmUsers
+      });
+    } catch (err) {
+      console.error('Error loading owner data', err);
+    }
+  },
+
   // Match
-  addMatch: (match) => {
-    set((state) => ({ adminMatches: [match, ...state.adminMatches] }));
-    FB.fbAddMatch(match as any);
+  addMatch: async (match) => {
+    const prev = get().adminMatches;
+    set({ adminMatches: [match, ...prev] });
+    try { await FB.fbAddMatch(match as any); }
+    catch (e) { set({ adminMatches: prev }); throw e; }
   },
-  updateMatch: (match) => {
-    set((state) => ({ adminMatches: state.adminMatches.map(m => m.id === match.id ? match : m) }));
-    FB.fbUpdateMatch(match as any);
+  updateMatch: async (match) => {
+    const prev = get().adminMatches;
+    set({ adminMatches: prev.map(m => m.id === match.id ? match : m) });
+    try { await FB.fbUpdateMatch(match as any); }
+    catch (e) { set({ adminMatches: prev }); throw e; }
   },
-  deleteMatch: (id) => {
-    set((state) => ({ adminMatches: state.adminMatches.filter(m => m.id !== id) }));
-    FB.fbDeleteMatch(id);
+  deleteMatch: async (id) => {
+    const prev = get().adminMatches;
+    set({ adminMatches: prev.filter(m => m.id !== id) });
+    try { await FB.fbDeleteMatch(id); }
+    catch (e) { set({ adminMatches: prev }); throw e; }
   },
 
   // Supabase Plei/Fubles Hybrid
@@ -801,62 +820,60 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // User
-  updateUser: (user) => {
-    set((state) => ({
-      adminUsers: state.adminUsers.map(u => u.id === user.id ? user : u)
-    }));
-    FB.fbUpdateUser(user);
+  updateUser: async (user) => {
+    const prev = get().adminUsers;
+    set({ adminUsers: prev.map(u => u.id === user.id ? user : u) });
+    try { await FB.fbUpdateUser(user); }
+    catch (e) { set({ adminUsers: prev }); throw e; }
   },
-  setNewMatchBadge: (val) => {
+  setNewMatchBadge: async (val) => {
     const uid = auth.currentUser?.uid || 'u1';
     const user = get().adminUsers.find(u => u.id === uid);
     if (user) {
-      set((state) => ({
-        adminUsers: state.adminUsers.map(u => u.id === uid ? { ...u, newMatchBadge: val } : u)
-      }));
-      FB.fbUpdateUser({ ...user, newMatchBadge: val }).catch(err => {
-        console.warn("Failed to sync user newMatchBadge:", err);
-      });
+      const prev = get().adminUsers;
+      set({ adminUsers: prev.map(u => u.id === uid ? { ...u, newMatchBadge: val } : u) });
+      try { await FB.fbUpdateUser({ ...user, newMatchBadge: val }); }
+      catch { set({ adminUsers: prev }); }
     }
   },
-  banUser: (id) => {
-    set((state) => ({
-      adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isBanned: true } : u)
-    }));
-    FB.fbBanUser(id, true);
+  banUser: async (id) => {
+    const prev = get().adminUsers;
+    set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: true } : u) });
+    try { await FB.fbBanUser(id, true); }
+    catch (e) { set({ adminUsers: prev }); throw e; }
   },
-  unbanUser: (id) => {
-    set((state) => ({
-      adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isBanned: false } : u)
-    }));
-    FB.fbBanUser(id, false);
+  unbanUser: async (id) => {
+    const prev = get().adminUsers;
+    set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: false } : u) });
+    try { await FB.fbBanUser(id, false); }
+    catch (e) { set({ adminUsers: prev }); throw e; }
   },
-  toggleUserPro: (id) => {
+  toggleUserPro: async (id) => {
     const user = get().adminUsers.find(u => u.id === id);
     if (user) {
-      set((state) => ({
-        adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isPro: !u.isPro } : u)
-      }));
-      FB.fbToggleUserPro(id, !user.isPro);
+      const prev = get().adminUsers;
+      set({ adminUsers: prev.map(u => u.id === id ? { ...u, isPro: !u.isPro } : u) });
+      try { await FB.fbToggleUserPro(id, !user.isPro); }
+      catch (e) { set({ adminUsers: prev }); throw e; }
     }
   },
-  verifyUser: (id) => {
-    set((state) => ({
-      adminUsers: state.adminUsers.map(u => u.id === id ? { ...u, isVerified: true } : u)
-    }));
-    FB.fbVerifyUser(id);
+  verifyUser: async (id) => {
+    const prev = get().adminUsers;
+    set({ adminUsers: prev.map(u => u.id === id ? { ...u, isVerified: true } : u) });
+    try { await FB.fbVerifyUser(id); }
+    catch (e) { set({ adminUsers: prev }); throw e; }
   },
-  addUser: (user) => {
-    set((state) => ({
-      adminUsers: [user, ...state.adminUsers]
-    }));
-    FB.fbAddUser(user);
+  addUser: async (user) => {
+    const prev = get().adminUsers;
+    set({ adminUsers: [user, ...prev] });
+    try { await FB.fbAddUser(user); }
+    catch (e) { set({ adminUsers: prev }); throw e; }
   },
-  deleteUser: (id) => {
-    set((state) => ({
-      adminUsers: state.adminUsers.filter(u => u.id !== id)
-    }));
-    FB.fbDeleteUser(id);
+  deleteUser: async (id) => {
+    const prev = get().adminUsers;
+    set({ adminUsers: prev.filter(u => u.id !== id) });
+    try { await FB.fbDeleteUser(id); }
+    catch (e) { set({ adminUsers: prev }); throw e; }
   },
 
   // Notifications
@@ -869,6 +886,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // App Settings
   updateAppSettings: (settings) => FB.fbUpdateAppSettings(settings),
+  addAdminLog: (log) => set((state) => ({
+    adminLogs: [
+      { ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() },
+      ...state.adminLogs
+    ]
+  })),
 
   // User Notifications
   userNotifications: [],
