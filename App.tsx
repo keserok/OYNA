@@ -462,7 +462,6 @@ const App: React.FC = () => {
         return <MatchJoin
           match={selectedMatch}
           onBack={() => setView(matchJoinReturnView)}
-          onJoin={() => setView('DASHBOARD')} // Kadro kaydından sonra Dashboard'a dön
         />;
       case 'PREMIUM':
         return <PremiumScreen
