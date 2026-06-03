@@ -39,6 +39,48 @@ export const loginWithGoogle = async () => {
   if (error) console.error("Error signing in with Google", error);
 };
 
+// ─── E-posta OTP (Doğrulama Kodu) ────────────────────────────────────────────
+// Kullanıcının e-postasına 6 haneli doğrulama kodu gönderir.
+// Hesap yoksa otomatik oluşturulur (kayıt akışı).
+export const sendEmailOtp = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true },
+  });
+  if (error) throw error;
+};
+
+export const verifyEmailOtp = async (email: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  });
+  if (error) throw error;
+  return data;
+};
+
+// ─── Telefon OTP (SMS Doğrulama Kodu) ─────────────────────────────────────────
+// Telefon numarası E.164 formatında olmalıdır (örn: +905551112233).
+// SMS sağlayıcısı Supabase panelinden yapılandırılmalıdır.
+export const sendPhoneOtp = async (phone: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    phone,
+    options: { shouldCreateUser: true },
+  });
+  if (error) throw error;
+};
+
+export const verifyPhoneOtp = async (phone: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: 'sms',
+  });
+  if (error) throw error;
+  return data;
+};
+
 export const logout = async () => {
   try {
     await supabase.auth.signOut();
