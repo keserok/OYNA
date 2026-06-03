@@ -4,26 +4,30 @@ export const auth = {
   currentUser: null as any
 };
 
-// Initialize currentUser synchronously if possible, but mostly rely on listener
+// Supabase User nesnesini uygulama genelinde kullanılan yapıya dönüştürür.
+// email ve phone her ikisi de null olabilir (e-posta veya telefon OTP'ye göre değişir).
+const buildCurrentUser = (user: {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+  user_metadata?: Record<string, any>;
+}) => ({
+  uid: user.id,
+  email: user.email ?? null,
+  phone: user.phone ?? null,
+  displayName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+  photoURL: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+});
+
 supabase.auth.getSession().then(({ data: { session } }) => {
   if (session?.user) {
-    auth.currentUser = {
-      uid: session.user.id,
-      email: session.user.email,
-      displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-      photoURL: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
-    };
+    auth.currentUser = buildCurrentUser(session.user);
   }
 });
 
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange((_event, session) => {
   if (session?.user) {
-    auth.currentUser = {
-      uid: session.user.id,
-      email: session.user.email,
-      displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-      photoURL: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
-    };
+    auth.currentUser = buildCurrentUser(session.user);
   } else {
     auth.currentUser = null;
   }
@@ -39,9 +43,28 @@ export const loginWithGoogle = async () => {
   if (error) console.error("Error signing in with Google", error);
 };
 
-// ─── E-posta OTP (Doğrulama Kodu) ────────────────────────────────────────────
-// Kullanıcının e-postasına 6 haneli doğrulama kodu gönderir.
-// Hesap yoksa otomatik oluşturulur (kayıt akışı).
+export const logout = async () => {
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error("Error signing out", error);
+  }
+};
+
+export const onAuthStateChanged = (authObj: any, callback: (user: any) => void) => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    callback(session?.user ? auth.currentUser : null);
+  });
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user ? auth.currentUser : null);
+  });
+
+  return () => subscription.unsubscribe();
+};
+
+// ─── E-posta OTP ─────────────────────────────────────────────────────────────
+// shouldCreateUser: true → hesap yoksa otomatik oluşturur (kayıt + giriş tek akış)
 export const sendEmailOtp = async (email: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -60,9 +83,9 @@ export const verifyEmailOtp = async (email: string, token: string) => {
   return data;
 };
 
-// ─── Telefon OTP (SMS Doğrulama Kodu) ─────────────────────────────────────────
-// Telefon numarası E.164 formatında olmalıdır (örn: +905551112233).
-// SMS sağlayıcısı Supabase panelinden yapılandırılmalıdır.
+// ─── Telefon OTP (SMS) ───────────────────────────────────────────────────────
+// Numara E.164 formatında olmalı: +905551112233
+// Supabase panelinde SMS sağlayıcısı (Twilio vb.) tanımlanmalıdır.
 export const sendPhoneOtp = async (phone: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     phone,
@@ -79,24 +102,4 @@ export const verifyPhoneOtp = async (phone: string, token: string) => {
   });
   if (error) throw error;
   return data;
-};
-
-export const logout = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    console.error("Error signing out", error);
-  }
-};
-
-export const onAuthStateChanged = (authObj: any, callback: (user: any) => void) => {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    callback(session?.user ? auth.currentUser : null);
-  });
-  
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    callback(session?.user ? auth.currentUser : null);
-  });
-
-  return () => subscription.unsubscribe();
 };

@@ -307,6 +307,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
               ? 'E-posta veya telefonunla doğrulama kodu al'
               : `${contactLabel} adresine gönderilen kodu gir`}
           </p>
+          {stage === 'input' && (
+            <p className="text-[10px] mt-2 font-bold" style={{ color: 'rgba(255,255,255,0.18)' }}>
+              Hesabınız varsa giriş · yoksa ücretsiz kayıt olursunuz
+            </p>
+          )}
         </div>
 
         <AnimatePresence mode="wait">
