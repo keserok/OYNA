@@ -50,6 +50,7 @@ const ChangeView = ({ center }: { center: [number, number] | null }) => {
 interface MatchJoinProps {
   match: MatchListing | null;
   onBack: () => void;
+  onJoin: () => void;
 }
 
 type SlotInviteStatus = 'NONE' | 'INVITED' | 'ACCEPTED';
@@ -399,7 +400,7 @@ const generateDefaultSlots = (size: string, prefixId: string): PositionSlot[] =>
 
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 
-const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) => {
+const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJoin }) => {
   const matchFormatStr = originalMatch?.format || originalMatch?.badges?.find(b => b.includes('v') || b.includes('V'))?.toLowerCase() || '5v5';
   const match = originalMatch ? {
     ...originalMatch,
@@ -431,9 +432,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
 
   // Arkadaş daveti kategorisi
   const [inviteCategory, setInviteCategory] = useState('Tümü');
-
-  // Kadro Düzenleme Modu
-  const [isEditingSquad, setIsEditingSquad] = useState(false);
 
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -637,14 +635,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
   const handleSlotClick = (slot: any) => {
     if (!slot) return;
 
-    // Kadro düzenleme modunda: açık slota geç, doluya dokunma
-    if (isAlreadyJoined && isEditingSquad) {
-      if (slot.status === 'OPEN' && pitchSide !== 'away') {
-        handleMoveToSlot(slot.id);
-      }
-      return;
-    }
-
     if (pitchSide === 'away') {
       if (slot.status === 'TAKEN') {
         setActivePlayerSlotId(slot.id);
@@ -678,39 +668,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
         // Kendim için slot seçiyorum veya seçimi kaldırıyorum
         setSelectedSlotId(prev => prev === slot.id ? null : slot.id);
       }
-    }
-  };
-
-  // ── Kadro Düzenleme: Kendi slotunu değiştir ─────────────────────────────
-  const handleMoveToSlot = async (newSlotId: string) => {
-    if (!isAlreadyJoined || !mySlot || isProcessing) return;
-    setIsProcessing(true);
-    try {
-      const isHomePlayer = isAlreadyJoinedHome;
-      const targetSlots = isHomePlayer ? (match.slots || []) : (match.awaySlots || []);
-      const targetSlot = targetSlots.find(s => s?.id === newSlotId);
-      if (!targetSlot || targetSlot.status !== 'OPEN') { setIsProcessing(false); return; }
-
-      const movedPlayer = { ...currentUserProfile, position: targetSlot.role, x: targetSlot.x, y: targetSlot.y, paymentStatus: (mySlot.player as any)?.paymentStatus || 'UNPAID' } as any;
-
-      const updatedSlots = targetSlots.map(s => {
-        if (s?.id === mySlot.id) return { ...s, status: 'OPEN' as const, player: undefined };
-        if (s?.id === newSlotId) return { ...s, status: 'TAKEN' as const, player: movedPlayer };
-        return s;
-      });
-
-      if (isHomePlayer) {
-        await updateMatch({ ...match, slots: updatedSlots });
-        await joinMatchSlot(match.id, updatedSlots, false);
-      } else {
-        await updateMatch({ ...match, awaySlots: updatedSlots });
-        await joinMatchSlot(match.id, updatedSlots, true);
-      }
-      setIsEditingSquad(false);
-      setIsProcessing(false);
-    } catch (e) {
-      console.error('Move slot error:', e);
-      setIsProcessing(false);
     }
   };
 
@@ -918,7 +875,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
   };
 
   const handleLeaveMatch = async () => {
-    setIsEditingSquad(false);
     if (!isAlreadyJoined || !currentUserProfile?.id) return;
     setIsProcessing(true);
 
@@ -1601,19 +1557,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
             <ArrowLeft size={17} />
           </button>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <h1 className="text-[15px] font-black text-white italic uppercase tracking-tighter leading-tight truncate">
-                {match.title || 'Maç Lobisi'}
-              </h1>
-              {match.status === 'LIVE' && (
-                <span className="shrink-0 px-2 py-0.5 rounded-full bg-red-500 text-white text-[8px] font-black uppercase tracking-widest animate-pulse">CANLI</span>
-              )}
-              {isAlreadyJoined && (
-                <span className="shrink-0 px-2 py-0.5 rounded-full bg-[#39FF14]/15 text-[#39FF14] text-[8px] font-black uppercase tracking-widest border border-[#39FF14]/20">KADRODASIN</span>
-              )}
-            </div>
-            <p className="text-[9px] text-white/40 font-bold uppercase tracking-[0.2em] truncate">
-              {match.location} • {match.date} {match.time}
+            <h1 className="text-[15px] font-black text-white italic uppercase tracking-tighter leading-tight truncate">
+              Maç Lobisi
+            </h1>
+            <p className="text-[9px] text-white/40 font-bold uppercase tracking-[0.2em] mt-0.5 truncate">
+              {match.title || 'Maç Detayı'}
             </p>
           </div>
           {/* Sağ Aksiyon: Doluluk Göstergesi veya Maçtan Ayrıl Butonu */}
@@ -1669,17 +1617,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
                     {homeTeam?.name || 'BEYAZ TAKIM'}
                   </h4>
                   <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
-                    {homeTeam?.teamValue ? (
-                      <>
-                        <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
-                        <span className="text-[9px] text-[#FFFF00] font-black italic">{Math.round(parseInt(homeTeam.teamValue)/1000)}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">KADRO</span>
-                        <span className="text-[9px] text-white font-black italic">{(match.slots||[]).filter(s=>s.status==='TAKEN').length}/{(match.slots||[]).length}</span>
-                      </>
-                    )}
+                    <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
+                    <span className="text-[9px] text-[#FFFF00] font-black italic">{homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue)/1000) : 80}</span>
                   </div>
                 </button>
 
@@ -1717,17 +1656,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
                     {awayTeam?.name || 'KIRMIZI TAKIM'}
                   </h4>
                   <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
-                    {awayTeam?.teamValue ? (
-                      <>
-                        <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
-                        <span className="text-[9px] text-[#FFFF00] font-black italic">{Math.round(parseInt(awayTeam.teamValue)/1000)}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">KADRO</span>
-                        <span className="text-[9px] text-white font-black italic">{(match.awaySlots||[]).filter(s=>s.status==='TAKEN').length}/{(match.awaySlots||[]).length}</span>
-                      </>
-                    )}
+                    <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
+                    <span className="text-[9px] text-[#FFFF00] font-black italic">{awayTeam?.teamValue ? Math.round(parseInt(awayTeam.teamValue)/1000) : 78}</span>
                   </div>
                 </button>
               </div>
@@ -2118,13 +2048,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
                           className="relative w-full h-full flex flex-col items-center justify-center"
                         >
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-200 relative ${
-                            isAlreadyJoined && isEditingSquad
-                              ? 'bg-[#00F2FE]/15 border-[#00F2FE] text-[#00F2FE] shadow-[0_0_18px_rgba(0,242,254,0.55)] animate-pulse'
-                              : isSelected
-                                ? 'bg-[#39FF14] border-white text-black shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
-                                : isAlreadyJoined
-                                  ? 'bg-black/50 border-white/20 text-white/40 hover:border-[#39FF14]/60 hover:bg-[#39FF14]/10 hover:text-[#39FF14] backdrop-blur-md'
-                                  : 'bg-black/50 border-white/25 text-white/60 hover:border-[#39FF14]/50 backdrop-blur-md'
+                            isSelected
+                              ? 'bg-[#39FF14] border-white text-black shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
+                              : isAlreadyJoined
+                                ? 'bg-black/50 border-white/20 text-white/40 hover:border-[#39FF14]/60 hover:bg-[#39FF14]/10 hover:text-[#39FF14] backdrop-blur-md'
+                                : 'bg-black/50 border-white/25 text-white/60 hover:border-[#39FF14]/50 backdrop-blur-md'
                           }`}>
                             {isSelected ? (
                               <CheckCircle2 size={20} className="drop-shadow-md" />
@@ -2162,12 +2090,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
             })}
           </div>
 
-          <p className="text-center text-[9px] font-bold mt-3 uppercase tracking-[0.2em]" style={{ color: isAlreadyJoined && isEditingSquad ? 'rgba(0,242,254,0.6)' : 'rgba(255,255,255,0.25)' }}>
-            {isAlreadyJoined && isEditingSquad
-              ? 'Mavi pozisyona dokun — orada görüneceksin'
-              : isAlreadyJoined
-                ? '+ butonuna basarak arkadaşlarını davet et'
-                : 'Pozisyona dokun — ardından aşağıdan "Sahaya Çık"'}
+          <p className="text-center text-[9px] text-white/25 font-bold mt-3 uppercase tracking-[0.2em]">
+            {isAlreadyJoined
+              ? '+ butonuna basarak arkadaşlarını davet et'
+              : 'Pozisyona dokun — ardından aşağıdan "Sahaya Çık"'}
           </p>
 
           {/* Yedek Kulübesi (Reserve List) */}
@@ -2375,53 +2301,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack }) =
           <div className="max-w-md mx-auto w-full">
 
             {isAlreadyJoined ? (
-              /* ── Kadroya Girdim: Düzenle veya Ayrıl ─────────────────── */
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
-                {isEditingSquad ? (
-                  /* Düzenleme modu aktif */
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#00F2FE]/10 border border-[#00F2FE]/25">
-                      <span className="text-[10px] font-black text-[#00F2FE] uppercase tracking-widest animate-pulse">
-                        Taşımak istediğin pozisyona dokun
-                      </span>
-                    </div>
-                    <div className="flex gap-3">
-                      <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setIsEditingSquad(false)}
-                        className="flex-1 h-14 rounded-[20px] bg-white/5 border border-white/15 text-white/70 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2"
-                      >
-                        İPTAL
-                      </motion.button>
-                      {isProcessing && (
-                        <div className="w-14 h-14 rounded-[20px] bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center">
-                          <Loader2 size={18} className="text-[#39FF14] animate-spin" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-3">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => { setIsEditingSquad(true); setPitchSide(isAlreadyJoinedHome ? 'home' : 'away'); setLobbyTab('squad'); }}
-                      className="flex-1 h-14 rounded-[20px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
-                      style={{ background: 'linear-gradient(135deg,rgba(0,242,254,0.2),rgba(79,172,254,0.15))', border: '1px solid rgba(0,242,254,0.35)', color: '#00F2FE' }}
-                    >
-                      <CheckCircle2 size={15} />
-                      KADROYU DÜZENLE
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setShowLeaveConfirm(true)}
-                      className="px-5 h-14 rounded-[20px] bg-red-500/10 border border-red-500/20 text-red-400 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all hover:bg-red-500 hover:text-white"
-                    >
-                      AYRIL
-                    </motion.button>
-                  </div>
-                )}
+              /* ── Zaten Kadroya Girdim: Tamamlandı Görünümü ──────────── */
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-center gap-3 h-16 rounded-[24px] border border-[#39FF14]/20 bg-[#39FF14]/5">
+                <CheckCircle2 size={20} className="text-[#39FF14]" />
+                <span className="font-black text-sm text-[#39FF14] uppercase tracking-widest">KADRODASIN</span>
               </motion.div>
             ) : isAlreadyJoinedReserve ? (
               /* ── Zaten Yedek Kulübesindeyim ─────────────────────────── */
