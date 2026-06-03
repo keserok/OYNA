@@ -376,13 +376,29 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
     try {
-      await Promise.allSettled([
+      const [, , matchesResult] = await Promise.allSettled([
         withTimeout(supabase.auth.getSession()),
-        withTimeout(supabase.from('pitches').select('*').limit(20) as unknown as Promise<unknown>),
-        withTimeout(supabase.from('matches').select('*').limit(20) as unknown as Promise<unknown>),
+        withTimeout(supabase.from('pitches').select('*').limit(50) as unknown as Promise<unknown>),
+        withTimeout(supabase.from('matches').select('*').order('created_at', { ascending: false }).limit(50) as unknown as Promise<unknown>),
         withTimeout(supabase.from('teams').select('*').limit(20) as unknown as Promise<unknown>),
         withTimeout(get().loadServices(), 4000),
       ]);
+      // Supabase'den gelen maçları store'a yaz; mevcut mock liste ile birleştir
+      if (matchesResult.status === 'fulfilled' && matchesResult.value) {
+        const result = matchesResult.value as { data: any[] | null };
+        if (result?.data && result.data.length > 0) {
+          const dbMatches = result.data.map((m: any) => ({
+            ...m,
+            slots: m.slots || [],
+            awaySlots: m.away_slots || m.awaySlots || [],
+          }));
+          // DB maçlarını mock verinin önüne al; aynı id'li olanı DB versiyonuyla güncelle
+          const mockFiltered = get().adminMatches.filter(
+            (mock) => !dbMatches.some((db) => db.id === mock.id)
+          );
+          set({ adminMatches: [...dbMatches, ...mockFiltered] });
+        }
+      }
     } catch (e) {
       console.error('Hydration error:', e);
     } finally {

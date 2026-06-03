@@ -2936,69 +2936,23 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
 
-    // Mock data for public matches created at this facility by players
-    const [publicMatches, setPublicMatches] = useState([
-        {
-            id: 'pm1',
-            title: 'Sarıyer Aslanları Derbisi',
-            pitchName: 'Saha 1',
-            time: 'Bugün 20.00 - 21.00',
-            price: 250,
-            maxPlayers: 12,
-            joinedPlayers: 10,
-            creator: { name: 'Burak Yılmaz', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' },
-            players: [
-                { name: 'Burak Y.', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-                { name: 'Can K.', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' },
-                { name: 'Mert A.', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100' },
-                { name: 'Arda G.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-                { name: 'Deniz T.', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100' },
-                { name: 'Efe B.', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100' },
-                { name: 'Yusuf Y.', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100' },
-                { name: 'Kerem K.', avatar: 'https://images.unsplash.com/photo-1489980508314-941910ded1f4?w=100' },
-                { name: 'Emre Ç.', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100' },
-                { name: 'Tolga E.', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100' }
-            ],
-            type: 'HALK_MACI',
-            status: 'FORMING'
-        },
-        {
-            id: 'pm2',
-            title: 'Haftalık 7v7 Gazozuna Mücadele',
-            pitchName: 'Saha 3',
-            time: 'Bugün 22.00 - 23.00',
-            price: 300,
-            maxPlayers: 14,
-            joinedPlayers: 14,
-            creator: { name: 'Efe Şen', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' },
-            players: [
-                { name: 'Efe Ş.', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' },
-                { name: 'Selim V.', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100' },
-                { name: 'Volkan K.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-                { name: 'Ahmet B.', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-                { name: 'Kaan A.', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100' }
-            ],
-            type: 'SIRE_MACI',
-            status: 'READY'
-        },
-        {
-            id: 'pm3',
-            title: 'Süper Lig Taktik Kapışma',
-            pitchName: 'Saha 2',
-            time: 'Yarın 21.00 - 22.00',
-            price: 250,
-            maxPlayers: 12,
-            joinedPlayers: 5,
-            creator: { name: 'Kaan Demir', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80' },
-            players: [
-                { name: 'Kaan D.', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100' },
-                { name: 'Mert C.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-                { name: 'Eray Y.', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100' }
-            ],
-            type: 'SIRALAMALI',
-            status: 'FORMING'
-        }
-    ]);
+    // Maçları global store'dan al — MatchCreate ve diğer kaynaklardan eklenen tüm maçlar burada görünür
+    const { adminMatches } = useAppStore();
+    const publicMatches = adminMatches.map(m => ({
+        id: m.id,
+        title: m.title || 'İsimsiz Maç',
+        pitchName: m.location || 'Saha',
+        time: `${m.date || ''} ${m.time || ''}`.trim() || 'Tarih belirtilmedi',
+        price: m.price || 0,
+        maxPlayers: (m.slots?.length || 0) + (m.awaySlots?.length || 0),
+        joinedPlayers: [...(m.slots || []), ...(m.awaySlots || [])].filter(s => s.status === 'TAKEN').length,
+        creator: { name: m.creatorId || 'Kaptan', avatar: 'https://i.pravatar.cc/150?u=' + m.id },
+        players: [...(m.slots || []), ...(m.awaySlots || [])]
+            .filter(s => s.status === 'TAKEN' && s.player)
+            .map(s => ({ name: s.player!.name || 'Oyuncu', avatar: s.player!.avatar || 'https://i.pravatar.cc/150?u=' + s.id })),
+        type: 'OYUNCU_MACI',
+        status: m.status === 'ACTIVE' ? 'FORMING' : (m.status || 'FORMING'),
+    }));
 
     const activeRequests = pendingRequests.filter(r => r.status === 'PENDING');
 
