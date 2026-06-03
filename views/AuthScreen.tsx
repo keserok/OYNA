@@ -1,8 +1,9 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Check, Mail, Smartphone, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { UserRole } from '../types';
-import { loginWithGoogle } from '../supabaseAuth';
+import { sendEmailOtp, verifyEmailOtp, sendPhoneOtp, verifyPhoneOtp } from '../supabaseAuth';
+import { setRememberMe } from '../supabaseClient';
 
 interface AuthScreenProps {
   onSuccess: () => void;
@@ -126,33 +127,95 @@ const AnimatedTagline = ({ text, color }: { text: string; color: string }) => {
   );
 };
 
+const PHONE_PREFIX = '+90';
+
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+
+const formatPhoneDisplay = (digits: string) => {
+  const d = digits.slice(0, 10);
+  return [d.slice(0, 3), d.slice(3, 6), d.slice(6, 8), d.slice(8, 10)].filter(Boolean).join(' ');
+};
+
 const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const theme = getTheme(role);
   const { color, orb1, orb2, tagline, badge } = theme;
-  const [agreed, setAgreed] = React.useState(true);
 
-  const [isLoading, setIsLoading] = React.useState<'google' | 'apple' | 'guest' | null>(null);
+  const [method, setMethod] = React.useState<'email' | 'phone'>('email');
+  const [stage, setStage] = React.useState<'input' | 'otp'>('input');
+  const [email, setEmail] = React.useState('');
+  const [phoneDigits, setPhoneDigits] = React.useState('');
+  const [otp, setOtp] = React.useState('');
+  const [agreed, setAgreed] = React.useState(false);
+  const [remember, setRemember] = React.useState(true);
+  const [isLoading, setIsLoading] = React.useState<'send' | 'verify' | 'guest' | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [resendIn, setResendIn] = React.useState(0);
 
-  const handleGoogleLogin = async () => {
-    if (!agreed || isLoading) return;
-    setIsLoading('google');
+  const phoneE164 = `${PHONE_PREFIX}${phoneDigits}`;
+  const contactValid = method === 'email' ? isValidEmail(email) : phoneDigits.length === 10;
+  const contactLabel = method === 'email' ? email.trim() : `${PHONE_PREFIX} ${formatPhoneDisplay(phoneDigits)}`;
+
+  // "Beni hatırla" tercihini oturum deposuna yansıt (giriş öncesi ayarlanmalı)
+  React.useEffect(() => {
+    setRememberMe(remember);
+  }, [remember]);
+
+  // Tekrar gönderme geri sayımı
+  React.useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
+
+  const requestOtp = async () => {
+    if (method === 'email') await sendEmailOtp(email.trim());
+    else await sendPhoneOtp(phoneE164);
+  };
+
+  const handleSendOtp = async () => {
+    if (!agreed || !contactValid || isLoading) return;
+    setError(null);
+    setIsLoading('send');
     try {
-      await loginWithGoogle();
-      // OAuth yönlendirmesi başlar — onSuccess auth listener'dan tetiklenir
-    } catch (err) {
-      console.error('Authentication error:', err);
+      setRememberMe(remember);
+      await requestOtp();
+      setStage('otp');
+      setOtp('');
+      setResendIn(60);
+    } catch (err: any) {
+      console.error('OTP gönderim hatası:', err);
+      setError(err?.message || 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.');
+    } finally {
       setIsLoading(null);
     }
   };
 
-  const handleAppleLogin = async () => {
-    if (!agreed || isLoading) return;
-    setIsLoading('apple');
+  const handleResend = async () => {
+    if (resendIn > 0 || isLoading) return;
+    setError(null);
+    setIsLoading('send');
     try {
-      // Apple Sign In henüz bağlı değil — misafir akışıyla devam
+      await requestOtp();
+      setResendIn(60);
+    } catch (err: any) {
+      setError(err?.message || 'Kod tekrar gönderilemedi.');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (otp.length < 6 || isLoading) return;
+    setError(null);
+    setIsLoading('verify');
+    try {
+      if (method === 'email') await verifyEmailOtp(email.trim(), otp);
+      else await verifyPhoneOtp(phoneE164, otp);
+      // Başarılı: oturum açıldı, rol bazlı yönlendirme
       onSuccess();
-    } catch (err) {
-      console.error('Authentication error:', err);
+    } catch (err: any) {
+      console.error('OTP doğrulama hatası:', err);
+      setError(err?.message || 'Kod hatalı veya süresi dolmuş.');
     } finally {
       setIsLoading(null);
     }
@@ -164,9 +227,22 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     onSuccess();
   };
 
+  const handleHeaderBack = () => {
+    if (stage === 'otp') {
+      setStage('input');
+      setOtp('');
+      setError(null);
+    } else {
+      onBack();
+    }
+  };
+
+  const sendDisabled = !agreed || !contactValid || isLoading !== null;
+  const guestDisabled = !agreed || isLoading !== null;
+
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: '#0A0E14' }}>
-      
+
       {/* ─── ANIMATED BACKGROUND ─────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <motion.div
@@ -198,14 +274,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3 }}
-        onClick={onBack}
+        onClick={handleHeaderBack}
         className="absolute top-12 left-6 z-30 p-2.5 rounded-full border border-white/10 text-white bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors"
       >
         <ArrowLeft size={18} />
       </motion.button>
 
       {/* ─── HERO TAGLINE ────────────────────────────────────────── */}
-      <div className="relative z-10 pt-32 pb-4 px-6 flex flex-col justify-end">
+      <div className="relative z-10 pt-24 pb-4 px-6 flex flex-col justify-end">
         <span className="px-3.5 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black tracking-widest text-[#FFFF00] uppercase self-start mb-4 shadow-[0_0_15px_rgba(255,255,0,0.1)]">
           {badge} GİRİŞİ
         </span>
@@ -217,74 +293,214 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
         initial={{ y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 26, delay: 0.25 }}
-        className="relative z-10 flex-1 mx-4 mb-8 rounded-[36px] border border-white/5 p-6 flex flex-col justify-between"
+        className="relative z-10 flex-1 mx-4 mb-8 rounded-[36px] border border-white/5 p-6 flex flex-col"
         style={{
           background: 'linear-gradient(180deg, rgba(22,27,34,0.8) 0%, rgba(10,14,20,0.95) 100%)',
           backdropFilter: 'blur(30px)',
           boxShadow: '0 24px 60px -12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)',
         }}
       >
-        <div className="space-y-6 flex-1 flex flex-col justify-center">
-          <div className="text-center mb-4">
-            <h2 className="text-lg font-black text-white uppercase tracking-wider italic">OYNA ECOSYSTEM</h2>
-            <p className="text-xs text-gray-500 mt-1">Giriş yönteminizi seçerek anında sahaya katılın</p>
-          </div>
-
-          <div className="space-y-4">
-            {/* Google Sign In */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGoogleLogin}
-              disabled={!agreed || isLoading !== null}
-              className="w-full h-15 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-white text-black hover:bg-gray-100 transition-colors shadow-2xl disabled:opacity-50"
-            >
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3 0-3.478 2.822-6.3 6.3-6.3 1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z"/>
-              </svg>
-              <span>{isLoading === 'google' ? 'YÖNLENDİRİLİYOR...' : 'GOOGLE İLE DEVAM ET'}</span>
-            </motion.button>
-
-            {/* Apple Sign In */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleAppleLogin}
-              disabled={!agreed || isLoading !== null}
-              className="w-full h-15 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-black text-white hover:bg-black/80 border border-white/10 transition-colors shadow-2xl disabled:opacity-50"
-            >
-              <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z"/>
-              </svg>
-              <span>{isLoading === 'apple' ? 'GİRİŞ YAPILIYOR...' : 'APPLE İLE DEVAM ET'}</span>
-            </motion.button>
-
-            {/* Guest Sign In */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGuestLogin}
-              disabled={!agreed || isLoading !== null}
-              className="w-full h-15 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-[#FFFF00]/10 text-[#FFFF00] border border-[#FFFF00]/20 hover:bg-[#FFFF00]/20 transition-colors shadow-2xl disabled:opacity-50 mt-2"
-            >
-              <span>{isLoading === 'guest' ? 'DEVAM EDİLİYOR...' : 'MİSAFİR OLARAK TEST ET'}</span>
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Agreement checkbox */}
-        <div className="flex items-start gap-3.5 mt-6 px-1 border-t border-white/5 pt-5 shrink-0">
-          <button
-            onClick={() => setAgreed(!agreed)}
-            className="mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-all"
-            style={{ background: agreed ? '#FFFF00' : 'transparent', borderColor: agreed ? '#FFFF00' : 'rgba(255,255,255,0.2)' }}
-          >
-            {agreed && <Check size={12} className="text-black" />}
-          </button>
-          <p className="text-[10px] text-gray-400 leading-relaxed font-bold tracking-wide uppercase">
-            Devam ederek <span className="text-[#FFFF00] underline cursor-pointer">Kullanım Koşulları</span> ve <span className="text-[#FFFF00] underline cursor-pointer">Gizlilik Politikası</span> metinlerini okuduğumu ve onayladığımı kabul ediyorum.
+        <div className="text-center mb-5">
+          <h2 className="text-lg font-black text-white uppercase tracking-wider italic">OYNA ECOSYSTEM</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            {stage === 'input'
+              ? 'E-posta veya telefonunla doğrulama kodu al'
+              : `${contactLabel} adresine gönderilen kodu gir`}
           </p>
         </div>
+
+        <AnimatePresence mode="wait">
+          {stage === 'input' ? (
+            <motion.div
+              key="input"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.25 }}
+              className="flex-1 flex flex-col"
+            >
+              {/* Yöntem seçimi */}
+              <div className="flex p-1 rounded-2xl bg-black/40 border border-white/10 mb-5">
+                {([['email', 'E-POSTA', Mail], ['phone', 'TELEFON', Smartphone]] as const).map(([m, label, Icon]) => (
+                  <button
+                    key={m}
+                    onClick={() => { setMethod(m); setError(null); }}
+                    className="flex-1 h-11 rounded-xl text-[11px] font-black tracking-wider flex items-center justify-center gap-2 transition-all"
+                    style={{
+                      background: method === m ? '#FFFF00' : 'transparent',
+                      color: method === m ? '#000' : 'rgba(255,255,255,0.5)',
+                    }}
+                  >
+                    <Icon size={15} /> {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Giriş alanı */}
+              {method === 'email' ? (
+                <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
+                  <Mail size={20} className="text-gray-500 shrink-0" />
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                    className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700"
+                    placeholder="ornek@oyna.app"
+                  />
+                </div>
+              ) : (
+                <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
+                  <Smartphone size={20} className="text-gray-500 shrink-0" />
+                  <span className="text-white font-bold shrink-0">{PHONE_PREFIX}</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    value={formatPhoneDisplay(phoneDigits)}
+                    onChange={(e) => { setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null); }}
+                    className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 tracking-wide"
+                    placeholder="5XX XXX XX XX"
+                  />
+                </div>
+              )}
+
+              {/* Beni Hatırla */}
+              <button
+                onClick={() => setRemember((v) => !v)}
+                className="flex items-center justify-between w-full mt-4 px-1 group"
+              >
+                <span className="text-xs font-bold text-gray-300">Beni Hatırla</span>
+                <span
+                  className="relative w-11 h-6 rounded-full transition-colors shrink-0"
+                  style={{ background: remember ? '#FFFF00' : 'rgba(255,255,255,0.12)' }}
+                >
+                  <span
+                    className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform"
+                    style={{ transform: remember ? 'translateX(20px)' : 'translateX(0)' }}
+                  />
+                </span>
+              </button>
+              <p className="text-[10px] text-gray-600 mt-1 px-1">
+                Açık olduğunda çıkış yapana kadar bu cihazda kimliğinle oturumun açık kalır.
+              </p>
+
+              {error && (
+                <p className="text-[11px] text-red-400 font-bold mt-3 px-1">{error}</p>
+              )}
+
+              {/* KVKK + Sözleşme onayı */}
+              <div className="flex items-start gap-3 mt-5 px-1">
+                <button
+                  onClick={() => setAgreed(!agreed)}
+                  className="mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-all"
+                  style={{ background: agreed ? '#FFFF00' : 'transparent', borderColor: agreed ? '#FFFF00' : 'rgba(255,255,255,0.2)' }}
+                >
+                  {agreed && <Check size={12} className="text-black" />}
+                </button>
+                <p className="text-[10px] text-gray-400 leading-relaxed font-bold tracking-wide">
+                  <span className="text-[#FFFF00] underline cursor-pointer">KVKK Aydınlatma Metni</span> ve <span className="text-[#FFFF00] underline cursor-pointer">Kullanıcı Sözleşmesi</span>'ni okudum, kişisel verilerimin işlenmesini onaylıyorum.
+                </p>
+              </div>
+
+              <div className="mt-auto pt-5 space-y-3">
+                <motion.button
+                  whileHover={sendDisabled ? undefined : { scale: 1.02 }}
+                  whileTap={sendDisabled ? undefined : { scale: 0.98 }}
+                  onClick={handleSendOtp}
+                  disabled={sendDisabled}
+                  className="w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-[#FFFF00] text-black transition-all shadow-2xl disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isLoading === 'send'
+                    ? <><Loader2 size={18} className="animate-spin" /> KOD GÖNDERİLİYOR...</>
+                    : <>DOĞRULAMA KODU GÖNDER <ArrowRight size={18} /></>}
+                </motion.button>
+
+                {/* Misafir girişi — altta */}
+                <button
+                  onClick={handleGuestLogin}
+                  disabled={guestDisabled}
+                  className="w-full h-12 rounded-2xl font-black text-xs flex items-center justify-center gap-2 bg-transparent text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isLoading === 'guest' ? 'DEVAM EDİLİYOR...' : 'MİSAFİR OLARAK GİR'}
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="otp"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.25 }}
+              className="flex-1 flex flex-col"
+            >
+              <div className="flex items-center justify-center mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/20 flex items-center justify-center">
+                  <KeyRound size={24} className="text-[#FFFF00]" />
+                </div>
+              </div>
+
+              <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block text-center tracking-widest">
+                Doğrulama Kodu
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null); }}
+                className="bg-[#0A0E14] border border-gray-800 rounded-2xl w-full h-16 text-center text-white font-black text-3xl tracking-[0.5em] outline-none focus:border-white/40 transition-colors placeholder:text-gray-800"
+                placeholder="••••••"
+                autoFocus
+              />
+
+              {error && (
+                <p className="text-[11px] text-red-400 font-bold mt-3 text-center">{error}</p>
+              )}
+
+              <div className="text-center mt-4">
+                {resendIn > 0 ? (
+                  <span className="text-[11px] text-gray-500 font-bold">
+                    Kodu tekrar gönder ({resendIn}s)
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleResend}
+                    disabled={isLoading !== null}
+                    className="text-[11px] text-[#FFFF00] font-black underline disabled:opacity-50"
+                  >
+                    Kodu tekrar gönder
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-auto pt-5 space-y-3">
+                <motion.button
+                  whileHover={otp.length < 6 || isLoading ? undefined : { scale: 1.02 }}
+                  whileTap={otp.length < 6 || isLoading ? undefined : { scale: 0.98 }}
+                  onClick={handleVerify}
+                  disabled={otp.length < 6 || isLoading !== null}
+                  className="w-full h-14 rounded-2xl font-black text-sm flex items-center justify-center gap-3 bg-[#FFFF00] text-black transition-all shadow-2xl disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isLoading === 'verify'
+                    ? <><Loader2 size={18} className="animate-spin" /> DOĞRULANIYOR...</>
+                    : <>DOĞRULA VE GİRİŞ YAP <ArrowRight size={18} /></>}
+                </motion.button>
+
+                <button
+                  onClick={handleHeaderBack}
+                  disabled={isLoading !== null}
+                  className="w-full h-12 rounded-2xl font-black text-xs flex items-center justify-center gap-2 bg-transparent text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-40"
+                >
+                  {method === 'email' ? 'E-POSTAYI DEĞİŞTİR' : 'NUMARAYI DEĞİŞTİR'}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
