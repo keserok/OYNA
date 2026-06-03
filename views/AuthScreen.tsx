@@ -127,6 +127,60 @@ const AnimatedTagline = ({ text, color }: { text: string; color: string }) => {
   );
 };
 
+
+// ─── Yasal Metin Modal Bileşeni ───────────────────────────────────────────────
+const KVKK_TEXT = `OYNA, kullanıcıların e-posta veya telefon numarasını 6379 sayılı KVKK kapsamında yalnızca kimlik doğrulama, hesap güvenliği ve hizmet bilgilendirmesi amacıyla işlemekte; üçüncü taraflarla paylaşmamakta ve kullanıcının talebi üzerine verilerini kalıcı olarak silmektedir. Kişisel verilerinize ilişkin haklarınızı destek@oyna.app adresine yazılı başvuru yoluyla kullanabilirsiniz.`;
+
+const SOZLESME_TEXT = `OYNA platformunu kullanan her kişi, uygulamanın yalnızca yasal spor organizasyonları amacıyla kullanılacağını, başkalarının haklarını ihlal eden içerik paylaşmayacağını ve hesabının güvenliğinden bizzat sorumlu olduğunu kabul etmektedir. Kullanım koşullarını ihlal eden hesaplar bildirim yapılmaksızın askıya alınabilir.`;
+
+interface LegalModalsProps {
+  openModal: 'kvkk' | 'sozlesme' | null;
+  setOpenModal: (v: 'kvkk' | 'sozlesme' | null) => void;
+}
+
+const LegalModal: React.FC<LegalModalsProps> = ({ openModal, setOpenModal }) => {
+  if (!openModal) return null;
+  const isKvkk = openModal === 'kvkk';
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+      onClick={() => setOpenModal(null)}
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-t-[32px] p-6 pb-10"
+        style={{
+          background: 'linear-gradient(180deg, #161B22 0%, #0A0E14 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: 'none',
+        }}
+      >
+        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+        <h3 className="text-base font-black text-white uppercase tracking-wider mb-4">
+          {isKvkk ? 'KVKK Aydınlatma Metni' : 'Kullanıcı Sözleşmesi'}
+        </h3>
+        <p className="text-xs text-gray-300 leading-relaxed font-medium">
+          {isKvkk ? KVKK_TEXT : SOZLESME_TEXT}
+        </p>
+        <button
+          onClick={() => setOpenModal(null)}
+          className="mt-6 w-full h-12 rounded-2xl font-black text-xs bg-[#FFFF00] text-black"
+        >
+          ANLADIM, KAPAT
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const PHONE_PREFIX = '+90';
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
@@ -150,6 +204,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [isLoading, setIsLoading] = React.useState<'send' | 'verify' | 'guest' | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [resendIn, setResendIn] = React.useState(0);
+  const [openModal, setOpenModal] = React.useState<'kvkk' | 'sozlesme' | null>(null);
 
   const phoneE164 = `${PHONE_PREFIX}${phoneDigits}`;
   const contactValid = method === 'email' ? isValidEmail(email) : phoneDigits.length === 10;
@@ -301,17 +356,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
         }}
       >
         <div className="text-center mb-5">
-          <h2 className="text-lg font-black text-white uppercase tracking-wider italic">OYNA ECOSYSTEM</h2>
+          <h2 className="text-lg font-black text-white uppercase tracking-wider italic">OYNA</h2>
           <p className="text-xs text-gray-500 mt-1">
             {stage === 'input'
               ? 'E-posta veya telefonunla doğrulama kodu al'
               : `${contactLabel} adresine gönderilen kodu gir`}
           </p>
-          {stage === 'input' && (
-            <p className="text-[10px] mt-2 font-bold" style={{ color: 'rgba(255,255,255,0.18)' }}>
-              Hesabınız varsa giriş · yoksa ücretsiz kayıt olursunuz
-            </p>
-          )}
+
         </div>
 
         <AnimatePresence mode="wait">
@@ -396,7 +447,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
               )}
 
               {/* KVKK + Sözleşme onayı */}
-              <div className="flex items-start gap-3 mt-5 px-1">
+              <LegalModal openModal={openModal} setOpenModal={setOpenModal} />
+              <div className="flex items-start gap-3 mt-3 px-1">
                 <button
                   onClick={() => setAgreed(!agreed)}
                   className="mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-all"
@@ -405,7 +457,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   {agreed && <Check size={12} className="text-black" />}
                 </button>
                 <p className="text-[10px] text-gray-400 leading-relaxed font-bold tracking-wide">
-                  <span className="text-[#FFFF00] underline cursor-pointer">KVKK Aydınlatma Metni</span> ve <span className="text-[#FFFF00] underline cursor-pointer">Kullanıcı Sözleşmesi</span>'ni okudum, kişisel verilerimin işlenmesini onaylıyorum.
+                  <button onClick={() => setOpenModal('kvkk')} className="text-[#FFFF00] underline">KVKK Aydınlatma Metni</button>'ni ve <button onClick={() => setOpenModal('sozlesme')} className="text-[#FFFF00] underline">Kullanıcı Sözleşmesi</button>'ni okudum, kişisel verilerimin işlenmesini onaylıyorum.
                 </p>
               </div>
 
