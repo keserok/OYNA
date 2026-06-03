@@ -234,6 +234,12 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
 
   const handleCardClick = (role: UserRole) => {
     setSelectedRole(role);
+    if (role === UserRole.PLAYER) {
+      // Oyuncu için kimlik bilgileri ve fiziksel künye adımları kaldırıldı.
+      // Oyuncu doğrudan kayıt/giriş akışına yönlendirilir.
+      onSelect(role);
+      return;
+    }
     setStep(2);
   };
 
