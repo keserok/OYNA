@@ -12,3 +12,10 @@ node_modules_old/
 node_modules_local/
 my_vite.log
 tsc_err.log
+android/
+ios/
+__mocks__/
+reports/
+scripts/
+DATABASE_README.md
+
