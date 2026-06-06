@@ -341,7 +341,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
                                         maxLength={11}
                                         value={formData.tcNumber}
                                         onChange={(e) => setFormData({...formData, tcNumber: e.target.value.replace(/[^0-9]/g, '')})}
-                                        className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 tracking-widest font-mono"
+                                        className="bg-transparent w-full outline-none text-white text-base font-bold placeholder:text-gray-700 tracking-widest font-mono"
                                         placeholder="12345678901"
                                         autoFocus
                                     />
@@ -356,7 +356,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
                                         type="tel" 
                                         value={formData.phone}
                                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                        className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700"
+                                        className="bg-transparent w-full outline-none text-white text-base font-bold placeholder:text-gray-700"
                                         placeholder="5XX XXX XX XX"
                                     />
                                 </div>
@@ -372,7 +372,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
                                         type="text" 
                                         value={formData.fullName}
                                         onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                                        className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700"
+                                        className="bg-transparent w-full outline-none text-white text-base font-bold placeholder:text-gray-700"
                                         placeholder="Örn: Burak Yılmaz"
                                         autoFocus
                                     />
@@ -387,7 +387,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
                                         type="email" 
                                         value={formData.email}
                                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                        className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700"
+                                        className="bg-transparent w-full outline-none text-white text-base font-bold placeholder:text-gray-700"
                                         placeholder="ornek@oyna.app"
                                     />
                                 </div>
@@ -401,7 +401,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
                                         type="tel" 
                                         value={formData.phone}
                                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                        className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700"
+                                        className="bg-transparent w-full outline-none text-white text-base font-bold placeholder:text-gray-700"
                                         placeholder="5XX XXX XX XX"
                                     />
                                 </div>

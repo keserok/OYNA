@@ -563,7 +563,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="px-6 grid grid-cols-2 gap-4 auto-rows-min"
+        className="px-4 xs:px-6 grid grid-cols-2 gap-3 xs:gap-4 auto-rows-min"
       >
 
         
@@ -579,7 +579,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -3 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('MATCH_DISCOVERY')}
-          className="col-span-2 h-44 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
+          className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
           style={{ boxShadow: '0 0 60px rgba(255,255,0,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
           {/* Sarı → Siyah ana gradient */}
@@ -662,7 +662,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('MATCH_CREATE')}
-          className="col-span-2 h-32 bg-[#d97706] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(217,119,6,0.35)] breathing-glow"
+          className="col-span-2 min-h-[128px] py-5 bg-[#d97706] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(217,119,6,0.35)] breathing-glow"
         >
           {/* Carbon Fibre Texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-60 pointer-events-none"></div>
@@ -756,7 +756,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('COMMUNITY_VIEW')}
-          className="col-span-2 h-32 bg-[#fb923c] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(251,146,60,0.4)] breathing-glow"
+          className="col-span-2 min-h-[128px] py-5 bg-[#fb923c] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(251,146,60,0.4)] breathing-glow"
         >
           {/* Intertwined Geometric Mesh Pattern (No Circles) */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.12]">
@@ -779,7 +779,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 <Users size={18} className="text-black" />
                 <span className="text-black text-xs font-bold uppercase tracking-widest">Sosyal</span>
               </div>
-              <h2 className="text-2xl font-black text-black italic uppercase leading-none drop-shadow-sm">Topluluklar, Takımlarım ve Arkadaşlarım</h2>
+              <h2 className="text-lg xs:text-xl sm:text-2xl font-black text-black italic uppercase leading-none drop-shadow-sm">Topluluklar, Takımlarım ve Arkadaşlarım</h2>
               <p className="text-[10px] text-orange-900 mt-1 font-bold">Üniversite ve şirket ligleri.</p>
             </div>
             <div className="w-24 h-24 bg-black/5 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-black/10 group-hover:scale-110 transition-transform">
@@ -828,7 +828,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', transform: 'skewX(-20deg)' }}
           />
           {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between p-5">
+          <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
             <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -841,7 +841,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <motion.h3
                 animate={{ textShadow: ['0 0 8px rgba(57,255,20,0.5)', '0 0 24px rgba(57,255,20,1)', '0 0 8px rgba(57,255,20,0.5)'] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-2xl font-black italic tracking-tighter leading-none"
+                className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
                 style={{ color: '#39FF14' }}
               >
                 KALECİLER
@@ -890,7 +890,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', transform: 'skewX(-20deg)' }}
           />
           {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between p-5">
+          <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
             <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
@@ -903,7 +903,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <motion.h3
                 animate={{ textShadow: ['0 0 8px rgba(59,130,246,0.5)', '0 0 24px rgba(99,179,255,1)', '0 0 8px rgba(59,130,246,0.5)'] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                className="text-2xl font-black italic tracking-tighter leading-none"
+                className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
                 style={{ color: '#60a5fa' }}
               >
                 HAKEMLER
@@ -919,7 +919,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('PITCH_DISCOVERY')}
-          className="col-span-2 h-32 bg-[#16a34a] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(22,163,74,0.3)] breathing-glow"
+          className="col-span-2 min-h-[128px] py-5 bg-[#16a34a] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(22,163,74,0.3)] breathing-glow"
         >
           {/* Vektörel Futbol Sahası Deseni */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -991,7 +991,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('STUDIO')}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          className="col-span-2 h-44 bg-[#050812] rounded-[32px] relative overflow-hidden group cursor-pointer border border-[#39FF14]/30 shadow-[0_0_30px_rgba(57,255,20,0.05)] flex flex-col justify-between p-6 breathing-glow"
+          className="col-span-2 min-h-[176px] py-6 bg-[#050812] rounded-[32px] relative overflow-hidden group cursor-pointer border border-[#39FF14]/30 shadow-[0_0_30px_rgba(57,255,20,0.05)] flex flex-col justify-between p-5 xs:p-6 breathing-glow"
         >
           {/* Soccer Pitch Background Pattern */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none">

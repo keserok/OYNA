@@ -8,4 +8,7 @@ dist/
 .env.local
 .env.*.local
 !.env.example
-
+node_modules_old/
+node_modules_local/
+my_vite.log
+tsc_err.log
