@@ -795,7 +795,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('MARKETPLACE_GK')}
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
-          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
+          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer button-neon-glow-green"
           style={{ border: '1px solid rgba(57,255,20,0.3)' }}
         >
           {/* Fluid animated gradient */}
@@ -857,7 +857,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('MARKETPLACE_REF')}
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
-          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
+          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer button-neon-glow-blue"
           style={{ border: '1px solid rgba(59,130,246,0.3)' }}
         >
           {/* Fluid animated gradient */}
