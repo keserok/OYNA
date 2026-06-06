@@ -595,3 +595,107 @@ export interface PlayerSeekAnnouncement {
   createdAt?: string;
 }
 
+// ============================================================================
+// TESİS SAHİBİ & DOLULUK — TEK KAYNAK (Supabase ile hizalı, Faz 1)
+// ----------------------------------------------------------------------------
+// NOT: Pitch.occupancy (yukarıda) artık TÜRETİLMİŞ bir değerdir; DB'de kolon
+// yoktur. Doluluk tek kaynak olan pitch_bookings satırlarından get_court_occupancy
+// ile hesaplanır. Aşağıdaki tipler DB tablolarıyla birebir eşleşir (camelCase).
+// ============================================================================
+
+// pitches satırı (TESİS) — tesis sahibinin düzenlediği alanlar
+export interface OwnerFacility {
+  id: string;
+  ownerId?: string | null;
+  name: string;
+  district?: string | null;
+  address?: string | null;
+  latitude?: number;
+  longitude?: number;
+  description?: string | null;
+  image?: string | null;          // kapak görseli
+  images: string[];               // galeri
+  amenities: string[];
+  pricePerPerson?: number | null;
+  totalPrice?: number | null;
+  workingHours: { open: string; close: string; slot_duration: number };
+  // settings: tesis-geneli tarife, ödeme yöntemleri, banka hesapları, günlük çalışma saatleri vb.
+  settings: Record<string, any>;
+  rating?: number;
+  isActive: boolean;              // tesis açık/kapalı (pitches.is_active)
+}
+
+// courts satırı (SAHA) — bir tesisteki her saha
+export interface OwnerCourt {
+  id: string;
+  pitchId: string;
+  name: string;                   // "Saha 1"
+  courtType: 'OPEN' | 'CLOSED';
+  size?: string | null;           // "5v5", "7v7"
+  price?: number | null;          // saha-bazlı taban saatlik ücret
+  images: string[];
+  description?: string | null;
+  isActive: boolean;              // "Bakımda (Gizli)" toggle
+  lightingGrade?: 'A' | 'B' | 'C' | null;
+  grassGrade?: 'A' | 'B' | 'C' | null;
+  lockerGrade?: 'A' | 'B' | 'C' | null;
+  sortOrder: number;
+  createdAt?: string;
+}
+
+export type BookingSource = 'OWNER_MANUAL' | 'APP_BOOKING' | 'SUBSCRIPTION' | 'APP_MATCH';
+export type BookingPaymentStatus = 'PAID' | 'PARTIAL' | 'PENDING';
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+
+// pitch_bookings satırı (SLOT/REZERVASYON = TEK KAYNAK)
+export interface PitchBooking {
+  id: string;
+  pitchId: string;
+  courtId: string;
+  subscriptionId?: string | null;
+  matchId?: string | null;
+  userId?: string | null;
+  source: BookingSource;
+  title?: string | null;
+  bookingDate: string;            // YYYY-MM-DD
+  startTime: string;              // HH:MM
+  endTime: string;                // HH:MM
+  status: BookingStatus;
+  paymentStatus: BookingPaymentStatus;
+  price: number;
+  paidAmount: number;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  createdAt?: string;
+}
+
+// pitch_subscriptions satırı (ABONMAN — haftalık tekrar kuralı)
+export interface PitchSubscription {
+  id: string;
+  courtId: string;
+  pitchId: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  weekday: number;                // 0=Pzt ... 6=Paz
+  startTime: string;              // HH:MM
+  endTime: string;                // HH:MM
+  price: number;
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+  startDate?: string;
+  endDate?: string | null;
+  materializedUntil?: string | null;
+  notes?: string | null;
+  createdAt?: string;
+}
+
+// court_availability view satırı (oyuncu tarafı — Faz 2; müşteri/ödeme YOK)
+export interface CourtAvailabilitySlot {
+  id: string;
+  courtId: string;
+  pitchId: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: BookingStatus;
+}
+

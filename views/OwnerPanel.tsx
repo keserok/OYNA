@@ -8,6 +8,9 @@ import {
 
 import { OWNER_TRANSACTIONS, PITCHES } from '../constants';
 import { useAppStore } from '../store';
+import * as ownerService from '../services/ownerService';
+import { auth } from '../supabaseAuth';
+import type { OwnerFacility, OwnerCourt, PitchBooking, PitchSubscription } from '../types';
 
 interface OwnerPanelProps {
   onBack: () => void;
@@ -878,27 +881,28 @@ const EXTENDED_AMENITIES = [
     'Yapay Çim', 'Doğal Çim', 'Kapalı Saha', 'Açık Saha', 'Isıtma', 'Soğutma', 'Soyunma Odası', 'Kilitli Dolap'
 ];
 
-const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; initialData?: any; onSave: (data: any) => void }> = ({ onClose, facilityId, initialData, onSave }) => {
+const EditFacilityModal: React.FC<{ onClose: () => void; facility: OwnerFacility | null; courts: OwnerCourt[]; onSaved: () => void }> = ({ onClose, facility, courts, onSaved }) => {
     const [activeTab, setActiveTab] = useState<'general' | 'amenities' | 'pitches'>('general');
-    
-    // General Info State
-    const [facilityName, setFacilityName] = useState(initialData?.name || 'Arena Sport Center');
-    const [description, setDescription] = useState(initialData?.description || 'İstanbulun kalbinde, profesyonel standartlarda halı saha deneyimi. 7/24 açık, güvenli ve konforlu.');
-    const [images, setImages] = useState(initialData?.images || PITCHES[0].images);
+
+    // General Info State (gerçek tesisten)
+    const [facilityName, setFacilityName] = useState(facility?.name || '');
+    const [description, setDescription] = useState(facility?.description || '');
+    const [images, setImages] = useState<string[]>(facility?.images || []);
 
     // Amenities State
-    const [amenities, setAmenities] = useState<string[]>(initialData?.amenities || PITCHES[0].amenities);
+    const [amenities, setAmenities] = useState<string[]>(facility?.amenities || []);
     const [customAmenity, setCustomAmenity] = useState('');
     const [availableAmenities, setAvailableAmenities] = useState<string[]>(EXTENDED_AMENITIES);
 
-    // Pitches State
-    const [pitches, setPitches] = useState(INTERNAL_PITCHES.map(p => ({
-        ...p,
-        description: '',
-        images: [] as string[],
-        isActive: true
+    // Sahalar (courts) — düzenlenebilir yerel kopya
+    const [pitches, setPitches] = useState(courts.map(c => ({
+        id: c.id,
+        name: c.name,
+        description: c.description || '',
+        images: c.images || [],
+        isActive: c.isActive,
     })));
-    const [selectedPitchId, setSelectedPitchId] = useState(INTERNAL_PITCHES[0].id);
+    const [selectedPitchId, setSelectedPitchId] = useState(courts[0]?.id || '');
 
     const [isSaving, setIsSaving] = useState(false);
     const [draggedItem, setDraggedItem] = useState<{ index: number, pitchId?: string } | null>(null);
@@ -968,23 +972,35 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     };
 
     const handleSave = async () => {
-        if (!facilityId) return;
+        if (!facility?.id) return;
         setIsSaving(true);
         try {
-            // Mock save
-            setTimeout(() => {
-                onSave({
-                    name: facilityName,
-                    description,
-                    images,
-                    amenities,
-                    pitches
+            // Tesis profili (pitches satırı)
+            await ownerService.upsertFacility({
+                id: facility.id,
+                name: facilityName,
+                description,
+                images,
+                image: images[0] ?? facility.image ?? null,
+                amenities,
+            });
+            // Sahalar (courts)
+            for (const p of pitches) {
+                await ownerService.upsertCourt({
+                    id: p.id,
+                    pitchId: facility.id,
+                    name: p.name,
+                    description: p.description,
+                    images: p.images,
+                    isActive: p.isActive,
                 });
-                setIsSaving(false);
-                onClose();
-            }, 1000);
+            }
+            onSaved();
+            onClose();
         } catch (error) {
             console.error("Tesis bilgileri kaydedilirken hata:", error);
+            alert('Kaydedilemedi. Lütfen tekrar deneyin.');
+        } finally {
             setIsSaving(false);
         }
     };
@@ -1322,71 +1338,181 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     );
 };
 
-const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[] }> = ({ facilityId, pricingPolicy }) => {
-    const [selectedDate, setSelectedDate] = useState(0);
-    const [selectedMonthlyDay, setSelectedMonthlyDay] = useState(24);
-    const [selectedPitchId, setSelectedPitchId] = useState(INTERNAL_PITCHES[0].id);
-    const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
+const FinancialCalendarView: React.FC<{ facility: OwnerFacility | null; courts: OwnerCourt[]; onDataChanged?: () => void }> = ({ facility, courts, onDataChanged }) => {
+    const facilityId = facility?.id;
+    const [selectedDate, setSelectedDate] = useState(0); // 0 = bugün, ileri günler için offset
+    const [selectedMonthlyDay, setSelectedMonthlyDay] = useState(0);
+    const [selectedPitchId, setSelectedPitchId] = useState<string>(courts[0]?.id ?? ''); // seçili SAHA (court) id'si
+    const [selectedBooking, setSelectedBooking] = useState<PitchBooking | null>(null);
     const [isQuickCreateOpen, setIsQuickCreateOpen] = useState<string | null>(null);
     const [repriceModalOpen, setRepriceModalOpen] = useState<string | null>(null);
     const [customPrice, setCustomPrice] = useState('2000');
     const [specialRates, setSpecialRates] = useState<Record<string, number>>({});
     const [isMonthlyView, setIsMonthlyView] = useState(false);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
-    const [realTimeSlots, setRealTimeSlots] = useState<any[]>([]);
     const [isAddingSlot, setIsAddingSlot] = useState(false);
+    const [isBusy, setIsBusy] = useState(false);
 
-    // New states for reservation creation
-    const [bookings, setBookings] = useState<CalendarBooking[]>(CALENDAR_BOOKINGS);
+    // Gerçek veri (TEK KAYNAK: pitch_bookings + pitch_subscriptions)
+    const [bookings, setBookings] = useState<PitchBooking[]>([]);
+    const [subscriptions, setSubscriptions] = useState<PitchSubscription[]>([]);
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'PARTIAL' | 'PENDING'>('PENDING');
     const [isRecurringPrice, setIsRecurringPrice] = useState(false);
+    // Abonman formu
+    const [subName, setSubName] = useState('');
+    const [subPhone, setSubPhone] = useState('');
+    const [subWeekday, setSubWeekday] = useState(0);
+    const [subTime, setSubTime] = useState('21.00');
+    const [subMonths, setSubMonths] = useState(3);
+    const [subPrice, setSubPrice] = useState('2000');
 
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}.00`);
+    const dayShort = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt']; // JS getDay() 0=Paz
 
-    // Mock slots
+    // Tarih yardımcıları
+    const dateForOffset = (off: number) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + off); return d; };
+    const toDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const selectedDateStr = toDateStr(dateForOffset(selectedDate));
+
+    // Çalışma saatlerinden saatlik slotlar (gece yarısını geçen kapanışı destekler)
+    const openH = parseInt(facility?.workingHours?.open ?? '10:00');
+    let closeH = parseInt(facility?.workingHours?.close ?? '02:00');
+    if (closeH <= openH) closeH += 24;
+    const timeSlots: string[] = [];
+    for (let h = openH; h < closeH; h++) timeSlots.push(`${(h % 24).toString().padStart(2, '0')}.00`);
+
+    const reload = async () => {
+        if (!facilityId) { setBookings([]); setSubscriptions([]); return; }
+        try {
+            const from = toDateStr(dateForOffset(0));
+            const to = toDateStr(dateForOffset(90)); // görünür ufuk ~3 ay
+            const [bk, subs] = await Promise.all([
+                ownerService.getBookings(facilityId, from, to),
+                ownerService.getSubscriptions(facilityId),
+            ]);
+            setBookings(bk);
+            setSubscriptions(subs);
+        } catch (e) { console.error('Takvim verisi yüklenemedi:', e); }
+    };
+
+    useEffect(() => { reload(); /* eslint-disable-line */ }, [facilityId]);
     useEffect(() => {
-        setRealTimeSlots([]);
-    }, [facilityId]);
+        if (courts.length && !courts.find(c => c.id === selectedPitchId)) setSelectedPitchId(courts[0].id);
+    }, [courts]); // eslint-disable-line
 
-    const currentBookings = useMemo(() => {
-        return bookings.filter(b => {
-            const pitchMatch = b.pitchId === selectedPitchId;
-            const dateMatch = b.date ? b.date === (24 + selectedDate).toString() : true; // Mock date matching
-            return pitchMatch && dateMatch;
-        });
-    }, [bookings, selectedPitchId, selectedDate]);
-    
-    // Combine mock bookings with real slots (for visualization)
-    const displaySlots = useMemo(() => {
-        const combined = [...currentBookings];
-        
-        // Add real slots that are not already in bookings
-        realTimeSlots.forEach(slot => {
-            const timeFormatted = slot.time.replace(':', '.');
-            if (!combined.find(b => b.time === timeFormatted)) {
-                // This is a free slot in our mock logic, but it exists in Firestore
-            }
-        });
-        
-        return combined;
-    }, [currentBookings, realTimeSlots]);
+    // Seçili gün+saha rezervasyonları
+    const currentBookings = useMemo(
+        () => bookings.filter(b => b.courtId === selectedPitchId && b.bookingDate === selectedDateStr),
+        [bookings, selectedPitchId, selectedDateStr],
+    );
 
-    const dailyCollected = currentBookings.reduce((acc, curr) => acc + curr.paid, 0);
-    const dailyTotal = currentBookings.reduce((acc, curr) => acc + curr.price, 0);
+    // Bir rezervasyon verilen slot saatini kapsıyor mu (çok saatli + gece yarısı desteği)
+    const bookingCoversHour = (b: PitchBooking, slotHour: number) => {
+        let s = parseInt(b.startTime); let e = parseInt(b.endTime);
+        if (e <= s) e += 24;
+        for (let h = s; h < e; h++) if ((h % 24) === slotHour) return true;
+        return false;
+    };
+    const getBooking = (time: string) => currentBookings.find(b => bookingCoversHour(b, parseInt(time)));
+
+    const dailyTotal = currentBookings.reduce((acc, b) => acc + (b.price || 0), 0);
+    const dailyCollected = currentBookings.reduce((acc, b) => acc + (b.paidAmount || 0), 0);
     const dailyPending = dailyTotal - dailyCollected;
-    const occupancyRate = Math.round((currentBookings.length / timeSlots.length) * 100);
-
-    const getBooking = (time: string) => currentBookings.find(b => b.time === time || b.time === time.replace('.', ':'));
-    const getRealSlot = (time: string) => realTimeSlots.find(s => s.time === time.replace('.', ':'));
+    const busyHours = currentBookings.reduce((acc, b) => { let s = parseInt(b.startTime), e = parseInt(b.endTime); if (e <= s) e += 24; return acc + (e - s); }, 0);
+    const occupancyRate = timeSlots.length ? Math.round((busyHours / timeSlots.length) * 100) : 0;
 
     const handleQuickCreate = async (time: string) => {
         setIsQuickCreateOpen(time);
         setCustomerName('');
         setCustomerPhone('');
         setPaymentStatus('PENDING');
+    };
+
+    // Tek seferlik rezervasyon oluştur (TEK KAYNAK'a yazar)
+    const handleCreateBooking = async () => {
+        if (!isQuickCreateOpen || !facilityId || !selectedPitchId) return;
+        const startH = parseInt(isQuickCreateOpen);
+        const price = specialRates[isQuickCreateOpen] || (parseInt(customPrice) || 2000);
+        const paid = paymentStatus === 'PAID' ? price : paymentStatus === 'PARTIAL' ? Math.floor(price * 0.25) : 0;
+        setIsBusy(true);
+        try {
+            await ownerService.createBooking({
+                pitchId: facilityId,
+                courtId: selectedPitchId,
+                bookingDate: selectedDateStr,
+                startTime: `${startH.toString().padStart(2, '0')}:00`,
+                endTime: `${((startH + 1) % 24).toString().padStart(2, '0')}:00`,
+                customerName: customerName.trim() || 'Misafir',
+                customerPhone: customerPhone.trim() || undefined,
+                price,
+                paidAmount: paid,
+                paymentStatus,
+            });
+            setIsQuickCreateOpen(null);
+            setCustomerName(''); setCustomerPhone(''); setPaymentStatus('PENDING');
+            await reload();
+            onDataChanged?.();
+        } catch (e: any) {
+            alert(e?.message || 'Rezervasyon oluşturulamadı.');
+        } finally { setIsBusy(false); }
+    };
+
+    const handleDeleteBooking = async (id: string) => {
+        setIsBusy(true);
+        try {
+            await ownerService.deleteBooking(id);
+            setSelectedBooking(null);
+            await reload();
+            onDataChanged?.();
+        } catch (e) { console.error(e); } finally { setIsBusy(false); }
+    };
+
+    const handleUpdatePayment = async (id: string, status: 'PAID' | 'PARTIAL' | 'PENDING', price: number) => {
+        const paid = status === 'PAID' ? price : status === 'PARTIAL' ? Math.floor(price * 0.25) : 0;
+        setIsBusy(true);
+        try {
+            await ownerService.updateBookingPayment(id, status, paid);
+            setSelectedBooking(null);
+            await reload();
+        } catch (e) { console.error(e); } finally { setIsBusy(false); }
+    };
+
+    // Abonman oluştur (server-side materialize eder)
+    const handleCreateSubscription = async () => {
+        if (!facilityId || !selectedPitchId) return;
+        const startH = parseInt(subTime);
+        const endDate = subMonths ? toDateStr((() => { const d = dateForOffset(0); d.setMonth(d.getMonth() + subMonths); return d; })()) : null;
+        setIsBusy(true);
+        try {
+            await ownerService.createSubscription({
+                pitchId: facilityId,
+                courtId: selectedPitchId,
+                weekday: subWeekday,
+                startTime: `${startH.toString().padStart(2, '0')}:00`,
+                endTime: `${((startH + 1) % 24).toString().padStart(2, '0')}:00`,
+                customerName: subName.trim() || 'Abonman',
+                customerPhone: subPhone.trim() || undefined,
+                price: parseInt(subPrice) || 0,
+                endDate,
+            });
+            setIsSubscriptionModalOpen(false);
+            setSubName(''); setSubPhone('');
+            await reload();
+            onDataChanged?.();
+        } catch (e: any) {
+            alert(e?.message || 'Abonman oluşturulamadı.');
+        } finally { setIsBusy(false); }
+    };
+
+    const handleCancelSubscription = async (id: string) => {
+        setIsBusy(true);
+        try {
+            await ownerService.cancelSubscription(id);
+            await reload();
+            onDataChanged?.();
+        } catch (e) { console.error(e); } finally { setIsBusy(false); }
     };
 
     const getStatusStyles = (status: string) => {
@@ -1428,25 +1554,28 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
 
                 <div className="p-4 pt-2 space-y-3">
                     <div className="flex justify-between gap-1">
-                        {days.map((d, i) => (
-                            <button 
+                        {Array.from({ length: 7 }, (_, i) => {
+                            const dt = dateForOffset(i);
+                            return (
+                            <button
                                 key={i}
                                 onClick={() => setSelectedDate(i)}
                                 className={`flex-1 py-2 rounded-lg flex flex-col items-center gap-0.5 transition-all border ${selectedDate === i ? 'bg-white/10 text-white border-white/20 shadow-lg scale-105' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
                             >
-                                <span className="text-[9px] font-black uppercase">{d}</span>
-                                <span className="text-sm font-bold">{24 + i}</span>
+                                <span className="text-[9px] font-black uppercase">{i === 0 ? 'BUGÜN' : dayShort[dt.getDay()]}</span>
+                                <span className="text-sm font-bold">{dt.getDate()}</span>
                             </button>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="flex items-center gap-2">
                         <div className="flex-1 flex bg-[#161B22] p-1 rounded-xl">
-                            {INTERNAL_PITCHES.map(p => (
+                            {courts.map(p => (
                                 <button
                                     key={p.id}
                                     onClick={() => setSelectedPitchId(p.id)}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${selectedPitchId === p.id ? 'bg-[#2D3748] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${selectedPitchId === p.id ? 'bg-[#2D3748] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'} ${p.isActive ? '' : 'opacity-50'}`}
                                 >
                                     {p.name}
                                 </button>
@@ -1468,7 +1597,7 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-black text-white italic">MART 2024</h3>
+                                <h3 className="text-lg font-black text-white italic">{new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }).toLocaleUpperCase('tr-TR')}</h3>
                                 <button 
                                     onClick={() => setIsSubscriptionModalOpen(true)}
                                     className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20"
@@ -1482,7 +1611,7 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                             <div className="grid grid-cols-7 gap-2">
                                 {Array.from({ length: 31 }, (_, i) => {
                                     const day = i + 1;
-                                    const isToday = day === 24;
+                                    const isToday = day === new Date().getDate();
                                     const isSelected = selectedMonthlyDay === day;
                                     
                                     return (
@@ -1503,62 +1632,56 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
 
                         <div className="space-y-4">
                             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">AKTİF ABONMANLAR</h4>
-                            {[
-                                { id: 's1', user: 'Vadi Gücü FC', day: 'Pazartesi', time: '21.00', pitch: 'Saha 1' },
-                                { id: 's2', user: 'Kaplanlar', day: 'Çarşamba', time: '19.00', pitch: 'Saha 2' }
-                            ].map(sub => (
+                            {subscriptions.length === 0 ? (
+                                <p className="text-sm text-gray-500 text-center py-4">Aktif abonman bulunmuyor.</p>
+                            ) : subscriptions.map(sub => {
+                                const court = courts.find(c => c.id === sub.courtId);
+                                return (
                                 <div key={sub.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center group">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                                             <RefreshCw size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-white">{sub.user}</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase">{sub.day} • {sub.time} • {sub.pitch}</p>
+                                            <p className="text-sm font-black text-white">{sub.customerName || 'Abonman'}</p>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase">{days[sub.weekday] || ''} • {sub.startTime} • {court?.name || ''}</p>
                                         </div>
                                     </div>
-                                    <button className="p-2 text-gray-600 hover:text-white transition-colors">
-                                        <MoreHorizontal size={20} />
+                                    <button onClick={() => handleCancelSubscription(sub.id)} disabled={isBusy} className="p-2 text-gray-600 hover:text-red-400 transition-colors" title="Abonmanı iptal et">
+                                        <Trash2 size={20} />
                                     </button>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 ) : (
                     timeSlots.map((time, idx) => {
                         const booking = getBooking(time);
-                        const isSub = booking?.type === 'SUB';
+                        const isSub = booking?.source === 'SUBSCRIPTION';
                         const subStyles = { bg: 'bg-blue-900/30', border: 'border-blue-500/50', text: 'text-blue-400', bar: 'bg-blue-500' };
-                        const styles = booking ? (isSub ? subStyles : getStatusStyles(booking.status)) : null;
-                        
+                        const styles = booking ? (isSub ? subStyles : getStatusStyles(booking.paymentStatus)) : null;
+
                         const hour = parseInt(time.split('.')[0]);
-                        let defaultPrice = 2000;
-                        
-                        if (pricingPolicy && pricingPolicy.length > 0) {
-                            const matchedPolicy = pricingPolicy.find(p => {
-                                const startH = parseInt(p.startTime.split(':')[0]);
-                                let endH = parseInt(p.endTime.split(':')[0]);
+                        const selectedCourt = courts.find(c => c.id === selectedPitchId);
+                        let defaultPrice = selectedCourt?.price || 2000;
+
+                        const policy = facility?.settings?.pricing_policy;
+                        if (Array.isArray(policy) && policy.length > 0) {
+                            const matchedPolicy = policy.find((p: any) => {
+                                const startH = parseInt(String(p.startTime).split(':')[0]);
+                                let endH = parseInt(String(p.endTime).split(':')[0]);
                                 if (endH === 0) endH = 24;
-                                
-                                if (startH <= endH) {
-                                    return hour >= startH && hour < endH;
-                                } else {
-                                    return hour >= startH || hour < endH;
-                                }
+                                if (startH <= endH) return hour >= startH && hour < endH;
+                                return hour >= startH || hour < endH;
                             });
                             if (matchedPolicy) defaultPrice = matchedPolicy.price;
-                        } else {
-                            if (hour >= 18 && hour < 23) defaultPrice = 3200;
-                            else if (hour >= 13 && hour < 16) defaultPrice = 2000;
+                        } else if (hour >= 18 && hour < 23) {
+                            defaultPrice = (selectedCourt?.price || 2000) * 1.5;
                         }
-                        
+
                         const currentPrice = specialRates[time] || defaultPrice;
-                        
-                        // Override booking price if present to reflect the policy
-                        if (booking && defaultPrice) {
-                            booking.price = defaultPrice;
-                        }
-                        const nextTime = `${(parseInt(time.split('.')[0]) + 1).toString().padStart(2, '0')}.00`;
+                        const nextTime = `${((hour + 1) % 24).toString().padStart(2, '0')}.00`;
                         
                         return (
                             <div key={time} className="flex gap-4 group">
@@ -1577,12 +1700,13 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${styles?.bar}`}></div>
                                         <div className="p-3 pl-5 flex justify-between items-center">
                                             <div>
-                                                <p className="text-sm font-bold text-white leading-tight">{booking.user}</p>
+                                                <p className="text-sm font-bold text-white leading-tight">{booking.customerName || booking.title || 'Müşteri'}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${styles?.text} bg-black/20`}>
-                                                        {booking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
+                                                        {booking.paymentStatus === 'PAID' ? 'ÖDENDİ' : booking.paymentStatus === 'PARTIAL' ? 'KAPORA' : 'BEKLEYEN'}
                                                     </span>
-                                                    {booking.note && <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{booking.note}</span>}
+                                                    {isSub && <span className="text-[10px] text-blue-400 font-bold">ABONMAN</span>}
+                                                    {!isSub && booking.customerPhone && <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{booking.customerPhone}</span>}
                                                 </div>
                                             </div>
                                             <div className="text-right">
@@ -1592,23 +1716,17 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                     </button>
                                 ) : (
                                     <div className="flex gap-2 h-16 w-full">
-                                        <button 
+                                        <button
                                             onClick={() => handleQuickCreate(time)}
-                                            disabled={isAddingSlot || getRealSlot(time) !== undefined}
-                                            className={`flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 relative overflow-hidden ${
-                                                getRealSlot(time) 
-                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                                                : 'border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-gray-600 hover:text-emerald-400 group/add'
-                                            }`}
+                                            disabled={isAddingSlot || isBusy}
+                                            className="flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 relative overflow-hidden border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-gray-600 hover:text-emerald-400 group/add"
                                         >
                                             <div className="relative z-10 flex flex-col items-center">
                                                 <div className="flex items-center gap-1">
-                                                    {getRealSlot(time) ? <CheckCircle2 size={16} /> : <Plus size={16} className="group-hover/add:scale-110 transition-transform" />}
-                                                    <span className="text-xs font-bold uppercase tracking-wider">
-                                                        {getRealSlot(time) ? 'YAYINDA' : 'BOŞ'}
-                                                    </span>
+                                                    <Plus size={16} className="group-hover/add:scale-110 transition-transform" />
+                                                    <span className="text-xs font-bold uppercase tracking-wider">BOŞ</span>
                                                 </div>
-                                                <span className="text-[10px] text-gray-500 font-mono mt-0.5">{currentPrice}₺</span>
+                                                <span className="text-[10px] text-gray-500 font-mono mt-0.5">{Math.round(currentPrice)}₺</span>
                                             </div>
                                         </button>
 
@@ -1699,32 +1817,12 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                             </div>
                         </div>
 
-                        <button 
-                            onClick={() => {
-                                if (!isQuickCreateOpen) return;
-                                const rateVal = specialRates[isQuickCreateOpen] || 2000;
-                                const newBooking: CalendarBooking = {
-                                    id: `new-${Date.now()}`,
-                                    pitchId: selectedPitchId,
-                                    time: isQuickCreateOpen,
-                                    date: (24 + selectedDate).toString(), // Store the selected date
-                                    duration: 1,
-                                    user: customerName.trim() || 'Misafir Oyuncu',
-                                    status: paymentStatus,
-                                    price: rateVal,
-                                    paid: paymentStatus === 'PAID' ? rateVal : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25) : 0,
-                                    type: 'DAILY',
-                                    note: customerPhone ? `Tel: ${customerPhone}` : (paymentStatus === 'PARTIAL' ? 'Kapora Alındı' : paymentStatus === 'PAID' ? 'Tam Ödendi' : 'Ödeme Bekliyor')
-                                };
-                                setBookings(prev => [...prev, newBooking]);
-                                setIsQuickCreateOpen(null);
-                                setCustomerName('');
-                                setCustomerPhone('');
-                                setPaymentStatus('PENDING');
-                            }}
-                            className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all"
+                        <button
+                            onClick={handleCreateBooking}
+                            disabled={isBusy}
+                            className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-60"
                         >
-                            KAYDET
+                            {isBusy ? 'KAYDEDİLİYOR...' : 'KAYDET'}
                         </button>
                     </div>
                 </div>
@@ -1808,12 +1906,25 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                             <button onClick={() => setIsSubscriptionModalOpen(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">MÜŞTERİ BİLGİSİ</label>
                                 <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl flex items-center gap-3">
                                     <User size={20} className="text-gray-500" />
-                                    <input type="text" placeholder="Ad Soyad / Takım Adı" className="bg-transparent w-full outline-none text-white font-bold" />
+                                    <input type="text" value={subName} onChange={e => setSubName(e.target.value)} placeholder="Ad Soyad / Takım Adı" className="bg-transparent w-full outline-none text-white font-bold" />
+                                </div>
+                                <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl flex items-center gap-3">
+                                    <Phone size={20} className="text-gray-500" />
+                                    <input type="tel" value={subPhone} onChange={e => setSubPhone(e.target.value)} placeholder="Telefon (opsiyonel)" className="bg-transparent w-full outline-none text-gray-300 font-mono text-sm" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">SAHA</label>
+                                <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
+                                    <select value={selectedPitchId} onChange={e => setSelectedPitchId(e.target.value)} className="bg-transparent w-full outline-none text-white font-bold appearance-none">
+                                        {courts.map(c => <option key={c.id} value={c.id} className="bg-[#0A0E14]">{c.name}</option>)}
+                                    </select>
                                 </div>
                             </div>
 
@@ -1821,39 +1932,99 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">GÜN</label>
                                     <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
-                                        <select className="bg-transparent w-full outline-none text-white font-bold appearance-none">
-                                            {days.map(d => <option key={d} value={d}>{d}</option>)}
+                                        <select value={subWeekday} onChange={e => setSubWeekday(parseInt(e.target.value))} className="bg-transparent w-full outline-none text-white font-bold appearance-none">
+                                            {days.map((d, i) => <option key={d} value={i} className="bg-[#0A0E14]">{d}</option>)}
                                         </select>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">SAAT</label>
                                     <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
-                                        <select className="bg-transparent w-full outline-none text-white font-bold appearance-none">
-                                            {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                                        <select value={subTime} onChange={e => setSubTime(e.target.value)} className="bg-transparent w-full outline-none text-white font-bold appearance-none">
+                                            {timeSlots.map(t => <option key={t} value={t} className="bg-[#0A0E14]">{t}</option>)}
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">SÜRE (AY)</label>
-                                <div className="flex gap-2">
-                                    {[1, 3, 6, 12].map(m => (
-                                        <button key={m} className="flex-1 py-3 bg-[#0A0E14] border border-white/5 rounded-xl text-xs font-bold hover:border-blue-500 transition-colors">
-                                            {m} Ay
-                                        </button>
-                                    ))}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">SÜRE (AY)</label>
+                                    <div className="flex gap-2">
+                                        {[1, 3, 6, 12].map(m => (
+                                            <button key={m} onClick={() => setSubMonths(m)} className={`flex-1 py-3 border rounded-xl text-xs font-bold transition-colors ${subMonths === m ? 'bg-blue-600 text-white border-blue-600' : 'bg-[#0A0E14] border-white/5 hover:border-blue-500'}`}>
+                                                {m}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">ÜCRET (₺)</label>
+                                    <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
+                                        <input type="number" value={subPrice} onChange={e => setSubPrice(e.target.value)} className="bg-transparent w-full outline-none text-white font-bold" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <button 
-                                onClick={() => setIsSubscriptionModalOpen(false)}
-                                className="w-full h-16 bg-blue-600 text-white font-black text-lg rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-500 transition-all mt-4"
+                            <button
+                                onClick={handleCreateSubscription}
+                                disabled={isBusy || !selectedPitchId}
+                                className="w-full h-16 bg-blue-600 text-white font-black text-lg rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-500 transition-all mt-2 disabled:opacity-60"
                             >
-                                ABONMANI OLUŞTUR
+                                {isBusy ? 'OLUŞTURULUYOR...' : 'ABONMANI OLUŞTUR'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rezervasyon Detay / İşlem Modalı */}
+            {selectedBooking && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+                    <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-lg font-black text-white">{selectedBooking.customerName || selectedBooking.title || 'Rezervasyon'}</h3>
+                                <p className="text-xs text-gray-400 mt-1">{selectedBooking.bookingDate} • {selectedBooking.startTime}–{selectedBooking.endTime}{selectedBooking.source === 'SUBSCRIPTION' ? ' • Abonman' : ''}</p>
+                            </div>
+                            <button onClick={() => setSelectedBooking(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+                        </div>
+
+                        {selectedBooking.customerPhone && (
+                            <div className="bg-[#0A0E14] p-3 rounded-xl border border-white/5 mb-4 flex items-center gap-2 text-sm text-gray-300">
+                                <Phone size={16} className="text-gray-500" /> {selectedBooking.customerPhone}
+                            </div>
+                        )}
+
+                        <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-4 flex justify-between items-center">
+                            <span className="text-sm font-bold text-gray-400">Tutar</span>
+                            <span className="text-lg font-black text-white font-mono">{selectedBooking.price}₺</span>
+                        </div>
+
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">ÖDEME DURUMU</label>
+                        <div className="flex gap-2 mt-2 mb-6">
+                            {(['PAID', 'PARTIAL', 'PENDING'] as const).map(st => (
+                                <button
+                                    key={st}
+                                    onClick={() => handleUpdatePayment(selectedBooking.id, st, selectedBooking.price)}
+                                    disabled={isBusy}
+                                    className={`flex-1 py-3 border rounded-xl text-xs font-bold transition-colors ${selectedBooking.paymentStatus === st ? (st === 'PAID' ? 'bg-emerald-500 text-black border-emerald-500' : st === 'PARTIAL' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-red-500 text-white border-red-500') : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'}`}
+                                >
+                                    {st === 'PAID' ? 'Ödendi' : st === 'PARTIAL' ? 'Kapora' : 'Bekliyor'}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => handleDeleteBooking(selectedBooking.id)}
+                            disabled={isBusy}
+                            className="w-full py-4 bg-red-600/90 text-white font-black rounded-2xl hover:bg-red-500 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                            <Trash2 size={18} /> {selectedBooking.source === 'SUBSCRIPTION' ? 'BU HAFTAYI İPTAL ET' : 'REZERVASYONU SİL'}
+                        </button>
+                        {selectedBooking.source === 'SUBSCRIPTION' && (
+                            <p className="text-[10px] text-gray-500 text-center mt-2">Bu yalnızca bu haftaki slotu siler; abonman devam eder.</p>
+                        )}
                     </div>
                 </div>
             )}
@@ -3250,46 +3421,70 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
   const [isFacilityOpen, setIsFacilityOpen] = useState(true);
 
   const [facilityData, setFacilityData] = useState<any>(null);
+  const [ownerFacility, setOwnerFacility] = useState<OwnerFacility | null>(null);
+  const [ownerCourts, setOwnerCourts] = useState<OwnerCourt[]>([]);
+  const [courtOccupancy, setCourtOccupancy] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch facility data on mount
-  useEffect(() => {
-    // Firebase setup was declined or skipped, using mock mode with localStorage
-    const uid = 'mock-user-id';
-    
-    // Use default mock data
-    const defaultData = {
-      ownerId: uid,
-      name: 'Arena Sport Center',
-      description: 'Tesis açıklaması buraya gelecek.',
-      images: [PITCHES[0].image],
-      amenities: ['Otopark', 'Kafe', 'Soyunma Odası', 'Duş'],
-      isFacilityOpen: true,
-      pricingPolicy: { daytime: 2000, prime: 3200, weekend: 3500 },
-      bankAccounts: [],
-      workingHours: [
-        { name: 'Pazartesi', open: '08:00', close: '00:00' },
-        { name: 'Salı', open: '08:00', close: '00:00' },
-        { name: 'Çarşamba', open: '08:00', close: '00:00' },
-        { name: 'Perşembe', open: '08:00', close: '00:00' },
-        { name: 'Cuma', open: '08:00', close: '02:00' },
-        { name: 'Cumartesi', open: '08:00', close: '02:00' },
-        { name: 'Pazar', open: '08:00', close: '00:00' },
-      ],
-      createdAt: new Date()
-    };
-    
-    const savedFacilityData = localStorage.getItem('owner_facilityData');
-    if (savedFacilityData) {
-        const parsed = JSON.parse(savedFacilityData);
-        setFacilityData(parsed);
-        setIsFacilityOpen(parsed.isFacilityOpen ?? true);
-    } else {
-        setFacilityData({ id: 'mock-facility-id', ...defaultData });
-        setIsFacilityOpen(true);
+  // Tesis + sahaları Supabase'den yükle (TEK KAYNAK). Giriş yoksa dev fallback: ilk tesis.
+  const loadFacility = async () => {
+    setIsLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      let fac = uid ? await ownerService.getOwnerFacility(uid) : null;
+      if (!fac) fac = await ownerService.getFirstFacility();
+      setOwnerFacility(fac);
+      setIsFacilityOpen(fac?.isActive ?? true);
+      if (fac) {
+        const courts = await ownerService.getCourts(fac.id);
+        setOwnerCourts(courts);
+        // Bugünkü doluluk (her saha için türetilmiş % — tek kaynaktan)
+        const today = new Date().toISOString().slice(0, 10);
+        const occ: Record<string, number> = {};
+        await Promise.all(courts.map(async c => { occ[c.id] = await ownerService.getCourtOccupancy(c.id, today); }));
+        setCourtOccupancy(occ);
+        // Modalların beklediği adapter şekli (gerçek veriden türetilir)
+        setFacilityData({
+          id: fac.id,
+          name: fac.name,
+          description: fac.description ?? '',
+          images: fac.images ?? [],
+          image: fac.image,
+          amenities: fac.amenities ?? [],
+          isFacilityOpen: fac.isActive,
+          pricingPolicy: fac.settings?.pricing_policy,
+          paymentOptions: fac.settings?.payment_options,
+          bankAccounts: fac.settings?.bank_accounts ?? [],
+          workingHours: fac.settings?.working_hours_days
+            ?? ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'].map(n => ({ name: n, open: fac!.workingHours?.open ?? '10:00', close: fac!.workingHours?.close ?? '02:00' })),
+        });
+      } else {
+        setFacilityData(null);
+        setOwnerCourts([]);
+      }
+    } catch (e) {
+      console.error('Tesis yüklenemedi:', e);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, []);
+  };
+
+  useEffect(() => { loadFacility(); }, []);
+
+  // Tesis ayarlarını (pricing_policy / payment_options / working_hours_days) settings JSONB'ye persist eder
+  const saveFacilitySettings = async (patch: Record<string, any>) => {
+    if (!ownerFacility) return;
+    const newSettings = { ...(ownerFacility.settings || {}), ...patch };
+    try {
+      const updated = await ownerService.upsertFacility({ id: ownerFacility.id, settings: newSettings });
+      setOwnerFacility(updated);
+    } catch (e) { console.error('Ayar kaydedilemedi:', e); }
+  };
+
+  // Bugünkü ortalama doluluk (HOME özeti — tek kaynaktan türetilir)
+  const avgOccupancy = ownerCourts.length
+    ? Math.round(ownerCourts.reduce((a, c) => a + (courtOccupancy[c.id] || 0), 0) / ownerCourts.length)
+    : 0;
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
@@ -3308,23 +3503,19 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
       localStorage.setItem('owner_activeWidgets', JSON.stringify(activeWidgets));
   }, [activeWidgets]);
 
-  useEffect(() => {
-      if (facilityData) {
-          localStorage.setItem('owner_facilityData', JSON.stringify({
-              ...facilityData,
-              isFacilityOpen
-          }));
-      }
-  }, [facilityData, isFacilityOpen]);
+  // Tesis verisi artık Supabase'de tutulur (localStorage persist kaldırıldı).
 
   const toggleFacilityStatus = async () => {
-    if (!facilityData?.id) return;
-    
+    if (!ownerFacility?.id) return;
     const newStatus = !isFacilityOpen;
     setIsFacilityOpen(newStatus);
-    
-    // Mock update
-    console.log("Mock: Facility status updated to", newStatus);
+    try {
+      await ownerService.upsertFacility({ id: ownerFacility.id, isActive: newStatus });
+      setOwnerFacility(prev => prev ? { ...prev, isActive: newStatus } : prev);
+    } catch (e) {
+      console.error('Tesis durumu güncellenemedi:', e);
+      setIsFacilityOpen(!newStatus);
+    }
   };
 
   const handleProcessRequest = (id: string, action: 'APPROVE' | 'REJECT') => {
@@ -3391,8 +3582,8 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
                     >
                         <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Users size={48} /></div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">Doluluk <ArrowUpRight size={12} /></p>
-                        <h3 className={`text-3xl font-black mt-1 transition-colors ${78 < 50 ? 'text-red-500 group-hover:text-red-400' : 'text-emerald-500 group-hover:text-emerald-400'}`}>%78</h3>
-                        <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold mt-2">4 Saat Boş</div>
+                        <h3 className={`text-3xl font-black mt-1 transition-colors ${avgOccupancy < 50 ? 'text-red-500 group-hover:text-red-400' : 'text-emerald-500 group-hover:text-emerald-400'}`}>%{avgOccupancy}</h3>
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold mt-2">{ownerCourts.length} saha • bugün</div>
                     </button>
                   </div>
               )}
@@ -3460,7 +3651,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
           </main>
       )}
 
-      {activeTab === 'CALENDAR' && <FinancialCalendarView facilityId={facilityData?.id} pricingPolicy={facilityData?.pricingPolicy} />}
+      {activeTab === 'CALENDAR' && <FinancialCalendarView facility={ownerFacility} courts={ownerCourts} onDataChanged={loadFacility} />}
       {activeTab === 'FINANCE' && <FinanceView hasDebt={hasDebt} isPayingDebt={isPayingDebt} onPayDebt={handlePayDebt} />}
       {activeTab === 'TEAM' && <TeamView />}
       {activeTab === 'PENDING_ACTIONS' && (
@@ -3489,11 +3680,11 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
 
       {/* MODALS */}
       {showEditProfile && (
-        <EditFacilityModal 
-          onClose={() => setShowEditProfile(false)} 
-          facilityId={facilityData?.id} 
-          initialData={facilityData}
-          onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
+        <EditFacilityModal
+          onClose={() => setShowEditProfile(false)}
+          facility={ownerFacility}
+          courts={ownerCourts}
+          onSaved={loadFacility}
         />
       )}
       {showWorkingHours && (
@@ -3503,7 +3694,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
             isOpen={isFacilityOpen} 
             onToggleOpen={toggleFacilityStatus} 
             initialHours={facilityData?.workingHours}
-            onSave={(hours) => setFacilityData((prev: any) => ({ ...prev, workingHours: hours }))}
+            onSave={(hours) => { setFacilityData((prev: any) => ({ ...prev, workingHours: hours })); saveFacilitySettings({ working_hours_days: hours }); }}
           />
       )}
       {showBankAccounts && (
@@ -3517,7 +3708,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
           onClose={() => setShowPricingPolicy(false)} 
           facilityId={facilityData?.id}
           initialPrices={facilityData?.pricingPolicy}
-          onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
+          onSave={(policy) => { setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy })); saveFacilitySettings({ pricing_policy: policy }); }}
         />
       )}
       {showPaymentSettings && (
@@ -3525,7 +3716,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
           onClose={() => setShowPaymentSettings(false)} 
           facilityId={facilityData?.id}
           initialData={facilityData}
-          onSave={(paymentData) => setFacilityData((prev: any) => ({ ...prev, ...paymentData }))}
+          onSave={(paymentData) => { setFacilityData((prev: any) => ({ ...prev, ...paymentData })); saveFacilitySettings({ payment_options: paymentData }); }}
         />
       )}
       {showWidgetSettings && (
@@ -3574,22 +3765,22 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
                       <button onClick={() => setShowOccupancyModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                   </div>
                   <div className="space-y-6">
-                      {[
-                          { label: 'Saha 1', value: 85 },
-                          { label: 'Saha 2', value: 70 },
-                          { label: 'Saha 3', value: 45 },
-                          { label: 'Saha 4', value: 60 }
-                      ].map((item, idx) => (
-                          <div key={idx} className="space-y-2">
+                      {ownerCourts.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">Saha bulunmuyor.</p>
+                      ) : ownerCourts.map((court) => {
+                          const value = courtOccupancy[court.id] || 0;
+                          return (
+                          <div key={court.id} className="space-y-2">
                               <div className="flex justify-between items-end">
-                                  <span className="text-sm font-bold text-white">{item.label}</span>
-                                  <span className={`text-sm font-black ${item.value < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.value}</span>
+                                  <span className="text-sm font-bold text-white">{court.name}</span>
+                                  <span className={`text-sm font-black ${value < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{value}</span>
                               </div>
                               <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full transition-all duration-500 ${item.value < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.value}%` }}></div>
+                                  <div className={`h-full rounded-full transition-all duration-500 ${value < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${value}%` }}></div>
                               </div>
                           </div>
-                      ))}
+                          );
+                      })}
                   </div>
               </div>
           </div>

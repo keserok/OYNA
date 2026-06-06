@@ -246,41 +246,6 @@ export const fbGetProviderOffers = async (providerId: string) => {
 };
 
 // --- Owner Pitch Management ---
-export const fbGetOwnerPitches = async (ownerId: string) => {
-  const { data, error } = await supabase.from('pitches').select('*').eq('owner_id', ownerId);
-  if (error) {
-    console.error('Error fetching owner pitches:', error);
-    return [];
-  }
-  return data;
-};
-
-export const fbGetPitchBookings = async (pitchId: string, dateStr?: string) => {
-  let query = supabase.from('pitch_bookings').select('*').eq('pitch_id', pitchId);
-  if (dateStr) {
-      query = query.eq('booking_date', dateStr);
-  }
-  const { data, error } = await query;
-  if (error) {
-    console.error('Error fetching pitch bookings:', error);
-    return [];
-  }
-  return data;
-};
-
-export const fbCreatePitchBooking = async (booking: { pitch_id: string, user_id?: string, title?: string, booking_date: string, start_time: string, end_time: string, status?: string }) => {
-  const { data, error } = await supabase.from('pitch_bookings').insert([booking]).select();
-  if (error) {
-    console.error('Error creating pitch booking:', error);
-    throw error;
-  }
-  return data;
-};
-
-export const fbDeletePitchBooking = async (bookingId: string) => {
-  const { error } = await supabase.from('pitch_bookings').delete().eq('id', bookingId);
-  if (error) {
-    console.error('Error deleting pitch booking:', error);
-    throw error;
-  }
-};
+// Tesis / saha (courts) / rezervasyon (pitch_bookings) / abonman işlemleri
+// services/ownerService.ts'e taşındı: doğru snake_case eşleme, court_id + ödeme +
+// abonman alanları ve çakışma (EXCLUDE) hata yönetimi orada yapılır.
