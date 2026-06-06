@@ -265,3 +265,18 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px #0d1420 inset;
   -webkit-text-fill-color: #fff;
 }
+
+/* Prevent iOS auto-zoom on form focus by forcing min 16px font-size on mobile viewports */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
