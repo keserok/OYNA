@@ -438,7 +438,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     </p>
                   </div>
 
-                  <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent z-20">
+                  <div className="fixed bottom-0 left-0 right-0 px-6 pt-6 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent z-20">
                     <div className="flex gap-3">
                       <button 
                         disabled={isPaying || paySuccess}
