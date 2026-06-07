@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement } from './types';
 import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER_TEAMS } from './constants';
 import * as FB from './supabaseMutations';
+import * as playerPitchService from './services/playerPitchService';
 import { auth } from './supabaseAuth';
 
 import { supabase } from './supabaseClient';
@@ -222,6 +223,9 @@ interface AppState {
 
   // Admin CRUD Data (live, reflected across whole app)
   adminPitches: Pitch[];
+  // Oyuncu keşif ekranı için gerçek (Supabase) tesisler — Faz 2
+  discoveryPitches: Pitch[];
+  discoveryLoading: boolean;
   adminGoalkeepers: Goalkeeper[];
   adminReferees: Referee[];
   adminMatches: MatchListing[];
@@ -302,6 +306,7 @@ interface AppState {
   addPitch: (pitch: Pitch) => void;
   updatePitch: (pitch: Pitch) => void;
   deletePitch: (id: string) => void;
+  loadDiscoveryPitches: () => Promise<void>;
 
   // ─── Goalkeeper CRUD ───────────────────────────────────────────
   addGoalkeeper: (gk: Goalkeeper) => void;
@@ -431,6 +436,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   searchRadius: 50,
   setSearchRadius: (searchRadius) => set({ searchRadius }),
   adminPitches: PITCHES,
+  discoveryPitches: [],
+  discoveryLoading: false,
   adminGoalkeepers: GOALKEEPERS,
   adminReferees: REFEREES,
   adminMatches: MATCH_LISTINGS,
@@ -683,6 +690,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   deletePitch: (id) => {
     set((state) => ({ adminPitches: state.adminPitches.filter(p => p.id !== id) }));
     FB.fbDeletePitch(id);
+  },
+  loadDiscoveryPitches: async () => {
+    set({ discoveryLoading: true });
+    try {
+      const pitches = await playerPitchService.getDiscoveryPitches();
+      set({ discoveryPitches: pitches });
+    } catch (e) {
+      console.error('loadDiscoveryPitches:', e);
+    } finally {
+      set({ discoveryLoading: false });
+    }
   },
 
   // Goalkeeper

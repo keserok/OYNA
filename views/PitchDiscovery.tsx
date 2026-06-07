@@ -12,6 +12,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
+import * as playerPitchService from '../services/playerPitchService';
 
 // Fix leafet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -300,6 +301,12 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
           <Star size={9} className="fill-[#FFFF00] text-[#FFFF00]" />
           <span className="text-[9px] font-black text-white">{pitch.rating.toFixed(1)}</span>
         </div>
+
+        {/* Bugünkü doluluk (türetilmiş — tek kaynaktan) */}
+        <div className="absolute bottom-2 left-2.5 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-md">
+          <span className={`w-1.5 h-1.5 rounded-full ${pitch.occupancy >= 70 ? 'bg-red-500' : pitch.occupancy >= 40 ? 'bg-yellow-400' : 'bg-emerald-400'}`} />
+          <span className="text-[8px] font-black text-white">%{pitch.occupancy} dolu</span>
+        </div>
       </div>
 
       {/* Lower part: Info & Prices */}
@@ -348,7 +355,7 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = {
 };
 
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime }) => {
-  const { userLocation, adminPitches, addUserNotification } = useAppStore();
+  const { userLocation, discoveryPitches, discoveryLoading, loadDiscoveryPitches, addUserNotification } = useAppStore();
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -359,6 +366,21 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(0); // 0 = Today
   const [timeFilter, setTimeFilter] = useState<'DAY' | 'NIGHT'>('NIGHT');
+  // Seçili saha+gün için DOLU saatler (court_availability'den) — oyuncu doluluk görüntüleme
+  const [bookedHours, setBookedHours] = useState<Set<number>>(new Set());
+
+  // Gerçek tesisleri Supabase'den yükle (mount)
+  useEffect(() => { loadDiscoveryPitches(); }, []); // eslint-disable-line
+
+  // Açılan saha + seçili gün değişince o sahanın o günkü DOLU saatlerini çek
+  useEffect(() => {
+    let alive = true;
+    if (!expandedCourtId) { setBookedHours(new Set()); return; }
+    const d = new Date(); d.setDate(d.getDate() + selectedDate);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    playerPitchService.getBookedHours(expandedCourtId, dateStr).then(hrs => { if (alive) setBookedHours(new Set(hrs)); });
+    return () => { alive = false; };
+  }, [expandedCourtId, selectedDate]);
 
   // Quick Rent States
   const [quickRentCourt, setQuickRentCourt] = useState<Court | null>(null);
@@ -441,10 +463,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     return selectedCourt.price;
   };
 
-  const districts = useMemo(() => ['Tümü', ...Array.from(new Set(adminPitches.map(p => p.district)))], [adminPitches]);
+  const districts = useMemo(() => ['Tümü', ...Array.from(new Set(discoveryPitches.map(p => p.district)))], [discoveryPitches]);
 
   const filteredPitches = useMemo(() => {
-    let result = adminPitches.filter(p => {
+    let result = discoveryPitches.filter(p => {
       // Show only approved pitches to players
       if (p.isApproved === false) return false;
 
@@ -571,6 +593,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
               )}
             </div>
 
+            {discoveryLoading && discoveryPitches.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-12 h-12 border-2 border-[#39FF14]/30 border-t-[#39FF14] rounded-full animate-spin mb-4" />
+                <p className="text-gray-500 text-xs">Tesisler yükleniyor…</p>
+              </div>
+            )}
+
             <AnimatePresence mode="popLayout">
               <div className="grid grid-cols-2 gap-3.5 pb-8">
                 {filteredPitches.map((pitch) => (
@@ -579,7 +608,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
               </div>
             </AnimatePresence>
 
-            {filteredPitches.length === 0 && (
+            {!discoveryLoading && filteredPitches.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
                   <Search size={32} className="text-gray-600" />
@@ -922,22 +951,31 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                                             {(timeFilter === 'DAY' 
                                               ? ['06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00']
                                               : ['18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 00:00', '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00', '04:00 - 05:00', '05:00 - 06:00']
-                                            ).map(slot => (
+                                            ).map(slot => {
+                                              const slotHour = parseInt(slot);
+                                              const isBooked = bookedHours.has(slotHour);
+                                              const isSel = selectedSlot === slot && selectedCourtId === court.id;
+                                              return (
                                               <button
                                                 key={slot}
+                                                disabled={isBooked}
                                                 onClick={() => {
+                                                  if (isBooked) return;
                                                   setSelectedSlot(slot);
                                                   setSelectedCourtId(court.id);
                                                 }}
                                                 className={`py-3 rounded-xl border text-[10px] font-black transition-all ${
-                                                  selectedSlot === slot && selectedCourtId === court.id
+                                                  isBooked
+                                                    ? 'bg-red-500/10 border-red-500/20 text-red-400/70 line-through cursor-not-allowed'
+                                                    : isSel
                                                     ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
                                                     : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
                                                 }`}
                                               >
-                                                {slot}
+                                                {isBooked ? 'DOLU' : slot}
                                               </button>
-                                            ))}
+                                              );
+                                            })}
                                           </div>
                                       </div>
 
