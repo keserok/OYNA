@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
-import { Shield, Scale, Building2, User, Mail, Smartphone, ArrowLeft, ArrowRight, Target, Check, Activity, Fingerprint, Settings } from 'lucide-react';
+import { Shield, Scale, Building2, User, Mail, Smartphone, ArrowLeft, ArrowRight, Target, Check, Activity, Fingerprint, Settings, Clock } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { auth } from '../supabaseAuth';
+import { updateUserRoles } from '../services/userService';
 
 // ─── Custom Football SVG Icon (Perfected Geometry)
 const FootballIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
@@ -215,11 +217,55 @@ const RoleHeroCard: React.FC<{
   );
 };
 
+// ─── GK/Ref onay bekleniyor modal ─────────────────────────────────────────────
+const PendingApprovalModal: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
+  >
+    <motion.div
+      initial={{ scale: 0.85, opacity: 0, y: 30 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.85, opacity: 0, y: 30 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      className="w-full max-w-sm rounded-[28px] p-6 text-center"
+      style={{
+        background: 'linear-gradient(180deg, rgba(22,27,34,0.95) 0%, rgba(10,14,20,0.98) 100%)',
+        border: '1px solid rgba(255,255,0,0.15)',
+      }}
+    >
+      <motion.div
+        animate={{ scale: [1, 1.1, 1], opacity: [0.85, 1, 0.85] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+        style={{ background: 'rgba(255,255,0,0.1)', border: '2px solid rgba(255,255,0,0.25)' }}
+      >
+        <Clock size={32} className="text-[#FFFF00]" />
+      </motion.div>
+      <h3 className="text-xl font-black text-white italic mb-2">Profilin İncelemeye Alındı</h3>
+      <p className="text-sm text-gray-300 leading-relaxed mb-6">
+        Kaleci/Hakem profilleri güvenlik için admin onayı gerektirir.
+        Profilin genellikle <span className="text-[#FFFF00] font-bold">24 saat</span> içinde incelenir.
+        Onaylandığında sana bildirim göndereceğiz.
+      </p>
+      <button
+        onClick={onConfirm}
+        className="w-full h-12 rounded-2xl font-black text-sm bg-[#FFFF00] text-black"
+      >
+        Tamam, Anladım
+      </button>
+    </motion.div>
+  </motion.div>
+);
+
 const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartnerInvite, onNavigate }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Role, 2: Contact, 3: Physical
   const [isVerifying, setIsVerifying] = useState(false);
-  
+  const [showPendingModal, setShowPendingModal] = useState(false);
+
   // Data States
   const [formData, setFormData] = useState({
       fullName: '',
@@ -265,12 +311,42 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
       }
   };
 
-  const handleComplete = () => {
-    if (selectedRole) {
-       setIsVerifying(true);
-       setTimeout(() => {
-           onSelect(selectedRole, formData);
-       }, 1500);
+  const handleComplete = async () => {
+    if (!selectedRole) return;
+    setIsVerifying(true);
+    try {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        await updateUserRoles(userId, selectedRole, [selectedRole]);
+      }
+
+      // GK veya Ref — admin onayı gerekir
+      if (selectedRole === UserRole.GOALKEEPER || selectedRole === UserRole.REFEREE) {
+        setIsVerifying(false);
+        setShowPendingModal(true);
+        return;
+      }
+
+      // Diğer roller — normal akış
+      setTimeout(() => {
+        onSelect(selectedRole, formData);
+      }, 400);
+    } catch (err) {
+      console.error('[RoleSelection] Rol güncelleme hatası:', err);
+      // Hata olsa bile devam et
+      setTimeout(() => {
+        onSelect(selectedRole, formData);
+      }, 400);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handlePendingConfirm = () => {
+    setShowPendingModal(false);
+    // PENDING_VERIFICATION ekranına yönlendir
+    if (onNavigate) {
+      onNavigate('PENDING_VERIFICATION');
     }
   };
 
@@ -286,9 +362,19 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
   const positions = ['Forvet', 'Orta Saha', 'Defans', 'Kaleci', 'Libero'];
   const theme = getRoleTheme();
 
+  // ─── GK/Ref pending modal'ı her step'te render edilmeli ──────────────────────
+  const pendingModal = (
+    <AnimatePresence>
+      {showPendingModal && (
+        <PendingApprovalModal onConfirm={handlePendingConfirm} />
+      )}
+    </AnimatePresence>
+  );
+
   // --- STEP 2 & 3 CONTAINER ---
   if (step > 1) {
     return (
+      <>
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0A0E14] relative overflow-hidden">
          {/* Background Grid */}
          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
@@ -523,6 +609,8 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
 
          </div>
       </div>
+      {pendingModal}
+    </>
     );
   }
 
@@ -652,6 +740,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
           <Settings size={16} />
         </button>
       )}
+      {pendingModal}
     </div>
   );
 };

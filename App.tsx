@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
+import PendingVerificationView from './views/PendingVerificationView';
 
 // ─── Page transition wrapper ─────────────────────────────────────────────────
 const PageTransition: React.FC<{ children: React.ReactNode; viewKey: string }> = ({ children, viewKey }) => (
@@ -85,10 +86,11 @@ const ViewLoader = () => (
 // 🛠️  GELİŞTİRME MODU
 // VITE_DEV_MODE=true  → direkt Dashboard
 // .env boşsa          → otomatik dev mod (Supabase yokken takılmayı önler)
+// import.meta.env.PROD === true ise dev mod hiçbir zaman aktif olmaz
 // ─────────────────────────────────────────────────────────────────────────────
 const DEV_MODE =
-  import.meta.env.VITE_DEV_MODE === 'true' ||
-  !import.meta.env.VITE_SUPABASE_URL;
+  import.meta.env.PROD !== true &&
+  (import.meta.env.VITE_DEV_MODE === 'true' || !import.meta.env.VITE_SUPABASE_URL);
 
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
@@ -152,28 +154,59 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
-          const { data: userSnap } = await supabase.from('profiles').select('*').eq('id', user.uid).single();
-          if (!userSnap) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, roles, verification_status, is_admin, wallet_balance')
+            .eq('id', user.uid)
+            .single();
+
+          if (!profile) {
+            // İlk giriş — yeni kullanıcı oluştur
             try {
               await supabase.from('profiles').insert({
                 id: user.uid,
                 email: user.email,
                 full_name: user.displayName || '',
-                role: UserRole.PLAYER
+                avatar_url: user.photoURL || '',
+                role: 'PLAYER',
+                roles: ['PLAYER'],
+                verification_status: 'approved',
+                last_active_at: new Date().toISOString(),
               });
             } catch (error) {
-              console.error('Error creating user profile:', error);
+              console.error('[App] Profil oluşturma hatası:', error);
             }
-          } else if (userSnap.role) {
-            setRole(userSnap.role as UserRole);
+            setRole(UserRole.PLAYER);
+            setView('ROLE_SELECTION');
+          } else {
+            const primaryRole = profile.role as UserRole;
+            setRole(primaryRole);
+
+            // last_active_at background güncelleme
+            supabase
+              .from('profiles')
+              .update({ last_active_at: new Date().toISOString() })
+              .eq('id', user.uid);
+
+            const currentView = useAppStore.getState().view;
+            if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'LOCATION_PROMPT'].includes(currentView)) {
+              if (profile.verification_status === 'pending') {
+                setView('PENDING_VERIFICATION');
+              } else if (primaryRole === UserRole.OWNER) {
+                setView('LOCATION_PROMPT');
+              } else if (primaryRole === UserRole.GOALKEEPER || primaryRole === UserRole.REFEREE) {
+                setView('SERVICE_DASHBOARD');
+              } else {
+                setView('LOCATION_PROMPT');
+              }
+            }
           }
-          const currentView = useAppStore.getState().view;
-          if (['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(currentView)) {
-            setView('LOCATION_PROMPT');
-          }
+        } else {
+          setRole(UserRole.PLAYER);
+          setView('SPLASH');
         }
       } catch (error) {
-        console.error('Auth state error:', error);
+        console.error('[App] Auth state error:', error);
       } finally {
         setIsAuthReady(true);
       }
@@ -296,6 +329,11 @@ const App: React.FC = () => {
           onSelect={handleRoleSelect}
           onBack={() => { }}
           onNavigate={(v) => setView(v)}
+        />;
+      case 'PENDING_VERIFICATION':
+        return <PendingVerificationView
+          onApproved={() => setView(navigateBasedOnRole(role))}
+          onLogout={() => setView('SPLASH')}
         />;
       case 'ADMIN_PANEL':
         return <AdminPanel onBack={() => setView('ROLE_SELECTION')} />;
