@@ -14,8 +14,15 @@ my_vite.log
 tsc_err.log
 android/
 ios/
-__mocks__/
 reports/
 scripts/
 DATABASE_README.md
+# scratch / debug files
+test_browser.cjs
+test_compile.js
+test_page.ts
+test_scanner.js
+test_vite_start.js
+my_vite.log
+tsc_err.log
 
