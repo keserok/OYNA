@@ -58,7 +58,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [newCardNo, setNewCardNo] = useState('');
   
   // UX Enhancements States
-  const [arrivedMatchId, setArrivedMatchId] = useState<string | null>(null);
+  const [matchLiveStatus, setMatchLiveStatus] = useState<Record<string, 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED'>>({});
   const [showPostMatchReport, setShowPostMatchReport] = useState(false);
   const [postMatchRating, setPostMatchRating] = useState(5);
   const [newCardHolder, setNewCardHolder] = useState('');
@@ -789,9 +789,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                           
                           {/* Live Location / Arrived Logic */}
-                          <div className="flex items-center gap-2">
-                            {arrivedMatchId === myUpcomingMatches[0].id ? (
-                                <>
+                          <div className="flex flex-col gap-2">
+                            {matchLiveStatus[myUpcomingMatches[0].id] === 'ARRIVED' ? (
+                                <div className="flex gap-2">
                                   <button disabled className="flex-1 py-2 rounded-xl bg-white/10 text-white/50 text-[10px] font-black uppercase flex items-center justify-center gap-1">
                                     <CheckCircle2 size={12} /> KAPTANA BİLDİRİLDİ
                                   </button>
@@ -801,13 +801,20 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   >
                                     MAÇI BİTİR
                                   </button>
-                                </>
-                            ) : (
+                                </div>
+                            ) : matchLiveStatus[myUpcomingMatches[0].id] === 'ON_THE_WAY' ? (
                                 <button 
-                                  onClick={() => setArrivedMatchId(myUpcomingMatches[0].id)}
+                                  onClick={() => setMatchLiveStatus(prev => ({ ...prev, [myUpcomingMatches[0].id]: 'ARRIVED' }))}
                                   className="w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-black uppercase shadow-[0_0_15px_rgba(34,197,94,0.3)] flex items-center justify-center gap-2 hover:bg-green-400 transition-colors"
                                 >
-                                  <MapPin size={14} /> SAHAYA ULAŞTIM
+                                  <MapPin size={14} /> TESİSE VARDIM
+                                </button>
+                            ) : (
+                                <button 
+                                  onClick={() => setMatchLiveStatus(prev => ({ ...prev, [myUpcomingMatches[0].id]: 'ON_THE_WAY' }))}
+                                  className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-xs font-black uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 hover:bg-blue-400 transition-colors"
+                                >
+                                  <Navigation size={14} /> YOLA ÇIKTIM
                                 </button>
                             )}
                           </div>
@@ -1708,6 +1715,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
 
               <div className="space-y-4 mb-6">
+                {isRef && (
+                  <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
+                    <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Maç Skoru</label>
+                    <div className="flex items-center justify-center gap-4">
+                      <input type="number" placeholder="0" className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors" />
+                      <span className="text-xl font-black text-gray-600">-</span>
+                      <input type="number" placeholder="0" className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors" />
+                    </div>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase text-center mt-3">Kaptanlara skor onayı gönderilecektir</p>
+                  </div>
+                )}
                 <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
                   <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Centilmenlik ve Misafirperverlik</label>
                   <div className="flex justify-between items-center px-2">
@@ -1730,10 +1748,18 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <button 
                 onClick={() => {
                   setShowPostMatchReport(false);
-                  setArrivedMatchId(null);
-                  alert('Raporunuz başarıyla gönderildi. Kazancınız cüzdanınıza aktarıldı.');
+                  const updatedStatus = { ...matchLiveStatus };
+                  if (myUpcomingMatches[0]?.id) {
+                      updatedStatus[myUpcomingMatches[0].id] = 'FINISHED';
+                  }
+                  setMatchLiveStatus(updatedStatus);
+                  if (isRef) {
+                      alert('Raporunuz başarıyla gönderildi. Her iki kaptana skor onayı için bildirim iletildi.');
+                  } else {
+                      alert('Raporunuz başarıyla gönderildi. Kazancınız cüzdanınıza aktarıldı.');
+                  }
                 }}
-                className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase`}
+                className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg`}
               >
                 RAPORU GÖNDER VE BİTİR
               </button>

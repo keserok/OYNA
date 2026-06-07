@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Share2, MapPin, Calendar, Clock, CloudRain, Navigation, Shield, User, CheckCircle2, AlertCircle, XCircle, Edit3, Save, Hand, Scale, ExternalLink, MessageSquare, X, Star, Brain, ShoppingBag, CreditCard, Users, UserPlus, Check, Banknote, PiggyBank, Crosshair } from 'lucide-react';
+import { ArrowLeft, Share2, MapPin, Calendar, Clock, CloudRain, Navigation, Shield, User, CheckCircle2, AlertCircle, XCircle, Edit3, Save, Hand, Scale, ExternalLink, MessageSquare, X, Star, Brain, ShoppingBag, CreditCard, Users, UserPlus, Check, Banknote, PiggyBank, Crosshair, QrCode, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Player, AppView } from '../types';
 import { MY_TEAM, PITCHES } from '../constants';
@@ -24,8 +24,8 @@ const MATCH_DATA = {
     location: 'Fulya, Beşiktaş',
     totalPrice: 2800,
     pricePerPerson: 200,
-    hiredReferee: { name: 'Cüneyt Ç.', avatar: 'https://i.pravatar.cc/150?u=ref1', status: 'CONFIRMED', price: 300 },
-    hiredGk: { name: 'Volkan D.', avatar: 'https://i.pravatar.cc/150?u=gk1', status: 'CONFIRMED', price: 200 },
+    hiredReferee: { name: 'Cüneyt Ç.', avatar: 'https://i.pravatar.cc/150?u=ref1', status: 'CONFIRMED', price: 300, liveStatus: 'ON_THE_WAY' },
+    hiredGk: { name: 'Volkan D.', avatar: 'https://i.pravatar.cc/150?u=gk1', status: 'CONFIRMED', price: 200, liveStatus: 'ARRIVED' },
     teamATarget: 1500,
     teamBTarget: 1300,
     teamBPaid: 800
@@ -179,18 +179,30 @@ const MatchLobby: React.FC<MatchLobbyProps> = ({ onBack, onNavigate }) => {
                         </div>
                     </div>
 
-                    <div className="flex gap-3 mt-4">
+                    <div className="grid grid-cols-2 gap-2 mt-4">
                         <button
                             onClick={() => setIsPitchDetailOpen(true)}
-                            className="flex-1 bg-[#161B22] border border-white/10 py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                            className="bg-[#161B22] border border-white/10 py-2.5 rounded-xl text-[11px] font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
                         >
                             <ExternalLink size={14} /> Tesis Detayı
                         </button>
                         <button
                             onClick={handleDirectionsClick}
-                            className="flex-1 bg-[#161B22] border border-white/10 py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                            className="bg-[#161B22] border border-white/10 py-2.5 rounded-xl text-[11px] font-bold text-white flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
                         >
                             <Navigation size={14} /> Yol Tarifi
+                        </button>
+                        <button
+                            onClick={() => {}}
+                            className="bg-red-500/10 border border-red-500/30 py-2.5 rounded-xl text-[11px] font-bold text-red-400 flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                        >
+                            <Phone size={14} /> Tesis İletişim
+                        </button>
+                        <button
+                            onClick={() => onNavigate('QR_SCANNER')}
+                            className="bg-[#39FF14]/10 border border-[#39FF14]/30 py-2.5 rounded-xl text-[11px] font-black text-[#39FF14] flex items-center justify-center gap-2 hover:bg-[#39FF14]/20 transition-colors shadow-[0_0_10px_rgba(57,255,20,0.1)] uppercase tracking-wider"
+                        >
+                            <QrCode size={14} /> Check-in
                         </button>
                     </div>
                 </div>
@@ -301,11 +313,22 @@ const MatchLobby: React.FC<MatchLobbyProps> = ({ onBack, onNavigate }) => {
                             <div className="flex-1 flex flex-col items-center h-full pb-0 relative">
                                 {/* Hired GK Float */}
                                 <div className="absolute -left-3 top-10 bg-[#0A0E14] border border-green-500/30 rounded-2xl p-2 z-20 flex flex-col items-center shadow-2xl">
-                                    <div className="p-1 bg-green-500/10 rounded-full mb-1">
+                                    <div className="relative p-1 bg-green-500/10 rounded-full mb-1">
                                         <img src={MATCH_DATA.hiredGk.avatar} className="w-6 h-6 rounded-full border border-green-500/50" />
+                                        {MATCH_DATA.hiredGk.liveStatus === 'ARRIVED' && (
+                                            <div className="absolute -bottom-1 -right-1 bg-[#39FF14] text-black rounded-full p-0.5 shadow-lg">
+                                                <CheckCircle2 size={8} />
+                                            </div>
+                                        )}
                                     </div>
                                     <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Kaleci</span>
-                                    <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 px-1.5 py-0.5 rounded-sm mt-0.5">+{MATCH_DATA.hiredGk.price}₺</span>
+                                    <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 px-1.5 py-0.5 rounded-sm mt-0.5 mb-1">+{MATCH_DATA.hiredGk.price}₺</span>
+                                    {MATCH_DATA.hiredGk.liveStatus === 'ARRIVED' && (
+                                        <span className="text-[7px] font-black text-black bg-[#39FF14] px-1.5 py-0.5 rounded-full uppercase">TESİSTE</span>
+                                    )}
+                                    {MATCH_DATA.hiredGk.liveStatus === 'ON_THE_WAY' && (
+                                        <span className="text-[7px] font-black text-black bg-blue-400 px-1.5 py-0.5 rounded-full uppercase">YOLDA</span>
+                                    )}
                                 </div>
 
                                 <div className="text-center mb-3 z-10 w-full relative pt-2">
@@ -338,11 +361,21 @@ const MatchLobby: React.FC<MatchLobbyProps> = ({ onBack, onNavigate }) => {
                                 <div className="bg-[#0A0E14] border border-[#FFFF00]/30 rounded-[24px] p-2 shadow-[0_0_30px_rgba(255,255,0,0.15)] relative flex flex-col items-center mt-8">
                                     <div className="bg-[#161B22] border border-[#FFFF00]/20 rounded-2xl w-14 h-16 sm:w-16 sm:h-20 flex flex-col items-center justify-center relative overflow-hidden mb-2">
                                         <div className="absolute inset-0 bg-yellow-500/10 animate-[pulse_3s_ease-in-out_infinite]"></div>
-                                        <img src={MATCH_DATA.hiredReferee.avatar} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-500/50 object-cover relative z-10 mb-1 shadow-md" />
+                                        <div className="relative">
+                                            <img src={MATCH_DATA.hiredReferee.avatar} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-500/50 object-cover relative z-10 mb-1 shadow-md" />
+                                            {MATCH_DATA.hiredReferee.liveStatus === 'ON_THE_WAY' && (
+                                                <div className="absolute -bottom-1 -right-1 bg-blue-400 text-black rounded-full p-0.5 shadow-lg z-20">
+                                                    <Navigation size={10} />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="bg-yellow-500/20 px-1.5 py-0.5 rounded text-[8px] font-black text-[#FFFF00] relative z-10">+{MATCH_DATA.hiredReferee.price}₺</div>
                                     </div>
                                     <span className="text-[8px] font-black text-gray-500 block uppercase tracking-widest mb-0.5">Hakem</span>
-                                    <span className="text-[9px] font-bold text-yellow-500 bg-yellow-500/10 px-2.5 py-1 rounded-full">{MATCH_DATA.hiredReferee.name}</span>
+                                    <span className="text-[9px] font-bold text-yellow-500 bg-yellow-500/10 px-2.5 py-1 rounded-full mb-1">{MATCH_DATA.hiredReferee.name}</span>
+                                    {MATCH_DATA.hiredReferee.liveStatus === 'ON_THE_WAY' && (
+                                        <span className="text-[8px] font-black text-black bg-blue-400 px-2 py-0.5 rounded-full uppercase">YOLDA</span>
+                                    )}
                                 </div>
                             </div>
 

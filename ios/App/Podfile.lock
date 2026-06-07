@@ -1,22 +1,34 @@
 PODS:
-  - Capacitor (8.2.0):
+  - Capacitor (8.3.4):
     - CapacitorCordova
-  - CapacitorCordova (8.2.0)
+  - CapacitorCordova (8.3.4)
+  - CapacitorLocalNotifications (8.2.0):
+    - Capacitor
+  - CapacitorPushNotifications (8.1.1):
+    - Capacitor
 
 DEPENDENCIES:
-  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "Capacitor (from `../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/ios`)"
+  - "CapacitorCordova (from `../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/ios`)"
+  - "CapacitorLocalNotifications (from `../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/local-notifications`)"
+  - "CapacitorPushNotifications (from `../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/push-notifications`)"
 
 EXTERNAL SOURCES:
   Capacitor:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/ios"
   CapacitorCordova:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/ios"
+  CapacitorLocalNotifications:
+    :path: "../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/local-notifications"
+  CapacitorPushNotifications:
+    :path: "../../../../.gemini/antigravity/oyna_project/node_modules/@capacitor/push-notifications"
 
 SPEC CHECKSUMS:
-  Capacitor: 49a454e1cdbd520bc106a220adca7913536a4933
-  CapacitorCordova: a9ac88d84a1f5280f33b349fe50fce1902683ac0
+  Capacitor: d13cad5fa09155679672808cc4ca9fbc2997e1b4
+  CapacitorCordova: c07921bdcfec6f691bae22274446b4d606ebf6a4
+  CapacitorLocalNotifications: 2615aa008f608b95d3921a778ee1988abf1e6148
+  CapacitorPushNotifications: ec08d589c226a2c0db7c032ec1bf5b044ec85f8e
 
-PODFILE CHECKSUM: f20f621c613bcfbd8ccd141364707d62e0831b9b
+PODFILE CHECKSUM: 04be097ed9b006257a74e639f407ecab57ea48d9
 
 COCOAPODS: 1.16.2

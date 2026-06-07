@@ -1,7 +1,7 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './types';
-import { auth, onAuthStateChanged } from './supabaseAuth';
+import { auth, onAuthStateChanged, logout } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
@@ -205,8 +205,19 @@ const App: React.FC = () => {
           setRole(UserRole.PLAYER);
           setView('SPLASH');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('[App] Auth state error:', error);
+        // JWT veya Auth hatalarında oturumu kapat; geçici ağ hatalarında kullanıcıyı atmamak için kontrol et
+        if (error?.message?.includes('JWT') || error?.message?.includes('Auth') || error?.code === 'PGRST301') {
+          logout().catch(e => console.error('[App] Sign out error on invalid session:', e));
+          setView('ROLE_SELECTION');
+        } else {
+          // Ağ hatası olsa bile mevcut oturum korunur
+          const currentView = useAppStore.getState().view;
+          if (['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(currentView)) {
+            setView('LOCATION_PROMPT');
+          }
+        }
       } finally {
         setIsAuthReady(true);
       }

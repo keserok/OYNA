@@ -8,7 +8,9 @@ import {
 
 import { OWNER_TRANSACTIONS, PITCHES } from '../constants';
 import { useAppStore } from '../store';
-
+import { PitchManager } from './admin/PitchManager';
+import { CustomerManager } from './admin/CustomerManager';
+import { UIBuilder } from './admin/UIBuilder';
 interface OwnerPanelProps {
   onBack: () => void;
   onNavigate: (view: any) => void;
@@ -227,7 +229,7 @@ const HEATMAP_DATA = [
     { hour: '21:00', intensity: 90 }, { hour: '22:00', intensity: 60 }, { hour: '23:00', intensity: 20 },
 ];
 
-type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS';
+type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES' | 'CUSTOMERS';
 
 type WidgetType = 'QUICK_STATS' | 'QUICK_ACTIONS' | 'OCCUPANCY_ANALYSIS' | 'PENDING_REQUESTS' | 'WEATHER_INFO' | 'STAFF_STATUS' | 'MAINTENANCE_ALERTS';
 
@@ -878,7 +880,7 @@ const EXTENDED_AMENITIES = [
     'Yapay Çim', 'Doğal Çim', 'Kapalı Saha', 'Açık Saha', 'Isıtma', 'Soğutma', 'Soyunma Odası', 'Kilitli Dolap'
 ];
 
-const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; initialData?: any; onSave: (data: any) => void }> = ({ onClose, facilityId, initialData, onSave }) => {
+const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; initialData?: any; onSave: (data: any) => void; initialPitches?: any[] }> = ({ onClose, facilityId, initialData, onSave, initialPitches = INTERNAL_PITCHES }) => {
     const [activeTab, setActiveTab] = useState<'general' | 'amenities' | 'pitches'>('general');
     
     // General Info State
@@ -892,7 +894,7 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     const [availableAmenities, setAvailableAmenities] = useState<string[]>(EXTENDED_AMENITIES);
 
     // Pitches State
-    const [pitches, setPitches] = useState(INTERNAL_PITCHES.map(p => ({
+    const [pitches, setPitches] = useState(initialPitches.map(p => ({
         ...p,
         description: '',
         images: [] as string[],
@@ -1322,10 +1324,10 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     );
 };
 
-const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[] }> = ({ facilityId, pricingPolicy }) => {
+const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[]; pitches?: any[] }> = ({ facilityId, pricingPolicy, pitches = INTERNAL_PITCHES }) => {
     const [selectedDate, setSelectedDate] = useState(0);
     const [selectedMonthlyDay, setSelectedMonthlyDay] = useState(24);
-    const [selectedPitchId, setSelectedPitchId] = useState(INTERNAL_PITCHES[0].id);
+    const [selectedPitchId, setSelectedPitchId] = useState(pitches[0]?.id || '1');
     const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
     const [isQuickCreateOpen, setIsQuickCreateOpen] = useState<string | null>(null);
     const [repriceModalOpen, setRepriceModalOpen] = useState<string | null>(null);
@@ -1442,7 +1444,7 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
 
                     <div className="flex items-center gap-2">
                         <div className="flex-1 flex bg-[#161B22] p-1 rounded-xl">
-                            {INTERNAL_PITCHES.map(p => (
+                            {pitches.map(p => (
                                 <button
                                     key={p.id}
                                     onClick={() => setSelectedPitchId(p.id)}
@@ -1578,10 +1580,15 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                         <div className="p-3 pl-5 flex justify-between items-center">
                                             <div>
                                                 <p className="text-sm font-bold text-white leading-tight">{booking.user}</p>
-                                                <div className="flex items-center gap-2 mt-1">
+                                                <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                     <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${styles?.text} bg-black/20`}>
                                                         {booking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
                                                     </span>
+                                                    {booking.type === 'APP' && (
+                                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded text-indigo-400 bg-indigo-500/20 border border-indigo-500/30 flex items-center gap-1 shadow-[0_0_8px_rgba(99,102,241,0.2)]">
+                                                            <Shield size={10} /> OYNA HAKEMİ ATANDI
+                                                        </span>
+                                                    )}
                                                     {booking.note && <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{booking.note}</span>}
                                                 </div>
                                             </div>
@@ -2606,6 +2613,8 @@ const MenuView: React.FC<{
     notificationsEnabled: boolean;
     onToggleNotifications: () => void;
     onWidgetSettings: () => void;
+    onPitches: () => void;
+    onCustomers: () => void;
 }> = ({ 
     onNavigate, 
     onBack,
@@ -2617,7 +2626,9 @@ const MenuView: React.FC<{
     onLogout,
     notificationsEnabled,
     onToggleNotifications,
-    onWidgetSettings
+    onWidgetSettings,
+    onPitches,
+    onCustomers
 }) => {
     return (
         <div className="p-6 pb-32 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
@@ -2667,8 +2678,28 @@ const MenuView: React.FC<{
                             className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5"
                         >
                             <div className="flex items-center gap-3">
-                                <Edit3 size={18} className="text-gray-400" />
-                                <span className="text-sm font-bold text-white">Halı Sahamı Düzenle</span>
+                                <Building2 size={18} className="text-gray-400" />
+                                <span className="text-sm font-bold text-white">Tesis Ayarları</span>
+                            </div>
+                            <ChevronRight size={16} className="text-gray-600" />
+                        </button>
+                        <button 
+                            onClick={onPitches}
+                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5"
+                        >
+                            <div className="flex items-center gap-3">
+                                <LayoutDashboard size={18} className="text-gray-400" />
+                                <span className="text-sm font-bold text-white">Sahalarım (Pitch Management)</span>
+                            </div>
+                            <ChevronRight size={16} className="text-gray-600" />
+                        </button>
+                        <button 
+                            onClick={onCustomers}
+                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5"
+                        >
+                            <div className="flex items-center gap-3">
+                                <Users size={18} className="text-gray-400" />
+                                <span className="text-sm font-bold text-white">Müşteriler (CRM)</span>
                             </div>
                             <ChevronRight size={16} className="text-gray-600" />
                         </button>
@@ -3205,9 +3236,25 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     );
 };
 
-const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
-  const { setIsNotificationsOpen } = useAppStore();
+ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
+  const { setIsNotificationsOpen, loadOwnerData, adminMatches } = useAppStore();
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
+  const [pitches, setPitches] = useState<any[]>(PITCHES); // Initializing with mock data
+  const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
+
+  useEffect(() => {
+    loadOwnerData('1'); // Assuming '1' is the current mock facility ID for the owner
+  }, [loadOwnerData]);
+
+  // Compute dynamic stats from store data (MatchListing uses 'price' not 'pricePerPerson')
+  const dynamicTotalRevenue = adminMatches.reduce((acc, match) => {
+    return acc + ((match as any).price ?? 0) * match.slots.filter(s => s.status === 'TAKEN').length;
+  }, 0);
+  
+  const dynamicOccupancyRatio = adminMatches.length > 0 
+    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'TAKEN')).length / adminMatches.length) * 100) 
+    : 0;
+
   const [pendingRequests, setPendingRequests] = useState(() => {
       const saved = localStorage.getItem('owner_pendingRequests');
       return saved ? JSON.parse(saved) : INITIAL_PENDING_REQUESTS;
@@ -3380,9 +3427,9 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
                     <button onClick={() => setShowRevenueModal(true)} className="text-left bg-gradient-to-br from-emerald-900/40 to-[#1A1F2C] p-5 rounded-2xl border border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/50 transition-all active:scale-95">
                         <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Wallet size={48} /></div>
                         <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">Bugünkü Ciro <ArrowUpRight size={12} /></p>
-                        <h3 className="text-3xl font-black text-white mt-1 group-hover:text-emerald-300 transition-colors">13.600₺</h3>
+                        <h3 className="text-3xl font-black text-white mt-1 group-hover:text-emerald-300 transition-colors">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</h3>
                         <div className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold mt-2 bg-emerald-500/10 w-fit px-2 py-0.5 rounded-lg">
-                            <TrendingUp size={12} /> %12 Artış
+                            <TrendingUp size={12} /> Gerçek Veri
                         </div>
                     </button>
                     <button 
@@ -3391,8 +3438,8 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
                     >
                         <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Users size={48} /></div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">Doluluk <ArrowUpRight size={12} /></p>
-                        <h3 className={`text-3xl font-black mt-1 transition-colors ${78 < 50 ? 'text-red-500 group-hover:text-red-400' : 'text-emerald-500 group-hover:text-emerald-400'}`}>%78</h3>
-                        <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold mt-2">4 Saat Boş</div>
+                        <h3 className={`text-3xl font-black mt-1 transition-colors ${dynamicOccupancyRatio < 50 ? 'text-red-500 group-hover:text-red-400' : 'text-emerald-500 group-hover:text-emerald-400'}`}>%{dynamicOccupancyRatio}</h3>
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold mt-2">Dinamik Hesaplandı</div>
                     </button>
                   </div>
               )}
@@ -3460,7 +3507,10 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
           </main>
       )}
 
-      {activeTab === 'CALENDAR' && <FinancialCalendarView facilityId={facilityData?.id} pricingPolicy={facilityData?.pricingPolicy} />}
+      {activeTab === 'CALENDAR' && <FinancialCalendarView facilityId={facilityData?.id} pricingPolicy={facilityData?.pricingPolicy} pitches={pitches} />}
+      {activeTab === 'PITCHES' && <PitchManager facilityId={facilityData?.id} pitches={pitches} onUpdatePitches={setPitches} onBack={() => setActiveTab('HOME')} />}
+      {activeTab === 'CUSTOMERS' && <CustomerManager onBack={() => setActiveTab('HOME')} />}
+      {activeTab === 'UI_BUILDER' && <UIBuilder onBack={() => setActiveTab('HOME')} />}
       {activeTab === 'FINANCE' && <FinanceView hasDebt={hasDebt} isPayingDebt={isPayingDebt} onPayDebt={handlePayDebt} />}
       {activeTab === 'TEAM' && <TeamView />}
       {activeTab === 'PENDING_ACTIONS' && (
@@ -3484,6 +3534,8 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
             notificationsEnabled={notificationsEnabled}
             onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
             onWidgetSettings={() => setShowWidgetSettings(true)}
+            onPitches={() => setActiveTab('PITCHES')}
+            onCustomers={() => setActiveTab('CUSTOMERS')}
         />
       )}
 
@@ -3493,6 +3545,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
           onClose={() => setShowEditProfile(false)} 
           facilityId={facilityData?.id} 
           initialData={facilityData}
+          initialPitches={pitches}
           onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
         />
       )}
@@ -3595,27 +3648,69 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
           </div>
       )}
 
+      {selectedBooking && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
+                  <div className="flex justify-between items-center mb-6">
+                      <div>
+                          <h3 className="text-xl font-black text-white">{selectedBooking.user}</h3>
+                          <p className="text-xs text-gray-400 mt-1">{selectedBooking.time} • Saha Rezervasyonu</p>
+                      </div>
+                      <button onClick={() => setSelectedBooking(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+                  </div>
+
+                  <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase">Durum</span>
+                          <span className={`text-[10px] font-black px-2 py-1 rounded ${selectedBooking.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {selectedBooking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
+                          </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase">Tutar</span>
+                          <span className="text-lg font-black text-white font-mono">{selectedBooking.price}₺</span>
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                      <button 
+                          onClick={() => {}}
+                          className="py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[11px] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                      >
+                          <MessageSquare size={16} /> Kaptana Mesaj
+                      </button>
+                      <button 
+                          onClick={() => onNavigate('QR_SCANNER')}
+                          className="py-3 bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] rounded-xl text-[11px] font-black hover:bg-[#39FF14]/20 transition-colors flex flex-col items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(57,255,20,0.1)]"
+                      >
+                          <QrCode size={16} /> QR Check-in
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 w-full bg-[#1A1F2C] border-t border-white/5 px-6 py-3 flex justify-between items-center z-40 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'HOME' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Home size={20} />
-              <span className="text-[10px] font-bold">Özet</span>
+              <Home size={20} className={activeTab === 'HOME' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">Ana</span>
           </button>
           <button onClick={() => setActiveTab('CALENDAR')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'CALENDAR' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Calendar size={20} />
-              <span className="text-[10px] font-bold">Takvim</span>
+              <Calendar size={20} className={activeTab === 'CALENDAR' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">Takvim</span>
           </button>
-          <button onClick={() => setActiveTab('FINANCE')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'FINANCE' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Wallet size={20} />
-              <span className="text-[10px] font-bold">Finans</span>
+          <button onClick={() => setActiveTab('CUSTOMERS')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'CUSTOMERS' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
+              <Users size={20} className={activeTab === 'CUSTOMERS' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">CRM</span>
           </button>
-          <button onClick={() => setActiveTab('TEAM')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'TEAM' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Users size={20} />
-              <span className="text-[10px] font-bold">Ekip</span>
+          <button onClick={() => setActiveTab('UI_BUILDER')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'UI_BUILDER' ? 'text-[#FFFF00]' : 'text-gray-500 hover:text-gray-300'}`}>
+              <LayoutDashboard size={20} className={activeTab === 'UI_BUILDER' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">UI Builder</span>
           </button>
           <button onClick={() => setActiveTab('MORE')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'MORE' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <MoreHorizontal size={20} />
-              <span className="text-[10px] font-bold">Menü</span>
+              <MoreHorizontal size={20} className={activeTab === 'MORE' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">Menü</span>
           </button>
       </nav>
     </div>

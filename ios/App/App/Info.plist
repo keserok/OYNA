@@ -45,5 +45,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>OYNA, QR kod taramak ve profil fotoğrafı çekmek için kameranıza erişmek istiyor.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>OYNA, yakınındaki sahaları ve maçları gösterebilmek için konumunuza erişmek istiyor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>OYNA, profil fotoğrafınızı değiştirmek için fotoğraf kütüphanenize erişmek istiyor.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>OYNA, maç istatistiklerini ve taktik görsellerini kaydetmek istiyor.</string>
 </dict>
 </plist>

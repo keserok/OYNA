@@ -52,7 +52,11 @@ Deno.serve(async (req: Request) => {
   // Sadece Supabase webhook'larından gelen istekleri kabul et
   const authHeader = req.headers.get('Authorization')
   const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
-  if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+  if (!webhookSecret) {
+    console.error('[send-push] WEBHOOK_SECRET env variable is not set!')
+    return new Response('Server misconfigured', { status: 500 })
+  }
+  if (authHeader !== `Bearer ${webhookSecret}`) {
     return new Response('Unauthorized', { status: 401 })
   }
 
