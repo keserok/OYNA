@@ -1,7 +1,8 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './types';
-import { auth, onAuthStateChanged } from './supabaseAuth';
+import { auth, onAuthStateChanged, logout } from './supabaseAuth';
+import { useAuthStore } from './store/useAuthStore';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
@@ -148,6 +149,12 @@ const App: React.FC = () => {
     initApp();
   }, [initApp]);
 
+  // Auth listener — store/useAuthStore yönetir
+  useEffect(() => {
+    const cleanup = useAuthStore.getState().initAuthListener();
+    return cleanup;
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
@@ -172,8 +179,20 @@ const App: React.FC = () => {
             setView('LOCATION_PROMPT');
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Auth state error:', error);
+        // Yalnızca yetkilendirme ile ilgili bir hata varsa çıkış yap
+        // Geçici ağ hatalarında (offline olma vb.) kullanıcıyı sistemden atmamak için
+        if (error?.message?.includes('JWT') || error?.message?.includes('Auth') || error?.code === 'PGRST301') {
+          logout().catch(e => console.error('Sign out error on invalid session:', e));
+          setView('ROLE_SELECTION');
+        } else {
+          // Ağ hatası olsa bile oturum var, devam et
+          const currentView = useAppStore.getState().view;
+          if (['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(currentView)) {
+            setView('LOCATION_PROMPT');
+          }
+        }
       } finally {
         setIsAuthReady(true);
       }

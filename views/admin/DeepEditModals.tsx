@@ -154,15 +154,42 @@ const GradePicker: React.FC<{ label: string; desc?: string; value?: 'A' | 'B' | 
 export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pitch, onClose }) => {
     const [edit, setEdit] = useState<Pitch>(pitch);
     const [saving, setSaving] = useState(false);
+    const [activeTab, setActiveTab] = useState<'general' | 'amenities' | 'pricing_hours' | 'courts' | 'slots'>('general');
     const { showOk, Toast } = useToast();
+    const adminUsers = useAppStore(state => state.adminUsers);
+    const owners = adminUsers.filter(u => u.role === UserRole.OWNER);
 
     const handleSave = async () => {
         setSaving(true);
-        await FB.fbUpdatePitch(edit);
-        setSaving(false);
-        showOk('✅ Saha Firebase\'e kaydedildi');
-        setTimeout(onClose, 1000);
+        try {
+            await FB.fbUpdatePitch(edit);
+            showOk('✅ Saha başarıyla güncellendi');
+            setTimeout(onClose, 1000);
+        } catch (e: any) {
+            alert('Hata: ' + e.message);
+        } finally {
+            setSaving(false);
+        }
     };
+
+    const AMENITIES_LIST = ["Duş", "Otopark", "Kafe", "WiFi", "Kamera Kaydı", "Krampon Kiralama", "Büfe", "Mescit"];
+
+    const toggleAmenity = (a: string) => {
+        const current = edit.amenities || [];
+        if (current.includes(a)) {
+            setEdit({ ...edit, amenities: current.filter(x => x !== a) });
+        } else {
+            setEdit({ ...edit, amenities: [...current, a] });
+        }
+    };
+
+    const tabs = [
+        { id: 'general', label: 'Genel Bilgiler' },
+        { id: 'amenities', label: 'Olanaklar' },
+        { id: 'pricing_hours', label: 'Saatler & Ücretler' },
+        { id: 'courts', label: 'Alt Sahalar' },
+        { id: 'slots', label: 'Slot Matrisi' }
+    ] as const;
 
     return (
         <AnimatePresence>
@@ -178,110 +205,193 @@ export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pi
                 </div>
             }>
                 <Toast />
-                {/* Photo */}
-                <FI label="Saha Görseli">
-                    <PhotoUploadZone currentUrl={edit.image} onChanged={url => setEdit({ ...edit, image: url })} folder="pitches" />
-                    <I className="mt-2" placeholder="veya URL yapıştır..." value={edit.image} onChange={e => setEdit({ ...edit, image: e.target.value })} />
-                </FI>
 
-                {/* Identity */}
-                <div className="grid grid-cols-2 gap-4">
-                    <FI label="Saha Adı"><I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
-                    <FI label="Bölge / İlçe"><I value={edit.district || ''} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
-                </div>
-                <FI label="Tam Adres"><I value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
-
-                {/* GPS Coordinates Override */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><MapPin size={11} /> GPS HARİTA KOORDİNATLARI (OVERRIDE)</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <FI label="Enlem (Latitude)"><I type="number" step="0.000001" value={edit.coordinates?.lat || 41.058} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 29.002 } })} /></FI>
-                        <FI label="Boylam (Longitude)"><I type="number" step="0.000001" value={edit.coordinates?.lng || 29.002} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 41.058, lng: +e.target.value } })} /></FI>
-                    </div>
+                {/* Tabs Header */}
+                <div className="flex overflow-x-auto gap-2 border-b border-white/10 pb-2 mb-4 custom-scrollbar">
+                    {tabs.map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setActiveTab(t.id)}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                                activeTab === t.id 
+                                ? 'bg-red-500/20 text-red-400 border border-red-500/50' 
+                                : 'bg-white/5 text-gray-400 border border-transparent hover:bg-white/10'
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
                 </div>
 
-                {/* Pricing */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> FİYATLANDIRMA</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <FI label="Kişi Başı Fiyat (₺)"><I type="number" value={edit.pricePerPerson} onChange={e => setEdit({ ...edit, pricePerPerson: +e.target.value })} className="text-red-400 font-mono" /></FI>
-                        <FI label="Toplam Saha Fiyatı (₺)"><I type="number" value={edit.totalPrice} onChange={e => setEdit({ ...edit, totalPrice: +e.target.value })} className="text-red-400 font-mono" /></FI>
-                    </div>
-                    <button onClick={() => setEdit({ ...edit, totalPrice: edit.pricePerPerson * 14 })}
-                        className="mt-2 text-[10px] text-purple-400 hover:text-purple-300 transition-colors font-bold">
-                        ↻ Toplam Fiyatı Otomatik Hesapla (×14 oyuncu)
-                    </button>
-                </div>
+                {/* Tab Content */}
+                <div className="space-y-5">
+                    {activeTab === 'general' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                            <FI label="Saha Görseli">
+                                <PhotoUploadZone currentUrl={edit.image} onChanged={url => setEdit({ ...edit, image: url })} folder="pitches" />
+                            </FI>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FI label="Saha Adı"><I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
+                                <FI label="Saha Sahibi (Owner)">
+                                    <Sel value={edit.ownerId || ''} onChange={e => setEdit({ ...edit, ownerId: e.target.value })}>
+                                        <option value="">-- Sahipsiz --</option>
+                                        {owners.map(o => (
+                                            <option key={o.id} value={o.id}>{o.name} ({o.email})</option>
+                                        ))}
+                                    </Sel>
+                                </FI>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FI label="Tam Adres"><I value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
+                                <FI label="Bölge / İlçe"><I value={edit.district || ''} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FI label="Enlem (Lat)"><I type="number" step="0.000001" value={edit.coordinates?.lat || 41.0} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 29.0 } })} /></FI>
+                                <FI label="Boylam (Lng)"><I type="number" step="0.000001" value={edit.coordinates?.lng || 29.0} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 41.0, lng: +e.target.value } })} /></FI>
+                            </div>
+                            <Toggle label="Saha Aktif mi? (Approved)" value={!!edit.isApproved} onChange={() => setEdit({ ...edit, isApproved: !edit.isApproved })} />
+                        </motion.div>
+                    )}
 
-                {/* Quality */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Star size={11} /> SAHA KALİTESİ (SAYISAL)</p>
-                    <div className="grid grid-cols-3 gap-4">
-                        <FI label="Rating (0-5)" hint="Yıldız puanı"><I type="number" step="0.1" min="0" max="5" value={edit.rating} onChange={e => setEdit({ ...edit, rating: +e.target.value })} /></FI>
-                        <FI label="Zemin (0-100)" hint="Çim kalitesi"><I type="number" min="0" max="100" value={edit.grassQuality} onChange={e => setEdit({ ...edit, grassQuality: +e.target.value })} /></FI>
-                        <FI label="Işıklandırma (0-100)" hint="Aydınlatma"><I type="number" min="0" max="100" value={edit.lighting} onChange={e => setEdit({ ...edit, lighting: +e.target.value })} /></FI>
-                    </div>
-                </div>
+                    {activeTab === 'amenities' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {AMENITIES_LIST.map(a => {
+                                const active = (edit.amenities || []).includes(a);
+                                return (
+                                    <div key={a} onClick={() => toggleAmenity(a)} className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${active ? 'bg-green-500/10 border-green-500/50' : 'bg-black/30 border-white/10 hover:bg-white/5'}`}>
+                                        <span className={`text-xs font-bold ${active ? 'text-green-400' : 'text-gray-300'}`}>{a}</span>
+                                        <div className={`w-4 h-4 rounded-full border ${active ? 'bg-green-400 border-green-400' : 'border-gray-500'}`} />
+                                    </div>
+                                );
+                            })}
+                        </motion.div>
+                    )}
 
-                {/* Slots Matrix Override */}
-                <div className="p-4 bg-[#161B22]/70 rounded-2xl border border-yellow-500/20">
-                    <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5"><Clock size={11} /> AKTİF SAAT SLOTU OVERRIDE MATRİSİ</p>
-                    <p className="text-[9px] text-gray-500 mb-4">Saha sahibinin doldurmayı unuttuğu saat dilimlerini el ile rezerve (dolu) veya müsait (boş) konumuna getirin.</p>
-                    <div className="grid grid-cols-4 gap-2">
-                        {['17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'].map(t => {
-                            const slot = edit.slots?.find(s => s.time === t);
-                            const isBooked = slot?.status === 'booked';
-                            return (
+                    {activeTab === 'pricing_hours' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                            <div className="p-4 bg-black/30 rounded-2xl border border-white/5 space-y-4">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest"><Clock size={11} className="inline mr-1" /> Çalışma Saatleri</p>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <FI label="Açılış"><I type="time" value={edit.workingHours?.open || '09:00'} onChange={e => setEdit({ ...edit, workingHours: { ...(edit.workingHours || { close: '00:00', slotDuration: 60 }), open: e.target.value } })} /></FI>
+                                    <FI label="Kapanış"><I type="time" value={edit.workingHours?.close || '00:00'} onChange={e => setEdit({ ...edit, workingHours: { ...(edit.workingHours || { open: '09:00', slotDuration: 60 }), close: e.target.value } })} /></FI>
+                                    <FI label="Slot Süresi (dk)"><I type="number" step="15" value={edit.workingHours?.slotDuration || 60} onChange={e => setEdit({ ...edit, workingHours: { ...(edit.workingHours || { open: '09:00', close: '00:00' }), slotDuration: +e.target.value } })} /></FI>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-black/30 rounded-2xl border border-white/5 space-y-4">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest"><Wallet size={11} className="inline mr-1" /> Fiyatlandırma & Ödeme Seçenekleri</p>
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <FI label="Kişi Başı (₺)"><I type="number" value={edit.pricePerPerson} onChange={e => setEdit({ ...edit, pricePerPerson: +e.target.value })} /></FI>
+                                    <FI label="Toplam Fiyat (₺)"><I type="number" value={edit.totalPrice} onChange={e => setEdit({ ...edit, totalPrice: +e.target.value })} /></FI>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <Toggle label="Online Ödeme" value={!!edit.paymentOptions?.online} onChange={() => setEdit({ ...edit, paymentOptions: { ...(edit.paymentOptions || { deposit: false, cash: true }), online: !edit.paymentOptions?.online } })} />
+                                    <Toggle label="Kapora Modu" value={!!edit.paymentOptions?.deposit} onChange={() => setEdit({ ...edit, paymentOptions: { ...(edit.paymentOptions || { online: false, cash: true }), deposit: !edit.paymentOptions?.deposit } })} />
+                                    <Toggle label="Nakit (Yerinde)" value={!!edit.paymentOptions?.cash} onChange={() => setEdit({ ...edit, paymentOptions: { ...(edit.paymentOptions || { online: false, deposit: false }), cash: !edit.paymentOptions?.cash } })} />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-blue-900/10 rounded-2xl border border-blue-500/20 space-y-4">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Param POS Entegrasyonu</p>
+                                <FI label="Merchant ID"><I value={edit.paramMerchantId || ''} onChange={e => setEdit({ ...edit, paramMerchantId: e.target.value })} /></FI>
+                                <FI label="API Key"><I type="password" value={edit.paramApiKey || ''} onChange={e => setEdit({ ...edit, paramApiKey: e.target.value })} /></FI>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'courts' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tesisin Alt Sahaları</p>
                                 <button
-                                    key={t}
-                                    type="button"
                                     onClick={() => {
-                                        const existingSlots = [...(edit.slots || [])];
-                                        const idx = existingSlots.findIndex(s => s.time === t);
-                                        if (idx >= 0) {
-                                            existingSlots[idx] = { time: t, status: isBooked ? 'available' : 'booked' };
-                                        } else {
-                                            existingSlots.push({ time: t, status: 'booked' });
-                                        }
-                                        setEdit({ ...edit, slots: existingSlots });
+                                        const newCourt = { id: `court_${Date.now()}`, name: `Saha ${(edit.courts?.length || 0) + 1}`, type: 'OPEN' as const, price: edit.totalPrice || 1000, slots: [] };
+                                        setEdit({ ...edit, courts: [...(edit.courts || []), newCourt] });
                                     }}
-                                    className={`py-2 px-1.5 rounded-xl border text-[10px] font-black transition-all flex flex-col items-center justify-center gap-0.5 ${
-                                        isBooked 
-                                        ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.05)]' 
-                                        : 'bg-green-500/10 border-green-500/30 text-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.05)]'
-                                    }`}
+                                    className="flex items-center gap-1 text-[10px] bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-all"
                                 >
-                                    <span>{t}</span>
-                                    <span className="text-[8px] font-bold uppercase">{isBooked ? 'DOLU' : 'BOŞ'}</span>
+                                    <Plus size={12} /> Kort Ekle
                                 </button>
-                            );
-                        })}
-                    </div>
-                </div>
+                            </div>
+                            <div className="space-y-3">
+                                {!edit.courts || edit.courts.length === 0 ? (
+                                    <p className="text-xs text-gray-500 text-center py-6">Bu tesise ait henüz kort eklenmemiş.</p>
+                                ) : (
+                                    edit.courts.map((court, i) => (
+                                        <div key={court.id} className="p-4 bg-black/30 rounded-xl border border-white/5 flex gap-4">
+                                            <div className="flex-1 grid grid-cols-2 gap-3">
+                                                <FI label="Kort Adı"><I value={court.name} onChange={e => {
+                                                    const newCourts = [...edit.courts!];
+                                                    newCourts[i] = { ...court, name: e.target.value };
+                                                    setEdit({ ...edit, courts: newCourts });
+                                                }} /></FI>
+                                                <FI label="Tipi">
+                                                    <Sel value={court.type} onChange={e => {
+                                                        const newCourts = [...edit.courts!];
+                                                        newCourts[i] = { ...court, type: e.target.value as 'OPEN'|'CLOSED' };
+                                                        setEdit({ ...edit, courts: newCourts });
+                                                    }}>
+                                                        <option value="OPEN">Açık Saha</option>
+                                                        <option value="CLOSED">Kapalı Saha</option>
+                                                    </Sel>
+                                                </FI>
+                                                <FI label="Fiyat (₺)"><I type="number" value={court.price} onChange={e => {
+                                                    const newCourts = [...edit.courts!];
+                                                    newCourts[i] = { ...court, price: +e.target.value };
+                                                    setEdit({ ...edit, courts: newCourts });
+                                                }} /></FI>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setEdit({ ...edit, courts: edit.courts!.filter(c => c.id !== court.id) });
+                                                }}
+                                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 mt-5"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
 
-                {/* A/B/C Grades */}
-                <div className="p-4 bg-black/30 rounded-2xl border border-purple-500/20">
-                    <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Zap size={11} className="text-purple-400" /> A/B/C PUAN SİSTEMİ</p>
-                    <div className="grid grid-cols-3 gap-4">
-                        <GradePicker
-                            label="Işıklandırma"
-                            desc="LED/HID kalitesi ve kapsamı"
-                            value={edit.lightingGrade}
-                            onChange={g => setEdit({ ...edit, lightingGrade: g })}
-                        />
-                        <GradePicker
-                            label="Zemin"
-                            desc="Çim tipi, bakım durumu"
-                            value={edit.grassGrade}
-                            onChange={g => setEdit({ ...edit, grassGrade: g })}
-                        />
-                        <GradePicker
-                            label="Soyunma Odası"
-                            desc="Temizlik, duş, dolap"
-                            value={edit.lockerRoomGrade}
-                            onChange={g => setEdit({ ...edit, lockerRoomGrade: g })}
-                        />
-                    </div>
+                    {activeTab === 'slots' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-[#161B22]/70 rounded-2xl border border-yellow-500/20">
+                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5"><Clock size={11} /> AKTİF SAAT SLOTU OVERRIDE MATRİSİ</p>
+                            <p className="text-[9px] text-gray-500 mb-4">Saha sahibinin doldurmayı unuttuğu saat dilimlerini el ile rezerve (dolu) veya müsait (boş) konumuna getirin.</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                {['17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'].map(t => {
+                                    const slot = edit.slots?.find(s => s.time === t);
+                                    const isBooked = slot?.status === 'booked';
+                                    return (
+                                        <button
+                                            key={t}
+                                            type="button"
+                                            onClick={() => {
+                                                const existingSlots = [...(edit.slots || [])];
+                                                const idx = existingSlots.findIndex(s => s.time === t);
+                                                if (idx >= 0) {
+                                                    existingSlots[idx] = { time: t, status: isBooked ? 'available' : 'booked' };
+                                                } else {
+                                                    existingSlots.push({ time: t, status: 'booked' });
+                                                }
+                                                setEdit({ ...edit, slots: existingSlots });
+                                            }}
+                                            className={`py-2 px-1.5 rounded-xl border text-[10px] font-black transition-all flex flex-col items-center justify-center gap-0.5 ${
+                                                isBooked 
+                                                ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.05)]' 
+                                                : 'bg-green-500/10 border-green-500/30 text-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.05)]'
+                                            }`}
+                                        >
+                                            <span>{t}</span>
+                                            <span className="text-[8px] font-bold uppercase">{isBooked ? 'DOLU' : 'BOŞ'}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    )}
                 </div>
             </Shell>
         </AnimatePresence>
