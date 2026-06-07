@@ -6,7 +6,7 @@ import {
     ChevronLeft, ChevronRight, Activity, AlertTriangle, TrendingUp,
     Eye, Send, UserPlus, MoreHorizontal, ChevronDown, RefreshCw, Download,
     Swords, LogOut, Radio, Lock, Filter, Plus, Minus, Check, X, LayoutDashboard,
-    Trophy, Globe, Award, Share2
+    Trophy, Globe, Award, Share2, Clock
 } from 'lucide-react';
 import {
     PitchModal, MatchModal, BanModal, PushModal,
@@ -16,6 +16,7 @@ import { GodViewDataTables } from './GodViewDataTables';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { MatchesTab, NotificationsTab } from './MatchNotifTabs';
 import { SettingsTab, ContentTab } from './SettingsContentTabs';
+import { PendingVerificationsTab } from './PendingVerificationsTab';
 
 interface Props { onBack: () => void; onNavigate?: (tab: string) => void; }
 
@@ -97,7 +98,8 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     } = useAppStore();
 
     // ── UI State ────────────────────────────────────────────────────
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR'>('GENEL');
+    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS'>('GENEL');
+    const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
     const [multiplier, setMultiplier] = useState(1.4);
     const [selectedPitchIdx, setSelectedPitchIdx] = useState(0);
@@ -491,6 +493,7 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
             label: 'OPERASYON', items: [
                 { icon: MapPin, label: 'Sahalar', badge: adminPitches.length, active: subRoute === 'SAHALAR', action: () => setSubRoute('SAHALAR') },
                 { icon: Users, label: 'Kullanıcılar', badge: adminUsers.length, active: subRoute === 'KULLANICILAR', action: () => setSubRoute('KULLANICILAR') },
+                { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: subRoute === 'PENDING_VERIFICATIONS', action: () => setSubRoute('PENDING_VERIFICATIONS') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : adminMatches.length, active: subRoute === 'MATCHES', action: () => setSubRoute('MATCHES') },
                 { icon: Shield, label: 'Kaleciler', badge: adminGoalkeepers.length, active: subRoute === 'KALECİLER', action: () => setSubRoute('KALECİLER') },
                 { icon: Scale, label: 'Hakemler', badge: adminReferees.length, active: subRoute === 'HAKEMLER', action: () => setSubRoute('HAKEMLER') },
@@ -1686,6 +1689,10 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                        ) : subRoute === 'PENDING_VERIFICATIONS' ? (
+                            <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5">
+                                <PendingVerificationsTab onBadgeCount={setPendingVerifCount} />
                             </div>
                         ) : subRoute === 'MATCHES' ? (
                             <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5"><MatchesTab /></div>
