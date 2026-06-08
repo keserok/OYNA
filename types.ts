@@ -332,6 +332,9 @@ export interface Pitch {
   paramMerchantId?: string;
   paramApiKey?: string;
   paramClientId?: string;
+  // Owner module — aktif flash indirim (PitchDiscovery'de rozet için)
+  flashDiscount?: number;
+  flashDealId?: string;
 }
 
 export interface ServiceReview {
