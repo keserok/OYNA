@@ -595,3 +595,247 @@ export interface PlayerSeekAnnouncement {
   createdAt?: string;
 }
 
+// ============================================================================
+// OWNER MODULE TYPES (Saha Sahibi) — canlı Supabase şemasıyla uyumlu satır tipleri
+// NOT: alan adları canlı DB kolonlarıyla birebir eşleşir
+//   (örn. pitch_bookings.source / price — booking_source / total_price DEĞİL).
+// ============================================================================
+
+// `courts` tablosu (spec: "pitch_courts")
+export interface PitchCourt {
+  id: string;
+  pitch_id: string;
+  name: string;
+  court_type: string; // 'GRASS' | 'TURF' | 'INDOOR' | 'CLAY' | 'OPEN' | 'CLOSED' ...
+  size?: string | null;
+  price?: number | null;
+  capacity?: number | null;
+  images?: string[] | null;
+  description?: string | null;
+  is_active: boolean;
+  lighting_grade?: string | null;
+  grass_grade?: string | null;
+  locker_grade?: string | null;
+  sort_order: number;
+  created_at?: string;
+}
+
+export interface PitchTariff {
+  id: string;
+  pitch_id: string;
+  court_id?: string | null;
+  name: string;
+  tariff_type: 'WEEKDAY' | 'WEEKEND' | 'HOLIDAY' | 'SPECIAL';
+  applies_to_days: number[];
+  start_time: string;
+  end_time: string;
+  price_per_hour: number;
+  deposit_amount: number;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface BookingPayment {
+  id: string;
+  booking_id: string;
+  amount: number;
+  payment_method: 'CASH' | 'CARD' | 'BANK_TRANSFER' | 'OYNA_WALLET';
+  note: string | null;
+  recorded_by?: string | null;
+  created_at: string;
+}
+
+// `pitch_bookings` tablosu (zenginleştirilmiş)
+export interface PitchBookingFull {
+  id: string;
+  pitch_id: string;
+  court_id: string | null;
+  user_id: string | null;
+  match_id: string | null;
+  subscription_id?: string | null;
+  title: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+  source: 'OWNER_MANUAL' | 'APP_BOOKING' | 'SUBSCRIPTION' | 'APP_MATCH';
+  tariff_id: string | null;
+  price: number;
+  deposit_amount: number;
+  paid_amount: number;
+  payment_status: 'PENDING' | 'PARTIAL' | 'PAID' | 'REFUNDED' | 'WAIVED';
+  note: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  created_at?: string;
+  // join'ler
+  courts?: { name: string | null } | null;
+  booking_payments?: BookingPayment[];
+}
+
+export interface PitchExpense {
+  id: string;
+  pitch_id: string;
+  category: string;
+  title: string;
+  amount: number;
+  expense_date: string;
+  note: string | null;
+  created_by?: string | null;
+  created_at?: string;
+}
+
+export interface PitchDebtor {
+  id: string;
+  pitch_id: string;
+  oyna_user_id: string | null;
+  name: string;
+  phone: string | null;
+  amount_owed: number;
+  last_match_date: string | null;
+  notes: string | null;
+  is_resolved: boolean;
+  last_reminded_at?: string | null;
+  created_at?: string;
+}
+
+// `pitch_subscriptions` tablosu (canlı: weekday / price / customer_name)
+export interface PitchSubscription {
+  id: string;
+  pitch_id: string;
+  court_id: string | null;
+  user_id: string | null;
+  customer_name: string;
+  customer_phone: string | null;
+  weekday: number; // 1=Pazartesi .. 7=Pazar (ISO)
+  start_time: string;
+  end_time: string | null;
+  price: number;
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED';
+  start_date: string;
+  end_date: string | null;
+  materialized_until?: string | null;
+  auto_renew?: boolean;
+  notes: string | null;
+  created_at?: string;
+}
+
+export interface FlashDeal {
+  id: string;
+  pitch_id: string;
+  court_id: string | null;
+  booking_date: string;
+  start_time: string;
+  discount_percent: number;
+  original_price: number;
+  deal_price: number;
+  expires_at: string;
+  is_claimed: boolean;
+  claimed_by?: string | null;
+  claimed_at?: string | null;
+  created_at?: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  pitch_id: string;
+  owner_id: string;
+  amount: number;
+  iban: string;
+  iban_photo_url: string | null;
+  status: 'PENDING' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+  admin_notes?: string | null;
+  processed_at?: string | null;
+  created_at: string;
+}
+
+export interface MatchScoreToken {
+  id: string;
+  match_id: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  used_by: string | null;
+  created_at?: string;
+}
+
+export interface MatchDispute {
+  id: string;
+  match_id: string;
+  raised_by: string;
+  home_claimed_score: string | null;
+  away_claimed_score: string | null;
+  evidence_urls: string[];
+  status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
+  resolution_notes: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface PitchAvailabilityException {
+  id: string;
+  pitch_id: string;
+  court_id: string | null;
+  exception_date: string | null;
+  day_of_week: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  reason: string | null;
+  exception_type: 'MAINTENANCE' | 'PRIVATE_EVENT' | 'HOLIDAY' | 'EMERGENCY' | 'OTHER';
+  is_recurring: boolean;
+  created_at?: string;
+}
+
+export interface OwnerDailySummary {
+  pitch_id: string;
+  pitch_name: string;
+  owner_id: string;
+  summary_date: string;
+  total_bookings_today: number;
+  confirmed_today: number;
+  pending_today: number;
+  expected_revenue_today: number;
+  collected_today: number;
+  total_courts: number;
+  active_courts: number;
+}
+
+// pitches satırının owner modülünde kullanılan alanları (DB ile uyumlu)
+export interface OwnerPitch {
+  id: string;
+  owner_id: string | null;
+  name: string;
+  city: string | null;
+  district: string | null;
+  address?: string | null;
+  price_per_match: number | null;
+  total_price: number | null;
+  price_per_person: number | null;
+  iban: string | null;
+  verification_status: 'pending' | 'approved' | 'rejected';
+  verification_notes?: string | null;
+  pricing_mode: 'FULL' | 'PER_PERSON';
+  is_open: boolean;
+  auto_approve_minutes: number;
+  platform_commission_rate?: number | null;
+  cancellation_policy?: {
+    before_24h_refund_percent: number;
+    before_12h_refund_percent: number;
+    before_0h_refund_percent: number;
+  } | null;
+  working_hours?: Record<string, unknown> | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  google_rating?: number | null;
+  google_review_count?: number | null;
+  rating?: number | null;
+  image?: string | null;
+  images?: string[] | null;
+  created_at?: string;
+  // join'ler
+  courts?: PitchCourt[];
+  pitch_tariffs?: PitchTariff[];
+}
+
