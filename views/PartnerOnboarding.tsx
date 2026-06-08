@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, ChevronLeft, Check, Crown, Gift, Share2, Phone, X, Award, ShieldCheck, Zap, Activity } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowRight, ChevronLeft, Check, Crown, Gift, Share2, Phone, X, Award, ShieldCheck, Zap, Activity, TrendingUp, MapPin, Hourglass, AlertTriangle, Loader2 } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 interface PartnerOnboardingProps {
   onComplete: () => void;
@@ -9,26 +10,183 @@ interface PartnerOnboardingProps {
 
 type Step = 'LANDING' | 'SETUP_1' | 'SETUP_2' | 'SETUP_3' | 'LOADING' | 'DASHBOARD';
 
+const LOADING_STEPS = [
+  'Tesis profili oluşturuluyor...',
+  'Varsayılan tarife yapılandırılıyor...',
+  'Bölgesel pazar analizi yapılıyor...',
+];
+
 const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClose }) => {
   const [step, setStep] = useState<Step>('LANDING');
-  
+
   // Form State
   const [facilityName, setFacilityName] = useState('');
+  const [cityRaw, setCityRaw] = useState(''); // "Beşiktaş, İstanbul"
   const [price, setPrice] = useState('');
-  
+  const [iban, setIban] = useState('');
+  const [pricingMode] = useState<'FULL' | 'PER_PERSON'>('FULL');
+
+  // Onboard process state
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [onboardError, setOnboardError] = useState<string | null>(null);
+  const [estimatedRevenue, setEstimatedRevenue] = useState<number>(0);
+  const [nearbyCount, setNearbyCount] = useState<number>(0);
+  const [firstBookingSeconds, setFirstBookingSeconds] = useState(1800);
+  const onboardStartedRef = useRef(false);
+
   // Dashboard State
   const [giftOpen, setGiftOpen] = useState(false);
 
   const handleNext = () => {
       if (navigator.vibrate) navigator.vibrate(50);
-      if (step === 'SETUP_1') setStep('SETUP_2');
-      else if (step === 'SETUP_2') setStep('SETUP_3');
-      else if (step === 'SETUP_3') setStep('LOADING');
+      if (step === 'SETUP_1') {
+          if (!facilityName.trim()) { setOnboardError('Lütfen tesis adını girin.'); return; }
+          setOnboardError(null);
+          setStep('SETUP_2');
+      } else if (step === 'SETUP_2') {
+          if (!price || Number(price) <= 0) { setOnboardError('Lütfen geçerli bir saatlik ücret girin.'); return; }
+          setOnboardError(null);
+          setStep('SETUP_3');
+      } else if (step === 'SETUP_3') {
+          if (!iban.trim()) { setOnboardError('Ödemeler için IBAN gereklidir.'); return; }
+          setOnboardError(null);
+          setStep('LOADING');
+      }
   };
 
   const handlePriceSuggestion = () => {
       setPrice('1800');
   };
+
+  const parseLocation = (raw: string): { city: string; district: string | null } => {
+      const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      if (parts.length >= 2) return { district: parts[0], city: parts[parts.length - 1] };
+      return { district: null, city: parts[0] || '' };
+  };
+
+  // --- REAL DB SAVE (runs once when entering LOADING) ---
+  const onboardPitch = useCallback(async () => {
+      try {
+          setOnboardError(null);
+          setLoadingStep(0);
+
+          const { data: userData, error: userErr } = await supabase.auth.getUser();
+          if (userErr || !userData.user) throw new Error('Oturumunuz bulunamadı. Lütfen tekrar giriş yapın.');
+          const ownerId = userData.user.id;
+          const { city, district } = parseLocation(cityRaw);
+          const basePrice = Number(price);
+
+          // 1. Tesisi oluştur
+          const { data: newPitch, error: pitchErr } = await supabase
+              .from('pitches')
+              .insert({
+                  owner_id: ownerId,
+                  name: facilityName.trim(),
+                  city,
+                  district,
+                  price_per_match: basePrice,
+                  total_price: basePrice,
+                  iban: iban.trim(),
+                  verification_status: 'pending',
+                  pricing_mode: pricingMode,
+                  is_open: true,
+                  auto_approve_minutes: 35,
+              })
+              .select()
+              .single();
+          if (pitchErr) throw pitchErr;
+          const pitchId = (newPitch as { id: string }).id;
+
+          setLoadingStep(1);
+
+          // 2. Varsayılan saha (court)
+          await supabase.from('courts').insert({
+              pitch_id: pitchId,
+              name: 'Saha 1',
+              sort_order: 0,
+          });
+
+          // 3. Varsayılan tarifeler
+          await supabase.from('pitch_tariffs').insert([
+              { pitch_id: pitchId, name: 'Gündüz Tarifesi', tariff_type: 'WEEKDAY', applies_to_days: [1, 2, 3, 4, 5], start_time: '08:00', end_time: '17:00', price_per_hour: Math.round(basePrice * 0.8), deposit_amount: Math.round(basePrice * 0.2), sort_order: 0 },
+              { pitch_id: pitchId, name: 'Akşam Tarifesi', tariff_type: 'WEEKDAY', applies_to_days: [1, 2, 3, 4, 5], start_time: '17:00', end_time: '00:00', price_per_hour: basePrice, deposit_amount: Math.round(basePrice * 0.3), sort_order: 1 },
+              { pitch_id: pitchId, name: 'Hafta Sonu', tariff_type: 'WEEKEND', applies_to_days: [6, 7], start_time: '08:00', end_time: '00:00', price_per_hour: Math.round(basePrice * 1.2), deposit_amount: Math.round(basePrice * 0.4), sort_order: 2 },
+          ]);
+
+          // 4. Adminlere bildirim
+          const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'ADMIN');
+          if (admins && admins.length > 0) {
+              await supabase.from('notifications').insert(
+                  (admins as { id: string }[]).map((a) => ({
+                      user_id: a.id,
+                      title: 'Yeni Tesis Onay Bekliyor',
+                      body: `${facilityName.trim()} tesisi onayınızı bekliyor.`,
+                      type_key: 'PITCH_VERIFICATION_REQUEST',
+                  })),
+              );
+          }
+
+          setLoadingStep(2);
+
+          // 5. Bölgesel pazar analizi (WOW moment)
+          const { data: regionStats } = await supabase
+              .from('pitches')
+              .select('price_per_match')
+              .eq('city', city)
+              .eq('verification_status', 'approved');
+
+          const prices = (regionStats ?? [])
+              .map((r) => (r as { price_per_match: number | null }).price_per_match)
+              .filter((p): p is number => typeof p === 'number' && p > 0);
+          const avgHourly = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : basePrice;
+          // Aylık tahmini ek gelir: ortalama saatlik * 30 gün * 0.65 doluluk
+          const monthly = Math.round(avgHourly * 30 * 0.65) || 120000;
+          setEstimatedRevenue(monthly);
+
+          const { count } = await supabase
+              .from('pitches')
+              .select('id', { count: 'exact', head: true })
+              .eq('city', city)
+              .eq('verification_status', 'approved');
+          setNearbyCount(count ?? prices.length);
+
+          // Adımların görünür kalması için kısa bekleme
+          await new Promise((res) => setTimeout(res, 600));
+          setStep('DASHBOARD');
+      } catch (err) {
+          console.error('onboardPitch:', err);
+          const raw = err instanceof Error ? err.message : String(err);
+          let msg = 'Tesis oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.';
+          if (raw.includes('row-level security')) msg = 'Bu işlem için yetkiniz yok. Hesabınızın saha sahibi olduğundan emin olun.';
+          else if (raw.includes('duplicate')) msg = 'Bu tesis zaten kayıtlı görünüyor.';
+          else if (raw.includes('Oturum')) msg = raw;
+          else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetinizi kontrol edin.';
+          setOnboardError(msg);
+      }
+  }, [cityRaw, facilityName, iban, price, pricingMode]);
+
+  // LOADING adımına girince tek sefer çalıştır
+  useEffect(() => {
+      if (step === 'LOADING' && !onboardStartedRef.current) {
+          onboardStartedRef.current = true;
+          void onboardPitch();
+      }
+      if (step !== 'LOADING') onboardStartedRef.current = step === 'DASHBOARD' ? true : false;
+  }, [step, onboardPitch]);
+
+  // İlk rezervasyon geri sayımı (DASHBOARD)
+  useEffect(() => {
+      if (step !== 'DASHBOARD') return;
+      const t = setInterval(() => setFirstBookingSeconds((s) => (s > 0 ? s - 1 : 0)), 1000);
+      return () => clearInterval(t);
+  }, [step]);
+
+  const retryOnboard = () => {
+      onboardStartedRef.current = true;
+      void onboardPitch();
+  };
+
+  const fmtCountdown = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   // --- SUB-VIEWS ---
 
@@ -118,6 +276,8 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                   <label className="text-xs font-bold text-gray-500 uppercase">Şehir / Semt</label>
                                   <input 
                                     type="text" 
+                                    value={cityRaw}
+                                    onChange={(e) => setCityRaw(e.target.value)}
                                     placeholder="Örn: Beşiktaş, İstanbul" 
                                     className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FFFF00] outline-none placeholder:text-gray-700 transition-colors"
                                   />
@@ -159,6 +319,8 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                   <label className="text-xs font-bold text-gray-500 uppercase">IBAN</label>
                                   <input 
                                     type="text" 
+                                    value={iban}
+                                    onChange={(e) => setIban(e.target.value)}
                                     placeholder="TR00 0000..." 
                                     className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FFFF00] outline-none placeholder:text-gray-700 transition-colors"
                                   />
@@ -174,9 +336,17 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   )}
               </div>
 
+              {onboardError && (
+                  <div className="bg-red-900/30 border border-red-500/40 rounded-xl p-3 mb-3 flex items-center gap-2">
+                      <AlertTriangle className="text-red-400 shrink-0" size={18} />
+                      <p className="text-xs text-red-200">{onboardError}</p>
+                  </div>
+              )}
+
               <div className="flex justify-between items-center mt-6">
                   <button 
                     onClick={() => {
+                        setOnboardError(null);
                         if (step === 'SETUP_1') setStep('LANDING');
                         else if (step === 'SETUP_2') setStep('SETUP_1');
                         else if (step === 'SETUP_3') setStep('SETUP_2');
@@ -197,19 +367,46 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
   };
 
   const LoadingScreen = () => {
-      useEffect(() => {
-          setTimeout(() => setStep('DASHBOARD'), 3000);
-      }, []);
-
       return (
-          <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center relative overflow-hidden p-6">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 animate-spin-slow"></div>
-              
-              <div className="relative z-10 text-center">
-                  <div className="w-24 h-24 border-4 border-[#FFFF00] border-t-transparent rounded-full animate-spin mx-auto mb-8 shadow-[0_0_50px_rgba(255,255,0,0.3)]"></div>
-                  <h2 className="text-2xl font-black text-white mb-2">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
-                  <p className="text-gray-500">Sistem yapılandırılıyor.</p>
-              </div>
+
+              {!onboardError ? (
+                  <div className="relative z-10 text-center w-full max-w-sm">
+                      <div className="w-24 h-24 border-4 border-[#FFFF00] border-t-transparent rounded-full animate-spin mx-auto mb-8 shadow-[0_0_50px_rgba(255,255,0,0.3)]"></div>
+                      <h2 className="text-2xl font-black text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
+                      <div className="space-y-3 text-left">
+                          {LOADING_STEPS.map((label, idx) => {
+                              const done = idx < loadingStep;
+                              const active = idx === loadingStep;
+                              return (
+                                  <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${active ? 'bg-[#161B22] border-[#FFFF00]/40' : done ? 'bg-[#161B22]/50 border-green-500/30' : 'bg-[#161B22]/30 border-white/5'}`}>
+                                      {done ? (
+                                          <span className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center"><Check className="text-green-400" size={14} /></span>
+                                      ) : active ? (
+                                          <Loader2 className="text-[#FFFF00] animate-spin" size={20} />
+                                      ) : (
+                                          <span className="w-6 h-6 rounded-full border-2 border-white/10" />
+                                      )}
+                                      <span className={`text-sm font-bold ${done ? 'text-green-300' : active ? 'text-white' : 'text-gray-600'}`}>{label}</span>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </div>
+              ) : (
+                  <div className="relative z-10 text-center w-full max-w-sm bg-[#161B22] border border-red-500/30 rounded-3xl p-6">
+                      <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                          <AlertTriangle className="text-red-400" size={28} />
+                      </div>
+                      <h2 className="text-xl font-black text-white mb-2">Bir şeyler ters gitti</h2>
+                      <p className="text-sm text-gray-400 mb-6">{onboardError}</p>
+                      <div className="flex gap-3">
+                          <button onClick={() => { setOnboardError(null); setStep('SETUP_3'); }} className="flex-1 h-12 rounded-xl bg-[#0A0E14] border border-white/10 text-gray-300 font-bold">Geri Dön</button>
+                          <button onClick={retryOnboard} className="flex-1 h-12 rounded-xl bg-[#FFFF00] text-black font-black">Tekrar Dene</button>
+                      </div>
+                  </div>
+              )}
           </div>
       );
   };
@@ -279,6 +476,40 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Referans Olan</p>
                       <p className="text-sm font-bold text-white">Burak Kaptan</p>
                       <p className="text-[10px] text-gray-400">Bu tesis OYNA ekosistemine kazandırıldı.</p>
+                  </div>
+              </div>
+
+              {/* Onay durumu */}
+              <div className="bg-gradient-to-r from-blue-900/30 to-[#161B22] border border-blue-500/30 rounded-2xl p-4 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <Hourglass className="text-blue-400" size={20} />
+                  </div>
+                  <div>
+                      <h4 className="font-bold text-white text-sm">Tesisiniz incelemeye alındı</h4>
+                      <p className="text-[11px] text-gray-400 leading-relaxed mt-1">
+                          Ekibimiz tesisinizi 24 saat içinde onaylar. Onaylandığında size anlık bildirim göndereceğiz ve tesisiniz oyunculara görünür olacak.
+                      </p>
+                  </div>
+              </div>
+
+              {/* WOW istatistik kartları */}
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#161B22] p-4 rounded-2xl border border-[#39FF14]/20">
+                      <TrendingUp className="text-[#39FF14] mb-2" size={20} />
+                      <p className="text-[10px] text-gray-500 uppercase font-bold">Tahmini Aylık Ek Gelir</p>
+                      <p className="text-xl font-black text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
+                  </div>
+                  <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5">
+                      <MapPin className="text-[#FFFF00] mb-2" size={20} />
+                      <p className="text-[10px] text-gray-500 uppercase font-bold">Bölgenizde OYNA'da</p>
+                      <p className="text-xl font-black text-white">{nearbyCount} tesis</p>
+                  </div>
+                  <div className="col-span-2 bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <div>
+                          <p className="text-[10px] text-gray-500 uppercase font-bold">İlk rezervasyona tahmini</p>
+                          <p className="text-[11px] text-gray-400">Onay sonrası ilk talep beklentisi</p>
+                      </div>
+                      <p className="text-2xl font-black text-[#FFFF00] font-mono tabular-nums">{fmtCountdown(firstBookingSeconds)}</p>
                   </div>
               </div>
 
