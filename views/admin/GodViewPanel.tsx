@@ -16,6 +16,7 @@ import { GodViewDataTables } from './GodViewDataTables';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { MatchesTab, NotificationsTab } from './MatchNotifTabs';
 import { SettingsTab, ContentTab } from './SettingsContentTabs';
+import OwnerModerationTab from './OwnerModerationTab';
 
 interface Props { onBack: () => void; onNavigate?: (tab: string) => void; }
 
@@ -97,7 +98,7 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     } = useAppStore();
 
     // ── UI State ────────────────────────────────────────────────────
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR'>('GENEL');
+    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'MODERATION'>('GENEL');
 
     const [multiplier, setMultiplier] = useState(1.4);
     const [selectedPitchIdx, setSelectedPitchIdx] = useState(0);
@@ -494,6 +495,7 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : adminMatches.length, active: subRoute === 'MATCHES', action: () => setSubRoute('MATCHES') },
                 { icon: Shield, label: 'Kaleciler', badge: adminGoalkeepers.length, active: subRoute === 'KALECİLER', action: () => setSubRoute('KALECİLER') },
                 { icon: Scale, label: 'Hakemler', badge: adminReferees.length, active: subRoute === 'HAKEMLER', action: () => setSubRoute('HAKEMLER') },
+                { icon: Award, label: 'Onay Merkezi', badge: null, active: subRoute === 'MODERATION', action: () => setSubRoute('MODERATION') },
             ]
         },
         {
@@ -1695,6 +1697,8 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                             <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5"><ContentTab /></div>
                         ) : subRoute === 'SETTINGS' ? (
                             <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5"><SettingsTab /></div>
+                        ) : subRoute === 'MODERATION' ? (
+                            <OwnerModerationTab />
                         ) : (
                             <div className="flex-1 h-[600px]">
                                 <GodViewDataTables
