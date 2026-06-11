@@ -563,7 +563,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="px-6 grid grid-cols-2 gap-4 auto-rows-min"
+        className="px-4 xs:px-6 grid grid-cols-2 gap-3 xs:gap-4 auto-rows-min"
       >
 
         
@@ -579,7 +579,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -3 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('MATCH_DISCOVERY')}
-          className="col-span-2 h-44 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
+          className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
           style={{ boxShadow: '0 0 60px rgba(255,255,0,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
           {/* Sarı → Siyah ana gradient */}
@@ -662,24 +662,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('MATCH_CREATE')}
-          className="col-span-2 h-32 bg-[#d97706] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(217,119,6,0.35)] breathing-glow"
+          className="col-span-2 min-h-[128px] py-5 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-yellow"
+          style={{ borderColor: 'rgba(245,158,11,0.2)' }}
         >
           {/* Carbon Fibre Texture */}
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-60 pointer-events-none"></div>
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
           {/* Gradient fade to protect text */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#d97706]/90 via-[#d97706]/50 to-transparent pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/15 via-transparent to-transparent pointer-events-none" />
           {/* Content */}
           <div className="absolute inset-0 p-5 flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
-                <Swords size={18} className="text-white" />
-                <span className="text-white text-xs font-bold uppercase tracking-widest">Kaptan Modu</span>
+                <Swords size={18} className="text-amber-400" />
+                <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Kaptan Modu</span>
               </div>
               <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Maç<br />Oluştur</h2>
               <p className="text-[10px] text-amber-100 mt-1 font-bold">Takımını kur, sahayı seç, oyna.</p>
             </div>
-            <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/20 group-hover:scale-110 transition-transform">
-              <Swords size={40} className="text-white" />
+            <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-amber-500/20 group-hover:scale-110 transition-transform">
+              <Swords size={40} className="text-amber-400" />
             </div>
           </div>
         </AnimatedButton>
@@ -756,7 +757,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('COMMUNITY_VIEW')}
-          className="col-span-2 h-32 bg-[#fb923c] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(251,146,60,0.4)] breathing-glow"
+          className="col-span-2 min-h-[128px] py-5 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-yellow"
+          style={{ borderColor: 'rgba(251,146,60,0.2)' }}
         >
           {/* Intertwined Geometric Mesh Pattern (No Circles) */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.12]">
@@ -772,18 +774,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <rect width="100%" height="100%" fill="url(#community-mesh)" />
             </svg>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#fb923c]/80 via-transparent to-transparent pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-transparent to-transparent pointer-events-none" />
           <div className="absolute inset-0 p-5 flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
-                <Users size={18} className="text-black" />
-                <span className="text-black text-xs font-bold uppercase tracking-widest">Sosyal</span>
+                <Users size={18} className="text-orange-400" />
+                <span className="text-orange-400 text-xs font-bold uppercase tracking-widest">Sosyal</span>
               </div>
-              <h2 className="text-2xl font-black text-black italic uppercase leading-none drop-shadow-sm">Topluluklar, Takımlarım ve Arkadaşlarım</h2>
-              <p className="text-[10px] text-orange-900 mt-1 font-bold">Üniversite ve şirket ligleri.</p>
+              <h2 className="text-lg xs:text-xl sm:text-2xl font-black text-white italic uppercase leading-none drop-shadow-sm">Topluluklar, Takımlarım ve Arkadaşlarım</h2>
+              <p className="text-[10px] text-orange-200 mt-1 font-bold">Üniversite ve şirket ligleri.</p>
             </div>
-            <div className="w-24 h-24 bg-black/5 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-black/10 group-hover:scale-110 transition-transform">
-              <Users size={40} className="text-black" />
+            <div className="w-24 h-24 bg-orange-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-orange-500/20 group-hover:scale-110 transition-transform">
+              <Users size={40} className="text-orange-400" />
             </div>
           </div>
         </AnimatedButton>
@@ -795,8 +797,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('MARKETPLACE_GK')}
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
-          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
-          style={{ border: '1px solid rgba(57,255,20,0.3)' }}
+          className="h-40 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-green"
+          style={{ borderColor: 'rgba(57,255,20,0.2)' }}
         >
           {/* Fluid animated gradient */}
           <motion.div
@@ -828,7 +830,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', transform: 'skewX(-20deg)' }}
           />
           {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between p-5">
+          <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
             <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -841,7 +843,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <motion.h3
                 animate={{ textShadow: ['0 0 8px rgba(57,255,20,0.5)', '0 0 24px rgba(57,255,20,1)', '0 0 8px rgba(57,255,20,0.5)'] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-2xl font-black italic tracking-tighter leading-none"
+                className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
                 style={{ color: '#39FF14' }}
               >
                 KALECİLER
@@ -857,8 +859,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('MARKETPLACE_REF')}
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
-          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
-          style={{ border: '1px solid rgba(59,130,246,0.3)' }}
+          className="h-40 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-blue"
+          style={{ borderColor: 'rgba(59,130,246,0.2)' }}
         >
           {/* Fluid animated gradient */}
           <motion.div
@@ -890,7 +892,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', transform: 'skewX(-20deg)' }}
           />
           {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between p-5">
+          <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
             <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
@@ -903,7 +905,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <motion.h3
                 animate={{ textShadow: ['0 0 8px rgba(59,130,246,0.5)', '0 0 24px rgba(99,179,255,1)', '0 0 8px rgba(59,130,246,0.5)'] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                className="text-2xl font-black italic tracking-tighter leading-none"
+                className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
                 style={{ color: '#60a5fa' }}
               >
                 HAKEMLER
@@ -919,15 +921,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onNavigate('PITCH_DISCOVERY')}
-          className="col-span-2 h-32 bg-[#16a34a] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(22,163,74,0.3)] breathing-glow"
+          className="col-span-2 min-h-[128px] py-5 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-green"
+          style={{ borderColor: 'rgba(34,197,94,0.2)' }}
         >
           {/* Vektörel Futbol Sahası Deseni */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             {/* Grass Stripes */}
-            <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
 
             {/* Pitch SVG */}
-            <div className="absolute inset-0 w-full h-full opacity-40">
+            <div className="absolute inset-0 w-full h-full opacity-30">
               <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" xmlns="http://www.w3.org/2000/svg">
                 <g stroke="white" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   {/* Outer Boundary */}
@@ -967,19 +970,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             </div>
 
             {/* Gradient Fade to protect text */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#16a34a]/90 via-[#16a34a]/40 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/15 via-transparent to-transparent"></div>
           </div>
           <div className="absolute inset-0 p-5 flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
-                <MapPin size={18} className="text-white" />
-                <span className="text-white text-xs font-bold uppercase tracking-widest">Rezervasyon</span>
+                <MapPin size={18} className="text-[#39FF14]" />
+                <span className="text-[#39FF14] text-xs font-bold uppercase tracking-widest">Rezervasyon</span>
               </div>
               <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Saha<br />Vitrini</h2>
               <p className="text-[10px] text-lime-100 mt-1 font-bold">Uygun sahaları gör.</p>
             </div>
-            <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/20 group-hover:scale-110 transition-transform">
-              <MapPin size={40} className="text-white" />
+            <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-emerald-500/20 group-hover:scale-110 transition-transform">
+              <MapPin size={40} className="text-[#39FF14]" />
             </div>
           </div>
         </AnimatedButton>
@@ -991,7 +994,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('STUDIO')}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          className="col-span-2 h-44 bg-[#050812] rounded-[32px] relative overflow-hidden group cursor-pointer border border-[#39FF14]/30 shadow-[0_0_30px_rgba(57,255,20,0.05)] flex flex-col justify-between p-6 breathing-glow"
+          className="col-span-2 min-h-[176px] py-6 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-green flex flex-col justify-between p-5 xs:p-6"
+          style={{ borderColor: 'rgba(57,255,20,0.2)' }}
         >
           {/* Soccer Pitch Background Pattern */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none">

@@ -458,7 +458,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             const { data, error } = await supabase
                 .from('tactics')
                 .select('*')
-                .eq('user_id', auth.currentUser.uid);
+                .eq('userId', auth.currentUser.uid);
 
             if (error) {
                 console.error("Error fetching tactics:", error);
@@ -468,12 +468,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             const fetchedTactics: TacticState[] = (data || []).map((d: any) => ({
                 id: d.id,
                 name: d.name,
-                teamName: d.team_name,
+                teamName: d.teamName,
                 size: d.size,
                 formation: d.formation,
                 slots: JSON.parse(d.slots || '[]'),
                 subs: JSON.parse(d.subs || '[]'),
-                captainId: d.captain_id || null,
+                captainId: d.captainId || null,
                 notes: d.notes || '',
                 opponents: JSON.parse(d.opponents || '[]'),
                 mentality: d.mentality || 'Balanced',
@@ -487,7 +487,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         fetchTactics();
 
         const channel = supabase.channel(`tactics_${auth.currentUser.uid}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tactics', filter: `user_id=eq.${auth.currentUser.uid}` }, () => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tactics', filter: `userId=eq.${auth.currentUser.uid}` }, () => {
                 fetchTactics();
             })
             .subscribe();
@@ -829,7 +829,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             } else {
                 const { data: inserted, error: insertErr } = await supabase.from('tactics').insert({
                     ...tacticData,
-                    created_at: new Date().toISOString()
+                    createdAt: new Date().toISOString()
                 }).select().single();
                 if (insertErr) throw insertErr;
                 const savedTactic = { ...activeTactic, id: inserted.id, name: saveTacticName, teamName: saveTeamName };

@@ -33,7 +33,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
   // --- SUB-VIEWS ---
 
   const LandingHero = () => (
-      <div className="min-h-screen relative flex flex-col justify-end p-6 overflow-hidden">
+      <div className="min-h-screen relative flex flex-col justify-end px-6 pt-6 pb-safe overflow-hidden">
           {/* Background */}
           <div className="absolute inset-0 z-0">
               <img 
@@ -90,7 +90,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
       const progress = step === 'SETUP_1' ? 33 : step === 'SETUP_2' ? 66 : 100;
       
       return (
-          <div className="min-h-screen bg-[#0A0E14] flex flex-col p-6">
+          <div className="min-h-screen bg-[#0A0E14] flex flex-col px-6 pt-safe pb-safe">
               {/* Progress Bar */}
               <div className="w-full h-1 bg-gray-800 rounded-full mb-8 mt-2">
                   <div className="h-full bg-[#FFFF00] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
@@ -217,7 +217,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
   const LaunchpadDashboard = () => (
       <div className="min-h-screen bg-[#0A0E14] flex flex-col relative">
           {/* Header */}
-          <header className="p-6 flex justify-between items-center bg-[#161B22]/50 backdrop-blur-md">
+          <header className="px-6 pt-safe pb-4 flex justify-between items-center bg-[#161B22]/50 backdrop-blur-md">
               <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-lg">A</div>
                   <div>
@@ -241,7 +241,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               </div>
           </header>
 
-          <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+          <main className="flex-1 px-6 pt-6 pb-safe space-y-6 overflow-y-auto">
               
               {/* Gift Modal/Section */}
               {giftOpen && (

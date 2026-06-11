@@ -8,4 +8,21 @@ dist/
 .env.local
 .env.*.local
 !.env.example
+node_modules_old/
+node_modules_local/
+my_vite.log
+tsc_err.log
+android/
+ios/
+reports/
+scripts/
+DATABASE_README.md
+# scratch / debug files
+test_browser.cjs
+test_compile.js
+test_page.ts
+test_scanner.js
+test_vite_start.js
+my_vite.log
+tsc_err.log
 

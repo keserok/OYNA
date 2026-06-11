@@ -59,7 +59,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     <div className="flex flex-col h-screen bg-[#0A0E14]">
       
       {/* Header */}
-      <header className="px-4 py-4 bg-[#161B22]/90 backdrop-blur-xl border-b border-white/5 flex items-center justify-between sticky top-0 z-20">
+      <header className="px-4 pt-safe pb-4 bg-[#161B22]/90 backdrop-blur-xl border-b border-white/5 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
             <button onClick={onBack} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
                 <ArrowLeft size={20} />
@@ -104,7 +104,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-[#161B22] border-t border-white/5">
+      <div className="px-4 pt-4 pb-safe bg-[#161B22] border-t border-white/5">
           <div className="flex items-center gap-2">
               <button className="p-3 text-gray-400 hover:text-white bg-white/5 rounded-xl transition-colors">
                   <ImageIcon size={20} />
