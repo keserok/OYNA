@@ -8,3 +8,20 @@ dist/
 .env.*
 *.local
 
+# Yerel deneme/çıktı dosyaları
+node_modules_local/
+node_modules_old/
+*.log
+reports/
+/test_*
+/tsconfig.check.json
+
+# Android build artıkları (kaynak dosyalar commit'lenir, build çıktıları edilmez)
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/local.properties
+android/.idea/
+android/captures/
+

@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { joinMatchSlot, subscribeToMatchUpdates } from '../services/matchService';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -472,6 +473,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         awaySlots: (updatedMatch as any).away_slots || (updatedMatch as any).awaySlots || [],
         homeTeamId: (updatedMatch as any).home_team_id || (updatedMatch as any).homeTeamId,
         awayTeamId: (updatedMatch as any).away_team_id || (updatedMatch as any).awayTeamId,
+        creatorId: (updatedMatch as any).creator_id || (updatedMatch as any).creatorId,
+        chatMessages: (updatedMatch as any).chat_messages || (updatedMatch as any).chatMessages || [],
+        reservePlayers: (updatedMatch as any).reserve_players || (updatedMatch as any).reservePlayers || [],
+        minRating: (updatedMatch as any).min_rating || (updatedMatch as any).minRating,
+        homeScore: (updatedMatch as any).home_score || (updatedMatch as any).homeScore,
+        awayScore: (updatedMatch as any).away_score || (updatedMatch as any).awayScore,
+        scoreEnteredAt: (updatedMatch as any).score_entered_at || (updatedMatch as any).scoreEnteredAt,
       };
       updateMatch({ ...originalMatch, ...mapped } as MatchListing);
     });
@@ -632,6 +640,55 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  const handleSendChatMessage = async (text: string) => {
+    if (!text.trim()) return;
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const newMsg = {
+      id: `chat_${Date.now()}`,
+      senderId: currentUserProfile.id,
+      senderName: currentUserProfile.name,
+      senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
+      text: text.trim(),
+      timestamp: timeStr
+    };
+    const baseMessages = (match.chatMessages && match.chatMessages.length > 0)
+      ? match.chatMessages
+      : [
+          {
+            id: 'm1',
+            senderId: 'mock_1',
+            senderName: 'Mert H. (KL)',
+            senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
+            text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
+            timestamp: '10:42'
+          },
+          {
+            id: 'm2',
+            senderId: 'mock_2',
+            senderName: 'Burak Y. (STP)',
+            senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
+            text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
+            timestamp: '10:45'
+          },
+          {
+            id: 'm3',
+            senderId: 'mock_3',
+            senderName: 'Arda G. (SNT)',
+            senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
+            text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
+            timestamp: '10:48'
+          }
+        ];
+    const updatedMessages = [...baseMessages, newMsg];
+    try {
+      await updateMatch({ ...match, chatMessages: updatedMessages });
+      setChatInputText('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSlotClick = (slot: any) => {
     if (!slot) return;
 
@@ -680,59 +737,61 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     const targetSlot = slotsSource.find(s => s?.id === selectedSlotId);
     if (!targetSlot) { setIsProcessing(false); return; }
 
-    const joinedPlayer: Player = {
-      id: currentUserProfile.id || 'u1',
-      name: currentUserProfile.name || 'Oyuncu',
-      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-      rating: (currentUserProfile as any).rating || 4.5,
-      position: targetSlot.role || 'OYUNCU',
-      x: targetSlot.x,
-      y: targetSlot.y,
-      paymentStatus: 'UNPAID',
-    };
-
-    let updatedSlots = match.slots || [];
-    let updatedAwaySlots = match.awaySlots || [];
-
-    if (isAway) {
-      updatedAwaySlots = slotsSource.map(s =>
-        s?.id === selectedSlotId
-          ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-          : s
-      );
-    } else {
-      updatedSlots = slotsSource.map(s =>
-        s?.id === selectedSlotId
-          ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-          : s
-      );
-    }
-
-    const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-
-    // ── Optimistic UI: Anında lokal state'i güncelle ──
     try {
+      // Call Supabase RPC for safe concurrency-locked join
+      const { error } = await supabase.rpc('join_public_match_slot', {
+        p_match_id: match.id,
+        p_slot_id: selectedSlotId,
+        p_user_id: currentUserProfile.id,
+        p_is_away: isAway
+      });
+
+      if (error) throw error;
+
+      const joinedPlayer: Player = {
+        id: currentUserProfile.id,
+        name: currentUserProfile.name,
+        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+        rating: currentUserProfile.rating || 4.5,
+        position: targetSlot.role || 'OYUNCU',
+        x: targetSlot.x,
+        y: targetSlot.y,
+        paymentStatus: 'UNPAID',
+      };
+
+      let updatedSlots = [...(match.slots || [])];
+      let updatedAwaySlots = [...(match.awaySlots || [])];
+
+      if (isAway) {
+        updatedAwaySlots = updatedAwaySlots.map(s =>
+          s?.id === selectedSlotId
+            ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
+            : s
+        );
+      } else {
+        updatedSlots = updatedSlots.map(s =>
+          s?.id === selectedSlotId
+            ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
+            : s
+        );
+      }
+
+      const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
+
       await updateMatch({ 
         ...match, 
         slots: updatedSlots, 
         awaySlots: updatedAwaySlots, 
         status: nextStatus 
       });
+      
       setSelectedSlotId(null);
-      setIsProcessing(false);
       setNewMatchBadge(true);
       setLobbyTab('chat');
-
-      // ── Arka planda Supabase'e kaydet ──
-      try {
-        await joinMatchSlot(match.id, isAway ? updatedAwaySlots : updatedSlots, isAway);
-      } catch (dbErr) {
-        console.warn('Supabase kayıt hatası (rollback yapılıyor):', dbErr);
-        // Rollback: Eski state'e geri dön
-        await updateMatch({ ...match });
-      }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Join error:', e);
+      alert(e.message || 'Maça katılırken bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -777,24 +836,31 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (isAlreadyJoined || isAlreadyJoinedReserve) return;
     setIsProcessing(true);
 
-    const reservePlayer: Player = {
-      id: currentUserProfile.id || 'u1',
-      name: currentUserProfile.name || 'Oyuncu',
-      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-      rating: (currentUserProfile as any).rating || 4.5,
-      position: 'YEDEK',
-      x: 50,
-      y: 50,
-      paymentStatus: 'UNPAID',
-    };
-
-    const updatedReserves = [...(match.reservePlayers || []), reservePlayer];
-
     try {
+      const { error } = await supabase.rpc('join_public_match_reserve', {
+        p_match_id: match.id,
+        p_user_id: currentUserProfile.id
+      });
+
+      if (error) throw error;
+
+      const reservePlayer: Player = {
+        id: currentUserProfile.id,
+        name: currentUserProfile.name,
+        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+        rating: currentUserProfile.rating || 4.5,
+        position: 'YEDEK',
+        x: 50,
+        y: 50,
+        paymentStatus: 'UNPAID',
+      };
+
+      const updatedReserves = [...(match.reservePlayers || []), reservePlayer];
       await updateMatch({ ...match, reservePlayers: updatedReserves });
-      setIsProcessing(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Join reserve error:', e);
+      alert(e.message || 'Yedek olarak katılırken bir hata oluştu.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -803,16 +869,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!isAlreadyJoinedReserve) return;
     setIsProcessing(true);
 
-    const updatedReserves = (match.reservePlayers || []).filter(
-      p => p.id !== currentUserProfile.id
-    );
-
     try {
+      const { error } = await supabase.rpc('leave_public_match_slot', {
+        p_match_id: match.id,
+        p_user_id: currentUserProfile.id
+      });
+
+      if (error) throw error;
+
+      const updatedReserves = (match.reservePlayers || []).filter(
+        p => p.id !== currentUserProfile.id
+      );
+
       await updateMatch({ ...match, reservePlayers: updatedReserves });
-      setIsProcessing(false);
       setShowLeaveConfirm(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Leave reserves error:', e);
+      alert(e.message || 'Yedek listesinden çıkarken bir hata oluştu.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -878,68 +952,75 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!isAlreadyJoined || !currentUserProfile?.id) return;
     setIsProcessing(true);
 
-    const reserves = match.reservePlayers || [];
-    const isHomePlayer = (match.slots || []).some(s => s.player?.id === currentUserProfile.id);
-    const isAwayPlayer = (match.awaySlots || []).some(s => s.player?.id === currentUserProfile.id);
-
-    let updatedSlots = match.slots || [];
-    let updatedAwaySlots = match.awaySlots || [];
-    let remainingReserves = reserves;
-
-    if (isHomePlayer) {
-      const slotId = (match.slots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
-      if (slotId) {
-        const res = fillVacatedSlot(match.slots || [], remainingReserves, slotId);
-        updatedSlots = res.updatedSlots;
-        remainingReserves = res.remainingReserves;
-      }
-    } else if (isAwayPlayer) {
-      const slotId = (match.awaySlots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
-      if (slotId) {
-        const res = fillVacatedSlot(match.awaySlots || [], remainingReserves, slotId);
-        updatedAwaySlots = res.updatedSlots;
-        remainingReserves = res.remainingReserves;
-      }
-    }
-
-    // Halef Kaptan Belirleme Mantığı (Reliability Score Tabanlı)
-    let newCreatorId = match.creatorId;
-    const isCreatorLeaving = match.creatorId === currentUserProfile.id;
-    if (isCreatorLeaving) {
-      const remainingPlayers = updatedSlots
-        .map(s => s?.player)
-        .filter((p): p is Player => !!p && p.id !== currentUserProfile.id);
-      if (remainingPlayers.length > 0) {
-        let bestScore = -1;
-        let bestPlayerId = remainingPlayers[0].id;
-        remainingPlayers.forEach(p => {
-          const dbUser = (adminUsers || []).find(u => u?.id === p.id);
-          const score = dbUser?.reliabilityScore ?? 100;
-          if (score > bestScore) {
-            bestScore = score;
-            bestPlayerId = p.id;
-          }
-        });
-        newCreatorId = bestPlayerId;
-        
-        // Notify new captain
-        addUserNotification({
-          id: `succ_${newCreatorId}_${Date.now()}`,
-          type: 'system',
-          title: '👑 Yeni Kaptan Sensin!',
-          desc: `Eski kaptan ayrıldığı için yüksek güvenilirlik skorunla bu maçın yeni kaptanı seçildin.`,
-          time: 'Şimdi',
-          iconName: 'Award',
-          color: '#39FF14',
-          textColor: '#39FF14',
-          read: false,
-        });
-      }
-    }
-
-    const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-
     try {
+      const { error } = await supabase.rpc('leave_public_match_slot', {
+        p_match_id: match.id,
+        p_user_id: currentUserProfile.id
+      });
+
+      if (error) throw error;
+
+      const reserves = match.reservePlayers || [];
+      const isHomePlayer = (match.slots || []).some(s => s.player?.id === currentUserProfile.id);
+      const isAwayPlayer = (match.awaySlots || []).some(s => s.player?.id === currentUserProfile.id);
+
+      let updatedSlots = match.slots || [];
+      let updatedAwaySlots = match.awaySlots || [];
+      let remainingReserves = reserves;
+
+      if (isHomePlayer) {
+        const slotId = (match.slots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
+        if (slotId) {
+          const res = fillVacatedSlot(match.slots || [], remainingReserves, slotId);
+          updatedSlots = res.updatedSlots;
+          remainingReserves = res.remainingReserves;
+        }
+      } else if (isAwayPlayer) {
+        const slotId = (match.awaySlots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
+        if (slotId) {
+          const res = fillVacatedSlot(match.awaySlots || [], remainingReserves, slotId);
+          updatedAwaySlots = res.updatedSlots;
+          remainingReserves = res.remainingReserves;
+        }
+      }
+
+      // Halef Kaptan Belirleme Mantığı (Reliability Score Tabanlı)
+      let newCreatorId = match.creatorId;
+      const isCreatorLeaving = match.creatorId === currentUserProfile.id;
+      if (isCreatorLeaving) {
+        const remainingPlayers = updatedSlots
+          .map(s => s?.player)
+          .filter((p): p is Player => !!p && p.id !== currentUserProfile.id);
+        if (remainingPlayers.length > 0) {
+          let bestScore = -1;
+          let bestPlayerId = remainingPlayers[0].id;
+          remainingPlayers.forEach(p => {
+            const dbUser = (adminUsers || []).find(u => u?.id === p.id);
+            const score = dbUser?.reliabilityScore ?? 100;
+            if (score > bestScore) {
+              bestScore = score;
+              bestPlayerId = p.id;
+            }
+          });
+          newCreatorId = bestPlayerId;
+          
+          // Notify new captain
+          addUserNotification({
+            id: `succ_${newCreatorId}_${Date.now()}`,
+            type: 'system',
+            title: '👑 Yeni Kaptan Sensin!',
+            desc: `Eski kaptan ayrıldığı için yüksek güvenilirlik skorunla bu maçın yeni kaptanı seçildin.`,
+            time: 'Şimdi',
+            iconName: 'Award',
+            color: '#39FF14',
+            textColor: '#39FF14',
+            read: false,
+          });
+        }
+      }
+
+      const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
+
       await updateMatch({
         ...match,
         slots: updatedSlots,
@@ -948,11 +1029,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         creatorId: newCreatorId,
         status: nextStatus
       });
-      setIsProcessing(false);
+      
       setShowLeaveConfirm(false);
       onBack();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Leave match error:', e);
+      alert(e.message || 'Maçtan ayrılırken bir hata oluştu.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -1140,6 +1223,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             onClick={async () => {
                               try {
                                 setIsProcessing(true);
+                                const { error } = await supabase.rpc('pay_public_match_deposit', {
+                                  p_match_id: match.id,
+                                  p_user_id: currentUserProfile.id,
+                                  p_amount: 50
+                                });
+
+                                if (error) throw error;
+
                                 const updatedSlots = (match.slots || []).map(s => {
                                   if (s?.player?.id === currentUserProfile.id) {
                                     return {
@@ -1152,6 +1243,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                   }
                                   return s;
                                 });
+                                
                                 const nextStatus = checkAndGetStatus(updatedSlots);
                                 await updateMatch({
                                   ...match,
@@ -1160,8 +1252,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 });
                                 setActivePlayerSlotId(null);
                                 alert("Kapora ödemesi başarıyla gerçekleştirildi! ⚽");
-                              } catch (e) {
+                              } catch (e: any) {
                                 console.error(e);
+                                alert(e.message || 'Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
                               } finally {
                                 setIsProcessing(false);
                               }
@@ -1813,77 +1906,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 type="text"
                 value={chatInputText}
                 onChange={(e) => setChatInputText(e.target.value)}
-                onKeyDown={async (e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    if (!chatInputText.trim()) return;
-                    const now = new Date();
-                    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                    const newMsg = {
-                      id: `chat_${Date.now()}`,
-                      senderId: currentUserProfile.id,
-                      senderName: currentUserProfile.name,
-                      senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
-                      text: chatInputText.trim(),
-                      timestamp: timeStr
-                    };
-                    const updatedMessages = [...(match.chatMessages || []), newMsg];
-                    try {
-                      await updateMatch({ ...match, chatMessages: updatedMessages });
-                      setChatInputText('');
-                    } catch (err) {
-                      console.error(err);
-                    }
+                    handleSendChatMessage(chatInputText);
                   }
                 }}
                 placeholder="Takıma mesaj yaz..."
                 className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#39FF14]/40"
               />
               <button
-                onClick={async () => {
-                  if (!chatInputText.trim()) return;
-                  const now = new Date();
-                  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                  const newMsg = {
-                    id: `chat_${Date.now()}`,
-                    senderId: currentUserProfile.id,
-                    senderName: currentUserProfile.name,
-                    senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
-                    text: chatInputText.trim(),
-                    timestamp: timeStr
-                  };
-                  const defaultChatMessages = [
-                    {
-                      id: 'm1',
-                      senderId: 'mock_1',
-                      senderName: 'Mert H. (KL)',
-                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
-                      text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
-                      timestamp: '10:42'
-                    },
-                    {
-                      id: 'm2',
-                      senderId: 'mock_2',
-                      senderName: 'Burak Y. (STP)',
-                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
-                      text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
-                      timestamp: '10:45'
-                    },
-                    {
-                      id: 'm3',
-                      senderId: 'mock_3',
-                      senderName: 'Arda G. (SNT)',
-                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
-                      text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
-                      timestamp: '10:48'
-                    }
-                  ];
-                  const updatedMessages = [...(match.chatMessages || defaultChatMessages), newMsg];
-                  try {
-                    await updateMatch({ ...match, chatMessages: updatedMessages });
-                    setChatInputText('');
-                  } catch (err) {
-                    console.error(err);
-                  }
+                onClick={() => {
+                  handleSendChatMessage(chatInputText);
                 }}
                 className="p-3 bg-[#39FF14] text-black rounded-xl hover:shadow-[0_0_12px_rgba(57,255,20,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer"
               >
