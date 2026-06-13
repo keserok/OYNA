@@ -42,7 +42,8 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
     }
 
     if (!userSnap) {
-      const newUser = {
+      // Yeni kullanıcı, profilini oluşturuyoruz.
+      const dbUser = {
         id: supabaseUser.id,
         email: supabaseUser.email,
         full_name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
@@ -52,29 +53,43 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         verification_status: 'approved',
         is_admin: false,
         wallet_balance: 0,
+        stats: {
+          matchesPlayed: 0,
+          rating: 5.0,
+        },
         last_active_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      const { error: insertError } = await supabase.from('profiles').insert([newUser]);
+      const { error: insertError } = await supabase.from('profiles').insert([dbUser]);
       if (insertError) {
         console.error('[UserService] Kullanıcı yaratılırken hata:', insertError);
         return null;
       }
 
       return {
-        ...newUser,
-        walletBalance: 0,
-        stats: { matchesPlayed: 0, rating: 5.0 },
+        id: dbUser.id,
+        email: dbUser.email ?? null,
+        full_name: dbUser.full_name,
+        avatar_url: dbUser.avatar_url,
+        role: dbUser.role,
+        roles: dbUser.roles,
+        verification_status: dbUser.verification_status,
+        is_admin: dbUser.is_admin,
+        walletBalance: dbUser.wallet_balance,
+        stats: dbUser.stats,
+        createdAt: dbUser.created_at,
+        updatedAt: dbUser.updated_at
       } as OynaUser;
     } else {
-      // Mevcut kullanıcı — last_active_at güncelle (background, hata önemli değil)
-      supabase
+      // Zaten kayıtlı bir kullanıcı, son aktif olma tarihini güncelleyip bilgilerini döndür
+      const nowISO = new Date().toISOString();
+      await supabase
         .from('profiles')
-        .update({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .update({ last_active_at: nowISO, updated_at: nowISO })
         .eq('id', supabaseUser.id);
-
+      
       return {
         id: userSnap.id,
         email: userSnap.email,
@@ -84,10 +99,10 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         roles: userSnap.roles ?? ['PLAYER'],
         verification_status: userSnap.verification_status ?? 'approved',
         is_admin: userSnap.is_admin ?? false,
-        walletBalance: userSnap.wallet_balance ?? 0,
-        stats: { matchesPlayed: 0, rating: 5.0 },
+        walletBalance: Number(userSnap.wallet_balance ?? 0),
+        stats: userSnap.stats || { matchesPlayed: 0, rating: 5.0 },
         createdAt: userSnap.created_at,
-        updatedAt: userSnap.updated_at,
+        updatedAt: nowISO
       } as OynaUser;
     }
   } catch (err) {

@@ -18,10 +18,16 @@ export interface PitchSlot {
 
 export const addAvailableSlot = async (slotData: Omit<PitchSlot, 'id' | 'createdAt'>) => {
   try {
-    const { data, error } = await supabase.from('pitch_slots').insert([{
-      ...slotData,
-      status: 'AVAILABLE'
-    }]).select().single();
+    const dbData = {
+      pitch_id: slotData.pitchId,
+      date: slotData.date,
+      time: slotData.time,
+      status: 'AVAILABLE',
+      price: slotData.price,
+      booked_by: slotData.bookedBy ?? null,
+      booked_at: slotData.bookedAt ?? null
+    };
+    const { data, error } = await supabase.from('pitch_slots').insert([dbData]).select().single();
 
     if (error) throw error;
     
@@ -48,8 +54,8 @@ export const bookSlot = async (slotId: string, userId: string) => {
   try {
     const { error } = await supabase.from('pitch_slots').update({
       status: 'BOOKED',
-      bookedBy: userId,
-      bookedAt: new Date().toISOString()
+      booked_by: userId,
+      booked_at: new Date().toISOString()
     }).eq('id', slotId);
 
     if (error) throw error;
@@ -69,10 +75,23 @@ export const subscribeToPitchSlots = (pitchId: string, callback: (slots: PitchSl
     const { data } = await supabase
       .from('pitch_slots')
       .select('*')
-      .eq('pitchId', pitchId)
+      .eq('pitch_id', pitchId)
       .eq('status', 'AVAILABLE');
     
-    if (data) callback(data as PitchSlot[]);
+    if (data) {
+      const mapped = data.map((s: any) => ({
+        id: s.id,
+        pitchId: s.pitch_id,
+        date: s.date,
+        time: s.time,
+        status: s.status as any,
+        price: Number(s.price),
+        bookedBy: s.booked_by,
+        bookedAt: s.booked_at,
+        createdAt: s.created_at
+      } as PitchSlot));
+      callback(mapped);
+    }
   };
 
   fetchSlots();
@@ -82,7 +101,7 @@ export const subscribeToPitchSlots = (pitchId: string, callback: (slots: PitchSl
       event: '*', 
       schema: 'public', 
       table: 'pitch_slots', 
-      filter: `pitchId=eq.${pitchId}` 
+      filter: `pitch_id=eq.${pitchId}` 
     }, () => {
       fetchSlots();
     })
