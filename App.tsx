@@ -290,6 +290,7 @@ const App: React.FC = () => {
       (user: any) => {
         if (user?.uid) {
           setupPush(user.uid);
+          useAppStore.getState().loadMyTeams();
         } else {
           // Çıkış yapılınca token’ı temizle
           if (unsubscribeRealtime) unsubscribeRealtime();
@@ -528,7 +529,15 @@ const App: React.FC = () => {
       case 'TEAM_CREATOR':
         return <TeamCreator
           onBack={() => setView('PROFILE')}
-          onComplete={() => setView('PROFILE')}
+          onComplete={async (teamData) => {
+            try {
+              await useAppStore.getState().createTeam(teamData);
+              setView('MY_TEAM');
+            } catch (error) {
+              console.error('Takım oluşturulamadı:', error);
+              setView('PROFILE');
+            }
+          }}
           communities={[{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }]}
         />;
       case 'TRANSFER_CENTER':

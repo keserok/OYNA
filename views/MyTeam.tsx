@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2 } from 'lucide-react';
-import { MY_TEAM } from '../constants';
+import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users } from 'lucide-react';
 import { Player, AppView } from '../types';
 import { getTeamRolesAndInstructions, updateTeamRolesAndInstructions, sbRemovePlayerFromTeam } from '../supabaseClient';
+import { useAppStore } from '../store';
+import { withDefaultPositions } from '../services/teamService';
 
 
 interface MyTeamProps {
@@ -13,15 +14,23 @@ interface MyTeamProps {
 
 
 const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
-    const [roster, setRoster] = useState<Player[]>(MY_TEAM.roster);
+    const myTeams = useAppStore(s => s.myTeams);
+    const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+    const activeTeam = myTeams.find(t => t.id === activeTeamId) ?? myTeams[0] ?? null;
+
+    const [roster, setRoster] = useState<Player[]>([]);
     const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const pitchRef = useRef<HTMLDivElement>(null);
 
-    // Supabase'den pozisyonları ve talimatları yükle
+    // Aktif takım değişince kadroyu kur, Supabase'den pozisyon/talimatları yükle
     useEffect(() => {
+        if (!activeTeam) { setRoster([]); return; }
+        const baseRoster = withDefaultPositions(activeTeam.roster || []);
+        setRoster(baseRoster);
+
         const loadSupabaseData = async () => {
-            const savedRoles = await getTeamRolesAndInstructions(MY_TEAM.id);
+            const savedRoles = await getTeamRolesAndInstructions(activeTeam.id);
             if (savedRoles) {
                 setRoster(prev => prev.map(p => {
                     const saved = savedRoles[p.id];
@@ -39,10 +48,11 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
             }
         };
         loadSupabaseData();
-    }, []);
+    }, [activeTeam?.id]);
 
     // Supabase'de pozisyonları ve talimatları güncelle
     const saveRosterToSupabase = async (currentRoster: Player[]) => {
+        if (!activeTeam) return;
         const teamRolesObj: Record<string, any> = {};
         currentRoster.forEach(p => {
             teamRolesObj[p.id] = {
@@ -52,7 +62,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                 instruction: p.instruction || ''
             };
         });
-        await updateTeamRolesAndInstructions(MY_TEAM.id, teamRolesObj);
+        await updateTeamRolesAndInstructions(activeTeam.id, teamRolesObj);
     };
 
     // Formation Presets
@@ -105,10 +115,11 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     };
 
     const removePlayer = async (id: string) => {
+        if (!activeTeam) return;
         const nextRoster = roster.filter(p => p.id !== id);
         setRoster(nextRoster);
         // Supabase'den kadrodan çıkar
-        await sbRemovePlayerFromTeam(MY_TEAM.id, id);
+        await sbRemovePlayerFromTeam(activeTeam.id, id);
         // Yeni kadro rollerini Supabase'de güncelle
         await saveRosterToSupabase(nextRoster);
     };
@@ -118,6 +129,35 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
         setRoster(nextRoster);
         await saveRosterToSupabase(nextRoster);
     };
+
+    // ─── Boş durum: henüz takım yok ───────────────────────────────────────
+    if (!activeTeam) {
+        return (
+            <div className="min-h-screen bg-[#0A0E14] flex flex-col">
+                <header className="px-6 py-4 flex items-center gap-3 bg-[#161B22]/90 backdrop-blur-md border-b border-white/5">
+                    <button onClick={onBack} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <h1 className="font-black text-white text-lg tracking-tight uppercase">Takımım</h1>
+                </header>
+                <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+                    <div className="w-24 h-24 rounded-full bg-[#161B22] border border-white/10 flex items-center justify-center mb-6">
+                        <Users size={40} className="text-gray-600" />
+                    </div>
+                    <h2 className="text-xl font-black text-white mb-2">Henüz bir takımın yok</h2>
+                    <p className="text-sm text-gray-500 mb-8 max-w-xs">
+                        Takımını kur, arkadaşlarını davet et, taktiğini hazırla ve maça çık.
+                    </p>
+                    <button
+                        onClick={() => onNavigate('TEAM_CREATOR')}
+                        className="flex items-center gap-2 bg-[#39FF14] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-wider text-sm hover:bg-green-400 transition-colors shadow-[0_0_30px_rgba(57,255,20,0.3)]"
+                    >
+                        <Plus size={18} /> Takım Kur
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#0A0E14] flex flex-col relative">
@@ -129,8 +169,8 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="font-black text-white text-lg tracking-tight uppercase">Taktik Tahtası</h1>
-                        <p className="text-[10px] text-gray-400 font-medium">Kaptan Modu: Aktif</p>
+                        <h1 className="font-black text-white text-lg tracking-tight uppercase">{activeTeam.name}</h1>
+                        <p className="text-[10px] text-gray-400 font-medium">Taktik Tahtası • Kaptan Modu</p>
                     </div>
                 </div>
                 <button className="p-2 bg-white/5 rounded-full text-white">
@@ -140,6 +180,30 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+
+                {/* Takım Değiştirici + Yeni Takım */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {myTeams.map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setActiveTeamId(t.id)}
+                            className={`shrink-0 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider border transition-colors ${
+                                t.id === activeTeam.id
+                                    ? 'bg-white text-black border-white'
+                                    : 'bg-[#161B22] text-gray-400 border-white/10 hover:border-white/30'
+                            }`}
+                            style={t.id === activeTeam.id && t.color1 ? { backgroundColor: t.color1, borderColor: t.color1, color: '#fff' } : undefined}
+                        >
+                            {t.shortName || t.name}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => onNavigate('TEAM_CREATOR')}
+                        className="shrink-0 px-3 py-2 rounded-full text-xs font-black border border-dashed border-white/20 text-gray-500 hover:text-white hover:border-white/50 transition-colors flex items-center gap-1"
+                    >
+                        <Plus size={12} /> Yeni
+                    </button>
+                </div>
 
                 {/* Pitch Area */}
                 <section>
@@ -237,18 +301,18 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                 <section className="grid grid-cols-3 gap-3">
                     <div className="bg-[#161B22] p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                         <Swords className="text-yellow-400 mb-1" size={20} />
-                        <span className="text-xl font-black text-white">12</span>
+                        <span className="text-xl font-black text-white">{activeTeam.wins ?? 0}</span>
                         <span className="text-[9px] text-gray-500 uppercase font-bold">Galibiyet</span>
                     </div>
                     <div className="bg-[#161B22] p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                         <Shield className="text-blue-400 mb-1" size={20} />
-                        <span className="text-xl font-black text-white">%85</span>
-                        <span className="text-[9px] text-gray-500 uppercase font-bold">Güven Skoru</span>
+                        <span className="text-xl font-black text-white">{activeTeam.losses ?? 0}</span>
+                        <span className="text-[9px] text-gray-500 uppercase font-bold">Mağlubiyet</span>
                     </div>
                     <div className="bg-[#161B22] p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                         <Activity className="text-green-400 mb-1" size={20} />
-                        <span className="text-xl font-black text-white">4.8</span>
-                        <span className="text-[9px] text-gray-500 uppercase font-bold">Form</span>
+                        <span className="text-xl font-black text-white">{roster.length}</span>
+                        <span className="text-[9px] text-gray-500 uppercase font-bold">Oyuncu</span>
                     </div>
                 </section>
 

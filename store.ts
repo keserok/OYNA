@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog } from './types';
 import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER_TEAMS } from './constants';
 import { MOCK_USERS } from './__mocks__/mockUsers';
+import { MOCK_TEAMS } from './__mocks__/mockTeams';
 import * as FB from './supabaseMutations';
+import * as TeamService from './services/teamService';
 import { auth } from './supabaseAuth';
 
 import { supabase } from './supabaseClient';
@@ -189,6 +191,8 @@ interface AppState {
 
   myTeams: Team[];
   addMyTeam: (team: Team) => void;
+  loadMyTeams: () => Promise<void>;
+  createTeam: (input: TeamService.NewTeamInput) => Promise<Team>;
 
   // ─── Studio Transfer ─────────────────────────────────────────────
   activeStudioTeam: Team | null;
@@ -545,68 +549,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
   clearSelectedFriendsForTeam: () => set({ selectedFriendsForTeam: [] }),
 
-  userTeams: [
-    {
-        id: 't1', name: 'Boğaziçi Kaplanları', shortName: 'BĞZ', location: 'Hisarüstü, İstanbul', 
-        color1: '#10B981', color2: '#064E3B', crest: 'shield', players: ['1', '6', '11'], 
-        roster: [{ id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner' }, { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak' }, { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=bgz&backgroundColor=10B981',
-        captain: '1', teamValue: '75000', wins: 14, losses: 3
-    },
-    {
-        id: 't2', name: 'Karaköy Athletics', shortName: 'KRK', location: 'Karaköy, İstanbul', 
-        color1: '#FF5722', color2: '#000000', crest: 'sword', players: ['4', '8', '15'], 
-        roster: [{ id: '4', name: 'Ahmet Yılmaz', avatar: 'https://i.pravatar.cc/150?u=ahmet' }, { id: '8', name: 'Ozan Tekin', avatar: 'https://i.pravatar.cc/150?u=ozan' }, { id: '15', name: 'Deniz Sarp', avatar: 'https://i.pravatar.cc/150?u=deniz' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=krk&backgroundColor=FF5722',
-        captain: '4', teamValue: '85000', wins: 22, losses: 8
-    },
-    {
-        id: 't3', name: 'Moda United', shortName: 'MOD', location: 'Kadıköy, İstanbul', 
-        color1: '#800000', color2: '#FFD700', crest: 'crown', players: ['2', '7', '14'], 
-        roster: [{ id: '2', name: 'Emre Demir', avatar: 'https://i.pravatar.cc/150?u=emre' }, { id: '7', name: 'Kaan Gök', avatar: 'https://i.pravatar.cc/150?u=kaan' }, { id: '14', name: 'Yusuf Can', avatar: 'https://i.pravatar.cc/150?u=yusuf' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=mod&backgroundColor=800000',
-        captain: '2', teamValue: '62000', wins: 15, losses: 10
-    },
-    {
-        id: 't4', name: 'Maslak City FC', shortName: 'MSL', location: 'Sarıyer, İstanbul', 
-        color1: '#00BCD4', color2: '#0A0E14', crest: 'lightning', players: ['3', '9', '10'], 
-        roster: [{ id: '3', name: 'Mert Arslan', avatar: 'https://i.pravatar.cc/150?u=mert' }, { id: '9', name: 'Efe Korkmaz', avatar: 'https://i.pravatar.cc/150?u=efe' }, { id: '10', name: 'Sinan Gül', avatar: 'https://i.pravatar.cc/150?u=sinan' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=msl&backgroundColor=00BCD4',
-        captain: '3', teamValue: '95000', wins: 30, losses: 5
-    }
-  ] as any[],
-  // addTeam is synced directly to Firestore 'teams' collection below
+  // Mock takımlar yalnızca dev modda; prod'da Supabase'den hydrate edilir (loadMyTeams).
+  userTeams: IS_LOCAL_DEV ? MOCK_TEAMS : [],
 
-  myTeams: [
-    {
-        id: 't1', name: 'Boğaziçi Kaplanları', shortName: 'BĞZ', location: 'Hisarüstü, İstanbul', 
-        color1: '#10B981', color2: '#064E3B', crest: 'shield', players: ['1', '6', '11'], 
-        roster: [{ id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner' }, { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak' }, { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=bgz&backgroundColor=10B981',
-        captain: '1', teamValue: '75000', wins: 14, losses: 3
-    },
-    {
-        id: 't2', name: 'Karaköy Athletics', shortName: 'KRK', location: 'Karaköy, İstanbul', 
-        color1: '#FF5722', color2: '#000000', crest: 'sword', players: ['4', '8', '15'], 
-        roster: [{ id: '4', name: 'Ahmet Yılmaz', avatar: 'https://i.pravatar.cc/150?u=ahmet' }, { id: '8', name: 'Ozan Tekin', avatar: 'https://i.pravatar.cc/150?u=ozan' }, { id: '15', name: 'Deniz Sarp', avatar: 'https://i.pravatar.cc/150?u=deniz' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=krk&backgroundColor=FF5722',
-        captain: '4', teamValue: '85000', wins: 22, losses: 8
-    },
-    {
-        id: 't3', name: 'Moda United', shortName: 'MOD', location: 'Kadıköy, İstanbul', 
-        color1: '#800000', color2: '#FFD700', crest: 'crown', players: ['2', '7', '14'], 
-        roster: [{ id: '2', name: 'Emre Demir', avatar: 'https://i.pravatar.cc/150?u=emre' }, { id: '7', name: 'Kaan Gök', avatar: 'https://i.pravatar.cc/150?u=kaan' }, { id: '14', name: 'Yusuf Can', avatar: 'https://i.pravatar.cc/150?u=yusuf' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=mod&backgroundColor=800000',
-        captain: '2', teamValue: '62000', wins: 15, losses: 10
-    },
-    {
-        id: 't4', name: 'Maslak City FC', shortName: 'MSL', location: 'Sarıyer, İstanbul', 
-        color1: '#00BCD4', color2: '#0A0E14', crest: 'lightning', players: ['3', '9', '10'], 
-        roster: [{ id: '3', name: 'Mert Arslan', avatar: 'https://i.pravatar.cc/150?u=mert' }, { id: '9', name: 'Efe Korkmaz', avatar: 'https://i.pravatar.cc/150?u=efe' }, { id: '10', name: 'Sinan Gül', avatar: 'https://i.pravatar.cc/150?u=sinan' }],
-        logo: 'https://api.dicebear.com/7.x/shapes/svg?seed=msl&backgroundColor=00BCD4',
-        captain: '3', teamValue: '95000', wins: 30, losses: 5
-    }
-  ] as any[],
+  myTeams: IS_LOCAL_DEV ? MOCK_TEAMS : [],
   addMyTeam: async (team) => {
       const prev = get().myTeams;
       set({ myTeams: [team, ...prev] });
@@ -614,6 +560,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       catch (e) { set({ myTeams: prev }); throw e; }
   },
   addTeam: (team) => FB.fbAddTeam(team),
+
+  // Takımlarımı DB'den yükle (login sonrası App.tsx çağırır).
+  // userTeams da aynı kaynaktan beslenir — MatchCreate/MatchJoin bunu okuyor.
+  loadMyTeams: async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const teams = await TeamService.fetchMyTeams(uid);
+    if (teams.length > 0 || !IS_LOCAL_DEV) {
+      set({ myTeams: teams, userTeams: teams });
+    }
+  },
+
+  createTeam: async (input) => {
+    const team = await TeamService.createTeam(input);
+    set((state) => ({
+      myTeams: [team, ...state.myTeams],
+      userTeams: [team, ...state.userTeams],
+    }));
+    return team;
+  },
 
   // Studio Transfer
   activeStudioTeam: null,

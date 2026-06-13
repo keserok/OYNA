@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserRole, AppView, PlayerCardData } from '../types';
-import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy } from 'lucide-react';
+import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy, Users } from 'lucide-react';
 import { MATCH_HISTORY } from '../constants';
 import { PlayerCard } from '../components/PlayerCard';
 import { useAppStore } from '../store';
@@ -251,6 +251,24 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             YÖNET
                         </span>
                     </div>
+                </button>
+
+                {/* ═══ TAKIMLARIM CARD ═══ */}
+                <button
+                    onClick={() => onNavigate && onNavigate('MY_TEAM')}
+                    className="w-full bg-[#161B22]/60 backdrop-blur-md border border-[#FFFF00]/30 rounded-3xl p-5 flex items-center justify-between group hover:bg-[#FFFF00]/5 hover:border-[#FFFF00]/50 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden"
+                >
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FFFF00]/10 blur-[40px] rounded-full group-hover:bg-[#FFFF00]/20 transition-all" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 bg-[#FFFF00]/20 rounded-2xl flex items-center justify-center border border-[#FFFF00]/30 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(255,255,0,0.2)]">
+                            <Users size={22} className="text-[#FFFF00]" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">TAKIMLARIM</p>
+                            <p className="text-sm font-black italic text-white leading-none tracking-tight">Kadro & Taktik Tahtası</p>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} className="text-[#FFFF00] relative z-10 group-hover:translate-x-1 transition-transform" />
                 </button>
 
                 {/* ═══ BENTO STATISTICS & FILTERS ═══ */}
