@@ -16,15 +16,16 @@ const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m
 const MatchesPage = lazy(() => import('./pages/MatchesPage').then(m => ({ default: m.MatchesPage })));
 const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => ({ default: m.CommunitiesPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const OwnerModerationTab = lazy(() => import('./OwnerModerationTab'));
 
-interface Props { 
-    onBack: () => void; 
-    onNavigate?: (tab: string) => void; 
+interface Props {
+    onBack: () => void;
+    onNavigate?: (tab: string) => void;
 }
 
 export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     const { deletePitch } = useAppStore();
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR'>('GENEL');
+    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'MODERATION'>('GENEL');
     const [modal, setModal] = useState<any>({ type: 'none' });
 
     const handleNavigate = (route: typeof subRoute) => {
@@ -41,7 +42,7 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 return <DashboardPage />;
             case 'SAHALAR':
                 return (
-                    <PitchesPage 
+                    <PitchesPage
                         onEditPitch={(pitch) => setModal({ type: 'deepEditPitch', data: pitch })}
                         onDeletePitch={(id) => deletePitch(id)}
                     />
@@ -52,6 +53,8 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 return <UsersPage subRoute={subRoute} />;
             case 'MATCHES':
                 return <MatchesPage />;
+            case 'MODERATION':
+                return <OwnerModerationTab />;
             case 'TOPLULUKLAR':
             case 'TAKIMLAR':
             case 'TURNUVALAR':
@@ -71,9 +74,9 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
 
     return (
         <>
-            <AdminLayout 
-                activeSubRoute={subRoute} 
-                onNavigate={handleNavigate} 
+            <AdminLayout
+                activeSubRoute={subRoute}
+                onNavigate={handleNavigate}
                 onBack={onBack}
             >
                 <Suspense fallback={
@@ -100,7 +103,7 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 {modal.type === 'addPitch' && (
                     <AddPitchModal onClose={closeModal} />
                 )}
-                {/* 
+                {/*
                   Add other global modals as needed (PushModal, BanModal, etc.)
                 */}
             </AnimatePresence>

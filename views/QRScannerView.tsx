@@ -2,20 +2,67 @@ import React, { useEffect, useState } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { ArrowLeft, Trophy, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../supabaseClient';
 
 interface QRScannerViewProps {
   onBack: () => void;
   onResult: (result: any) => void;
 }
 
+interface MatchInfo {
+  id: string;
+  title: string;
+}
+
 const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [scoreEntry, setScoreEntry] = useState({ teamA: 0, teamB: 0, teamAName: 'Takım A', teamBName: 'Takım B' });
+  const [scoreEntry, setScoreEntry] = useState({ teamA: 0, teamB: 0, teamAName: 'Ev Sahibi', teamBName: 'Deplasman' });
+  const [matchInfo, setMatchInfo] = useState<MatchInfo | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
+
+  // Skor QR token'ını doğrula
+  const validateToken = async (token: string) => {
+    const cleaned = token.trim();
+    if (!cleaned) return;
+    setIsValidating(true);
+    setError(null);
+    try {
+      const { data, error: dbErr } = await supabase
+        .from('match_score_tokens')
+        .select('match_id, expires_at, used_at, matches(id, title, status)')
+        .eq('token', cleaned)
+        .gt('expires_at', new Date().toISOString())
+        .is('used_at', null)
+        .maybeSingle();
+
+      if (dbErr) throw dbErr;
+      if (!data) {
+        setError('QR kodu geçersiz veya süresi dolmuş.');
+        setTimeout(() => setError(null), 4000);
+        return;
+      }
+
+      const row = data as unknown as {
+        match_id: string;
+        matches: { id: string; title: string | null } | { id: string; title: string | null }[] | null;
+      };
+      const matchObj = Array.isArray(row.matches) ? row.matches[0] : row.matches;
+      setMatchInfo({ id: matchObj?.id ?? row.match_id, title: matchObj?.title ?? 'Maç' });
+      setScanResult(cleaned);
+    } catch (err) {
+      console.error('validateToken:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      setError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'QR kodu doğrulanamadı.');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   useEffect(() => {
     if (showManualInput) return;
@@ -32,7 +79,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
       (decodedText) => {
         if (isScanning) {
           isScanning = false;
-          setScanResult(decodedText);
+          void validateToken(decodedText);
           scanner.clear().catch(err => {
             // Ignore clear errors if they happen after success
           });
@@ -59,42 +106,52 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.trim().length >= 4) {
-      setScanResult(manualCode);
-      // Mock team names based on code
-      setScoreEntry(prev => ({
-        ...prev,
-        teamAName: 'Kartallar FC',
-        teamBName: 'Aslanlar SK'
-      }));
+      void validateToken(manualCode);
     } else {
       setError('Lütfen geçerli bir kod girin (En az 4 karakter)');
       setTimeout(() => setError(null), 3000);
     }
   };
 
-  const handleSubmitScore = () => {
+  const handleSubmitScore = async () => {
+    if (!scanResult) return;
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setError(null);
+    try {
+      const { error: rpcErr } = await supabase.rpc('submit_match_score', {
+        p_token: scanResult,
+        p_home_score: scoreEntry.teamA,
+        p_away_score: scoreEntry.teamB,
+      });
+      if (rpcErr) throw rpcErr;
+
       setIsSuccess(true);
-      
-      // Pass the result back to App.tsx
       onResult({
-        id: scanResult || manualCode,
+        id: matchInfo?.id || scanResult,
         teamA: scoreEntry.teamAName,
         teamB: scoreEntry.teamBName,
         scoreA: scoreEntry.teamA,
         scoreB: scoreEntry.teamB,
         date: new Date().toLocaleDateString('tr-TR'),
         time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        pitch: 'Saha 1'
+        pitch: matchInfo?.title || 'Maç',
       });
 
       setTimeout(() => {
         onBack();
       }, 2000);
-    }, 1500);
+    } catch (err) {
+      console.error('handleSubmitScore:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      let msg = 'Skor kaydedilemedi. Lütfen tekrar deneyin.';
+      if (raw.includes('INVALID_TOKEN')) msg = 'QR kodu geçersiz veya süresi dolmuş.';
+      else if (raw.includes('INVALID_SCORE')) msg = 'Girilen skor geçersiz.';
+      else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetinizi kontrol edin.';
+      setError(msg);
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -158,9 +215,10 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                     </div>
                     <button 
                       type="submit"
-                      className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all"
+                      disabled={isValidating}
+                      className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
                     >
-                      KODU DOĞRULA
+                      {isValidating ? <RefreshCw size={22} className="animate-spin" /> : 'KODU DOĞRULA'}
                     </button>
                     <button 
                       type="button"
@@ -192,7 +250,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                   <Trophy size={32} />
                 </div>
                 <h2 className="text-2xl font-black italic mb-1 uppercase">MAÇ SONUCU</h2>
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">Maç ID: {scanResult.slice(0, 8)}</p>
+                <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">{matchInfo?.title || 'Maç'}</p>
               </div>
 
               <div className="flex items-center justify-between gap-4 mb-10">
@@ -207,7 +265,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                     </button>
                     <span className="text-5xl font-black italic">{scoreEntry.teamA}</span>
                     <button 
-                      onClick={() => setScoreEntry(prev => ({ ...prev, teamA: prev.teamA + 1 }))}
+                      onClick={() => setScoreEntry(prev => ({ ...prev, teamA: Math.min(20, prev.teamA + 1) }))}
                       className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold hover:bg-white/10"
                     >
                       +
@@ -228,7 +286,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                     </button>
                     <span className="text-5xl font-black italic">{scoreEntry.teamB}</span>
                     <button 
-                      onClick={() => setScoreEntry(prev => ({ ...prev, teamB: prev.teamB + 1 }))}
+                      onClick={() => setScoreEntry(prev => ({ ...prev, teamB: Math.min(20, prev.teamB + 1) }))}
                       className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold hover:bg-white/10"
                     >
                       +
@@ -236,6 +294,10 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                   </div>
                 </div>
               </div>
+
+              {error && (
+                <p className="text-red-400 text-xs font-bold mb-3 text-center uppercase tracking-widest">{error}</p>
+              )}
 
               <button 
                 onClick={handleSubmitScore}
@@ -254,6 +316,9 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                   setScanResult(null);
                   setShowManualInput(false);
                   setManualCode('');
+                  setMatchInfo(null);
+                  setError(null);
+                  setScoreEntry({ teamA: 0, teamB: 0, teamAName: 'Ev Sahibi', teamBName: 'Deplasman' });
                 }}
                 className="w-full mt-4 text-gray-500 text-sm font-bold uppercase tracking-widest hover:text-white transition-colors"
               >

@@ -2164,8 +2164,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                     }
                                 });
                                 
-                                alert("Maç Başarıyla Yayınlandı, Davetler Gönderildi!");
-                                onNavigate('COMMUNITY');
+                                onNavigate('MATCH_DISCOVERY');
                             } catch(err) {
                                 console.error("Maç yayınlanamadı:", err);
                                 alert("Maç yayınlanırken bir hata oluştu!");

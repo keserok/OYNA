@@ -159,21 +159,41 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
-          const { data: userSnap } = await supabase.from('profiles').select('*').eq('id', user.uid).single();
+          const { data: userSnap } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.uid)
+            .single();
+
           if (!userSnap) {
+            // ─── YENİ KULLANICI (kayıt) ───────────────────────────────────────
+            // OTP ile gelen kullanıcılar için email veya phone dolu olur.
+            // displayName e-posta OTP veya OAuth dışı yöntemlerde boştur;
+            // fallback olarak e-posta kullanıcı adı kısmını alıyoruz.
+            const currentRole = useAppStore.getState().role ?? UserRole.PLAYER;
+            const fallbackName = user.displayName
+              || (user.email ? user.email.split('@')[0] : '')
+              || (user.phone ? user.phone : '');
             try {
               await supabase.from('profiles').insert({
                 id: user.uid,
-                email: user.email,
-                full_name: user.displayName || '',
-                role: UserRole.PLAYER
+                email: user.email ?? null,
+                phone: user.phone ?? null,
+                full_name: fallbackName,
+                role: currentRole,
               });
-            } catch (error) {
-              console.error('Error creating user profile:', error);
+              // Rol store'da zaten seçili, güncellemeye gerek yok
+            } catch (insertError) {
+              console.error('Error creating user profile:', insertError);
             }
-          } else if (userSnap.role) {
-            setRole(userSnap.role as UserRole);
+          } else {
+            // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
+            // DB'deki rolü geri yükle
+            if (userSnap.role) {
+              setRole(userSnap.role as UserRole);
+            }
           }
+
           const currentView = useAppStore.getState().view;
           if (['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(currentView)) {
             setView('LOCATION_PROMPT');
