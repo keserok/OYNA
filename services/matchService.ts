@@ -29,7 +29,12 @@ export interface Match {
 export const createMatch = async (matchData: Omit<Match, 'id' | 'createdAt' | 'status' | 'applicants'>) => {
   try {
     const { data, error } = await supabase.from('matches').insert([{
-      ...matchData,
+      pitch_id: matchData.pitchId,
+      pitch_name: matchData.pitchName,
+      captain_id: matchData.captainId,
+      captain_name: matchData.captainName,
+      date: matchData.date,
+      time: matchData.time,
       status: 'OPEN',
       applicants: []
     }]).select().single();
@@ -45,8 +50,8 @@ export const createMatch = async (matchData: Omit<Match, 'id' | 'createdAt' | 's
 export const approveApplicant = async (matchId: string, applicantUid: string, role: 'GOALKEEPER' | 'REFEREE') => {
   try {
     const updateData: any = {};
-    if (role === 'GOALKEEPER') updateData.gkId = applicantUid;
-    else if (role === 'REFEREE') updateData.refId = applicantUid;
+    if (role === 'GOALKEEPER') updateData.gk_id = applicantUid;
+    else if (role === 'REFEREE') updateData.ref_id = applicantUid;
     
     updateData.status = 'CONFIRMED';
 
@@ -141,7 +146,15 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
   try {
     const { data, error } = await supabase.from('matches').select('*').eq('id', matchId).single();
     if (error) throw error;
-    return data as unknown as MatchListing;
+    if (!data) return null;
+    return {
+      ...data,
+      awaySlots: data.away_slots || data.awaySlots || [],
+      homeTeamId: data.home_team_id || data.homeTeamId,
+      awayTeamId: data.away_team_id || data.awayTeamId,
+      refereeId: data.ref_id || data.refereeId,
+      creatorId: data.captain_id || data.creatorId,
+    } as unknown as MatchListing;
   } catch (error) {
     console.error("Maç detayları çekilirken hata:", error);
     return null;

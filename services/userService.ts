@@ -37,35 +37,56 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
 
     if (!userSnap) {
       // Yeni kullanıcı, profilini oluşturuyoruz.
-      const newUser = {
+      const dbUser = {
         id: supabaseUser.id,
         email: supabaseUser.email,
         full_name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
         avatar_url: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture || '',
         role: 'PLAYER',
-        walletBalance: 0,
+        wallet_balance: 0,
         stats: {
           matchesPlayed: 0,
           rating: 5.0,
         },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      const { error: insertError } = await supabase.from('profiles').insert([newUser]);
+      const { error: insertError } = await supabase.from('profiles').insert([dbUser]);
       if (insertError) {
         console.error('Kullanıcı yaratılırken hata:', insertError);
         return null;
       }
-      return newUser as OynaUser;
+      return {
+        id: dbUser.id,
+        email: dbUser.email ?? null,
+        full_name: dbUser.full_name,
+        avatar_url: dbUser.avatar_url,
+        role: dbUser.role as any,
+        walletBalance: dbUser.wallet_balance,
+        stats: dbUser.stats,
+        createdAt: dbUser.created_at,
+        updatedAt: dbUser.updated_at
+      } as OynaUser;
     } else {
       // Zaten kayıtlı bir kullanıcı, son aktif olma tarihini güncelleyip bilgilerini döndür
+      const nowISO = new Date().toISOString();
       await supabase
         .from('profiles')
-        .update({ updatedAt: new Date().toISOString() })
+        .update({ updated_at: nowISO })
         .eq('id', supabaseUser.id);
       
-      return userSnap as OynaUser;
+      return {
+        id: userSnap.id,
+        email: userSnap.email,
+        full_name: userSnap.full_name,
+        avatar_url: userSnap.avatar_url,
+        role: userSnap.role as any,
+        walletBalance: Number(userSnap.wallet_balance ?? 0),
+        stats: userSnap.stats || { matchesPlayed: 0, rating: 5.0 },
+        createdAt: userSnap.created_at,
+        updatedAt: nowISO
+      } as OynaUser;
     }
   } catch (err) {
     console.error('Senkronizasyon hatası:', err);
