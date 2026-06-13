@@ -124,6 +124,7 @@ interface AppState {
 
   // Global text overrides
   globalTexts: Record<string, string>;
+  setGlobalText: (key: string, value: string) => void;
 
   // ─── Location & Matching ─────────────────────────────────────────
   userLocation: { lat: number; lng: number } | null;

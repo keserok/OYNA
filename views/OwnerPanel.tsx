@@ -3236,22 +3236,23 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     );
 };
 
-const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
+ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
   const { setIsNotificationsOpen, loadOwnerData, adminMatches } = useAppStore();
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
   const [pitches, setPitches] = useState<any[]>(PITCHES); // Initializing with mock data
+  const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
 
   useEffect(() => {
     loadOwnerData('1'); // Assuming '1' is the current mock facility ID for the owner
   }, [loadOwnerData]);
 
-  // Compute dynamic stats from store data
+  // Compute dynamic stats from store data (MatchListing uses 'price' not 'pricePerPerson')
   const dynamicTotalRevenue = adminMatches.reduce((acc, match) => {
-    return acc + (match.pricePerPerson * match.slots.filter(s => s.status === 'FILLED').length);
+    return acc + ((match as any).price ?? 0) * match.slots.filter(s => s.status === 'TAKEN').length;
   }, 0);
   
   const dynamicOccupancyRatio = adminMatches.length > 0 
-    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'FILLED')).length / adminMatches.length) * 100) 
+    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'TAKEN')).length / adminMatches.length) * 100) 
     : 0;
 
   const [pendingRequests, setPendingRequests] = useState(() => {

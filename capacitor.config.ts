@@ -5,8 +5,11 @@ const config: CapacitorConfig = {
   appName: 'OYNA',
   webDir: 'dist',
 
-  // ─── Splash Screen ──────────────────────────────────────────────
+  // ─── Plugins ────────────────────────────────────────────────────
   plugins: {
+    SignInWithApple: {
+      // clientId must match the App Store Bundle ID set in Apple Developer Console
+    },
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
@@ -36,22 +39,17 @@ const config: CapacitorConfig = {
 
   // ─── Deep Links ─────────────────────────────────────────────────
   server: {
-    // Prod: web asset'ler local'den servis edilir
-    // Dev: aşağıdaki url aktif olur (yorum kaldır)
-    // url: 'http://192.168.1.x:4000',
     androidScheme: 'https',
   },
 
   android: {
-    // App Links ve Deep Link desteği
     buildOptions: {
-      keystorePath: undefined, // Release build'de tanımla
+      keystorePath: undefined,
       keystoreAlias: undefined,
     },
   },
 
   ios: {
-    // Universal Links için
     contentInset: 'automatic',
     scheme: 'OYNA',
   },

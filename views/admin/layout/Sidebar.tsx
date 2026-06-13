@@ -2,15 +2,16 @@ import React from 'react';
 import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
-    ChevronLeft, Radio, Swords, LogOut, Lock, Filter, TrendingUp, Download, Globe, Trophy
+    ChevronLeft, Radio, Swords, LogOut, Lock, Filter, TrendingUp, Download, Globe, Trophy, Clock
 } from 'lucide-react';
 
 interface SidebarProps {
     activeSubRoute: string;
-    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR') => void;
+    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS') => void;
     onBack: () => void;
     onShowToast: (msg: string) => void;
     onShowRevenue: () => void;
+    pendingVerifCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -18,7 +19,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onNavigate,
     onBack,
     onShowToast,
-    onShowRevenue
+    onShowRevenue,
+    pendingVerifCount = 0,
 }) => {
     const { adminPitches, adminUsers, adminGoalkeepers, adminReferees, adminMatches } = useAppStore();
 
@@ -38,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             items: [
                 { icon: MapPin, label: 'Sahalar', badge: adminPitches.length, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
                 { icon: Users, label: 'Kullanıcılar', badge: adminUsers.length, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
+                { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: activeSubRoute === 'PENDING_VERIFICATIONS', action: () => onNavigate('PENDING_VERIFICATIONS') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : adminMatches.length, active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
                 { icon: Shield, label: 'Kaleciler', badge: adminGoalkeepers.length, active: activeSubRoute === 'KALECİLER', action: () => onNavigate('KALECİLER') },
                 { icon: Scale, label: 'Hakemler', badge: adminReferees.length, active: activeSubRoute === 'HAKEMLER', action: () => onNavigate('HAKEMLER') },
@@ -129,7 +132,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border ${
                                             String(badge).includes('⚠')
                                                 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 animate-pulse'
-                                                : 'bg-white/5 text-gray-400 border-white/5'
+                                                : label === 'Onay Bekl.' && Number(badge) > 0
+                                                    ? 'bg-red-500/15 text-red-400 border-red-500/20 animate-pulse'
+                                                    : 'bg-white/5 text-gray-400 border-white/5'
                                         }`}
                                     >
                                         {badge}
