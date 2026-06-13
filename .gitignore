@@ -23,6 +23,5 @@ test_compile.js
 test_page.ts
 test_scanner.js
 test_vite_start.js
-my_vite.log
-tsc_err.log
-
+.env.*
+*.local
