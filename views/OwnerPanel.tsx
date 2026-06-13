@@ -11,6 +11,17 @@ import { useAppStore } from '../store';
 import { PitchManager } from './admin/PitchManager';
 import { CustomerManager } from './admin/CustomerManager';
 import { UIBuilder } from './admin/UIBuilder';
+import { supabase } from '../supabaseClient';
+import {
+  getOwnerPitches,
+  saveTariffs,
+  saveWorkingHours,
+  togglePitchOpen,
+  requestWithdrawal,
+  getOwnerBalance,
+  toTurkishError,
+  type TariffInput,
+} from '../services/pitchOwnerService';
 interface OwnerPanelProps {
   onBack: () => void;
   onNavigate: (view: any) => void;
@@ -361,19 +372,38 @@ const PricingPolicyModal: React.FC<{ onClose: () => void; facilityId: string; in
         ];
     });
     const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const handleSave = async () => {
         if (!facilityId) return;
         setIsSaving(true);
+        setSaveError(null);
         try {
-            // Mock save
-            setTimeout(() => {
-                onSave(tariffs);
-                setIsSaving(false);
-                onClose();
-            }, 1000);
+            const isRealPitch = !facilityId.startsWith('mock-');
+            if (isRealPitch) {
+                // Tarife adından gün/tip çıkarımı (modal gün seçimi içermiyor)
+                const mapped: TariffInput[] = tariffs.map((t, idx) => {
+                    const lower = t.name.toLocaleLowerCase('tr-TR');
+                    const isWeekend = lower.includes('hafta sonu') || lower.includes('weekend') || lower.includes('cumartesi') || lower.includes('pazar');
+                    return {
+                        name: t.name,
+                        tariff_type: isWeekend ? 'WEEKEND' : 'WEEKDAY',
+                        applies_to_days: isWeekend ? [6, 7] : [1, 2, 3, 4, 5],
+                        start_time: t.startTime,
+                        end_time: t.endTime,
+                        price_per_hour: Number(t.price) || 0,
+                        deposit_amount: Number(t.deposit) || 0,
+                        sort_order: idx,
+                    };
+                });
+                await saveTariffs(facilityId, mapped);
+            }
+            onSave(tariffs);
+            setIsSaving(false);
+            onClose();
         } catch (error) {
             console.error("Fiyatlandırma kaydedilirken hata:", error);
+            setSaveError(toTurkishError(error));
             setIsSaving(false);
         }
     };
@@ -420,6 +450,12 @@ const PricingPolicyModal: React.FC<{ onClose: () => void; facilityId: string; in
                         Fiyat değişiklikleri mevcut rezervasyonları etkilemez, sadece yeni yapılacak kayıtlar için geçerli olur. Her tarife için saat aralığı, saatlik ücret ve kapora tutarı belirleyebilirsiniz.
                     </p>
                 </div>
+
+                {saveError && (
+                    <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                        <AlertCircle size={16} className="shrink-0" /> {saveError}
+                    </div>
+                )}
 
                 <div className="space-y-4">
                     {tariffs.map((tariff) => (
@@ -514,15 +550,31 @@ const BankOperationsModal: React.FC<{ onClose: () => void; facilityId: string }>
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [iban, setIban] = useState('');
     const [ibanPhoto, setIbanPhoto] = useState<string | null>(null);
+    const [ibanPhotoFile, setIbanPhotoFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [withdrawError, setWithdrawError] = useState<string | null>(null);
+    const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+    const [availableBalance, setAvailableBalance] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const availableBalance = 12500; // Mock balance
+    const isRealPitch = !!facilityId && !facilityId.startsWith('mock-');
+
+    useEffect(() => {
+        let active = true;
+        if (!isRealPitch) {
+            setAvailableBalance(12500); // demo modu
+            return;
+        }
+        getOwnerBalance(facilityId)
+            .then(bal => { if (active) setAvailableBalance(bal.available); })
+            .catch(() => { if (active) setAvailableBalance(0); });
+        return () => { active = false; };
+    }, [facilityId, isRealPitch]);
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Mock reading the file
+            setIbanPhotoFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setIbanPhoto(reader.result as string);
@@ -533,16 +585,29 @@ const BankOperationsModal: React.FC<{ onClose: () => void; facilityId: string }>
 
     const handleWithdraw = async () => {
         if (!withdrawAmount || !iban) return;
+        const amount = Number(withdrawAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            setWithdrawError('Geçerli bir tutar girin.');
+            return;
+        }
+        if (amount > availableBalance) {
+            setWithdrawError('Çekmek istediğiniz tutar bakiyenizden fazla.');
+            return;
+        }
         setIsProcessing(true);
+        setWithdrawError(null);
         try {
-            // Mock API call
-            setTimeout(() => {
-                setIsProcessing(false);
-                alert('Para çekme talebiniz alındı.');
-                onClose();
-            }, 1500);
+            if (isRealPitch) {
+                await requestWithdrawal(facilityId, amount, iban, ibanPhotoFile ?? undefined);
+            } else {
+                await new Promise(r => setTimeout(r, 800)); // demo modu
+            }
+            setWithdrawSuccess(true);
+            setIsProcessing(false);
+            setTimeout(() => onClose(), 1300);
         } catch (error) {
             console.error("İşlem hatası:", error);
+            setWithdrawError(toTurkishError(error));
             setIsProcessing(false);
         }
     };
@@ -602,7 +667,7 @@ const BankOperationsModal: React.FC<{ onClose: () => void; facilityId: string }>
                                 <img src={ibanPhoto} alt="IBAN" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                     <button 
-                                        onClick={() => setIbanPhoto(null)}
+                                        onClick={() => { setIbanPhoto(null); setIbanPhotoFile(null); }}
                                         className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                                     >
                                         <Trash2 size={20} />
@@ -632,9 +697,20 @@ const BankOperationsModal: React.FC<{ onClose: () => void; facilityId: string }>
                     </div>
                 </div>
 
+                {withdrawError && (
+                    <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                        <AlertCircle size={16} className="shrink-0" /> {withdrawError}
+                    </div>
+                )}
+                {withdrawSuccess && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
+                        <CheckCircle2 size={16} className="shrink-0" /> Para çekme talebiniz alındı. Onay sonrası bilgilendirileceksiniz.
+                    </div>
+                )}
+
                 <button 
                     onClick={handleWithdraw}
-                    disabled={isProcessing || !withdrawAmount || !iban || Number(withdrawAmount) > availableBalance || Number(withdrawAmount) <= 0}
+                    disabled={isProcessing || withdrawSuccess || !withdrawAmount || !iban || Number(withdrawAmount) > availableBalance || Number(withdrawAmount) <= 0}
                     className="w-full py-4 rounded-2xl bg-[#FFFF00] text-black font-black text-lg flex items-center justify-center gap-2 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[0_0_20px_rgba(255,255,0,0.2)]"
                 >
                     {isProcessing ? 'İŞLENİYOR...' : <><Banknote size={24} /> PARA ÇEK</>}
@@ -655,19 +731,22 @@ const WorkingHoursModal: React.FC<{ onClose: () => void; facilityId: string; isO
         { name: 'Pazar', open: '08:00', close: '00:00' },
     ]);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const handleSave = async () => {
         if (!facilityId) return;
         setIsSaving(true);
+        setSaveError(null);
         try {
-            // Mock save
-            setTimeout(() => {
-                onSave(days);
-                setIsSaving(false);
-                onClose();
-            }, 1000);
+            if (!facilityId.startsWith('mock-')) {
+                await saveWorkingHours(facilityId, days);
+            }
+            onSave(days);
+            setIsSaving(false);
+            onClose();
         } catch (error) {
             console.error("Çalışma saatleri kaydedilirken hata:", error);
+            setSaveError(toTurkishError(error));
             setIsSaving(false);
         }
     };
@@ -689,6 +768,11 @@ const WorkingHoursModal: React.FC<{ onClose: () => void; facilityId: string; isO
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {saveError && (
+                    <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                        <AlertCircle size={16} className="shrink-0" /> {saveError}
+                    </div>
+                )}
                 {/* Manual Toggle */}
                 <div className="bg-[#161B22] p-6 rounded-[32px] border border-white/5 flex items-center justify-between">
                     <div>
@@ -2967,69 +3051,23 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
 
-    // Mock data for public matches created at this facility by players
-    const [publicMatches, setPublicMatches] = useState([
-        {
-            id: 'pm1',
-            title: 'Sarıyer Aslanları Derbisi',
-            pitchName: 'Saha 1',
-            time: 'Bugün 20.00 - 21.00',
-            price: 250,
-            maxPlayers: 12,
-            joinedPlayers: 10,
-            creator: { name: 'Burak Yılmaz', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' },
-            players: [
-                { name: 'Burak Y.', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-                { name: 'Can K.', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' },
-                { name: 'Mert A.', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100' },
-                { name: 'Arda G.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-                { name: 'Deniz T.', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100' },
-                { name: 'Efe B.', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100' },
-                { name: 'Yusuf Y.', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100' },
-                { name: 'Kerem K.', avatar: 'https://images.unsplash.com/photo-1489980508314-941910ded1f4?w=100' },
-                { name: 'Emre Ç.', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100' },
-                { name: 'Tolga E.', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100' }
-            ],
-            type: 'HALK_MACI',
-            status: 'FORMING'
-        },
-        {
-            id: 'pm2',
-            title: 'Haftalık 7v7 Gazozuna Mücadele',
-            pitchName: 'Saha 3',
-            time: 'Bugün 22.00 - 23.00',
-            price: 300,
-            maxPlayers: 14,
-            joinedPlayers: 14,
-            creator: { name: 'Efe Şen', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' },
-            players: [
-                { name: 'Efe Ş.', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' },
-                { name: 'Selim V.', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100' },
-                { name: 'Volkan K.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-                { name: 'Ahmet B.', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-                { name: 'Kaan A.', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100' }
-            ],
-            type: 'SIRE_MACI',
-            status: 'READY'
-        },
-        {
-            id: 'pm3',
-            title: 'Süper Lig Taktik Kapışma',
-            pitchName: 'Saha 2',
-            time: 'Yarın 21.00 - 22.00',
-            price: 250,
-            maxPlayers: 12,
-            joinedPlayers: 5,
-            creator: { name: 'Kaan Demir', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80' },
-            players: [
-                { name: 'Kaan D.', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100' },
-                { name: 'Mert C.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-                { name: 'Eray Y.', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100' }
-            ],
-            type: 'SIRALAMALI',
-            status: 'FORMING'
-        }
-    ]);
+    // Maçları global store'dan al — MatchCreate ve diğer kaynaklardan eklenen tüm maçlar burada görünür
+    const { adminMatches } = useAppStore();
+    const publicMatches = adminMatches.map(m => ({
+        id: m.id,
+        title: m.title || 'İsimsiz Maç',
+        pitchName: m.location || 'Saha',
+        time: `${m.date || ''} ${m.time || ''}`.trim() || 'Tarih belirtilmedi',
+        price: m.price || 0,
+        maxPlayers: (m.slots?.length || 0) + (m.awaySlots?.length || 0),
+        joinedPlayers: [...(m.slots || []), ...(m.awaySlots || [])].filter(s => s.status === 'TAKEN').length,
+        creator: { name: m.creatorId || 'Kaptan', avatar: 'https://i.pravatar.cc/150?u=' + m.id },
+        players: [...(m.slots || []), ...(m.awaySlots || [])]
+            .filter(s => s.status === 'TAKEN' && s.player)
+            .map(s => ({ name: s.player!.name || 'Oyuncu', avatar: s.player!.avatar || 'https://i.pravatar.cc/150?u=' + s.id })),
+        type: 'OYUNCU_MACI',
+        status: m.status === 'ACTIVE' ? 'FORMING' : (m.status || 'FORMING'),
+    }));
 
     const activeRequests = pendingRequests.filter(r => r.status === 'PENDING');
 
@@ -3236,22 +3274,23 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     );
 };
 
-const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
+ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
   const { setIsNotificationsOpen, loadOwnerData, adminMatches } = useAppStore();
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
   const [pitches, setPitches] = useState<any[]>(PITCHES); // Initializing with mock data
+  const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
 
   useEffect(() => {
     loadOwnerData('1'); // Assuming '1' is the current mock facility ID for the owner
   }, [loadOwnerData]);
 
-  // Compute dynamic stats from store data
+  // Compute dynamic stats from store data (MatchListing uses 'price' not 'pricePerPerson')
   const dynamicTotalRevenue = adminMatches.reduce((acc, match) => {
-    return acc + (match.pricePerPerson * match.slots.filter(s => s.status === 'FILLED').length);
+    return acc + ((match as any).price ?? 0) * match.slots.filter(s => s.status === 'TAKEN').length;
   }, 0);
   
   const dynamicOccupancyRatio = adminMatches.length > 0 
-    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'FILLED')).length / adminMatches.length) * 100) 
+    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'TAKEN')).length / adminMatches.length) * 100) 
     : 0;
 
   const [pendingRequests, setPendingRequests] = useState(() => {
@@ -3297,6 +3336,37 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
 
   const [facilityData, setFacilityData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [realPitchId, setRealPitchId] = useState<string | null>(null);
+
+  // Gerçek tesisi (varsa) yükle ve mock facilityData üzerine bindir.
+  // Böylece tüm modal kayıtları gerçek pitch id ile çalışır; tesis yoksa demo modu sürer.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) return;
+        const pitches = await getOwnerPitches(uid);
+        if (!active || !pitches.length) return;
+        const p: any = pitches[0];
+        setRealPitchId(p.id);
+        setIsFacilityOpen(p.is_open ?? true);
+        setFacilityData((prev: any) => ({
+          ...(prev || {}),
+          id: p.id,
+          ownerId: uid,
+          name: p.name ?? prev?.name,
+          isFacilityOpen: p.is_open ?? true,
+          workingHours: Array.isArray(p.working_hours) && p.working_hours.length ? p.working_hours : prev?.workingHours,
+        }));
+      } catch (err) {
+        // Sessiz geç: demo/mock moduna düş
+        console.warn('Gerçek tesis yüklenemedi, demo modu:', err);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   // Fetch facility data on mount
   useEffect(() => {
@@ -3365,12 +3435,19 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
 
   const toggleFacilityStatus = async () => {
     if (!facilityData?.id) return;
-    
+
     const newStatus = !isFacilityOpen;
-    setIsFacilityOpen(newStatus);
-    
-    // Mock update
-    console.log("Mock: Facility status updated to", newStatus);
+    setIsFacilityOpen(newStatus); // iyimser güncelleme
+
+    const pitchId = realPitchId ?? (typeof facilityData.id === 'string' && !facilityData.id.startsWith('mock-') ? facilityData.id : null);
+    if (!pitchId) return; // demo modu: yalnız yerel durum
+
+    try {
+      await togglePitchOpen(pitchId, newStatus);
+    } catch (err) {
+      console.error('Tesis durumu güncellenemedi:', err);
+      setIsFacilityOpen(!newStatus); // hata: geri al
+    }
   };
 
   const handleProcessRequest = (id: string, action: 'APPROVE' | 'REJECT') => {

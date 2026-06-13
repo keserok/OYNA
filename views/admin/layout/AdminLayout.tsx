@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AdminLayoutProps {
     children: React.ReactNode;
     activeSubRoute: string;
-    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR') => void;
+    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION') => void;
     onBack: () => void;
+    pendingVerifCount?: number;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRoute, onNavigate, onBack }) => {
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRoute, onNavigate, onBack, pendingVerifCount = 0 }) => {
     const [cmdOpen, setCmdOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [toastMsg, setToastMsg] = useState<{ text: string, id: number } | null>(null);
@@ -41,15 +42,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRou
                 )}
                 
                 <div className={`fixed inset-y-0 left-0 z-50 md:relative md:flex transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-                    <Sidebar 
-                        activeSubRoute={activeSubRoute} 
+                    <Sidebar
+                        activeSubRoute={activeSubRoute}
                         onNavigate={(route) => {
                             onNavigate(route);
                             setIsMobileMenuOpen(false);
-                        }} 
+                        }}
                         onBack={onBack}
                         onShowToast={showToast}
                         onShowRevenue={() => showToast('Gelir Modülü Yakında')}
+                        pendingVerifCount={pendingVerifCount}
                     />
                 </div>
 

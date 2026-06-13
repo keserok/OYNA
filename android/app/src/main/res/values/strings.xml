@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">OYNA</string>
+    <string name="title_activity_main">OYNA</string>
+    <string name="package_name">com.oyna.app</string>
+    <string name="custom_url_scheme">com.oyna.app</string>
+</resources>

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Globe, Bell, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, Moon, Database, MapPin, Lock, CheckCircle2, XCircle, Smartphone,
-  AlertCircle
+  AlertCircle, Download, Trash2, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
 import { logout, auth } from '../supabaseAuth';
 import { useAppStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 import { NOTIFICATION_CATEGORIES, fetchNotificationTemplates, updateNotificationPreference, NotificationTemplateInfo } from '../notifications/notificationPreferences';
 import type { NotificationPreferenceKey } from '../notifications/pushService';
@@ -18,6 +19,119 @@ interface SettingsScreenProps {
   onNavigate: (view: AppView) => void;
 }
 
+// ─── İki adımlı hesap silme modal ─────────────────────────────────────────────
+const DeleteAccountModal: React.FC<{
+  onClose: () => void;
+  onConfirmed: () => void;
+}> = ({ onClose, onConfirmed }) => {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [confirmText, setConfirmText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    if (confirmText !== 'HESABIMI SİL') return;
+    setLoading(true);
+    try {
+      await supabase.rpc('request_account_deletion');
+      setToast('Silme talebiniz alındı. 30 gün içinde hesabınız silinecek.');
+      setTimeout(() => {
+        onConfirmed();
+      }, 2000);
+    } catch {
+      setToast('Bir hata oluştu. Lütfen tekrar deneyin.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
+    >
+      <motion.div
+        initial={{ scale: 0.88, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.88, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        className="w-full max-w-sm rounded-[28px] p-6"
+        style={{
+          background: 'linear-gradient(180deg, #1a0808 0%, #0A0E14 100%)',
+          border: '1px solid rgba(239,68,68,0.2)',
+        }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-black text-white text-lg">
+            {step === 1 ? 'Hesabı Sil' : 'Son Adım'}
+          </h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <X size={18} />
+          </button>
+        </div>
+
+        {toast && (
+          <div className="mb-4 p-3 bg-green-500/15 border border-green-500/25 rounded-xl text-sm text-green-300 font-bold text-center">
+            {toast}
+          </div>
+        )}
+
+        {step === 1 ? (
+          <>
+            <p className="text-sm text-gray-300 mb-6 leading-relaxed">
+              Bu işlem <span className="text-red-400 font-bold">geri alınamaz</span>. Hesabın, tüm verilerinle birlikte 30 gün içinde kalıcı olarak silinecek.
+              Devam etmek istediğine emin misin?
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => setStep(2)}
+                className="w-full h-12 rounded-2xl font-black text-sm bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+              >
+                Evet, Devam Et
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
+              >
+                İptal
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+              Onaylamak için aşağıya <span className="text-red-400 font-bold">HESABIMI SİL</span> yazın:
+            </p>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value)}
+              placeholder="HESABIMI SİL"
+              className="w-full h-12 bg-black/40 border border-white/10 rounded-xl px-4 text-white font-bold text-sm outline-none focus:border-red-500/50 mb-4"
+            />
+            <div className="space-y-3">
+              <button
+                onClick={handleConfirm}
+                disabled={confirmText !== 'HESABIMI SİL' || loading}
+                className="w-full h-12 rounded-2xl font-black text-sm bg-red-600 text-white disabled:opacity-40 transition-opacity"
+              >
+                {loading ? 'İŞLENİYOR...' : 'Hesabımı Kalıcı Olarak Sil'}
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
+              >
+                İptal
+              </button>
+            </div>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) => {
   const [lang, setLang] = useState('TR');
   const [seeding, setSeeding] = useState(false);
@@ -26,6 +140,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [templates, setTemplates] = useState<NotificationTemplateInfo[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [isNative] = useState(() => Capacitor.isNativePlatform());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDataDownloadModal, setShowDataDownloadModal] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref } = useAppStore();
 
@@ -33,6 +152,96 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   useEffect(() => {
     fetchNotificationTemplates().then(setTemplates);
   }, []);
+
+  // Kullanıcının saha sahibi olup olmadığını tespit et
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) return;
+        const { count } = await supabase
+          .from('pitches')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner_id', uid);
+        if (active) setIsOwner((count ?? 0) > 0);
+      } catch {
+        /* sessiz geç */
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // KVKK — Tesis verilerini JSON olarak indir (client-side)
+  const handleExportOwnerData = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) throw new Error('Oturumunuz bulunamadı.');
+
+      const { data: pitches, error: pErr } = await supabase
+        .from('pitches')
+        .select('*')
+        .eq('owner_id', uid);
+      if (pErr) throw pErr;
+
+      const pitchIds = (pitches ?? []).map((p) => (p as { id: string }).id);
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+
+      let bookings: unknown[] = [];
+      let expenses: unknown[] = [];
+      let debtors: unknown[] = [];
+      let subscriptions: unknown[] = [];
+
+      if (pitchIds.length > 0) {
+        const [bRes, eRes, dRes, sRes] = await Promise.all([
+          supabase.from('pitch_bookings').select('*').in('pitch_id', pitchIds).gte('booking_date', oneYearAgo),
+          supabase.from('pitch_expenses').select('*').in('pitch_id', pitchIds).gte('expense_date', oneYearAgo),
+          supabase.from('pitch_debtors').select('*').in('pitch_id', pitchIds),
+          supabase.from('pitch_subscriptions').select('*').in('pitch_id', pitchIds),
+        ]);
+        if (bRes.error) throw bRes.error;
+        if (eRes.error) throw eRes.error;
+        if (dRes.error) throw dRes.error;
+        if (sRes.error) throw sRes.error;
+        bookings = bRes.data ?? [];
+        expenses = eRes.data ?? [];
+        debtors = dRes.data ?? [];
+        subscriptions = sRes.data ?? [];
+      }
+
+      const payload = {
+        exported_at: new Date().toISOString(),
+        owner_id: uid,
+        pitches: pitches ?? [],
+        bookings,
+        expenses,
+        debtors,
+        subscriptions,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `oyna-tesis-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('handleExportOwnerData:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      setExportError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'Veriler indirilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleUpdateLocation = () => {
     setIsUpdatingLocation(true);
@@ -297,6 +506,35 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           </AnimatePresence>
         </section>
 
+        {/* Tesis Verileri (KVKK) — yalnızca saha sahipleri */}
+        {isOwner && (
+          <section className="bg-[#161B22] border border-white/5 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2 text-[#39FF14]">
+              <Download size={16} />
+              <h3 className="text-xs font-black uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Tesisinize ait son 1 yıllık rezervasyon, gider, veresiye ve abonelik kayıtlarını JSON formatında indirin. Tüm verileriniz size aittir.
+            </p>
+            {exportError && (
+              <div className="flex items-center gap-2 text-red-300 text-[11px] bg-red-900/20 border border-red-500/30 rounded-lg p-2">
+                <AlertCircle size={14} className="shrink-0" /> {exportError}
+              </div>
+            )}
+            <button
+              disabled={isExporting}
+              onClick={handleExportOwnerData}
+              className="w-full flex items-center justify-center gap-2.5 p-3.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/30 rounded-xl text-[#39FF14] font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
+            >
+              {isExporting ? (
+                <><RefreshCw size={14} className="animate-spin" /> Hazırlanıyor...</>
+              ) : (
+                <><Download size={14} /> Tesis Verilerimi İndir</>
+              )}
+            </button>
+          </section>
+        )}
+
         {/* Geliştirici Konsolu */}
         <section className="bg-[#1a1c22]/50 border border-yellow-500/10 rounded-2xl p-5 space-y-3 relative overflow-hidden">
           <div className="flex items-center gap-2 text-yellow-500">
@@ -338,6 +576,42 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           </div>
         </section>
 
+        {/* Hesap ve Veri (KVKK) */}
+        <section>
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Hesap ve Veri</h3>
+          <div className="space-y-3">
+            {/* Kişisel Veri İndir */}
+            <button
+              onClick={() => setShowDataDownloadModal(true)}
+              className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/5 rounded-2xl hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="text-gray-400"><Download size={20} /></div>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-white block">Kişisel Verilerimi İndir</span>
+                  <span className="text-xs text-gray-500">KVKK kapsamında veri talebi</span>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-gray-600" />
+            </button>
+
+            {/* Hesabı Kalıcı Sil */}
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full flex items-center justify-between p-4 bg-red-500/8 border border-red-500/15 rounded-2xl hover:bg-red-500/15 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="text-red-400"><Trash2 size={20} /></div>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-red-400 block">Hesabı Kalıcı Olarak Sil</span>
+                  <span className="text-xs text-red-400/60">Bu işlem geri alınamaz</span>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-red-600" />
+            </button>
+          </div>
+        </section>
+
         {/* Destek */}
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Destek</h3>
@@ -357,6 +631,55 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         </div>
 
       </main>
+
+      {/* Kişisel veri indirme placeholder modal */}
+      <AnimatePresence>
+        {showDataDownloadModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
+            onClick={() => setShowDataDownloadModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.88, opacity: 0 }}
+              className="w-full max-w-sm rounded-[28px] p-6 text-center"
+              style={{ background: '#161B22', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <Download size={26} className="text-gray-300" />
+              </div>
+              <h3 className="text-lg font-black text-white mb-2">Yakında Aktif Olacak</h3>
+              <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                Kişisel veri indirme özelliği çok yakında kullanıma açılacak.
+              </p>
+              <button
+                onClick={() => setShowDataDownloadModal(false)}
+                className="w-full h-12 rounded-2xl font-black text-sm bg-white/10 text-white"
+              >
+                Tamam
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hesap silme modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <DeleteAccountModal
+            onClose={() => setShowDeleteModal(false)}
+            onConfirmed={async () => {
+              setShowDeleteModal(false);
+              await handleLogout();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

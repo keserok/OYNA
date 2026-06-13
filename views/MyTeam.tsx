@@ -1,8 +1,10 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2 } from 'lucide-react';
 import { MY_TEAM } from '../constants';
 import { Player, AppView } from '../types';
+import { getTeamRolesAndInstructions, updateTeamRolesAndInstructions, sbRemovePlayerFromTeam } from '../supabaseClient';
+
 
 interface MyTeamProps {
     onBack: () => void;
@@ -16,10 +18,47 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const pitchRef = useRef<HTMLDivElement>(null);
 
+    // Supabase'den pozisyonları ve talimatları yükle
+    useEffect(() => {
+        const loadSupabaseData = async () => {
+            const savedRoles = await getTeamRolesAndInstructions(MY_TEAM.id);
+            if (savedRoles) {
+                setRoster(prev => prev.map(p => {
+                    const saved = savedRoles[p.id];
+                    if (saved) {
+                        return {
+                            ...p,
+                            x: saved.x ?? p.x,
+                            y: saved.y ?? p.y,
+                            position: saved.position ?? p.position,
+                            instruction: saved.instruction ?? p.instruction
+                        };
+                    }
+                    return p;
+                }));
+            }
+        };
+        loadSupabaseData();
+    }, []);
+
+    // Supabase'de pozisyonları ve talimatları güncelle
+    const saveRosterToSupabase = async (currentRoster: Player[]) => {
+        const teamRolesObj: Record<string, any> = {};
+        currentRoster.forEach(p => {
+            teamRolesObj[p.id] = {
+                x: p.x,
+                y: p.y,
+                position: p.position || 'OYUNCU',
+                instruction: p.instruction || ''
+            };
+        });
+        await updateTeamRolesAndInstructions(MY_TEAM.id, teamRolesObj);
+    };
+
     // Formation Presets
-    const applyFormation = (type: '2-3-1' | '3-2-1') => {
-        const newRoster = [...roster];
-        if (type === '2-3-1') {
+    const applyFormation = async (type: '2-3-1' | '3-2-1') => {
+        const newRoster = roster.map(p => ({ ...p }));
+        if (type === '2-3-1' && newRoster.length >= 6) {
             // GK, 2 Def, 3 Mid, 1 Fwd
             newRoster[0].x = 50; newRoster[0].y = 10; // FWD
             newRoster[1].x = 20; newRoster[1].y = 45; // LM
@@ -27,7 +66,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
             newRoster[3].x = 80; newRoster[3].y = 45; // RM
             newRoster[4].x = 30; newRoster[4].y = 80; // CB
             newRoster[5].x = 70; newRoster[5].y = 80; // CB
-        } else if (type === '3-2-1') {
+        } else if (type === '3-2-1' && newRoster.length >= 6) {
             newRoster[0].x = 50; newRoster[0].y = 15; // FWD
             newRoster[1].x = 35; newRoster[1].y = 50; // CM
             newRoster[2].x = 65; newRoster[2].y = 50; // CM
@@ -36,6 +75,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
             newRoster[5].x = 80; newRoster[5].y = 80; // RB
         }
         setRoster(newRoster);
+        await saveRosterToSupabase(newRoster);
     };
 
     const rafRef = useRef<number | null>(null);
@@ -58,13 +98,25 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = async () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setDraggedPlayer(null);
+        await saveRosterToSupabase(roster);
     };
 
-    const removePlayer = (id: string) => {
-        setRoster(prev => prev.filter(p => p.id !== id));
+    const removePlayer = async (id: string) => {
+        const nextRoster = roster.filter(p => p.id !== id);
+        setRoster(nextRoster);
+        // Supabase'den kadrodan çıkar
+        await sbRemovePlayerFromTeam(MY_TEAM.id, id);
+        // Yeni kadro rollerini Supabase'de güncelle
+        await saveRosterToSupabase(nextRoster);
+    };
+
+    const handleSetInstruction = async (playerId: string, instruction: string) => {
+        const nextRoster = roster.map(p => p.id === playerId ? { ...p, instruction } : p);
+        setRoster(nextRoster);
+        await saveRosterToSupabase(nextRoster);
     };
 
     return (
@@ -169,8 +221,11 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                     <div className={`relative w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden ${draggedPlayer === player.id ? 'ring-4 ring-[#FFFF00]' : ''}`}>
                                         <img src={player.avatar} alt={player.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold text-white whitespace-nowrap flex items-center gap-1">
-                                        {player.name}
+                                    <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold text-white whitespace-nowrap flex flex-col items-center gap-0.5">
+                                        <span>{player.name}</span>
+                                        {player.instruction && (
+                                            <span className="text-[#FFFF00] text-[7px] tracking-widest uppercase font-black">{player.instruction}</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -212,17 +267,34 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                         {roster.map((player) => (
                             <div key={player.id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl transition-colors">
                                 <div className="flex items-center gap-3">
-                                    <img src={player.avatar} className="w-10 h-10 rounded-full bg-gray-700" alt={player.name} />
+                                    <img src={player.avatar} className="w-10 h-10 rounded-full bg-gray-700 object-cover" alt={player.name} />
                                     <div>
                                         <p className="font-bold text-white text-sm">{player.name}</p>
+                                        <p className="text-[9px] text-[#39FF14] uppercase tracking-wider font-bold">{player.position || 'OYUNCU'}</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => removePlayer(player.id)}
-                                    className="p-2 text-gray-600 hover:text-red-500 transition-colors"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        value={player.instruction || ''}
+                                        onChange={(e) => handleSetInstruction(player.id, e.target.value)}
+                                        className="bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
+                                    >
+                                        <option value="" className="text-gray-500">Talimat Yok</option>
+                                        <option value="Hücuma Çık">Hücuma Çık</option>
+                                        <option value="Geride Kal">Geride Kal</option>
+                                        <option value="Serbest">Serbest</option>
+                                        <option value="Markaj">Markaj</option>
+                                        <option value="Oyun Kurucu">Oyun Kurucu</option>
+                                        <option value="Pres Yap">Pres Yap</option>
+                                    </select>
+                                    <button
+                                        onClick={() => removePlayer(player.id)}
+                                        className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                                        title="Kadrodan Çıkar"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

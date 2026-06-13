@@ -1,14 +1,58 @@
 import { supabase } from './supabaseClient';
 import { Pitch, Match, Goalkeeper, Referee, AdminUser, Team } from './types';
 
+const mapPitchToDb = (pitch: Partial<Pitch>) => {
+  if (!pitch) return pitch;
+  const mapped: any = {};
+  if (pitch.id !== undefined) mapped.id = pitch.id;
+  if (pitch.name !== undefined) mapped.name = pitch.name;
+  if (pitch.district !== undefined) mapped.district = pitch.district;
+  
+  if (pitch.googleRating !== undefined) mapped.google_rating = pitch.googleRating;
+  if (pitch.googleReviews !== undefined) mapped.google_review_count = pitch.googleReviews;
+  if (pitch.totalPrice !== undefined) mapped.price_per_match = pitch.totalPrice;
+  if (pitch.isApproved !== undefined) mapped.verification_status = pitch.isApproved ? 'approved' : 'pending';
+  
+  if (pitch.coordinates !== undefined) {
+    mapped.latitude = pitch.coordinates.lat;
+    mapped.longitude = pitch.coordinates.lng;
+  }
+  return mapped;
+};
+
+const mapMatchToDb = (match: any) => {
+  if (!match) return match;
+  const mapped: any = {};
+  if (match.id !== undefined) mapped.id = match.id;
+  if (match.pitchId !== undefined) mapped.pitch_id = match.pitchId;
+  if (match.pitchName !== undefined) mapped.pitch_name = match.pitchName;
+  if (match.captainId !== undefined) mapped.captain_id = match.captainId;
+  if (match.captainName !== undefined) mapped.captain_name = match.captainName;
+  if (match.date !== undefined) mapped.date = match.date;
+  if (match.time !== undefined) mapped.time = match.time;
+  if (match.status !== undefined) mapped.status = match.status;
+  if (match.gkId !== undefined) mapped.gk_id = match.gkId;
+  if (match.refId !== undefined) mapped.ref_id = match.refId;
+  if (match.applicants !== undefined) mapped.applicants = match.applicants;
+  if (match.format !== undefined) mapped.format = match.format;
+  if (match.budget !== undefined) mapped.budget = match.budget;
+  if (match.slots !== undefined) mapped.slots = match.slots;
+  if (match.awaySlots !== undefined) mapped.away_slots = match.awaySlots;
+  if (match.homeTeamId !== undefined) mapped.home_team_id = match.homeTeamId;
+  if (match.awayTeamId !== undefined) mapped.away_team_id = match.awayTeamId;
+  if (match.badges !== undefined) mapped.badges = match.badges;
+  if (match.difficulty !== undefined) mapped.difficulty = match.difficulty;
+  return mapped;
+};
+
 export const fbAddPitch = async (pitch: Pitch) => {
-  const mapped = mapToSnakeCase(pitch);
+  const mapped = mapPitchToDb(pitch);
   const { error } = await supabase.from('pitches').insert(mapped);
   if (error) throw new Error(`Saha eklenemedi: ${error.message}`);
 };
 
 export const fbUpdatePitch = async (pitch: Pitch) => {
-  const mapped = mapToSnakeCase(pitch);
+  const mapped = mapPitchToDb(pitch);
   const { error } = await supabase.from('pitches').update(mapped).eq('id', pitch.id);
   if (error) throw new Error(`Saha güncellenemedi: ${error.message}`);
 };
@@ -19,12 +63,14 @@ export const fbDeletePitch = async (id: string) => {
 };
 
 export const fbAddMatch = async (match: Match) => {
-  const { error } = await supabase.from('matches').insert(match);
+  const mapped = mapMatchToDb(match);
+  const { error } = await supabase.from('matches').insert(mapped);
   if (error) throw new Error(`Maç oluşturulamadı: ${error.message}`);
 };
 
 export const fbUpdateMatch = async (match: Match) => {
-  const { error } = await supabase.from('matches').update(match).eq('id', match.id);
+  const mapped = mapMatchToDb(match);
+  const { error } = await supabase.from('matches').update(mapped).eq('id', match.id);
   if (error) throw new Error(`Maç güncellenemedi: ${error.message}`);
 };
 
@@ -33,28 +79,51 @@ export const fbDeleteMatch = async (id: string) => {
   if (error) throw new Error(`Maç silinemedi: ${error.message}`);
 };
 
+const mapUserToDb = (user: Partial<AdminUser>) => {
+  if (!user) return user;
+  const mapped: any = {};
+  if (user.id !== undefined) mapped.id = user.id;
+  if (user.name !== undefined) mapped.full_name = user.name;
+  if (user.email !== undefined) mapped.email = user.email;
+  if (user.avatar !== undefined) mapped.avatar_url = user.avatar;
+  if (user.role !== undefined) mapped.role = user.role;
+  if (user.isVerified !== undefined) mapped.is_verified = user.isVerified;
+  if (user.isBanned !== undefined) mapped.is_banned = user.isBanned;
+  if (user.isPro !== undefined) mapped.is_pro = user.isPro;
+  if (user.wallet !== undefined) mapped.wallet_balance = user.wallet;
+  if (user.matchCount !== undefined || user.rating !== undefined) {
+    mapped.stats = {
+      matchesPlayed: user.matchCount || 0,
+      rating: user.rating || 5.0
+    };
+  }
+  return mapped;
+};
+
 export const fbAddUser = async (user: AdminUser) => {
-  const { error } = await supabase.from('profiles').insert(user);
+  const mapped = mapUserToDb(user);
+  const { error } = await supabase.from('profiles').insert(mapped);
   if (error) throw new Error(`Kullanıcı eklenemedi: ${error.message}`);
 };
 
 export const fbUpdateUser = async (user: AdminUser) => {
-  const { error } = await supabase.from('profiles').update(user).eq('id', user.id);
+  const mapped = mapUserToDb(user);
+  const { error } = await supabase.from('profiles').update(mapped).eq('id', user.id);
   if (error) throw new Error(`Kullanıcı güncellenemedi: ${error.message}`);
 };
 
 export const fbBanUser = async (id: string, isBanned: boolean) => {
-  const { error } = await supabase.from('profiles').update({ isBanned }).eq('id', id);
+  const { error } = await supabase.from('profiles').update({ is_banned: isBanned }).eq('id', id);
   if (error) throw new Error(`Ban işlemi başarısız: ${error.message}`);
 };
 
 export const fbToggleUserPro = async (id: string, isPro: boolean) => {
-  const { error } = await supabase.from('profiles').update({ isPro }).eq('id', id);
+  const { error } = await supabase.from('profiles').update({ is_pro: isPro }).eq('id', id);
   if (error) throw new Error(`PRO durumu değiştirilemedi: ${error.message}`);
 };
 
 export const fbVerifyUser = async (id: string) => {
-  const { error } = await supabase.from('profiles').update({ isVerified: true }).eq('id', id);
+  const { error } = await supabase.from('profiles').update({ is_verified: true }).eq('id', id);
   if (error) throw new Error(`Doğrulama başarısız: ${error.message}`);
 };
 

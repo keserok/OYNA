@@ -194,7 +194,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({ onBack }) => {
                             <Users size={16} />
                             <span className="text-xs font-bold uppercase tracking-wider">Kayıtlı Müşteri</span>
                         </div>
-                        <span className="text-2xl font-black text-white">{customers.length}</span>
+                        <span className="text-2xl font-black text-white">{crmUsers.length}</span>
                     </div>
                     <div className="bg-gradient-to-br from-red-900/40 to-[#161B22] p-4 rounded-2xl border border-red-500/20">
                         <div className="flex items-center gap-2 mb-2 text-red-400">

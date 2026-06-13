@@ -8,6 +8,8 @@ import {
 } from './GodViewModals';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { AnimatePresence } from 'framer-motion';
+import { PendingVerificationsTab } from './PendingVerificationsTab';
+import OwnerModerationTab from './OwnerModerationTab';
 
 // Lazy loaded page components
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -17,15 +19,16 @@ const MatchesPage = lazy(() => import('./pages/MatchesPage').then(m => ({ defaul
 const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => ({ default: m.CommunitiesPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
-interface Props { 
-    onBack: () => void; 
-    onNavigate?: (tab: string) => void; 
+interface Props {
+    onBack: () => void;
+    onNavigate?: (tab: string) => void;
 }
 
 export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     const { deletePitch } = useAppStore();
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR'>('GENEL');
+    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'>('GENEL');
     const [modal, setModal] = useState<any>({ type: 'none' });
+    const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
     const handleNavigate = (route: typeof subRoute) => {
         setSubRoute(route);
@@ -41,7 +44,7 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 return <DashboardPage />;
             case 'SAHALAR':
                 return (
-                    <PitchesPage 
+                    <PitchesPage
                         onEditPitch={(pitch) => setModal({ type: 'deepEditPitch', data: pitch })}
                         onDeletePitch={(id) => deletePitch(id)}
                     />
@@ -50,6 +53,12 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
             case 'KALECİLER':
             case 'HAKEMLER':
                 return <UsersPage subRoute={subRoute} />;
+            case 'PENDING_VERIFICATIONS':
+                return (
+                    <div className="p-6">
+                        <PendingVerificationsTab onBadgeCount={setPendingVerifCount} />
+                    </div>
+                );
             case 'MATCHES':
                 return <MatchesPage />;
             case 'TOPLULUKLAR':
@@ -60,6 +69,8 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
             case 'CONTENT':
             case 'NOTIFICATIONS':
                 return <SettingsPage subRoute={subRoute} />;
+            case 'MODERATION':
+                return <OwnerModerationTab />;
             default:
                 return (
                     <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">
@@ -71,10 +82,11 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
 
     return (
         <>
-            <AdminLayout 
-                activeSubRoute={subRoute} 
-                onNavigate={handleNavigate} 
+            <AdminLayout
+                activeSubRoute={subRoute}
+                onNavigate={handleNavigate}
                 onBack={onBack}
+                pendingVerifCount={pendingVerifCount}
             >
                 <Suspense fallback={
                     <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-3">
@@ -86,7 +98,7 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 </Suspense>
             </AdminLayout>
 
-            {/* Modals are preserved for deep editing */}
+            {/* Deep-edit modals */}
             <AnimatePresence>
                 {modal.type === 'deepEditPitch' && (
                     <DeepEditPitchModal pitch={modal.data} onClose={closeModal} />
@@ -100,9 +112,6 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 {modal.type === 'addPitch' && (
                     <AddPitchModal onClose={closeModal} />
                 )}
-                {/* 
-                  Add other global modals as needed (PushModal, BanModal, etc.)
-                */}
             </AnimatePresence>
         </>
     );

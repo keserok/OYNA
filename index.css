@@ -5,6 +5,13 @@
 @source "./index.html";
 
 
+@source not "./node_modules_local/**";
+@source not "./node_modules_old/**";
+@source not "./android/**";
+@source not "./ios/**";
+@source not "./arsiv/**";
+@source not "./dist/**";
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --breakpoint-xs: 375px;
