@@ -41,7 +41,11 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                 matchCount: 0,
                 preferredZones: ['İstanbul'],
                 coordinates: { lat: 41.0082, lng: 28.9784 },
-                stats: { reflexes: 85, positioning: 80, distribution: 75, handling: 80, oneOnOne: 82 }
+                stats: { savePercentage: '75%', cleanSheets: 0, penaltySaveRate: '50%', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78, handling: 80 },
+                recentAwards: '',
+                skills: { reflexes: 85, diving: 80, handling: 80, positioning: 80, kicking: 70, speed: 75 },
+                equipment: { gloves: 'Standart', boots: 'Standart', jersey: 'Standart' },
+                reviews: []
             };
             onAddGoalkeeper(gk);
         } else if (roleType === 'HAKEMLER') {

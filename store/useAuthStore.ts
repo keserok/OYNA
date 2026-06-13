@@ -5,6 +5,8 @@ import { supabase } from '../supabaseClient';
 export interface AuthUser {
   uid: string;
   email: string | undefined;
+  /** Telefon OTP ile giriş yapan kullanıcılarda dolu (E.164) */
+  phone?: string | null;
   displayName: string;
   photoURL: string;
 }
@@ -26,10 +28,11 @@ interface AuthState {
 }
 
 /** Extract our AuthUser shape from a Supabase session user */
-function mapSessionUser(user: { id: string; email?: string; user_metadata?: Record<string, any> }): AuthUser {
+function mapSessionUser(user: { id: string; email?: string; phone?: string | null; user_metadata?: Record<string, any> }): AuthUser {
   return {
     uid: user.id,
     email: user.email,
+    phone: user.phone ?? null,
     displayName: user.user_metadata?.full_name || user.user_metadata?.name || '',
     photoURL: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
   };

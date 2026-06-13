@@ -126,7 +126,7 @@ const container = {
 };
 const item = {
   hidden: { opacity: 0, x: -24, scale: 0.96 },
-  show: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 340, damping: 26 } },
+  show: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 340, damping: 26 } },
   exit: { opacity: 0, x: 50, scale: 0.94, transition: { duration: 0.22 } },
 };
 
@@ -156,7 +156,8 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   }));
 
   const [localNotifications, setLocalNotifications] = useState(rawNotifs);
-  const notifications = [...storeNotifs, ...localNotifications];
+  // storeNotifs (type/payload tasir) + mock liste (tasimaz) birlesimi — alan erisimi icin gevsek tip
+  const notifications: any[] = [...storeNotifs, ...localNotifications];
   
   const [allRead, setAllRead] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<any>(null);

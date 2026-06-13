@@ -241,7 +241,7 @@ const HEATMAP_DATA = [
     { hour: '21:00', intensity: 90 }, { hour: '22:00', intensity: 60 }, { hour: '23:00', intensity: 20 },
 ];
 
-type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES' | 'CUSTOMERS';
+type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES' | 'CUSTOMERS' | 'UI_BUILDER';
 
 type WidgetType = 'QUICK_STATS' | 'QUICK_ACTIONS' | 'OCCUPANCY_ANALYSIS' | 'PENDING_REQUESTS' | 'WEATHER_INFO' | 'STAFF_STATUS' | 'MAINTENANCE_ALERTS';
 
@@ -3286,11 +3286,11 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
 
   // Compute dynamic stats from store data
   const dynamicTotalRevenue = adminMatches.reduce((acc, match) => {
-    return acc + (match.pricePerPerson * match.slots.filter(s => s.status === 'FILLED').length);
+    return acc + (match.pricePerPerson * match.slots.filter(s => (s.status as string) === 'FILLED').length);
   }, 0);
   
   const dynamicOccupancyRatio = adminMatches.length > 0 
-    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'FILLED')).length / adminMatches.length) * 100) 
+    ? Math.round((adminMatches.filter(m => m.slots.every(s => (s.status as string) === 'FILLED')).length / adminMatches.length) * 100) 
     : 0;
 
   const [pendingRequests, setPendingRequests] = useState(() => {
@@ -3304,6 +3304,8 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
   const [isPayingDebt, setIsPayingDebt] = useState(false);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showOccupancyModal, setShowOccupancyModal] = useState(false);
+  // Rezervasyon detay alt-modali (legacy goruntuleme)
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showWorkingHours, setShowWorkingHours] = useState(false);
   const [showBankAccounts, setShowBankAccounts] = useState(false);

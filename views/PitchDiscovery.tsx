@@ -750,7 +750,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                 <p className="text-gray-500 text-xs mt-2">Filtreleri temizleyip tekrar dene.</p>
                 <button
                   onClick={() => {
-                    setFilters({ district: 'Tümü', minRating: 0, maxPrice: 4000, hasAmenities: [] });
+                    setFilters({ district: 'Tümü', minRating: 0, maxPrice: 4000, hasAmenities: [], type: 'Tümü', availability: 'Tümü' });
                     setSearchQuery('');
                   }}
                   className="mt-6 text-[#FFFF00] text-[10px] font-black uppercase tracking-widest underline"

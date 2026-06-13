@@ -267,6 +267,8 @@ export interface MatchListing {
   status?: 'DRAFT' | 'ACTIVE' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
   creatorId?: string;
   communityId?: string;
+  pricePerPerson?: number; // Kişi başı ücret (OwnerPanel görünümü için)
+  pitchName?: string; // Saha adı etiketi (servis panelleri için)
   format?: string;
   duration?: string;
   gender?: string;
@@ -418,6 +420,7 @@ export interface Referee {
   isAvailable?: boolean;
   workingHours?: { activeDays: string[]; activeHours: string };
   settings?: any;
+  distance?: string; // Kullanıcı konumuna göre hesaplanan mesafe etiketi
 }
 
 export interface Equipment {
@@ -443,6 +446,7 @@ export interface Goalkeeper {
   preferredZones: string[];
   isElite?: boolean;
   coordinates: { lat: number; lng: number };
+  distance?: string; // Kullanıcı konumuna göre hesaplanan mesafe etiketi
   stats: {
     savePercentage: string;
     cleanSheets: number;
@@ -453,6 +457,7 @@ export interface Goalkeeper {
     distribution: number;
     oneOnOne: number;
     aerialReach: number;
+    handling?: number;
   };
   skills: {
     reflexes: number;
@@ -536,6 +541,7 @@ export interface JobListing {
 
 export interface DirectOffer {
   id: string;
+  matchId?: string; // Teklifin bağlı olduğu maç (varsa)
   pitchName: string;
   teamName: string;
   captainName: string;
