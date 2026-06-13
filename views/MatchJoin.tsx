@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { joinMatchSlot, subscribeToMatchUpdates } from '../services/matchService';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -413,10 +414,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [isProcessing, setIsProcessing] = useState(false);
   const [hireModalType, setHireModalType] = useState<'GK' | 'REF' | null>(null);
   const [hiringState, setHiringState] = useState<{ gk: 'IDLE' | 'BROADCASTING'; ref: 'IDLE' | 'BROADCASTING' }>({ gk: 'IDLE', ref: 'IDLE' });
-  const [budget, setBudget] = useState(150);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [showCriteria, setShowCriteria] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pitch' | 'rules' | 'finance'>('pitch');
+  const [activeTab, setActiveTab] = useState<'rules' | 'finance'>('rules');
 
   // Lobi Sekmesi & Sohbet & Taktik Kenarı
   const [lobbyTab, setLobbyTab] = useState<'squad' | 'chat'>('squad');
@@ -444,8 +443,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
-  const [customPlayerName, setCustomPlayerName] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const { 
@@ -476,6 +473,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         awaySlots: (updatedMatch as any).away_slots || (updatedMatch as any).awaySlots || [],
         homeTeamId: (updatedMatch as any).home_team_id || (updatedMatch as any).homeTeamId,
         awayTeamId: (updatedMatch as any).away_team_id || (updatedMatch as any).awayTeamId,
+        creatorId: (updatedMatch as any).creator_id || (updatedMatch as any).creatorId,
+        chatMessages: (updatedMatch as any).chat_messages || (updatedMatch as any).chatMessages || [],
+        reservePlayers: (updatedMatch as any).reserve_players || (updatedMatch as any).reservePlayers || [],
+        minRating: (updatedMatch as any).min_rating || (updatedMatch as any).minRating,
+        homeScore: (updatedMatch as any).home_score || (updatedMatch as any).homeScore,
+        awayScore: (updatedMatch as any).away_score || (updatedMatch as any).awayScore,
+        scoreEnteredAt: (updatedMatch as any).score_entered_at || (updatedMatch as any).scoreEnteredAt,
       };
       updateMatch({ ...originalMatch, ...mapped } as MatchListing);
     });
@@ -636,6 +640,55 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  const handleSendChatMessage = async (text: string) => {
+    if (!text.trim()) return;
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const newMsg = {
+      id: `chat_${Date.now()}`,
+      senderId: currentUserProfile.id,
+      senderName: currentUserProfile.name,
+      senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
+      text: text.trim(),
+      timestamp: timeStr
+    };
+    const baseMessages = (match.chatMessages && match.chatMessages.length > 0)
+      ? match.chatMessages
+      : [
+          {
+            id: 'm1',
+            senderId: 'mock_1',
+            senderName: 'Mert H. (KL)',
+            senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
+            text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
+            timestamp: '10:42'
+          },
+          {
+            id: 'm2',
+            senderId: 'mock_2',
+            senderName: 'Burak Y. (STP)',
+            senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
+            text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
+            timestamp: '10:45'
+          },
+          {
+            id: 'm3',
+            senderId: 'mock_3',
+            senderName: 'Arda G. (SNT)',
+            senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
+            text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
+            timestamp: '10:48'
+          }
+        ];
+    const updatedMessages = [...baseMessages, newMsg];
+    try {
+      await updateMatch({ ...match, chatMessages: updatedMessages });
+      setChatInputText('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSlotClick = (slot: any) => {
     if (!slot) return;
 
@@ -684,59 +737,61 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     const targetSlot = slotsSource.find(s => s?.id === selectedSlotId);
     if (!targetSlot) { setIsProcessing(false); return; }
 
-    const joinedPlayer: Player = {
-      id: currentUserProfile.id || 'u1',
-      name: currentUserProfile.name || 'Oyuncu',
-      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-      rating: (currentUserProfile as any).rating || 4.5,
-      position: targetSlot.role || 'OYUNCU',
-      x: targetSlot.x,
-      y: targetSlot.y,
-      paymentStatus: 'UNPAID',
-    };
-
-    let updatedSlots = match.slots || [];
-    let updatedAwaySlots = match.awaySlots || [];
-
-    if (isAway) {
-      updatedAwaySlots = slotsSource.map(s =>
-        s?.id === selectedSlotId
-          ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-          : s
-      );
-    } else {
-      updatedSlots = slotsSource.map(s =>
-        s?.id === selectedSlotId
-          ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-          : s
-      );
-    }
-
-    const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-
-    // ── Optimistic UI: Anında lokal state'i güncelle ──
     try {
+      // Call Supabase RPC for safe concurrency-locked join
+      const { error } = await supabase.rpc('join_public_match_slot', {
+        p_match_id: match.id,
+        p_slot_id: selectedSlotId,
+        p_user_id: currentUserProfile.id,
+        p_is_away: isAway
+      });
+
+      if (error) throw error;
+
+      const joinedPlayer: Player = {
+        id: currentUserProfile.id,
+        name: currentUserProfile.name,
+        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+        rating: currentUserProfile.rating || 4.5,
+        position: targetSlot.role || 'OYUNCU',
+        x: targetSlot.x,
+        y: targetSlot.y,
+        paymentStatus: 'UNPAID',
+      };
+
+      let updatedSlots = [...(match.slots || [])];
+      let updatedAwaySlots = [...(match.awaySlots || [])];
+
+      if (isAway) {
+        updatedAwaySlots = updatedAwaySlots.map(s =>
+          s?.id === selectedSlotId
+            ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
+            : s
+        );
+      } else {
+        updatedSlots = updatedSlots.map(s =>
+          s?.id === selectedSlotId
+            ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
+            : s
+        );
+      }
+
+      const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
+
       await updateMatch({ 
         ...match, 
         slots: updatedSlots, 
         awaySlots: updatedAwaySlots, 
         status: nextStatus 
       });
+      
       setSelectedSlotId(null);
-      setIsProcessing(false);
       setNewMatchBadge(true);
       setLobbyTab('chat');
-
-      // ── Arka planda Supabase'e kaydet ──
-      try {
-        await joinMatchSlot(match.id, isAway ? updatedAwaySlots : updatedSlots, isAway);
-      } catch (dbErr) {
-        console.warn('Supabase kayıt hatası (rollback yapılıyor):', dbErr);
-        // Rollback: Eski state'e geri dön
-        await updateMatch({ ...match });
-      }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Join error:', e);
+      alert(e.message || 'Maça katılırken bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -781,24 +836,31 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (isAlreadyJoined || isAlreadyJoinedReserve) return;
     setIsProcessing(true);
 
-    const reservePlayer: Player = {
-      id: currentUserProfile.id || 'u1',
-      name: currentUserProfile.name || 'Oyuncu',
-      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-      rating: (currentUserProfile as any).rating || 4.5,
-      position: 'YEDEK',
-      x: 50,
-      y: 50,
-      paymentStatus: 'UNPAID',
-    };
-
-    const updatedReserves = [...(match.reservePlayers || []), reservePlayer];
-
     try {
+      const { error } = await supabase.rpc('join_public_match_reserve', {
+        p_match_id: match.id,
+        p_user_id: currentUserProfile.id
+      });
+
+      if (error) throw error;
+
+      const reservePlayer: Player = {
+        id: currentUserProfile.id,
+        name: currentUserProfile.name,
+        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+        rating: currentUserProfile.rating || 4.5,
+        position: 'YEDEK',
+        x: 50,
+        y: 50,
+        paymentStatus: 'UNPAID',
+      };
+
+      const updatedReserves = [...(match.reservePlayers || []), reservePlayer];
       await updateMatch({ ...match, reservePlayers: updatedReserves });
-      setIsProcessing(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Join reserve error:', e);
+      alert(e.message || 'Yedek olarak katılırken bir hata oluştu.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -807,16 +869,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!isAlreadyJoinedReserve) return;
     setIsProcessing(true);
 
-    const updatedReserves = (match.reservePlayers || []).filter(
-      p => p.id !== currentUserProfile.id
-    );
-
     try {
+      const { error } = await supabase.rpc('leave_public_match_slot', {
+        p_match_id: match.id,
+        p_user_id: currentUserProfile.id
+      });
+
+      if (error) throw error;
+
+      const updatedReserves = (match.reservePlayers || []).filter(
+        p => p.id !== currentUserProfile.id
+      );
+
       await updateMatch({ ...match, reservePlayers: updatedReserves });
-      setIsProcessing(false);
       setShowLeaveConfirm(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Leave reserves error:', e);
+      alert(e.message || 'Yedek listesinden çıkarken bir hata oluştu.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -841,24 +911,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setFriendSearch('');
   };
 
-  const handleAddCustomPlayer = async () => {
-    if (!customPlayerName.trim() || !inviteModalSlotId) return;
-    const rid = 'custom_' + Math.random().toString(36).substr(2, 9);
-    const cp: Player = {
-      id: rid, name: customPlayerName.trim(),
-      avatar: `https://i.pravatar.cc/150?u=${rid}`,
-      rating: 4.0, position: 'OYUNCU', x: 50, y: 50,
-    };
-    const updatedSlots = (match.slots || []).map(s =>
-      s?.id === inviteModalSlotId ? { ...s, status: 'TAKEN' as const, player: cp } : s
-    );
-    try {
-      await updateMatch({ ...match, slots: updatedSlots });
-    } catch (e) { console.error(e); }
-    setInviteModalSlotId(null);
-    setCustomPlayerName('');
-    setShowCustomInput(false);
-  };
+
 
   const handleRemovePlayer = async (slotId: string) => {
     const isHomeSlot = (match.slots || []).some(s => s.id === slotId);
@@ -899,68 +952,75 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!isAlreadyJoined || !currentUserProfile?.id) return;
     setIsProcessing(true);
 
-    const reserves = match.reservePlayers || [];
-    const isHomePlayer = (match.slots || []).some(s => s.player?.id === currentUserProfile.id);
-    const isAwayPlayer = (match.awaySlots || []).some(s => s.player?.id === currentUserProfile.id);
-
-    let updatedSlots = match.slots || [];
-    let updatedAwaySlots = match.awaySlots || [];
-    let remainingReserves = reserves;
-
-    if (isHomePlayer) {
-      const slotId = (match.slots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
-      if (slotId) {
-        const res = fillVacatedSlot(match.slots || [], remainingReserves, slotId);
-        updatedSlots = res.updatedSlots;
-        remainingReserves = res.remainingReserves;
-      }
-    } else if (isAwayPlayer) {
-      const slotId = (match.awaySlots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
-      if (slotId) {
-        const res = fillVacatedSlot(match.awaySlots || [], remainingReserves, slotId);
-        updatedAwaySlots = res.updatedSlots;
-        remainingReserves = res.remainingReserves;
-      }
-    }
-
-    // Halef Kaptan Belirleme Mantığı (Reliability Score Tabanlı)
-    let newCreatorId = match.creatorId;
-    const isCreatorLeaving = match.creatorId === currentUserProfile.id;
-    if (isCreatorLeaving) {
-      const remainingPlayers = updatedSlots
-        .map(s => s?.player)
-        .filter((p): p is Player => !!p && p.id !== currentUserProfile.id);
-      if (remainingPlayers.length > 0) {
-        let bestScore = -1;
-        let bestPlayerId = remainingPlayers[0].id;
-        remainingPlayers.forEach(p => {
-          const dbUser = (adminUsers || []).find(u => u?.id === p.id);
-          const score = dbUser?.reliabilityScore ?? 100;
-          if (score > bestScore) {
-            bestScore = score;
-            bestPlayerId = p.id;
-          }
-        });
-        newCreatorId = bestPlayerId;
-        
-        // Notify new captain
-        addUserNotification({
-          id: `succ_${newCreatorId}_${Date.now()}`,
-          type: 'system',
-          title: '👑 Yeni Kaptan Sensin!',
-          desc: `Eski kaptan ayrıldığı için yüksek güvenilirlik skorunla bu maçın yeni kaptanı seçildin.`,
-          time: 'Şimdi',
-          iconName: 'Award',
-          color: '#39FF14',
-          textColor: '#39FF14',
-          read: false,
-        });
-      }
-    }
-
-    const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-
     try {
+      const { error } = await supabase.rpc('leave_public_match_slot', {
+        p_match_id: match.id,
+        p_user_id: currentUserProfile.id
+      });
+
+      if (error) throw error;
+
+      const reserves = match.reservePlayers || [];
+      const isHomePlayer = (match.slots || []).some(s => s.player?.id === currentUserProfile.id);
+      const isAwayPlayer = (match.awaySlots || []).some(s => s.player?.id === currentUserProfile.id);
+
+      let updatedSlots = match.slots || [];
+      let updatedAwaySlots = match.awaySlots || [];
+      let remainingReserves = reserves;
+
+      if (isHomePlayer) {
+        const slotId = (match.slots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
+        if (slotId) {
+          const res = fillVacatedSlot(match.slots || [], remainingReserves, slotId);
+          updatedSlots = res.updatedSlots;
+          remainingReserves = res.remainingReserves;
+        }
+      } else if (isAwayPlayer) {
+        const slotId = (match.awaySlots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
+        if (slotId) {
+          const res = fillVacatedSlot(match.awaySlots || [], remainingReserves, slotId);
+          updatedAwaySlots = res.updatedSlots;
+          remainingReserves = res.remainingReserves;
+        }
+      }
+
+      // Halef Kaptan Belirleme Mantığı (Reliability Score Tabanlı)
+      let newCreatorId = match.creatorId;
+      const isCreatorLeaving = match.creatorId === currentUserProfile.id;
+      if (isCreatorLeaving) {
+        const remainingPlayers = updatedSlots
+          .map(s => s?.player)
+          .filter((p): p is Player => !!p && p.id !== currentUserProfile.id);
+        if (remainingPlayers.length > 0) {
+          let bestScore = -1;
+          let bestPlayerId = remainingPlayers[0].id;
+          remainingPlayers.forEach(p => {
+            const dbUser = (adminUsers || []).find(u => u?.id === p.id);
+            const score = dbUser?.reliabilityScore ?? 100;
+            if (score > bestScore) {
+              bestScore = score;
+              bestPlayerId = p.id;
+            }
+          });
+          newCreatorId = bestPlayerId;
+          
+          // Notify new captain
+          addUserNotification({
+            id: `succ_${newCreatorId}_${Date.now()}`,
+            type: 'system',
+            title: '👑 Yeni Kaptan Sensin!',
+            desc: `Eski kaptan ayrıldığı için yüksek güvenilirlik skorunla bu maçın yeni kaptanı seçildin.`,
+            time: 'Şimdi',
+            iconName: 'Award',
+            color: '#39FF14',
+            textColor: '#39FF14',
+            read: false,
+          });
+        }
+      }
+
+      const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
+
       await updateMatch({
         ...match,
         slots: updatedSlots,
@@ -969,11 +1029,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         creatorId: newCreatorId,
         status: nextStatus
       });
-      setIsProcessing(false);
+      
       setShowLeaveConfirm(false);
       onBack();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Leave match error:', e);
+      alert(e.message || 'Maçtan ayrılırken bir hata oluştu.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -1028,17 +1090,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <X size={18} />
                 </button>
               </div>
-              <div className="bg-black/40 p-6 rounded-3xl border border-white/5 mb-6">
-                <div className="flex justify-between items-end mb-5">
-                  <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Bütçe</span>
-                  <span className={`text-4xl font-black ${hireModalType === 'REF' ? 'text-[#FFFF00]' : 'text-[#39FF14]'}`}>{budget} ₺</span>
-                </div>
-                <input type="range" min="50" max="500" step="10" value={budget}
-                  onChange={e => setBudget(parseInt(e.target.value))}
-                  className={`w-full h-2 rounded-full cursor-pointer appearance-none bg-white/10 ${hireModalType === 'REF' ? 'accent-[#FFFF00]' : 'accent-[#39FF14]'}`} />
-                <div className="flex justify-between mt-3 text-[9px] text-white/30 font-black uppercase tracking-widest">
-                  <span>50 ₺</span><span>500 ₺</span>
-                </div>
+              <div className="bg-black/40 p-5 rounded-3xl border border-white/5 mb-6 text-center">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Talep Yayınla</p>
+                <p className="text-xs text-white/60 font-medium leading-relaxed">Pazaryerindeki kaleci/hakem adaylarına anında ulaşırsın. Fiyat teklifi doğrudan oyuncularla belirlenir.</p>
               </div>
               <button onClick={() => { if (hireModalType === 'GK') setHiringState(p => ({ ...p, gk: 'BROADCASTING' })); else setHiringState(p => ({ ...p, ref: 'BROADCASTING' })); setHireModalType(null); }}
                 className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 ${hireModalType === 'REF' ? 'bg-[#FFFF00] text-black shadow-[0_0_30px_rgba(255,255,0,0.4)]' : 'bg-[#39FF14] text-black shadow-[0_0_30px_rgba(57,255,20,0.4)]'}`}>
@@ -1169,6 +1223,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             onClick={async () => {
                               try {
                                 setIsProcessing(true);
+                                const { error } = await supabase.rpc('pay_public_match_deposit', {
+                                  p_match_id: match.id,
+                                  p_user_id: currentUserProfile.id,
+                                  p_amount: 50
+                                });
+
+                                if (error) throw error;
+
                                 const updatedSlots = (match.slots || []).map(s => {
                                   if (s?.player?.id === currentUserProfile.id) {
                                     return {
@@ -1181,6 +1243,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                   }
                                   return s;
                                 });
+                                
                                 const nextStatus = checkAndGetStatus(updatedSlots);
                                 await updateMatch({
                                   ...match,
@@ -1189,8 +1252,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 });
                                 setActivePlayerSlotId(null);
                                 alert("Kapora ödemesi başarıyla gerçekleştirildi! ⚽");
-                              } catch (e) {
+                              } catch (e: any) {
                                 console.error(e);
+                                alert(e.message || 'Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
                               } finally {
                                 setIsProcessing(false);
                               }
@@ -1729,27 +1793,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </div>
             </div>
 
-            {/* Geniş, Parlayan Maç Bilgileri Butonu */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowCriteria(prev => !prev)}
-              className={`w-full flex items-center justify-center gap-2 transition-all py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer active:scale-95 mt-1 ${
-                showCriteria
-                  ? 'bg-[#FFFF00] text-black shadow-[0_0_20px_rgba(255,255,0,0.35)]'
-                  : 'bg-[#FFFF00]/10 border border-[#FFFF00]/25 hover:border-[#FFFF00] text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.1)]'
-              }`}
+            {/* Maç Detayları Bağlantısı */}
+            <button
+              onClick={() => setShowInfoModal(true)}
+              className="w-full flex items-center justify-center gap-2 transition-all py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer active:scale-95 mt-1 bg-[#FFFF00]/10 border border-[#FFFF00]/25 hover:border-[#FFFF00] text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.1)]"
             >
-              <Info size={13} className={showCriteria ? '' : 'animate-pulse'} />
-              <span>MAÇ BİLGİLERİ VE KRİTERLER</span>
-              <motion.span
-                animate={{ rotate: showCriteria ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-                className="ml-1 text-[8px]"
-              >
-                ▼
-              </motion.span>
-            </motion.button>
+              <Info size={13} className="animate-pulse" />
+              <span>MAÇ KURALLARI & FİNANS</span>
+              <ChevronRight size={12} />
+            </button>
           </div>
         </div>
       </header>
@@ -1815,52 +1867,37 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
             {/* Mesaj Listesi */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4 scrollbar-hide">
-              {(match.chatMessages || [
-                {
-                  id: 'm1',
-                  senderId: 'mock_1',
-                  senderName: 'Mert H. (KL)',
-                  senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
-                  text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
-                  timestamp: '10:42'
-                },
-                {
-                  id: 'm2',
-                  senderId: 'mock_2',
-                  senderName: 'Burak Y. (STP)',
-                  senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
-                  text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
-                  timestamp: '10:45'
-                },
-                {
-                  id: 'm3',
-                  senderId: 'mock_3',
-                  senderName: 'Arda G. (SNT)',
-                  senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
-                  text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
-                  timestamp: '10:48'
-                }
-              ]).map((msg) => {
-                const isMe = msg.senderId === currentUserProfile.id;
-                return (
-                  <div key={msg.id} className={`flex gap-3 items-start ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <img src={msg.senderAvatar} alt={msg.senderName} className="w-8 h-8 rounded-full object-cover border border-white/10" />
-                    <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
-                      <div className="flex items-center gap-1.5 mb-1 px-1">
-                        <span className="text-[9px] font-black text-white/50 uppercase tracking-wider">{msg.senderName}</span>
-                        <span className="text-[7px] text-white/30 font-semibold">{msg.timestamp}</span>
-                      </div>
-                      <div className={`p-3.5 rounded-2xl text-xs font-medium leading-relaxed ${
-                        isMe 
-                          ? 'bg-[#39FF14] text-black rounded-tr-none shadow-[0_0_15px_rgba(57,255,20,0.25)]' 
-                          : 'bg-black/50 border border-white/5 text-white/90 rounded-tl-none'
-                      }`}>
-                        {msg.text}
+              {(match.chatMessages && match.chatMessages.length > 0) ? (
+                match.chatMessages.map((msg: any) => {
+                  const isMe = msg.senderId === currentUserProfile.id;
+                  return (
+                    <div key={msg.id} className={`flex gap-3 items-start ${isMe ? 'flex-row-reverse' : ''}`}>
+                      <img src={msg.senderAvatar} alt={msg.senderName} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                      <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                        <div className="flex items-center gap-1.5 mb-1 px-1">
+                          <span className="text-[9px] font-black text-white/50 uppercase tracking-wider">{msg.senderName}</span>
+                          <span className="text-[7px] text-white/30 font-semibold">{msg.timestamp}</span>
+                        </div>
+                        <div className={`p-3.5 rounded-2xl text-xs font-medium leading-relaxed ${
+                          isMe 
+                            ? 'bg-[#39FF14] text-black rounded-tr-none shadow-[0_0_15px_rgba(57,255,20,0.25)]' 
+                            : 'bg-black/50 border border-white/5 text-white/90 rounded-tl-none'
+                        }`}>
+                          {msg.text}
+                        </div>
                       </div>
                     </div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-3 py-12">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <Send size={20} className="text-white/20" />
                   </div>
-                );
-              })}
+                  <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest">Henüz mesaj yok</p>
+                  <p className="text-[10px] text-white/20 text-center max-w-[200px] leading-relaxed">Kadrona katılanlarla buradan iletişime geç</p>
+                </div>
+              )}
             </div>
 
             {/* Gönderme Alanı */}
@@ -1869,103 +1906,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 type="text"
                 value={chatInputText}
                 onChange={(e) => setChatInputText(e.target.value)}
-                onKeyDown={async (e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    if (!chatInputText.trim()) return;
-                    const now = new Date();
-                    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                    const newMsg = {
-                      id: `chat_${Date.now()}`,
-                      senderId: currentUserProfile.id,
-                      senderName: currentUserProfile.name,
-                      senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
-                      text: chatInputText.trim(),
-                      timestamp: timeStr
-                    };
-                    const defaultChatMessages = [
-                      {
-                        id: 'm1',
-                        senderId: 'mock_1',
-                        senderName: 'Mert H. (KL)',
-                        senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
-                        text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
-                        timestamp: '10:42'
-                      },
-                      {
-                        id: 'm2',
-                        senderId: 'mock_2',
-                        senderName: 'Burak Y. (STP)',
-                        senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
-                        text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
-                        timestamp: '10:45'
-                      },
-                      {
-                        id: 'm3',
-                        senderId: 'mock_3',
-                        senderName: 'Arda G. (SNT)',
-                        senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
-                        text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
-                        timestamp: '10:48'
-                      }
-                    ];
-                    const updatedMessages = [...(match.chatMessages || defaultChatMessages), newMsg];
-                    try {
-                      await updateMatch({ ...match, chatMessages: updatedMessages });
-                      setChatInputText('');
-                    } catch (err) {
-                      console.error(err);
-                    }
+                    handleSendChatMessage(chatInputText);
                   }
                 }}
                 placeholder="Takıma mesaj yaz..."
                 className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#39FF14]/40"
               />
               <button
-                onClick={async () => {
-                  if (!chatInputText.trim()) return;
-                  const now = new Date();
-                  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                  const newMsg = {
-                    id: `chat_${Date.now()}`,
-                    senderId: currentUserProfile.id,
-                    senderName: currentUserProfile.name,
-                    senderAvatar: currentUserProfile.avatar || 'https://i.pravatar.cc/150?u=' + currentUserProfile.id,
-                    text: chatInputText.trim(),
-                    timestamp: timeStr
-                  };
-                  const defaultChatMessages = [
-                    {
-                      id: 'm1',
-                      senderId: 'mock_1',
-                      senderName: 'Mert H. (KL)',
-                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
-                      text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
-                      timestamp: '10:42'
-                    },
-                    {
-                      id: 'm2',
-                      senderId: 'mock_2',
-                      senderName: 'Burak Y. (STP)',
-                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
-                      text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
-                      timestamp: '10:45'
-                    },
-                    {
-                      id: 'm3',
-                      senderId: 'mock_3',
-                      senderName: 'Arda G. (SNT)',
-                      senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
-                      text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
-                      timestamp: '10:48'
-                    }
-                  ];
-                  const updatedMessages = [...(match.chatMessages || defaultChatMessages), newMsg];
-                  try {
-                    await updateMatch({ ...match, chatMessages: updatedMessages });
-                    setChatInputText('');
-                  } catch (err) {
-                    console.error(err);
-                  }
+                onClick={() => {
+                  handleSendChatMessage(chatInputText);
                 }}
                 className="p-3 bg-[#39FF14] text-black rounded-xl hover:shadow-[0_0_12px_rgba(57,255,20,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer"
               >
@@ -1987,73 +1938,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </motion.div>
             )}
 
-        {/* ── MAÇ KRİTERLERİ & KURALLAR ───────────────────────────────────── */}
-        <AnimatePresence>
-          {showCriteria && (
-            <motion.div
-              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-              animate={{ height: 'auto', opacity: 1, marginBottom: 20 }}
-              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="overflow-hidden"
-            >
-              <div className="bg-[#161B22]/60 backdrop-blur-md rounded-3xl border border-white/5 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <Layers size={13} className="text-[#39FF14]" />
-                    <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
-                      Maç Kriterleri & Taktik Kurallar
-                    </p>
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowInfoModal(true)}
-                    className="text-[9px] font-black text-[#FFFF00] bg-[#FFFF00]/10 border border-[#FFFF00]/25 px-3 py-1 rounded-full uppercase tracking-widest cursor-pointer shadow-[0_0_10px_rgba(255,255,0,0.1)] hover:border-[#FFFF00]"
-                  >
-                    TÜM DETAYLAR
-                  </motion.button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Hakem Durumu */}
-                  <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center col-span-2 shadow-inner">
-                    <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">HAKEM</span>
-                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">
-                      {hasReferee ? 'Lisanslı Hakem' : 'Kaptan Yönetimi'}
-                    </span>
-                  </div>
-
-                  {/* Katılım Ücreti */}
-                  <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
-                    <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">ÜCRET</span>
-                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">
-                      {match.price > 0 ? `${match.price} ₺` : 'Ücretsiz'}
-                    </span>
-                  </div>
-
-                  {/* Süre */}
-                  <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
-                    <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">SÜRE</span>
-                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">{durationRule}</span>
-                  </div>
-
-                  {/* Yaş Sınırı */}
-                  <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
-                    <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">YAŞ GRUBU</span>
-                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">{ageLimit}</span>
-                  </div>
-
-                  {/* Cinsiyet */}
-                  <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-inner">
-                    <span className="block text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1">CİNSİYET</span>
-                    <span className="text-base font-black uppercase italic tracking-tighter text-white block">{genderRule}</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── TAKTİK SAHA ─────────────────────────────────────────────────── */}
         <div className="mb-6">
@@ -2409,7 +2293,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => setShowOpponentModal(true)}
+              onClick={() => { setView('OPPONENT_FINDER'); }}
               className="p-4 rounded-2xl bg-[#161B22]/80 border border-white/5 hover:border-pink-500/30 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-pink-500/10 to-transparent pointer-events-none" />
@@ -2695,7 +2579,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {/* Tab Seçimi */}
               <div className="flex px-6 pt-3 pb-1 border-b border-white/5 bg-black/20 gap-2 shrink-0">
                 {[
-                  { id: 'pitch' as const, label: 'SAHA & TESİS', icon: Layers },
                   { id: 'rules' as const, label: 'MAÇ KURALLARI', icon: Shield },
                   { id: 'finance' as const, label: 'GİRİŞ & BARAJ', icon: DollarSign }
                 ].map((tab) => {
@@ -2726,75 +2609,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {/* Tab İçerik Alanı */}
               <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide pb-12">
                 <AnimatePresence mode="wait">
-                  {activeTab === 'pitch' && (
-                    <motion.div
-                      key="pitch"
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 12 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-5"
-                    >
-                      {/* Tesis & Zemin Standartları */}
-                      <div className="space-y-3">
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.25em] ml-1">Zemin & Tesis Kalitesi</p>
-                        
-                        {/* 3'lü Değerlendirme Grid */}
-                        {(() => {
-                          const getGradeBadgeStyles = (grade?: 'A' | 'B' | 'C' | string) => {
-                            const g = grade || 'A';
-                            if (g.startsWith('A')) return 'bg-[#39FF14]/10 border-[#39FF14]/25 text-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.15)]';
-                            if (g.startsWith('B')) return 'bg-[#FFFF00]/10 border-[#FFFF00]/25 text-[#FFFF00] shadow-[0_0_12px_rgba(255,255,0,0.15)]';
-                            return 'bg-orange-500/10 border-orange-500/25 text-orange-400';
-                          };
-                          return (
-                            <div className="grid grid-cols-3 gap-2.5">
-                              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3 text-center relative overflow-hidden group">
-                                <Layers size={14} className="text-[#39FF14] mx-auto mb-1.5" />
-                                <span className="block text-[8px] font-bold text-white/30 uppercase tracking-widest mb-0.5">ZEMİN</span>
-                                <span className="text-xs font-black text-white">Suni Çim</span>
-                                <div className={`mt-1.5 inline-block px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getGradeBadgeStyles(activePitch.grassGrade)}`}>
-                                  GRADE {activePitch.grassGrade || 'A'}
-                                </div>
-                              </div>
-
-                              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3 text-center relative overflow-hidden group">
-                                <Zap size={14} className="text-[#FFFF00] mx-auto mb-1.5" />
-                                <span className="block text-[8px] font-bold text-white/30 uppercase tracking-widest mb-0.5">IŞIKLANDIRMA</span>
-                                <span className="text-xs font-black text-white">LED Güçlü</span>
-                                <div className={`mt-1.5 inline-block px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getGradeBadgeStyles(activePitch.lightingGrade)}`}>
-                                  GRADE {activePitch.lightingGrade || 'A'}
-                                </div>
-                              </div>
-
-                              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3 text-center relative overflow-hidden group">
-                                <Shield size={14} className="text-[#00f2fe] mx-auto mb-1.5" />
-                                <span className="block text-[8px] font-bold text-white/30 uppercase tracking-widest mb-0.5">KONFOR</span>
-                                <span className="text-xs font-black text-white">Soyunma Odası</span>
-                                <div className={`mt-1.5 inline-block px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getGradeBadgeStyles(activePitch.lockerRoomGrade)}`}>
-                                  GRADE {activePitch.lockerRoomGrade || 'B'}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Olanaklar Grid */}
-                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4">
-                          <span className="block text-[8px] font-bold text-white/40 uppercase tracking-widest mb-3">TESİS OLANAKLARI</span>
-                          <div className="grid grid-cols-2 gap-2">
-                            {activePitch.amenities && activePitch.amenities.map((amenity, i) => (
-                              <div key={i} className="flex items-center gap-2 text-white/70 text-[11px] font-medium bg-white/[0.02] border border-white/5 px-3 py-2.5 rounded-xl">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14]/80 shadow-[0_0_6px_rgba(57,255,20,0.5)]" />
-                                <span>{amenity}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
                   {activeTab === 'rules' && (
                     <motion.div
                       key="rules"

@@ -9,6 +9,7 @@ import {
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { AnimatePresence } from 'framer-motion';
 import { PendingVerificationsTab } from './PendingVerificationsTab';
+import OwnerModerationTab from './OwnerModerationTab';
 
 // Lazy loaded page components
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -25,7 +26,7 @@ interface Props {
 
 export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     const { deletePitch } = useAppStore();
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS'>('GENEL');
+    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'>('GENEL');
     const [modal, setModal] = useState<any>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
@@ -68,6 +69,8 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
             case 'CONTENT':
             case 'NOTIFICATIONS':
                 return <SettingsPage subRoute={subRoute} />;
+            case 'MODERATION':
+                return <OwnerModerationTab />;
             default:
                 return (
                     <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">

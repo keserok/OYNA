@@ -12,6 +12,111 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
+import { supabase } from '../supabaseClient';
+
+// ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
+interface DbTariff {
+  applies_to_days: number[] | null;
+  start_time: string;
+  end_time: string;
+  price_per_hour: number;
+  is_active: boolean | null;
+  tariff_type: string;
+}
+
+/** Şu anki gün/saate göre aktif tarife fiyatını hesaplar (client-side). */
+const getActiveTariffPrice = (tariffs: DbTariff[] | null | undefined): number | null => {
+  if (!tariffs || tariffs.length === 0) return null;
+  const now = new Date();
+  const dow = ((now.getDay() + 6) % 7) + 1; // 1=Pazartesi .. 7=Pazar (ISO)
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const priority: Record<string, number> = { HOLIDAY: 1, WEEKEND: 2, WEEKDAY: 3, SPECIAL: 4 };
+  const matches = tariffs
+    .filter((t) => t.is_active !== false)
+    .filter((t) => (t.applies_to_days ?? []).includes(dow))
+    .filter((t) => {
+      const start = t.start_time.slice(0, 5);
+      const end = t.end_time.slice(0, 5);
+      return hhmm >= start && (hhmm < end || end === '00:00');
+    })
+    .sort((a, b) => (priority[a.tariff_type] ?? 9) - (priority[b.tariff_type] ?? 9));
+  if (matches.length > 0) return matches[0].price_per_hour;
+  // Aktif dilime denk gelmiyorsa en düşük tarifeyi referans göster
+  const active = tariffs.filter((t) => t.is_active !== false);
+  if (active.length > 0) return Math.min(...active.map((t) => t.price_per_hour));
+  return null;
+};
+
+interface DbPitchRow {
+  id: string;
+  name: string;
+  city: string | null;
+  district: string | null;
+  address: string | null;
+  rating: number | null;
+  google_rating: number | null;
+  google_review_count: number | null;
+  price_per_person: number | null;
+  total_price: number | null;
+  price_per_match: number | null;
+  image: string | null;
+  images: string[] | null;
+  description: string | null;
+  amenities: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  courts?: { id: string; name: string; court_type: string | null; price: number | null; is_active: boolean | null }[];
+  pitch_tariffs?: DbTariff[];
+}
+
+const FALLBACK_CENTER: { lat: number; lng: number } = { lat: 41.0433, lng: 29.0057 };
+const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800';
+
+const mapDbPitchToUiPitch = (
+  row: DbPitchRow,
+  flash?: { id: string; discount: number },
+): Pitch => {
+  const currentPrice = getActiveTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
+  const courts: Court[] = (row.courts ?? [])
+    .filter((c) => c.is_active !== false)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.court_type === 'INDOOR' || c.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
+      price: c.price ?? currentPrice,
+      slots: [],
+    }));
+  return {
+    id: row.id,
+    name: row.name,
+    district: row.district ?? row.city ?? '',
+    location: row.address ?? [row.district, row.city].filter(Boolean).join(', '),
+    distance: '',
+    rating: row.rating ?? row.google_rating ?? 0,
+    googleRating: row.google_rating ?? 0,
+    googleReviews: row.google_review_count ?? 0,
+    pricePerPerson: row.price_per_person ?? 0,
+    totalPrice: currentPrice,
+    image: row.image ?? row.images?.[0] ?? PLACEHOLDER_IMG,
+    images: row.images ?? (row.image ? [row.image] : []),
+    description: row.description ?? '',
+    amenities: row.amenities ?? [],
+    lighting: 0,
+    grassQuality: 0,
+    lockerRoomQuality: 0,
+    goalQuality: 0,
+    occupancy: 0,
+    coordinates: {
+      lat: row.latitude ?? FALLBACK_CENTER.lat,
+      lng: row.longitude ?? FALLBACK_CENTER.lng,
+    },
+    slots: [],
+    courts,
+    isApproved: true,
+    flashDiscount: flash?.discount,
+    flashDealId: flash?.id,
+  };
+};
 
 // Fix leafet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -62,10 +167,14 @@ const AIRBNB_MAP_CSS = `
 
 const createPitchPin = (pitch: Pitch, isSelected: boolean) => {
   const priceLabel = pitch.totalPrice ? `${pitch.totalPrice}₺` : pitch.name.split(' ')[0];
+  const flashBadge = pitch.flashDiscount
+    ? `<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FF3B30;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:100px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,59,48,0.5);">🔥 %${pitch.flashDiscount}</div>`
+    : '';
   return L.divIcon({
     className: 'oyna-pitch-pin',
     html: `
       <div style="position:relative;display:inline-block;">
+        ${flashBadge}
         <div class="pin-bubble ${isSelected ? 'selected' : ''}">
           <svg width="8" height="8" viewBox="0 0 8 8" fill="${isSelected ? '#000' : '#39FF14'}"><circle cx="4" cy="4" r="4"/></svg>
           ${priceLabel}
@@ -300,6 +409,14 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
           <Star size={9} className="fill-[#FFFF00] text-[#FFFF00]" />
           <span className="text-[9px] font-black text-white">{pitch.rating.toFixed(1)}</span>
         </div>
+
+        {/* Flash Deal Badge */}
+        {pitch.flashDiscount ? (
+          <div className="absolute bottom-2.5 left-2.5 px-2 py-0.5 bg-red-600 rounded-lg flex items-center gap-1 shadow-md animate-pulse">
+            <Zap size={9} className="fill-white text-white" />
+            <span className="text-[9px] font-black text-white">🔥 %{pitch.flashDiscount} İNDİRİM</span>
+          </div>
+        ) : null}
       </div>
 
       {/* Lower part: Info & Prices */}
@@ -349,6 +466,51 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = {
 
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime }) => {
   const { userLocation, adminPitches, addUserNotification } = useAppStore();
+
+  // Canlı saha verisi (onaylı + açık). Boşsa mock adminPitches'e düşer.
+  const [realPitches, setRealPitches] = useState<Pitch[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [pitchRes, dealRes] = await Promise.all([
+          supabase
+            .from('pitches')
+            .select('*, courts(id, name, court_type, price, is_active), pitch_tariffs(*)')
+            .eq('verification_status', 'approved')
+            .eq('is_open', true),
+          supabase
+            .from('pitch_flash_deals')
+            .select('id, pitch_id, discount_percent, expires_at, is_claimed')
+            .eq('is_claimed', false)
+            .gt('expires_at', new Date().toISOString()),
+        ]);
+
+        if (!active) return;
+        if (pitchRes.error) throw pitchRes.error;
+
+        const rows = (pitchRes.data ?? []) as unknown as DbPitchRow[];
+        // Saha başına en yüksek indirimli aktif flash deal
+        const flashByPitch: Record<string, { id: string; discount: number }> = {};
+        ((dealRes.data ?? []) as { id: string; pitch_id: string; discount_percent: number }[]).forEach((d) => {
+          const existing = flashByPitch[d.pitch_id];
+          if (!existing || d.discount_percent > existing.discount) {
+            flashByPitch[d.pitch_id] = { id: d.id, discount: d.discount_percent };
+          }
+        });
+
+        setRealPitches(rows.map((r) => mapDbPitchToUiPitch(r, flashByPitch[r.id])));
+      } catch (err) {
+        console.error('PitchDiscovery fetch:', err);
+        if (active) setRealPitches([]); // mock fallback
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Oyuncuya gösterilecek saha kaynağı: canlı veri varsa onu, yoksa mock'u kullan
+  const sourcePitches = realPitches.length > 0 ? realPitches : adminPitches;
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -441,10 +603,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     return selectedCourt.price;
   };
 
-  const districts = useMemo(() => ['Tümü', ...Array.from(new Set(adminPitches.map(p => p.district)))], [adminPitches]);
+  const districts = useMemo(() => ['Tümü', ...Array.from(new Set(sourcePitches.map(p => p.district).filter(Boolean)))], [sourcePitches]);
 
   const filteredPitches = useMemo(() => {
-    let result = adminPitches.filter(p => {
+    let result = sourcePitches.filter(p => {
       // Show only approved pitches to players
       if (p.isApproved === false) return false;
 
@@ -479,7 +641,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     }
 
     return result;
-  }, [searchQuery, filters, sortOrder, mapCenter]);
+  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter]);
 
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">

@@ -790,6 +790,78 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           </div>
         </AnimatedButton>
 
+        {/* 3. Pitch Booking (FULL WIDTH) */}
+        <AnimatedButton
+          as="div"
+          variants={itemVariants}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onNavigate('PITCH_DISCOVERY')}
+          className="col-span-2 h-32 bg-[#16a34a] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(22,163,74,0.3)] breathing-glow"
+        >
+          {/* Vektörel Futbol Sahası Deseni */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {/* Grass Stripes */}
+            <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
+
+            {/* Pitch SVG */}
+            <div className="absolute inset-0 w-full h-full opacity-40">
+              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="white" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  {/* Outer Boundary */}
+                  <rect x="25" y="25" width="1000" height="630" />
+                  {/* Halfway Line */}
+                  <line x1="525" y1="25" x2="525" y2="655" />
+                  {/* Center Circle */}
+                  <circle cx="525" cy="340" r="90" />
+                  {/* Center Spot */}
+                  <circle cx="525" cy="340" r="4" fill="white" />
+
+                  {/* Left Penalty Area */}
+                  <rect x="25" y="140" width="165" height="400" />
+                  {/* Left Goal Area */}
+                  <rect x="25" y="240" width="55" height="200" />
+                  {/* Left Penalty Spot */}
+                  <circle cx="120" cy="340" r="4" fill="white" />
+                  {/* Left Penalty Arc */}
+                  <path d="M 190 260 A 90 90 0 0 1 190 420" />
+
+                  {/* Right Penalty Area */}
+                  <rect x="860" y="140" width="165" height="400" />
+                  {/* Right Goal Area */}
+                  <rect x="970" y="240" width="55" height="200" />
+                  {/* Right Penalty Spot */}
+                  <circle cx="930" cy="340" r="4" fill="white" />
+                  {/* Right Penalty Arc */}
+                  <path d="M 860 260 A 90 90 0 0 0 860 420" />
+
+                  {/* Corner Arcs */}
+                  <path d="M 65 25 A 40 40 0 0 0 25 65" />
+                  <path d="M 25 615 A 40 40 0 0 0 65 655" />
+                  <path d="M 985 25 A 40 40 0 0 1 1025 65" />
+                  <path d="M 1025 615 A 40 40 0 0 1 985 655" />
+                </g>
+              </svg>
+            </div>
+
+            {/* Gradient Fade to protect text */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#16a34a]/90 via-[#16a34a]/40 to-transparent"></div>
+          </div>
+          <div className="absolute inset-0 p-5 flex items-center justify-between">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin size={18} className="text-white" />
+                <span className="text-white text-xs font-bold uppercase tracking-widest">Rezervasyon</span>
+              </div>
+              <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Saha<br />Vitrini</h2>
+              <p className="text-[10px] text-lime-100 mt-1 font-bold">Uygun sahaları gör.</p>
+            </div>
+            <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/20 group-hover:scale-110 transition-transform">
+              <MapPin size={40} className="text-white" />
+            </div>
+          </div>
+        </AnimatedButton>
+
         {/* KALECİLER */}
         <AnimatedButton
           as="div"
@@ -986,7 +1058,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             </div>
           </div>
         </AnimatedButton>
-
         {/* 6. Studio Box (FULL WIDTH) */}
         <AnimatedButton
           as="div"

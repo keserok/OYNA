@@ -142,6 +142,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [isNative] = useState(() => Capacitor.isNativePlatform());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDataDownloadModal, setShowDataDownloadModal] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref } = useAppStore();
 
@@ -149,6 +152,96 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   useEffect(() => {
     fetchNotificationTemplates().then(setTemplates);
   }, []);
+
+  // Kullanıcının saha sahibi olup olmadığını tespit et
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) return;
+        const { count } = await supabase
+          .from('pitches')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner_id', uid);
+        if (active) setIsOwner((count ?? 0) > 0);
+      } catch {
+        /* sessiz geç */
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // KVKK — Tesis verilerini JSON olarak indir (client-side)
+  const handleExportOwnerData = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) throw new Error('Oturumunuz bulunamadı.');
+
+      const { data: pitches, error: pErr } = await supabase
+        .from('pitches')
+        .select('*')
+        .eq('owner_id', uid);
+      if (pErr) throw pErr;
+
+      const pitchIds = (pitches ?? []).map((p) => (p as { id: string }).id);
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+
+      let bookings: unknown[] = [];
+      let expenses: unknown[] = [];
+      let debtors: unknown[] = [];
+      let subscriptions: unknown[] = [];
+
+      if (pitchIds.length > 0) {
+        const [bRes, eRes, dRes, sRes] = await Promise.all([
+          supabase.from('pitch_bookings').select('*').in('pitch_id', pitchIds).gte('booking_date', oneYearAgo),
+          supabase.from('pitch_expenses').select('*').in('pitch_id', pitchIds).gte('expense_date', oneYearAgo),
+          supabase.from('pitch_debtors').select('*').in('pitch_id', pitchIds),
+          supabase.from('pitch_subscriptions').select('*').in('pitch_id', pitchIds),
+        ]);
+        if (bRes.error) throw bRes.error;
+        if (eRes.error) throw eRes.error;
+        if (dRes.error) throw dRes.error;
+        if (sRes.error) throw sRes.error;
+        bookings = bRes.data ?? [];
+        expenses = eRes.data ?? [];
+        debtors = dRes.data ?? [];
+        subscriptions = sRes.data ?? [];
+      }
+
+      const payload = {
+        exported_at: new Date().toISOString(),
+        owner_id: uid,
+        pitches: pitches ?? [],
+        bookings,
+        expenses,
+        debtors,
+        subscriptions,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `oyna-tesis-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('handleExportOwnerData:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      setExportError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'Veriler indirilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleUpdateLocation = () => {
     setIsUpdatingLocation(true);
@@ -412,6 +505,35 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             )}
           </AnimatePresence>
         </section>
+
+        {/* Tesis Verileri (KVKK) — yalnızca saha sahipleri */}
+        {isOwner && (
+          <section className="bg-[#161B22] border border-white/5 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2 text-[#39FF14]">
+              <Download size={16} />
+              <h3 className="text-xs font-black uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Tesisinize ait son 1 yıllık rezervasyon, gider, veresiye ve abonelik kayıtlarını JSON formatında indirin. Tüm verileriniz size aittir.
+            </p>
+            {exportError && (
+              <div className="flex items-center gap-2 text-red-300 text-[11px] bg-red-900/20 border border-red-500/30 rounded-lg p-2">
+                <AlertCircle size={14} className="shrink-0" /> {exportError}
+              </div>
+            )}
+            <button
+              disabled={isExporting}
+              onClick={handleExportOwnerData}
+              className="w-full flex items-center justify-center gap-2.5 p-3.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/30 rounded-xl text-[#39FF14] font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
+            >
+              {isExporting ? (
+                <><RefreshCw size={14} className="animate-spin" /> Hazırlanıyor...</>
+              ) : (
+                <><Download size={14} /> Tesis Verilerimi İndir</>
+              )}
+            </button>
+          </section>
+        )}
 
         {/* Geliştirici Konsolu */}
         <section className="bg-[#1a1c22]/50 border border-yellow-500/10 rounded-2xl p-5 space-y-3 relative overflow-hidden">

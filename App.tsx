@@ -156,30 +156,39 @@ const App: React.FC = () => {
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role, roles, verification_status, is_admin, wallet_balance')
+            .select('role, roles, verification_status, is_admin, wallet_balance, phone, email')
             .eq('id', user.uid)
             .single();
 
           if (!profile) {
-            // İlk giriş — yeni kullanıcı oluştur
+            // ─── YENİ KULLANICI (kayıt) ───────────────────────────────────────
+            const currentRole = useAppStore.getState().role ?? UserRole.PLAYER;
+            const fallbackName = user.displayName
+              || (user.email ? user.email.split('@')[0] : '')
+              || (user.phone ? user.phone : '');
             try {
               await supabase.from('profiles').insert({
                 id: user.uid,
-                email: user.email,
-                full_name: user.displayName || '',
-                avatar_url: user.photoURL || '',
-                role: 'PLAYER',
-                roles: ['PLAYER'],
-                verification_status: 'approved',
+                email: user.email ?? null,
+                phone: user.phone ?? null,
+                full_name: fallbackName,
+                role: currentRole,
+                roles: [currentRole],
+                verification_status: (currentRole === UserRole.OWNER || currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) ? 'pending' : 'approved',
                 last_active_at: new Date().toISOString(),
               });
-            } catch (error) {
-              console.error('[App] Profil oluşturma hatası:', error);
+            } catch (insertError) {
+              console.error('[App] Error creating user profile:', insertError);
             }
-            setRole(UserRole.PLAYER);
-            setView('ROLE_SELECTION');
+            setRole(currentRole);
+            if (currentRole === UserRole.OWNER || currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
+              setView('PENDING_VERIFICATION');
+            } else {
+              setView('LOCATION_PROMPT');
+            }
           } else {
-            const primaryRole = profile.role as UserRole;
+            // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
+            const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
             setRole(primaryRole);
 
             // last_active_at background güncelleme
@@ -207,16 +216,9 @@ const App: React.FC = () => {
         }
       } catch (error: any) {
         console.error('[App] Auth state error:', error);
-        // JWT veya Auth hatalarında oturumu kapat; geçici ağ hatalarında kullanıcıyı atmamak için kontrol et
         if (error?.message?.includes('JWT') || error?.message?.includes('Auth') || error?.code === 'PGRST301') {
           logout().catch(e => console.error('[App] Sign out error on invalid session:', e));
           setView('ROLE_SELECTION');
-        } else {
-          // Ağ hatası olsa bile mevcut oturum korunur
-          const currentView = useAppStore.getState().view;
-          if (['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(currentView)) {
-            setView('LOCATION_PROMPT');
-          }
         }
       } finally {
         setIsAuthReady(true);

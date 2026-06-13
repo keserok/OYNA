@@ -7,7 +7,7 @@ import {
 
 interface SidebarProps {
     activeSubRoute: string;
-    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS') => void;
+    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION') => void;
     onBack: () => void;
     onShowToast: (msg: string) => void;
     onShowRevenue: () => void;
@@ -41,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: MapPin, label: 'Sahalar', badge: adminPitches.length, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
                 { icon: Users, label: 'Kullanıcılar', badge: adminUsers.length, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
                 { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: activeSubRoute === 'PENDING_VERIFICATIONS', action: () => onNavigate('PENDING_VERIFICATIONS') },
+                { icon: Shield, label: 'Tesis Onayları', badge: null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : adminMatches.length, active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
                 { icon: Shield, label: 'Kaleciler', badge: adminGoalkeepers.length, active: activeSubRoute === 'KALECİLER', action: () => onNavigate('KALECİLER') },
                 { icon: Scale, label: 'Hakemler', badge: adminReferees.length, active: activeSubRoute === 'HAKEMLER', action: () => onNavigate('HAKEMLER') },

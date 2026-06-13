@@ -6,6 +6,7 @@ import { clearPushToken } from './notifications/pushService';
 export interface OynaCurrentUser {
   uid: string;
   email: string | null;
+  phone?: string | null;
   displayName: string;
   photoURL: string;
   roles: string[];
@@ -18,12 +19,18 @@ export const auth: { currentUser: OynaCurrentUser | null } = {
 };
 
 // ─── Build currentUser from session + profiles row ────────────────────────────
-async function buildCurrentUser(userId: string, email: string | null, meta: Record<string, any>): Promise<OynaCurrentUser> {
+async function buildCurrentUser(user: {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+  user_metadata?: Record<string, any>;
+}): Promise<OynaCurrentUser> {
   const base: OynaCurrentUser = {
-    uid: userId,
-    email,
-    displayName: meta?.full_name || meta?.name || '',
-    photoURL: meta?.avatar_url || meta?.picture || '',
+    uid: user.id,
+    email: user.email ?? null,
+    phone: user.phone ?? null,
+    displayName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+    photoURL: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
     roles: ['PLAYER'],
     verificationStatus: 'approved',
     isAdmin: false,
@@ -33,7 +40,7 @@ async function buildCurrentUser(userId: string, email: string | null, meta: Reco
     const { data: profile } = await supabase
       .from('profiles')
       .select('roles, verification_status, is_admin')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
 
     if (profile) {
@@ -51,21 +58,13 @@ async function buildCurrentUser(userId: string, email: string | null, meta: Reco
 // ─── Session init ────────────────────────────────────────────────────────────
 supabase.auth.getSession().then(async ({ data: { session } }) => {
   if (session?.user) {
-    auth.currentUser = await buildCurrentUser(
-      session.user.id,
-      session.user.email ?? null,
-      session.user.user_metadata ?? {},
-    );
+    auth.currentUser = await buildCurrentUser(session.user);
   }
 });
 
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabase.auth.onAuthStateChange(async (_event, session) => {
   if (session?.user) {
-    auth.currentUser = await buildCurrentUser(
-      session.user.id,
-      session.user.email ?? null,
-      session.user.user_metadata ?? {},
-    );
+    auth.currentUser = await buildCurrentUser(session.user);
   } else {
     auth.currentUser = null;
   }
@@ -155,11 +154,7 @@ export const verifyOtp = async (phone: string, token: string): Promise<void> => 
 
   // currentUser'ı yeni oturum bilgisiyle güncelle
   if (data?.user) {
-    auth.currentUser = await buildCurrentUser(
-      data.user.id,
-      data.user.email ?? null,
-      data.user.user_metadata ?? {},
-    );
+    auth.currentUser = await buildCurrentUser(data.user);
   }
 };
 
@@ -185,11 +180,7 @@ export const onAuthStateChanged = (
   // Mevcut oturum için hemen tetikle
   supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (session?.user) {
-      const user = await buildCurrentUser(
-        session.user.id,
-        session.user.email ?? null,
-        session.user.user_metadata ?? {},
-      );
+      const user = await buildCurrentUser(session.user);
       auth.currentUser = user;
       callback(user);
     } else {
@@ -199,11 +190,7 @@ export const onAuthStateChanged = (
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
-      const user = await buildCurrentUser(
-        session.user.id,
-        session.user.email ?? null,
-        session.user.user_metadata ?? {},
-      );
+      const user = await buildCurrentUser(session.user);
       auth.currentUser = user;
       callback(user);
     } else {
@@ -213,4 +200,45 @@ export const onAuthStateChanged = (
   });
 
   return () => subscription.unsubscribe();
+};
+
+// ─── E-posta OTP ─────────────────────────────────────────────────────────────
+// shouldCreateUser: true → hesap yoksa otomatik oluşturur (kayıt + giriş tek akış)
+export const sendEmailOtp = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true },
+  });
+  if (error) throw error;
+};
+
+export const verifyEmailOtp = async (email: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  });
+  if (error) throw error;
+  return data;
+};
+
+// ─── Telefon OTP (SMS) ───────────────────────────────────────────────────────
+// Numara E.164 formatında olmalı: +905551112233
+// Supabase panelinde SMS sağlayıcısı (Twilio vb.) tanımlanmalıdır.
+export const sendPhoneOtp = async (phone: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    phone,
+    options: { shouldCreateUser: true },
+  });
+  if (error) throw error;
+};
+
+export const verifyPhoneOtp = async (phone: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: 'sms',
+  });
+  if (error) throw error;
+  return data;
 };
