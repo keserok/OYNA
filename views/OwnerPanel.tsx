@@ -19,6 +19,8 @@ import {
   togglePitchOpen,
   requestWithdrawal,
   getOwnerBalance,
+  approveBooking,
+  rejectBooking,
   toTurkishError,
   type TariffInput,
 } from '../services/pitchOwnerService';
@@ -3041,14 +3043,134 @@ const WidgetSettingsModal: React.FC<{
     );
 };
 
+// ── Gerçek (canlı) onay bekleyen uygulama rezervasyonları ──────────────────────
+interface RealPendingBooking {
+  id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  customer_name: string | null;
+  price: number;
+  deposit_amount: number;
+  source: string;
+  courts: { name: string } | null;
+}
+
+const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) => {
+    const [rows, setRows] = useState<RealPendingBooking[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [busyId, setBusyId] = useState<string | null>(null);
+
+    const load = React.useCallback(async () => {
+        if (!pitchId) return;
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('pitch_bookings')
+                .select('id, booking_date, start_time, end_time, customer_name, price, deposit_amount, source, courts(name)')
+                .eq('pitch_id', pitchId)
+                .eq('status', 'PENDING')
+                .in('source', ['APP_BOOKING', 'APP_MATCH'])
+                .order('booking_date', { ascending: true })
+                .order('start_time', { ascending: true });
+            if (error) throw error;
+            setRows((data ?? []) as unknown as RealPendingBooking[]);
+        } catch (err) {
+            console.error('Bekleyen rezervasyonlar yüklenemedi:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [pitchId]);
+
+    useEffect(() => { load(); }, [load]);
+
+    // Yeni rezervasyon düştüğünde anlık güncelle
+    useEffect(() => {
+        if (!pitchId) return;
+        const channel = supabase
+            .channel(`owner-pending-${pitchId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pitch_bookings', filter: `pitch_id=eq.${pitchId}` }, () => load())
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [pitchId, load]);
+
+    const handle = async (id: string, action: 'APPROVE' | 'REJECT') => {
+        setBusyId(id);
+        try {
+            if (action === 'APPROVE') {
+                await approveBooking(id);
+            } else {
+                await rejectBooking(id, 'Tesis sahibi rezervasyonu onaylamadı.');
+            }
+            setRows(prev => prev.filter(r => r.id !== id));
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'İşlem başarısız.');
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    if (!pitchId) return null;
+
+    return (
+        <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <Clock size={16} className="text-[#FFFF00]" /> Uygulama Talepleri
+                    {rows.length > 0 && <span className="bg-[#FFFF00] text-black text-[10px] px-2 py-0.5 rounded-full">{rows.length}</span>}
+                </h3>
+                <button onClick={load} className="text-gray-400 hover:text-white" title="Yenile"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>
+            </div>
+            {rows.length === 0 ? (
+                <div className="bg-[#161B22] border border-white/5 rounded-2xl p-5 text-center text-xs text-gray-500">
+                    {loading ? 'Yükleniyor...' : 'Onay bekleyen uygulama rezervasyonu yok.'}
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {rows.map(b => (
+                        <div key={b.id} className="bg-[#161B22] border border-orange-500/20 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <p className="text-sm font-black text-white">{b.courts?.name ?? 'Saha'} · {b.start_time.slice(0,5)}-{b.end_time.slice(0,5)}</p>
+                                    <p className="text-[11px] text-gray-400 mt-0.5">{new Date(b.booking_date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}{b.price > 0 ? ` · ₺${b.price}` : ''}</p>
+                                </div>
+                                <span className="text-[9px] font-black px-2 py-1 rounded-full bg-orange-500/15 text-orange-400 uppercase">Bekliyor</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    disabled={busyId === b.id}
+                                    onClick={() => handle(b.id, 'REJECT')}
+                                    className="py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black uppercase hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                >
+                                    Reddet
+                                </button>
+                                <button
+                                    disabled={busyId === b.id}
+                                    onClick={() => handle(b.id, 'APPROVE')}
+                                    className="py-2.5 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black uppercase hover:bg-[#39FF14]/20 transition-colors disabled:opacity-50"
+                                >
+                                    {busyId === b.id ? '...' : 'Onayla'}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface PendingActionsViewProps {
     pendingRequests: any[];
+    realPitchId?: string | null;
+    autoApprove?: boolean;
+    onToggleAutoApprove?: () => void;
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
     onBack: () => void;
 }
 
-const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, onApprove, onReject, onBack }) => {
+const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, onApprove, onReject, onBack }) => {
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
 
@@ -3111,6 +3233,27 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24">
+                {/* Otomatik onay ayarı + gerçek (canlı) uygulama rezervasyon talepleri — her zaman üstte */}
+                {subTab === 'REQUESTS' && realPitchId && onToggleAutoApprove && (
+                    <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-sm font-black text-white">Otomatik Onay</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
+                                {autoApprove
+                                    ? 'Açık: talepler süre sonunda otomatik onaylanır.'
+                                    : 'Kapalı: her talebi elle onaylaman gerekir.'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={onToggleAutoApprove}
+                            className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${autoApprove ? 'bg-[#39FF14]' : 'bg-gray-600'}`}
+                            aria-label="Otomatik onay aç/kapa"
+                        >
+                            <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition-transform ${autoApprove ? 'translate-x-6' : ''}`} />
+                        </button>
+                    </div>
+                )}
+                {subTab === 'REQUESTS' && <RealPendingBookings pitchId={realPitchId ?? null} />}
                 {subTab === 'REQUESTS' ? (
                     activeRequests.length > 0 ? (
                         <div className="space-y-4">
@@ -3449,7 +3592,27 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
     } catch (err) {
       console.error('Tesis durumu güncellenemedi:', err);
       setIsFacilityOpen(!newStatus); // hata: geri al
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('NO_TARIFF')) {
+        alert('Sahayı yayına almadan önce en az bir aktif tarife girmelisin (0 TL olabilir). Tarifeler bölümünden ekleyebilirsin.');
+      }
     }
+  };
+
+  // Otomatik onay opsiyonu (pitches.auto_approve_enabled)
+  const [autoApprove, setAutoApprove] = useState(true);
+  useEffect(() => {
+    if (!realPitchId) return;
+    supabase.from('pitches').select('auto_approve_enabled').eq('id', realPitchId).single()
+      .then(({ data }) => { if (data) setAutoApprove((data as any).auto_approve_enabled ?? true); });
+  }, [realPitchId]);
+
+  const toggleAutoApprove = async () => {
+    const next = !autoApprove;
+    setAutoApprove(next); // iyimser
+    if (!realPitchId) return;
+    const { error } = await supabase.from('pitches').update({ auto_approve_enabled: next }).eq('id', realPitchId);
+    if (error) { console.error('auto_approve güncellenemedi:', error); setAutoApprove(!next); }
   };
 
   const handleProcessRequest = (id: string, action: 'APPROVE' | 'REJECT') => {
@@ -3592,9 +3755,12 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
       {activeTab === 'FINANCE' && <FinanceView hasDebt={hasDebt} isPayingDebt={isPayingDebt} onPayDebt={handlePayDebt} />}
       {activeTab === 'TEAM' && <TeamView />}
       {activeTab === 'PENDING_ACTIONS' && (
-          <PendingActionsView 
-              pendingRequests={pendingRequests} 
-              onApprove={(id) => handleProcessRequest(id, 'APPROVE')} 
+          <PendingActionsView
+              pendingRequests={pendingRequests}
+              realPitchId={realPitchId}
+              autoApprove={autoApprove}
+              onToggleAutoApprove={toggleAutoApprove}
+              onApprove={(id) => handleProcessRequest(id, 'APPROVE')}
               onReject={(id) => handleProcessRequest(id, 'REJECT')}
               onBack={() => setActiveTab('HOME')}
           />
