@@ -1881,7 +1881,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               image: draftMatch.image,
               price: draftMatch.price,
               type: 'OPEN', slots: [], features: []
-          });
+          } as any);
           setSelectedTimeSlot({ date: draftMatch.date, time: draftMatch.time });
           if (draftMatch.slots) {
               const playersRecord: Record<string, any> = {};
@@ -2026,7 +2026,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     setMyPlayers(prev => {
                         const next = { ...prev };
                         for (const k in next) { if (next[k].id === player.id) delete next[k]; }
-                        next[slotId] = { ...player, status: 'PENDING' };
+                        next[slotId] = { ...player, avatar: player.avatar || '', status: 'PENDING' as const };
                         return next;
                     });
                 }}
@@ -2106,7 +2106,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 format: format.v,
                                 duration: dna.duration,
                                 gender: dna.gender,
-                                ageGroup: dna.age,
+                                ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age,
                                 minRating: 4.0,
                                 image: selectedPitch?.image || 'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
                                 badges: ['Fair Play Vurgulu', `${format.label}`],
@@ -2141,7 +2141,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             };
                             try {
                                 if (isDraftMode && draftMatch) {
-                                    await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: dna.age });
+                                    await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age });
                                     setActiveDraftId(null);
                                 } else {
                                     await addMatch(matchData);

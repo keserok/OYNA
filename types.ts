@@ -266,6 +266,7 @@ export interface MatchListing {
   id: string;
   title: string;
   location: string;
+  pitchName?: string; // Saha adı etiketi (servis panelleri için)
   time: string;
   date: string;
   price: number;
@@ -409,6 +410,7 @@ export interface Referee {
   id: string;
   authUid?: string; // Link to users table for actual login
   name: string;
+  distance?: string; // Kullanıcı konumuna göre hesaplanan mesafe etiketi
   level: string;
   matchCount: number;
   fee: number;
@@ -444,6 +446,7 @@ export interface Equipment {
 export interface Goalkeeper {
   id: string;
   name: string;
+  distance?: string; // Kullanıcı konumuna göre hesaplanan mesafe etiketi
   height: string;
   age: number;
   rating: number;
@@ -549,6 +552,7 @@ export interface JobListing {
 
 export interface DirectOffer {
   id: string;
+  matchId?: string; // Teklifin bağlı olduğu maç (varsa)
   pitchName: string;
   teamName: string;
   captainName: string;

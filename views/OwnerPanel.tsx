@@ -3106,9 +3106,6 @@ const WidgetSettingsModal: React.FC<{
     );
 };
 
-    );
-};
-
 // ── Gerçek (canlı) onay bekleyen uygulama rezervasyonları ──────────────────────
 interface RealPendingBooking {
   id: string;

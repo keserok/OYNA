@@ -107,7 +107,7 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                     <DeepEditUserModal user={modal.data} onClose={closeModal} />
                 )}
                 {modal.type === 'deepEditProvider' && (
-                    <DeepEditProviderModal data={modal.data} type={modal.typeParam} onClose={closeModal} />
+                    <DeepEditProviderModal item={modal.data} typeParam={modal.typeParam} onClose={closeModal} />
                 )}
                 {modal.type === 'addPitch' && (
                     <AddPitchModal onClose={closeModal} />

@@ -781,7 +781,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                 <span className="text-[10px] text-gray-400 font-bold">{myUpcomingMatches[0].location}</span>
                             </div>
                             <button 
-                              onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0])}
+                              onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0] as any)}
                               className="text-[10px] font-black text-green-400 hover:text-white transition-colors"
                             >
                                 DETAYLAR
