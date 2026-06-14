@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, SavedPaymentCard, WalletTab, Court } from './types';
 import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER_TEAMS } from './constants';
 import { MOCK_USERS } from './__mocks__/mockUsers';
 import { MOCK_TEAMS } from './__mocks__/mockTeams';
@@ -77,6 +77,25 @@ const IS_LOCAL_DEV =
   import.meta.env.VITE_DEV_MODE === 'true' ||
   !import.meta.env.VITE_SUPABASE_URL;
 
+const SAVED_CARDS_KEY = 'oyna_saved_cards';
+
+function loadSavedCards(): SavedPaymentCard[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(SAVED_CARDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SavedPaymentCard[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedCards(cards: SavedPaymentCard[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SAVED_CARDS_KEY, JSON.stringify(cards));
+}
+
 // INITIAL_USERS artık __mocks__/mockUsers.ts'de (MOCK_USERS olarak).
 // Prod'da boş dizi, dev'de mock veriler yüklenir.
 export const INITIAL_USERS: AdminUser[] = IS_LOCAL_DEV ? MOCK_USERS : [];
@@ -147,18 +166,6 @@ interface AppState {
   adminTeams: Team[];
   appSettings: AppSettings;
 
-  // ─── SaaS OwnerPanel (Patron Paneli) States ──────────────────────
-  facilityUIConfigs: import('./types').FacilityUIConfig[];
-  setFacilityUIConfigs: (configs: import('./types').FacilityUIConfig[]) => Promise<void>;
-  roleAppearanceRules: import('./types').RoleAppearanceRule[];
-  setRoleAppearanceRules: (rules: import('./types').RoleAppearanceRule[]) => Promise<void>;
-  crmUsers: import('./types').CRMUser[];
-  setCrmUsers: (users: import('./types').CRMUser[]) => void;
-  addCrmUser: (user: import('./types').CRMUser) => Promise<void>;
-  updateCrmUser: (user: import('./types').CRMUser) => Promise<void>;
-  deleteCrmUser: (id: string) => Promise<void>;
-  // ───────────────────────────────────────────────────────────────
-
 
   // App-wide toggles
   announcementBanner: string;
@@ -217,6 +224,28 @@ interface AppState {
   setSelectedRef: (ref: Referee | null) => void;
   setMarketplaceReturnView: (view: AppView) => void;
   setMatchJoinReturnView: (view: AppView) => void;
+  bookingPitch: Pitch | null;
+  bookingCourt: Court | null;
+  bookingDate: string | null;
+  bookingSlot: string | null;
+  bookingPrice: number | null;
+  bookingDeposit: number | null;
+  setBookingPitch: (pitch: Pitch | null) => void;
+  setBookingCourt: (court: Court | null) => void;
+  setBookingDate: (date: string | null) => void;
+  setBookingSlot: (slot: string | null) => void;
+  setBookingPrice: (price: number | null) => void;
+  setBookingDeposit: (deposit: number | null) => void;
+
+  savedCards: SavedPaymentCard[];
+  walletReturnView: AppView | null;
+  walletInitialTab: WalletTab;
+  walletPendingDeposit: boolean;
+  addSavedCard: (card: Omit<SavedPaymentCard, 'id'>) => void;
+  removeSavedCard: (id: string) => void;
+  setWalletReturnView: (view: AppView | null) => void;
+  setWalletInitialTab: (tab: WalletTab) => void;
+  setWalletPendingDeposit: (pending: boolean) => void;
 
   // ─── Direct Setters for Firebase Listeners ─────────────────────
   setAdminPitches: (pitches: Pitch[]) => void;
@@ -343,6 +372,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeDraftId: null,
   selectedGk: null,
   selectedRef: null,
+  bookingPitch: null,
+  bookingCourt: null,
+  bookingDate: null,
+  bookingSlot: null,
+  bookingPrice: null,
+  bookingDeposit: null,
+  savedCards: loadSavedCards(),
+  walletReturnView: null,
+  walletInitialTab: 'MAIN',
+  walletPendingDeposit: false,
   marketplaceReturnView: 'DASHBOARD',
   matchJoinReturnView: 'MATCH_DISCOVERY',
   reliabilityScore: 100,
@@ -384,39 +423,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminTeams: USER_TEAMS,
   appSettings: INITIAL_SETTINGS,
   
-  facilityUIConfigs: [],
-  setFacilityUIConfigs: async (configs) => {
-    set({ facilityUIConfigs: configs });
-    for (const config of configs) {
-      await FB.fbSaveFacilityUIConfig(config).catch(e => console.error(e));
-    }
-  },
-  roleAppearanceRules: [],
-  setRoleAppearanceRules: async (rules) => {
-    set({ roleAppearanceRules: rules });
-    for (const rule of rules) {
-      await FB.fbSaveRoleAppearanceRule(rule).catch(e => console.error(e));
-    }
-  },
-  crmUsers: [],
-  setCrmUsers: (users) => set({ crmUsers: users }),
-  addCrmUser: async (user) => {
-    const prev = get().crmUsers;
-    set({ crmUsers: [user, ...prev] });
-    try { await FB.fbAddCRMUser(user); }
-    catch (e) { set({ crmUsers: prev }); throw e; }
-  },
-  updateCrmUser: async (user) => {
-    const prev = get().crmUsers;
-    set({ crmUsers: prev.map(u => u.id === user.id ? user : u) });
-    try { await FB.fbUpdateCRMUser(user); }
-    catch (e) { set({ crmUsers: prev }); throw e; }
-  },
-  deleteCrmUser: async (id) => {
-    const prev = get().crmUsers;
-    set({ crmUsers: prev.filter(u => u.id !== id) });
-    try { await FB.fbDeleteCRMUser(id); }
-    catch (e) { set({ crmUsers: prev }); throw e; }
+  loadOwnerData: async (_facilityId?: string) => {
+    // CRM / UI Builder kaldırıldı — saha sahibi verisi pitchOwnerService üzerinden yüklenir.
   },
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
@@ -603,6 +611,30 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedRef: (selectedRef) => set({ selectedRef }),
   setMarketplaceReturnView: (marketplaceReturnView) => set({ marketplaceReturnView }),
   setMatchJoinReturnView: (matchJoinReturnView) => set({ matchJoinReturnView }),
+  setBookingPitch: (bookingPitch) => set({ bookingPitch }),
+  setBookingCourt: (bookingCourt) => set({ bookingCourt }),
+  setBookingDate: (bookingDate) => set({ bookingDate }),
+  setBookingSlot: (bookingSlot) => set({ bookingSlot }),
+  setBookingPrice: (bookingPrice) => set({ bookingPrice }),
+  setBookingDeposit: (bookingDeposit) => set({ bookingDeposit }),
+  addSavedCard: (card) => {
+    const next: SavedPaymentCard = { ...card, id: `card-${Date.now()}` };
+    set((s) => {
+      const savedCards = [...s.savedCards, next];
+      persistSavedCards(savedCards);
+      return { savedCards };
+    });
+  },
+  removeSavedCard: (id) => {
+    set((s) => {
+      const savedCards = s.savedCards.filter((c) => c.id !== id);
+      persistSavedCards(savedCards);
+      return { savedCards };
+    });
+  },
+  setWalletReturnView: (walletReturnView) => set({ walletReturnView }),
+  setWalletInitialTab: (walletInitialTab) => set({ walletInitialTab }),
+  setWalletPendingDeposit: (walletPendingDeposit) => set({ walletPendingDeposit }),
 
   // Direct Firebase Listener Setters
   initialLoadComplete: false,
@@ -684,24 +716,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (refs && refs.length > 0) set({ adminReferees: refs });
     } catch (err) {
       console.error('Error loading services', err);
-    }
-  },
-
-  // Load Owner Data (SaaS)
-  loadOwnerData: async (facilityId?: string) => {
-    try {
-      const [uiConfigs, roleRules, crmUsers] = await Promise.all([
-        FB.fbGetFacilityUIConfigs(facilityId),
-        FB.fbGetRoleAppearanceRules(facilityId),
-        FB.fbGetCRMUsers(facilityId)
-      ]);
-      set({ 
-        facilityUIConfigs: uiConfigs,
-        roleAppearanceRules: roleRules,
-        crmUsers: crmUsers
-      });
-    } catch (err) {
-      console.error('Error loading owner data', err);
     }
   },
 

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, MapPin, Users, User, Scale, Shield, Swords,
   Clock, Check, Wallet, Sparkles, ChevronRight,
-  Target, MousePointer2, Trophy, Activity, Calendar, Star, TrendingUp, Flame, Zap
+  Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap, PenLine
 } from 'lucide-react';
 import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
@@ -610,7 +610,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   <Flame size={16} className="text-black fill-black drop-shadow-[0_0_6px_rgba(0,0,0,0.6)]" />
                 </motion.div>
-                <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">Sahaya Çık</span>
+                <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
               <h2 className="text-5xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,255,0,0.3)' }}>Top<br />Oyna</h2>
               <p className="text-[10px] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
@@ -654,33 +654,116 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         {/* ═══════════════════════════════════════════════════════════════════
             MAÇ OLUŞTUR — VERSİYON A (AKTİF)
             Stil: Saha Vitrini / Maça Katıl / Rakip Bul ile aynı dil.
-            Amber dolgu, carbon-fibre doku, sol başlık + sağ yuvarlak ikon.
+            Kırmızı dolgu, carbon-fibre doku, sol başlık + sağ yuvarlak ikon + kesikli kırmızı sınır çizgisi.
         ═══════════════════════════════════════════════════════════════════ */}
         <AnimatedButton
           as="div"
           variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.02, y: -3 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('MATCH_CREATE')}
-          className="col-span-2 min-h-[128px] py-5 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-yellow"
-          style={{ borderColor: 'rgba(245,158,11,0.2)' }}
+          className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
+          style={{ boxShadow: '0 0 60px rgba(255,122,0,0.35), 0 0 120px rgba(255,92,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
-          {/* Carbon Fibre Texture */}
+          {/* Turuncu → Siyah ana gradient */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FF7A00 0%, #FF5C00 25%, #E64A19 45%, #1a0a00 75%, #000000 100%)' }} />
+          {/* Animated sweep — koyu tarafta neon kırmızı/turuncu vurgu */}
+          <motion.div
+            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,122,0,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
+          />
+          {/* Carbon texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
-          {/* Gradient fade to protect text */}
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/15 via-transparent to-transparent pointer-events-none" />
+          {/* Sol taraf turuncu parlaması (metin bölgesi) */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(255,122,0,0.15) 0%, transparent 50%)' }} />
+          {/* Shimmer */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
+          />
+
           {/* Content */}
-          <div className="absolute inset-0 p-5 flex items-center justify-between">
+          <div className="absolute inset-0 p-6 flex items-center justify-between">
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <Swords size={18} className="text-amber-400" />
-                <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Kaptan Modu</span>
+              <div className="flex items-center gap-2 mb-2">
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                  <Calendar size={16} className="text-black drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]" />
+                </motion.div>
+                <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">ORGANİZASYON</span>
               </div>
-              <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Maç<br />Oluştur</h2>
-              <p className="text-[10px] text-amber-100 mt-1 font-bold">Takımını kur, sahayı seç, oyna.</p>
+              <h2 className="text-5xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
+              <p className="text-[10px] text-black/60 mt-2 font-bold">Maçı organize et.</p>
             </div>
-            <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-amber-500/20 group-hover:scale-110 transition-transform">
-              <Swords size={40} className="text-amber-400" />
+
+            {/* Organizasyon Diski — sağ taraf, siyah zemin üzerinde parlak turuncu takvim + kalem */}
+            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+              {/* Arka plan disk — koyu kısım */}
+              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
+              {/* Dış halka */}
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-0 rounded-full border-2"
+                style={{ borderColor: 'rgba(255,122,0,0.6)', boxShadow: '0 0 20px rgba(255,122,0,0.4), inset 0 0 10px rgba(255,122,0,0.1)' }}
+              />
+              {/* İkinci parlama halkası */}
+              <motion.div
+                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute rounded-full border"
+                style={{ inset: '-6px', borderColor: 'rgba(255,122,0,0.2)' }}
+              />
+              {/* Salınım animasyonu ile saha + takvim özel sembolü */}
+              <motion.div
+                animate={{ rotate: [0, 4, -4, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative z-10 flex items-center justify-center"
+              >
+                <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 12px rgba(255,122,0,0.8))' }}>
+                  {/* ── SOL: Futbol Sahası ── */}
+                  <rect x="6" y="14" width="40" height="72" rx="3" stroke="#FF7A00" strokeWidth="2.2" />
+                  {/* Orta çizgi */}
+                  <line x1="6" y1="50" x2="46" y2="50" stroke="#FF7A00" strokeWidth="1.5" />
+                  {/* Orta daire */}
+                  <circle cx="26" cy="50" r="8" stroke="#FF7A00" strokeWidth="1.5" />
+                  <circle cx="26" cy="50" r="1.5" fill="#FF7A00" />
+                  {/* Üst ceza sahası */}
+                  <rect x="14" y="14" width="24" height="14" rx="1" stroke="#FF7A00" strokeWidth="1.3" />
+                  <rect x="18" y="14" width="16" height="6" rx="1" stroke="#FF7A00" strokeWidth="1.1" />
+                  {/* Alt ceza sahası */}
+                  <rect x="14" y="72" width="24" height="14" rx="1" stroke="#FF7A00" strokeWidth="1.3" />
+                  <rect x="18" y="80" width="16" height="6" rx="1" stroke="#FF7A00" strokeWidth="1.1" />
+
+                  {/* ── SAĞ: Takvim ── */}
+                  <rect x="52" y="18" width="42" height="66" rx="4" stroke="#FF7A00" strokeWidth="2.2" />
+                  {/* Takvim üst bar */}
+                  <line x1="52" y1="30" x2="94" y2="30" stroke="#FF7A00" strokeWidth="1.8" />
+                  {/* Takvim askıları */}
+                  <line x1="62" y1="13" x2="62" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="73" y1="13" x2="73" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="84" y1="13" x2="84" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
+                  {/* Takvim grid — 5x4 kutucuk */}
+                  {[0, 1, 2, 3, 4].map(row => (
+                    [0, 1, 2, 3].map(col => (
+                      <rect
+                        key={`${row}-${col}`}
+                        x={57 + col * 9}
+                        y={34 + row * 9.5}
+                        width={6}
+                        height={6}
+                        rx={1.2}
+                        fill="none"
+                        stroke="#FF7A00"
+                        strokeWidth="1.2"
+                      />
+                    ))
+                  ))}
+                </svg>
+              </motion.div>
             </div>
           </div>
         </AnimatedButton>
@@ -750,92 +833,57 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         </AnimatedButton>
         */}
 
-        {/* Community Button (FULL WIDTH) */}
-        <AnimatedButton
-          as="div"
-          variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onNavigate('COMMUNITY_VIEW')}
-          className="col-span-2 min-h-[128px] py-5 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-yellow"
-          style={{ borderColor: 'rgba(251,146,60,0.2)' }}
-        >
-          {/* Intertwined Geometric Mesh Pattern (No Circles) */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.12]">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="community-mesh" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="scale(1.5) rotate(45)">
-                  {/* Interlocking squares/diamonds symbolizing structured community */}
-                  <rect x="0" y="0" width="24" height="24" fill="none" stroke="black" strokeWidth="3" />
-                  <rect x="16" y="16" width="24" height="24" fill="none" stroke="black" strokeWidth="3" />
-                  <path d="M 24 0 L 24 16 M 0 24 L 16 24 M 40 16 L 40 24 M 16 40 L 24 40" stroke="black" strokeWidth="3" fill="none" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#community-mesh)" />
-            </svg>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/15 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute inset-0 p-5 flex items-center justify-between">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <Users size={18} className="text-orange-400" />
-                <span className="text-orange-400 text-xs font-bold uppercase tracking-widest">Sosyal</span>
-              </div>
-              <h2 className="text-lg xs:text-xl sm:text-2xl font-black text-white italic uppercase leading-none drop-shadow-sm">Topluluklar, Takımlarım ve Arkadaşlarım</h2>
-              <p className="text-[10px] text-orange-200 mt-1 font-bold">Üniversite ve şirket ligleri.</p>
-            </div>
-            <div className="w-24 h-24 bg-orange-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-orange-500/20 group-hover:scale-110 transition-transform">
-              <Users size={40} className="text-orange-400" />
-            </div>
-          </div>
-        </AnimatedButton>
+
 
         {/* 3. Pitch Booking (FULL WIDTH) */}
         <AnimatedButton
           as="div"
           variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.02, y: -3 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('PITCH_DISCOVERY')}
-          className="col-span-2 h-32 bg-[#16a34a] rounded-[32px] relative overflow-hidden group cursor-pointer shadow-[0_0_30px_rgba(22,163,74,0.3)] breathing-glow"
+          className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
+          style={{ boxShadow: '0 0 60px rgba(16,185,129,0.35), 0 0 120px rgba(5,150,105,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
-          {/* Vektörel Futbol Sahası Deseni */}
+          {/* Yeşil → Siyah ana gradient */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 25%, #34D399 45%, #022014 75%, #000000 100%)' }} />
+          {/* Animated sweep — koyu tarafta neon yeşil vurgu */}
+          <motion.div
+            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(16,185,129,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
+          />
+          {/* Carbon texture */}
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+          {/* Sol taraf yeşil parlaması (metin bölgesi) */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, transparent 50%)' }} />
+          {/* Shimmer */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
+          />
+
+          {/* Vektörel Futbol Sahası Deseni (Koyu Yeşil Uyumlu) */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Grass Stripes */}
-            <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
-
-            {/* Pitch SVG */}
-            <div className="absolute inset-0 w-full h-full opacity-40">
-              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" xmlns="http://www.w3.org/2000/svg">
-                <g stroke="white" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  {/* Outer Boundary */}
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
+            <div className="absolute inset-0 w-full h-full opacity-15">
+              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#10B981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="25" y="25" width="1000" height="630" />
-                  {/* Halfway Line */}
                   <line x1="525" y1="25" x2="525" y2="655" />
-                  {/* Center Circle */}
                   <circle cx="525" cy="340" r="90" />
-                  {/* Center Spot */}
-                  <circle cx="525" cy="340" r="4" fill="white" />
-
-                  {/* Left Penalty Area */}
+                  <circle cx="525" cy="340" r="4" fill="#10B981" />
                   <rect x="25" y="140" width="165" height="400" />
-                  {/* Left Goal Area */}
                   <rect x="25" y="240" width="55" height="200" />
-                  {/* Left Penalty Spot */}
-                  <circle cx="120" cy="340" r="4" fill="white" />
-                  {/* Left Penalty Arc */}
+                  <circle cx="120" cy="340" r="4" fill="#10B981" />
                   <path d="M 190 260 A 90 90 0 0 1 190 420" />
-
-                  {/* Right Penalty Area */}
                   <rect x="860" y="140" width="165" height="400" />
-                  {/* Right Goal Area */}
                   <rect x="970" y="240" width="55" height="200" />
-                  {/* Right Penalty Spot */}
-                  <circle cx="930" cy="340" r="4" fill="white" />
-                  {/* Right Penalty Arc */}
+                  <circle cx="930" cy="340" r="4" fill="#10B981" />
                   <path d="M 860 260 A 90 90 0 0 0 860 420" />
-
-                  {/* Corner Arcs */}
                   <path d="M 65 25 A 40 40 0 0 0 25 65" />
                   <path d="M 25 615 A 40 40 0 0 0 65 655" />
                   <path d="M 985 25 A 40 40 0 0 1 1025 65" />
@@ -843,22 +891,75 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 </g>
               </svg>
             </div>
-
-            {/* Gradient Fade to protect text */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#16a34a]/90 via-[#16a34a]/40 to-transparent"></div>
           </div>
-          <div className="absolute inset-0 p-5 flex items-center justify-between">
+
+          {/* Content */}
+          <div className="absolute inset-0 p-6 flex items-center justify-between">
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin size={18} className="text-white" />
-                <span className="text-white text-xs font-bold uppercase tracking-widest">Rezervasyon</span>
+              <div className="flex items-center gap-2 mb-2">
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                  <MapPin size={16} className="text-white fill-none drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
+                </motion.div>
+                <span className="text-white/95 text-[10px] font-black uppercase tracking-[0.3em]">REZERVASYON</span>
               </div>
-              <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Saha<br />Vitrini</h2>
-              <p className="text-[10px] text-lime-100 mt-1 font-bold">Uygun sahaları gör.</p>
+              <h2 className="text-5xl font-black text-white italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
+              <p className="text-[10px] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
-            <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/20 group-hover:scale-110 transition-transform">
-              <MapPin size={40} className="text-white" />
+
+            {/* Neon Harita Diski — sağ taraf, siyah zemin üzerinde parlak yeşil MapPin */}
+            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+              {/* Arka plan disk — koyu kısım */}
+              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
+              {/* Dış halka */}
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-0 rounded-full border-2"
+                style={{ borderColor: 'rgba(16,185,129,0.6)', boxShadow: '0 0 20px rgba(16,185,129,0.4), inset 0 0 10px rgba(16,185,129,0.1)' }}
+              />
+              {/* İkinci parlama halkası */}
+              <motion.div
+                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute rounded-full border"
+                style={{ inset: '-6px', borderColor: 'rgba(16,185,129,0.2)' }}
+              />
+              {/* Salınım animasyonu ile MapPin */}
+              <motion.div
+                animate={{ rotate: [0, 4, -4, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative z-10 text-[#10B981]"
+              >
+                <MapPin
+                  size={54}
+                  className="drop-shadow-[0_0_16px_rgba(16,185,129,0.9)]"
+                />
+              </motion.div>
             </div>
+          </div>
+        </AnimatedButton>
+
+        {/* Rezervasyonlarım — saha kiralamalarını görüntüle/iptal et */}
+        <AnimatedButton
+          as="div"
+          variants={itemVariants}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onNavigate('MY_BOOKINGS')}
+          className="col-span-2 py-4 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer"
+          style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+        >
+          <div className="px-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#39FF14]">
+                <CalendarCheck size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white italic uppercase leading-none">Rezervasyonlarım</h3>
+                <p className="text-[10px] text-gray-400 mt-1 font-bold">Saha kiralamalarını yönet</p>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-gray-500 group-hover:translate-x-1 transition-transform" />
           </div>
         </AnimatedButton>
 
@@ -903,14 +1004,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           />
           {/* Content */}
           <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
-            <motion.div
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-11 h-11 rounded-2xl flex items-center justify-center"
-              style={{ background: 'rgba(57,255,20,0.15)', border: '1px solid rgba(57,255,20,0.5)', color: '#39FF14' }}
-            >
-              <Shield size={22} />
-            </motion.div>
+            <div className="flex justify-between items-start">
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                style={{ background: 'rgba(57,255,20,0.15)', border: '1px solid rgba(57,255,20,0.5)', color: '#39FF14' }}
+              >
+                <Shield size={22} />
+              </motion.div>
+            </div>
             <div>
               <motion.h3
                 animate={{ textShadow: ['0 0 8px rgba(57,255,20,0.5)', '0 0 24px rgba(57,255,20,1)', '0 0 8px rgba(57,255,20,0.5)'] }}
@@ -918,7 +1021,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
                 style={{ color: '#39FF14' }}
               >
-                KALECİLER
+                KALECİ BUL
               </motion.h3>
             </div>
           </div>
@@ -965,14 +1068,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           />
           {/* Content */}
           <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
-            <motion.div
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-              className="w-11 h-11 rounded-2xl flex items-center justify-center"
-              style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(99,179,255,0.5)', color: '#60a5fa' }}
-            >
-              <Scale size={22} />
-            </motion.div>
+            <div className="flex justify-between items-start">
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(99,179,255,0.5)', color: '#60a5fa' }}
+              >
+                <Scale size={22} />
+              </motion.div>
+            </div>
             <div>
               <motion.h3
                 animate={{ textShadow: ['0 0 8px rgba(59,130,246,0.5)', '0 0 24px rgba(99,179,255,1)', '0 0 8px rgba(59,130,246,0.5)'] }}
@@ -980,143 +1085,186 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
                 style={{ color: '#60a5fa' }}
               >
-                HAKEMLER
+                HAKEM KİRALA
               </motion.h3>
             </div>
           </div>
         </AnimatedButton>
 
-        {/* 3. Pitch Booking (FULL WIDTH) */}
-        <AnimatedButton
-          as="div"
-          variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onNavigate('PITCH_DISCOVERY')}
-          className="col-span-2 min-h-[128px] py-5 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-green"
-          style={{ borderColor: 'rgba(34,197,94,0.2)' }}
-        >
-          {/* Vektörel Futbol Sahası Deseni */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Grass Stripes */}
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
 
-            {/* Pitch SVG */}
-            <div className="absolute inset-0 w-full h-full opacity-30">
-              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" xmlns="http://www.w3.org/2000/svg">
-                <g stroke="white" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  {/* Outer Boundary */}
-                  <rect x="25" y="25" width="1000" height="630" />
-                  {/* Halfway Line */}
-                  <line x1="525" y1="25" x2="525" y2="655" />
-                  {/* Center Circle */}
-                  <circle cx="525" cy="340" r="90" />
-                  {/* Center Spot */}
-                  <circle cx="525" cy="340" r="4" fill="white" />
-
-                  {/* Left Penalty Area */}
-                  <rect x="25" y="140" width="165" height="400" />
-                  {/* Left Goal Area */}
-                  <rect x="25" y="240" width="55" height="200" />
-                  {/* Left Penalty Spot */}
-                  <circle cx="120" cy="340" r="4" fill="white" />
-                  {/* Left Penalty Arc */}
-                  <path d="M 190 260 A 90 90 0 0 1 190 420" />
-
-                  {/* Right Penalty Area */}
-                  <rect x="860" y="140" width="165" height="400" />
-                  {/* Right Goal Area */}
-                  <rect x="970" y="240" width="55" height="200" />
-                  {/* Right Penalty Spot */}
-                  <circle cx="930" cy="340" r="4" fill="white" />
-                  {/* Right Penalty Arc */}
-                  <path d="M 860 260 A 90 90 0 0 0 860 420" />
-
-                  {/* Corner Arcs */}
-                  <path d="M 65 25 A 40 40 0 0 0 25 65" />
-                  <path d="M 25 615 A 40 40 0 0 0 65 655" />
-                  <path d="M 985 25 A 40 40 0 0 1 1025 65" />
-                  <path d="M 1025 615 A 40 40 0 0 1 985 655" />
-                </g>
-              </svg>
-            </div>
-
-            {/* Gradient Fade to protect text */}
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/15 via-transparent to-transparent"></div>
-          </div>
-          <div className="absolute inset-0 p-5 flex items-center justify-between">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin size={18} className="text-[#39FF14]" />
-                <span className="text-[#39FF14] text-xs font-bold uppercase tracking-widest">Rezervasyon</span>
-              </div>
-              <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Saha<br />Vitrini</h2>
-              <p className="text-[10px] text-lime-100 mt-1 font-bold">Uygun sahaları gör.</p>
-            </div>
-            <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-emerald-500/20 group-hover:scale-110 transition-transform">
-              <MapPin size={40} className="text-[#39FF14]" />
-            </div>
-          </div>
-        </AnimatedButton>
-        {/* 6. Studio Box (FULL WIDTH) */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            TAKTİK STÜDYO — PREMIUM 5-KATMANLI TASARIM
+            1. Neon Aura (Electric Red Glow)
+            2. Radikal Çerçeve (Rotating Conic Border)
+            3. Degrade Gövde (Deep Lacivert Gradient)
+            4. Cam Efekti (Glassmorphism Layers)
+            5. Asimetrik Layout (Tech HQ Command Center)
+        ═══════════════════════════════════════════════════════════════════ */}
         <AnimatedButton
           as="div"
           variants={itemVariants}
           onClick={() => onNavigate('STUDIO')}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          className="col-span-2 min-h-[176px] py-6 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-green flex flex-col justify-between p-5 xs:p-6"
-          style={{ borderColor: 'rgba(57,255,20,0.2)' }}
+          className="col-span-2 min-h-[176px] rounded-[32px] relative overflow-hidden group cursor-pointer"
+          style={{ 
+            boxShadow: '0 0 40px rgba(255,50,50,0.18), 0 0 80px rgba(255,30,30,0.06)'
+          }}
         >
-          {/* Soccer Pitch Background Pattern */}
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-            <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <rect x="0" y="0" width="100" height="100" fill="none" stroke="#39FF14" strokeWidth="0.5" />
-              <line x1="50" y1="0" x2="50" y2="100" stroke="#39FF14" strokeWidth="0.5" />
-              <circle cx="50" cy="50" r="15" fill="none" stroke="#39FF14" strokeWidth="0.5" />
-              <rect x="0" y="30" width="15" height="40" fill="none" stroke="#39FF14" strokeWidth="0.5" />
-              <rect x="85" y="30" width="15" height="40" fill="none" stroke="#39FF14" strokeWidth="0.5" />
+          {/* ── KATMAN 1: NEON AURA — Nabız atan Electric Red dış glow ── */}
+          <motion.div
+            className="absolute -inset-px rounded-[32px] pointer-events-none z-0"
+            animate={{
+              boxShadow: [
+                '0 0 20px rgba(255,50,50,0.12), 0 0 60px rgba(255,30,30,0.05)',
+                '0 0 55px rgba(255,50,50,0.4), 0 0 120px rgba(255,30,30,0.18)',
+                '0 0 20px rgba(255,50,50,0.12), 0 0 60px rgba(255,30,30,0.05)'
+              ]
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          />
+
+          {/* ── KATMAN 2: RADİKAL ÇERÇEVE — Dönen conic-gradient border ── */}
+          <div className="absolute inset-0 rounded-[32px] overflow-hidden pointer-events-none z-[1]">
+            <motion.div
+              className="absolute origin-center"
+              style={{
+                inset: '-50%',
+                background: 'conic-gradient(from 0deg, transparent 0%, transparent 20%, rgba(255,50,50,0.7) 35%, #FF3232 50%, rgba(255,50,50,0.7) 65%, transparent 80%, transparent 100%)'
+              }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+            />
+            {/* İç maske — ince kenar çizgisi bırakır */}
+            <div className="absolute inset-[1.5px] rounded-[31px]" style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #09132c 20%, #060b1b 50%, #03050d 80%, #000000 100%)' }} />
+          </div>
+
+          {/* ── KATMAN 3: DEGRADE GÖVDE — Derin lacivert gradient ── */}
+          <div className="absolute inset-[1.5px] rounded-[31px] z-[2]" style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #09132c 20%, #060b1b 50%, #03050d 80%, #000000 100%)' }} />
+
+          {/* ── KATMAN 4: CAM EFEKTİ — Glassmorphism katmanları ── */}
+          {/* Üst cam vurgusu */}
+          <div className="absolute inset-[1.5px] rounded-[31px] z-[3] pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 35%)' }} />
+          {/* İç cam paneli */}
+          <div className="absolute left-3 right-3 top-3 bottom-3 rounded-[26px] z-[3] pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.015) 0%, transparent 40%, rgba(255,50,50,0.015) 100%)', border: '1px solid rgba(255,255,255,0.03)' }} />
+          {/* Köşe kırmızı vurgu reflesi */}
+          <div className="absolute inset-[1.5px] rounded-[31px] z-[3] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 95% 5%, rgba(255,50,50,0.08) 0%, transparent 50%)' }} />
+
+          {/* ── TAKTİK SVG OVERLAY — Blueprint çizgileri ── */}
+          <div className="absolute inset-0 z-[4] opacity-[0.08] pointer-events-none overflow-hidden">
+            <svg width="100%" height="100%" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute right-0 top-0 h-full w-auto">
+              <defs>
+                <marker id="taktik-ok" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#FF3232" />
+                </marker>
+              </defs>
+              <rect x="10" y="10" width="380" height="180" rx="12" stroke="#FF3232" strokeWidth="0.5" strokeDasharray="3 8" opacity="0.6" />
+              <line x1="200" y1="10" x2="200" y2="190" stroke="#FF3232" strokeWidth="0.5" strokeDasharray="3 8" opacity="0.5" />
+              <circle cx="200" cy="100" r="30" stroke="#FF3232" strokeWidth="0.5" strokeDasharray="3 8" opacity="0.5" />
+              {/* Pas yolları */}
+              <circle cx="70" cy="60" r="5" stroke="#39FF14" strokeWidth="1" opacity="0.7" />
+              <path d="M 78 60 Q 120 40 160 80" stroke="#39FF14" strokeWidth="0.8" strokeDasharray="4 3" markerEnd="url(#taktik-ok)" opacity="0.6" />
+              <circle cx="165" cy="85" r="5" stroke="#39FF14" strokeWidth="1" opacity="0.7" />
+              <path d="M 173 85 Q 230 110 280 75" stroke="#39FF14" strokeWidth="0.8" strokeDasharray="4 3" markerEnd="url(#taktik-ok)" opacity="0.6" />
+              <circle cx="288" cy="72" r="5" stroke="#39FF14" strokeWidth="1" opacity="0.7" />
+              <path d="M 295 72 L 340 95" stroke="#39FF14" strokeWidth="1" markerEnd="url(#taktik-ok)" opacity="0.6" />
+              {/* Defans X'leri */}
+              <path d="M 140 70 L 148 78 M 148 70 L 140 78" stroke="#FF3232" strokeWidth="1" opacity="0.5" />
+              <path d="M 250 90 L 258 98 M 258 90 L 250 98" stroke="#FF3232" strokeWidth="1" opacity="0.5" />
+              <path d="M 320 120 L 328 128 M 328 120 L 320 128" stroke="#FF3232" strokeWidth="1" opacity="0.5" />
             </svg>
           </div>
 
-          <div className="flex justify-between items-start relative z-10">
-            <motion.div
-              animate={{
-                rotate: [0, 10, -10, 0],
-                scale: [1, 1.1, 1]
-              }}
-              transition={{ duration: 5, repeat: Infinity }}
-              className="w-14 h-14 bg-[#39FF14]/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-[#39FF14] border border-[#39FF14]/20"
-            >
-              <Target size={28} />
-            </motion.div>
-            <div className="flex -space-x-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-[#050812] bg-[#161B22] flex items-center justify-center overflow-hidden">
-                  <img src={`https://i.pravatar.cc/100?u=player${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </div>
-              ))}
-              <div className="w-8 h-8 rounded-full border-2 border-[#050812] bg-[#39FF14] flex items-center justify-center text-[10px] font-black text-black">
-                +8
-              </div>
-            </div>
-          </div>
+          {/* ── SHIMMER SWEEP — Kırmızımsı ışık geçişi ── */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none z-[5]"
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 5 }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,50,50,0.05), rgba(255,255,255,0.03), transparent)', transform: 'skewX(-20deg)' }}
+          />
 
-          <div className="relative z-10 flex justify-between items-end">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles size={14} className="text-[#39FF14]" />
-                <p className="text-[10px] text-[#39FF14] font-black uppercase tracking-[0.2em]">Strateji & Analiz</p>
+          {/* ── KATMAN 5: İÇERİK — Asimetrik Layout ── */}
+          <div className="relative z-[10] p-5 xs:p-6 flex flex-col justify-between min-h-[176px]">
+            {/* Üst satır: Taramalı ikon + Avatar yığını */}
+            <div className="flex justify-between items-start">
+              {/* AI tarama göstergesi */}
+              <div className="relative">
+                <motion.div
+                  animate={{
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.08, 1]
+                  }}
+                  transition={{ duration: 5, repeat: Infinity }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden"
+                  style={{ 
+                    background: 'rgba(255,50,50,0.06)', 
+                    border: '1px solid rgba(255,50,50,0.2)',
+                    boxShadow: '0 0 25px rgba(255,50,50,0.08), inset 0 0 20px rgba(255,50,50,0.03)'
+                  }}
+                >
+                  {/* İkon kutusu içinde dikey tarama çizgisi */}
+                  <motion.div
+                    className="absolute left-0 right-0 h-[1px] pointer-events-none"
+                    animate={{ top: ['0%', '100%', '0%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(255,50,50,0.7), transparent)' }}
+                  />
+                  <Target size={28} className="relative z-10" style={{ color: '#FF3232', filter: 'drop-shadow(0 0 8px rgba(255,50,50,0.5))' }} />
+                </motion.div>
+                {/* İkon etrafında genişleyen nabız halkası */}
+                <motion.div
+                  className="absolute -inset-1.5 rounded-2xl pointer-events-none"
+                  animate={{ 
+                    opacity: [0.4, 0, 0.4],
+                    scale: [1, 1.2, 1]
+                  }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }}
+                  style={{ border: '1px solid rgba(255,50,50,0.25)' }}
+                />
               </div>
-              <h2 className="text-3xl font-black text-white italic leading-none">TAKTİK ZEKA</h2>
+
+              {/* Oyuncu avatarları */}
+              <div className="flex -space-x-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-[#060b1b] bg-[#161B22] flex items-center justify-center overflow-hidden">
+                    <img src={`https://i.pravatar.cc/100?u=player${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                ))}
+                <div className="w-8 h-8 rounded-full border-2 border-[#060b1b] flex items-center justify-center text-[10px] font-black text-white" style={{ background: '#FF3232', boxShadow: '0 0 12px rgba(255,50,50,0.4)' }}>
+                  +8
+                </div>
+              </div>
             </div>
-            <motion.div
-              animate={{ x: [0, 5, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="bg-[#39FF14] text-black p-3 rounded-2xl shadow-[0_0_20px_rgba(57,255,20,0.4)]"
-            >
-              <MousePointer2 size={20} />
-            </motion.div>
+
+            {/* Alt satır: Başlık + CTA butonu */}
+            <div className="flex justify-between items-end">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Sparkles size={14} style={{ color: '#FF3232', filter: 'drop-shadow(0 0 4px rgba(255,50,50,0.5))' }} />
+                  </motion.div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#FF3232', textShadow: '0 0 10px rgba(255,50,50,0.25)' }}>STRATEJİ & ANALİZ</p>
+                </div>
+                <h2 className="text-3xl font-black text-white italic leading-none tracking-tight" style={{ textShadow: '0 0 30px rgba(255,50,50,0.12)' }}>TAKTİK STÜDYO</h2>
+                <p className="text-[10px] text-gray-400/75 font-bold mt-1.5">Maç analizleri ve oyuncu istatistikleri.</p>
+              </div>
+              <motion.div
+                animate={{ x: [0, 5, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="p-3 rounded-2xl relative overflow-hidden group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300"
+                style={{ 
+                  background: 'linear-gradient(135deg, #FF3232, #cc1a1a)',
+                  boxShadow: '0 0 25px rgba(255,50,50,0.45), inset 0 1px 0 rgba(255,255,255,0.2)'
+                }}
+              >
+                {/* CTA üzerinde cam vurgusu */}
+                <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 50%)' }} />
+                <MousePointer2 size={20} className="text-white relative z-10" />
+              </motion.div>
+            </div>
           </div>
         </AnimatedButton>
       </motion.main>

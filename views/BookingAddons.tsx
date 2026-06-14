@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { GOALKEEPERS, REFEREES } from '../constants';
 import { Goalkeeper, Referee } from '../types';
+import { useAppStore } from '../store';
 
 interface BookingAddonsProps {
   onBack: () => void;

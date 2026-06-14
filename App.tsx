@@ -72,6 +72,7 @@ const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
+const MyBookings = lazy(() => import('./views/MyBookings'));
 import { BottomNav } from './components/BottomNav';
 import { RookieShowcase } from './views/RookieShowcase';
 
@@ -352,7 +353,13 @@ const App: React.FC = () => {
       case 'ADMIN_PANEL':
         return <AdminPanel onBack={() => setView('ROLE_SELECTION')} />;
       case 'OWNER_PANEL':
-        return <OwnerPanel onBack={() => setView('ROLE_SELECTION')} onNavigate={(v) => setView(v as AppView)} />;
+        return (
+          <OwnerPanel
+            onBack={() => setView('ROLE_SELECTION')}
+            onNavigate={(v) => setView(v as AppView)}
+            onNeedOnboarding={() => setView('PARTNER_ONBOARDING')}
+          />
+        );
       case 'SERVICE_DASHBOARD':
         return <ServiceDashboard role={role!} onBack={() => setView('ROLE_SELECTION')} onNavigate={(v) => setView(v)} />;
       case 'PARTNER_ONBOARDING':
@@ -390,7 +397,10 @@ const App: React.FC = () => {
         return <PitchDiscovery
           onBack={() => setView('DASHBOARD')}
           onBook={() => setView('BOOKING_ADDONS')}
+          onNavigate={(v) => setView(v as AppView)}
         />;
+      case 'MY_BOOKINGS':
+        return <MyBookings onBack={() => setView('DASHBOARD')} />;
       case 'MARKETPLACE_GK':
         return <Marketplace
           type="GK"
@@ -455,7 +465,13 @@ const App: React.FC = () => {
           isPro={isUserPro}
         />;
       case 'WALLET':
-        return <WalletScreen onBack={() => setView('DASHBOARD')} />;
+        return <WalletScreen
+          onBack={() => {
+            const ret = useAppStore.getState().walletReturnView;
+            useAppStore.getState().setWalletInitialTab('MAIN');
+            setView(ret ?? 'DASHBOARD');
+          }}
+        />;
       // MATCH_LOBBY kaldırıldı — tüm işlemler MatchJoin'de yapılıyor
       case 'OPPONENT_FINDER':
         return <OpponentFinder onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
@@ -557,7 +573,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
+  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'COMMUNITY_VIEW', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
 
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">

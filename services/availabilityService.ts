@@ -1,4 +1,5 @@
 import type { Pitch } from '../types';
+import { resolveTariffForSlot } from './tariffService';
 
 export type SlotAvailabilityStatus = 'available' | 'booked' | 'closed' | 'pending';
 
@@ -9,6 +10,7 @@ export interface TimeSlotAvailability {
   status: SlotAvailabilityStatus;
   bookingId?: string;
   price?: number;
+  deposit?: number;
 }
 
 export interface PitchBookingRow {
@@ -156,6 +158,10 @@ export function buildAvailabilitySlots(
       return { label, startTime, endTime, status: 'closed' as const };
     }
 
+    const quote = resolveTariffForSlot(pitch.tariffs, bookingDate, startTime);
+    const slotPrice = quote?.price ?? pitch.totalPrice;
+    const slotDeposit = quote?.deposit ?? 0;
+
     const hit = pitchBookings.find(b => bookingOverlapsSlot(b, startTime, endTime));
     if (!hit) {
       return {
@@ -163,7 +169,8 @@ export function buildAvailabilitySlots(
         startTime,
         endTime,
         status: 'available' as const,
-        price: pitch.totalPrice,
+        price: slotPrice,
+        deposit: slotDeposit,
       };
     }
 
@@ -176,7 +183,8 @@ export function buildAvailabilitySlots(
       endTime,
       status,
       bookingId: hit.id,
-      price: hit.price ?? pitch.totalPrice,
+      price: hit.price ?? slotPrice,
+      deposit: slotDeposit,
     };
   });
 }

@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CreditCard, Users, User, Share2, Ticket, CheckCircle2, ShieldCheck, AlertCircle, PieChart, Lock, ChevronRight, Copy, TicketPercent, ToggleLeft, ToggleRight, Crown, X } from 'lucide-react';
+import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
+import { parseSlotLabel } from '../services/availabilityService';
 
 interface PaymentScreenProps {
   onBack: () => void;
@@ -13,15 +17,15 @@ interface PaymentScreenProps {
 type PaymentStep = 'DEPOSIT' | 'POOL' | 'SUCCESS';
 
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, hasMotmCoupon = false, onUpgradeRequest, onViewTicket }) => {
+  const { bookingPitch, bookingCourt, bookingDate, bookingSlot, bookingPrice, bookingDeposit } = useAppStore();
   const [step, setStep] = useState<PaymentStep>('DEPOSIT');
   const [captainGuarantee, setCaptainGuarantee] = useState(false);
   const [payMode, setPayMode] = useState<'MY_SHARE' | 'MULTI' | 'ALL'>('MY_SHARE');
   const [multiCount, setMultiCount] = useState(1);
   const [applyDiscount, setApplyDiscount] = useState(false);
 
-  // FINANCIAL CONSTANTS
-  const PITCH_PRICE = 2800;
-  const DEPOSIT_AMOUNT = 1000;
+  const PITCH_PRICE = bookingPrice ?? (bookingCourt ? bookingCourt.price : (bookingPitch ? bookingPitch.totalPrice : 2800));
+  const DEPOSIT_AMOUNT = bookingDeposit ?? Math.min(1000, PITCH_PRICE);
   const COMMISSION_RATE = 0.10; 
   const PRO_COMMISSION_RATE = 0.05; 
   
@@ -38,11 +42,41 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, has
   const [paidAmount, setPaidAmount] = useState(DEPOSIT_AMOUNT);
   const [paidPlayers, setPaidPlayers] = useState<number>(3); // 3 people paid already
   
+  useEffect(() => {
+    setPaidAmount(DEPOSIT_AMOUNT);
+  }, [DEPOSIT_AMOUNT]);
+
   const remainingDebt = TOTAL_AMOUNT - paidAmount;
   const progressPercent = Math.min(100, (paidAmount / TOTAL_AMOUNT) * 100);
 
-  const handleDepositPay = () => {
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+
+  const createBookingInDatabase = async () => {
+    if (!bookingPitch || !bookingCourt || !bookingDate || !bookingSlot) return;
+    try {
+      const { startTime, endTime } = parseSlotLabel(bookingSlot);
+      const { data, error } = await supabase.rpc('create_pitch_booking', {
+        p_pitch_id: bookingPitch.id,
+        p_court_id: bookingCourt.id,
+        p_booking_date: bookingDate,
+        p_start_time: `${startTime}:00`,
+        p_end_time: `${endTime}:00`,
+        p_source: 'APP_BOOKING',
+        p_title: auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : 'Kullanıcı',
+      });
+      if (error) throw error;
+      console.log('Booking successfully created:', data);
+    } catch (error) {
+      console.error('Error creating booking in database:', error);
+      throw error;
+    }
+  };
+
+  const handleDepositPay = async () => {
     if (captainGuarantee) {
+      setIsSubmittingBooking(true);
+      await createBookingInDatabase();
+      setIsSubmittingBooking(false);
       setStep('POOL');
     }
   };
@@ -140,11 +174,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, has
 
         {/* Sticky Action */}
         <button 
-            disabled={!captainGuarantee}
+            disabled={!captainGuarantee || isSubmittingBooking}
             onClick={handleDepositPay}
             className="w-full py-4 bg-[#FFFF00] disabled:bg-gray-800 disabled:text-gray-500 text-black font-black text-lg rounded-2xl shadow-[0_0_30px_rgba(255,255,0,0.2)] hover:bg-yellow-300 transition-all active:scale-95 flex items-center justify-center gap-2"
         >
-            KAPORAYI ÖDE & REZERVE ET
+            {isSubmittingBooking ? 'REZERVE EDİLİYOR...' : `${DEPOSIT_AMOUNT}₺ KAPORAYI ÖDE & REZERVE ET`}
         </button>
     </div>
   );

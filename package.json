@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "owner:demo:seed": "node scripts/owner-demo.mjs seed",
+    "owner:demo:purge": "node scripts/owner-demo.mjs purge"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

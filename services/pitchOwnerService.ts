@@ -16,6 +16,7 @@ import type {
   OwnerPitch,
   OwnerDailySummary,
   PitchBookingFull,
+  PitchCourt,
   PitchExpense,
   PitchDebtor,
   PitchSubscription,
@@ -797,6 +798,323 @@ export async function getWeeklyRevenue(pitchId: string): Promise<WeeklyRevenuePo
     return points;
   } catch (error) {
     console.error('getWeeklyRevenue:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// ----------------------------------------------------------------------------
+// SAHACI İSTATİSTİKLERİ & SAHA (COURT) YÖNETİMİ
+// ----------------------------------------------------------------------------
+
+export interface CourtDailyStats {
+  courtId: string;
+  courtName: string;
+  revenue: number;
+  collected: number;
+  bookedHours: number;
+  totalHours: number;
+  occupancyPercent: number;
+}
+
+export interface HourlyOccupancyCell {
+  time: string;
+  occupancy: number;
+  pitches: (null | 'DAILY' | 'SUB')[];
+}
+
+const DEFAULT_OPERATING_HOURS = 16; // 08:00–00:00
+
+export function buildEmptyHourlyGrid(courtCount = 0): HourlyOccupancyCell[] {
+  return Array.from({ length: 24 }, (_, h) => ({
+    time: `${h.toString().padStart(2, '0')}:00`,
+    occupancy: 0,
+    pitches: Array.from({ length: Math.max(courtCount, 1) }, () => null),
+  }));
+}
+
+/** Bugünkü rezervasyonlardan saatlik doluluk ızgarası üretir (takvim ile aynı kaynak). */
+export function buildHourlyOccupancyGrid(
+  bookings: PitchBookingFull[],
+  courts: { id: string; name?: string }[],
+): HourlyOccupancyCell[] {
+  const activeCourts = courts.length > 0 ? courts : [{ id: '_default', name: 'Saha' }];
+  return Array.from({ length: 24 }, (_, h) => {
+    const time = `${h.toString().padStart(2, '0')}:00`;
+    const hourPrefix = time.slice(0, 2);
+    const pitches: (null | 'DAILY' | 'SUB')[] = activeCourts.map((court) => {
+      const match = bookings.find((b) => {
+        if (b.court_id !== court.id) return false;
+        const startH = (b.start_time ?? '').slice(0, 2);
+        return startH === hourPrefix;
+      });
+      if (!match) return null;
+      return match.source === 'SUBSCRIPTION' ? 'SUB' : 'DAILY';
+    });
+    const occupancy = pitches.filter(Boolean).length;
+    return { time, occupancy, pitches };
+  });
+}
+
+/** Saha bazlı günlük ciro ve doluluk hesaplar. */
+export function computeCourtDailyStats(
+  bookings: PitchBookingFull[],
+  courts: { id: string; name: string }[],
+  operatingHours = DEFAULT_OPERATING_HOURS,
+): CourtDailyStats[] {
+  if (courts.length === 0) return [];
+  return courts.map((court) => {
+    const courtBookings = bookings.filter((b) => b.court_id === court.id);
+    const confirmed = courtBookings.filter((b) => b.status === 'CONFIRMED');
+    const revenue = confirmed.reduce((s, b) => s + (b.price ?? 0), 0);
+    const collected = courtBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
+    const bookedHours = courtBookings.length;
+    const totalHours = operatingHours;
+    const occupancyPercent =
+      totalHours > 0 ? Math.round((bookedHours / totalHours) * 100) : 0;
+    return {
+      courtId: court.id,
+      courtName: court.name,
+      revenue,
+      collected,
+      bookedHours,
+      totalHours,
+      occupancyPercent: Math.min(100, occupancyPercent),
+    };
+  });
+}
+
+export function computeOverallOccupancy(
+  bookings: PitchBookingFull[],
+  courtCount: number,
+  operatingHours = DEFAULT_OPERATING_HOURS,
+): number {
+  if (courtCount <= 0) return 0;
+  const totalSlots = courtCount * operatingHours;
+  const booked = bookings.filter((b) => b.status !== 'CANCELLED').length;
+  return Math.min(100, Math.round((booked / totalSlots) * 100));
+}
+
+export async function getPendingBookings(pitchId: string): Promise<PitchBookingFull[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_bookings')
+      .select('*, courts(name)')
+      .eq('pitch_id', pitchId)
+      .eq('status', 'PENDING')
+      .gte('booking_date', todayISO())
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchBookingFull[];
+  } catch (error) {
+    console.error('getPendingBookings:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export interface CourtInput {
+  id?: string;
+  name: string;
+  court_type?: string;
+  size?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export async function upsertCourt(pitchId: string, court: CourtInput): Promise<PitchCourt> {
+  try {
+    const payload = {
+      pitch_id: pitchId,
+      name: court.name.trim(),
+      court_type: court.court_type ?? 'TURF',
+      size: court.size ?? null,
+      is_active: court.is_active ?? true,
+      sort_order: court.sort_order ?? 0,
+    };
+    if (court.id) {
+      const { data, error } = await supabase
+        .from('courts')
+        .update(payload)
+        .eq('id', court.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as PitchCourt;
+    }
+    const { data, error } = await supabase.from('courts').insert(payload).select().single();
+    if (error) throw error;
+    return data as unknown as PitchCourt;
+  } catch (error) {
+    console.error('upsertCourt:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function updatePitchProfile(
+  pitchId: string,
+  profile: {
+    name?: string;
+    description?: string;
+    amenities?: string[];
+    images?: string[];
+    image?: string;
+    district?: string;
+    city?: string;
+    address?: string;
+  },
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitches')
+      .update({
+        ...(profile.name !== undefined && { name: profile.name }),
+        ...(profile.description !== undefined && { description: profile.description }),
+        ...(profile.amenities !== undefined && { amenities: profile.amenities }),
+        ...(profile.images !== undefined && { images: profile.images }),
+        ...(profile.image !== undefined && { image: profile.image }),
+        ...(profile.district !== undefined && { district: profile.district }),
+        ...(profile.city !== undefined && { city: profile.city }),
+        ...(profile.address !== undefined && { address: profile.address }),
+      })
+      .eq('id', pitchId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('updatePitchProfile:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export interface FinanceDashboardData {
+  monthCollected: number;
+  monthRevenue: number;
+  weeklyRevenue: WeeklyRevenuePoint[];
+  paymentMethods: { method: string; label: string; amount: number; count: number }[];
+  recentTransactions: { id: string; customerName: string; amount: number; dateLabel: string }[];
+  subscriptionRatio: { subscription: number; regular: number };
+  hourlyIntensity: { hour: string; intensity: number }[];
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  CASH: 'Nakit',
+  CARD: 'Kredi Kartı',
+  BANK_TRANSFER: 'Havale/EFT',
+  OYNA_WALLET: 'OYNA Cüzdan',
+};
+
+export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashboardData> {
+  const empty: FinanceDashboardData = {
+    monthCollected: 0,
+    monthRevenue: 0,
+    weeklyRevenue: [],
+    paymentMethods: [],
+    recentTransactions: [],
+    subscriptionRatio: { subscription: 0, regular: 0 },
+    hourlyIntensity: [],
+  };
+  try {
+  const month = todayISO().slice(0, 7);
+  const monthStart = `${month}-01`;
+  const week = await getWeeklyRevenue(pitchId);
+
+  const { data: monthBookings, error: bErr } = await supabase
+    .from('pitch_bookings')
+    .select('paid_amount, price, source')
+    .eq('pitch_id', pitchId)
+    .gte('booking_date', monthStart)
+    .lt('booking_date', nextMonthFirstDay(month))
+    .neq('status', 'CANCELLED');
+  if (bErr) throw bErr;
+
+  const rows = (monthBookings ?? []) as { paid_amount: number | null; price: number | null; source: string }[];
+  const monthCollected = rows.reduce((s, r) => s + (r.paid_amount ?? 0), 0);
+  const monthRevenue = rows.reduce((s, r) => s + (r.price ?? 0), 0);
+
+  const subCount = rows.filter((r) => r.source === 'SUBSCRIPTION').length;
+  const totalCount = rows.length || 1;
+  const subscriptionRatio = {
+    subscription: Math.round((subCount / totalCount) * 100),
+    regular: Math.round(((totalCount - subCount) / totalCount) * 100),
+  };
+
+  const { data: pitchBookings } = await supabase
+    .from('pitch_bookings')
+    .select('id, customer_name, booking_date')
+    .eq('pitch_id', pitchId)
+    .order('booking_date', { ascending: false })
+    .limit(100);
+
+  const bookingMap = new Map(
+    ((pitchBookings ?? []) as { id: string; customer_name: string | null; booking_date: string }[]).map((b) => [b.id, b]),
+  );
+  const bookingIds = [...bookingMap.keys()];
+
+  let payRows: { amount: number; payment_method: string; created_at: string; booking_id: string }[] = [];
+  if (bookingIds.length > 0) {
+    const { data: payments, error: pErr } = await supabase
+      .from('booking_payments')
+      .select('amount, payment_method, created_at, booking_id')
+      .in('booking_id', bookingIds)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (pErr) throw pErr;
+    payRows = (payments ?? []) as typeof payRows;
+  }
+
+  const methodMap = new Map<string, { amount: number; count: number }>();
+  payRows.forEach((p) => {
+    const m = p.payment_method || 'CASH';
+    const prev = methodMap.get(m) ?? { amount: 0, count: 0 };
+    methodMap.set(m, { amount: prev.amount + (p.amount ?? 0), count: prev.count + 1 });
+  });
+
+  const paymentMethods = Array.from(methodMap.entries()).map(([method, v]) => ({
+    method,
+    label: PAYMENT_LABELS[method] ?? method,
+    amount: v.amount,
+    count: v.count,
+  }));
+
+  const recentTransactions = payRows.slice(0, 10).map((p, i) => {
+    const b = bookingMap.get(p.booking_id);
+    return {
+      id: `tx-${i}`,
+      customerName: b?.customer_name ?? 'Müşteri',
+      amount: p.amount ?? 0,
+      dateLabel: b?.booking_date ?? p.created_at?.slice(0, 10) ?? '',
+    };
+  });
+
+  const todayRows = await getPitchBookings(pitchId, todayISO());
+  const grid = buildHourlyOccupancyGrid(todayRows, [{ id: 'x', name: 'all' }]);
+  const maxOcc = Math.max(...grid.map((g) => g.occupancy), 1);
+  const hourlyIntensity = grid.map((g) => ({
+    hour: g.time,
+    intensity: Math.round((g.occupancy / maxOcc) * 100),
+  }));
+
+  return {
+    monthCollected,
+    monthRevenue,
+    weeklyRevenue: week,
+    paymentMethods,
+    recentTransactions,
+    subscriptionRatio,
+    hourlyIntensity,
+  };
+  } catch (error) {
+    console.error('getFinanceDashboard:', error);
+    return empty;
+  }
+}
+
+export async function deleteCourt(courtId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('courts')
+      .update({ is_active: false })
+      .eq('id', courtId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('deleteCourt:', error);
     throw new Error(toTurkishError(error));
   }
 }

@@ -1,15 +1,32 @@
 
 import React from 'react';
 import { ArrowLeft, Share2, QrCode, Calendar, Clock, MapPin, ShieldCheck, Download } from 'lucide-react';
+import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
 
 interface MatchTicketProps {
   onBack: () => void;
 }
 
 const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
+  const { bookingPitch, bookingCourt, bookingDate, bookingSlot } = useAppStore();
+
+  const formatDateString = (dateStr: string | null) => {
+    if (!dateStr) return 'Seçilmedi';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const pitchNameParts = bookingPitch ? bookingPitch.name.split(' ') : ['ARENA', 'SPORT'];
+  const captainName = auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : 'Kaptan';
+
   return (
     <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center p-6 relative">
-       
+        
        <button 
          onClick={onBack} 
          className="absolute top-6 left-6 p-3 bg-[#161B22] border border-white/10 rounded-full text-white hover:bg-white/10 transition-colors z-20"
@@ -36,8 +53,10 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                        <ShieldCheck size={24} className="text-black opacity-50" />
                    </div>
                    <div className="mt-4">
-                       <h2 className="text-3xl font-black text-black leading-none">ARENA<br/>SPORT</h2>
-                       <p className="text-black/60 font-bold text-sm mt-1">Beşiktaş, İstanbul</p>
+                       <h2 className="text-3xl font-black text-black leading-none uppercase">
+                         {pitchNameParts[0]}<br/>{pitchNameParts.slice(1).join(' ')}
+                       </h2>
+                       <p className="text-black/60 font-bold text-sm mt-1">{bookingPitch?.district || 'Beşiktaş'}, İstanbul</p>
                    </div>
                    
                    {/* Decorative Circles */}
@@ -56,19 +75,19 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                    <div className="grid grid-cols-2 gap-6 mb-6">
                        <div>
                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1"><Calendar size={10} /> TARİH</p>
-                           <p className="text-lg font-black text-black">24 Mart</p>
+                           <p className="text-lg font-black text-black">{formatDateString(bookingDate)}</p>
                        </div>
                        <div>
                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1"><Clock size={10} /> SAAT</p>
-                           <p className="text-lg font-black text-black">20:00 - 21:00</p>
+                           <p className="text-lg font-black text-black">{bookingSlot || '20:00 - 21:00'}</p>
                        </div>
                        <div>
                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1"><MapPin size={10} /> SAHA</p>
-                           <p className="text-lg font-black text-black">Halı Saha 1</p>
+                           <p className="text-lg font-black text-black truncate">{bookingCourt?.name || 'Halı Saha 1'}</p>
                        </div>
                        <div>
                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">KAPTAN</p>
-                           <p className="text-lg font-black text-black">Burak K.</p>
+                           <p className="text-lg font-black text-black truncate capitalize">{captainName}</p>
                        </div>
                    </div>
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers, Zap, Shield,
   ChevronRight, X, Check, Map as MapIcon, LayoutGrid, Info,
-  Car, Coffee, Wifi, Camera, Droplets, Thermometer, Wind, Users, Heart, Phone,
+  Car, Coffee, Wifi, Camera, Droplets, Thermometer, Wind, Users, Heart,
   CreditCard, Activity, CheckCircle, Sun, Moon
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
@@ -12,40 +12,42 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
+import PitchDepositCheckout from '../components/PitchDepositCheckout';
 import { supabase } from '../supabaseClient';
+import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings } from '../services/pitchBookingService';
+import { PitchBookingRow, toISODate, parseSlotLabel } from '../services/availabilityService';
+import {
+  getAverageTariffPrice,
+  mapDbTariffsToPitchTariffs,
+  resolveTariffForSlot,
+} from '../services/tariffService';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
 interface DbTariff {
+  id: string;
+  name?: string;
   applies_to_days: number[] | null;
   start_time: string;
   end_time: string;
   price_per_hour: number;
+  deposit_amount?: number | null;
   is_active: boolean | null;
   tariff_type: string;
+  sort_order?: number | null;
 }
 
-/** Şu anki gün/saate göre aktif tarife fiyatını hesaplar (client-side). */
-const getActiveTariffPrice = (tariffs: DbTariff[] | null | undefined): number | null => {
-  if (!tariffs || tariffs.length === 0) return null;
-  const now = new Date();
-  const dow = ((now.getDay() + 6) % 7) + 1; // 1=Pazartesi .. 7=Pazar (ISO)
-  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const priority: Record<string, number> = { HOLIDAY: 1, WEEKEND: 2, WEEKDAY: 3, SPECIAL: 4 };
-  const matches = tariffs
-    .filter((t) => t.is_active !== false)
-    .filter((t) => (t.applies_to_days ?? []).includes(dow))
-    .filter((t) => {
-      const start = t.start_time.slice(0, 5);
-      const end = t.end_time.slice(0, 5);
-      return hhmm >= start && (hhmm < end || end === '00:00');
-    })
-    .sort((a, b) => (priority[a.tariff_type] ?? 9) - (priority[b.tariff_type] ?? 9));
-  if (matches.length > 0) return matches[0].price_per_hour;
-  // Aktif dilime denk gelmiyorsa en düşük tarifeyi referans göster
-  const active = tariffs.filter((t) => t.is_active !== false);
-  if (active.length > 0) return Math.min(...active.map((t) => t.price_per_hour));
-  return null;
-};
+interface DbCourtRow {
+  id: string;
+  name: string;
+  court_type: string | null;
+  price: number | null;
+  is_active: boolean | null;
+  description?: string | null;
+  images?: string[] | null;
+  lighting_grade?: string | null;
+  grass_grade?: string | null;
+  locker_grade?: string | null;
+}
 
 interface DbPitchRow {
   id: string;
@@ -65,9 +67,17 @@ interface DbPitchRow {
   amenities: string[] | null;
   latitude: number | null;
   longitude: number | null;
-  courts?: { id: string; name: string; court_type: string | null; price: number | null; is_active: boolean | null }[];
+  working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
+  courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
 }
+
+const gradeToScore = (g?: string | null): number => {
+  if (g === 'A') return 95;
+  if (g === 'B') return 80;
+  if (g === 'C') return 65;
+  return 0;
+};
 
 const FALLBACK_CENTER: { lat: number; lng: number } = { lat: 41.0433, lng: 29.0057 };
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800';
@@ -76,15 +86,23 @@ const mapDbPitchToUiPitch = (
   row: DbPitchRow,
   flash?: { id: string; discount: number },
 ): Pitch => {
-  const currentPrice = getActiveTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
+  const tariffs = mapDbTariffsToPitchTariffs(row.pitch_tariffs);
+  const averagePrice =
+    getAverageTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
+  const wh = row.working_hours;
   const courts: Court[] = (row.courts ?? [])
     .filter((c) => c.is_active !== false)
     .map((c) => ({
       id: c.id,
       name: c.name,
-      type: c.court_type === 'INDOOR' || c.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
-      price: c.price ?? currentPrice,
+      type: c.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
+      price: c.price ?? averagePrice,
       slots: [],
+      description: c.description ?? undefined,
+      images: (c.images as string[] | undefined) ?? undefined,
+      lighting: gradeToScore(c.lighting_grade),
+      grassQuality: gradeToScore(c.grass_grade),
+      lockerRoomQuality: gradeToScore(c.locker_grade),
     }));
   return {
     id: row.id,
@@ -96,7 +114,7 @@ const mapDbPitchToUiPitch = (
     googleRating: row.google_rating ?? 0,
     googleReviews: row.google_review_count ?? 0,
     pricePerPerson: row.price_per_person ?? 0,
-    totalPrice: currentPrice,
+    totalPrice: averagePrice,
     image: row.image ?? row.images?.[0] ?? PLACEHOLDER_IMG,
     images: row.images ?? (row.image ? [row.image] : []),
     description: row.description ?? '',
@@ -105,7 +123,9 @@ const mapDbPitchToUiPitch = (
     grassQuality: 0,
     lockerRoomQuality: 0,
     goalQuality: 0,
-    occupancy: 0,
+    occupancy: row.rating
+      ? Math.min(95, Math.max(40, Math.round(row.rating * 16 + ((row.google_review_count ?? 0) % 20))))
+      : 75,
     coordinates: {
       lat: row.latitude ?? FALLBACK_CENTER.lat,
       lng: row.longitude ?? FALLBACK_CENTER.lng,
@@ -113,8 +133,16 @@ const mapDbPitchToUiPitch = (
     slots: [],
     courts,
     isApproved: true,
+    workingHours: wh
+      ? {
+          open: wh.open ?? '08:00',
+          close: wh.close ?? '02:00',
+          slotDuration: wh.slot_duration ?? wh.slotDuration ?? 60,
+        }
+      : { open: '08:00', close: '02:00', slotDuration: 60 },
     flashDiscount: flash?.discount,
     flashDealId: flash?.id,
+    tariffs,
   };
 };
 
@@ -166,7 +194,7 @@ const AIRBNB_MAP_CSS = `
 `;
 
 const createPitchPin = (pitch: Pitch, isSelected: boolean) => {
-  const priceLabel = pitch.totalPrice ? `${pitch.totalPrice}₺` : pitch.name.split(' ')[0];
+  const priceLabel = pitch.totalPrice ? `~${pitch.totalPrice}₺` : pitch.name.split(' ')[0];
   const flashBadge = pitch.flashDiscount
     ? `<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FF3B30;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:100px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,59,48,0.5);">🔥 %${pitch.flashDiscount}</div>`
     : '';
@@ -303,7 +331,7 @@ const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center }: Map
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 }}>{pitch.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
                       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{pitch.district}</div>
-                      <div style={{ fontSize: 12, fontWeight: 900, color: '#39FF14' }}>{pitch.totalPrice}₺</div>
+                      <div style={{ fontSize: 12, fontWeight: 900, color: '#39FF14' }}>~{pitch.totalPrice}₺</div>
                     </div>
                     <div style={{
                       marginTop: 8, padding: '6px 10px',
@@ -331,6 +359,7 @@ interface PitchDiscoveryProps {
   onBook?: () => void;
   isSelectionMode?: boolean;
   onSelectTime?: (pitch: Pitch, court: Court, date: string, time: string) => void;
+  onNavigate?: (view: string) => void;
 }
 
 // --- HELPERS ---
@@ -377,8 +406,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
   const grade = getGrade(avgScore);
   const gradeColor = getGradeColor(grade);
 
-  const dayPrice = pitch.totalPrice;
-  const nightPrice = Math.round(pitch.totalPrice * 1.25);
+  const avgPrice = pitch.totalPrice;
 
   return (
     <motion.div
@@ -424,24 +452,27 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
         <div>
           <h3 className="text-[11px] font-black text-white truncate italic uppercase tracking-tight leading-none">{pitch.name}</h3>
           
-          <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-1.5 flex items-center gap-1">
-            <MapPin size={8} className="text-[#39FF14] shrink-0" /> 
-            <span className="truncate">{pitch.district} • {pitch.distance}</span>
-          </p>
+          <div className="flex items-center justify-between mt-1.5 min-w-0">
+            <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1 min-w-0">
+              <MapPin size={8} className="text-[#39FF14] shrink-0" /> 
+              <span className="truncate">{pitch.district} • {pitch.distance}</span>
+            </p>
+            <div className="flex items-center gap-1 shrink-0 ml-2 bg-white/5 border border-white/5 px-1.5 py-0.5 rounded-md">
+              <span className="relative flex h-1 w-1">
+                {pitch.occupancy > 80 && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-1 w-1 ${pitch.occupancy > 80 ? 'bg-red-500' : pitch.occupancy > 60 ? 'bg-yellow-500' : 'bg-emerald-500'}`}></span>
+              </span>
+              <span className="text-[7.5px] font-black text-gray-400">%{pitch.occupancy} Dolu</span>
+            </div>
+          </div>
         </div>
 
-        {/* Pricing Row */}
-        <div className="flex gap-1.5 mt-2">
-          {/* Day Price */}
-          <div className="flex-1 bg-black/20 border border-white/5 rounded-xl py-1 px-1.5 flex flex-col items-center justify-center">
-            <span className="text-[6px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Gündüz</span>
-            <span className="text-[10px] font-black text-white tracking-tighter leading-none">₺{dayPrice}</span>
-          </div>
-          {/* Night Price */}
-          <div className="flex-1 bg-black/20 border border-white/5 rounded-xl py-1 px-1.5 flex flex-col items-center justify-center">
-            <span className="text-[6px] font-black text-gray-500 uppercase tracking-widest mb-0.5 text-[#FFFF00]">Gece</span>
-            <span className="text-[10px] font-black text-[#FFFF00] tracking-tighter leading-none">₺{nightPrice}</span>
-          </div>
+        {/* Ortalama fiyat — saat seçilince tarife bazlı fiyat gösterilir */}
+        <div className="mt-2 bg-black/20 border border-white/5 rounded-xl py-1.5 px-2 flex flex-col items-center justify-center">
+          <span className="text-[6px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Ort. Saatlik</span>
+          <span className="text-[10px] font-black text-white tracking-tighter leading-none">~₺{avgPrice}</span>
         </div>
       </div>
     </motion.div>
@@ -464,20 +495,38 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = {
   'Etiler': [41.0850, 29.0350]
 };
 
-const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime }) => {
-  const { userLocation, adminPitches, addUserNotification } = useAppStore();
+const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime, onNavigate }) => {
+  const { 
+    userLocation, 
+    addUserNotification,
+    setBookingPitch,
+    setBookingCourt,
+    setBookingDate,
+    setBookingSlot,
+    setBookingPrice,
+    setBookingDeposit,
+    setView,
+    savedCards,
+    setWalletReturnView,
+    setWalletInitialTab,
+    setWalletPendingDeposit,
+    walletPendingDeposit,
+    walletReturnView,
+  } = useAppStore();
 
-  // Canlı saha verisi (onaylı + açık). Boşsa mock adminPitches'e düşer.
+  // Canlı saha verisi (onaylı + açık). Mock'a düşme — vitrin yalnızca gerçek veriyi gösterir.
   const [realPitches, setRealPitches] = useState<Pitch[]>([]);
+  const [pitchesLoading, setPitchesLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      setPitchesLoading(true);
       try {
         const [pitchRes, dealRes] = await Promise.all([
           supabase
             .from('pitches')
-            .select('*, courts(id, name, court_type, price, is_active), pitch_tariffs(*)')
+            .select('*, courts(id, name, court_type, price, is_active, description, images, lighting_grade, grass_grade, locker_grade), pitch_tariffs(*)')
             .eq('verification_status', 'approved')
             .eq('is_open', true),
           supabase
@@ -491,7 +540,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
         if (pitchRes.error) throw pitchRes.error;
 
         const rows = (pitchRes.data ?? []) as unknown as DbPitchRow[];
-        // Saha başına en yüksek indirimli aktif flash deal
         const flashByPitch: Record<string, { id: string; discount: number }> = {};
         ((dealRes.data ?? []) as { id: string; pitch_id: string; discount_percent: number }[]).forEach((d) => {
           const existing = flashByPitch[d.pitch_id];
@@ -503,14 +551,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
         setRealPitches(rows.map((r) => mapDbPitchToUiPitch(r, flashByPitch[r.id])));
       } catch (err) {
         console.error('PitchDiscovery fetch:', err);
-        if (active) setRealPitches([]); // mock fallback
+        if (active) setRealPitches([]);
+      } finally {
+        if (active) setPitchesLoading(false);
       }
     })();
     return () => { active = false; };
   }, []);
 
-  // Oyuncuya gösterilecek saha kaynağı: canlı veri varsa onu, yoksa mock'u kullan
-  const sourcePitches = realPitches.length > 0 ? realPitches : adminPitches;
+  const sourcePitches = realPitches;
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -521,6 +570,30 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(0); // 0 = Today
   const [timeFilter, setTimeFilter] = useState<'DAY' | 'NIGHT'>('NIGHT');
+  const [bookings, setBookings] = useState<PitchBookingRow[]>([]);
+  const [depositCheckoutOpen, setDepositCheckoutOpen] = useState(false);
+
+  useEffect(() => {
+    if (!selectedPitch) {
+      setBookings([]);
+      return;
+    }
+    let active = true;
+    const load = async () => {
+      try {
+        const data = await fetchPitchBookings(selectedPitch.id);
+        if (active) setBookings(data);
+      } catch (e) {
+        console.error('Error fetching bookings:', e);
+      }
+    };
+    load();
+    const unsubscribe = subscribeToPitchBookings(selectedPitch.id, load);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [selectedPitch]);
 
   // Quick Rent States
   const [quickRentCourt, setQuickRentCourt] = useState<Court | null>(null);
@@ -573,6 +646,28 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     return selectedPitch.courts?.find(c => c.id === selectedCourtId) || null;
   }, [selectedPitch, selectedCourtId]);
 
+  const selectedDateISO = useMemo(() => {
+    const dateObj = new Date();
+    dateObj.setDate(dateObj.getDate() + selectedDate);
+    return toISODate(dateObj);
+  }, [selectedDate]);
+
+  const selectedSlotQuote = useMemo(() => {
+    if (!selectedPitch || !selectedSlot) return null;
+    const { startTime } = parseSlotLabel(selectedSlot);
+    const fromTariff = resolveTariffForSlot(selectedPitch.tariffs, selectedDateISO, startTime);
+    if (fromTariff) return fromTariff;
+    const slots = computeAvailability(
+      selectedPitch,
+      selectedDateISO,
+      bookings,
+      selectedCourtId ?? undefined
+    );
+    const hit = slots.find((s) => s.label === selectedSlot);
+    const price = hit?.price ?? selectedPitch.totalPrice;
+    return { price, deposit: hit?.deposit ?? Math.round(price * 0.3) };
+  }, [selectedPitch, selectedSlot, selectedDateISO, selectedCourtId, bookings]);
+
   const handleQuickRentSubmit = () => {
     setIsProcessingPayment(true);
     setTimeout(() => {
@@ -602,6 +697,79 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     if (!selectedCourt) return selectedPitch?.totalPrice || 0;
     return selectedCourt.price;
   };
+
+  const persistBookingSelection = () => {
+    if (!selectedPitch || !selectedCourt || !selectedSlot || !selectedSlotQuote) return;
+    setBookingPitch(selectedPitch);
+    setBookingCourt(selectedCourt);
+    setBookingDate(selectedDateISO);
+    setBookingSlot(selectedSlot);
+    setBookingPrice(selectedSlotQuote.price);
+    setBookingDeposit(selectedSlotQuote.deposit);
+  };
+
+  const handlePayDeposit = () => {
+    if (!selectedSlot || !selectedCourtId || !selectedPitch || !selectedCourt || !selectedSlotQuote) return;
+    persistBookingSelection();
+
+    if (savedCards.length === 0) {
+      setWalletReturnView('PITCH_DISCOVERY');
+      setWalletInitialTab('CARD_SETTINGS');
+      setWalletPendingDeposit(true);
+      setView('WALLET');
+      return;
+    }
+
+    setDepositCheckoutOpen(true);
+  };
+
+  const handleDepositSuccess = () => {
+    setDepositCheckoutOpen(false);
+    setIsDetailOpen(false);
+    addUserNotification({
+      id: `rent-${Date.now()}`,
+      title: 'Saha Kiralandı!',
+      desc: `${selectedPitch?.name} — ${selectedSlot} rezervasyonu alındı.`,
+      time: 'Şimdi',
+      type: 'success',
+      iconName: 'CheckCircle',
+      color: 'bg-[#39FF14]',
+      textColor: 'text-[#39FF14]',
+    });
+    if (onNavigate) {
+      onNavigate('MY_BOOKINGS');
+    } else {
+      setView('MATCH_TICKET');
+    }
+  };
+
+  useEffect(() => {
+    if (
+      walletPendingDeposit &&
+      walletReturnView === 'PITCH_DISCOVERY' &&
+      savedCards.length > 0 &&
+      selectedSlot &&
+      selectedSlotQuote &&
+      selectedPitch &&
+      selectedCourt &&
+      !depositCheckoutOpen
+    ) {
+      setWalletPendingDeposit(false);
+      setWalletReturnView(null);
+      setDepositCheckoutOpen(true);
+    }
+  }, [
+    savedCards.length,
+    walletPendingDeposit,
+    walletReturnView,
+    selectedSlot,
+    selectedSlotQuote,
+    selectedPitch,
+    selectedCourt,
+    depositCheckoutOpen,
+    setWalletPendingDeposit,
+    setWalletReturnView,
+  ]);
 
   const districts = useMemo(() => ['Tümü', ...Array.from(new Set(sourcePitches.map(p => p.district).filter(Boolean)))], [sourcePitches]);
 
@@ -734,14 +902,21 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
             </div>
 
             <AnimatePresence mode="popLayout">
-              <div className="grid grid-cols-2 gap-3.5 pb-8">
-                {filteredPitches.map((pitch) => (
-                  <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />
-                ))}
-              </div>
+              {!pitchesLoading && (
+                <div className="grid grid-cols-2 gap-3.5 pb-8">
+                  {filteredPitches.map((pitch) => (
+                    <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />
+                  ))}
+                </div>
+              )}
             </AnimatePresence>
 
-            {filteredPitches.length === 0 && (
+            {pitchesLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-12 h-12 border-2 border-[#FFFF00] border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Sahalar yükleniyor...</p>
+              </div>
+            ) : filteredPitches.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
                   <Search size={32} className="text-gray-600" />
@@ -750,7 +925,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                 <p className="text-gray-500 text-xs mt-2">Filtreleri temizleyip tekrar dene.</p>
                 <button
                   onClick={() => {
-                    setFilters({ district: 'Tümü', minRating: 0, maxPrice: 4000, hasAmenities: [] });
+                    setFilters({ district: 'Tümü', minRating: 0, maxPrice: 4000, hasAmenities: [], type: 'Tümü', availability: 'Tümü' });
                     setSearchQuery('');
                   }}
                   className="mt-6 text-[#FFFF00] text-[10px] font-black uppercase tracking-widest underline"
@@ -758,7 +933,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                   FİLTRELERİ SIFIRLA
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         ) : (
           <div className="w-full h-[calc(100vh-280px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
@@ -887,7 +1062,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar pb-32">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pb-44">
               {/* Edge to Edge Image Carousel */}
               <div className="relative w-full h-[35vh]">
                 <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
@@ -930,6 +1105,21 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                     {selectedPitch.description}
                   </p>
                 )}
+                <div className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                  {selectedSlotQuote ? (
+                    <>
+                      <span className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest">Seçilen Saat</span>
+                      <span className="text-base font-black text-white">{selectedSlotQuote.price}₺</span>
+                      <span className="text-[10px] text-gray-500">/ saat</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ortalama Fiyat</span>
+                      <span className="text-base font-black text-white">~{selectedPitch.totalPrice}₺</span>
+                      <span className="text-[10px] text-gray-500">/ saat · saat seçince güncellenir</span>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Amenities */}
@@ -941,6 +1131,30 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                       {a}
                     </span>
                   ))}
+                </div>
+              </div>
+
+              {/* Occupancy Info */}
+              <div className="px-6 mb-8">
+                <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-3xl p-5 shadow-lg flex items-center justify-between">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h3 className="text-sm font-bold text-white mb-1">Haftalık Ortalama Doluluk</h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Bu tesis genellikle {selectedPitch.occupancy > 80 ? 'çok yoğun' : selectedPitch.occupancy > 60 ? 'orta yoğunlukta' : 'sakin'} oluyor.
+                    </p>
+                    <div className="mt-3.5 w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          selectedPitch.occupancy > 80 ? 'bg-red-500' : selectedPitch.occupancy > 60 ? 'bg-yellow-500' : 'bg-emerald-500'
+                        }`} 
+                        style={{ width: `${selectedPitch.occupancy}%` }} 
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right pl-5 shrink-0 border-l border-white/5 flex flex-col justify-center min-w-[70px]">
+                    <span className={`text-2xl font-black italic tracking-tighter ${selectedPitch.occupancy > 80 ? 'text-red-500' : selectedPitch.occupancy > 60 ? 'text-yellow-500' : 'text-emerald-500'}`}>%{selectedPitch.occupancy}</span>
+                    <span className="text-[7.5px] font-black text-gray-500 block uppercase tracking-widest mt-1">DOLULUK</span>
+                  </div>
                 </div>
               </div>
 
@@ -974,8 +1188,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                                 </div>
                                 <div className="text-right flex items-center gap-3">
                                   <div>
-                                    <p className="text-lg font-black text-[#39FF14]">{court.price}₺</p>
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">saat</p>
+                                    <p className="text-lg font-black text-[#39FF14]">
+                                      {selectedCourtId === court.id && selectedSlotQuote
+                                        ? `${selectedSlotQuote.price}₺`
+                                        : `~${selectedPitch.totalPrice}₺`}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">
+                                      {selectedCourtId === court.id && selectedSlotQuote ? 'seçilen saat' : 'ort. / saat'}
+                                    </p>
                                   </div>
                                   <ChevronRight size={20} className={`text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} />
                                 </div>
@@ -1081,25 +1301,49 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                                           </div>
                                           
                                           <div className="grid grid-cols-3 gap-2">
-                                            {(timeFilter === 'DAY' 
-                                              ? ['06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00']
-                                              : ['18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 00:00', '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00', '04:00 - 05:00', '05:00 - 06:00']
-                                            ).map(slot => (
-                                              <button
-                                                key={slot}
-                                                onClick={() => {
-                                                  setSelectedSlot(slot);
-                                                  setSelectedCourtId(court.id);
-                                                }}
-                                                className={`py-3 rounded-xl border text-[10px] font-black transition-all ${
-                                                  selectedSlot === slot && selectedCourtId === court.id
-                                                    ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
-                                                    : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
-                                                }`}
-                                              >
-                                                {slot}
-                                              </button>
-                                            ))}
+                                            {(() => {
+                                              const dateObj = new Date();
+                                              dateObj.setDate(dateObj.getDate() + selectedDate);
+                                              const dateStrISO = toISODate(dateObj);
+                                              const computedSlots = computeAvailability(selectedPitch, dateStrISO, bookings, court.id);
+                                              const filteredComputedSlots = computedSlots.filter(s => {
+                                                const hour = parseInt(s.startTime.split(':')[0], 10);
+                                                if (timeFilter === 'DAY') return hour >= 6 && hour < 18;
+                                                return hour >= 18 || hour < 6;
+                                              });
+
+                                              return filteredComputedSlots.map(slot => {
+                                                const isBooked = slot.status === 'booked' || slot.status === 'pending';
+                                                const isSelected = selectedSlot === slot.label && selectedCourtId === court.id;
+                                                return (
+                                                  <button
+                                                    key={slot.label}
+                                                    disabled={isBooked || slot.status === 'closed'}
+                                                    onClick={() => {
+                                                      setSelectedSlot(slot.label);
+                                                      setSelectedCourtId(court.id);
+                                                    }}
+                                                    className={`py-3 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center justify-center gap-0.5 ${
+                                                      isBooked
+                                                        ? 'bg-red-500/10 border-red-500/20 text-red-400/60 cursor-not-allowed line-through'
+                                                        : isSelected
+                                                          ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
+                                                          : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
+                                                    }`}
+                                                  >
+                                                    <span>{slot.label}</span>
+                                                    {!isBooked && slot.status !== 'closed' && slot.price != null && (
+                                                      <span className={`text-[7px] font-bold ${isSelected ? 'text-black/70' : 'text-[#39FF14]'}`}>
+                                                        {slot.price}₺
+                                                      </span>
+                                                    )}
+                                                    {isBooked && (
+                                                      <span className="text-[6.5px] font-bold tracking-widest text-red-400 leading-none">DOLU</span>
+                                                    )}
+                                                  </button>
+                                                );
+                                              });
+                                            })()}
                                           </div>
                                       </div>
 
@@ -1117,7 +1361,20 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
             </div>
 
             {/* Footer Showcase Actions */}
-            <div className="absolute bottom-0 left-0 w-full p-6 bg-[#0A0E14] border-t border-white/5 flex gap-4 items-center z-20">
+            <div className="absolute bottom-0 left-0 w-full bg-[#0A0E14] border-t border-white/5 z-20">
+              {selectedSlotQuote && (
+                <div className="px-6 pt-3 flex items-center justify-between text-sm border-b border-white/5 pb-3">
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Seçilen Saat Ücreti</p>
+                    <p className="text-lg font-black text-white">{selectedSlotQuote.price}₺</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kapora</p>
+                    <p className="text-lg font-black text-[#FFFF00]">{selectedSlotQuote.deposit}₺</p>
+                  </div>
+                </div>
+              )}
+              <div className="p-6 flex gap-4 items-center">
                <button
                   className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                 >
@@ -1143,17 +1400,39 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                   </button>
                 ) : (
                   <button
-                    className="flex-1 h-14 rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 transition-all bg-[#FF385C] text-white hover:bg-[#D70466] active:scale-95"
+                    disabled={!selectedSlot || !selectedCourtId}
+                    onClick={handlePayDeposit}
+                    className={`flex-1 h-14 rounded-2xl font-black text-[13px] tracking-widest flex items-center justify-center gap-2 transition-all uppercase bg-[#FFFF00] text-black ${
+                      selectedSlot && selectedCourtId
+                        ? 'shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer'
+                        : 'opacity-60 cursor-not-allowed'
+                    }`}
                   >
-                     <Phone size={18} /> TESİSİ ARA
+                    {selectedSlot && selectedSlotQuote
+                      ? `${selectedSlotQuote.deposit}₺ KAPORAYI ÖDE`
+                      : 'ÖNCE SAAT SEÇİN'}
                   </button>
                 )}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-
+      {depositCheckoutOpen && selectedPitch && selectedCourt && selectedSlot && selectedSlotQuote && savedCards[0] && (
+        <PitchDepositCheckout
+          open={depositCheckoutOpen}
+          onClose={() => setDepositCheckoutOpen(false)}
+          pitch={selectedPitch}
+          court={selectedCourt}
+          bookingDateISO={selectedDateISO}
+          slotLabel={selectedSlot}
+          price={selectedSlotQuote.price}
+          deposit={selectedSlotQuote.deposit}
+          card={savedCards[0]}
+          onSuccess={handleDepositSuccess}
+        />
+      )}
 
     </div>
   );

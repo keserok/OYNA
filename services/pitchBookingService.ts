@@ -5,6 +5,7 @@ import {
   dbTimeToOwnerHour,
   LOCAL_BOOKINGS_EVENT,
   toISODate,
+  addDays,
   type PitchBookingRow,
   type TimeSlotAvailability,
 } from './availabilityService';
@@ -18,7 +19,36 @@ export async function fetchPitchBookings(
   pitchId: string,
   dateStr?: string
 ): Promise<PitchBookingRow[]> {
-  return FB.fbGetPitchBookings(pitchId, dateStr);
+  const today = toISODate(new Date());
+  const from = dateStr ?? today;
+  const to = dateStr ?? addDays(new Date(), 14).toISOString().slice(0, 10);
+
+  const { data, error } = await supabase.rpc('get_pitch_availability', {
+    p_pitch_id: pitchId,
+    p_date_from: from,
+    p_date_to: dateStr ? dateStr : to,
+  });
+
+  if (error) {
+    // RPC yoksa veya anon erişim kapalıysa doğrudan tabloya düş
+    return FB.fbGetPitchBookings(pitchId, dateStr);
+  }
+
+  return ((data ?? []) as {
+    court_id: string | null;
+    booking_date: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+  }[]).map((row) => ({
+    id: `${row.booking_date}-${row.start_time}-${row.court_id ?? 'all'}`,
+    pitch_id: pitchId,
+    court_id: row.court_id,
+    booking_date: row.booking_date,
+    start_time: String(row.start_time).slice(0, 5),
+    end_time: String(row.end_time).slice(0, 5),
+    status: row.status,
+  }));
 }
 
 export async function fetchOwnerBookingsForDate(

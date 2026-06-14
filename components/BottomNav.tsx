@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Home, Calendar, Users, User, Target } from 'lucide-react';
+import { Home, Calendar, Users, User, MapPin } from 'lucide-react';
 import { AppView } from '../types';
 
 interface BottomNavProps {
@@ -12,8 +12,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
   const navItems = [
     { id: 'DASHBOARD', icon: Home, label: 'Ana Sayfa' },
     { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Top Oyna' },
-    { id: 'STUDIO', icon: Target, label: 'Taktik', isCenter: true },
-    { id: 'PITCH_DISCOVERY', icon: Users, label: 'Sahalar' },
+    { id: 'COMMUNITY_VIEW', icon: Users, label: 'Sosyal', isCenter: true },
+    { id: 'PITCH_DISCOVERY', icon: MapPin, label: 'Sahalar' },
     { id: 'PROFILE', icon: User, label: 'Profil' },
   ];
 

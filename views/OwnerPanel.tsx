@@ -3,14 +3,13 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
-  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard
+  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette
 } from 'lucide-react';
 
 import { OWNER_TRANSACTIONS, PITCHES } from '../constants';
 import { useAppStore } from '../store';
 import { PitchManager } from './admin/PitchManager';
-import { CustomerManager } from './admin/CustomerManager';
-import { UIBuilder } from './admin/UIBuilder';
+import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { supabase } from '../supabaseClient';
 import {
   getOwnerPitches,
@@ -19,59 +18,75 @@ import {
   togglePitchOpen,
   requestWithdrawal,
   getOwnerBalance,
+  getOwnerDailySummary,
+  getPitchBookings,
+  getPendingBookings,
+  approveBooking,
+  rejectBooking,
+  createManualBooking,
+  recordBookingPayment,
+  getSubscriptions,
+  subscribeToOwnerBookings,
+  buildHourlyOccupancyGrid,
+  buildEmptyHourlyGrid,
+  computeCourtDailyStats,
+  computeOverallOccupancy,
   toTurkishError,
+  updatePitchProfile,
   type TariffInput,
+  type CourtDailyStats,
+  type HourlyOccupancyCell,
 } from '../services/pitchOwnerService';
+import { getOwnerDemoPitchId, seedOwnerDemo } from '../services/ownerDemoService';
+import type { PitchCourt, PitchBookingFull, OwnerDailySummary } from '../types';
 interface OwnerPanelProps {
   onBack: () => void;
   onNavigate: (view: any) => void;
+  onNeedOnboarding?: () => void;
 }
 
-// --- MOCK DATA ---
+// --- HELPERS ---
 
-const HOURLY_DATA = [
-    { time: '00:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '01:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '02:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '03:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '04:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '05:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '06:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '07:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '08:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '09:00', occupancy: 1, pitches: ['DAILY', null, null, null] },
-    { time: '10:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '11:00', occupancy: 2, pitches: ['DAILY', 'SUB', null, null] },
-    { time: '12:00', occupancy: 1, pitches: [null, null, 'DAILY', null] },
-    { time: '13:00', occupancy: 0, pitches: [null, null, null, null] },
-    { time: '14:00', occupancy: 2, pitches: ['SUB', null, 'DAILY', null] },
-    { time: '15:00', occupancy: 1, pitches: [null, 'SUB', null, null] },
-    { time: '16:00', occupancy: 4, pitches: ['DAILY', 'SUB', 'DAILY', 'SUB'] },
-    { time: '17:00', occupancy: 3, pitches: ['SUB', 'DAILY', 'SUB', null] },
-    { time: '18:00', occupancy: 4, pitches: ['DAILY', 'DAILY', 'SUB', 'SUB'] },
-    { time: '19:00', occupancy: 4, pitches: ['SUB', 'SUB', 'DAILY', 'DAILY'] },
-    { time: '20:00', occupancy: 4, pitches: ['DAILY', 'SUB', 'DAILY', 'SUB'] },
-    { time: '21:00', occupancy: 3, pitches: ['SUB', 'DAILY', null, 'DAILY'] },
-    { time: '22:00', occupancy: 2, pitches: ['DAILY', null, null, 'SUB'] },
-    { time: '23:00', occupancy: 0, pitches: [null, null, null, null] },
-];
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
-const INITIAL_PENDING_REQUESTS = [
-    {
-        id: 'req1',
-        title: 'Ahmet Kuru',
-        subtitle: 'Saha 1 (17:00 - 18:00)',
-        timerSeconds: 25 * 60 + 49,
-        status: 'PENDING'
-    },
-    {
-        id: 'req2',
-        title: 'Vadi Gücü FC',
-        subtitle: 'Saha 2 (21:00 - 22:00)',
-        timerSeconds: 35 * 60,
-        status: 'PENDING'
-    }
-];
+function getWeekDates(base = new Date()): Date[] {
+  const day = base.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(base);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(base.getDate() + diff);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function formatDateISO(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function bookingToPendingRequest(b: PitchBookingFull, autoApproveMinutes: number) {
+  const created = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+  const deadline = created + autoApproveMinutes * 60 * 1000;
+  const timerSeconds = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+  const courtName = b.courts?.name ?? 'Saha';
+  const start = (b.start_time ?? '').slice(0, 5);
+  const end = (b.end_time ?? '').slice(0, 5);
+  return {
+    id: b.id,
+    bookingId: b.id,
+    title: b.customer_name || b.title || 'Rezervasyon Talebi',
+    subtitle: `${courtName} (${start} - ${end})`,
+    timerSeconds,
+    status: 'PENDING' as const,
+    source: b.source,
+  };
+}
+
+const INITIAL_PENDING_REQUESTS: ReturnType<typeof bookingToPendingRequest>[] = [];
 
 const MatchCountdownItem: React.FC<{
     request: any;
@@ -79,20 +94,22 @@ const MatchCountdownItem: React.FC<{
     onReject: () => void;
 }> = ({ request, onApprove, onReject }) => {
     const [timeLeft, setTimeLeft] = useState(request.timerSeconds || (request.timerMinutes ? request.timerMinutes * 60 : 0));
+    const onApproveRef = useRef(onApprove);
+    onApproveRef.current = onApprove;
 
     useEffect(() => {
-        if (timeLeft <= 0 || request.status !== 'PENDING') return;
+        if (request.status !== 'PENDING') return;
         const timerId = setInterval(() => {
             setTimeLeft((prev: number) => {
                 if (prev <= 1) {
-                    onApprove();
+                    onApproveRef.current();
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timerId);
-    }, [timeLeft, request.status, onApprove]);
+    }, [request.id, request.status]);
 
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -187,19 +204,22 @@ interface CalendarBooking {
     date?: string;
 }
 
-const CALENDAR_BOOKINGS: CalendarBooking[] = [
-    { id: 'b1', time: '17:00', duration: 1, user: 'Ahmet Yılmaz', type: 'APP', status: 'PAID', price: 2000, paid: 2000, note: '', pitchId: '1' },
-    { id: 'b2', time: '18:00', duration: 1, user: 'Mehmet Demir', type: 'PHONE', status: 'PARTIAL', price: 3200, paid: 500, note: 'Elden ödeyecek', pitchId: '1' },
-    { id: 'b3', time: '19:00', duration: 1, user: 'Kaplanlar FC', type: 'SUB', status: 'PAID', price: 3200, paid: 3200, note: 'Abone', pitchId: '1' },
-    { id: 'b4', time: '20:00', duration: 1, user: 'Misafir', type: 'APP', status: 'PENDING', price: 3200, paid: 0, note: 'Ödeme bekleniyor', pitchId: '1' },
-    { id: 'b5', time: '19:00', duration: 1, user: 'Vadi Gücü', type: 'APP', status: 'PAID', price: 3200, paid: 3200, note: '', pitchId: '2' },
-    { id: 'b6', time: '21:00', duration: 1, user: 'Gece Kuşları', type: 'APP', status: 'PAID', price: 3200, paid: 3200, note: '', pitchId: '1' },
-    { id: 'b7', time: '22:00', duration: 1, user: 'Son Dakika FC', type: 'PHONE', status: 'PENDING', price: 3200, paid: 0, note: '', pitchId: '1' },
-    { id: 'b8', time: '13:00', duration: 1, user: 'Öğle Grubu', type: 'APP', status: 'PAID', price: 2000, paid: 2000, note: '', pitchId: '1' },
-    { id: 'b9', time: '14:00', duration: 1, user: 'Kurumsal Maç', type: 'PHONE', status: 'PAID', price: 2000, paid: 2000, note: '', pitchId: '1' },
-    { id: 'b10', time: '15:00', duration: 1, user: 'Genç Yetenekler', type: 'APP', status: 'PARTIAL', price: 2000, paid: 1000, note: '', pitchId: '1' },
-    { id: 'b11', time: '10:00', duration: 1, user: 'Sabah Sporu', type: 'SUB', status: 'PAID', price: 1500, paid: 1500, note: '', pitchId: '1' },
-];
+function mapDbBookingToCalendar(b: PitchBookingFull): CalendarBooking {
+  const start = (b.start_time ?? '00:00').slice(0, 5);
+  return {
+    id: b.id,
+    time: start.replace(':', '.'),
+    duration: 1,
+    user: b.customer_name || b.title || 'Misafir',
+    type: b.source === 'SUBSCRIPTION' ? 'SUB' : b.source === 'OWNER_MANUAL' ? 'PHONE' : 'APP',
+    status: b.payment_status === 'PAID' ? 'PAID' : b.payment_status === 'PARTIAL' ? 'PARTIAL' : 'PENDING',
+    price: b.price ?? 0,
+    paid: b.paid_amount ?? 0,
+    note: b.note ?? undefined,
+    pitchId: b.court_id ?? '',
+    date: b.booking_date,
+  };
+}
 
 const WEEKLY_REVENUE_DATA = [
     { day: 'Pzt', revenue: 12000 },
@@ -240,7 +260,7 @@ const HEATMAP_DATA = [
     { hour: '21:00', intensity: 90 }, { hour: '22:00', intensity: 60 }, { hour: '23:00', intensity: 20 },
 ];
 
-type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES' | 'CUSTOMERS';
+type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
 
 type WidgetType = 'QUICK_STATS' | 'QUICK_ACTIONS' | 'OCCUPANCY_ANALYSIS' | 'PENDING_REQUESTS' | 'WEATHER_INFO' | 'STAFF_STATUS' | 'MAINTENANCE_ALERTS';
 
@@ -251,18 +271,11 @@ const WIDGETS: { id: WidgetType; title: string; description: string; icon: any }
     { id: 'PENDING_REQUESTS', title: 'Onay Bekleyen Talepler', description: 'Bekleyen rezervasyon taleplerini listeler.', icon: Clock }
 ];
 
-const INTERNAL_PITCHES = [
-    { id: '1', name: 'Saha 1' },
-    { id: '2', name: 'Saha 2' },
-    { id: '3', name: 'Saha 3' },
-    { id: '4', name: 'Saha 4' }
-];
-
 const AVAILABLE_AMENITIES = ['Duş', 'Otopark', 'Kafe', 'WiFi', 'Kamera Kaydı', 'Mescit', 'Krampon Kiralama', 'Büfe'];
 
 // --- COMPONENTS ---
 
-const AnimatedBarChart: React.FC<{ data: typeof HOURLY_DATA; dataKey: 'revenue' | 'occupancy'; color: string; height?: number; maxValue?: number; onBarClick?: (data: any) => void; showGrid?: boolean }> = ({ data, dataKey, color, height = 160, maxValue, onBarClick, showGrid = true }) => {
+const AnimatedBarChart: React.FC<{ data: HourlyOccupancyCell[]; dataKey: 'revenue' | 'occupancy'; color: string; height?: number; maxValue?: number; onBarClick?: (data: any) => void; showGrid?: boolean }> = ({ data, dataKey, color, height = 160, maxValue, onBarClick, showGrid = true }) => {
     const max = maxValue || Math.max(...data.map(d => d[dataKey])) || 1;
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -964,16 +977,16 @@ const EXTENDED_AMENITIES = [
     'Yapay Çim', 'Doğal Çim', 'Kapalı Saha', 'Açık Saha', 'Isıtma', 'Soğutma', 'Soyunma Odası', 'Kilitli Dolap'
 ];
 
-const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; initialData?: any; onSave: (data: any) => void; initialPitches?: any[] }> = ({ onClose, facilityId, initialData, onSave, initialPitches = INTERNAL_PITCHES }) => {
+const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; initialData?: any; onSave: (data: any) => void; initialPitches?: PitchCourt[] }> = ({ onClose, facilityId, initialData, onSave, initialPitches = [] }) => {
     const [activeTab, setActiveTab] = useState<'general' | 'amenities' | 'pitches'>('general');
     
     // General Info State
     const [facilityName, setFacilityName] = useState(initialData?.name || 'Arena Sport Center');
     const [description, setDescription] = useState(initialData?.description || 'İstanbulun kalbinde, profesyonel standartlarda halı saha deneyimi. 7/24 açık, güvenli ve konforlu.');
-    const [images, setImages] = useState(initialData?.images || PITCHES[0].images);
+    const [images, setImages] = useState(initialData?.images || PITCHES[0]?.images || []);
 
     // Amenities State
-    const [amenities, setAmenities] = useState<string[]>(initialData?.amenities || PITCHES[0].amenities);
+    const [amenities, setAmenities] = useState<string[]>(initialData?.amenities || PITCHES[0]?.amenities || []);
     const [customAmenity, setCustomAmenity] = useState('');
     const [availableAmenities, setAvailableAmenities] = useState<string[]>(EXTENDED_AMENITIES);
 
@@ -984,7 +997,7 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
         images: [] as string[],
         isActive: true
     })));
-    const [selectedPitchId, setSelectedPitchId] = useState(INTERNAL_PITCHES[0].id);
+    const [selectedPitchId, setSelectedPitchId] = useState(initialPitches[0]?.id ?? '');
 
     const [isSaving, setIsSaving] = useState(false);
     const [draggedItem, setDraggedItem] = useState<{ index: number, pitchId?: string } | null>(null);
@@ -1057,20 +1070,28 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
         if (!facilityId) return;
         setIsSaving(true);
         try {
-            // Mock save
-            setTimeout(() => {
-                onSave({
+            const isRealPitch = !facilityId.startsWith('mock-');
+            if (isRealPitch) {
+                await updatePitchProfile(facilityId, {
                     name: facilityName,
                     description,
-                    images,
                     amenities,
-                    pitches
+                    images,
+                    image: images[0] ?? undefined,
                 });
-                setIsSaving(false);
-                onClose();
-            }, 1000);
+            }
+            onSave({
+                name: facilityName,
+                description,
+                images,
+                amenities,
+                pitches
+            });
+            onClose();
         } catch (error) {
             console.error("Tesis bilgileri kaydedilirken hata:", error);
+            alert(toTurkishError(error));
+        } finally {
             setIsSaving(false);
         }
     };
@@ -1408,10 +1429,17 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     );
 };
 
-const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[]; pitches?: any[] }> = ({ facilityId, pricingPolicy, pitches = INTERNAL_PITCHES }) => {
-    const [selectedDate, setSelectedDate] = useState(0);
-    const [selectedMonthlyDay, setSelectedMonthlyDay] = useState(24);
-    const [selectedPitchId, setSelectedPitchId] = useState(pitches[0]?.id || '1');
+const FinancialCalendarView: React.FC<{ pitchId: string; pricingPolicy?: any[]; courts?: PitchCourt[] }> = ({ pitchId, pricingPolicy, courts = [] }) => {
+    const weekDates = useMemo(() => getWeekDates(), []);
+    const todayIndex = useMemo(() => {
+        const today = todayISO();
+        const idx = weekDates.findIndex((d) => formatDateISO(d) === today);
+        return idx >= 0 ? idx : 0;
+    }, [weekDates]);
+
+    const [selectedDate, setSelectedDate] = useState(todayIndex);
+    const [selectedMonthlyDay, setSelectedMonthlyDay] = useState(new Date().getDate());
+    const [selectedCourtId, setSelectedCourtId] = useState(courts[0]?.id ?? '');
     const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
     const [isQuickCreateOpen, setIsQuickCreateOpen] = useState<string | null>(null);
     const [repriceModalOpen, setRepriceModalOpen] = useState<string | null>(null);
@@ -1419,46 +1447,67 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
     const [specialRates, setSpecialRates] = useState<Record<string, number>>({});
     const [isMonthlyView, setIsMonthlyView] = useState(false);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
-    const [realTimeSlots, setRealTimeSlots] = useState<any[]>([]);
     const [isAddingSlot, setIsAddingSlot] = useState(false);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+    const [subscriptions, setSubscriptions] = useState<any[]>([]);
 
-    // New states for reservation creation
-    const [bookings, setBookings] = useState<CalendarBooking[]>(CALENDAR_BOOKINGS);
+    const [bookings, setBookings] = useState<CalendarBooking[]>([]);
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'PARTIAL' | 'PENDING'>('PENDING');
     const [isRecurringPrice, setIsRecurringPrice] = useState(false);
 
+    const isRealPitch = !!pitchId && !pitchId.startsWith('mock-');
+    const selectedDateISO = formatDateISO(weekDates[selectedDate] ?? new Date());
+    const activeCourts = courts.filter((c) => c.is_active !== false);
+
+    useEffect(() => {
+        if (activeCourts.length && !activeCourts.find((c) => c.id === selectedCourtId)) {
+            setSelectedCourtId(activeCourts[0].id);
+        }
+    }, [activeCourts, selectedCourtId]);
+
+    const loadBookings = React.useCallback(async () => {
+        if (!isRealPitch || !pitchId) {
+            setBookings([]);
+            return;
+        }
+        setIsLoadingBookings(true);
+        try {
+            const rows = await getPitchBookings(pitchId, selectedDateISO, selectedCourtId || undefined);
+            setBookings(rows.map(mapDbBookingToCalendar));
+        } catch (err) {
+            console.warn('Takvim rezervasyonları yüklenemedi:', err);
+            setBookings([]);
+        } finally {
+            setIsLoadingBookings(false);
+        }
+    }, [isRealPitch, pitchId, selectedDateISO, selectedCourtId]);
+
+    useEffect(() => {
+        loadBookings();
+    }, [loadBookings]);
+
+    useEffect(() => {
+        if (!isRealPitch || !pitchId) return;
+        return subscribeToOwnerBookings(pitchId, loadBookings);
+    }, [isRealPitch, pitchId, loadBookings]);
+
+    useEffect(() => {
+        if (!isRealPitch || !pitchId || !isMonthlyView) return;
+        getSubscriptions(pitchId)
+            .then(setSubscriptions)
+            .catch(() => setSubscriptions([]));
+    }, [isRealPitch, pitchId, isMonthlyView]);
+
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}.00`);
 
-    // Mock slots
-    useEffect(() => {
-        setRealTimeSlots([]);
-    }, [facilityId]);
-
     const currentBookings = useMemo(() => {
-        return bookings.filter(b => {
-            const pitchMatch = b.pitchId === selectedPitchId;
-            const dateMatch = b.date ? b.date === (24 + selectedDate).toString() : true; // Mock date matching
-            return pitchMatch && dateMatch;
-        });
-    }, [bookings, selectedPitchId, selectedDate]);
-    
-    // Combine mock bookings with real slots (for visualization)
-    const displaySlots = useMemo(() => {
-        const combined = [...currentBookings];
-        
-        // Add real slots that are not already in bookings
-        realTimeSlots.forEach(slot => {
-            const timeFormatted = slot.time.replace(':', '.');
-            if (!combined.find(b => b.time === timeFormatted)) {
-                // This is a free slot in our mock logic, but it exists in Firestore
-            }
-        });
-        
-        return combined;
-    }, [currentBookings, realTimeSlots]);
+        return bookings.filter((b) => b.pitchId === selectedCourtId);
+    }, [bookings, selectedCourtId]);
+
+    const displaySlots = currentBookings;
 
     const dailyCollected = currentBookings.reduce((acc, curr) => acc + curr.paid, 0);
     const dailyTotal = currentBookings.reduce((acc, curr) => acc + curr.price, 0);
@@ -1466,7 +1515,6 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
     const occupancyRate = Math.round((currentBookings.length / timeSlots.length) * 100);
 
     const getBooking = (time: string) => currentBookings.find(b => b.time === time || b.time === time.replace('.', ':'));
-    const getRealSlot = (time: string) => realTimeSlots.find(s => s.time === time.replace('.', ':'));
 
     const handleQuickCreate = async (time: string) => {
         setIsQuickCreateOpen(time);
@@ -1521,18 +1569,20 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                 className={`flex-1 py-2 rounded-lg flex flex-col items-center gap-0.5 transition-all border ${selectedDate === i ? 'bg-white/10 text-white border-white/20 shadow-lg scale-105' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
                             >
                                 <span className="text-[9px] font-black uppercase">{d}</span>
-                                <span className="text-sm font-bold">{24 + i}</span>
+                                <span className="text-sm font-bold">{weekDates[i]?.getDate() ?? i + 1}</span>
                             </button>
                         ))}
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="flex-1 flex bg-[#161B22] p-1 rounded-xl">
-                            {pitches.map(p => (
+                        <div className="flex-1 flex bg-[#161B22] p-1 rounded-xl overflow-x-auto">
+                            {activeCourts.length === 0 ? (
+                                <span className="text-xs text-gray-500 px-3 py-2">Saha ekleyin (Menü → Sahalarım)</span>
+                            ) : activeCourts.map(p => (
                                 <button
                                     key={p.id}
-                                    onClick={() => setSelectedPitchId(p.id)}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${selectedPitchId === p.id ? 'bg-[#2D3748] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+                                    onClick={() => setSelectedCourtId(p.id)}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap px-2 ${selectedCourtId === p.id ? 'bg-[#2D3748] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
                                 >
                                     {p.name}
                                 </button>
@@ -1554,7 +1604,9 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-black text-white italic">MART 2024</h3>
+                                <h3 className="text-lg font-black text-white italic">
+                                    {new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                                </h3>
                                 <button 
                                     onClick={() => setIsSubscriptionModalOpen(true)}
                                     className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20"
@@ -1568,7 +1620,7 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                             <div className="grid grid-cols-7 gap-2">
                                 {Array.from({ length: 31 }, (_, i) => {
                                     const day = i + 1;
-                                    const isToday = day === 24;
+                                    const isToday = day === new Date().getDate();
                                     const isSelected = selectedMonthlyDay === day;
                                     
                                     return (
@@ -1589,25 +1641,27 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
 
                         <div className="space-y-4">
                             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">AKTİF ABONMANLAR</h4>
-                            {[
-                                { id: 's1', user: 'Vadi Gücü FC', day: 'Pazartesi', time: '21.00', pitch: 'Saha 1' },
-                                { id: 's2', user: 'Kaplanlar', day: 'Çarşamba', time: '19.00', pitch: 'Saha 2' }
-                            ].map(sub => (
+                            {subscriptions.length === 0 ? (
+                                <p className="text-sm text-gray-500 text-center py-4">Aktif abonman bulunmuyor.</p>
+                            ) : subscriptions.map(sub => {
+                                const dayNames = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+                                const courtName = activeCourts.find(c => c.id === sub.court_id)?.name ?? 'Saha';
+                                return (
                                 <div key={sub.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center group">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                                             <RefreshCw size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-white">{sub.user}</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase">{sub.day} • {sub.time} • {sub.pitch}</p>
+                                            <p className="text-sm font-black text-white">{sub.customer_name}</p>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase">{dayNames[sub.weekday] ?? ''} • {(sub.start_time ?? '').slice(0,5).replace(':','.')} • {courtName}</p>
                                         </div>
                                     </div>
                                     <button className="p-2 text-gray-600 hover:text-white transition-colors">
                                         <MoreHorizontal size={20} />
                                     </button>
                                 </div>
-                            ))}
+                            );})}
                         </div>
                     </div>
                 ) : (
@@ -1685,19 +1739,13 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                                     <div className="flex gap-2 h-16 w-full">
                                         <button 
                                             onClick={() => handleQuickCreate(time)}
-                                            disabled={isAddingSlot || getRealSlot(time) !== undefined}
-                                            className={`flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 relative overflow-hidden ${
-                                                getRealSlot(time) 
-                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                                                : 'border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-gray-600 hover:text-emerald-400 group/add'
-                                            }`}
+                                            disabled={isAddingSlot || !selectedCourtId || isLoadingBookings}
+                                            className="flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 relative overflow-hidden border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-gray-600 hover:text-emerald-400 group/add"
                                         >
                                             <div className="relative z-10 flex flex-col items-center">
                                                 <div className="flex items-center gap-1">
-                                                    {getRealSlot(time) ? <CheckCircle2 size={16} /> : <Plus size={16} className="group-hover/add:scale-110 transition-transform" />}
-                                                    <span className="text-xs font-bold uppercase tracking-wider">
-                                                        {getRealSlot(time) ? 'YAYINDA' : 'BOŞ'}
-                                                    </span>
+                                                    <Plus size={16} className="group-hover/add:scale-110 transition-transform" />
+                                                    <span className="text-xs font-bold uppercase tracking-wider">BOŞ</span>
                                                 </div>
                                                 <span className="text-[10px] text-gray-500 font-mono mt-0.5">{currentPrice}₺</span>
                                             </div>
@@ -1791,31 +1839,49 @@ const FinancialCalendarView: React.FC<{ facilityId: string; pricingPolicy?: any[
                         </div>
 
                         <button 
-                            onClick={() => {
-                                if (!isQuickCreateOpen) return;
-                                const rateVal = specialRates[isQuickCreateOpen] || 2000;
-                                const newBooking: CalendarBooking = {
-                                    id: `new-${Date.now()}`,
-                                    pitchId: selectedPitchId,
-                                    time: isQuickCreateOpen,
-                                    date: (24 + selectedDate).toString(), // Store the selected date
-                                    duration: 1,
-                                    user: customerName.trim() || 'Misafir Oyuncu',
-                                    status: paymentStatus,
-                                    price: rateVal,
-                                    paid: paymentStatus === 'PAID' ? rateVal : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25) : 0,
-                                    type: 'DAILY',
-                                    note: customerPhone ? `Tel: ${customerPhone}` : (paymentStatus === 'PARTIAL' ? 'Kapora Alındı' : paymentStatus === 'PAID' ? 'Tam Ödendi' : 'Ödeme Bekliyor')
-                                };
-                                setBookings(prev => [...prev, newBooking]);
-                                setIsQuickCreateOpen(null);
-                                setCustomerName('');
-                                setCustomerPhone('');
-                                setPaymentStatus('PENDING');
+                            onClick={async () => {
+                                if (!isQuickCreateOpen || !selectedCourtId) return;
+                                if (!isRealPitch) {
+                                    alert('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.');
+                                    return;
+                                }
+                                setIsAddingSlot(true);
+                                try {
+                                    const startTime = isQuickCreateOpen.replace('.', ':');
+                                    const hour = parseInt(startTime.split(':')[0], 10);
+                                    const endTime = `${((hour + 1) % 24).toString().padStart(2, '0')}:00`;
+                                    const bookingId = await createManualBooking({
+                                        pitchId,
+                                        courtId: selectedCourtId,
+                                        bookingDate: selectedDateISO,
+                                        startTime,
+                                        endTime,
+                                        customerName: customerName.trim() || undefined,
+                                        customerPhone: customerPhone.trim() || undefined,
+                                        note: customerPhone ? `Tel: ${customerPhone}` : undefined,
+                                        source: 'OWNER_MANUAL',
+                                    });
+                                    const rateVal = specialRates[isQuickCreateOpen] || 2000;
+                                    if (paymentStatus === 'PAID') {
+                                        await recordBookingPayment(bookingId, rateVal, 'CASH');
+                                    } else if (paymentStatus === 'PARTIAL') {
+                                        await recordBookingPayment(bookingId, Math.floor(rateVal * 0.25), 'CASH', 'Kapora');
+                                    }
+                                    await loadBookings();
+                                    setIsQuickCreateOpen(null);
+                                    setCustomerName('');
+                                    setCustomerPhone('');
+                                    setPaymentStatus('PENDING');
+                                } catch (err) {
+                                    alert(toTurkishError(err));
+                                } finally {
+                                    setIsAddingSlot(false);
+                                }
                             }}
-                            className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all"
+                            disabled={isAddingSlot}
+                            className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
                         >
-                            KAYDET
+                            {isAddingSlot ? 'KAYDEDİLİYOR...' : 'KAYDET'}
                         </button>
                     </div>
                 </div>
@@ -2688,6 +2754,9 @@ const FinanceView: React.FC<{ hasDebt: boolean; isPayingDebt: boolean; onPayDebt
 const MenuView: React.FC<{ 
     onNavigate: (view: any) => void; 
     onBack: () => void;
+    facilityName?: string;
+    facilityDistrict?: string;
+    facilityImage?: string;
     onEditProfile: () => void;
     onWorkingHours: () => void;
     onBankAccounts: () => void;
@@ -2698,10 +2767,12 @@ const MenuView: React.FC<{
     onToggleNotifications: () => void;
     onWidgetSettings: () => void;
     onPitches: () => void;
-    onCustomers: () => void;
 }> = ({ 
     onNavigate, 
     onBack,
+    facilityName = 'Tesisim',
+    facilityDistrict = '',
+    facilityImage,
     onEditProfile, 
     onWorkingHours, 
     onBankAccounts, 
@@ -2712,7 +2783,6 @@ const MenuView: React.FC<{
     onToggleNotifications,
     onWidgetSettings,
     onPitches,
-    onCustomers
 }) => {
     return (
         <div className="p-6 pb-32 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
@@ -2720,14 +2790,20 @@ const MenuView: React.FC<{
             {/* Profile Header */}
             <div className="flex items-center gap-4 mb-8">
                 <div className="relative">
-                    <img src={PITCHES[0].image} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/10" alt="Facility" />
+                    {facilityImage ? (
+                      <img src={facilityImage} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/10" alt="Facility" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/10 flex items-center justify-center">
+                        <Building2 size={28} className="text-gray-500" />
+                      </div>
+                    )}
                     <div className="absolute -bottom-2 -right-2 bg-[#FFFF00] text-black text-[10px] font-black px-2 py-0.5 rounded-lg border-2 border-[#1A1F2C]">
                         PRO
                     </div>
                 </div>
                 <div>
-                    <h2 className="text-xl font-black text-white">Arena Sport Center</h2>
-                    <p className="text-xs text-gray-400 font-medium">Beşiktaş, İstanbul</p>
+                    <h2 className="text-xl font-black text-white">{facilityName}</h2>
+                    <p className="text-xs text-gray-400 font-medium">{facilityDistrict || 'Konum belirtilmedi'}</p>
                 </div>
             </div>
 
@@ -2774,16 +2850,6 @@ const MenuView: React.FC<{
                             <div className="flex items-center gap-3">
                                 <LayoutDashboard size={18} className="text-gray-400" />
                                 <span className="text-sm font-bold text-white">Sahalarım (Pitch Management)</span>
-                            </div>
-                            <ChevronRight size={16} className="text-gray-600" />
-                        </button>
-                        <button 
-                            onClick={onCustomers}
-                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5"
-                        >
-                            <div className="flex items-center gap-3">
-                                <Users size={18} className="text-gray-400" />
-                                <span className="text-sm font-bold text-white">Müşteriler (CRM)</span>
                             </div>
                             <ChevronRight size={16} className="text-gray-600" />
                         </button>
@@ -2911,8 +2977,8 @@ const MenuView: React.FC<{
     );
 };
 
-const PitchOccupancyGrid: React.FC<{ data: typeof HOURLY_DATA }> = ({ data }) => {
-    const pitches = ['Saha 1', 'Saha 2', 'Saha 3', 'Saha 4'];
+const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNames: string[] }> = ({ data, courtNames }) => {
+    const pitches = courtNames.length > 0 ? courtNames : ['Henüz saha yok'];
     
     return (
         <div className="w-full overflow-x-auto custom-scrollbar pb-2">
@@ -3040,14 +3106,136 @@ const WidgetSettingsModal: React.FC<{
     );
 };
 
+    );
+};
+
+// ── Gerçek (canlı) onay bekleyen uygulama rezervasyonları ──────────────────────
+interface RealPendingBooking {
+  id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  customer_name: string | null;
+  price: number;
+  deposit_amount: number;
+  source: string;
+  courts: { name: string } | null;
+}
+
+const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) => {
+    const [rows, setRows] = useState<RealPendingBooking[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [busyId, setBusyId] = useState<string | null>(null);
+
+    const load = React.useCallback(async () => {
+        if (!pitchId) return;
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('pitch_bookings')
+                .select('id, booking_date, start_time, end_time, customer_name, price, deposit_amount, source, courts(name)')
+                .eq('pitch_id', pitchId)
+                .eq('status', 'PENDING')
+                .in('source', ['APP_BOOKING', 'APP_MATCH'])
+                .order('booking_date', { ascending: true })
+                .order('start_time', { ascending: true });
+            if (error) throw error;
+            setRows((data ?? []) as unknown as RealPendingBooking[]);
+        } catch (err) {
+            console.error('Bekleyen rezervasyonlar yüklenemedi:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [pitchId]);
+
+    useEffect(() => { load(); }, [load]);
+
+    useEffect(() => {
+        if (!pitchId) return;
+        const channel = supabase
+            .channel(`owner-pending-${pitchId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pitch_bookings', filter: `pitch_id=eq.${pitchId}` }, () => load())
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [pitchId, load]);
+
+    const handle = async (id: string, action: 'APPROVE' | 'REJECT') => {
+        setBusyId(id);
+        try {
+            if (action === 'APPROVE') {
+                await approveBooking(id);
+            } else {
+                await rejectBooking(id, 'Tesis sahibi rezervasyonu onaylamadı.');
+            }
+            setRows(prev => prev.filter(r => r.id !== id));
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'İşlem başarısız.');
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    if (!pitchId) return null;
+
+    return (
+        <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <Clock size={16} className="text-[#FFFF00]" /> Uygulama Talepleri
+                    {rows.length > 0 && <span className="bg-[#FFFF00] text-black text-[10px] px-2 py-0.5 rounded-full">{rows.length}</span>}
+                </h3>
+                <button onClick={load} className="text-gray-400 hover:text-white" title="Yenile"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>
+            </div>
+            {rows.length === 0 ? (
+                <div className="bg-[#161B22] border border-white/5 rounded-2xl p-5 text-center text-xs text-gray-500">
+                    {loading ? 'Yükleniyor...' : 'Onay bekleyen uygulama rezervasyonu yok.'}
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {rows.map(b => (
+                        <div key={b.id} className="bg-[#161B22] border border-orange-500/20 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <p className="text-sm font-black text-white">{b.courts?.name ?? 'Saha'} · {b.start_time.slice(0,5)}-{b.end_time.slice(0,5)}</p>
+                                    <p className="text-[11px] text-gray-400 mt-0.5">{new Date(b.booking_date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}{b.price > 0 ? ` · ₺${b.price}` : ''}</p>
+                                </div>
+                                <span className="text-[9px] font-black px-2 py-1 rounded-full bg-orange-500/15 text-orange-400 uppercase">Bekliyor</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    disabled={busyId === b.id}
+                                    onClick={() => handle(b.id, 'REJECT')}
+                                    className="py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black uppercase hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                >
+                                    Reddet
+                                </button>
+                                <button
+                                    disabled={busyId === b.id}
+                                    onClick={() => handle(b.id, 'APPROVE')}
+                                    className="py-2.5 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black uppercase hover:bg-[#39FF14]/20 transition-colors disabled:opacity-50"
+                                >
+                                    {busyId === b.id ? '...' : 'Onayla'}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface PendingActionsViewProps {
     pendingRequests: any[];
+    realPitchId?: string | null;
+    autoApprove?: boolean;
+    onToggleAutoApprove?: () => void;
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
     onBack: () => void;
 }
 
-const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, onApprove, onReject, onBack }) => {
+const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, onApprove, onReject, onBack }) => {
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
 
@@ -3069,7 +3257,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         status: m.status === 'ACTIVE' ? 'FORMING' : (m.status || 'FORMING'),
     }));
 
-    const activeRequests = pendingRequests.filter(r => r.status === 'PENDING');
+    const activeRequests = pendingRequests.filter(r => r.status === 'PENDING' && !r.source?.startsWith('APP_'));
 
     return (
         <div className="flex-1 bg-[#0A0E14] text-slate-200 font-sans flex flex-col h-full overflow-hidden">
@@ -3110,6 +3298,26 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24">
+                {subTab === 'REQUESTS' && realPitchId && onToggleAutoApprove && (
+                    <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-sm font-black text-white">Otomatik Onay</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
+                                {autoApprove
+                                    ? 'Açık: talepler süre sonunda otomatik onaylanır.'
+                                    : 'Kapalı: her talebi elle onaylaman gerekir.'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={onToggleAutoApprove}
+                            className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${autoApprove ? 'bg-[#39FF14]' : 'bg-gray-600'}`}
+                            aria-label="Otomatik onay aç/kapa"
+                        >
+                            <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition-transform ${autoApprove ? 'translate-x-6' : ''}`} />
+                        </button>
+                    </div>
+                )}
+                {subTab === 'REQUESTS' && <RealPendingBookings pitchId={realPitchId ?? null} />}
                 {subTab === 'REQUESTS' ? (
                     activeRequests.length > 0 ? (
                         <div className="space-y-4">
@@ -3274,34 +3482,20 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     );
 };
 
- const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
-  const { setIsNotificationsOpen, loadOwnerData, adminMatches } = useAppStore();
+ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding }) => {
+  const { setIsNotificationsOpen } = useAppStore();
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
-  const [pitches, setPitches] = useState<any[]>(PITCHES); // Initializing with mock data
+  const [courts, setCourts] = useState<PitchCourt[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
+  const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
+  const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
+  const [courtStats, setCourtStats] = useState<CourtDailyStats[]>([]);
+  const [hourlyOccupancy, setHourlyOccupancy] = useState<HourlyOccupancyCell[]>(() => buildEmptyHourlyGrid());
+  const [autoApproveMinutes, setAutoApproveMinutes] = useState(35);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  useEffect(() => {
-    loadOwnerData('1'); // Assuming '1' is the current mock facility ID for the owner
-  }, [loadOwnerData]);
-
-  // Compute dynamic stats from store data (MatchListing uses 'price' not 'pricePerPerson')
-  const dynamicTotalRevenue = adminMatches.reduce((acc, match) => {
-    return acc + ((match as any).price ?? 0) * match.slots.filter(s => s.status === 'TAKEN').length;
-  }, 0);
-  
-  const dynamicOccupancyRatio = adminMatches.length > 0 
-    ? Math.round((adminMatches.filter(m => m.slots.every(s => s.status === 'TAKEN')).length / adminMatches.length) * 100) 
-    : 0;
-
-  const [pendingRequests, setPendingRequests] = useState(() => {
-      const saved = localStorage.getItem('owner_pendingRequests');
-      return saved ? JSON.parse(saved) : INITIAL_PENDING_REQUESTS;
-  });
-  const [hasDebt, setHasDebt] = useState(() => {
-      const saved = localStorage.getItem('owner_hasDebt');
-      return saved ? JSON.parse(saved) : true;
-  });
-  const [isPayingDebt, setIsPayingDebt] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>(INITIAL_PENDING_REQUESTS);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showOccupancyModal, setShowOccupancyModal] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -3338,83 +3532,139 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   const [isLoading, setIsLoading] = useState(true);
   const [realPitchId, setRealPitchId] = useState<string | null>(null);
 
-  // Gerçek tesisi (varsa) yükle ve mock facilityData üzerine bindir.
-  // Böylece tüm modal kayıtları gerçek pitch id ile çalışır; tesis yoksa demo modu sürer.
+  const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
+    try {
+      const [summary, bookings, pending] = await Promise.all([
+        getOwnerDailySummary(pitchId),
+        getPitchBookings(pitchId, todayISO()),
+        getPendingBookings(pitchId),
+      ]);
+      setDailySummary(summary);
+      setTodayBookings(bookings);
+      const activeCourtRows = (courtList ?? courts).filter((c) => c.is_active !== false);
+      const courtMeta = activeCourtRows.map((c) => ({ id: c.id, name: c.name }));
+      setCourtStats(computeCourtDailyStats(bookings, courtMeta));
+      setHourlyOccupancy(buildHourlyOccupancyGrid(bookings, courtMeta));
+      setPendingRequests(pending.map((b) => bookingToPendingRequest(b, approveMins)));
+    } catch (err) {
+      console.warn('Panel verileri yüklenemedi:', err);
+    }
+  }, [courts]);
+
+  // Gerçek tesis + sahalar (courts) yükle; yoksa demo veya onboarding
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const { data: userData } = await supabase.auth.getUser();
         const uid = userData.user?.id;
-        if (!uid) return;
-        const pitches = await getOwnerPitches(uid);
-        if (!active || !pitches.length) return;
-        const p: any = pitches[0];
-        setRealPitchId(p.id);
-        setIsFacilityOpen(p.is_open ?? true);
-        setFacilityData((prev: any) => ({
-          ...(prev || {}),
-          id: p.id,
+        if (!uid) {
+          if (active) setIsLoading(false);
+          return;
+        }
+        const ownerPitches = await getOwnerPitches(uid);
+        const owned = ownerPitches.filter((p) => !p.is_demo);
+        let pitch = owned[0] ?? null;
+        let demo = false;
+
+        if (!pitch) {
+          let demoId = await getOwnerDemoPitchId();
+          const autoSeed = import.meta.env.VITE_OWNER_DEMO_AUTO_SEED === 'true';
+          if (!demoId && autoSeed) {
+            try {
+              demoId = await seedOwnerDemo();
+            } catch (e) {
+              console.warn('Demo seed:', e);
+            }
+          }
+          if (demoId) {
+            const { data: demoPitch } = await supabase
+              .from('pitches')
+              .select('*, courts(*), pitch_tariffs(*)')
+              .eq('id', demoId)
+              .single();
+            if (demoPitch) {
+              pitch = demoPitch as typeof pitch;
+              demo = true;
+            }
+          }
+        }
+
+        if (!active) return;
+
+        if (!pitch) {
+          setNeedsOnboarding(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const facilityCourts = (pitch.courts ?? []).filter((c) => c.is_active !== false);
+        setRealPitchId(pitch.id);
+        setIsDemoMode(demo || !!pitch.is_demo);
+        setCourts(facilityCourts);
+        setAutoApproveMinutes(pitch.auto_approve_minutes ?? 35);
+        setIsFacilityOpen(pitch.is_open ?? true);
+        setFacilityData({
+          id: pitch.id,
           ownerId: uid,
-          name: p.name ?? prev?.name,
-          isFacilityOpen: p.is_open ?? true,
-          workingHours: Array.isArray(p.working_hours) && p.working_hours.length ? p.working_hours : prev?.workingHours,
-        }));
+          name: pitch.name ?? 'Tesisim',
+          description: pitch.description ?? '',
+          images: pitch.images?.length ? pitch.images : pitch.image ? [pitch.image] : [],
+          amenities: Array.isArray(pitch.amenities) ? pitch.amenities : [],
+          isFacilityOpen: pitch.is_open ?? true,
+          pricingPolicy: pitch.pitch_tariffs ?? [],
+          bankAccounts: [],
+          workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
+          district: pitch.district,
+          city: pitch.city,
+        });
+        await refreshDashboard(pitch.id, pitch.auto_approve_minutes ?? 35, facilityCourts);
       } catch (err) {
-        // Sessiz geç: demo/mock moduna düş
-        console.warn('Gerçek tesis yüklenemedi, demo modu:', err);
+        console.warn('Tesis yüklenemedi:', err);
+      } finally {
+        if (active) setIsLoading(false);
       }
     })();
     return () => { active = false; };
   }, []);
 
-  // Fetch facility data on mount
   useEffect(() => {
-    // Firebase setup was declined or skipped, using mock mode with localStorage
-    const uid = 'mock-user-id';
-    
-    // Use default mock data
-    const defaultData = {
-      ownerId: uid,
-      name: 'Arena Sport Center',
-      description: 'Tesis açıklaması buraya gelecek.',
-      images: [PITCHES[0].image],
-      amenities: ['Otopark', 'Kafe', 'Soyunma Odası', 'Duş'],
-      isFacilityOpen: true,
-      pricingPolicy: { daytime: 2000, prime: 3200, weekend: 3500 },
-      bankAccounts: [],
-      workingHours: [
-        { name: 'Pazartesi', open: '08:00', close: '00:00' },
-        { name: 'Salı', open: '08:00', close: '00:00' },
-        { name: 'Çarşamba', open: '08:00', close: '00:00' },
-        { name: 'Perşembe', open: '08:00', close: '00:00' },
-        { name: 'Cuma', open: '08:00', close: '02:00' },
-        { name: 'Cumartesi', open: '08:00', close: '02:00' },
-        { name: 'Pazar', open: '08:00', close: '00:00' },
-      ],
-      createdAt: new Date()
-    };
-    
+    if (!realPitchId) return;
+    return subscribeToOwnerBookings(realPitchId, () => {
+      refreshDashboard(realPitchId, autoApproveMinutes);
+    });
+  }, [realPitchId, autoApproveMinutes, refreshDashboard]);
+
+  // Yerel tesis ayarları (mock veya cache)
+  useEffect(() => {
+    if (realPitchId) return;
     const savedFacilityData = localStorage.getItem('owner_facilityData');
     if (savedFacilityData) {
-        const parsed = JSON.parse(savedFacilityData);
-        setFacilityData(parsed);
-        setIsFacilityOpen(parsed.isFacilityOpen ?? true);
+      const parsed = JSON.parse(savedFacilityData);
+      setFacilityData(parsed);
+      setIsFacilityOpen(parsed.isFacilityOpen ?? true);
     } else {
-        setFacilityData({ id: 'mock-facility-id', ...defaultData });
-        setIsFacilityOpen(true);
+      setFacilityData({
+        id: 'mock-facility-id',
+        name: 'Tesisiniz',
+        description: '',
+        images: [],
+        amenities: [],
+        isFacilityOpen: true,
+        pricingPolicy: [],
+        bankAccounts: [],
+        workingHours: [],
+      });
     }
     setIsLoading(false);
-  }, []);
+  }, [realPitchId]);
 
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-      localStorage.setItem('owner_pendingRequests', JSON.stringify(pendingRequests));
-  }, [pendingRequests]);
+  const dynamicTotalRevenue = dailySummary?.collected_today ?? todayBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
+  const dynamicOccupancyRatio = dailySummary && dailySummary.total_courts > 0
+    ? computeOverallOccupancy(todayBookings, dailySummary.active_courts || dailySummary.total_courts)
+    : computeOverallOccupancy(todayBookings, courts.length);
 
-  useEffect(() => {
-      localStorage.setItem('owner_hasDebt', JSON.stringify(hasDebt));
-  }, [hasDebt]);
+  const pendingCount = pendingRequests.filter((r) => r.status === 'PENDING').length;
 
   useEffect(() => {
       localStorage.setItem('owner_notificationsEnabled', JSON.stringify(notificationsEnabled));
@@ -3447,25 +3697,75 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     } catch (err) {
       console.error('Tesis durumu güncellenemedi:', err);
       setIsFacilityOpen(!newStatus); // hata: geri al
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('NO_TARIFF')) {
+        alert('Sahayı yayına almadan önce en az bir aktif tarife girmelisin (0 TL olabilir). Tarifeler bölümünden ekleyebilirsin.');
+      }
     }
   };
 
-  const handleProcessRequest = (id: string, action: 'APPROVE' | 'REJECT') => {
-      setPendingRequests((prev: any[]) => prev.map(req => 
-          req.id === id ? { ...req, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' } : req
-      ));
+  const [autoApprove, setAutoApprove] = useState(true);
+  useEffect(() => {
+    if (!realPitchId) return;
+    supabase.from('pitches').select('auto_approve_enabled').eq('id', realPitchId).single()
+      .then(({ data }) => { if (data) setAutoApprove((data as { auto_approve_enabled?: boolean }).auto_approve_enabled ?? true); });
+  }, [realPitchId]);
+
+  const toggleAutoApprove = async () => {
+    const next = !autoApprove;
+    setAutoApprove(next);
+    if (!realPitchId) return;
+    const { error } = await supabase.from('pitches').update({ auto_approve_enabled: next }).eq('id', realPitchId);
+    if (error) {
+      console.error('auto_approve güncellenemedi:', error);
+      setAutoApprove(!next);
+    }
   };
 
-  const handlePayDebt = () => {
-      setIsPayingDebt(true);
-      setTimeout(() => {
-          setHasDebt(false);
-          setIsPayingDebt(false);
-      }, 1500);
+  const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
+      setPendingRequests((prev: any[]) => prev.map(req =>
+          req.id === id ? { ...req, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' } : req
+      ));
+      if (!realPitchId) return;
+      try {
+          if (action === 'APPROVE') {
+              await approveBooking(id);
+          } else {
+              await rejectBooking(id, 'Tesis sahibi tarafından reddedildi.');
+          }
+          await refreshDashboard(realPitchId, autoApproveMinutes);
+      } catch (err) {
+          alert(toTurkishError(err));
+          if (realPitchId) await refreshDashboard(realPitchId, autoApproveMinutes);
+      }
   };
+
+  if (needsOnboarding && !isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center">
+        <Building2 size={64} className="text-[#FFFF00] mb-6" />
+        <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
+        <p className="text-gray-400 text-sm max-w-sm mb-8">
+          Ücretli işletme paneline erişmek için tesis kaydını tamamlayın. Demo verisi kaldırıldıysa gerçek tesisinizi oluşturun.
+        </p>
+        <button
+          onClick={() => onNeedOnboarding?.()}
+          className="px-8 py-4 bg-[#FFFF00] text-black font-black rounded-2xl mb-4"
+        >
+          TESİS KAYDI BAŞLAT
+        </button>
+        <button onClick={onBack} className="text-gray-500 text-sm font-bold">Geri Dön</button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+      {isDemoMode && (
+        <div className="sticky top-0 z-50 bg-amber-500/90 text-black text-center text-[11px] font-black py-2 px-4">
+          DEMO MODU — OYNA Demo Arena (gerçek veri değil). Kaldırmak için: npm run owner:demo:purge
+        </div>
+      )}
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
@@ -3476,7 +3776,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                   </button>
                   <div className="flex flex-col">
                       <h1 className="text-sm font-bold text-white tracking-wide text-shadow">OYNA İŞLETME</h1>
-                      <p className="text-[10px] text-gray-500 font-medium">Arena Sport Center</p>
+                      <p className="text-[10px] text-gray-500 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
                   </div>
               </div>
               <button 
@@ -3484,7 +3784,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                 className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 relative"
               >
                   <Bell size={20} />
-                  {pendingRequests.length > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
+                  {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
               </button>
           </header>
       )}
@@ -3551,7 +3851,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                     <h3 className="font-bold text-white text-base flex items-center gap-2 mb-6">
                         <BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi
                     </h3>
-                    <PitchOccupancyGrid data={HOURLY_DATA} />
+                    <PitchOccupancyGrid data={hourlyOccupancy} courtNames={courts.map(c => c.name)} />
                   </div>
               )}
 
@@ -3560,9 +3860,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                       <h3 className="font-bold text-white text-base flex items-center gap-2 mb-4">
                           <Clock size={18} className="text-yellow-500" /> Onay Bekleyen Talepler
                       </h3>
-                      {pendingRequests.length > 0 ? (
+                      {pendingCount > 0 ? (
                           <div className="space-y-4">
-                              {pendingRequests.slice(0, 3).map((req: any) => (
+                              {pendingRequests.filter((r: any) => r.status === 'PENDING').slice(0, 3).map((req: any) => (
                                   <MatchCountdownItem 
                                       key={req.id}
                                       request={req}
@@ -3570,8 +3870,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                                       onReject={() => handleProcessRequest(req.id, 'REJECT')}
                                   />
                               ))}
-                              {pendingRequests.length > 3 && (
-                                  <button onClick={() => setActiveTab('PENDING_ACTIONS')} className="w-full py-2 text-xs font-bold text-blue-400 hover:text-blue-300 text-center">Tümünü Gör ({pendingRequests.length})</button>
+                              {pendingCount > 3 && (
+                                  <button onClick={() => setActiveTab('PENDING_ACTIONS')} className="w-full py-2 text-xs font-bold text-blue-400 hover:text-blue-300 text-center">Tümünü Gör ({pendingCount})</button>
                               )}
                           </div>
                       ) : (
@@ -3583,15 +3883,18 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           </main>
       )}
 
-      {activeTab === 'CALENDAR' && <FinancialCalendarView facilityId={facilityData?.id} pricingPolicy={facilityData?.pricingPolicy} pitches={pitches} />}
-      {activeTab === 'PITCHES' && <PitchManager facilityId={facilityData?.id} pitches={pitches} onUpdatePitches={setPitches} onBack={() => setActiveTab('HOME')} />}
-      {activeTab === 'CUSTOMERS' && <CustomerManager onBack={() => setActiveTab('HOME')} />}
-      {activeTab === 'UI_BUILDER' && <UIBuilder onBack={() => setActiveTab('HOME')} />}
-      {activeTab === 'FINANCE' && <FinanceView hasDebt={hasDebt} isPayingDebt={isPayingDebt} onPayDebt={handlePayDebt} />}
+      {activeTab === 'CALENDAR' && <FinancialCalendarView pitchId={facilityData?.id ?? ''} pricingPolicy={facilityData?.pricingPolicy} courts={courts} />}
+      {activeTab === 'PITCHES' && <PitchManager facilityId={facilityData?.id} pitches={courts} onUpdatePitches={setCourts} onBack={() => setActiveTab('HOME')} />}
+      {activeTab === 'FINANCE' && (
+        <OwnerFinanceView pitchId={realPitchId ?? facilityData?.id ?? ''} isDemoMode={isDemoMode} />
+      )}
       {activeTab === 'TEAM' && <TeamView />}
       {activeTab === 'PENDING_ACTIONS' && (
           <PendingActionsView 
-              pendingRequests={pendingRequests} 
+              pendingRequests={pendingRequests}
+              realPitchId={realPitchId}
+              autoApprove={autoApprove}
+              onToggleAutoApprove={toggleAutoApprove}
               onApprove={(id) => handleProcessRequest(id, 'APPROVE')} 
               onReject={(id) => handleProcessRequest(id, 'REJECT')}
               onBack={() => setActiveTab('HOME')}
@@ -3601,6 +3904,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         <MenuView 
             onNavigate={onNavigate}
             onBack={onBack}
+            facilityName={facilityData?.name}
+            facilityDistrict={[facilityData?.district, facilityData?.city].filter(Boolean).join(', ')}
+            facilityImage={facilityData?.images?.[0]}
             onEditProfile={() => setShowEditProfile(true)}
             onWorkingHours={() => setShowWorkingHours(true)}
             onBankAccounts={() => setShowBankAccounts(true)}
@@ -3611,7 +3917,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
             onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
             onWidgetSettings={() => setShowWidgetSettings(true)}
             onPitches={() => setActiveTab('PITCHES')}
-            onCustomers={() => setActiveTab('CUSTOMERS')}
         />
       )}
 
@@ -3621,7 +3926,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onClose={() => setShowEditProfile(false)} 
           facilityId={facilityData?.id} 
           initialData={facilityData}
-          initialPitches={pitches}
+          initialPitches={courts}
           onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
         />
       )}
@@ -3674,21 +3979,17 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                       <button onClick={() => setShowRevenueModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                   </div>
                   <div className="space-y-4">
-                      {[
-                          { label: 'Saha 1', amount: 5200 },
-                          { label: 'Saha 2', amount: 4800 },
-                          { label: 'Saha 3', amount: 2400 },
-                          { label: 'Saha 4', amount: 3100 },
-                          { label: 'Kafeterya', amount: 1200 }
-                      ].map((item, idx) => (
-                          <div key={idx} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
-                              <span className="text-sm font-bold text-gray-400">{item.label}</span>
-                              <span className="text-lg font-black text-emerald-400">{item.amount.toLocaleString()}₺</span>
+                      {courtStats.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
+                      ) : courtStats.map((item) => (
+                          <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+                              <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
+                              <span className="text-lg font-black text-emerald-400">{item.collected.toLocaleString('tr-TR')}₺</span>
                           </div>
                       ))}
                       <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                          <span className="text-base font-black text-white">TOPLAM</span>
-                          <span className="text-2xl font-black text-emerald-500">13.600₺</span>
+                          <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
+                          <span className="text-2xl font-black text-emerald-500">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
                       </div>
                   </div>
               </div>
@@ -3703,20 +4004,18 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                       <button onClick={() => setShowOccupancyModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                   </div>
                   <div className="space-y-6">
-                      {[
-                          { label: 'Saha 1', value: 85 },
-                          { label: 'Saha 2', value: 70 },
-                          { label: 'Saha 3', value: 45 },
-                          { label: 'Saha 4', value: 60 }
-                      ].map((item, idx) => (
-                          <div key={idx} className="space-y-2">
+                      {courtStats.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
+                      ) : courtStats.map((item) => (
+                          <div key={item.courtId} className="space-y-2">
                               <div className="flex justify-between items-end">
-                                  <span className="text-sm font-bold text-white">{item.label}</span>
-                                  <span className={`text-sm font-black ${item.value < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.value}</span>
+                                  <span className="text-sm font-bold text-white">{item.courtName}</span>
+                                  <span className={`text-sm font-black ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
                               </div>
                               <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full transition-all duration-500 ${item.value < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.value}%` }}></div>
+                                  <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
                               </div>
+                              <p className="text-[10px] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
                           </div>
                       ))}
                   </div>
@@ -3770,19 +4069,19 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       <nav className="fixed bottom-0 left-0 w-full bg-[#1A1F2C] border-t border-white/5 px-6 py-3 flex justify-between items-center z-40 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'HOME' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
               <Home size={20} className={activeTab === 'HOME' ? 'scale-110' : ''} />
-              <span className="text-[9px] font-bold tracking-wider">Ana</span>
+              <span className="text-[9px] font-bold tracking-wider">Özet</span>
           </button>
           <button onClick={() => setActiveTab('CALENDAR')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'CALENDAR' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
               <Calendar size={20} className={activeTab === 'CALENDAR' ? 'scale-110' : ''} />
               <span className="text-[9px] font-bold tracking-wider">Takvim</span>
           </button>
-          <button onClick={() => setActiveTab('CUSTOMERS')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'CUSTOMERS' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Users size={20} className={activeTab === 'CUSTOMERS' ? 'scale-110' : ''} />
-              <span className="text-[9px] font-bold tracking-wider">CRM</span>
+          <button onClick={() => setActiveTab('FINANCE')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'FINANCE' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
+              <Wallet size={20} className={activeTab === 'FINANCE' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">Finans</span>
           </button>
-          <button onClick={() => setActiveTab('UI_BUILDER')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'UI_BUILDER' ? 'text-[#FFFF00]' : 'text-gray-500 hover:text-gray-300'}`}>
-              <LayoutDashboard size={20} className={activeTab === 'UI_BUILDER' ? 'scale-110' : ''} />
-              <span className="text-[9px] font-bold tracking-wider">UI Builder</span>
+          <button onClick={() => setActiveTab('TEAM')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'TEAM' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
+              <Users size={20} className={activeTab === 'TEAM' ? 'scale-110' : ''} />
+              <span className="text-[9px] font-bold tracking-wider">Ekip</span>
           </button>
           <button onClick={() => setActiveTab('MORE')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'MORE' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
               <MoreHorizontal size={20} className={activeTab === 'MORE' ? 'scale-110' : ''} />

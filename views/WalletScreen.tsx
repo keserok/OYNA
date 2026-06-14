@@ -1,34 +1,44 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Wallet, Shield, Zap, MapPin, CheckCircle2, Gift, Settings, ChevronRight, Star, Trophy, Sparkles, CreditCard, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Wallet, Zap, CheckCircle2, Settings, CreditCard, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Particles } from '../components/Particles';
+import { useAppStore } from '../store';
 
-// --- TİPLER ---
 interface WalletScreenProps {
   onBack: () => void;
 }
 
-// --- SAHTE VERİLER (MOCK DATA) ---
 const QUICK_AMOUNTS = [100, 250, 500, 1000];
 
 const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
-  const [currentView, setCurrentView] = useState<'MAIN' | 'CARD_SETTINGS'>('MAIN');
-  
-  const [cashBalance, setCashBalance] = useState(450.00);
-  
-  // Kartlar State
-  const [cards, setCards] = useState([
-    { id: 1, last4: '4242', brand: 'Mastercard', color: 'from-orange-600 to-red-600', holder: 'BURAK KAPTAN' },
-    { id: 2, last4: '8812', brand: 'Visa', color: 'from-blue-600 to-indigo-700', holder: 'BURAK KAPTAN' },
-  ]);
-  
-  // Yükleme State
-  const [selectedCardId, setSelectedCardId] = useState<number | null>(1);
+  const {
+    savedCards,
+    addSavedCard,
+    removeSavedCard,
+    walletInitialTab,
+    walletPendingDeposit,
+    setWalletInitialTab,
+    setWalletPendingDeposit,
+    walletReturnView,
+  } = useAppStore();
+
+  const [currentView, setCurrentView] = useState<'MAIN' | 'CARD_SETTINGS'>(walletInitialTab);
+  const [cashBalance, setCashBalance] = useState(450.0);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(savedCards[0]?.id ?? null);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
-
-  // Animasyon State
   const [paymentState, setPaymentState] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS'>('IDLE');
+
+  useEffect(() => {
+    setCurrentView(walletInitialTab);
+  }, [walletInitialTab]);
+
+  useEffect(() => {
+    if (savedCards.length > 0 && !savedCards.find((c) => c.id === selectedCardId)) {
+      setSelectedCardId(savedCards[0].id);
+    }
+    if (savedCards.length === 0) setSelectedCardId(null);
+  }, [savedCards, selectedCardId]);
 
   const handleTopUpSubmit = () => {
     if (paymentState !== 'IDLE') return;
@@ -36,13 +46,9 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     if (amountToAdd <= 0 || !selectedCardId) return;
 
     setPaymentState('PROCESSING');
-    
-    // API çağrısı simülasyonu
     setTimeout(() => {
       setPaymentState('SUCCESS');
-      setCashBalance(prev => prev + amountToAdd);
-      
-      // Akışı bitir
+      setCashBalance((prev) => prev + amountToAdd);
       setTimeout(() => {
         setPaymentState('IDLE');
         setCurrentView('MAIN');
@@ -52,47 +58,61 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     }, 1500);
   };
 
-  const handleAddMockCard = () => {
-    const newId = Date.now();
-    const brands = ['Visa', 'Mastercard', 'Troy'];
-    const colors = ['from-purple-600 to-blue-600', 'from-emerald-500 to-teal-700', 'from-pink-500 to-rose-700'];
-    const randomBrand = brands[Math.floor(Math.random() * brands.length)];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomLast4 = Math.floor(1000 + Math.random() * 9000).toString();
+  const handleAddCard = () => {
+    const brands = ['Visa', 'Mastercard', 'Troy'] as const;
+    const colors = [
+      'from-purple-600 to-blue-600',
+      'from-emerald-500 to-teal-700',
+      'from-orange-600 to-red-600',
+      'from-pink-500 to-rose-700',
+    ];
+    const brand = brands[Math.floor(Math.random() * brands.length)];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const last4 = Math.floor(1000 + Math.random() * 9000).toString();
 
-    setCards([...cards, {
-      id: newId,
-      last4: randomLast4,
-      brand: randomBrand,
-      color: randomColor,
-      holder: 'BURAK KAPTAN'
-    }]);
-  };
+    addSavedCard({
+      last4,
+      brand,
+      color,
+      holder: 'OYNA KULLANICI',
+    });
 
-  const handleRemoveCard = (id: number) => {
-    setCards(cards.filter(c => c.id !== id));
-    if (selectedCardId === id) {
-      setSelectedCardId(cards.find(c => c.id !== id)?.id || null);
+    if (walletPendingDeposit && walletReturnView) {
+      setWalletInitialTab('MAIN');
+      onBack();
     }
   };
 
+  const handleRemoveCard = (id: string) => {
+    removeSavedCard(id);
+  };
+
+  const handleBack = () => {
+    if (currentView !== 'MAIN') {
+      setCurrentView('MAIN');
+      setWalletInitialTab('MAIN');
+      return;
+    }
+    setWalletPendingDeposit(false);
+    setWalletInitialTab('MAIN');
+    onBack();
+  };
+
   const renderMainView = () => (
-    <motion.div 
+    <motion.div
       key="main"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32 z-10 space-y-8"
     >
-      {/* 1. ANA CÜZDAN KARTI */}
-      <motion.div 
+      <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="relative rounded-[32px] p-1 bg-gradient-to-b from-[#FFFF00]/40 via-[#161B22] to-[#0A0E14] shadow-[0_0_40px_rgba(255,255,0,0.15)]"
       >
         <div className="bg-[#0A0E14] rounded-[30px] p-6 relative overflow-hidden h-full">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-gradient-to-b from-[#FFFF00]/10 to-transparent blur-2xl"></div>
-          
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-gradient-to-b from-[#FFFF00]/10 to-transparent blur-2xl" />
           <div className="relative z-10 flex flex-col items-center text-center">
             <div className="flex items-center gap-2 mb-2">
               <Wallet size={16} className="text-[#39FF14]" />
@@ -105,29 +125,26 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         </div>
       </motion.div>
 
-      {/* YÜKLEME ARAYÜZÜ */}
-      <motion.div 
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-      >
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
         <div className="mb-6">
           <h2 className="text-xl font-black text-white tracking-tighter italic mb-1">BAKİYE YÜKLE</h2>
           <p className="text-xs text-gray-400 font-medium">Cüzdanınıza aktarmak istediğiniz tutarı seçin.</p>
         </div>
 
-        {/* Tutar Seçimi */}
         <div className="mb-8">
           <h3 className="text-sm font-bold text-white mb-4 px-1">Yüklenecek Tutar</h3>
           <div className="grid grid-cols-4 gap-3 mb-4">
-            {QUICK_AMOUNTS.map(amount => (
+            {QUICK_AMOUNTS.map((amount) => (
               <button
                 key={amount}
-                onClick={() => { setSelectedAmount(amount); setCustomAmount(''); }}
+                onClick={() => {
+                  setSelectedAmount(amount);
+                  setCustomAmount('');
+                }}
                 className={`py-3 rounded-xl font-black text-sm transition-all border ${
-                  selectedAmount === amount 
-                  ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.3)] scale-105' 
-                  : 'bg-[#161B22] text-gray-400 border-white/5 hover:bg-white/5'
+                  selectedAmount === amount
+                    ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.3)] scale-105'
+                    : 'bg-[#161B22] text-gray-400 border-white/5 hover:bg-white/5'
                 }`}
               >
                 {amount}₺
@@ -136,10 +153,13 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           </div>
           <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center gap-2 focus-within:border-[#FFFF00] transition-colors">
             <span className="text-gray-500 font-bold">Diğer:</span>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={customAmount}
-              onChange={(e) => { setCustomAmount(e.target.value); setSelectedAmount(null); }}
+              onChange={(e) => {
+                setCustomAmount(e.target.value);
+                setSelectedAmount(null);
+              }}
               placeholder="0.00"
               className="bg-transparent text-white font-bold w-full outline-none"
             />
@@ -147,54 +167,61 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Kart Seçimi */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4 px-1">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <CreditCard size={16} className="text-[#FFFF00]" /> Ödeme Yöntemi
             </h3>
-            <button 
+            <button
               onClick={() => setCurrentView('CARD_SETTINGS')}
               className="text-[10px] text-blue-400 font-bold flex items-center gap-1 bg-blue-900/20 px-2 py-1 rounded-lg hover:bg-blue-900/40 transition-colors"
             >
               <Settings size={12} /> Kartları Yönet
             </button>
           </div>
-          
+
           <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
-            {cards.map((card) => (
-              <div 
+            {savedCards.map((card) => (
+              <div
                 key={card.id}
                 onClick={() => setSelectedCardId(card.id)}
                 className={`snap-center shrink-0 w-72 h-44 rounded-2xl bg-gradient-to-br ${card.color} p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 border-2 cursor-pointer ${selectedCardId === card.id ? 'border-white scale-100 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'border-transparent scale-95 opacity-50'}`}
               >
                 <div className="flex justify-between items-start">
                   <span className="font-mono text-white/80 text-sm">{card.brand}</span>
-                  {selectedCardId === card.id && <div className="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10} /> SEÇİLİ</div>}
+                  {selectedCardId === card.id && (
+                    <div className="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 size={10} /> SEÇİLİ
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-white font-mono text-lg tracking-widest">•••• •••• •••• {card.last4}</p>
                   <p className="text-white/60 text-[10px] font-bold mt-2 uppercase">{card.holder}</p>
                 </div>
-                <div className="absolute top-6 right-6 w-10 h-8 bg-yellow-400/30 rounded-md border border-yellow-200/40"></div>
+                <div className="absolute top-6 right-6 w-10 h-8 bg-yellow-400/30 rounded-md border border-yellow-200/40" />
               </div>
             ))}
-            {cards.length === 0 && (
-              <div className="w-full text-center p-6 bg-[#161B22] rounded-2xl border border-white/5 text-gray-500 text-sm">
-                Kayıtlı kart bulunamadı. Lütfen kart ekleyin.
-              </div>
+            {savedCards.length === 0 && (
+              <button
+                onClick={() => setCurrentView('CARD_SETTINGS')}
+                className="w-full min-w-[280px] text-center p-8 bg-[#161B22] rounded-2xl border border-dashed border-[#FFFF00]/40 text-[#FFFF00] text-sm font-bold hover:bg-[#FFFF00]/5 transition-colors"
+              >
+                <Plus size={24} className="mx-auto mb-2" />
+                Kapora ödemek için kart ekleyin
+              </button>
             )}
           </div>
         </div>
 
         <div className="pt-2">
-          <button 
+          <button
             onClick={handleTopUpSubmit}
             disabled={(!selectedAmount && !customAmount) || !selectedCardId}
             className={`w-full h-16 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-lg ${
               (!selectedAmount && !customAmount) || !selectedCardId
-              ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              : 'bg-[#FFFF00] text-black hover:bg-yellow-300 active:scale-95 shadow-[0_0_30px_rgba(255,255,0,0.3)]'
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                : 'bg-[#FFFF00] text-black hover:bg-yellow-300 active:scale-95 shadow-[0_0_30px_rgba(255,255,0,0.3)]'
             }`}
           >
             <Zap size={20} /> {(selectedAmount || customAmount || 0)}₺ YÜKLE
@@ -204,23 +231,33 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     </motion.div>
   );
 
-
-
   const renderCardSettingsView = () => (
-    <motion.div 
+    <motion.div
       key="settings"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       className="flex-1 flex flex-col p-6 z-10 overflow-y-auto custom-scrollbar pb-32"
     >
+      {walletPendingDeposit && (
+        <div className="mb-6 p-4 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex gap-3 items-start">
+          <AlertCircle size={20} className="text-[#FFFF00] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-black text-white">Kapora için kart gerekli</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Saha rezervasyonunuzu tamamlamak için bir ödeme kartı ekleyin. Kart ekledikten sonra otomatik olarak sahaya döneceksiniz.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <h2 className="text-2xl font-black text-white tracking-tighter italic mb-2">KARTLARIM</h2>
         <p className="text-sm text-gray-400 font-medium">Kayıtlı ödeme yöntemlerinizi yönetin.</p>
       </div>
 
       <div className="space-y-4 flex-1">
-        {cards.map(card => (
+        {savedCards.map((card) => (
           <div key={card.id} className="bg-[#161B22] border border-white/10 rounded-2xl p-4 flex items-center justify-between group">
             <div className="flex items-center gap-4">
               <div className={`w-12 h-8 rounded bg-gradient-to-br ${card.color} flex items-center justify-center border border-white/20`}>
@@ -231,7 +268,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 <p className="text-gray-500 text-[10px] uppercase">{card.holder}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => handleRemoveCard(card.id)}
               className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
             >
@@ -239,17 +276,15 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             </button>
           </div>
         ))}
-        {cards.length === 0 && (
-          <div className="text-center py-10 text-gray-500 text-sm">
-            Kayıtlı kartınız bulunmuyor.
-          </div>
+        {savedCards.length === 0 && (
+          <div className="text-center py-10 text-gray-500 text-sm">Kayıtlı kartınız bulunmuyor.</div>
         )}
       </div>
 
       <div className="mt-auto pt-6 border-t border-white/5">
-        <button 
-          onClick={handleAddMockCard}
-          className="w-full h-16 bg-[#161B22] border border-white/10 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-white/5 active:scale-95 transition-all"
+        <button
+          onClick={handleAddCard}
+          className="w-full h-16 bg-[#FFFF00] text-black rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:brightness-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,0,0.25)]"
         >
           <Plus size={20} /> YENİ KART EKLE
         </button>
@@ -259,31 +294,27 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
-      
-      {/* Arka Plan Efektleri */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-[#FFFF00]/10 blur-[120px] rounded-full mix-blend-screen"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-[#39FF14]/10 blur-[120px] rounded-full mix-blend-screen"></div>
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-[#FFFF00]/10 blur-[120px] rounded-full mix-blend-screen" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-[#39FF14]/10 blur-[120px] rounded-full mix-blend-screen" />
       </div>
 
-      {/* Üst Kısım (Header) */}
       <header className="px-6 py-6 flex justify-between items-center sticky top-0 z-20 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
-          <button 
-            onClick={() => currentView === 'MAIN' ? onBack() : setCurrentView('MAIN')} 
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
-          >
-              <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-black text-white tracking-widest uppercase flex items-center gap-2">
-            <Wallet size={18} className="text-[#FFFF00]" /> OYNA CÜZDAN
-          </h1>
-          <button 
-            onClick={() => setCurrentView('CARD_SETTINGS')}
-            className={`w-11 h-11 flex items-center justify-center rounded-full border transition-all ${currentView === 'CARD_SETTINGS' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] border-white/5 text-white hover:bg-white/10 active:scale-95'}`}
-          >
-              <Settings size={20} />
-          </button>
+        <button
+          onClick={handleBack}
+          className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-black text-white tracking-widest uppercase flex items-center gap-2">
+          <Wallet size={18} className="text-[#FFFF00]" /> OYNA CÜZDAN
+        </h1>
+        <button
+          onClick={() => setCurrentView('CARD_SETTINGS')}
+          className={`w-11 h-11 flex items-center justify-center rounded-full border transition-all ${currentView === 'CARD_SETTINGS' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] border-white/5 text-white hover:bg-white/10 active:scale-95'}`}
+        >
+          <Settings size={20} />
+        </button>
       </header>
 
       <AnimatePresence mode="wait">
@@ -291,50 +322,32 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         {currentView === 'CARD_SETTINGS' && renderCardSettingsView()}
       </AnimatePresence>
 
-      {/* --- MİKRO ETKİLEŞİMLER VE ANİMASYONLAR --- */}
       <AnimatePresence>
         {paymentState !== 'IDLE' && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-[#0A0E14]/95 backdrop-blur-xl flex items-center justify-center p-6"
           >
-            
-            {/* 1. İŞLENİYOR */}
             {paymentState === 'PROCESSING' && (
-              <motion.div 
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="flex flex-col items-center"
-              >
-                <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-[#FFFF00] animate-spin mb-6"></div>
+              <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-[#FFFF00] animate-spin mb-6" />
                 <h2 className="text-xl font-black text-white tracking-widest uppercase animate-pulse">İşlem Onaylanıyor</h2>
               </motion.div>
             )}
-
-            {/* 2. BAŞARILI */}
             {paymentState === 'SUCCESS' && (
-              <motion.div 
-                initial={{ scale: 0, rotate: -45 }}
-                animate={{ scale: 1, rotate: 0 }}
-                className="flex flex-col items-center relative"
-              >
+              <motion.div initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }} className="flex flex-col items-center relative">
                 <Particles count={50} colors={['#39FF14', '#FFFFFF', '#FFFF00']} />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#39FF14]/20 blur-[100px] rounded-full"></div>
-                
                 <div className="w-32 h-32 bg-[#39FF14] rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(57,255,20,0.5)] mb-8 relative z-10">
                   <CheckCircle2 size={64} className="text-black" />
                 </div>
-                <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg relative z-10">ÖDEME BAŞARILI!</h2>
-                <p className="text-sm text-[#39FF14] font-bold tracking-widest uppercase mt-2 relative z-10">Bakiye Güncellendi!</p>
+                <h2 className="text-4xl font-black text-white tracking-tighter italic relative z-10">ÖDEME BAŞARILI!</h2>
               </motion.div>
             )}
-
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };
