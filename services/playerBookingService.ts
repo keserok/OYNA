@@ -1,0 +1,204 @@
+// ─── Oyuncu Rezervasyon Servisi ──────────────────────────────────────────────
+// Oyuncunun saha müsaitliğini görmesi, rezervasyon oluşturması,
+// kendi rezervasyonlarını listelemesi ve iptal etmesi (48 saat / %90 kuralı).
+// Tüm yazma işlemleri SECURITY DEFINER RPC'ler üzerinden gider;
+// doğrudan tablo yazma RLS ile kapalıdır.
+
+import { supabase } from '../supabaseClient';
+
+export interface AvailabilityRow {
+  court_id: string | null;
+  booking_date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM:SS
+  end_time: string; // HH:MM:SS
+  status: 'PENDING' | 'CONFIRMED';
+}
+
+export interface MyBooking {
+  id: string;
+  pitch_id: string;
+  court_id: string | null;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+  source: string;
+  price: number;
+  deposit_amount: number;
+  paid_amount: number;
+  payment_status: string;
+  cancellation_reason: string | null;
+  created_at: string;
+  pitches: { name: string; district: string | null; image: string | null } | null;
+  courts: { name: string } | null;
+}
+
+export interface CancelResult {
+  booking_id: string;
+  refund_percent: number;
+  refund_amount: number;
+  paid_amount: number;
+}
+
+// SQL exception mesajlarını kullanıcı dostu Türkçe'ye çevir
+const ERROR_MAP: [string, string][] = [
+  ['SLOT_TAKEN', 'Bu saat dilimi az önce dolmuş. Lütfen başka bir saat seç.'],
+  ['NO_TARIFF', 'Bu saha için fiyat tarifesi tanımlanmamış; şimdilik uygulamadan rezervasyon alınamıyor.'],
+  ['SLOT_UNAVAILABLE', 'Bu saat dilimi tesis tarafından kapatılmış.'],
+  ['CANCEL_WINDOW_CLOSED', 'Rezervasyon saatine 48 saatten az kaldığı için uygulamadan iptal edilemiyor. Lütfen tesisle iletişime geç.'],
+  ['ALREADY_STARTED', 'Geçmiş veya başlamış bir rezervasyon iptal edilemez.'],
+  ['ALREADY_CANCELLED', 'Bu rezervasyon zaten iptal edilmiş.'],
+  ['UNAUTHORIZED', 'Bu işlem için giriş yapman gerekiyor.'],
+  ['NOT_FOUND', 'Rezervasyon bulunamadı.'],
+];
+
+export function toPlayerErrorMessage(error: unknown): string {
+  const msg = error instanceof Error ? error.message : String((error as any)?.message ?? error ?? '');
+  for (const [code, tr] of ERROR_MAP) {
+    if (msg.includes(code)) return tr;
+  }
+  return 'Bir şeyler ters gitti. Lütfen tekrar dene.';
+}
+
+export function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** "HH:MM:SS" → "HH:MM" */
+export function shortTime(t: string): string {
+  return (t || '').slice(0, 5);
+}
+
+/**
+ * Tesisin dolu saatlerini getirir (kişisel veri içermez).
+ * Dönen satırlar PENDING + CONFIRMED rezervasyonlardır.
+ */
+export async function fetchPitchAvailability(
+  pitchId: string,
+  fromDate: Date,
+  toDate: Date
+): Promise<AvailabilityRow[]> {
+  const { data, error } = await supabase.rpc('get_pitch_availability', {
+    p_pitch_id: pitchId,
+    p_date_from: toISODate(fromDate),
+    p_date_to: toISODate(toDate),
+  });
+  if (error) throw error;
+  return (data ?? []) as AvailabilityRow[];
+}
+
+/**
+ * Müsaitlik satırlarını hızlı arama için map'e çevirir.
+ * Anahtar: `${courtId}|${dateISO}|${HH:MM}` — court_id NULL ise tesis geneli
+ * kabul edilir ve `*|${dateISO}|${HH:MM}` anahtarına yazılır.
+ */
+export function buildBusyMap(rows: AvailabilityRow[]): Record<string, 'PENDING' | 'CONFIRMED'> {
+  const map: Record<string, 'PENDING' | 'CONFIRMED'> = {};
+  for (const r of rows) {
+    // Bir rezervasyon birden fazla saati kapsayabilir (örn. 20:00-22:00) →
+    // başlangıçtan bitişe saat başı işaretle.
+    const startH = parseInt(r.start_time.slice(0, 2), 10);
+    let endH = parseInt(r.end_time.slice(0, 2), 10);
+    if (endH <= startH) endH += 24; // gece yarısını aşan rezervasyon
+    for (let h = startH; h < endH; h++) {
+      const hh = String(h % 24).padStart(2, '0') + ':' + r.start_time.slice(3, 5);
+      const key = `${r.court_id ?? '*'}|${r.booking_date}|${hh}`;
+      // CONFIRMED, PENDING'i ezer (daha kesin durum)
+      if (map[key] !== 'CONFIRMED') map[key] = r.status;
+    }
+  }
+  return map;
+}
+
+export function isSlotBusy(
+  busyMap: Record<string, 'PENDING' | 'CONFIRMED'>,
+  courtId: string,
+  dateISO: string,
+  startHHMM: string
+): 'PENDING' | 'CONFIRMED' | null {
+  return busyMap[`${courtId}|${dateISO}|${startHHMM}`] ?? busyMap[`*|${dateISO}|${startHHMM}`] ?? null;
+}
+
+export interface CreateBookingParams {
+  pitchId: string;
+  courtId: string;
+  dateISO: string; // YYYY-MM-DD
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM (gece yarısını aşarsa RPC +1 gün ekler)
+  title?: string;
+  note?: string;
+}
+
+export interface CreateBookingResult {
+  bookingId: string;
+  status: 'PENDING' | 'CONFIRMED';
+  price: number;
+  depositAmount: number;
+}
+
+/** Uygulamadan rezervasyon oluşturur (source=APP_BOOKING). */
+export async function createAppBooking(params: CreateBookingParams): Promise<CreateBookingResult> {
+  const { data, error } = await supabase.rpc('create_pitch_booking', {
+    p_pitch_id: params.pitchId,
+    p_court_id: params.courtId,
+    p_booking_date: params.dateISO,
+    p_start_time: params.startTime,
+    p_end_time: params.endTime,
+    p_source: 'APP_BOOKING',
+    p_customer_name: null,
+    p_customer_phone: null,
+    p_note: params.note ?? null,
+    p_title: params.title ?? null,
+  });
+  if (error) throw error;
+
+  const bookingId = data as string;
+  // Durumu öğren (PENDING = onay bekliyor, CONFIRMED = anında onay)
+  const { data: row, error: selErr } = await supabase
+    .from('pitch_bookings')
+    .select('status, price, deposit_amount')
+    .eq('id', bookingId)
+    .single();
+  if (selErr) {
+    // Kayıt oluştu ama okunamadı — kritik değil, varsayılan PENDING göster
+    return { bookingId, status: 'PENDING', price: 0, depositAmount: 0 };
+  }
+  return {
+    bookingId,
+    status: (row.status as 'PENDING' | 'CONFIRMED') ?? 'PENDING',
+    price: Number(row.price ?? 0),
+    depositAmount: Number(row.deposit_amount ?? 0),
+  };
+}
+
+/** Oyuncunun kendi rezervasyonları (RLS: user_id = auth.uid()). */
+export async function fetchMyBookings(): Promise<MyBooking[]> {
+  const { data, error } = await supabase
+    .from('pitch_bookings')
+    .select('id, pitch_id, court_id, booking_date, start_time, end_time, status, source, price, deposit_amount, paid_amount, payment_status, cancellation_reason, created_at, pitches(name, district, image), courts(name)')
+    .order('booking_date', { ascending: false })
+    .order('start_time', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as unknown as MyBooking[];
+}
+
+/** 48 saat kuralı dahilinde iptal; %90 iade bilgisi döner. */
+export async function cancelMyBooking(bookingId: string, reason?: string): Promise<CancelResult> {
+  const { data, error } = await supabase.rpc('cancel_app_booking', {
+    p_booking_id: bookingId,
+    p_reason: reason ?? null,
+  });
+  if (error) throw error;
+  return data as CancelResult;
+}
+
+/** Rezervasyon saatine 48 saatten fazla var mı? (iptal butonunu göstermek için) */
+export function canCancel(booking: Pick<MyBooking, 'booking_date' | 'start_time' | 'status'>): boolean {
+  if (booking.status === 'CANCELLED') return false;
+  const start = new Date(`${booking.booking_date}T${booking.start_time}`);
+  return start.getTime() - Date.now() >= 48 * 60 * 60 * 1000;
+}

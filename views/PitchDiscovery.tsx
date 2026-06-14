@@ -13,6 +13,15 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
 import { supabase } from '../supabaseClient';
+import {
+  fetchPitchAvailability,
+  buildBusyMap,
+  isSlotBusy,
+  createAppBooking,
+  toPlayerErrorMessage,
+  toISODate,
+  type CreateBookingResult,
+} from '../services/playerBookingService';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
 interface DbTariff {
@@ -331,6 +340,8 @@ interface PitchDiscoveryProps {
   onBook?: () => void;
   isSelectionMode?: boolean;
   onSelectTime?: (pitch: Pitch, court: Court, date: string, time: string) => void;
+  /** Rezervasyon sonrası "Rezervasyonlarım" gibi ekranlara geçiş */
+  onNavigate?: (view: string) => void;
 }
 
 // --- HELPERS ---
@@ -464,7 +475,7 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = {
   'Etiler': [41.0850, 29.0350]
 };
 
-const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime }) => {
+const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime, onNavigate }) => {
   const { userLocation, adminPitches, addUserNotification } = useAppStore();
 
   // Canlı saha verisi (onaylı + açık). Boşsa mock adminPitches'e düşer.
@@ -526,6 +537,35 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
   const [quickRentCourt, setQuickRentCourt] = useState<Court | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // ── Gerçek müsaitlik + rezervasyon durumu ──────────────────────────
+  const [busyMap, setBusyMap] = useState<Record<string, 'PENDING' | 'CONFIRMED'>>({});
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingResult, setBookingResult] = useState<CreateBookingResult | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  // Canlı (uuid id'li) tesis için 14 günlük doluluk verisini çek
+  const isRealPitch = (id?: string) => !!id && /^[0-9a-f]{8}-/i.test(id);
+  const loadAvailability = React.useCallback(async (pitchId: string) => {
+    try {
+      const from = new Date();
+      const to = new Date();
+      to.setDate(to.getDate() + 13);
+      const rows = await fetchPitchAvailability(pitchId, from, to);
+      setBusyMap(buildBusyMap(rows));
+    } catch (err) {
+      console.error('Müsaitlik yüklenemedi:', err);
+      setBusyMap({});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isDetailOpen && selectedPitch && isRealPitch(selectedPitch.id)) {
+      loadAvailability(selectedPitch.id);
+    } else {
+      setBusyMap({});
+    }
+  }, [isDetailOpen, selectedPitch?.id, loadAvailability]);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -601,6 +641,39 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
   const calculateTotal = () => {
     if (!selectedCourt) return selectedPitch?.totalPrice || 0;
     return selectedCourt.price;
+  };
+
+  // Seçili günün ISO tarihi (slot doluluk anahtarları için)
+  const selectedDateISO = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + selectedDate);
+    return toISODate(d);
+  }, [selectedDate]);
+
+  // "20:00 - 21:00" formatındaki slotu gerçek rezervasyona çevir
+  const handleBookSlot = async () => {
+    if (!selectedPitch || !selectedCourt || !selectedSlot || isBooking) return;
+    const [startRaw, endRaw] = selectedSlot.split(' - ').map(s => s.trim());
+    setIsBooking(true);
+    setBookingError(null);
+    try {
+      const result = await createAppBooking({
+        pitchId: selectedPitch.id,
+        courtId: selectedCourt.id,
+        dateISO: selectedDateISO,
+        startTime: startRaw,
+        endTime: endRaw,
+        title: `${selectedCourt.name} — uygulama rezervasyonu`,
+      });
+      setBookingResult(result);
+      setSelectedSlot(null);
+      loadAvailability(selectedPitch.id); // ızgarayı tazele
+    } catch (err) {
+      console.error('Rezervasyon hatası:', err);
+      setBookingError(toPlayerErrorMessage(err));
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   const districts = useMemo(() => ['Tümü', ...Array.from(new Set(sourcePitches.map(p => p.district).filter(Boolean)))], [sourcePitches]);
@@ -1084,22 +1157,30 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                                             {(timeFilter === 'DAY' 
                                               ? ['06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00']
                                               : ['18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 00:00', '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00', '04:00 - 05:00', '05:00 - 06:00']
-                                            ).map(slot => (
-                                              <button
-                                                key={slot}
-                                                onClick={() => {
-                                                  setSelectedSlot(slot);
-                                                  setSelectedCourtId(court.id);
-                                                }}
-                                                className={`py-3 rounded-xl border text-[10px] font-black transition-all ${
-                                                  selectedSlot === slot && selectedCourtId === court.id
-                                                    ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
-                                                    : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
-                                                }`}
-                                              >
-                                                {slot}
-                                              </button>
-                                            ))}
+                                            ).map(slot => {
+                                              const slotStart = slot.split(' - ')[0];
+                                              const busy = isSlotBusy(busyMap, court.id, selectedDateISO, slotStart);
+                                              const isSelected = selectedSlot === slot && selectedCourtId === court.id;
+                                              return (
+                                                <button
+                                                  key={slot}
+                                                  disabled={!!busy}
+                                                  onClick={() => {
+                                                    setSelectedSlot(slot);
+                                                    setSelectedCourtId(court.id);
+                                                  }}
+                                                  className={`py-3 rounded-xl border text-[10px] font-black transition-all ${
+                                                    busy
+                                                      ? 'bg-red-950/40 border-red-500/20 text-red-400/70 cursor-not-allowed line-through'
+                                                      : isSelected
+                                                        ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
+                                                        : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
+                                                  }`}
+                                                >
+                                                  {busy ? `${slotStart} DOLU` : slot}
+                                                </button>
+                                              );
+                                            })}
                                           </div>
                                       </div>
 
@@ -1141,6 +1222,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                   >
                      {selectedSlot ? 'SAHAYI VE SAATİ ONAYLA' : 'ÖNCE SAAT SEÇİN'}
                   </button>
+                ) : selectedSlot && selectedCourt && isRealPitch(selectedPitch?.id) ? (
+                  <button
+                    disabled={isBooking}
+                    onClick={handleBookSlot}
+                    className={`flex-1 h-14 rounded-2xl font-black tracking-widest text-[13px] flex items-center justify-center gap-2 transition-all uppercase bg-[#39FF14] text-black ${
+                      isBooking
+                        ? 'opacity-60 cursor-wait'
+                        : 'shadow-[0_0_35px_rgba(57,255,20,0.55)] hover:shadow-[0_0_45px_rgba(57,255,20,0.8)] active:scale-95'
+                    }`}
+                  >
+                    {isBooking ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+                        REZERVE EDİLİYOR...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={18} /> REZERVE ET — {selectedSlot} {calculateTotal() > 0 ? `(₺${calculateTotal()})` : ''}
+                      </>
+                    )}
+                  </button>
                 ) : (
                   <button
                     className="flex-1 h-14 rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 transition-all bg-[#FF385C] text-white hover:bg-[#D70466] active:scale-95"
@@ -1153,7 +1255,81 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
         )}
       </AnimatePresence>
 
+      {/* ── Rezervasyon Hatası Toast ── */}
+      <AnimatePresence>
+        {bookingError && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] max-w-sm w-[90%] bg-red-950/95 backdrop-blur-xl border border-red-500/40 rounded-2xl px-5 py-4 shadow-2xl flex items-start gap-3"
+          >
+            <X size={18} className="text-red-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-white">Rezervasyon yapılamadı</p>
+              <p className="text-xs text-red-200 mt-1 leading-relaxed">{bookingError}</p>
+            </div>
+            <button onClick={() => setBookingError(null)} className="text-red-300 hover:text-white"><X size={16} /></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* ── Rezervasyon Başarı Modalı ── */}
+      <AnimatePresence>
+        {bookingResult && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={() => setBookingResult(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-white/10 p-8 text-center"
+            >
+              <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 ${
+                bookingResult.status === 'CONFIRMED' ? 'bg-[#39FF14]/15 border-2 border-[#39FF14]/40' : 'bg-yellow-500/15 border-2 border-yellow-500/40'
+              }`}>
+                <CheckCircle size={40} className={bookingResult.status === 'CONFIRMED' ? 'text-[#39FF14]' : 'text-yellow-400'} />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">
+                {bookingResult.status === 'CONFIRMED' ? 'Rezervasyon Onaylandı!' : 'Talebin Alındı!'}
+              </h2>
+              <p className="text-sm text-gray-400 leading-relaxed mb-2">
+                {bookingResult.status === 'CONFIRMED'
+                  ? 'Saha senin için ayrıldı. İyi oyunlar!'
+                  : 'Tesis sahibinin onayı bekleniyor. Onaylandığında bildirim alacaksın.'}
+              </p>
+              {bookingResult.price > 0 && (
+                <p className="text-xs text-gray-500 mb-6">
+                  Tutar: <span className="text-white font-bold">₺{bookingResult.price}</span>
+                  {bookingResult.depositAmount > 0 && <> · Kapora: <span className="text-white font-bold">₺{bookingResult.depositAmount}</span></>}
+                </p>
+              )}
+              <div className="flex flex-col gap-3 mt-4">
+                {onNavigate && (
+                  <button
+                    onClick={() => { setBookingResult(null); setIsDetailOpen(false); onNavigate('MY_BOOKINGS'); }}
+                    className="w-full py-3.5 bg-[#FFFF00] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform"
+                  >
+                    Rezervasyonlarımı Gör
+                  </button>
+                )}
+                <button
+                  onClick={() => setBookingResult(null)}
+                  className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors"
+                >
+                  Kapat
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

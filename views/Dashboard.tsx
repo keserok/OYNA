@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, MapPin, Users, User, Scale, Shield, Swords,
   Clock, Check, Wallet, Sparkles, ChevronRight,
-  Target, MousePointer2, Trophy, Activity, Calendar, Star, TrendingUp, Flame, Zap
+  Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap
 } from 'lucide-react';
 import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
@@ -984,6 +984,30 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-emerald-500/20 group-hover:scale-110 transition-transform">
               <MapPin size={40} className="text-[#39FF14]" />
             </div>
+          </div>
+        </AnimatedButton>
+
+        {/* Rezervasyonlarım — saha kiralamalarını görüntüle/iptal et */}
+        <AnimatedButton
+          as="div"
+          variants={itemVariants}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onNavigate('MY_BOOKINGS')}
+          className="col-span-2 py-4 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer"
+          style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+        >
+          <div className="px-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#39FF14]">
+                <CalendarCheck size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white italic uppercase leading-none">Rezervasyonlarım</h3>
+                <p className="text-[10px] text-gray-400 mt-1 font-bold">Saha kiralamalarını yönet</p>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-gray-500 group-hover:translate-x-1 transition-transform" />
           </div>
         </AnimatedButton>
 
