@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "port": 4000,
       "autoPort": true
+    },
+    {
+      "name": "oyna-main",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4100,
+      "autoPort": true
     }
   ]
 }
