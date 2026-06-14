@@ -284,3 +284,162 @@ export const fbDeletePitchBooking = async (bookingId: string) => {
     throw error;
   }
 };
+
+// --- Skor Sistemi ---
+export type ScoreEntryRole = 'OWNER' | 'REFEREE';
+
+export const fbRecordScore = async (
+  matchId: string,
+  homeScore: number,
+  awayScore: number,
+  byRole: ScoreEntryRole
+) => {
+  const { data, error } = await supabase.rpc('record_match_score', {
+    p_match_id: matchId,
+    p_home: homeScore,
+    p_away: awayScore,
+    p_by_role: byRole
+  });
+  if (error) {
+    console.error('Error recording match score:', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true, data };
+};
+
+export const fbApproveCaptainScore = async (matchId: string, side: 'home' | 'away') => {
+  const { data, error } = await supabase.rpc('approve_match_score', {
+    p_match_id: matchId,
+    p_side: side
+  });
+  if (error) {
+    console.error('Error approving captain score:', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true, data };
+};
+
+// --- Vitrin Stüdyosu Mutations ---
+export interface PitchShowcasePayload {
+  name?: string;
+  description?: string;
+  image?: string;
+  images?: string[];
+  amenities?: string[];
+  featured_amenities?: string[];
+  cover_image_index?: number;
+  quality_grades?: { grass: 'A' | 'B' | 'C'; lighting: 'A' | 'B' | 'C'; lockerRoom: 'A' | 'B' | 'C' };
+  showcase_campaign?: {
+    title: string;
+    subtitle?: string;
+    validUntil?: string;
+    discountPct?: number;
+  } | null;
+  is_approved?: boolean;
+}
+
+export const fbUpdatePitchShowcase = async (pitchId: string, payload: PitchShowcasePayload) => {
+  const { error } = await supabase
+    .from('pitches')
+    .update(payload)
+    .eq('id', pitchId);
+  if (error) {
+    console.error('Error updating pitch showcase:', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+};
+
+// --- Realtime Aboneliği ---
+export const fbSubscribePitchBookings = (
+  pitchId: string,
+  callback: (event: { type: 'INSERT' | 'UPDATE' | 'DELETE'; row: any }) => void
+) => {
+  const channel = supabase
+    .channel(`pitch_bookings:${pitchId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'pitch_bookings', filter: `pitch_id=eq.${pitchId}` },
+      (payload: any) => {
+        callback({
+          type: payload.eventType,
+          row: payload.new || payload.old
+        });
+      }
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};
+
+export const fbSubscribePitchUpdates = (
+  pitchId: string,
+  callback: (row: any) => void
+) => {
+  const channel = supabase
+    .channel(`pitches:${pitchId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'pitches', filter: `id=eq.${pitchId}` },
+      (payload: any) => callback(payload.new)
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};
+
+export const fbSubscribeOwnerMatches = (
+  ownerPitchIds: string[],
+  callback: (event: { type: 'INSERT' | 'UPDATE' | 'DELETE'; row: any }) => void
+) => {
+  if (!ownerPitchIds.length) return () => {};
+  // Birden fazla saha için tek channel - filter pitch_id=in.(...) desteklenmediği için
+  // tüm individual_matches'i dinleyip client'ta filtreliyoruz
+  const channel = supabase
+    .channel(`owner_matches`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'individual_matches' },
+      (payload: any) => {
+        const row = payload.new || payload.old;
+        if (row && ownerPitchIds.includes(row.pitch_id)) {
+          callback({ type: payload.eventType, row });
+        }
+      }
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};
+
+// Owner'ın tüm pending skor maçlarını çek
+export const fbGetOwnerPendingScoreMatches = async (ownerId: string) => {
+  const { data, error } = await supabase
+    .from('individual_matches')
+    .select('*, pitches!inner(owner_id, name)')
+    .eq('pitches.owner_id', ownerId)
+    .is('score_entered_at', null)
+    .in('status', ['CONFIRMED', 'PLAYING', 'COMPLETED']);
+  if (error) {
+    console.error('Error fetching pending score matches:', error);
+    return [];
+  }
+  return data || [];
+};
+
+// Belirli bir maçın detayını çek (kaptan onay modalı için)
+export const fbGetMatchDetail = async (matchId: string) => {
+  const { data, error } = await supabase
+    .from('individual_matches')
+    .select('*, pitches(name, image)')
+    .eq('id', matchId)
+    .single();
+  if (error) {
+    console.error('Error fetching match detail:', error);
+    return null;
+  }
+  return data;
+};

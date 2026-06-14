@@ -12,6 +12,10 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
+import PitchShowcaseCard from '../components/PitchShowcaseCard';
+import OccupancyCalendar from '../components/OccupancyCalendar';
+import { getOccupancyMatrix, OccupancyMatrix } from '../services/pitchService';
+import { fbSubscribePitchBookings } from '../supabaseMutations';
 
 // Fix leafet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -574,7 +578,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
             <AnimatePresence mode="popLayout">
               <div className="grid grid-cols-2 gap-3.5 pb-8">
                 {filteredPitches.map((pitch) => (
-                  <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />
+                  <PitchShowcaseCard key={pitch.id} pitch={pitch} variant="list" onClick={() => handleOpenDetail(pitch)} />
                 ))}
               </div>
             </AnimatePresence>
@@ -729,19 +733,52 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
               {/* Edge to Edge Image Carousel */}
               <div className="relative w-full h-[35vh]">
                 <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
-                  {selectedPitch.images && selectedPitch.images.length > 0 ? (
-                    selectedPitch.images.map((img, idx) => (
-                      <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                        <img src={img} className="w-full h-full object-cover" alt={`${selectedPitch.name} ${idx + 1}`} />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="w-full h-full flex-shrink-0 snap-center relative">
-                      <img src={selectedPitch.image} className="w-full h-full object-cover" alt={selectedPitch.name} />
-                    </div>
-                  )}
+                  {(() => {
+                    // Owner'ın seçtiği kapak fotoğrafını başa al
+                    const imgs = selectedPitch.images || [selectedPitch.image].filter(Boolean);
+                    const coverIdx = selectedPitch.coverImageIndex ?? 0;
+                    const ordered = imgs.length > 0
+                      ? [imgs[coverIdx], ...imgs.filter((_, i) => i !== coverIdx)].filter(Boolean)
+                      : [];
+                    return ordered.length > 0 ? (
+                      ordered.map((img, idx) => (
+                        <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
+                          <img src={img} className="w-full h-full object-cover" alt={`${selectedPitch.name} ${idx + 1}`} />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="w-full h-full flex-shrink-0 snap-center relative bg-[#161B22]"></div>
+                    );
+                  })()}
                 </div>
                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none"></div>
+
+                {/* KAMPANYA BANDI - Owner'ın eklediği */}
+                {selectedPitch.showcaseCampaign && (
+                  <div className="absolute top-4 left-4 right-4 z-20">
+                    <div className="bg-gradient-to-r from-[#FFFF00]/95 to-yellow-300/95 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 shadow-[0_0_30px_rgba(255,255,0,0.4)] border border-[#FFFF00]">
+                      <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center shrink-0">
+                        <span className="text-2xl">🎉</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-black uppercase tracking-tight truncate">
+                          {selectedPitch.showcaseCampaign.title}
+                        </p>
+                        {selectedPitch.showcaseCampaign.subtitle && (
+                          <p className="text-[11px] text-black/70 font-bold truncate">
+                            {selectedPitch.showcaseCampaign.subtitle}
+                          </p>
+                        )}
+                      </div>
+                      {selectedPitch.showcaseCampaign.discountPct && (
+                        <span className="text-2xl font-black text-black bg-white/30 px-3 py-1 rounded-lg shrink-0">
+                          %{selectedPitch.showcaseCampaign.discountPct}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Carousel Indicator Dots */}
                 {selectedPitch.images && selectedPitch.images.length > 1 && (
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
@@ -864,81 +901,32 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
                                         </div>
                                       )}
 
-                                      {/* Tarih ve Saat Seçimi (Sadece Selection Mode veya Her Zaman) */}
+                                      {/* 7 Günlük Canlı Doluluk Takvimi */}
                                       <div className="border-t border-white/5 pt-5">
-                                          <div className="flex items-center justify-between mb-4">
-                                            <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Tarih Seç</h4>
-                                          </div>
-                                          <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                                            {Array.from({ length: 14 }).map((_, d) => {
-                                              const date = new Date();
-                                              date.setDate(date.getDate() + d);
-                                              const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
-                                              const dayNum = date.getDate();
-                                              return (
-                                                <button
-                                                  key={d}
-                                                  onClick={() => setSelectedDate(d)}
-                                                  className={`flex-shrink-0 w-16 h-20 rounded-2xl border flex flex-col items-center justify-center transition-all ${
-                                                    selectedDate === d
-                                                      ? 'bg-[#39FF14]/10 border-[#39FF14] text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.2)]'
-                                                      : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
-                                                  }`}
-                                                >
-                                                  <span className="text-[10px] uppercase font-bold mb-1">{d === 0 ? 'Bugün' : dayName}</span>
-                                                  <span className="text-xl font-black">{dayNum}</span>
-                                                </button>
-                                              );
-                                            })}
-                                          </div>
-
-                                          <div className="flex items-center justify-between mt-6 mb-4">
-                                            <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Saat Seç</h4>
-                                            <div className="flex gap-2">
-                                              <button 
-                                                onClick={() => setTimeFilter('DAY')}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase transition-all ${
-                                                  timeFilter === 'DAY'
-                                                    ? 'bg-white/10 border-white/40 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]'
-                                                    : 'bg-transparent border-white/10 text-gray-500 hover:text-gray-300'
-                                                }`}
-                                              >
-                                                <Sun size={12} className={timeFilter === 'DAY' ? 'text-[#FFFF00]' : ''} /> Gündüz
-                                              </button>
-                                              <button 
-                                                onClick={() => setTimeFilter('NIGHT')}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase transition-all ${
-                                                  timeFilter === 'NIGHT'
-                                                    ? 'bg-blue-500/10 border-blue-500/40 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
-                                                    : 'bg-transparent border-white/10 text-gray-500 hover:text-gray-300'
-                                                }`}
-                                              >
-                                                <Moon size={12} className={timeFilter === 'NIGHT' ? 'text-blue-400' : ''} /> Gece
-                                              </button>
-                                            </div>
-                                          </div>
-                                          
-                                          <div className="grid grid-cols-3 gap-2">
-                                            {(timeFilter === 'DAY' 
-                                              ? ['06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00']
-                                              : ['18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 00:00', '00:00 - 01:00', '01:00 - 02:00', '02:00 - 03:00', '03:00 - 04:00', '04:00 - 05:00', '05:00 - 06:00']
-                                            ).map(slot => (
-                                              <button
-                                                key={slot}
-                                                onClick={() => {
-                                                  setSelectedSlot(slot);
-                                                  setSelectedCourtId(court.id);
-                                                }}
-                                                className={`py-3 rounded-xl border text-[10px] font-black transition-all ${
-                                                  selectedSlot === slot && selectedCourtId === court.id
-                                                    ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
-                                                    : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
-                                                }`}
-                                              >
-                                                {slot}
-                                              </button>
-                                            ))}
-                                          </div>
+                                        <div className="flex items-center justify-between mb-4">
+                                          <h4 className="text-[12px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                            <Activity size={14} className="text-[#FFFF00]" /> CANLI DOLULUK
+                                          </h4>
+                                          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            REALTIME
+                                          </span>
+                                        </div>
+                                        {selectedPitch && (
+                                          <OccupancyCalendar
+                                            pitchId={selectedPitch.id}
+                                            variant="player"
+                                            selectedSlot={
+                                              selectedSlot && selectedCourtId === court.id
+                                                ? { date: new Date().toISOString().split('T')[0], time: selectedSlot }
+                                                : null
+                                            }
+                                            onSlotSelect={(date, time) => {
+                                              setSelectedSlot(time);
+                                              setSelectedCourtId(court.id);
+                                            }}
+                                          />
+                                        )}
                                       </div>
 
                                     </div>

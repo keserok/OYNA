@@ -106,7 +106,7 @@ export interface Match {
 }
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'BOOKING_ADDONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'PREMIUM' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'UPCOMING_MATCHES' | 'CARD_BUILDER';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'BOOKING_ADDONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'PREMIUM' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'UPCOMING_MATCHES' | 'CARD_BUILDER' | 'OWNER_SHOWCASE_STUDIO' | 'OWNER_MATCHES' | 'REFEREE_SCORE_ENTRY' | 'CAPTAIN_SCORE_APPROVAL';
 
 export interface PlayerStat {
   value: number;
@@ -332,6 +332,52 @@ export interface Pitch {
   paramMerchantId?: string;
   paramApiKey?: string;
   paramClientId?: string;
+  // VITRIN STUDIO: Owner customization
+  ownerId?: string;
+  coverImageIndex?: number; // images[] içinde kapak fotonun indeksi
+  featuredAmenities?: string[]; // İlk gösterilen 3 amenity
+  qualityGrades?: { grass: 'A' | 'B' | 'C'; lighting: 'A' | 'B' | 'C'; lockerRoom: 'A' | 'B' | 'C' };
+  showcaseCampaign?: {
+    title: string;
+    subtitle?: string;
+    validUntil?: string;
+    discountPct?: number;
+  } | null;
+}
+
+// SKOR ENTEGRASYONU - individual_matches paralelinde
+export interface MatchScoreState {
+  matchId: string;
+  homeScore?: number;
+  awayScore?: number;
+  scoreEnteredAt?: string;
+  scoreEnteredBy?: string;
+  scoreEnteredRole?: 'OWNER' | 'REFEREE';
+  homeCaptainApproved?: boolean;
+  awayCaptainApproved?: boolean;
+  homeCaptainId?: string;
+  awayCaptainId?: string;
+  refereeId?: string;
+  scoreLockedAt?: string;
+  status?: 'GATHERING' | 'CONFIRMED' | 'PLAYING' | 'COMPLETED' | 'CANCELLED';
+}
+
+export interface OwnerMatchRow {
+  id: string;
+  pitchId: string;
+  pitchName?: string;
+  title: string;
+  matchDatetime: string;
+  homeTeamName?: string;
+  awayTeamName?: string;
+  homeScore?: number;
+  awayScore?: number;
+  scoreEnteredAt?: string;
+  scoreLockedAt?: string;
+  homeCaptainApproved?: boolean;
+  awayCaptainApproved?: boolean;
+  refereeId?: string;
+  status: 'GATHERING' | 'CONFIRMED' | 'PLAYING' | 'COMPLETED' | 'CANCELLED';
 }
 
 export interface ServiceReview {

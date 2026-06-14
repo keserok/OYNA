@@ -15,6 +15,7 @@ import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
 import SharedPitch from '../components/SharedPitch';
 import PitchDiscovery from './PitchDiscovery';
+import PitchShowcaseCard from '../components/PitchShowcaseCard';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -852,7 +853,7 @@ const PitchSelectStep: React.FC<{
               {filters.district !== 'Tümü' && <span className="text-[10px] font-black text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-1 rounded-lg">{filters.district}</span>}
             </div>
             <AnimatePresence mode="popLayout">
-              {filteredPitches.map((pitch:any) => <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />)}
+              {filteredPitches.map((pitch:any) => <PitchShowcaseCard key={pitch.id} pitch={pitch} variant="list" showOccupancy occupancyPct={pitch.occupancy} onClick={() => handleOpenDetail(pitch)} />)}
             </AnimatePresence>
             {filteredPitches.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500">

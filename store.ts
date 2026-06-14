@@ -323,6 +323,19 @@ interface AppState {
   updateMatch: (match: MatchListing) => void;
   deleteMatch: (id: string) => void;
 
+  // ─── Skor Sistemi (Owner + Referee + Captain) ──────────────────
+  scoreEntryMatchId: string | null;        // ScoreEntryDrawer için
+  setScoreEntryMatchId: (id: string | null) => void;
+  captainApprovalMatchId: string | null;   // CaptainScoreApprovalModal için
+  setCaptainApprovalMatchId: (id: string | null) => void;
+  recordMatchScore: (matchId: string, home: number, away: number, role: 'OWNER' | 'REFEREE') => Promise<{ success: boolean; error?: string }>;
+  approveCaptainScore: (matchId: string, side: 'home' | 'away') => Promise<{ success: boolean; error?: string }>;
+
+  // ─── Vitrin Stüdyosu ───────────────────────────────────────────
+  showcaseStudioPitchId: string | null;
+  setShowcaseStudioPitchId: (id: string | null) => void;
+  publishPitchShowcase: (pitchId: string, payload: any) => Promise<{ success: boolean; error?: string }>;
+
   // ─── User CRUD ─────────────────────────────────────────────────
   updateUser: (user: AdminUser) => void;
   setNewMatchBadge: (val: boolean) => void;
@@ -733,6 +746,95 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateMatch: (match) => {
     set((state) => ({ adminMatches: state.adminMatches.map(m => m.id === match.id ? match : m) }));
     FB.fbUpdateMatch(match as any);
+  },
+
+  // ─── Skor Sistemi ─────────────────────────────────────────────
+  scoreEntryMatchId: null,
+  setScoreEntryMatchId: (id) => set({ scoreEntryMatchId: id }),
+  captainApprovalMatchId: null,
+  setCaptainApprovalMatchId: (id) => set({ captainApprovalMatchId: id }),
+
+  recordMatchScore: async (matchId, home, away, role) => {
+    const result = await FB.fbRecordScore(matchId, home, away, role);
+    if (result.success) {
+      // Local state'i güncelle (optimistic)
+      set((state) => ({
+        adminMatches: state.adminMatches.map(m =>
+          m.id === matchId
+            ? { ...m, homeScore: home, awayScore: away, scoreEnteredAt: new Date().toISOString(), status: 'COMPLETED' as any }
+            : m
+        )
+      }));
+      // Bildirim ekle
+      const m = get().adminMatches.find(mm => mm.id === matchId);
+      get().addUserNotification({
+        id: `score-${Date.now()}`,
+        title: 'Skor Girildi',
+        desc: `${m?.title || 'Maç'} için skor (${home}-${away}) kaydedildi. Kaptan onayı bekleniyor.`,
+        time: 'Şimdi',
+        type: 'info',
+        iconName: 'Trophy',
+        color: 'bg-[#FFFF00]',
+        textColor: 'text-[#FFFF00]'
+      });
+    }
+    return result;
+  },
+
+  approveCaptainScore: async (matchId, side) => {
+    const result = await FB.fbApproveCaptainScore(matchId, side);
+    if (result.success) {
+      set((state) => ({
+        adminMatches: state.adminMatches.map(m =>
+          m.id === matchId
+            ? side === 'home'
+              ? { ...m, homeCaptainApproved: true } as any
+              : { ...m, awayCaptainApproved: true } as any
+            : m
+        )
+      }));
+    }
+    return result;
+  },
+
+  // ─── Vitrin Stüdyosu ───────────────────────────────────────────
+  showcaseStudioPitchId: null,
+  setShowcaseStudioPitchId: (id) => set({ showcaseStudioPitchId: id }),
+
+  publishPitchShowcase: async (pitchId, payload) => {
+    const result = await FB.fbUpdatePitchShowcase(pitchId, payload);
+    if (result.success) {
+      // Local'de güncelle
+      set((state) => ({
+        adminPitches: state.adminPitches.map(p =>
+          p.id === pitchId
+            ? {
+                ...p,
+                ...(payload.name && { name: payload.name }),
+                ...(payload.description !== undefined && { description: payload.description }),
+                ...(payload.image && { image: payload.image }),
+                ...(payload.images && { images: payload.images }),
+                ...(payload.amenities && { amenities: payload.amenities }),
+                ...(payload.featured_amenities && { featuredAmenities: payload.featured_amenities }),
+                ...(payload.cover_image_index !== undefined && { coverImageIndex: payload.cover_image_index }),
+                ...(payload.quality_grades && { qualityGrades: payload.quality_grades }),
+                ...(payload.showcase_campaign !== undefined && { showcaseCampaign: payload.showcase_campaign })
+              }
+            : p
+        )
+      }));
+      get().addUserNotification({
+        id: `showcase-${Date.now()}`,
+        title: 'Vitrin Yayında',
+        desc: 'Değişiklikleriniz oyunculara yansıtıldı.',
+        time: 'Şimdi',
+        type: 'success',
+        iconName: 'CheckCircle',
+        color: 'bg-[#39FF14]',
+        textColor: 'text-[#39FF14]'
+      });
+    }
+    return result;
   },
   deleteMatch: (id) => {
     set((state) => ({ adminMatches: state.adminMatches.filter(m => m.id !== id) }));

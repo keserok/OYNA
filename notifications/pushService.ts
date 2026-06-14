@@ -89,6 +89,20 @@ export const handleDeepLink = (deepLink: string, setView: (v: string) => void, s
         });
       }
       break;
+    case 'score-approval':
+      // Kaptanlara skor onayı talebi geldi
+      if (id) {
+        // Store'a matchId'yi yaz, modal açılsın
+        import('../store').then(({ useAppStore }) => {
+          useAppStore.getState().setCaptainApprovalMatchId(id);
+        });
+        setView('CAPTAIN_SCORE_APPROVAL');
+      }
+      break;
+    case 'referee-score':
+      // Hakeme skor giriş talebi geldi
+      setView('REFEREE_SCORE_ENTRY');
+      break;
     case 'profile':
       setView('PROFILE');
       break;

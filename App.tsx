@@ -71,6 +71,10 @@ const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
+const VitrinStudio = lazy(() => import('./views/owner/VitrinStudio'));
+const MatchesOwnerView = lazy(() => import('./views/owner/MatchesOwnerView'));
+const RefereeScoreView = lazy(() => import('./views/RefereeScoreView'));
+const CaptainScoreApprovalModal = lazy(() => import('./views/CaptainScoreApprovalModal'));
 import { BottomNav } from './components/BottomNav';
 import { RookieShowcase } from './views/RookieShowcase';
 
@@ -301,6 +305,17 @@ const App: React.FC = () => {
         return <AdminPanel onBack={() => setView('ROLE_SELECTION')} />;
       case 'OWNER_PANEL':
         return <OwnerPanel onBack={() => setView('ROLE_SELECTION')} onNavigate={(v) => setView(v as AppView)} />;
+      case 'OWNER_SHOWCASE_STUDIO': {
+        const { showcaseStudioPitchId, adminPitches } = useAppStore.getState();
+        const pitchId = showcaseStudioPitchId || adminPitches[0]?.id || '';
+        return <VitrinStudio pitchId={pitchId} onBack={() => setView('OWNER_PANEL')} />;
+      }
+      case 'OWNER_MATCHES':
+        return <MatchesOwnerView onBack={() => setView('OWNER_PANEL')} onNavigate={(v) => setView(v as AppView)} />;
+      case 'REFEREE_SCORE_ENTRY':
+        return <RefereeScoreView onBack={() => setView('DASHBOARD')} />;
+      case 'CAPTAIN_SCORE_APPROVAL':
+        return <CaptainScoreApprovalModal onClose={() => setView('DASHBOARD')} />;
       case 'SERVICE_DASHBOARD':
         return <ServiceDashboard role={role!} onBack={() => setView('ROLE_SELECTION')} onNavigate={(v) => setView(v)} />;
       case 'PARTNER_ONBOARDING':
@@ -485,7 +500,7 @@ const App: React.FC = () => {
       case 'LEADERBOARDS':
         return <Leaderboards onBack={() => setView('COMMUNITY_VIEW')} />;
       case 'POST_MATCH_EVAL':
-        return <PostMatchEval onBack={() => setView('COMMUNITY_VIEW')} onComplete={() => setView('COMMUNITY_VIEW')} />;
+        return <PostMatchEval onBack={() => setView('MATCH_TICKET')} onComplete={() => setView('MATCH_TICKET')} />;
       case 'TOURNAMENT_BRACKET':
         return <TournamentBracket onBack={() => setView('COMMUNITY_VIEW')} />;
       case 'COMMUNITY_ADMIN_DASHBOARD':

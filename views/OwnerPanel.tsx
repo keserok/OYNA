@@ -8,6 +8,7 @@ import {
 
 import { OWNER_TRANSACTIONS, PITCHES } from '../constants';
 import { useAppStore } from '../store';
+import OccupancyCalendar from '../components/OccupancyCalendar';
 
 interface OwnerPanelProps {
   onBack: () => void;
@@ -2662,13 +2663,40 @@ const MenuView: React.FC<{
                 <section>
                     <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">İŞLETME YÖNETİMİ</h3>
                     <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
-                        <button 
+                        <button
+                            onClick={() => {
+                                const store = useAppStore.getState();
+                                const ownerPitch = store.adminPitches[0];
+                                if (ownerPitch) {
+                                    store.setShowcaseStudioPitchId(ownerPitch.id);
+                                    onNavigate('OWNER_SHOWCASE_STUDIO');
+                                } else {
+                                    onEditProfile();
+                                }
+                            }}
+                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5 bg-gradient-to-r from-[#FFFF00]/5 to-transparent"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex items-center justify-center">
+                                    <Edit3 size={16} className="text-[#FFFF00]" />
+                                </div>
+                                <div className="text-left">
+                                    <span className="text-sm font-bold text-white block">Vitrin Stüdyosu</span>
+                                    <span className="text-[10px] text-gray-500 font-medium">Saha vitrinini özelleştir, oyunculara göster</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-1 rounded-md uppercase">YENİ</span>
+                                <ChevronRight size={16} className="text-gray-600" />
+                            </div>
+                        </button>
+                        <button
                             onClick={onEditProfile}
                             className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5"
                         >
                             <div className="flex items-center gap-3">
                                 <Edit3 size={18} className="text-gray-400" />
-                                <span className="text-sm font-bold text-white">Halı Sahamı Düzenle</span>
+                                <span className="text-sm font-bold text-white">Klasik Düzenleme (Hızlı)</span>
                             </div>
                             <ChevronRight size={16} className="text-gray-600" />
                         </button>
@@ -3206,8 +3234,20 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 };
 
 const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
-  const { setIsNotificationsOpen } = useAppStore();
-  const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
+  const { setIsNotificationsOpen, adminMatches } = useAppStore();
+  const [activeTab, setActiveTab] = useState<OwnerTab>('HOME');
+
+  // Bugün/geçmiş + skor girilmemiş + hakem yok maçlar (HOME widget'ı için)
+  const pendingScoreMatches = useMemo(() => {
+    const now = new Date();
+    return adminMatches.filter((m: any) => {
+      const dt = m.matchDatetime || m.date;
+      if (!dt) return false;
+      const d = new Date(dt);
+      const hasScore = typeof m.homeScore === 'number';
+      return d <= now && !hasScore && !m.refereeId;
+    });
+  }, [adminMatches]);
   const [pendingRequests, setPendingRequests] = useState(() => {
       const saved = localStorage.getItem('owner_pendingRequests');
       return saved ? JSON.parse(saved) : INITIAL_PENDING_REQUESTS;
@@ -3375,6 +3415,37 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
 
       {activeTab === 'HOME' && (
           <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
+
+              {/* SKOR BEKLEYEN MAÇLAR WIDGET */}
+              {pendingScoreMatches.length > 0 && (
+                  <button
+                      onClick={() => onNavigate('OWNER_MATCHES')}
+                      className="w-full mb-6 bg-gradient-to-r from-[#FFFF00]/10 via-orange-500/10 to-transparent border border-[#FFFF00]/30 rounded-3xl p-5 flex items-center gap-4 text-left hover:from-[#FFFF00]/20 hover:border-[#FFFF00]/50 transition-all group relative overflow-hidden shadow-[0_0_30px_rgba(255,255,0,0.1)]"
+                  >
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFFF00]/5 blur-2xl rounded-full"></div>
+                      <div className="w-14 h-14 rounded-2xl bg-[#FFFF00] flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,255,0,0.4)] relative z-10">
+                          <Trophy size={28} className="text-black" />
+                      </div>
+                      <div className="flex-1 min-w-0 relative z-10">
+                          <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[9px] font-black text-[#FFFF00] uppercase tracking-widest bg-[#FFFF00]/10 px-2 py-0.5 rounded-md border border-[#FFFF00]/30 animate-pulse">
+                                  ACİL
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                  Skor Girilmemiş
+                              </span>
+                          </div>
+                          <h3 className="text-xl font-black text-white italic uppercase tracking-tight">
+                              {pendingScoreMatches.length} Maçta Skor Bekleniyor
+                          </h3>
+                          <p className="text-[11px] text-gray-400 font-medium mt-1">
+                              Tıklayın ve maçları görüntüleyin, skoru girin
+                          </p>
+                      </div>
+                      <ChevronRight size={24} className="text-[#FFFF00] shrink-0 group-hover:translate-x-1 transition-transform relative z-10" />
+                  </button>
+              )}
+
               {activeWidgets.includes('QUICK_STATS') && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <button onClick={() => setShowRevenueModal(true)} className="text-left bg-gradient-to-br from-emerald-900/40 to-[#1A1F2C] p-5 rounded-2xl border border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/50 transition-all active:scale-95">
@@ -3424,11 +3495,24 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
               )}
 
               {activeWidgets.includes('OCCUPANCY_ANALYSIS') && (
-                  <div className="bg-[#161B22] border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
-                    <h3 className="font-bold text-white text-base flex items-center gap-2 mb-6">
-                        <BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi
+                  <div className="bg-transparent mb-6 shadow-xl relative overflow-hidden">
+                    <h3 className="font-bold text-white text-base flex items-center gap-2 mb-4 px-1">
+                        <Activity size={18} className="text-[#FFFF00]" /> Saha Doluluk - Canlı
+                        <span className="ml-auto text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          REALTIME
+                        </span>
                     </h3>
-                    <PitchOccupancyGrid data={HOURLY_DATA} />
+                    {facilityData?.id && (
+                      <OccupancyCalendar
+                        pitchId={facilityData.id}
+                        variant="owner"
+                        onBookingClick={(bookingId, title) => {
+                          // Owner için: rezervasyon detayını CALENDAR'da göster
+                          setActiveTab('CALENDAR');
+                        }}
+                      />
+                    )}
                   </div>
               )}
 
@@ -3596,7 +3680,7 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 w-full bg-[#1A1F2C] border-t border-white/5 px-6 py-3 flex justify-between items-center z-40 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      <nav className="fixed bottom-0 left-0 w-full bg-[#1A1F2C] border-t border-white/5 px-4 py-3 flex justify-between items-center z-40 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'HOME' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
               <Home size={20} />
               <span className="text-[10px] font-bold">Özet</span>
@@ -3605,13 +3689,13 @@ const OwnerPanel: React.FC<OwnerPanelProps> = ({ onBack, onNavigate }) => {
               <Calendar size={20} />
               <span className="text-[10px] font-bold">Takvim</span>
           </button>
+          <button onClick={() => onNavigate('OWNER_MATCHES')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg text-gray-500 hover:text-gray-300 relative`}>
+              <Trophy size={20} />
+              <span className="text-[10px] font-bold">Maçlar</span>
+          </button>
           <button onClick={() => setActiveTab('FINANCE')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'FINANCE' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
               <Wallet size={20} />
               <span className="text-[10px] font-bold">Finans</span>
-          </button>
-          <button onClick={() => setActiveTab('TEAM')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'TEAM' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
-              <Users size={20} />
-              <span className="text-[10px] font-bold">Ekip</span>
           </button>
           <button onClick={() => setActiveTab('MORE')} className={`flex flex-col items-center gap-1 transition-colors px-2 py-1 rounded-lg ${activeTab === 'MORE' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'}`}>
               <MoreHorizontal size={20} />
