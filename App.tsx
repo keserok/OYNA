@@ -122,6 +122,7 @@ const App: React.FC = () => {
     originalRole,
     setOriginalRole,
     chatTarget,
+    activeConversationId,
     isNotificationsOpen,
     setIsNotificationsOpen,
     addUserNotification,
@@ -453,11 +454,12 @@ const App: React.FC = () => {
           }}
         />;
       case 'CHAT':
-        return <ChatScreen 
-          targetName={chatTarget?.name} 
-          targetRole={chatTarget?.role} 
-          targetAvatar={chatTarget?.avatar} 
-          onBack={() => setView('MATCH_DISCOVERY')} 
+        return <ChatScreen
+          conversationId={activeConversationId}
+          targetName={chatTarget?.name}
+          targetRole={chatTarget?.role}
+          targetAvatar={chatTarget?.avatar}
+          onBack={() => setView('PROFILE')}
         />;
       case 'MATCH_TICKET':
         return <MatchTicket onBack={() => setView('DASHBOARD')} />;

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Globe, Bell, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, Moon, Database, MapPin, Lock, CheckCircle2, XCircle, Smartphone,
-  AlertCircle
+  AlertCircle, Download, ShieldOff
 } from 'lucide-react';
+import { downloadMyChatExport, getMyBlockedUsers, unblockUser } from '../services/chatService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
 import { logout, auth } from '../supabaseAuth';
@@ -26,8 +27,36 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [templates, setTemplates] = useState<NotificationTemplateInfo[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [isNative] = useState(() => Capacitor.isNativePlatform());
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [blockedList, setBlockedList] = useState<Array<{ blocked_id: string; reason: string | null; created_at: string }>>([]);
+  const [showBlocked, setShowBlocked] = useState(false);
 
   const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref } = useAppStore();
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportMsg(null);
+    try {
+      const ok = await downloadMyChatExport();
+      setExportMsg(ok ? 'Mesaj geçmişin indirildi.' : 'Veri indirilemedi.');
+    } catch {
+      setExportMsg('Veri indirilemedi.');
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setExportMsg(null), 4000);
+    }
+  };
+
+  const handleLoadBlocked = async () => {
+    setShowBlocked(true);
+    const list = await getMyBlockedUsers();
+    setBlockedList(list);
+  };
+  const handleUnblock = async (uid: string) => {
+    await unblockUser(uid);
+    setBlockedList(prev => prev.filter(b => b.blocked_id !== uid));
+  };
 
   // Şablonları yükle
   useEffect(() => {
@@ -317,6 +346,77 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               <><Database size={14} className="text-yellow-500" /> Veritabanını Tohumla (Seed DB)</>
             )}
           </button>
+        </section>
+
+        {/* Gizlilik & Veri (KVKK) */}
+        <section>
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2 flex items-center gap-2">
+            <Shield size={12} className="text-blue-400" /> Gizlilik & Veri
+          </h3>
+          <div className="flex flex-col bg-[#161B22] border border-white/5 rounded-2xl overflow-hidden">
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                  {isExporting ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white block">Mesaj Geçmişimi İndir</span>
+                  <span className="text-xs text-gray-400">KVKK gereği tüm sohbet verilerini JSON olarak indir</span>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-gray-600" />
+            </button>
+
+            <button
+              onClick={handleLoadBlocked}
+              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400">
+                  <ShieldOff size={16} />
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white block">Engellenen Kullanıcılar</span>
+                  <span className="text-xs text-gray-400">Mesajlaşmasını engellediğin kişileri yönet</span>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-gray-600" />
+            </button>
+          </div>
+          {exportMsg && (
+            <p className="mt-2 text-[11px] text-blue-300 px-2">{exportMsg}</p>
+          )}
+
+          {showBlocked && (
+            <div className="mt-3 bg-[#0F1318] border border-white/5 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                <span className="text-xs font-black uppercase tracking-widest text-gray-300">Engellediklerin ({blockedList.length})</span>
+                <button onClick={() => setShowBlocked(false)} className="text-gray-500 text-xs">Kapat</button>
+              </div>
+              {blockedList.length === 0 ? (
+                <p className="text-center text-xs text-gray-500 py-6">Engellediğin kimse yok.</p>
+              ) : (
+                blockedList.map((b) => (
+                  <div key={b.blocked_id} className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04] last:border-0">
+                    <div>
+                      <span className="text-xs text-white font-mono">{b.blocked_id.substring(0, 10)}…</span>
+                      {b.reason && <span className="block text-[10px] text-gray-500 mt-0.5">{b.reason}</span>}
+                    </div>
+                    <button
+                      onClick={() => handleUnblock(b.blocked_id)}
+                      className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[10px] font-black uppercase rounded-lg hover:bg-green-500/20"
+                    >
+                      Engeli Kaldır
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </section>
 
         {/* Konum */}

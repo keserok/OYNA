@@ -236,6 +236,7 @@ interface AppState {
 
   // Player Seek Announcements
   playerSeekAds: PlayerSeekAnnouncement[];
+  setPlayerSeekAds: (ads: PlayerSeekAnnouncement[]) => void;
   addPlayerSeekAd: (ad: PlayerSeekAnnouncement) => void;
   toggleJoinPlayerSeekAd: (adId: string, userId: string) => void;
   acceptPlayerSeekAdRequest: (adId: string, userId: string) => void;
@@ -243,6 +244,8 @@ interface AppState {
   // Active Chat Configuration
   chatTarget: { name: string; role: string; avatar: string } | null;
   setChatTarget: (target: { name: string; role: string; avatar: string } | null) => void;
+  activeConversationId: string | null;
+  setActiveConversationId: (id: string | null) => void;
 
   // ─── Friend System ─────────────────────────────────────────────────
   friends: Friend[];
@@ -440,44 +443,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   appSettings: INITIAL_SETTINGS,
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
-  playerSeekAds: [
-    {
-      id: "psa1",
-      creatorId: "u2",
-      creatorName: "Burak Demir",
-      creatorAvatar: "https://i.pravatar.cc/150?u=burak2024",
-      pitchName: "Arena Sport Center",
-      date: "Bugün",
-      time: "21:00",
-      positionsNeeded: ["SAVUNMA", "ORTA"],
-      difficulty: "Ciddi",
-      format: "7v7",
-      duration: "90 Dakika",
-      gender: "Erkek",
-      ageGroup: "23-27",
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      joinedPlayers: []
-    },
-    {
-      id: "psa2",
-      creatorId: "u3",
-      creatorName: "Mert Arslan",
-      creatorAvatar: "https://i.pravatar.cc/150?u=mert2024",
-      pitchName: "BJK RAMADA Futbol Sahası",
-      date: "Yarın",
-      time: "22:00",
-      positionsNeeded: ["KALECİ"],
-      difficulty: "Taktiksel",
-      format: "6v6",
-      duration: "60 Dakika",
-      gender: "Karma",
-      ageGroup: "28-35",
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      joinedPlayers: []
-    }
-  ],
+  // Player seek ads: Supabase'den listActiveAds() ile yüklenir.
+  // DEV_MODE'da hızlı UI denemesi için 2 mock ilan başlangıç state'i olarak kalır;
+  // gerçek bağlantıda setPlayerSeekAds() ile üzerine yazılır.
+  playerSeekAds: IS_LOCAL_DEV ? [
+    { id: "psa1", creatorId: "u2", creatorName: "Burak Demir", creatorAvatar: "https://i.pravatar.cc/150?u=burak2024", pitchName: "Arena Sport Center", date: "Bugün", time: "21:00", positionsNeeded: ["SAVUNMA","ORTA"], difficulty: "Ciddi", format: "7v7", duration: "90 Dakika", gender: "Erkek", ageGroup: "23-27", status: "ACTIVE", createdAt: new Date().toISOString(), joinedPlayers: [] },
+    { id: "psa2", creatorId: "u3", creatorName: "Mert Arslan", creatorAvatar: "https://i.pravatar.cc/150?u=mert2024", pitchName: "BJK RAMADA Futbol Sahası", date: "Yarın", time: "22:00", positionsNeeded: ["KALECİ"], difficulty: "Taktiksel", format: "6v6", duration: "60 Dakika", gender: "Karma", ageGroup: "28-35", status: "ACTIVE", createdAt: new Date().toISOString(), joinedPlayers: [] },
+  ] : [],
+  setPlayerSeekAds: (playerSeekAds) => set({ playerSeekAds }),
   addPlayerSeekAd: (ad) => set((state) => ({ playerSeekAds: [ad, ...state.playerSeekAds] })),
   toggleJoinPlayerSeekAd: (adId, userId) => set((state) => ({
     playerSeekAds: state.playerSeekAds.map(ad => {
@@ -508,6 +481,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
   chatTarget: null,
   setChatTarget: (chatTarget) => set({ chatTarget }),
+  activeConversationId: null,
+  setActiveConversationId: (activeConversationId) => set({ activeConversationId }),
 
   friends: [
     { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', nickname: 'CKaya', style: 'Bitirici', group: 'Lise Tayfası', online: true, isFavorite: true, wins: 24, losses: 5, position: 'FV', pos: 'FV', fp: 91, status: 'FRIEND' },

@@ -16,6 +16,7 @@ import { GodViewDataTables } from './GodViewDataTables';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { MatchesTab, NotificationsTab } from './MatchNotifTabs';
 import { SettingsTab, ContentTab } from './SettingsContentTabs';
+import { ChatModerationTab } from './ChatModerationTab';
 
 interface Props { onBack: () => void; onNavigate?: (tab: string) => void; }
 
@@ -97,7 +98,7 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     } = useAppStore();
 
     // ── UI State ────────────────────────────────────────────────────
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR'>('GENEL');
+    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'CHAT_REPORTS'>('GENEL');
 
     const [multiplier, setMultiplier] = useState(1.4);
     const [selectedPitchIdx, setSelectedPitchIdx] = useState(0);
@@ -521,6 +522,7 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
             label: 'SİSTEM', items: [
                 { icon: Type, label: 'Metinler', badge: null, active: subRoute === 'CONTENT', action: () => setSubRoute('CONTENT') },
                 { icon: Settings, label: 'Ayarlar', badge: null, active: subRoute === 'SETTINGS', action: () => setSubRoute('SETTINGS') },
+                { icon: AlertTriangle, label: 'Mesaj Şikayetleri', badge: null, active: subRoute === 'CHAT_REPORTS', action: () => setSubRoute('CHAT_REPORTS') },
                 { icon: Lock, label: 'Ekipler & Yetkiler', badge: null, active: false, action: () => showToast('ACL modülü geliştirme aşamasında') },
             ]
         },
@@ -1695,6 +1697,8 @@ const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                             <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5"><ContentTab /></div>
                         ) : subRoute === 'SETTINGS' ? (
                             <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5"><SettingsTab /></div>
+                        ) : subRoute === 'CHAT_REPORTS' ? (
+                            <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5"><ChatModerationTab /></div>
                         ) : (
                             <div className="flex-1 h-[600px]">
                                 <GodViewDataTables

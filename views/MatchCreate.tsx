@@ -15,6 +15,7 @@ import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
 import SharedPitch from '../components/SharedPitch';
 import PitchDiscovery from './PitchDiscovery';
+import CreateSeekAdModal from '../components/CreateSeekAdModal';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -1859,6 +1860,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ date: string; time: string } | null>(null);
+  const [showSeekAdPrompt, setShowSeekAdPrompt] = useState(false);
+  const [showSeekAdModal, setShowSeekAdModal] = useState(false);
   
   // Phase 2 states
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
@@ -2164,8 +2167,14 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                     }
                                 });
                                 
-                                alert("Maç Başarıyla Yayınlandı, Davetler Gönderildi!");
-                                onNavigate('COMMUNITY');
+                                // Boş slot varsa "ilan aç" prompt'unu göster
+                                const emptyCount = pitchSlots.filter(s => !s.player).length;
+                                if (emptyCount > 0) {
+                                  setShowSeekAdPrompt(true);
+                                } else {
+                                  alert("Maç Başarıyla Yayınlandı, Davetler Gönderildi!");
+                                  onNavigate('COMMUNITY');
+                                }
                             } catch(err) {
                                 console.error("Maç yayınlanamadı:", err);
                                 alert("Maç yayınlanırken bir hata oluştu!");
@@ -2598,6 +2607,67 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
 
       </AnimatePresence>
+
+      {/* Post-publish: eksik oyuncu için ilan aç prompt'u */}
+      <AnimatePresence>
+        {showSeekAdPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="bg-[#0F1318] border border-white/10 rounded-3xl p-6 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#39FF14]/20 to-[#FFFF00]/10 border border-[#39FF14]/40 flex items-center justify-center">
+                <Check size={28} className="text-[#39FF14]" />
+              </div>
+              <h3 className="text-white font-black text-lg mb-2">Maç Yayında! ⚽</h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-5">
+                Kadroda <span className="text-[#FFFF00] font-black">{pitchSlots.filter(s => !s.player).length}</span> boş slot var. Eksik oyuncular için "Oyuncu Arıyorum" ilanı açmak ister misin?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setShowSeekAdPrompt(false);
+                    onNavigate('COMMUNITY');
+                  }}
+                  className="py-3 bg-white/5 border border-white/10 text-gray-300 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/10"
+                >
+                  Şimdi Değil
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSeekAdPrompt(false);
+                    setShowSeekAdModal(true);
+                  }}
+                  className="py-3 bg-gradient-to-r from-[#39FF14] to-[#FFFF00] text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:brightness-110 shadow-[0_0_20px_rgba(57,255,20,0.35)]"
+                >
+                  İlan Aç ⚡
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Eksik oyuncu için ilan oluşturma modali (prefill'li) */}
+      <CreateSeekAdModal
+        open={showSeekAdModal}
+        onClose={() => {
+          setShowSeekAdModal(false);
+          onNavigate('COMMUNITY');
+        }}
+        presetPitch={selectedPitch ? { id: selectedPitch.id, name: selectedPitch.name } : undefined}
+        presetDate={selectedTimeSlot?.date}
+        presetTime={selectedTimeSlot?.time}
+        presetFormat={format.v}
+      />
     </div>
   );
 };

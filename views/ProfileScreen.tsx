@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { UserRole, AppView, PlayerCardData } from '../types';
-import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy } from 'lucide-react';
+import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy, MessageSquare } from 'lucide-react';
 import { MATCH_HISTORY } from '../constants';
 import { PlayerCard } from '../components/PlayerCard';
 import { useAppStore } from '../store';
 import { motion } from 'framer-motion';
+import InboxList from '../components/InboxList';
+import MySeekAdsPanel from '../components/MySeekAdsPanel';
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -117,7 +119,12 @@ const MatchBanner: React.FC<{ item: typeof MATCH_HISTORY[0]; isMvp?: boolean; on
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const [activeFilter, setActiveFilter] = useState<'ALL' | 'WIN' | 'PERFORMANCE' | 'MVP'>('ALL');
-    const { globalTexts } = useAppStore();
+    const { globalTexts, setActiveConversationId } = useAppStore();
+
+    const handleOpenConversation = (conversationId: string) => {
+        setActiveConversationId(conversationId);
+        onNavigate?.('CHAT');
+    };
 
     const total = MATCH_HISTORY.length;
     const wins = MATCH_HISTORY.filter(m => m.result === 'WIN').length;
@@ -252,6 +259,19 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         </span>
                     </div>
                 </button>
+
+                {/* ═══ AKTİF İLANLAR (KAPTAN) ═══ */}
+                <MySeekAdsPanel onOpenConversation={handleOpenConversation} />
+
+                {/* ═══ INBOX (GELEN KUTUSU) ═══ */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <MessageSquare size={16} className="text-[#FFFF00]" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">GELEN KUTUSU</span>
+                        <div className="flex-1 h-px bg-white/10" />
+                    </div>
+                    <InboxList onOpenConversation={handleOpenConversation} emptyMode="HINT" />
+                </div>
 
                 {/* ═══ BENTO STATISTICS & FILTERS ═══ */}
                 <div className="space-y-4">

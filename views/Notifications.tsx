@@ -140,7 +140,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   const rawNotifs = isGK ? GK_NOTIFICATIONS : isRef ? REF_NOTIFICATIONS : GENERAL_NOTIFICATIONS;
   
-  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, setSelectedMatch, setView, clearUnreadNotifications, markAllNotificationsAsRead } = useAppStore();
+  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, setSelectedMatch, setView, clearUnreadNotifications, markAllNotificationsAsRead, setActiveConversationId } = useAppStore();
   
   const storeNotifs = userNotifications.map(n => ({
     id: n.id,
@@ -289,6 +289,15 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     exit="exit"
                     layout
                     onClick={() => {
+                      // Chat bildirimleri → CHAT ekranına git
+                      const convId = (n.payload as any)?.conversation_id || (n.payload as any)?.conversationId;
+                      const typeKey = (n as any).type_key || (n.payload as any)?.type_key;
+                      if (convId && (typeKey?.startsWith('chat_') || ['chat_message','chat_unlocked_player','chat_unlocked_captain','chat_unlocked_provider'].includes(typeKey))) {
+                        setActiveConversationId(convId);
+                        setView('CHAT' as AppView);
+                        onBack(); // sheet'i kapat
+                        return;
+                      }
                       if (n.type === 'invite') {
                         setSelectedInvite(n);
                       } else if (n.payload?.matchId) {

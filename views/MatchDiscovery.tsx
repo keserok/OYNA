@@ -2,13 +2,16 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Shield, Circle,
   Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert,
-  MessageSquare
+  MessageSquare, Plus, Hourglass, Users as UsersIcon
 } from 'lucide-react';
+import CreateSeekAdModal from '../components/CreateSeekAdModal';
+import MyApplicationsList from '../components/MyApplicationsList';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { subscribeToOpenMatches, fetchNearbyMatches } from '../services/matchService';
+import { applyToAd, listActiveAds, subscribeToActiveAds, subscribeToMyApplications } from '../services/playerSeekService';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -35,18 +38,36 @@ const MENTALITY_OPTIONS = [
 ];
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
-  const { 
-    adminMatches, 
-    adminUsers, 
-    playerSeekAds, 
-    toggleJoinPlayerSeekAd, 
-    acceptPlayerSeekAdRequest, 
-    setChatTarget, 
+  const {
+    adminMatches,
+    adminUsers,
+    playerSeekAds,
+    setPlayerSeekAds,
+    setChatTarget,
+    setActiveConversationId,
     setView,
     userLocation,
     searchRadius,
     setSearchRadius
   } = useAppStore();
+
+  // Aktif ilanları ve kendi başvuru durumumu Supabase'den çek
+  const [myApplicationStatusMap, setMyApplicationStatusMap] = useState<Map<string, 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN'>>(new Map());
+  const [seekAdsLoading, setSeekAdsLoading] = useState(true);
+  const refreshSeekAds = async () => {
+    const uid = auth.currentUser?.uid || null;
+    const { ads, myApplications } = await listActiveAds(uid);
+    setPlayerSeekAds(ads);
+    setMyApplicationStatusMap(myApplications);
+    setSeekAdsLoading(false);
+  };
+  useEffect(() => {
+    refreshSeekAds();
+    const uid = auth.currentUser?.uid;
+    const unsubAds = subscribeToActiveAds(refreshSeekAds);
+    const unsubApps = uid ? subscribeToMyApplications(uid, refreshSeekAds) : () => {};
+    return () => { unsubAds(); unsubApps(); };
+  }, []);
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUser = adminUsers.find(u => u.id === currentUserUid) || adminUsers[0];
   const trustScore = currentUser?.rating || 4.2;
@@ -58,7 +79,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   };
 
   const [showWizard, setShowWizard] = useState(false);
+  const [showCreateAdModal, setShowCreateAdModal] = useState(false);
   const [activeSection, setActiveSection] = useState<'bireysel' | 'takim'>('bireysel');
+  const [takimSubTab, setTakimSubTab] = useState<'ILANLAR' | 'BASVURULARIM'>('ILANLAR');
   const [dna, setDna] = useState({
     format: '',
     budget: '',
@@ -657,15 +680,88 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             )}
 
             {activeSection === 'takim' && (
-              <div className="space-y-6">
-                {playerSeekAds.length === 0 ? (
-                  <div className="text-center py-20 text-white/50 font-black uppercase tracking-widest text-xs">
-                    Aktif oyuncu ilanı bulunamadı.
+              <div className="space-y-5">
+                {/* Sub-tabs + Create button row */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex bg-[#0D121F]/60 backdrop-blur-md border border-white/5 rounded-2xl p-1">
+                    <button
+                      onClick={() => setTakimSubTab('ILANLAR')}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        takimSubTab === 'ILANLAR'
+                          ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <UsersIcon size={11} className="inline mr-1.5" /> İlanlar
+                    </button>
+                    <button
+                      onClick={() => setTakimSubTab('BASVURULARIM')}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        takimSubTab === 'BASVURULARIM'
+                          ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Hourglass size={11} className="inline mr-1.5" /> Başvurularım
+                    </button>
                   </div>
+                  <button
+                    onClick={() => setShowCreateAdModal(true)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-[#39FF14] to-[#FFFF00] text-black rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_20px_rgba(57,255,20,0.35)] hover:brightness-110 active:scale-95 transition-all shrink-0"
+                  >
+                    <Plus size={13} strokeWidth={3} /> İlan Aç
+                  </button>
+                </div>
+
+                {takimSubTab === 'BASVURULARIM' ? (
+                  <MyApplicationsList
+                    emptyMode="HINT"
+                    onOpenConversation={(convId) => {
+                      setActiveConversationId(convId);
+                      setView('CHAT');
+                    }}
+                  />
+                ) : seekAdsLoading ? (
+                  <div className="space-y-4">
+                    {[0, 1, 2].map(i => (
+                      <div key={i} className="bg-[#161B22]/40 border border-white/5 rounded-[32px] p-6 animate-pulse">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-full bg-white/5" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3 bg-white/5 rounded w-1/3" />
+                            <div className="h-2 bg-white/5 rounded w-1/4" />
+                          </div>
+                        </div>
+                        <div className="h-4 bg-white/5 rounded w-2/3 mb-3" />
+                        <div className="flex gap-2"><div className="h-5 bg-white/5 rounded w-20" /><div className="h-5 bg-white/5 rounded w-24" /></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : playerSeekAds.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-[#161B22]/40 border border-white/5 rounded-3xl p-8 text-center"
+                  >
+                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex items-center justify-center">
+                      <UsersIcon size={28} className="text-[#FFFF00]" />
+                    </div>
+                    <p className="text-white font-black text-sm mb-1">Aktif oyuncu ilanı yok</p>
+                    <p className="text-gray-500 text-xs mb-5 leading-relaxed">
+                      Şu an oyuncu arayan kaptan bulunmuyor. Sen bir maç organize ediyorsan kendi ilanını açabilirsin.
+                    </p>
+                    <button
+                      onClick={() => setShowCreateAdModal(true)}
+                      className="px-5 py-3 bg-[#FFFF00] text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 inline-flex items-center gap-1.5"
+                    >
+                      <Plus size={12} strokeWidth={3} /> İlan Aç
+                    </button>
+                  </motion.div>
                 ) : (
                   playerSeekAds.map((ad, index) => {
-                    const isJoined = ad.joinedPlayers?.includes(currentUserUid);
-                    const isAccepted = ad.acceptedPlayers?.includes(currentUserUid);
+                    const myStatus = myApplicationStatusMap.get(ad.id);
+                    const isJoined = myStatus === 'PENDING';
+                    const isAccepted = myStatus === 'ACCEPTED';
                     let accentColor = '#FFFF00'; // Neon Yellow for Ciddi
                     if (ad.difficulty === 'Taktiksel') accentColor = '#3b82f6';
                     if (ad.difficulty === 'Rahat') accentColor = '#10b981';
@@ -764,13 +860,30 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                             <motion.button
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                setChatTarget({
-                                  name: ad.creatorName,
-                                  role: 'Takım Kaptanı',
-                                  avatar: ad.creatorAvatar
-                                });
-                                setView('CHAT');
+                              onClick={async () => {
+                                // Bu kullanıcı için kabul edilmiş başvuruya bağlı conversation'ı bul
+                                const { supabase } = await import('../supabaseClient');
+                                const { data: app } = await supabase
+                                  .from('player_seek_applications')
+                                  .select('id')
+                                  .eq('ad_id', ad.id)
+                                  .eq('applicant_id', currentUserUid)
+                                  .eq('status', 'ACCEPTED')
+                                  .maybeSingle();
+                                if (!app) { showToast('Sohbet henüz hazır değil, tekrar deneyin.', 'info'); return; }
+                                const { data: conv } = await supabase
+                                  .from('conversations')
+                                  .select('id')
+                                  .eq('type', 'PLAYER_SEEK')
+                                  .eq('context_id', app.id)
+                                  .maybeSingle();
+                                if (conv?.id) {
+                                  setActiveConversationId(conv.id);
+                                  setChatTarget({ name: ad.creatorName, role: 'Takım Kaptanı', avatar: ad.creatorAvatar });
+                                  setView('CHAT');
+                                } else {
+                                  showToast('Sohbet oluşturulurken hata.', 'info');
+                                }
                               }}
                               className="px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-gradient-to-r from-emerald-500 to-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.5)] border-2 border-white/30 hover:brightness-110 flex items-center gap-1.5 transition-all cursor-pointer"
                             >
@@ -780,23 +893,36 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                             <motion.button
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                toggleJoinPlayerSeekAd(ad.id, currentUserUid);
-                                if (!isJoined) {
-                                  // Simulate captain accepting after 2.5 seconds
-                                  setTimeout(() => {
-                                    acceptPlayerSeekAdRequest(ad.id, currentUserUid);
-                                    showToast('Talebiniz Kabul Edildi! Kaptanla mesajlaşabilirsiniz. 💬', 'success');
-                                  }, 2500);
+                              disabled={isJoined || myStatus === 'REJECTED'}
+                              onClick={async () => {
+                                if (isJoined) return;
+                                if (currentUserUid === ad.creatorId) {
+                                  showToast('Kendi ilanınıza başvuramazsınız.', 'info');
+                                  return;
+                                }
+                                const res = await applyToAd(ad.id, {
+                                  id: currentUserUid,
+                                  name: currentUser?.name || 'Oyuncu',
+                                  avatar: currentUser?.avatar,
+                                });
+                                if (res.success) {
+                                  showToast('Başvurunuz kaptana iletildi. Kabul edildiğinde sohbet açılacak.', 'success');
+                                  setMyApplicationStatusMap(prev => new Map(prev).set(ad.id, 'PENDING'));
+                                } else {
+                                  showToast(res.error || 'Başvuru gönderilemedi.', 'info');
                                 }
                               }}
                               className={`px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer ${
-                                isJoined 
-                                  ? 'bg-emerald-500/10 border border-emerald-500/50 text-[#39FF14] shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
-                                  : 'bg-[#FFFF00] hover:bg-yellow-300 text-black shadow-[0_0_20px_rgba(255,255,0,0.3)]'
+                                myStatus === 'REJECTED'
+                                  ? 'bg-red-500/10 border border-red-500/50 text-red-400 opacity-60 cursor-not-allowed'
+                                  : isJoined
+                                    ? 'bg-emerald-500/10 border border-emerald-500/50 text-[#39FF14] shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-default'
+                                    : 'bg-[#FFFF00] hover:bg-yellow-300 text-black shadow-[0_0_20px_rgba(255,255,0,0.3)]'
                               }`}
                             >
-                              {isJoined ? (
+                              {myStatus === 'REJECTED' ? (
+                                <span>BAŞVURU REDDEDİLDİ</span>
+                              ) : isJoined ? (
                                 <span className="flex items-center gap-1">
                                   <CheckCircle2 size={12} /> TALEP GÖNDERİLDİ
                                 </span>
@@ -832,6 +958,16 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Create Seek Ad Modal */}
+      <CreateSeekAdModal
+        open={showCreateAdModal}
+        onClose={() => setShowCreateAdModal(false)}
+        onCreated={() => {
+          showToast('İlanın yayında! Oyuncular başvuru gönderebilir. ⚡', 'success');
+          refreshSeekAds();
+        }}
+      />
     </div>
   );
 };
