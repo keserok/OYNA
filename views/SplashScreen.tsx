@@ -14,7 +14,7 @@ const letterVariants = {
     y: 0,
     scale: 1,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 400,
       damping: 20,
       delay: 0.5 + i * 0.08,

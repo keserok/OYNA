@@ -346,7 +346,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Hesap</h3>
           <div className="flex flex-col">
             <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" />
-            <SettingItem icon={<Shield size={20} />} title="Güvenlik & Gizlilik" value="" />
+            <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
           </div>
         </section>
 
