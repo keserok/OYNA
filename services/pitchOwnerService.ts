@@ -918,6 +918,13 @@ export interface CourtInput {
   size?: string | null;
   is_active?: boolean;
   sort_order?: number;
+  price?: number | null;
+  capacity?: number | null;
+  images?: string[] | null;
+  description?: string | null;
+  lighting_grade?: string | null;
+  grass_grade?: string | null;
+  locker_grade?: string | null;
 }
 
 export async function upsertCourt(pitchId: string, court: CourtInput): Promise<PitchCourt> {
@@ -929,6 +936,13 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       size: court.size ?? null,
       is_active: court.is_active ?? true,
       sort_order: court.sort_order ?? 0,
+      price: court.price ?? null,
+      capacity: court.capacity ?? 14,
+      images: court.images ?? [],
+      description: court.description ?? null,
+      lighting_grade: court.lighting_grade ?? null,
+      grass_grade: court.grass_grade ?? null,
+      locker_grade: court.locker_grade ?? null,
     };
     if (court.id) {
       const { data, error } = await supabase

@@ -1429,7 +1429,7 @@ const EditFacilityModal: React.FC<{ onClose: () => void; facilityId: string; ini
     );
 };
 
-const FinancialCalendarView: React.FC<{ pitchId: string; pricingPolicy?: any[]; courts?: PitchCourt[] }> = ({ pitchId, pricingPolicy, courts = [] }) => {
+const FinancialCalendarView: React.FC<{ pitchId: string; pricingPolicy?: any[]; courts?: PitchCourt[]; onNavigate?: (view: any) => void }> = ({ pitchId, pricingPolicy, courts = [], onNavigate }) => {
     const weekDates = useMemo(() => getWeekDates(), []);
     const todayIndex = useMemo(() => {
         const today = todayISO();
@@ -1469,7 +1469,43 @@ const FinancialCalendarView: React.FC<{ pitchId: string; pricingPolicy?: any[]; 
 
     const loadBookings = React.useCallback(async () => {
         if (!isRealPitch || !pitchId) {
-            setBookings([]);
+            const savedBookings = localStorage.getItem('owner_mock_bookings');
+            let parsed: CalendarBooking[] = [];
+            if (savedBookings) {
+                parsed = JSON.parse(savedBookings);
+            } else {
+                const now = new Date();
+                const todayStr = formatDateISO(now);
+                parsed = [
+                    {
+                        id: 'mock-booking-1',
+                        pitchId: 'mock-court-1',
+                        user: 'Ahmet Yılmaz',
+                        time: '18.00',
+                        duration: 1,
+                        type: 'PHONE',
+                        status: 'PAID',
+                        price: 2000,
+                        paid: 2000,
+                        date: todayStr,
+                    },
+                    {
+                        id: 'mock-booking-2',
+                        pitchId: 'mock-court-2',
+                        user: 'Mehmet Demir',
+                        time: '20.00',
+                        duration: 1,
+                        type: 'PHONE',
+                        status: 'PARTIAL',
+                        price: 1800,
+                        paid: 450,
+                        date: todayStr,
+                    }
+                ];
+                localStorage.setItem('owner_mock_bookings', JSON.stringify(parsed));
+            }
+            const filtered = parsed.filter((b: any) => b.date === selectedDateISO);
+            setBookings(filtered);
             return;
         }
         setIsLoadingBookings(true);
@@ -1842,7 +1878,52 @@ const FinancialCalendarView: React.FC<{ pitchId: string; pricingPolicy?: any[]; 
                             onClick={async () => {
                                 if (!isQuickCreateOpen || !selectedCourtId) return;
                                 if (!isRealPitch) {
-                                    alert('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.');
+                                    setIsAddingSlot(true);
+                                    try {
+                                        const startTime = isQuickCreateOpen.replace('.', ':');
+                                        const hour = parseInt(startTime.split(':')[0], 10);
+                                        const endTime = `${((hour + 1) % 24).toString().padStart(2, '0')}:00`;
+                                        const rateVal = specialRates[isQuickCreateOpen] || 2000;
+                                        
+                                        const newBooking: CalendarBooking = {
+                                            id: 'mock-booking-' + Date.now(),
+                                            time: isQuickCreateOpen,
+                                            duration: 1,
+                                            user: customerName.trim() || 'Misafir',
+                                            type: 'PHONE',
+                                            status: paymentStatus === 'PAID' ? 'PAID' : paymentStatus === 'PARTIAL' ? 'PARTIAL' : 'PENDING',
+                                            price: rateVal,
+                                            paid: paymentStatus === 'PAID' ? rateVal : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25) : 0,
+                                            note: customerPhone ? `Tel: ${customerPhone}` : undefined,
+                                            pitchId: selectedCourtId,
+                                            date: selectedDateISO,
+                                        };
+
+                                        const savedBookings = localStorage.getItem('owner_mock_bookings');
+                                        const currentMockBookings = savedBookings ? JSON.parse(savedBookings) : [];
+                                        
+                                        const hasOverlap = currentMockBookings.some((b: any) => 
+                                            b.pitchId === selectedCourtId &&
+                                            b.date === selectedDateISO &&
+                                            b.time === isQuickCreateOpen
+                                        );
+                                        if (hasOverlap) {
+                                            throw new Error('SLOT_TAKEN: Bu saat dilimi zaten rezerve edilmiş.');
+                                        }
+
+                                        const updated = [...currentMockBookings, newBooking];
+                                        localStorage.setItem('owner_mock_bookings', JSON.stringify(updated));
+
+                                        await loadBookings();
+                                        setIsQuickCreateOpen(null);
+                                        setCustomerName('');
+                                        setCustomerPhone('');
+                                        setPaymentStatus('PENDING');
+                                    } catch (err) {
+                                        alert(toTurkishError(err));
+                                    } finally {
+                                        setIsAddingSlot(false);
+                                    }
                                     return;
                                 }
                                 setIsAddingSlot(true);
@@ -2011,6 +2092,73 @@ const FinancialCalendarView: React.FC<{ pitchId: string; pricingPolicy?: any[]; 
                                 ABONMANI OLUŞTUR
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {selectedBooking && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+                    <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-black text-white">{selectedBooking.user}</h3>
+                                <p className="text-xs text-gray-400 mt-1">{selectedBooking.time} • Saha Rezervasyonu</p>
+                            </div>
+                            <button onClick={() => setSelectedBooking(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+                        </div>
+
+                        <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[10px] text-gray-500 font-bold uppercase">Durum</span>
+                                <span className={`text-[10px] font-black px-2 py-1 rounded ${selectedBooking.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    {selectedBooking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] text-gray-500 font-bold uppercase">Tutar</span>
+                                <span className="text-lg font-black text-white font-mono">{selectedBooking.price}₺</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            <button 
+                                onClick={() => {}}
+                                className="py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[11px] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                            >
+                                <MessageSquare size={16} /> Kaptana Mesaj
+                            </button>
+                            <button 
+                                onClick={() => onNavigate?.('QR_SCANNER')}
+                                className="py-3 bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] rounded-xl text-[11px] font-black hover:bg-[#39FF14]/20 transition-colors flex flex-col items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(57,255,20,0.1)]"
+                            >
+                                <QrCode size={16} /> QR Check-in
+                            </button>
+                        </div>
+
+                        <button 
+                            onClick={async () => {
+                                if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) return;
+                                try {
+                                    const isMock = selectedBooking.id.startsWith('mock-');
+                                    if (isMock) {
+                                        const savedBookings = localStorage.getItem('owner_mock_bookings');
+                                        if (savedBookings) {
+                                            const current = JSON.parse(savedBookings);
+                                            const updated = current.filter((b: any) => b.id !== selectedBooking.id);
+                                            localStorage.setItem('owner_mock_bookings', JSON.stringify(updated));
+                                        }
+                                    } else {
+                                        await rejectBooking(selectedBooking.id, 'Tesis sahibi tarafından iptal edildi.');
+                                    }
+                                    setSelectedBooking(null);
+                                    await loadBookings();
+                                } catch (err) {
+                                    alert(toTurkishError(err));
+                                }
+                            }}
+                            className="w-full py-3 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-xs font-bold hover:bg-red-500/20 active:scale-95 transition-all uppercase"
+                        >
+                            Rezervasyonu İptal Et
+                        </button>
                     </div>
                 </div>
             )}
@@ -3653,8 +3801,44 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         workingHours: [],
       });
     }
+
+    const savedCourts = localStorage.getItem('owner_mock_courts');
+    if (savedCourts) {
+      setCourts(JSON.parse(savedCourts));
+    } else {
+      setCourts([
+        {
+          id: 'mock-court-1',
+          pitch_id: 'mock-facility-id',
+          name: 'Merkez Saha',
+          court_type: 'TURF',
+          size: '30x50',
+          capacity: 14,
+          price: 2000,
+          is_active: true,
+          sort_order: 0,
+        },
+        {
+          id: 'mock-court-2',
+          pitch_id: 'mock-facility-id',
+          name: 'Kapalı Saha',
+          court_type: 'INDOOR',
+          size: '25x45',
+          capacity: 12,
+          price: 1800,
+          is_active: true,
+          sort_order: 1,
+        }
+      ]);
+    }
     setIsLoading(false);
   }, [realPitchId]);
+
+  useEffect(() => {
+    if (!realPitchId && courts.length > 0) {
+      localStorage.setItem('owner_mock_courts', JSON.stringify(courts));
+    }
+  }, [courts, realPitchId]);
 
   const dynamicTotalRevenue = dailySummary?.collected_today ?? todayBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
   const dynamicOccupancyRatio = dailySummary && dailySummary.total_courts > 0
@@ -3880,7 +4064,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           </main>
       )}
 
-      {activeTab === 'CALENDAR' && <FinancialCalendarView pitchId={facilityData?.id ?? ''} pricingPolicy={facilityData?.pricingPolicy} courts={courts} />}
+      {activeTab === 'CALENDAR' && <FinancialCalendarView pitchId={facilityData?.id ?? ''} pricingPolicy={facilityData?.pricingPolicy} courts={courts} onNavigate={onNavigate} />}
       {activeTab === 'PITCHES' && <PitchManager facilityId={facilityData?.id} pitches={courts} onUpdatePitches={setCourts} onBack={() => setActiveTab('HOME')} />}
       {activeTab === 'FINANCE' && (
         <OwnerFinanceView pitchId={realPitchId ?? facilityData?.id ?? ''} isDemoMode={isDemoMode} />
@@ -4020,47 +4204,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           </div>
       )}
 
-      {selectedBooking && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
-                  <div className="flex justify-between items-center mb-6">
-                      <div>
-                          <h3 className="text-xl font-black text-white">{selectedBooking.user}</h3>
-                          <p className="text-xs text-gray-400 mt-1">{selectedBooking.time} • Saha Rezervasyonu</p>
-                      </div>
-                      <button onClick={() => setSelectedBooking(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
-                  </div>
-
-                  <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                          <span className="text-[10px] text-gray-500 font-bold uppercase">Durum</span>
-                          <span className={`text-[10px] font-black px-2 py-1 rounded ${selectedBooking.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {selectedBooking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
-                          </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                          <span className="text-[10px] text-gray-500 font-bold uppercase">Tutar</span>
-                          <span className="text-lg font-black text-white font-mono">{selectedBooking.price}₺</span>
-                      </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                      <button 
-                          onClick={() => {}}
-                          className="py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[11px] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(59,130,246,0.1)]"
-                      >
-                          <MessageSquare size={16} /> Kaptana Mesaj
-                      </button>
-                      <button 
-                          onClick={() => onNavigate('QR_SCANNER')}
-                          className="py-3 bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] rounded-xl text-[11px] font-black hover:bg-[#39FF14]/20 transition-colors flex flex-col items-center gap-1.5 uppercase shadow-[0_0_10px_rgba(57,255,20,0.1)]"
-                      >
-                          <QrCode size={16} /> QR Check-in
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 w-full bg-[#1A1F2C] border-t border-white/5 px-6 py-3 flex justify-between items-center z-40 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
