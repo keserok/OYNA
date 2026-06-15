@@ -73,6 +73,7 @@ const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
 const MyBookings = lazy(() => import('./views/MyBookings'));
+const LegalScreen = lazy(() => import('./views/LegalScreen'));
 import { BottomNav } from './components/BottomNav';
 import { RookieShowcase } from './views/RookieShowcase';
 
@@ -401,6 +402,8 @@ const App: React.FC = () => {
         />;
       case 'MY_BOOKINGS':
         return <MyBookings onBack={() => setView('DASHBOARD')} />;
+      case 'LEGAL':
+        return <LegalScreen onBack={() => setView('SETTINGS')} />;
       case 'MARKETPLACE_GK':
         return <Marketplace
           type="GK"

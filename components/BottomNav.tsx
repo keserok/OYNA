@@ -18,14 +18,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
   ];
 
   return (
-    <motion.div 
-      initial={{ y: 100 }}
-      animate={{ y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+    <nav 
+      aria-label="Ana Gezinti"
+      role="navigation"
+      className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe max-w-lg md:max-w-2xl mx-auto"
     >
-      <div className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      <motion.div 
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+      >
         {navItems.map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;
@@ -35,7 +38,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id as AppView)}
-                className="relative -top-6 flex flex-col items-center justify-center group"
+                aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
+                className="relative -top-6 flex flex-col items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161B22] rounded-full min-h-[48px]"
               >
                 <motion.div 
                   whileHover={{ scale: 1.05 }}
@@ -46,7 +51,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
                 >
                   <Icon size={24} strokeWidth={isActive ? 3 : 2} />
                 </motion.div>
-                <span className={`text-[10px] font-bold mt-1 transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
+                <span className={`text-[10px] font-black tracking-wide mt-1 transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
                   {item.label}
                 </span>
               </button>
@@ -57,7 +62,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
             <button
               key={item.id}
               onClick={() => onNavigate(item.id as AppView)}
-              className="flex-1 flex flex-col items-center justify-center gap-1 py-2 relative group"
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              className="flex-1 flex flex-col items-center justify-center gap-1 py-2 relative group min-h-[48px] rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white/20"
             >
               {isActive && (
                 <motion.div 
@@ -73,14 +80,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
                   className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <span className={`text-[10px] font-bold tracking-wide transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
                   {item.label}
                 </span>
               </div>
             </button>
           );
         })}
-      </div>
-    </motion.div>
+      </motion.div>
+    </nav>
   );
 };

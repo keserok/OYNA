@@ -116,7 +116,7 @@ export interface Match {
 }
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'BOOKING_ADDONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'PREMIUM' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'UPCOMING_MATCHES' | 'CARD_BUILDER';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'BOOKING_ADDONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'PREMIUM' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'UPCOMING_MATCHES' | 'CARD_BUILDER' | 'LEGAL';
 
 export interface SavedPaymentCard {
   id: string;
@@ -168,6 +168,7 @@ export interface Player {
   y: number; // Percentage 0-100
   paymentStatus?: 'PAID' | 'PENDING' | 'UNPAID'; // New for Match Lobby
   instruction?: string;
+  style?: string;
 }
 
 export interface PlayerCard {
@@ -266,6 +267,7 @@ export interface MatchListing {
   id: string;
   title: string;
   location: string;
+  pitchName?: string; // Saha adı etiketi (servis panelleri için)
   time: string;
   date: string;
   price: number;
@@ -409,6 +411,7 @@ export interface Referee {
   id: string;
   authUid?: string; // Link to users table for actual login
   name: string;
+  distance?: string; // Kullanıcı konumuna göre hesaplanan mesafe etiketi
   level: string;
   matchCount: number;
   fee: number;
@@ -444,6 +447,7 @@ export interface Equipment {
 export interface Goalkeeper {
   id: string;
   name: string;
+  distance?: string; // Kullanıcı konumuna göre hesaplanan mesafe etiketi
   height: string;
   age: number;
   rating: number;
@@ -549,6 +553,7 @@ export interface JobListing {
 
 export interface DirectOffer {
   id: string;
+  matchId?: string; // Teklifin bağlı olduğu maç (varsa)
   pitchName: string;
   teamName: string;
   captainName: string;
