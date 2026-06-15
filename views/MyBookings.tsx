@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle2, XCircle, Hourglass, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle2, XCircle, Hourglass, AlertTriangle, Loader2, CreditCard, Wallet } from 'lucide-react';
 import {
   fetchMyBookings,
   cancelMyBooking,
@@ -10,6 +10,7 @@ import {
   type MyBooking,
   type CancelResult,
 } from '../services/playerBookingService';
+import { payBookingDeposit, toPaymentErrorMessage } from '../services/paymentService';
 
 interface MyBookingsProps {
   onBack: () => void;
@@ -39,6 +40,30 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  // Kapora ödeme durumu
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payOkId, setPayOkId] = useState<string | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  const handlePayDeposit = async (b: MyBooking) => {
+    setPayingId(b.id);
+    setPayError(null);
+    try {
+      const res = await payBookingDeposit(b.id);
+      if (!res.redirected) {
+        setPayOkId(b.id);
+        await load();
+        setTimeout(() => setPayOkId(null), 2500);
+      }
+    } catch (err) {
+      console.error('Kapora ödeme hatası:', err);
+      setPayError(toPaymentErrorMessage(err));
+      setTimeout(() => setPayError(null), 5000);
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,14 +164,45 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                       </div>
                     )}
 
+                    {/* Kapora ödeme durumu */}
+                    {b.status !== 'CANCELLED' && b.deposit_amount > 0 && (
+                      <div className="flex items-center justify-between mt-2 text-xs">
+                        <span className="text-gray-500">Kapora durumu</span>
+                        {b.paid_amount >= b.deposit_amount ? (
+                          <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Ödendi</span>
+                        ) : (
+                          <span className="text-yellow-400 font-bold">Ödenmedi</span>
+                        )}
+                      </div>
+                    )}
+
                     {b.status === 'CANCELLED' && b.cancellation_reason && (
                       <p className="text-[11px] text-red-400/80 mt-3 italic">{b.cancellation_reason}</p>
                     )}
                   </div>
 
-                  {/* Aksiyon: iptal (yalnız 48 saat öncesine kadar) */}
+                  {/* Aksiyonlar: kapora öde + iptal */}
                   {b.status !== 'CANCELLED' && (
-                    <div className="border-t border-white/5 px-5 py-3">
+                    <div className="border-t border-white/5 px-5 py-3 space-y-2">
+                      {/* Kaporayı Öde — yalnız ödenmemiş kapora varsa */}
+                      {b.deposit_amount > 0 && b.paid_amount < b.deposit_amount && (
+                        payOkId === b.id ? (
+                          <div className="w-full py-2.5 text-center text-[#39FF14] text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                            <CheckCircle2 size={14} /> Kapora Ödendi
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handlePayDeposit(b)}
+                            disabled={payingId === b.id}
+                            className={`w-full py-3 rounded-xl bg-[#FFFF00] text-black text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-transform ${payingId === b.id ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-yellow-300'}`}
+                          >
+                            {payingId === b.id
+                              ? (<><Loader2 size={14} className="animate-spin" /> İşleniyor...</>)
+                              : (<><CreditCard size={14} /> Kaporayı Öde (₺{b.deposit_amount})</>)}
+                          </button>
+                        )
+                      )}
+
                       {cancellable ? (
                         <button
                           onClick={() => { setCancelTarget(b); setCancelError(null); }}
@@ -167,6 +223,19 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
           </div>
         )}
       </main>
+
+      {/* Ödeme hatası toast */}
+      <AnimatePresence>
+        {payError && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-sm w-[90%] bg-red-950/95 backdrop-blur-xl border border-red-500/40 rounded-2xl px-5 py-4 shadow-2xl flex items-start gap-3"
+          >
+            <XCircle size={18} className="text-red-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-red-100 leading-relaxed flex-1">{payError}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* İptal Onay Modalı */}
       <AnimatePresence>
