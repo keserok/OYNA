@@ -55,7 +55,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
   const photoPool = isRef ? REFEREE_PHOTOS : GOALKEEPER_PHOTOS;
 
-  const { adminGoalkeepers, adminReferees } = useAppStore();
+  const { adminGoalkeepers, adminReferees, updateGoalkeeper, updateReferee } = useAppStore();
   const currentUser = auth.currentUser;
   
   const userProfile = React.useMemo(() => {
@@ -124,13 +124,31 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const accentBg = isRef ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
   const gradientFrom = isRef ? 'from-red-950' : 'from-green-950';
 
-  const handleSave = () => {
-    setBio(tempBio);
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+  const handleSave = async () => {
+    if (!userProfile) {
       onBack();
-    }, 900);
+      return;
+    }
+    setSaving(true);
+    try {
+      const update = {
+        ...userProfile,
+        bio: tempBio,
+        fee,
+        name: displayName,
+        style: selectedStyle,
+        avatar: customPhoto || userProfile.avatar,
+        coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
+      };
+      if (isRef) await updateReferee(update as Referee);
+      else await updateGoalkeeper(update as Goalkeeper);
+      setBio(tempBio);
+      onBack();
+    } catch (err) {
+      console.error('Profil kaydetme hatası:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

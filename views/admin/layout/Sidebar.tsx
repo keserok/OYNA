@@ -2,30 +2,36 @@ import React from 'react';
 import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
-    ChevronLeft, Radio, Swords, LogOut, Lock, Filter, TrendingUp, Download, Globe, Trophy, Clock
+    ChevronLeft, Radio, Swords, LogOut, Lock, Filter, Globe, Trophy, Clock, ScrollText, Building2
 } from 'lucide-react';
+import type { GodViewSubRoute } from '../GodViewPanel';
+import type { AdminSession } from '../../../services/adminService';
 
 interface SidebarProps {
     activeSubRoute: string;
-    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION') => void;
+    onNavigate: (route: GodViewSubRoute) => void;
     onBack: () => void;
-    onShowToast: (msg: string) => void;
-    onShowRevenue: () => void;
+    onShowToast?: (msg: string) => void;
     pendingVerifCount?: number;
+    mode?: 'embedded' | 'standalone';
+    adminSession?: AdminSession | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
     activeSubRoute,
     onNavigate,
     onBack,
-    onShowToast,
-    onShowRevenue,
     pendingVerifCount = 0,
+    mode = 'embedded',
+    adminSession,
 }) => {
-    const { adminPitches, adminUsers, adminGoalkeepers, adminReferees, adminMatches } = useAppStore();
+    const { adminPitches, adminUsers, adminGoalkeepers, adminReferees, adminMatches, adminDashboardStats } = useAppStore();
 
-    // Derived badges
-    const missingAlerts = adminMatches.filter(m => m.missingPositions.some(p => p.count > 0)).length;
+    const missingAlerts = adminMatches.filter(m => m.missingPositions?.some(p => p.count > 0)).length;
+    const pendingPitches = Number(adminDashboardStats?.pending_pitches ?? 0);
+    const openDisputes = Number(adminDashboardStats?.open_disputes ?? 0);
+    const communityCount = Number(adminDashboardStats?.total_communities ?? 0);
+    const deletionRequests = Number(adminDashboardStats?.deletion_requests ?? 0);
 
     const SIDEBAR_GROUPS = [
         {
@@ -41,7 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: MapPin, label: 'Sahalar', badge: adminPitches.length, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
                 { icon: Users, label: 'Kullanıcılar', badge: adminUsers.length, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
                 { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: activeSubRoute === 'PENDING_VERIFICATIONS', action: () => onNavigate('PENDING_VERIFICATIONS') },
-                { icon: Shield, label: 'Tesis Onayları', badge: null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
+                { icon: Shield, label: 'Tesis Onayları', badge: pendingPitches > 0 ? String(pendingPitches) : null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
+                { icon: Building2, label: 'SaaS Hesapları', badge: null, active: activeSubRoute === 'OWNER_ACCOUNTS', action: () => onNavigate('OWNER_ACCOUNTS') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : adminMatches.length, active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
                 { icon: Shield, label: 'Kaleciler', badge: adminGoalkeepers.length, active: activeSubRoute === 'KALECİLER', action: () => onNavigate('KALECİLER') },
                 { icon: Scale, label: 'Hakemler', badge: adminReferees.length, active: activeSubRoute === 'HAKEMLER', action: () => onNavigate('HAKEMLER') },
@@ -50,33 +57,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
             label: 'TOPLULUK YÖNETİMİ',
             items: [
-                { icon: Globe, label: 'Topluluklar', badge: '3', active: activeSubRoute === 'TOPLULUKLAR', action: () => onNavigate('TOPLULUKLAR') },
-                { icon: Users, label: 'Takımlar', badge: '8', active: activeSubRoute === 'TAKIMLAR', action: () => onNavigate('TAKIMLAR') },
-                { icon: Trophy, label: 'Turnuvalar', badge: 'AKTİF', active: activeSubRoute === 'TURNUVALAR', action: () => onNavigate('TURNUVALAR') }
+                { icon: Globe, label: 'Topluluklar', badge: communityCount || null, active: activeSubRoute === 'TOPLULUKLAR', action: () => onNavigate('TOPLULUKLAR') },
+                { icon: Users, label: 'Takımlar', badge: null, active: activeSubRoute === 'TAKIMLAR', action: () => onNavigate('TAKIMLAR') },
+                { icon: Trophy, label: 'Turnuvalar', badge: null, active: activeSubRoute === 'TURNUVALAR', action: () => onNavigate('TURNUVALAR') }
             ]
         },
         {
             label: 'PAZARLAMA',
             items: [
                 { icon: Megaphone, label: 'Kampanyalar', badge: null, active: activeSubRoute === 'NOTIFICATIONS', action: () => onNavigate('NOTIFICATIONS') },
-                { icon: Zap, label: 'İndirim Kodları', badge: null, active: false, action: () => onShowToast('İndirim modülü yakında 🚀') },
-                { icon: Filter, label: 'Segmentasyon', badge: null, active: false, action: () => onNavigate('KULLANICILAR') },
+                { icon: Zap, label: 'İndirim Kodları', badge: Number(adminDashboardStats?.active_promo_codes ?? 0) || null, active: activeSubRoute === 'PROMO_CODES', action: () => onNavigate('PROMO_CODES') },
+                { icon: Filter, label: 'Segmentasyon', badge: null, active: activeSubRoute === 'SEGMENTATION', action: () => onNavigate('SEGMENTATION') },
             ]
         },
         {
             label: 'FİNANS',
             items: [
-                { icon: CreditCard, label: 'Ledger', badge: null, active: activeSubRoute === 'SETTINGS', action: () => onNavigate('SETTINGS') },
-                { icon: TrendingUp, label: 'Gelir Analizi', badge: null, active: false, action: onShowRevenue },
-                { icon: Download, label: 'Ödemeler', badge: null, active: activeSubRoute === 'SETTINGS', action: () => onNavigate('SETTINGS') },
+                { icon: CreditCard, label: 'Finans Merkezi', badge: null, active: activeSubRoute === 'FINANCE', action: () => onNavigate('FINANCE') },
+                { icon: Scale, label: 'İhtilaflar', badge: openDisputes > 0 ? String(openDisputes) : null, active: activeSubRoute === 'DISPUTES', action: () => onNavigate('DISPUTES') },
             ]
         },
         {
             label: 'SİSTEM',
             items: [
+                { icon: ScrollText, label: 'Denetim Kayıtları', badge: null, active: activeSubRoute === 'AUDIT_LOG', action: () => onNavigate('AUDIT_LOG') },
                 { icon: Type, label: 'Metinler', badge: null, active: activeSubRoute === 'CONTENT', action: () => onNavigate('CONTENT') },
                 { icon: Settings, label: 'Ayarlar', badge: null, active: activeSubRoute === 'SETTINGS', action: () => onNavigate('SETTINGS') },
-                { icon: Lock, label: 'Ekipler & Yetkiler', badge: null, active: false, action: () => onShowToast('ACL modülü geliştirme aşamasında') },
+                { icon: Lock, label: 'Ekipler & Yetkiler', badge: deletionRequests > 0 ? `${deletionRequests}!` : null, active: activeSubRoute === 'ACL', action: () => onNavigate('ACL') },
             ]
         },
     ];
@@ -155,9 +162,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="w-9 h-9 rounded-full border border-red-500/20 object-cover shadow-md"
                 />
                 <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-white truncate leading-tight">Admin</p>
+                    <p className="text-xs font-black text-white truncate leading-tight">{adminSession?.name || 'Admin'}</p>
                     <span className="inline-block text-[8px] px-1.5 py-0.5 mt-0.5 bg-red-600/20 text-red-400 font-black rounded-md border border-red-500/10 uppercase tracking-widest scale-90 origin-left">
-                        PATRON
+                        {mode === 'standalone' ? 'OYNA OS' : 'PATRON'}
                     </span>
                 </div>
                 <button

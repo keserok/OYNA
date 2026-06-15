@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
-import { Shield, Scale, Building2, User, Mail, Smartphone, ArrowLeft, ArrowRight, Target, Check, Activity, Fingerprint, Settings, Clock } from 'lucide-react';
+import { Shield, Scale, Building2, User, Mail, Smartphone, ArrowLeft, ArrowRight, Target, Check, Activity, Fingerprint, Clock } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { auth } from '../supabaseAuth';
 import { updateUserRoles } from '../services/userService';
@@ -731,21 +731,7 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onBack, onPartn
         </div>
       </div>
 
-      {/* Admin Panel Button */}
-      {onNavigate && (
-        <button
-          onClick={() => onNavigate('ADMIN_PANEL')}
-          className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-50 transition-all"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.3)'
-          }}
-          title="Yönetici Paneli"
-        >
-          <Settings size={16} />
-        </button>
-      )}
+      {/* Admin panel artık standalone: /admin.html */}
       {pendingModal}
     </div>
   );

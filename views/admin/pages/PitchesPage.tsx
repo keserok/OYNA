@@ -3,26 +3,26 @@ import { useAppStore } from '../../../store';
 import { DataTable } from '../components/DataTable';
 import { ActionConfirmModal, ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { AddPitchModal } from '../components/AddPitchModal';
-import { MapPin, TrendingUp, Edit2, Trash2, PlusCircle, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ModuleCrudBar } from '../components/ModuleCrudBar';
+import { PageShell } from '../components/PageShell';
+import { useAdminToast } from '../context/AdminToastContext';
+import { MapPin, TrendingUp, Edit2, Trash2, Zap } from 'lucide-react';
 
 interface PitchesPageProps {
     onEditPitch: (pitch: any) => void;
     onDeletePitch: (id: string) => void;
+    onRefresh?: () => Promise<void>;
 }
 
-export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeletePitch }) => {
+export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeletePitch, onRefresh }) => {
     const { adminPitches, updatePitch, addPitch, deletePitch, addAdminLog } = useAppStore();
     const [multiplier, setMultiplier] = useState(1.0);
     const [selectedPitchIdx, setSelectedPitchIdx] = useState(0);
-    const [toast, setToast] = useState<string | null>(null);
+    const { success } = useAdminToast();
     const [confirmModal, setConfirmModal] = useState<ActionConfirmOptions | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 2500);
-    };
+    const showToast = (msg: string) => success(msg);
 
     const handleApplyPricingRequest = () => {
         const pitch = adminPitches[selectedPitchIdx];
@@ -132,24 +132,18 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
     ];
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Header & Add Button */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={20} className="text-[#39FF14]" /> Tesis Yönetimi
-                    </h2>
-                    <p className="text-[10px] text-gray-500 mt-1">Platformdaki tüm sahaları buradan ekleyebilir ve düzenleyebilirsiniz.</p>
-                </div>
-                <button 
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#39FF14]/90 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]"
-                >
-                    <PlusCircle size={16} /> YENİ SAHA EKLE
-                </button>
-            </div>
-
-            {/* Quick Actions Row */}
+        <PageShell
+            route="SAHALAR"
+            icon={<Zap size={20} />}
+            actions={
+                <ModuleCrudBar
+                    moduleKey="pitches"
+                    addLabel="Yeni Saha"
+                    onAdd={() => setIsAddModalOpen(true)}
+                    onRefresh={onRefresh}
+                />
+            }
+        >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Fast Price Multiplier */}
                 <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
@@ -187,7 +181,6 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
                     >
                         FİYAT ÇARPANINI UYGULA
                     </button>
-                    {toast && toast.includes('fiyatı') && <p className="text-[9px] text-green-400 font-bold mt-2 text-center">{toast}</p>}
                 </div>
 
                 <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl flex items-center justify-center flex-col text-center relative overflow-hidden">
@@ -198,13 +191,11 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
                 </div>
             </div>
 
-            {/* Pitches Table */}
             <div>
-                <h3 className="text-xs font-black uppercase tracking-widest text-white flex items-center justify-between mb-4 px-1">
-                    <span className="flex items-center gap-2"><MapPin size={14} className="text-gray-400" /> Tesisler Veritabanı</span>
-                    {toast && !toast.includes('fiyatı') && <span className="text-[9px] text-green-400 font-bold bg-green-500/10 px-2 py-1 rounded-md">{toast}</span>}
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+                    <MapPin size={14} /> Tesisler ({adminPitches.length})
                 </h3>
-                <DataTable columns={pitchColumns} data={adminPitches} />
+                <DataTable columns={pitchColumns} data={adminPitches} emptyMessage="Henüz saha kaydı yok" />
             </div>
 
             <ActionConfirmModal isOpen={!!confirmModal} options={confirmModal} />
@@ -214,9 +205,9 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
                 onClose={() => setIsAddModalOpen(false)} 
                 onAdd={(pitch) => {
                     addPitch(pitch);
-                    showToast(`✅ ${pitch.name} eklendi`);
+                    showToast(`${pitch.name} eklendi`);
                 }}
             />
-        </div>
+        </PageShell>
     );
 };

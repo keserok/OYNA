@@ -20,28 +20,23 @@ const mapPitchToDb = (pitch: Partial<Pitch>) => {
   return mapped;
 };
 
-const mapMatchToDb = (match: any) => {
+const mapProviderToDb = (obj: Record<string, unknown>) => {
+  if (!obj) return obj;
+  const mapped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    mapped[key] = value;
+  }
+  return mapped;
+};
+
+const mapMatchToDb = (match: Record<string, unknown>) => {
   if (!match) return match;
-  const mapped: any = {};
-  if (match.id !== undefined) mapped.id = match.id;
-  if (match.pitchId !== undefined) mapped.pitch_id = match.pitchId;
-  if (match.pitchName !== undefined) mapped.pitch_name = match.pitchName;
-  if (match.captainId !== undefined) mapped.captain_id = match.captainId;
-  if (match.captainName !== undefined) mapped.captain_name = match.captainName;
-  if (match.date !== undefined) mapped.date = match.date;
-  if (match.time !== undefined) mapped.time = match.time;
-  if (match.status !== undefined) mapped.status = match.status;
-  if (match.gkId !== undefined) mapped.gk_id = match.gkId;
-  if (match.refId !== undefined) mapped.ref_id = match.refId;
-  if (match.applicants !== undefined) mapped.applicants = match.applicants;
-  if (match.format !== undefined) mapped.format = match.format;
-  if (match.budget !== undefined) mapped.budget = match.budget;
-  if (match.slots !== undefined) mapped.slots = match.slots;
-  if (match.awaySlots !== undefined) mapped.away_slots = match.awaySlots;
-  if (match.homeTeamId !== undefined) mapped.home_team_id = match.homeTeamId;
-  if (match.awayTeamId !== undefined) mapped.away_team_id = match.awayTeamId;
-  if (match.badges !== undefined) mapped.badges = match.badges;
-  if (match.difficulty !== undefined) mapped.difficulty = match.difficulty;
+  const mapped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(match)) {
+    if (value === undefined) continue;
+    mapped[key] = value;
+  }
   return mapped;
 };
 
@@ -170,13 +165,14 @@ const mapToSnakeCase = (obj: any) => {
 };
 
 export const fbAddGoalkeeper = async (gk: Goalkeeper) => {
-  const mapped = mapToSnakeCase(gk);
+  const mapped = mapProviderToDb(gk as unknown as Record<string, unknown>);
   const { error } = await supabase.from('goalkeepers').insert(mapped);
   if (error) throw new Error(`Kaleci eklenemedi: ${error.message}`);
 };
 
 export const fbUpdateGoalkeeper = async (gk: Goalkeeper) => {
-  const mapped = mapToSnakeCase(gk);
+  const mapped = mapProviderToDb(gk as unknown as Record<string, unknown>);
+  delete mapped.id;
   const { error } = await supabase.from('goalkeepers').update(mapped).eq('id', gk.id);
   if (error) throw new Error(`Kaleci güncellenemedi: ${error.message}`);
 };
@@ -187,13 +183,14 @@ export const fbDeleteGoalkeeper = async (id: string) => {
 };
 
 export const fbAddReferee = async (ref: Referee) => {
-  const mapped = mapToSnakeCase(ref);
+  const mapped = mapProviderToDb(ref as unknown as Record<string, unknown>);
   const { error } = await supabase.from('referees').insert(mapped);
   if (error) throw new Error(`Hakem eklenemedi: ${error.message}`);
 };
 
 export const fbUpdateReferee = async (ref: Referee) => {
-  const mapped = mapToSnakeCase(ref);
+  const mapped = mapProviderToDb(ref as unknown as Record<string, unknown>);
+  delete mapped.id;
   const { error } = await supabase.from('referees').update(mapped).eq('id', ref.id);
   if (error) throw new Error(`Hakem güncellenemedi: ${error.message}`);
 };
@@ -268,8 +265,24 @@ export const fbUpdateUserLocation = async (userId: string, lat: number, lng: num
 };
 
 export const fbDeleteUser = async (id: string) => {
-  const { error } = await supabase.from('users').delete().eq('id', id);
+  const { error } = await supabase.from('profiles').delete().eq('id', id);
   if (error) throw new Error(`Kullanıcı silinemedi: ${error.message}`);
+};
+
+export const fbGetAppSettings = async () => {
+  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
+  if (error) throw new Error(`Ayarlar yüklenemedi: ${error.message}`);
+  return data;
+};
+
+export const fbGetAdminProfiles = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) throw new Error(`Kullanıcılar yüklenemedi: ${error.message}`);
+  return data || [];
 };
 
 const mapFromSnakeCase = (obj: any) => {

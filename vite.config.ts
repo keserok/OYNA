@@ -23,11 +23,15 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    entries: ['index.html']
+    entries: ['index.html', 'admin.html']
   },
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        admin: path.resolve(__dirname, 'admin.html'),
+      },
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],

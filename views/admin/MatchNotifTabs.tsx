@@ -63,7 +63,7 @@ export const MatchesTab: React.FC = () => {
                 { id: 's3', role: 'MID', x: 50, y: 50, status: 'TAKEN' }, { id: 's4', role: 'FW', x: 50, y: 20, status: 'TAKEN' },
             ]
         };
-        if (modal.type === 'add') { addMatch(base); toast('✅ Maç eklendi ve Firebase’e kaydedildi'); }
+        if (modal.type === 'add') { addMatch(base); toast('✅ Maç veritabanına kaydedildi'); }
         else { updateMatch({ ...modal.match!, ...base }); toast('✅ Maç güncellendi'); }
         setModal({ show: false, type: 'add' });
     };

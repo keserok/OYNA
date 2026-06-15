@@ -537,13 +537,19 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
     const [edit, setEdit] = useState<AdminUser>(user);
     const [saving, setSaving] = useState(false);
     const { showOk, Toast } = useToast();
+    const updateUser = useAppStore((s) => s.updateUser);
 
     const handleSave = async () => {
         setSaving(true);
-        await FB.fbUpdateUser(edit);
-        setSaving(false);
-        showOk('✅ Kullanıcı Firebase\'e kaydedildi');
-        setTimeout(onClose, 1000);
+        try {
+            await updateUser(edit);
+            showOk('✅ Kullanıcı veritabanına kaydedildi');
+            setTimeout(onClose, 1000);
+        } catch (err) {
+            showOk(`❌ Kayıt başarısız: ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
+        } finally {
+            setSaving(false);
+        }
     };
 
     // Sliders for dynamic FifaCard
@@ -733,16 +739,23 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
     const [edit, setEdit] = useState<any>(item);
     const [saving, setSaving] = useState(false);
     const { showOk, Toast } = useToast();
+    const { loadServices } = useAppStore();
 
     const label = typeParam === 'GK' ? 'KALECİ' : 'HAKEM';
 
     const handleSave = async () => {
         setSaving(true);
-        if (typeParam === 'GK') await FB.fbUpdateGoalkeeper(edit);
-        else await FB.fbUpdateReferee(edit);
-        setSaving(false);
-        showOk(`✅ ${item.name} Firebase'e kaydedildi`);
-        setTimeout(onClose, 1000);
+        try {
+            if (typeParam === 'GK') await FB.fbUpdateGoalkeeper(edit);
+            else await FB.fbUpdateReferee(edit);
+            await loadServices();
+            showOk(`✅ ${item.name} veritabanına kaydedildi`);
+            setTimeout(onClose, 1000);
+        } catch (err) {
+            showOk(`❌ Kayıt başarısız: ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
+        } finally {
+            setSaving(false);
+        }
     };
 
     // GK Specific stats adjustments

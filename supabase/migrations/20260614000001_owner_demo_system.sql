@@ -111,9 +111,9 @@ BEGIN
   );
 
   INSERT INTO public.courts (id, pitch_id, name, court_type, size, is_active, sort_order) VALUES
-    (v_court1, v_pitch_id, 'Merkez Saha', 'TURF', '30x50', true, 0),
-    (v_court2, v_pitch_id, 'Yan Saha', 'TURF', '28x48', true, 1),
-    (v_court3, v_pitch_id, 'Kapalı Saha', 'INDOOR', '25x45', true, 2);
+    (v_court1, v_pitch_id, 'Merkez Saha', 'OPEN', '30x50', true, 0),
+    (v_court2, v_pitch_id, 'Yan Saha', 'OPEN', '28x48', true, 1),
+    (v_court3, v_pitch_id, 'Kapalı Saha', 'CLOSED', '25x45', true, 2);
 
   INSERT INTO public.pitch_tariffs (pitch_id, name, tariff_type, applies_to_days, start_time, end_time, price_per_hour, deposit_amount, sort_order) VALUES
     (v_pitch_id, 'Gündüz Tarifesi', 'WEEKDAY', ARRAY[1,2,3,4,5], '08:00', '17:00', 2000, 500, 0),

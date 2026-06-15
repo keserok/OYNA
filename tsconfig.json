@@ -43,6 +43,8 @@
     "supabase",
     "notifications",
     "src",
-    "arsiv"
+    "arsiv",
+    "tests",
+    "playwright.config.ts"
   ]
 }

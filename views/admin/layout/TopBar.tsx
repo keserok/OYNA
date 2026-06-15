@@ -1,22 +1,23 @@
 import React from 'react';
 import { Search, Bell, Activity, ChevronRight, HardDrive, Menu } from 'lucide-react';
 import { useAppStore } from '../../../store';
-import { motion } from 'framer-motion';
+import { useAdminToast } from '../context/AdminToastContext';
+import { getRouteMeta } from '../design/adminRoutes';
 
 interface TopBarProps {
     activeSubRoute: string;
     onOpenCommandPalette: () => void;
-    onShowToast: (msg: string) => void;
     onToggleMobileMenu?: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ activeSubRoute, onOpenCommandPalette, onShowToast, onToggleMobileMenu }) => {
+export const TopBar: React.FC<TopBarProps> = ({ activeSubRoute, onOpenCommandPalette, onToggleMobileMenu }) => {
     const { appSettings, updateAppSettings } = useAppStore();
+    const { info } = useAdminToast();
+    const meta = getRouteMeta(activeSubRoute);
 
     return (
-        <header className="h-[60px] bg-[#0D1117]/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 sticky top-0">
-            <div className="flex items-center gap-3">
-                {/* Mobile Menu Toggle */}
+        <header className="h-14 bg-[#0D1117]/90 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-4 md:px-6 shrink-0 z-20 sticky top-0">
+            <div className="flex items-center gap-3 min-w-0">
                 {onToggleMobileMenu && (
                     <button 
                         onClick={onToggleMobileMenu}
@@ -26,59 +27,48 @@ export const TopBar: React.FC<TopBarProps> = ({ activeSubRoute, onOpenCommandPal
                     </button>
                 )}
 
-                {/* Breadcrumbs */}
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                    <span className="hidden md:inline">OYNA OS</span>
-                    <ChevronRight size={10} className="hidden md:inline text-gray-600" />
-                    <span className="text-gray-300">{activeSubRoute}</span>
-                </div>
+                <nav className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 min-w-0">
+                    <span className="hidden sm:inline text-gray-600">OYNA OS</span>
+                    <ChevronRight size={12} className="hidden sm:inline text-gray-700 shrink-0" />
+                    <span className="hidden md:inline text-gray-600 shrink-0">{meta.group}</span>
+                    <ChevronRight size={12} className="hidden md:inline text-gray-700 shrink-0" />
+                    <span className="text-gray-200 truncate">{meta.title}</span>
+                </nav>
             </div>
 
-            {/* Right Controls */}
-            <div className="flex items-center gap-4">
-                {/* Global Search Trigger (Cmd + K) */}
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <button
                     onClick={onOpenCommandPalette}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-black/40 border border-white/10 hover:border-white/20 rounded-lg text-gray-400 hover:text-white transition-colors group"
+                    className="flex items-center gap-2 h-8 px-3 bg-white/[0.03] border border-white/[0.08] hover:border-white/15 rounded-lg text-gray-500 hover:text-gray-300 transition-colors"
                 >
-                    <Search size={13} className="group-hover:text-red-400 transition-colors" />
-                    <span className="hidden md:inline text-[10px] font-mono">Arama Yap...</span>
-                    <div className="hidden md:flex items-center gap-0.5 ml-3 opacity-60">
-                        <span className="bg-white/10 px-1 py-0.5 rounded text-[8px] font-mono text-gray-300 border border-white/5">⌘</span>
-                        <span className="bg-white/10 px-1 py-0.5 rounded text-[8px] font-mono text-gray-300 border border-white/5">K</span>
-                    </div>
+                    <Search size={13} />
+                    <span className="hidden md:inline text-[11px]">Ara</span>
+                    <kbd className="hidden md:inline ml-1 text-[9px] font-mono text-gray-600 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">⌘K</kbd>
                 </button>
 
-                {/* Notifications */}
-                <button className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors relative">
+                <button className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-gray-500 hover:text-white relative">
                     <Bell size={14} />
-                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
                     <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 </button>
 
-                {/* Maintenance Mode Toggle */}
-                <div className="hidden md:block h-4 w-px bg-white/10" />
-                
                 <button
                     onClick={() => {
                         updateAppSettings({ maintenanceMode: !appSettings.maintenanceMode });
-                        onShowToast(appSettings.maintenanceMode ? 'Bakım modu kapatıldı' : '⚠️ Bakım modu AKTİF');
+                        info(appSettings.maintenanceMode ? 'Bakım modu kapatıldı' : 'Bakım modu aktif');
                     }}
-                    className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-black rounded border transition-all uppercase ${
+                    className={`hidden lg:flex items-center gap-1.5 h-8 px-2.5 text-[10px] font-bold rounded-lg border transition-all ${
                         appSettings.maintenanceMode 
-                            ? 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' 
-                            : 'bg-white/5 text-gray-500 border-white/10 hover:text-white'
+                            ? 'bg-red-500/15 text-red-400 border-red-500/30' 
+                            : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:text-gray-300'
                     }`}
                 >
-                    <Activity size={10} className={appSettings.maintenanceMode ? 'animate-pulse' : ''} />
-                    {appSettings.maintenanceMode ? 'BAKIM MODU (KAPALI)' : 'NORMAL MOD (AÇIK)'}
+                    <Activity size={11} />
+                    {appSettings.maintenanceMode ? 'Bakım' : 'Canlı'}
                 </button>
 
-                {/* DB Status */}
-                <div className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-md text-green-400 cursor-default" title="Supabase Connected">
+                <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400" title="Supabase">
                     <HardDrive size={10} />
-                    <span className="text-[8px] font-mono font-black uppercase">LIVE</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 ml-1 shadow-[0_0_5px_rgba(34,197,94,0.5)] animate-pulse" />
+                    <span className="text-[9px] font-bold uppercase hidden sm:inline">Live</span>
                 </div>
             </div>
         </header>

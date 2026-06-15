@@ -3,27 +3,50 @@ import { useAppStore } from '../../../store';
 import { DataTable } from '../components/DataTable';
 import { ActionConfirmModal, ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { AddUserModal } from '../components/AddUserModal';
-import { Users, Shield, Scale, PlayCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3 } from 'lucide-react';
+import { logImpersonation } from '../../../services/adminService';
+import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
+import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
+import { DeepEditProviderModal, DeepEditUserModal } from '../DeepEditModals';
+import { Goalkeeper, Referee, AdminUser } from '../../../types';
+import { ModuleCrudBar } from '../components/ModuleCrudBar';
+import { PageShell } from '../components/PageShell';
+import { StatusBadge } from '../components/StatusBadge';
+import { useAdminToast } from '../context/AdminToastContext';
+import type { DemoModuleKey } from '../../../services/adminService';
 
 interface UsersPageProps {
     subRoute: 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER';
+    mode?: 'embedded' | 'standalone';
+    onRefresh?: () => Promise<void>;
 }
 
-export const UsersPage: React.FC<UsersPageProps> = ({ subRoute }) => {
+const DEMO_MODULE: Record<UsersPageProps['subRoute'], DemoModuleKey | null> = {
+    KULLANICILAR: null,
+    'KALECİLER': 'goalkeepers',
+    HAKEMLER: 'referees',
+};
+
+export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded', onRefresh }) => {
     const { 
         adminUsers, adminGoalkeepers, adminReferees, 
         addUser, deleteUser, addGoalkeeper, deleteGoalkeeper, addReferee, deleteReferee,
-        setImpersonatedUser, setOriginalRole, setRole, setView, role, addAdminLog 
+        setImpersonatedUser, setOriginalRole, setRole, setView, role, addAdminLog, loadServices
     } = useAppStore();
 
-    const [toast, setToast] = useState<string | null>(null);
+    const { success } = useAdminToast();
     const [confirmModal, setConfirmModal] = useState<ActionConfirmOptions | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [detailProvider, setDetailProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
+    const [editProvider, setEditProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
+    const [editUser, setEditUser] = useState<AdminUser | null>(null);
 
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 2500);
+    const refresh = async () => {
+        await loadServices();
+        if (onRefresh) await onRefresh();
     };
+
+    const notify = (msg: string) => success(msg);
 
     const handleImpersonateRequest = (userId: string) => {
         const sourceData = subRoute === 'KALECİLER' ? adminGoalkeepers : subRoute === 'HAKEMLER' ? adminReferees : adminUsers;
@@ -38,22 +61,41 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute }) => {
             targetId: targetUser.id,
             targetName: targetUser.name,
             onCancel: () => setConfirmModal(null),
-            onConfirm: () => {
+            onConfirm: async () => {
+                if (mode === 'standalone') {
+                    try {
+                        await logImpersonation(targetUser.id);
+                        addAdminLog({
+                            action: 'GHOST_MODE',
+                            targetId: targetUser.id,
+                            targetName: targetUser.name,
+                            details: 'Standalone deep-link ghost session',
+                            adminId: 'ADMIN_CURRENT',
+                        });
+                        openGhostInConsumerApp(targetUser.id, targetUser.name);
+                        notify(`🕵️ ${targetUser.name} — consumer app'te açılıyor`);
+                    } catch {
+                        notify('Ghost mode kaydı başarısız');
+                    }
+                    setConfirmModal(null);
+                    return;
+                }
                 setOriginalRole(role);
                 setImpersonatedUser(targetUser as any);
                 setRole((targetUser as any).role || 'PLAYER');
                 if ((targetUser as any).role === 'OWNER') setView('OWNER_PANEL');
                 else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') setView('SERVICE_DASHBOARD');
                 else setView('DASHBOARD');
-                
+
+                try { await logImpersonation(targetUser.id); } catch { /* audit optional */ }
                 addAdminLog({
                     action: 'GHOST_MODE',
                     targetId: targetUser.id,
                     targetName: targetUser.name,
                     details: 'Ghost Mode Session Started',
-                    adminId: 'ADMIN_CURRENT'
+                    adminId: 'ADMIN_CURRENT',
                 });
-                showToast(`🕵️ Ghost Mode: ${targetUser.name} taklit ediliyor!`);
+                notify(`🕵️ Ghost Mode: ${targetUser.name} taklit ediliyor!`);
                 setConfirmModal(null);
             }
         });
@@ -76,31 +118,26 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute }) => {
                 } else {
                     deleteUser(u.id);
                 }
-                showToast(`🗑️ ${u.name} silindi`);
+                notify(`🗑️ ${u.name} silindi`);
                 setConfirmModal(null);
             }
         });
     };
 
     let title = 'Kullanıcı Bilgi Bankası';
-    let icon = <Users size={16} className="text-blue-400" />;
+    let icon = <Users size={18} />;
     let data: any[] = adminUsers;
-    let buttonColor = 'bg-blue-400 hover:bg-blue-300 shadow-[0_0_20px_rgba(96,165,250,0.3)]';
     let buttonIconColor = 'text-blue-400';
     let rowIconColor = 'text-blue-400';
     
     if (subRoute === 'KALECİLER') {
-        title = 'Kaleciler Birliği';
-        icon = <Shield size={16} className="text-green-400" />;
+        icon = <Shield size={18} />;
         data = adminGoalkeepers;
-        buttonColor = 'bg-green-400 hover:bg-green-300 shadow-[0_0_20px_rgba(74,222,128,0.3)]';
         buttonIconColor = 'text-green-400';
         rowIconColor = 'text-green-400';
     } else if (subRoute === 'HAKEMLER') {
-        title = 'Hakem Komitesi';
-        icon = <Scale size={16} className="text-yellow-400" />;
+        icon = <Scale size={18} />;
         data = adminReferees;
-        buttonColor = 'bg-yellow-400 hover:bg-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.3)]';
         buttonIconColor = 'text-yellow-400';
         rowIconColor = 'text-yellow-400';
     }
@@ -144,18 +181,46 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute }) => {
             header: 'STATÜ',
             render: (u: any) => (
                 <div className="flex gap-1.5 flex-wrap">
-                    {u.isPro && <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded text-[9px] font-black border border-yellow-500/20">PRO</span>}
-                    {(u.isVerified || subRoute !== 'KULLANICILAR') && <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded text-[9px] font-black border border-blue-500/20">DOĞRULANMIŞ</span>}
+                    {u.isPro && <StatusBadge tone="warning">PRO</StatusBadge>}
+                    {(u.isVerified || subRoute !== 'KULLANICILAR') && <StatusBadge tone="info">DOĞRULANMIŞ</StatusBadge>}
                     {u.isBanned 
-                        ? <span className="text-red-500 bg-red-500/10 px-2 py-0.5 rounded text-[9px] font-black border border-red-500/20">BANNED</span>
-                        : <span className="text-green-500 bg-green-500/10 px-2 py-0.5 rounded text-[9px] font-black border border-green-500/20">AKTİF</span>}
+                        ? <StatusBadge tone="danger">BANNED</StatusBadge>
+                        : <StatusBadge tone="success">AKTİF</StatusBadge>}
+                    {(u as { isDemo?: boolean }).isDemo && <StatusBadge tone="demo">DEMO</StatusBadge>}
                 </div>
             )
         },
         {
             header: 'AKSİYONLAR',
             render: (u: any) => (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                    {(subRoute === 'KALECİLER' || subRoute === 'HAKEMLER') && (
+                        <>
+                            <button
+                                onClick={() => setDetailProvider({ item: u, type: subRoute === 'KALECİLER' ? 'GK' : 'REF' })}
+                                title="Detay"
+                                className="flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border border-blue-500/20 text-[9px] font-black uppercase"
+                            >
+                                <Eye size={12} /> Detay
+                            </button>
+                            <button
+                                onClick={() => setEditProvider({ item: u, type: subRoute === 'KALECİLER' ? 'GK' : 'REF' })}
+                                title="Düzenle"
+                                className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-black uppercase"
+                            >
+                                <Edit3 size={12} /> Düzenle
+                            </button>
+                        </>
+                    )}
+                    {subRoute === 'KULLANICILAR' && (
+                        <button
+                            onClick={() => setEditUser(u)}
+                            title="Düzenle"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-black uppercase"
+                        >
+                            <Edit3 size={12} /> Düzenle
+                        </button>
+                    )}
                     <button 
                         onClick={() => handleImpersonateRequest(u.id)}
                         title="Ghost Mode (Giriş Yap)" 
@@ -172,28 +237,20 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute }) => {
     ];
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
-                <div>
-                    <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
-                        {icon} {title}
-                    </h2>
-                    <p className="text-[10px] text-gray-500 mt-1">
-                        Sistemdeki tüm kayıtlı {subRoute.toLowerCase()} listelenmektedir. Ghost modu ile profillerini taklit edebilirsiniz.
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    {toast && <span className="text-[10px] font-black text-[#39FF14] bg-[#39FF14]/10 px-3 py-1.5 rounded-lg border border-[#39FF14]/20 animate-pulse">{toast}</span>}
-                    <button 
-                        onClick={() => setIsAddModalOpen(true)}
-                        className={`flex items-center justify-center gap-2 px-5 py-2.5 text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all ${buttonColor}`}
-                    >
-                        <PlusCircle size={16} /> YENİ {subRoute === 'KULLANICILAR' ? 'KİŞİ' : subRoute === 'KALECİLER' ? 'KALECİ' : 'HAKEM'} EKLE
-                    </button>
-                </div>
-            </div>
-
-            <DataTable columns={columns} data={data} />
+        <PageShell
+            route={subRoute}
+            icon={icon}
+            actions={
+                <ModuleCrudBar
+                    moduleKey={DEMO_MODULE[subRoute]}
+                    addLabel={`Yeni ${subRoute === 'KULLANICILAR' ? 'Kişi' : subRoute === 'KALECİLER' ? 'Kaleci' : 'Hakem'}`}
+                    onAdd={() => setIsAddModalOpen(true)}
+                    onRefresh={refresh}
+                    showDemo={DEMO_MODULE[subRoute] !== null}
+                />
+            }
+        >
+            <DataTable columns={columns} data={data} emptyDescription="Yeni kayıt ekleyin veya demo verileri yükleyin." />
             
             <ActionConfirmModal isOpen={!!confirmModal} options={confirmModal} />
 
@@ -201,10 +258,32 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute }) => {
                 isOpen={isAddModalOpen} 
                 onClose={() => setIsAddModalOpen(false)} 
                 defaultRole={subRoute}
-                onAddUser={(u) => { addUser(u); showToast(`✅ ${u.name} eklendi`); }}
-                onAddGoalkeeper={(gk) => { addGoalkeeper(gk); showToast(`✅ ${gk.name} eklendi`); }}
-                onAddReferee={(ref) => { addReferee(ref); showToast(`✅ ${ref.name} eklendi`); }}
+                onAddUser={(u) => { addUser(u); notify(`✅ ${u.name} eklendi`); }}
+                onAddGoalkeeper={(gk) => { addGoalkeeper(gk); notify(`✅ ${gk.name} eklendi`); }}
+                onAddReferee={(ref) => { addReferee(ref); notify(`✅ ${ref.name} eklendi`); }}
             />
-        </div>
+
+            {detailProvider && (
+                <ProviderDetailPanel
+                    provider={detailProvider.item}
+                    type={detailProvider.type}
+                    onEdit={() => { setEditProvider(detailProvider); setDetailProvider(null); }}
+                    onClose={() => setDetailProvider(null)}
+                />
+            )}
+            {editProvider && (
+                <DeepEditProviderModal
+                    item={editProvider.item}
+                    typeParam={editProvider.type}
+                    onClose={() => { setEditProvider(null); void refresh(); }}
+                />
+            )}
+            {editUser && (
+                <DeepEditUserModal
+                    user={editUser}
+                    onClose={() => { setEditUser(null); void refresh(); }}
+                />
+            )}
+        </PageShell>
     );
 };

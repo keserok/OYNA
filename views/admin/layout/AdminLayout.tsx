@@ -2,32 +2,28 @@ import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { CommandPalette } from '../components/CommandPalette';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AdminToastProvider } from '../context/AdminToastContext';
+import type { GodViewSubRoute } from '../GodViewPanel';
+import type { AdminSession } from '../../../services/adminService';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
     activeSubRoute: string;
-    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION') => void;
+    onNavigate: (route: GodViewSubRoute) => void;
     onBack: () => void;
     pendingVerifCount?: number;
+    mode?: 'embedded' | 'standalone';
+    adminSession?: AdminSession | null;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRoute, onNavigate, onBack, pendingVerifCount = 0 }) => {
+export const AdminLayout: React.FC<AdminLayoutProps> = ({
+    children, activeSubRoute, onNavigate, onBack, pendingVerifCount = 0, mode = 'embedded', adminSession,
+}) => {
     const [cmdOpen, setCmdOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [toastMsg, setToastMsg] = useState<{ text: string, id: number } | null>(null);
-    const [toastCounter, setToastCounter] = useState(0);
-
-    const showToast = (text: string) => {
-        const id = toastCounter + 1;
-        setToastCounter(id);
-        setToastMsg({ text, id });
-        setTimeout(() => {
-            setToastMsg((current) => current?.id === id ? null : current);
-        }, 2500);
-    };
 
     return (
+        <AdminToastProvider>
         <div className="h-screen bg-[#0D1117] text-white flex flex-col overflow-hidden font-sans">
             {/* Top red glow accent */}
             <div className="h-0.5 w-full bg-gradient-to-r from-red-700 via-red-500 to-orange-500 shrink-0" />
@@ -49,9 +45,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRou
                             setIsMobileMenuOpen(false);
                         }}
                         onBack={onBack}
-                        onShowToast={showToast}
-                        onShowRevenue={() => showToast('Gelir Modülü Yakında')}
                         pendingVerifCount={pendingVerifCount}
+                        mode={mode}
+                        adminSession={adminSession}
                     />
                 </div>
 
@@ -59,12 +55,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRou
                     <TopBar 
                         activeSubRoute={activeSubRoute}
                         onOpenCommandPalette={() => setCmdOpen(true)}
-                        onShowToast={showToast}
                         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     />
 
-                    {/* Page Content area with scroll */}
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative">
+                    {/* Page Content */}
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative bg-[radial-gradient(ellipse_at_top,_rgba(239,68,68,0.04)_0%,_transparent_50%)]">
                         {children}
                     </div>
                 </main>
@@ -76,22 +71,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeSubRou
                 onClose={() => setCmdOpen(false)} 
                 onNavigate={onNavigate}
             />
-
-            {/* Global Toast */}
-            <AnimatePresence>
-                {toastMsg && (
-                    <motion.div
-                        key={toastMsg.id}
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                        className="fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-xl bg-[#161B22]/95 border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-3 backdrop-blur-md"
-                    >
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-xs font-bold tracking-wide text-white">{toastMsg.text}</span>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
+        </AdminToastProvider>
     );
 };

@@ -151,6 +151,31 @@ const App: React.FC = () => {
     initApp();
   }, [initApp]);
 
+  // Godview standalone → consumer app ghost deep-link (?ghost=userId&name=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ghostId = params.get('ghost');
+    if (!ghostId) return;
+
+    const ghostName = params.get('name') || 'Kullanıcı';
+    setOriginalRole(role);
+    setImpersonatedUser({
+      id: ghostId,
+      name: ghostName,
+      email: '',
+      avatar: '',
+      role: UserRole.PLAYER,
+      rating: 5,
+      isVerified: false,
+      isBanned: false,
+      isPro: false,
+      joinDate: new Date().toISOString(),
+      matchCount: 0,
+    });
+    setView('DASHBOARD');
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
@@ -182,7 +207,9 @@ const App: React.FC = () => {
               console.error('[App] Error creating user profile:', insertError);
             }
             setRole(currentRole);
-            if (currentRole === UserRole.OWNER || currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
+            if (currentRole === UserRole.OWNER) {
+              setView('OWNER_PANEL');
+            } else if (currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
               setView('PENDING_VERIFICATION');
             } else {
               setView('LOCATION_PROMPT');
@@ -200,10 +227,10 @@ const App: React.FC = () => {
 
             const currentView = useAppStore.getState().view;
             if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'LOCATION_PROMPT'].includes(currentView)) {
-              if (profile.verification_status === 'pending') {
+              if (profile.verification_status === 'pending' && primaryRole !== UserRole.OWNER) {
                 setView('PENDING_VERIFICATION');
               } else if (primaryRole === UserRole.OWNER) {
-                setView('LOCATION_PROMPT');
+                setView('OWNER_PANEL');
               } else if (primaryRole === UserRole.GOALKEEPER || primaryRole === UserRole.REFEREE) {
                 setView('SERVICE_DASHBOARD');
               } else {
@@ -331,7 +358,13 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case 'SPLASH':
-        return <SplashScreen onStart={() => setView(auth.currentUser ? 'LOCATION_PROMPT' : 'ROLE_SELECTION')} />;
+        return <SplashScreen onStart={() => {
+          if (!auth.currentUser) {
+            setView('ROLE_SELECTION');
+            return;
+          }
+          setView(navigateBasedOnRole(role));
+        }} />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => setView(navigateBasedOnRole(role))} onBack={() => setView('ROLE_SELECTION')} />;
       case 'LOCATION_PROMPT':

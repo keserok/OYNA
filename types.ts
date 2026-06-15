@@ -44,7 +44,7 @@ export interface AdminUser {
 
 export interface AdminLog {
   id: string;
-  action: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE';
+  action: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE' | string;
   targetId: string;
   targetName: string;
   details: string;
@@ -802,6 +802,69 @@ export interface PitchDebtor {
   created_at?: string;
 }
 
+export interface PitchStaffMember {
+  id: string;
+  pitch_id: string;
+  name: string;
+  role_title: string;
+  status: 'ON_DUTY' | 'OFF_DUTY' | 'LEAVE';
+  avatar_url: string | null;
+  phone: string | null;
+  sort_order: number;
+  created_at?: string;
+}
+
+export interface PitchStaffTask {
+  id: string;
+  pitch_id: string;
+  title: string;
+  assigned_to: string | null;
+  assigned_name: string | null;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  due_time: string | null;
+  due_date: string | null;
+  created_at?: string;
+}
+
+export interface PitchBankAccount {
+  id: string;
+  pitch_id: string;
+  bank_name: string;
+  account_holder: string;
+  iban: string;
+  is_primary: boolean;
+  created_at?: string;
+}
+
+export interface PitchPaymentSettings {
+  paymentOptions: { online: boolean; deposit: boolean; cash: boolean };
+  paramMerchantId: string;
+  paramClientId: string;
+  paramApiKey: string;
+}
+
+export interface OwnerEntitlements {
+  max_facilities: number;
+  max_courts: number;
+  max_staff: number;
+  flash_deals: boolean;
+  finance: boolean;
+  team: boolean;
+  withdrawals: boolean;
+}
+
+export interface OwnerAccount {
+  id: string;
+  owner_user_id: string;
+  plan_tier: 'starter' | 'pro' | 'enterprise';
+  status: 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+  trial_ends_at: string | null;
+  entitlements: OwnerEntitlements;
+  billing_email: string | null;
+  created_at?: string;
+}
+
 // `pitch_subscriptions` tablosu (canlı: weekday / price / customer_name)
 export interface PitchSubscription {
   id: string;
@@ -938,6 +1001,10 @@ export interface OwnerPitch {
   image?: string | null;
   images?: string[] | null;
   created_at?: string;
+  payment_options?: { online?: boolean; deposit?: boolean; cash?: boolean } | null;
+  param_merchant_id?: string | null;
+  param_client_id?: string | null;
+  param_api_key?: string | null;
   // join'ler
   courts?: PitchCourt[];
   pitch_tariffs?: PitchTariff[];
