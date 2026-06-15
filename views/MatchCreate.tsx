@@ -15,6 +15,9 @@ import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
 import SharedPitch from '../components/SharedPitch';
 import PitchDiscovery from './PitchDiscovery';
+import { PageLayout } from '../components/common/PageLayout';
+import { AnimatedButton } from '../components/AnimatedButton';
+import { useMatchCreate } from '../hooks/useMatchCreate';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -1831,163 +1834,47 @@ const PaymentStep: React.FC<{
 
 // ─── MAIN ──────────────────────────────────────────────────────────────────────
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
-  const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'BUDGET' | 'PLAYER_PICKER' | 'SUPPORT' | 'NONE'>('NONE');
-  const [pickerTab, setPickerTab] = useState<'FRIENDS' | 'TEAMS'>('FRIENDS');
-  const [pickerCategory, setPickerCategory] = useState('Tümü');
-  const [friendSearch, setFriendSearch] = useState('');
-  const [selectedFriendsForPicker, setSelectedFriendsForPicker] = useState<string[]>([]);
-  const [selectedSlotForPicker, setSelectedSlotForPicker] = useState<string | null>(null);
-  
-  const [format, setFormat] = useState<typeof FORMATS[0]>(FORMATS[4]);
-  const [dna, setDna] = useState<{
-      budget: string;
-      duration: string;
-      mentality: string;
-      gender: string;
-      age: string[];
-      role: string;
-  }>({
-      budget: '',
-      duration: '60 Dakika',
-      mentality: 'ciddi',
-      gender: 'Karma',
-      age: ['Tümü'],
-      role: ''
-  });
-  const [manualBudget, setManualBudget] = useState<number | null>(null);
-
-  const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
-  const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ date: string; time: string } | null>(null);
-  
-  // Phase 2 states
-  const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
-  const [customPositions, setCustomPositions] = useState<Record<string, {x: number, y: number, role: string}>>({});
-
-  const { addOpponentAd, incrementUnreadNotifications, addUserNotification, friends, userTeams, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, addPlayerSeekAd } = useAppStore();
-
-
-
-  const draftMatch = React.useMemo(() => adminMatches.find(m => m.id === activeDraftId), [activeDraftId, adminMatches]);
-  const isDraftMode = !!draftMatch;
-
-  useEffect(() => {
-      if (draftMatch) {
-          setSelectedPitch({
-              id: 'draft-pitch',
-              name: draftMatch.title.replace(' Maçı', ''),
-              district: draftMatch.location,
-              location: draftMatch.location,
-              image: draftMatch.image,
-              price: draftMatch.price,
-              type: 'OPEN', slots: [], features: []
-          } as any);
-          setSelectedTimeSlot({ date: draftMatch.date, time: draftMatch.time });
-          if (draftMatch.slots) {
-              const playersRecord: Record<string, any> = {};
-              draftMatch.slots.forEach(s => {
-                  if (s.player) playersRecord[s.id] = { ...s.player, status: s.player.paymentStatus === 'PAID' ? 'CONFIRMED' : 'PENDING' };
-              });
-              setMyPlayers(playersRecord);
-          }
-      }
-  }, [draftMatch]);
-
-  const perTeam = parseInt(format.v.split('v')[0]) || 7;
-  const isReady = selectedPitch && selectedTimeSlot;
-
-  // Symmetrical Defaults
-  const getSymmetricPositions = (pt: number, orient: 'vertical' | 'horizontal') => {
-    const verticalDefaults: Record<number, {x:number, y:number, role:string}[]> = {
-      5: [
-        { x: 50, y: 90, role: 'KL' }, { x: 30, y: 75, role: 'SAV' }, { x: 70, y: 75, role: 'SAV' },
-        { x: 50, y: 50, role: 'ORT' }, { x: 50, y: 25, role: 'HÜC' }
-      ],
-      7: [
-        { x: 50, y: 90, role: 'KL' }, { x: 25, y: 75, role: 'SAV' }, { x: 75, y: 75, role: 'SAV' },
-        { x: 20, y: 50, role: 'ORT' }, { x: 50, y: 50, role: 'ORT' }, { x: 80, y: 50, role: 'ORT' },
-        { x: 50, y: 25, role: 'HÜC' }
-      ],
-      11: [
-        { x: 50, y: 90, role: 'KL' }, { x: 20, y: 75, role: 'SAV' }, { x: 40, y: 75, role: 'SAV' }, { x: 60, y: 75, role: 'SAV' }, { x: 80, y: 75, role: 'SAV' },
-        { x: 20, y: 50, role: 'ORT' }, { x: 40, y: 50, role: 'ORT' }, { x: 60, y: 50, role: 'ORT' }, { x: 80, y: 50, role: 'ORT' },
-        { x: 35, y: 25, role: 'HÜC' }, { x: 65, y: 25, role: 'HÜC' }
-      ]
-    };
-    
-    let base = verticalDefaults[pt] || verticalDefaults[11];
-    
-    if (orient === 'horizontal') {
-        return base.map(p => ({
-            role: p.role,
-            x: 100 - p.y,
-            y: p.x
-        }));
-    }
-    return base;
-  };
-
-  const calculateRole = (x: number, y: number, orient: 'vertical' | 'horizontal') => {
-     if (orient === 'vertical') {
-         if (y > 80) return 'KL';
-         if (y > 55) return 'SAV';
-         if (y > 35) return 'ORT';
-         return 'HÜC';
-     } else {
-         if (x < 20) return 'KL';
-         if (x < 45) return 'SAV';
-         if (x < 65) return 'ORT';
-         return 'HÜC';
-     }
-  };
-
-  const pitchSlots = Array.from({ length: perTeam }).map((_, i) => {
-    const id = `slot_${i}`;
-    const defaults = getSymmetricPositions(perTeam, orientation);
-    const defPos = defaults[i % defaults.length];
-    
-    const pos = customPositions[id] || defPos;
-    return {
-        id,
-        x: pos.x,
-        y: pos.y,
-        role: pos.role,
-        player: myPlayers[id],
-        status: myPlayers[id]?.status
-    };
-  });
-
-  const handleSlotMove = (id: string, x: number, y: number) => {
-      setCustomPositions(prev => ({
-          ...prev,
-          [id]: { x, y, role: calculateRole(x, y, orientation) }
-      }));
-  };
-
-  const toggleOrientation = () => {
-      const newOrient = orientation === 'vertical' ? 'horizontal' : 'vertical';
-      
-      setCustomPositions(prev => {
-          const next: typeof customPositions = {};
-          for (const id in prev) {
-              const p = prev[id];
-              if (newOrient === 'horizontal') {
-                  next[id] = { ...p, x: 100 - p.y, y: p.x };
-              } else {
-                  next[id] = { ...p, x: p.y, y: 100 - p.x };
-              }
-              next[id].role = calculateRole(next[id].x, next[id].y, newOrient);
-          }
-          return next;
-      });
-      
-      setOrientation(newOrient);
-  };
-  const calculatedBudget = selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
-  const costPerPerson = calculatedBudget;
+  const { friends, userTeams } = useAppStore();
+  const {
+    activeSheet, setActiveSheet,
+    isPublishing,
+    pickerTab, setPickerTab,
+    pickerCategory, setPickerCategory,
+    friendSearch, setFriendSearch,
+    selectedFriendsForPicker, setSelectedFriendsForPicker,
+    selectedSlotForPicker, setSelectedSlotForPicker,
+    format, setFormat,
+    dna, setDna,
+    manualBudget, setManualBudget,
+    myPlayers, setMyPlayers,
+    selectedPitch, setSelectedPitch,
+    selectedTimeSlot, setSelectedTimeSlot,
+    orientation, setOrientation,
+    customPositions, setCustomPositions,
+    draftMatch, isDraftMode,
+    perTeam, isReady,
+    handleSlotMove, pitchSlots,
+    toggleOrientation, calculatedBudget, costPerPerson,
+    publishMatch
+  } = useMatchCreate(onNavigate);
 
   return (
-    <div className="min-h-screen bg-[#06080A] flex flex-col font-sans relative overflow-hidden">
+    <PageLayout
+      title="MAÇ LOBİSİ"
+      onBack={onBack}
+      scrollable={false}
+      showSafeBottom={false}
+      className="bg-[#06080A]"
+      rightElement={
+        <button 
+          type="button" 
+          aria-label="Paylaş"
+          className="w-10 h-10 flex items-center justify-center bg-white/5 backdrop-blur-md rounded-full text-white border border-white/10 shadow-lg hover:bg-white/10 transition-colors"
+        >
+          <Share2 size={16} />
+        </button>
+      }
+    >
       {/* Ambient breathing backgrounds */}
       <motion.div 
          animate={{ x: [-20, 20, -20], y: [-20, 20, -20], scale: [1, 1.1, 1] }} 
@@ -1999,19 +1886,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
          className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#39FF14]/5 rounded-full blur-[120px] pointer-events-none" 
       />
-
-      <header className="flex items-center justify-between px-5 pt-8 pb-3 z-30 relative bg-transparent">
-        <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-white/5 backdrop-blur-md rounded-full text-white border border-white/10 hover:bg-white/10 transition-colors shadow-lg">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="text-center">
-            <h1 className="text-base font-black tracking-[0.2em] text-white uppercase italic drop-shadow-md">MAÇ LOBİSİ</h1>
-            <p className="text-[9px] text-[#39FF14] font-bold tracking-widest uppercase mt-0.5 opacity-80">YENİ MAÇ OLUŞTUR</p>
-        </div>
-        <button className="w-10 h-10 flex items-center justify-center bg-white/5 backdrop-blur-md rounded-full text-white border border-white/10 shadow-lg hover:bg-white/10 transition-colors">
-          <Share2 size={16} />
-        </button>
-      </header>
 
       {/* CENTER: PITCH */}
       <div className="flex-1 relative flex flex-col items-center justify-center p-4 pt-10 pb-[360px] z-10 overflow-hidden">
@@ -2091,8 +1965,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           {/* Action Row: Publish Button */}
           <div className="flex flex-col gap-2 relative z-20 mt-2">
              <div className="flex items-center gap-3 w-full">
-                 <motion.button 
-                    whileTap={{ scale: 0.98 }}
+                 <AnimatedButton 
                     onClick={async () => {
                         if(isReady) {
                             const matchData = {
@@ -2140,6 +2013,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 })
                             };
                             try {
+                                setIsPublishing(true);
                                 if (isDraftMode && draftMatch) {
                                     await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age });
                                     setActiveDraftId(null);
@@ -2168,15 +2042,24 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             } catch(err) {
                                 console.error("Maç yayınlanamadı:", err);
                                 alert("Maç yayınlanırken bir hata oluştu!");
+                            } finally {
+                                setIsPublishing(false);
                             }
                         } else {
                             setActiveSheet('PITCH');
                         }
                     }}
-                    className={`flex-1 h-[60px] rounded-[20px] font-black text-lg italic uppercase tracking-tighter transition-all duration-300 flex items-center justify-center gap-2 shadow-2xl ${isReady ? 'bg-[#39FF14] text-black shadow-[0_0_30px_rgba(57,255,20,0.3)] hover:shadow-[0_0_40px_rgba(57,255,20,0.6)]' : 'bg-white/5 backdrop-blur-xl text-gray-400 border border-white/10 hover:bg-white/10'}`}
+                    isLoading={isPublishing}
+                    disabled={isPublishing}
+                    className="flex-1 h-[60px]"
+                    style={{
+                      background: isReady ? '#39FF14' : 'rgba(255,255,255,0.05)',
+                      color: isReady ? '#000' : 'rgba(255,255,255,0.3)',
+                      boxShadow: isReady && !isPublishing ? '0 0 30px rgba(57,255,20,0.3)' : 'none',
+                    }}
                  >
-                     {isReady ? (isDraftMode ? <><Check size={20} strokeWidth={3} /> DAVETLERİ GÖNDER & MAÇI YAYINLA</> : <><Check size={20} strokeWidth={3} /> YAYINLA & DAVET ET</>) : 'YAYINLA & DAVET ET'}
-                 </motion.button>
+                     {isReady ? (isDraftMode ? 'DAVETLERİ GÖNDER & MAÇI YAYINLA' : 'YAYINLA & DAVET ET') : 'YAYINLA & DAVET ET'}
+                 </AnimatedButton>
              </div>
           </div>
       </div>
@@ -2597,7 +2480,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
 
       </AnimatePresence>
-    </div>
+    </PageLayout>
   );
 };
 

@@ -168,6 +168,7 @@ export interface Player {
   y: number; // Percentage 0-100
   paymentStatus?: 'PAID' | 'PENDING' | 'UNPAID'; // New for Match Lobby
   instruction?: string;
+  style?: string;
 }
 
 export interface PlayerCard {
