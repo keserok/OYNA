@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pitch, Match, AppView } from '../types';
+import { Pitch, Match, AppView, PositionSlot, Player } from '../types';
 import { useAppStore } from '../store';
 
 export const FORMATS = [
@@ -12,7 +12,7 @@ export const FORMATS = [
   { v: '9v9', label: '9v9', players: 18, popular: false },
   { v: '10v10', label: '10v10', players: 20, popular: false },
   { v: '11v11', label: '11v11', players: 22, popular: false },
-] as const;
+];
 
 export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'BUDGET' | 'PLAYER_PICKER' | 'SUPPORT' | 'NONE'>('NONE');
@@ -172,7 +172,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   };
 
   const calculatedBudget = useMemo(() => {
-    return selectedPitch ? Math.round(selectedPitch.price / (perTeam * 2)) : 0;
+    return selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
   }, [selectedPitch, perTeam]);
 
   const costPerPerson = calculatedBudget;
@@ -203,25 +203,25 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             { role: 'STP', count: 1 },
             { role: 'ORT', count: 1 }
         ],
-        slots: pitchSlots.map(slot => {
-            const baseSlot: any = {
+        slots: pitchSlots.map((slot): PositionSlot => {
+            const baseSlot: PositionSlot = {
                 id: slot.id,
                 role: slot.role,
                 x: slot.x,
                 y: slot.y,
-                status: slot.player ? 'TAKEN' as const : 'OPEN' as const,
+                status: slot.player ? 'TAKEN' : 'OPEN',
             };
             if (slot.player) {
                 baseSlot.player = {
                     id: slot.player.id,
                     name: slot.player.name,
                     avatar: slot.player.avatar,
-                    style: 'Bitirici' as any,
+                    style: 'Bitirici',
                     rating: 4.8,
                     position: slot.role,
                     x: slot.x,
                     y: slot.y,
-                    paymentStatus: slot.player.status === 'CONFIRMED' ? 'PAID' as const : 'PENDING' as const
+                    paymentStatus: slot.player.status === 'CONFIRMED' ? 'PAID' : 'PENDING'
                 };
             }
             return baseSlot;

@@ -1968,83 +1968,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                  <AnimatedButton 
                     onClick={async () => {
                         if(isReady) {
-                            const matchData = {
-                                id: 'm_' + Math.random().toString(36).substr(2, 9),
-                                title: `${selectedPitch?.name || 'Saha'} Maçı`,
-                                location: selectedPitch?.district || 'Belirtilmedi',
-                                time: selectedTimeSlot?.time || '',
-                                date: selectedTimeSlot?.date || '',
-                                price: costPerPerson,
-                                difficulty: (dna.mentality === 'ciddi' ? 'Ciddi' : dna.mentality === 'taktiksel' ? 'Taktiksel' : 'Rahat') as 'Ciddi' | 'Taktiksel' | 'Rahat',
-                                format: format.v,
-                                duration: dna.duration,
-                                gender: dna.gender,
-                                ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age,
-                                minRating: 4.0,
-                                image: selectedPitch?.image || 'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
-                                badges: ['Fair Play Vurgulu', `${format.label}`],
-                                communityId: 'c1',
-                                missingPositions: [
-                                    { role: 'STP', count: 1 },
-                                    { role: 'ORT', count: 1 }
-                                ],
-                                slots: pitchSlots.map(slot => {
-                                    const baseSlot: any = {
-                                        id: slot.id,
-                                        role: slot.role,
-                                        x: slot.x,
-                                        y: slot.y,
-                                        status: slot.player ? 'TAKEN' as const : 'OPEN' as const,
-                                    };
-                                    if (slot.player) {
-                                        baseSlot.player = {
-                                            id: slot.player.id,
-                                            name: slot.player.name,
-                                            avatar: slot.player.avatar,
-                                            style: 'Bitirici' as any,
-                                            rating: 4.8,
-                                            position: slot.role,
-                                            x: slot.x,
-                                            y: slot.y,
-                                            paymentStatus: slot.player.status === 'CONFIRMED' ? 'PAID' as const : 'PENDING' as const
-                                        };
-                                    }
-                                    return baseSlot;
-                                })
-                            };
-                            try {
-                                setIsPublishing(true);
-                                if (isDraftMode && draftMatch) {
-                                    await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age });
-                                    setActiveDraftId(null);
-                                } else {
-                                    await addMatch(matchData);
-                                }
-                                
-                                // Add user notifications for pending players
-                                pitchSlots.forEach(slot => {
-                                    if (slot.player && slot.player.status === 'PENDING') {
-                                        addUserNotification({
-                                            id: Math.random().toString(),
-                                            type: 'INVITE',
-                                            title: 'Maç Daveti ⚽',
-                                            desc: `${selectedPitch?.name || 'Saha'} maçı için kadroya davet edildin!`,
-                                            time: 'Az önce',
-                                            iconName: 'Trophy',
-                                            color: 'bg-yellow-500',
-                                            textColor: 'text-yellow-500'
-                                        });
-                                        incrementUnreadNotifications();
-                                    }
-                                });
-                                
-                                onNavigate('MATCH_DISCOVERY');
-                            } catch(err) {
-                                console.error("Maç yayınlanamadı:", err);
-                                alert("Maç yayınlanırken bir hata oluştu!");
-                            } finally {
-                                setIsPublishing(false);
-                            }
+                            await publishMatch();
                         } else {
                             setActiveSheet('PITCH');
                         }
@@ -2093,7 +2017,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        {FORMATS.map(f => (
                          <button
                            key={f.v}
-                           onClick={() => setFormat(f)}
+                           onClick={() => setFormat(f as any)}
                            className={`shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
                              format.v === f.v 
                                ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
