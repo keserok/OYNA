@@ -11,6 +11,76 @@ import { supabase } from './supabaseClient';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
 
+const MOCK_TACTICS = [
+  {
+    id: 'mock_tactic_1',
+    teamId: 't1',
+    name: 'Ataç / Plan A',
+    formation: '2-3-1',
+    size: '7v7',
+    status: 'APPROVED',
+    priority: 0,
+    slots: JSON.stringify([
+      { id: 's1', x: 50, y: 90, role: 'GK', player: { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', rating: 4.6 } },
+      { id: 's2', x: 30, y: 75, role: 'DEF', player: { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', rating: 4.3 } },
+      { id: 's3', x: 70, y: 75, role: 'DEF', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', rating: 4.1 } },
+      { id: 's4', x: 50, y: 45, role: 'MID' },
+      { id: 's5', x: 25, y: 30, role: 'MID' },
+      { id: 's6', x: 75, y: 30, role: 'MID' },
+      { id: 's7', x: 50, y: 15, role: 'FWD' }
+    ]),
+    subs: '[]',
+    opponents: '[]',
+    drawings: '[]',
+    notes: 'Hücum ağırlıklı pres planı.'
+  },
+  {
+    id: 'mock_tactic_2',
+    teamId: 't1',
+    name: 'Plan B / Defans',
+    formation: '3-2-1',
+    size: '7v7',
+    status: 'APPROVED',
+    priority: 1,
+    slots: JSON.stringify([
+      { id: 's1', x: 50, y: 90, role: 'GK', player: { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', rating: 4.6 } },
+      { id: 's2', x: 20, y: 75, role: 'DEF', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', rating: 4.1 } },
+      { id: 's3', x: 50, y: 80, role: 'DEF', player: { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', rating: 4.3 } },
+      { id: 's4', x: 80, y: 75, role: 'DEF' },
+      { id: 's5', x: 35, y: 50, role: 'MID' },
+      { id: 's6', x: 65, y: 50, role: 'MID' },
+      { id: 's7', x: 50, y: 20, role: 'FWD' }
+    ]),
+    subs: '[]',
+    opponents: '[]',
+    drawings: '[]',
+    notes: 'Skoru korumak için savunma hattı.'
+  },
+  {
+    id: 'mock_tactic_3',
+    teamId: 't1',
+    name: 'Ahmetin Önerisi',
+    formation: '2-3-1',
+    size: '7v7',
+    status: 'PENDING_APPROVAL',
+    proposedBy: 'u2',
+    teamName: 'Ahmet K.',
+    slots: JSON.stringify([
+      { id: 's1', x: 50, y: 90, role: 'GK', player: { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', rating: 4.6 } },
+      { id: 's2', x: 30, y: 75, role: 'DEF', player: { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', rating: 4.3 } },
+      { id: 's3', x: 70, y: 75, role: 'DEF', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', rating: 4.1 } },
+      { id: 's4', x: 50, y: 35, role: 'MID' },
+      { id: 's5', x: 20, y: 40, role: 'MID' },
+      { id: 's6', x: 80, y: 40, role: 'MID' },
+      { id: 's7', x: 50, y: 15, role: 'FWD' }
+    ]),
+    subs: '[]',
+    opponents: '[]',
+    drawings: '[]',
+    notes: 'Orta sahada pas trafiği kurarak rakibi çözme planı.'
+  }
+];
+
 export interface Friend {
   id: string;
   name: string;
@@ -205,6 +275,13 @@ interface AppState {
   // ─── Studio Transfer ─────────────────────────────────────────────
   activeStudioTeam: Team | null;
   setActiveStudioTeam: (team: Team | null) => void;
+  teamTactics: any[];
+  fetchTeamTactics: (teamId: string) => Promise<void>;
+  proposeTactic: (tacticData: any) => Promise<any>;
+  approveTactic: (tacticId: string) => Promise<any>;
+  rejectTactic: (tacticId: string) => Promise<void>;
+  updateTacticPriorities: (teamId: string, orderedTacticIds: string[]) => Promise<void>;
+  updateTacticSlots: (tacticId: string, slots: any) => void;
 
   // ─── Opponent Finder Ads ─────────────────────────────────────────
   opponentAds: Team[];
@@ -352,7 +429,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         withTimeout(FB.fbGetMatches()),
         withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
-        withTimeout(supabase.from('texts').select('key, value')),
+        withTimeout<any>(Promise.resolve(supabase.from('texts').select('key, value'))),
       ]);
 
       if (pitchesRes.status === 'fulfilled' && pitchesRes.value) {
@@ -364,8 +441,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (teamsRes.status === 'fulfilled' && teamsRes.value) {
         set({ adminTeams: teamsRes.value as Team[] });
       }
-      if (textsRes.status === 'fulfilled' && textsRes.value && !textsRes.value.error) {
-        const rows = textsRes.value.data as Array<{ key: string; value: string }> | null;
+      if (textsRes.status === 'fulfilled' && textsRes.value && !(textsRes.value as any).error) {
+        const rows = (textsRes.value as any).data as Array<{ key: string; value: string }> | null;
         if (rows?.length) {
           const map: Record<string, string> = {};
           rows.forEach((row) => { map[row.key] = row.value; });
@@ -613,6 +690,147 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Studio Transfer
   activeStudioTeam: null,
   setActiveStudioTeam: (team) => set({ activeStudioTeam: team }),
+  teamTactics: [],
+  fetchTeamTactics: async (teamId) => {
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      const mocks = MOCK_TACTICS.filter(t => t.teamId === teamId);
+      const current = get().teamTactics;
+      if (current.length === 0 || !current.some(c => c.teamId === teamId)) {
+        set({ teamTactics: mocks });
+      }
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('tactics')
+        .select('*')
+        .eq('teamId', teamId)
+        .order('priority', { ascending: true });
+      if (error) throw error;
+      set({ teamTactics: data || [] });
+    } catch (err) {
+      console.error('fetchTeamTactics failed:', err);
+    }
+  },
+  proposeTactic: async (tacticData) => {
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      const newMock = {
+        ...tacticData,
+        id: `mock_${Date.now()}`,
+        status: 'PENDING_APPROVAL',
+        priority: get().teamTactics.filter(t => t.status === 'APPROVED').length,
+        createdAt: new Date().toISOString()
+      };
+      set(state => ({ teamTactics: [...state.teamTactics, newMock] }));
+      return newMock;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('tactics')
+        .insert({
+          ...tacticData,
+          status: 'PENDING_APPROVAL',
+          createdAt: new Date().toISOString()
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      set(state => ({ teamTactics: [...state.teamTactics, data] }));
+      return data;
+    } catch (err) {
+      console.error('proposeTactic failed:', err);
+      throw err;
+    }
+  },
+  approveTactic: async (tacticId) => {
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      set(state => ({
+        teamTactics: state.teamTactics.map(t => t.id === tacticId ? { ...t, status: 'APPROVED' } : t)
+      }));
+      return get().teamTactics.find(t => t.id === tacticId);
+    }
+    try {
+      const { data, error } = await supabase
+        .from('tactics')
+        .update({ status: 'APPROVED' })
+        .eq('id', tacticId)
+        .select()
+        .single();
+      if (error) throw error;
+      set(state => ({
+        teamTactics: state.teamTactics.map(t => t.id === tacticId ? data : t)
+      }));
+      return data;
+    } catch (err) {
+      console.error('approveTactic failed:', err);
+      throw err;
+    }
+  },
+  rejectTactic: async (tacticId) => {
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      set(state => ({
+        teamTactics: state.teamTactics.filter(t => t.id !== tacticId)
+      }));
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('tactics')
+        .delete()
+        .eq('id', tacticId);
+      if (error) throw error;
+      set(state => ({
+        teamTactics: state.teamTactics.filter(t => t.id !== tacticId)
+      }));
+    } catch (err) {
+      console.error('rejectTactic failed:', err);
+      throw err;
+    }
+  },
+  updateTacticPriorities: async (teamId, orderedTacticIds) => {
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      set(state => {
+        const reordered = state.teamTactics.map(t => {
+          const idx = orderedTacticIds.indexOf(t.id);
+          if (idx !== -1) {
+            return { ...t, priority: idx };
+          }
+          return t;
+        });
+        reordered.sort((a, b) => (a.priority ?? 9999) - (b.priority ?? 9999));
+        return { teamTactics: reordered };
+      });
+      return;
+    }
+    try {
+      const updates = orderedTacticIds.map((id, index) => 
+        supabase.from('tactics').update({ priority: index }).eq('id', id)
+      );
+      await Promise.all(updates);
+      set(state => {
+        const reordered = [...state.teamTactics];
+        reordered.sort((a, b) => {
+          const idxA = orderedTacticIds.indexOf(a.id);
+          const idxB = orderedTacticIds.indexOf(b.id);
+          return (idxA !== -1 ? idxA : 9999) - (idxB !== -1 ? idxB : 9999);
+        });
+        return { teamTactics: reordered };
+      });
+    } catch (err) {
+      console.error('updateTacticPriorities failed:', err);
+    }
+  },
+  updateTacticSlots: (tacticId, slots) => {
+    const slotsStr = typeof slots === 'string' ? slots : JSON.stringify(slots);
+    set(state => ({
+      teamTactics: state.teamTactics.map(t => t.id === tacticId ? { ...t, slots: slotsStr } : t)
+    }));
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      Promise.resolve(supabase.from('tactics').update({ slots: slotsStr }).eq('id', tacticId)).catch(err => {
+        console.error('Failed to sync tactic slots to DB:', err);
+      });
+    }
+  },
 
   // Opponent Ads
   opponentAds: [],

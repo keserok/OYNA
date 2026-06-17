@@ -1,12 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users } from 'lucide-react';
-import { Player, AppView } from '../types';
-import { getTeamRolesAndInstructions, updateTeamRolesAndInstructions, sbRemovePlayerFromTeam } from '../supabaseClient';
+import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users, Zap, Layout, GripHorizontal } from 'lucide-react';
+import { Player, AppView, UserRole } from '../types';
+import { getTeamRolesAndInstructions, updateTeamRolesAndInstructions, sbRemovePlayerFromTeam, supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { withDefaultPositions } from '../services/teamService';
-
-
+import { auth } from '../supabaseAuth';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 interface MyTeamProps {
     onBack: () => void;
     onNavigate: (view: AppView) => void;
@@ -18,39 +18,96 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
     const activeTeam = myTeams.find(t => t.id === activeTeamId) ?? myTeams[0] ?? null;
 
+    const teamTactics = useAppStore(s => s.teamTactics);
+    const fetchTeamTactics = useAppStore(s => s.fetchTeamTactics);
+    const approveTactic = useAppStore(s => s.approveTactic);
+    const rejectTactic = useAppStore(s => s.rejectTactic);
+    const updateTacticPriorities = useAppStore(s => s.updateTacticPriorities);
+    const updateTacticSlots = useAppStore(s => s.updateTacticSlots);
+    const setActiveStudioTeam = useAppStore(s => s.setActiveStudioTeam);
+    const role = useAppStore(s => s.role);
+
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+    const isCaptain = activeTeam 
+        ? (auth.currentUser 
+            ? activeTeam.captain === auth.currentUser.uid 
+            : role === UserRole.CAPTAIN) 
+        : false;
+
+    const activeApprovedTactics = teamTactics.filter((t: any) => t.status === 'APPROVED');
+    const [selectedTacticId, setSelectedTacticId] = useState<string | null>(null);
+
     const [roster, setRoster] = useState<Player[]>([]);
     const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const pitchRef = useRef<HTMLDivElement>(null);
 
-    // Aktif takım değişince kadroyu kur, Supabase'den pozisyon/talimatları yükle
+    // Aktif takım değişince taktikleri yükle
     useEffect(() => {
-        if (!activeTeam) { setRoster([]); return; }
-        const baseRoster = withDefaultPositions(activeTeam.roster || []);
-        setRoster(baseRoster);
-
-        const loadSupabaseData = async () => {
-            const savedRoles = await getTeamRolesAndInstructions(activeTeam.id);
-            if (savedRoles) {
-                setRoster(prev => prev.map(p => {
-                    const saved = savedRoles[p.id];
-                    if (saved) {
-                        return {
-                            ...p,
-                            x: saved.x ?? p.x,
-                            y: saved.y ?? p.y,
-                            position: saved.position ?? p.position,
-                            instruction: saved.instruction ?? p.instruction
-                        };
-                    }
-                    return p;
-                }));
-            }
-        };
-        loadSupabaseData();
+        if (activeTeam) {
+            fetchTeamTactics(activeTeam.id);
+            setSelectedTacticId(null);
+        }
     }, [activeTeam?.id]);
 
-    // Supabase'de pozisyonları ve talimatları güncelle
+    const currentTactic = activeApprovedTactics.find((t: any) => t.id === selectedTacticId) || activeApprovedTactics[0] || null;
+
+    // Aktif takım değişince veya taktik değişince kadroyu kur
+    useEffect(() => {
+        if (!activeTeam) { setRoster([]); return; }
+        
+        const allTeamPlayers = activeTeam.roster || [];
+        if (currentTactic) {
+            const slots = typeof currentTactic.slots === 'string' ? JSON.parse(currentTactic.slots) : currentTactic.slots;
+            
+            const mergedRoster = allTeamPlayers.map(p => {
+                const slot = (slots || []).find((s: any) => s.player && s.player.id === p.id);
+                if (slot) {
+                    return {
+                        ...p,
+                        position: slot.role,
+                        x: slot.x,
+                        y: slot.y,
+                        instruction: slot.instruction || ''
+                    };
+                } else {
+                    return {
+                        ...p,
+                        position: 'YEDEK',
+                        x: -999,
+                        y: -999,
+                        instruction: ''
+                    };
+                }
+            });
+            setRoster(mergedRoster);
+        } else {
+            const baseRoster = withDefaultPositions(allTeamPlayers);
+            setRoster(baseRoster);
+
+            const loadSupabaseData = async () => {
+                const savedRoles = await getTeamRolesAndInstructions(activeTeam.id);
+                if (savedRoles) {
+                    setRoster(prev => prev.map(p => {
+                        const saved = savedRoles[p.id];
+                        if (saved) {
+                            return {
+                                ...p,
+                                x: saved.x ?? p.x,
+                                y: saved.y ?? p.y,
+                                position: saved.position ?? p.position,
+                                instruction: saved.instruction ?? p.instruction
+                            };
+                        }
+                        return p;
+                    }));
+                }
+            };
+            loadSupabaseData();
+        }
+    }, [activeTeam?.id, currentTactic?.id]);
+
+    // Supabase'de pozisyonları ve talimatları güncelle (Fallback)
     const saveRosterToSupabase = async (currentRoster: Player[]) => {
         if (!activeTeam) return;
         const teamRolesObj: Record<string, any> = {};
@@ -63,6 +120,11 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
             };
         });
         await updateTeamRolesAndInstructions(activeTeam.id, teamRolesObj);
+    };
+
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
     };
 
     // Formation Presets
@@ -85,7 +147,20 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
             newRoster[5].x = 80; newRoster[5].y = 80; // RB
         }
         setRoster(newRoster);
-        await saveRosterToSupabase(newRoster);
+        if (currentTactic) {
+            const slots = typeof currentTactic.slots === 'string' ? JSON.parse(currentTactic.slots) : currentTactic.slots;
+            const updatedSlots = slots.map((s: any) => {
+                const rosterPlayer = newRoster.find(p => p.id === s.player?.id);
+                if (rosterPlayer) {
+                    return { ...s, x: rosterPlayer.x, y: rosterPlayer.y };
+                }
+                return s;
+            });
+            updateTacticSlots(currentTactic.id, updatedSlots);
+            showToast("Taktik dizilişi güncellendi!");
+        } else {
+            await saveRosterToSupabase(newRoster);
+        }
     };
 
     const rafRef = useRef<number | null>(null);
@@ -111,23 +186,56 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const handlePointerUp = async () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setDraggedPlayer(null);
-        await saveRosterToSupabase(roster);
+        if (currentTactic) {
+            const slots = typeof currentTactic.slots === 'string' ? JSON.parse(currentTactic.slots) : currentTactic.slots;
+            const updatedSlots = slots.map((s: any) => {
+                const rosterPlayer = roster.find(p => p.id === s.player?.id);
+                if (rosterPlayer) {
+                    return { ...s, x: rosterPlayer.x, y: rosterPlayer.y };
+                }
+                return s;
+            });
+            updateTacticSlots(currentTactic.id, updatedSlots);
+        } else {
+            await saveRosterToSupabase(roster);
+        }
     };
 
     const removePlayer = async (id: string) => {
         if (!activeTeam) return;
         const nextRoster = roster.filter(p => p.id !== id);
         setRoster(nextRoster);
-        // Supabase'den kadrodan çıkar
         await sbRemovePlayerFromTeam(activeTeam.id, id);
-        // Yeni kadro rollerini Supabase'de güncelle
-        await saveRosterToSupabase(nextRoster);
+        if (currentTactic) {
+            const slots = typeof currentTactic.slots === 'string' ? JSON.parse(currentTactic.slots) : currentTactic.slots;
+            const updatedSlots = slots.map((s: any) => {
+                if (s.player && s.player.id === id) {
+                    return { ...s, player: undefined };
+                }
+                return s;
+            });
+            updateTacticSlots(currentTactic.id, updatedSlots);
+        } else {
+            await saveRosterToSupabase(nextRoster);
+        }
     };
 
     const handleSetInstruction = async (playerId: string, instruction: string) => {
         const nextRoster = roster.map(p => p.id === playerId ? { ...p, instruction } : p);
         setRoster(nextRoster);
-        await saveRosterToSupabase(nextRoster);
+        if (currentTactic) {
+            const slots = typeof currentTactic.slots === 'string' ? JSON.parse(currentTactic.slots) : currentTactic.slots;
+            const updatedSlots = slots.map((s: any) => {
+                if (s.player && s.player.id === playerId) {
+                    return { ...s, instruction };
+                }
+                return s;
+            });
+            updateTacticSlots(currentTactic.id, updatedSlots);
+            showToast("Oyuncu talimatı güncellendi!");
+        } else {
+            await saveRosterToSupabase(nextRoster);
+        }
     };
 
     // ─── Boş durum: henüz takım yok ───────────────────────────────────────
@@ -205,6 +313,71 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     </button>
                 </div>
 
+                {/* Playbook Taktik Sekmeleri */}
+                {activeApprovedTactics.length > 0 && (
+                    <section className="space-y-2">
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <Layout size={12} className="text-[#39FF14]" /> TAKTİK KİTAPÇIĞI
+                            </span>
+                            {isCaptain && (
+                                <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Sürükleyip Sırala</span>
+                            )}
+                        </div>
+                        
+                        {isCaptain ? (
+                            <Reorder.Group
+                                axis="x"
+                                values={activeApprovedTactics}
+                                onReorder={(ordered) => {
+                                    updateTacticPriorities(activeTeam.id, ordered.map((t: any) => t.id));
+                                }}
+                                className="flex gap-2 overflow-x-auto no-scrollbar pb-1"
+                            >
+                                {activeApprovedTactics.map((tactic) => {
+                                    const isActive = selectedTacticId === tactic.id || (!selectedTacticId && activeApprovedTactics[0]?.id === tactic.id);
+                                    return (
+                                        <Reorder.Item
+                                            key={tactic.id}
+                                            value={tactic}
+                                            dragConstraints={{ top: 0, bottom: 0 }}
+                                            dragElastic={0.1}
+                                            onClick={() => setSelectedTacticId(tactic.id)}
+                                            className={`shrink-0 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all cursor-grab active:cursor-grabbing flex items-center gap-1.5 ${
+                                                isActive
+                                                    ? 'bg-gradient-to-r from-[#39FF14]/20 to-[#39FF14]/5 border-[#39FF14] text-white shadow-[0_0_15px_rgba(57,255,20,0.15)]'
+                                                    : 'bg-[#161B22] text-gray-400 border-white/5 hover:border-white/20'
+                                            }`}
+                                        >
+                                            <GripHorizontal size={10} className="text-gray-600" />
+                                            {tactic.name}
+                                        </Reorder.Item>
+                                    );
+                                })}
+                            </Reorder.Group>
+                        ) : (
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                {activeApprovedTactics.map((tactic) => {
+                                    const isActive = selectedTacticId === tactic.id || (!selectedTacticId && activeApprovedTactics[0]?.id === tactic.id);
+                                    return (
+                                        <button
+                                            key={tactic.id}
+                                            onClick={() => setSelectedTacticId(tactic.id)}
+                                            className={`shrink-0 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 ${
+                                                isActive
+                                                    ? 'bg-gradient-to-r from-[#39FF14]/20 to-[#39FF14]/5 border-[#39FF14] text-white shadow-[0_0_15px_rgba(57,255,20,0.15)]'
+                                                    : 'bg-[#161B22] text-gray-400 border-white/5 hover:border-white/20'
+                                            }`}
+                                        >
+                                            {tactic.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+                )}
+
                 {/* Pitch Area */}
                 <section>
                     {/* Controls */}
@@ -217,6 +390,16 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                 3-2-1
                             </button>
                         </div>
+                        
+                        <button
+                            onClick={() => {
+                                setActiveStudioTeam(activeTeam);
+                                onNavigate('STUDIO');
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-lg text-xs font-black text-black uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(57,255,20,0.15)] animate-pulse"
+                        >
+                            <Zap size={12} /> {isCaptain ? "Taktik Stüdyo" : "Taktik Öner"}
+                        </button>
                     </div>
 
                     {/* Tactical Board */}
@@ -271,7 +454,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                         </div>
 
                         {/* Draggable Players */}
-                        {roster.map((player) => (
+                        {roster.filter(player => player.x !== -999).map((player) => (
                             <div
                                 key={player.id}
                                 className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing active:scale-110 transition-transform"
@@ -315,6 +498,103 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                         <span className="text-[9px] text-gray-500 uppercase font-bold">Oyuncu</span>
                     </div>
                 </section>
+
+                {/* Önerilen Taktikler (Sadece Kaptana Görünür) */}
+                {isCaptain && teamTactics.some(t => t.status === 'PENDING_APPROVAL') && (
+                    <section className="bg-gradient-to-r from-yellow-500/10 to-amber-600/10 border border-yellow-500/20 rounded-[32px] p-5 space-y-3 shadow-[0_0_20px_rgba(245,158,11,0.05)]">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Zap className="text-yellow-400 animate-pulse" size={18} />
+                            <h3 className="font-black text-white text-sm uppercase tracking-wider">Taktik Önerileri</h3>
+                        </div>
+                        <div className="space-y-3">
+                            {teamTactics.filter(t => t.status === 'PENDING_APPROVAL').map((tactic) => (
+                                <div key={tactic.id} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-bold text-white text-sm">{tactic.name}</h4>
+                                            <p className="text-[10px] text-gray-400 mt-0.5">Formasyon: <span className="text-[#39FF14] font-bold">{tactic.formation}</span> • Öneren: <span className="text-white font-bold">{tactic.teamName || 'Oyuncu'}</span></p>
+                                        </div>
+                                        <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-[8px] font-black uppercase tracking-widest">Beklemede</span>
+                                    </div>
+                                    {tactic.notes && (
+                                        <p className="text-[11px] text-gray-400 italic bg-white/5 p-2 rounded-lg">"{tactic.notes}"</p>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => {
+                                                setActiveStudioTeam(activeTeam);
+                                                onNavigate('STUDIO');
+                                            }}
+                                            className="flex-1 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-white uppercase hover:bg-white/10 transition-colors"
+                                        >
+                                            Stüdyo'da İncele
+                                        </button>
+                                        <button 
+                                            onClick={async () => {
+                                                await approveTactic(tactic.id);
+                                                showToast("Taktik onaylandı ve taktik kitapçığına eklendi!");
+                                            }}
+                                            className="px-4 py-2 bg-[#39FF14] rounded-xl text-[10px] font-black text-black uppercase hover:bg-green-400 transition-colors"
+                                        >
+                                            Onayla
+                                        </button>
+                                        <button 
+                                            onClick={async () => {
+                                                if (confirm("Bu taktik önerisini reddetmek istediğinize emin misiniz?")) {
+                                                    await rejectTactic(tactic.id);
+                                                    showToast("Taktik önerisi reddedildi.", "error");
+                                                }
+                                            }}
+                                            className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* Gönderdiğin Öneriler (Oyuncular İçin) */}
+                {!isCaptain && teamTactics.some(t => t.status === 'PENDING_APPROVAL' && t.proposedBy === (auth.currentUser?.uid || 'guest')) && (
+                    <section className="bg-white/5 border border-white/5 rounded-[32px] p-5 space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Activity className="text-yellow-400" size={18} />
+                            <h3 className="font-black text-white text-sm uppercase tracking-wider">Gönderdiğin Öneriler</h3>
+                        </div>
+                        <div className="space-y-2">
+                            {teamTactics.filter(t => t.status === 'PENDING_APPROVAL' && t.proposedBy === (auth.currentUser?.uid || 'guest')).map((tactic) => (
+                                <div key={tactic.id} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                    <div>
+                                        <h4 className="font-bold text-white text-xs">{tactic.name}</h4>
+                                        <p className="text-[9px] text-gray-500 mt-0.5">Kaptan onayı bekleniyor...</p>
+                                    </div>
+                                    <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-[8px] font-bold uppercase tracking-wider">Beklemede</span>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* Local Toast Notification */}
+                <AnimatePresence>
+                    {toast && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                            className={`fixed bottom-24 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest z-[100] shadow-2xl flex items-center gap-2 border ${
+                                toast.type === 'error'
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                                    : 'bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14]'
+                            }`}
+                        >
+                            <CheckCircle2 size={14} />
+                            {toast.message}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Roster List & Management */}
                 <section className="bg-[#161B22] border border-white/5 rounded-[32px] p-5">

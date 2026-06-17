@@ -16,7 +16,7 @@ interface MatchDiscoveryProps {
 }
 
 // ── OYUN DNA'SI SEÇENEKLERİ ──
-const BUDGET_OPTIONS = ['Ücretsiz', '150-200₺', '200-250₺', '250-300₺', '300-350₺'];
+const BUDGET_OPTIONS = ['Ücretsiz', '150₺ ve Altı', '150-250₺', '250-350₺', '350₺ ve Üzeri'];
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
 const FORMAT_OPTIONS = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
@@ -66,7 +66,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     age: '',
     gender: '',
     role: '',
-    mentality: ''
+    mentality: '',
+    district: ''
   });
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
@@ -151,7 +152,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   }, [adminMatches, nearbyMatches, userLocation]);
 
   const isFilterActive = useMemo(() => {
-    return !!(dna.format || dna.budget || dna.duration || (dna.age && dna.age !== 'Tümü') || dna.gender || dna.role || dna.mentality);
+    return !!(dna.format || dna.budget || dna.duration || (dna.age && dna.age !== 'Tümü') || dna.gender || dna.role || dna.mentality || dna.district);
   }, [dna]);
 
   const checkMatchFilters = (match: any) => {
@@ -163,16 +164,16 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       if (dna.budget === 'Ücretsiz' && price !== 0) {
         return false;
       }
-      if (dna.budget === '150-200₺' && (price < 150 || price > 200)) {
+      if (dna.budget === '150₺ ve Altı' && (price === 0 || price > 150)) {
         return false;
       }
-      if (dna.budget === '200-250₺' && (price < 200 || price > 250)) {
+      if (dna.budget === '150-250₺' && (price < 150 || price > 250)) {
         return false;
       }
-      if (dna.budget === '250-300₺' && (price < 250 || price > 300)) {
+      if (dna.budget === '250-350₺' && (price < 250 || price > 350)) {
         return false;
       }
-      if (dna.budget === '300-350₺' && (price < 300 || price > 350)) {
+      if (dna.budget === '350₺ ve Üzeri' && price < 350) {
         return false;
       }
     }
@@ -198,6 +199,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         return false;
       }
     }
+    if (dna.district && match.location && !match.location.toLowerCase().includes(dna.district.toLowerCase())) {
+      return false;
+    }
     return true;
   };
 
@@ -218,7 +222,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       age: '',
       gender: '',
       role: '',
-      mentality: ''
+      mentality: '',
+      district: ''
     });
   };
 
@@ -275,6 +280,30 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                         }}
                     />
                     <p className="text-[9px] text-white/50 italic">Mevcut konumuna göre <span className="text-white font-bold">{searchRadius} KM</span> çapındaki sahalarda olan maçlar listelenir.</p>
+                  </div>
+                )}
+
+                {/* Bölge (İlçe) Seçimi - Konum Yoksa Alternatif */}
+                {!userLocation && (
+                  <div className="space-y-2 mb-2 p-4 bg-[#161B22] border border-white/5 rounded-2xl">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Arama Bölgesi (İlçe)</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['Tümü', 'Kadıköy', 'Beşiktaş', 'Şişli', 'Ümraniye', 'Ataşehir', 'Bakırköy'].map(dist => (
+                        <button
+                          key={dist}
+                          type="button"
+                          onClick={() => setDna({ ...dna, district: dist === 'Tümü' ? '' : dist })}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
+                            (dist === 'Tümü' && !dna.district) || dna.district === dist
+                              ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]'
+                              : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
+                          }`}
+                        >
+                          {dist.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-white/50 italic">Cihaz konumu bulunamadığı için maçları bölge bazlı filtreleyebilirsiniz.</p>
                   </div>
                 )}
 

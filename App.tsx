@@ -98,6 +98,7 @@ const DEV_MODE =
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
+  const [studioReturnView, setStudioReturnView] = React.useState<AppView>('DASHBOARD');
   const {
     view,
     role,
@@ -453,6 +454,9 @@ const App: React.FC = () => {
             if (newView === 'MARKETPLACE_GK' || newView === 'MARKETPLACE_REF') {
               setMarketplaceReturnView('DASHBOARD');
             }
+            if (newView === 'STUDIO') {
+              setStudioReturnView('DASHBOARD');
+            }
             setView(newView);
           }}
           onBack={() => setView('ROLE_SELECTION')}
@@ -518,9 +522,12 @@ const App: React.FC = () => {
           onViewTicket={() => setView('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
-        return <MyTeam onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <MyTeam onBack={() => setView('DASHBOARD')} onNavigate={(v) => {
+          if (v === 'STUDIO') setStudioReturnView('MY_TEAM');
+          setView(v);
+        }} />;
       case 'STUDIO':
-        return <Studio onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <Studio onBack={() => setView(studioReturnView)} onNavigate={(v) => setView(v)} />;
       case 'PROFILE':
         return <ProfileScreen
           role={role || UserRole.PLAYER}

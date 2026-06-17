@@ -168,7 +168,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [email, setEmail] = useState('');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [otp, setOtp] = useState('');
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState<'send' | 'verify' | 'guest' | 'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -483,6 +483,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                 <LegalModal openModal={openModal} setOpenModal={setOpenModal} />
                 <div className="flex items-start gap-3 mt-4 px-1">
                   <button
+                    id="agreement-checkbox"
                     type="button"
                     onClick={() => setAgreed(!agreed)}
                     className="mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-all outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#161B22]"
@@ -554,6 +555,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
 
                   {/* Misafir girişi */}
                   <AnimatedButton
+                    id="guest-login-button"
                     onClick={handleGuestLogin}
                     disabled={guestDisabled}
                     isLoading={isLoading === 'guest'}

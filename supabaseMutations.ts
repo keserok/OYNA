@@ -30,7 +30,7 @@ const mapProviderToDb = (obj: Record<string, unknown>) => {
   return mapped;
 };
 
-const mapMatchToDb = (match: Record<string, unknown>) => {
+const mapMatchToDb = (match: any) => {
   if (!match) return match;
   const mapped: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(match)) {
