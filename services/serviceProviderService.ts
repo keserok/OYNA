@@ -37,12 +37,21 @@ export const submitServiceApplication = async (
 
   const nowISO = new Date().toISOString();
 
-  // ─── 1. profiles güncelle ──────────────────────────────────────────────────
+  // ─── 1a. Rolü ayarla (RPC — profiles.role/roles admin olmayan UPDATE'lerde
+  // trigger tarafından korunuyor; sadece bu RPC kendi rolünü GOALKEEPER/REFEREE
+  // yapmasına izin veriyor) ──────────────────────────────────────────────────
+  const { error: roleError } = await supabase.rpc('apply_for_provider_role', {
+    p_role: role,
+  });
+  if (roleError) {
+    console.error('[ServiceProvider] rol ayarlama hatası:', roleError);
+    throw new Error('Başvuru kaydedilemedi. Lütfen tekrar dene.');
+  }
+
+  // ─── 1b. Diğer profil alanlarını güncelle ──────────────────────────────────
   const { error: profileError } = await supabase
     .from('profiles')
     .update({
-      role,
-      roles: [role],
       full_name: data.fullName.trim(),
       phone: data.phone,
       verification_status: 'pending',
@@ -56,20 +65,23 @@ export const submitServiceApplication = async (
   }
 
   // ─── 2. Sağlayıcı profilini oluştur / güncelle ─────────────────────────────
+  // NOT: goalkeepers/referees tablolarında kolonlar camelCase (preferredZones,
+  // matchCount, authUid) olarak tanımlı; is_available kolonu yok (pasif/aktif
+  // durumu profiles.verification_status üzerinden yönetiliyor).
   if (role === UserRole.GOALKEEPER) {
     const { error } = await supabase.from('goalkeepers').upsert(
       {
         id: uid,
+        authUid: uid,
         name: data.fullName.trim(),
         height: data.height ?? null,
         age: data.age ?? null,
         fee: data.fee,
         bio: data.bio.trim(),
         style: data.style,
-        preferred_zones: data.preferredZones,
+        preferredZones: data.preferredZones,
         rating: 0,
-        match_count: 0,
-        is_available: false, // onay öncesi pasif
+        matchCount: 0,
       },
       { onConflict: 'id' },
     );
@@ -81,16 +93,15 @@ export const submitServiceApplication = async (
     const { error } = await supabase.from('referees').upsert(
       {
         id: uid,
-        auth_uid: uid,
+        authUid: uid,
         name: data.fullName.trim(),
         level: data.level ?? null,
         fee: data.fee,
         bio: data.bio.trim(),
         style: data.style,
-        preferred_zones: data.preferredZones,
-        match_count: data.experienceYears ?? 0,
+        preferredZones: data.preferredZones,
+        matchCount: data.experienceYears ?? 0,
         rating: 0,
-        is_available: false, // onay öncesi pasif
       },
       { onConflict: 'id' },
     );
