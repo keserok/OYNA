@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, AppView, PlayerCardData } from '../types';
 import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy, Users } from 'lucide-react';
 import { MATCH_HISTORY } from '../constants';
 import { PlayerCard } from '../components/PlayerCard';
 import { useAppStore } from '../store';
 import { motion } from 'framer-motion';
+import { supabase } from '../supabaseClient';
+import { auth } from '../supabaseAuth';
+
+interface RealProfileData {
+    fullName: string;
+    avatarUrl: string;
+    walletBalance: number;
+    trustScore: number;
+    winCount: number;
+    totalMatches: number;
+    playerCard: Partial<PlayerCardData> | null;
+}
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -114,34 +126,68 @@ const MatchBanner: React.FC<{ item: typeof MATCH_HISTORY[0]; isMvp?: boolean; on
     </button>
 );
 
+const ROOKIE_CARD_DATA: PlayerCardData = {
+    overall: 60,
+    tier: 'bronze',
+    isStatsVerified: false,
+    diamondValue: 0,
+    winCount: 0,
+    totalMatches: 0,
+    stats: {
+        pace: { value: 50, videoUrl: null },
+        shooting: { value: 50, videoUrl: null },
+        passing: { value: 50, videoUrl: null },
+        dribbling: { value: 50, videoUrl: null },
+        defense: { value: 50, videoUrl: null },
+        physical: { value: 50, videoUrl: null }
+    }
+};
+
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const [activeFilter, setActiveFilter] = useState<'ALL' | 'WIN' | 'PERFORMANCE' | 'MVP'>('ALL');
+    const [realProfile, setRealProfile] = useState<RealProfileData | null>(null);
     const { globalTexts } = useAppStore();
 
-    const total = MATCH_HISTORY.length;
-    const wins = MATCH_HISTORY.filter(m => m.result === 'WIN').length;
+    useEffect(() => {
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        supabase
+            .from('profiles')
+            .select('full_name, avatar_url, wallet_balance, reliability_score, win_count, total_matches, player_card')
+            .eq('id', uid)
+            .single()
+            .then(({ data, error }) => {
+                if (error || !data) {
+                    console.error('[ProfileScreen] Profil çekme hatası:', error);
+                    return;
+                }
+                setRealProfile({
+                    fullName: data.full_name || 'Oyuncu',
+                    avatarUrl: data.avatar_url || '',
+                    walletBalance: Number(data.wallet_balance ?? 0),
+                    trustScore: Number(data.reliability_score ?? 100),
+                    winCount: Number(data.win_count ?? 0),
+                    totalMatches: Number(data.total_matches ?? 0),
+                    playerCard: (data.player_card && Object.keys(data.player_card).length > 0) ? data.player_card : null,
+                });
+            });
+    }, []);
+
+    // Gerçek maç geçmişi henüz arka uçta tutulmuyor (bkz. Modül 5).
+    // MATCH_HISTORY sadece tasarım/demo amaçlı sabit veridir; gerçek
+    // toplam maç sayısı 0 olan bir kullanıcıya sahte maç listesi gösterilmez.
+    const hasRealMatchHistory = (realProfile?.totalMatches ?? 0) > 0;
+    const total = hasRealMatchHistory ? (realProfile?.totalMatches ?? 0) : 0;
+    const wins = hasRealMatchHistory ? (realProfile?.winCount ?? 0) : 0;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
-    const mockCardData: PlayerCardData = {
-        overall: 88,
-        tier: 'gold',
-        isStatsVerified: true,
-        diamondValue: 75000,
-        winCount: wins,
-        totalMatches: total,
-        stats: {
-            pace: { value: 85, videoUrl: null },
-            shooting: { value: 88, videoUrl: null },
-            passing: { value: 82, videoUrl: null },
-            dribbling: { value: 90, videoUrl: null },
-            defense: { value: 45, videoUrl: null },
-            physical: { value: 78, videoUrl: null }
-        }
-    };
+    const cardData: PlayerCardData = realProfile?.playerCard
+        ? { ...ROOKIE_CARD_DATA, ...realProfile.playerCard, winCount: wins, totalMatches: total }
+        : { ...ROOKIE_CARD_DATA, winCount: wins, totalMatches: total, diamondValue: realProfile ? 0 : ROOKIE_CARD_DATA.diamondValue };
 
     // Filter match history
-    const filteredMatches = MATCH_HISTORY.filter(item => {
+    const filteredMatches = !hasRealMatchHistory ? [] : MATCH_HISTORY.filter(item => {
         if (activeFilter === 'WIN') return item.result === 'WIN';
         if (activeFilter === 'MVP') return item.id === 'm1'; // Simulate m1 as MVP match
         return true; // ALL or PERFORMANCE shows all matches
@@ -185,25 +231,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         >
                             {/* Front */}
                             <div style={{ backfaceVisibility: 'hidden' }}>
-                                <PlayerCard name="Burak Kaptan" photo="/player_card_photo.png" position="OS" cardData={mockCardData} />
+                                <PlayerCard name={realProfile?.fullName || 'Oyuncu'} photo={realProfile?.avatarUrl || '/player_card_photo.png'} position="OS" cardData={cardData} />
                             </div>
                             {/* Back */}
                             <div className="absolute inset-0 w-full" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                                <div style={{ aspectRatio: '2 / 3' }}><CardBack tier={mockCardData.tier} /></div>
+                                <div style={{ aspectRatio: '2 / 3' }}><CardBack tier={cardData.tier} /></div>
                             </div>
                         </motion.div>
-                    </div>
-
-                    {/* Static Info Badges under Card */}
-                    <div className="flex justify-center gap-3 relative z-50">
-                        <div className="px-3 py-1 bg-[#161B22]/80 backdrop-blur-md border border-[#d4a84b]/30 rounded-full flex items-center gap-1.5 shadow-2xl">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-[#c8962a]">Yaş</span>
-                            <span className="text-xs font-black text-[#ffd54f]">26</span>
-                        </div>
-                        <div className="px-3 py-1 bg-[#161B22]/80 backdrop-blur-md border border-[#d4a84b]/30 rounded-full flex items-center gap-1.5 shadow-2xl">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-[#c8962a]">Ayak</span>
-                            <span className="text-xs font-black text-[#ffd54f]">Sağ</span>
-                        </div>
                     </div>
 
                     {/* Quick Stats Grid */}
@@ -221,7 +255,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <div className="text-center flex-1">
                             <div className="flex items-center justify-center gap-1">
                                 <Shield size={16} fill="#39FF14" className="text-[#39FF14]" />
-                                <p className="text-2xl font-black text-[#39FF14] italic">100</p>
+                                <p className="text-2xl font-black text-[#39FF14] italic">{realProfile?.trustScore ?? 100}</p>
                             </div>
                             <p className="text-[8px] text-[#d4a84b] font-black uppercase tracking-widest">Güven</p>
                         </div>
@@ -241,7 +275,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <div className="text-left">
                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">OYNA CÜZDAN</p>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black italic text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">1,250</span>
+                                <span className="text-2xl font-black italic text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{(realProfile?.walletBalance ?? 0).toLocaleString('tr-TR')}</span>
                                 <span className="text-sm font-bold text-[#39FF14]">₺</span>
                             </div>
                         </div>
@@ -334,7 +368,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1.5">MVP SEÇİLDİN</p>
                                 </div>
                             </div>
-                            <span className={`text-4xl font-black italic ${activeFilter === 'MVP' ? 'text-indigo-300' : 'text-indigo-400'}`}>4</span>
+                            <span className={`text-4xl font-black italic ${activeFilter === 'MVP' ? 'text-indigo-300' : 'text-indigo-400'}`}>{hasRealMatchHistory ? MATCH_HISTORY.filter(m => m.id === 'm1').length : 0}</span>
                         </button>
                     </div>
                 </div>

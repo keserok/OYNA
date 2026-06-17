@@ -14,7 +14,7 @@
 |---|-------|--------|-------|
 | 1 | Çekirdek & Açılış Altyapısı | App.tsx, store, types, açılış, Supabase bağlantısı | ✅ Doğrulandı — ÇALIŞIYOR |
 | 2 | Kimlik & Üyelik (Onboarding) | Giriş, kayıt, rol seçimi, doğrulama, konum izni | ✅ İncelendi — 1 kod düzeltildi, 1 DB notu |
-| 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ⬜ Bekliyor |
+| 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ✅ İncelendi — 1 kritik kod düzeltildi, 2 büyük not |
 | 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ⬜ Bekliyor |
 | 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ⬜ Bekliyor |
 | 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ⬜ Bekliyor |
@@ -283,4 +283,100 @@ Roller: PLAYER, CAPTAIN, GOALKEEPER, REFEREE, OWNER, COMMUNITY_ADMIN, SUPER_ADMI
       eklendi. Canlı DB'ye uygulandı ve `migrations/20260617000000_align_profiles_role_constraints.sql`
       olarak repoya kaydedildi. Doğrulandı: her iki kısıt da 9 rolü kapsıyor. ✅
 - [ ] "Misafir" akışının kapsamı netleştirilsin (salt görüntüleme mi, yoksa kaldırılsın mı).
+
+---
+
+## ✅ Modül 3 — Oyuncu Profili & Oyunlaştırma (Tamamlandı)
+
+**1) Ne işe yarar?**
+Oyuncunun kendi kimlik ekranı: FIFA tarzı oyuncu kartı (güç puanı, nitelikler), cüzdan
+bakiyesi kısayolu, takımlarım kısayolu, maç/galibiyet/güven özeti ve geçmiş maç listesi.
+Ayrıca "Çaylak Vitrini" (yeni kullanıcı kartı tanıtım ekranı) ve "Liderlik Tablosu" bu
+modülde.
+
+**2) Hangi dosyalar?**
+`ProfileScreen.tsx`, `RookieShowcase.tsx`, `Leaderboards.tsx`, `FifaCard.tsx` (admin
+düzenleme önizlemesinde kullanılıyor), `PlayerCard.tsx`, `RookiePlayerCard.tsx`,
+`services/userService.ts`, `utils/avatarHelper.ts`. (`services/profileAdapter.ts`
+incelemede bulundu ve **silindi** — bkz. madde 5.)
+
+**3) Nasıl çalışıyor?**
+- **ProfileScreen:** Kart önü/arkası 3D çevirme animasyonu, cüzdan/takım kısayolları,
+  filtrelenebilir maç geçmişi listesi.
+- **RookieShowcase:** Yeni oyunculara "Elmas/Karat" sistemini tanıtan statik bir
+  vitrin ekranı (sabit demo verisiyle — bu doğru, çünkü amacı ürün tanıtımı).
+- **Leaderboards:** Takım/oyuncu sıralaması, TP/Fair Play/Gol kategorileri, podyum
+  animasyonu.
+
+**4) Veri & bağlantı**
+`profiles` tablosu — canlı veritabanı şeması incelendi (`execute_sql` ile gerçek sütun
+listesi çekildi). Önemli bulgu: tablo **iki paralel sütun seti** içeriyor (muhtemelen
+geçmişteki Firebase→Supabase geçişinden kalma):
+- **Güncel/aktif kullanılan:** `full_name`, `wallet_balance`, `is_verified`, `is_banned`,
+  `stats` (jsonb), `verification_status`, `avatar_url`. Bunlar `App.tsx` ve
+  `supabaseMutations.ts`'teki gerçek admin yazma akışı tarafından kullanılıyor.
+- **Eski/kullanılmayan kopyalar:** `name`, `wallet`, `rating`, `match_count`,
+  `reliability_score`, `skill_rating`, `trust_score`, `win_count`, `total_matches`,
+  `diamonds`, `oyna_id`, `friends`, `communities`, `is_looking_for_team`, `player_card`.
+  Bu sütunlar DB'de var ve gerçek isimlendirmeyle (`win_count`, `total_matches`,
+  `player_card`, `diamonds`) **Modül 3'ün ihtiyaç duyduğu tam alanlar** — ama hiçbir
+  aktif kod yolu bunlara yazmıyordu (yalnızca silinen `profileAdapter.ts` bunlara
+  yazmaya çalışıyordu, o da hiçbir yerden çağrılmıyordu).
+
+**5) Durum tespiti**
+- 🔧 **DÜZELTİLDİ (kritik kod hatası):** `ProfileScreen.tsx` giriş yapan kullanıcının
+  gerçek verisini **hiç çekmiyordu**. İsim ("Burak Kaptan"), fotoğraf, yaş (26), ayak
+  tercihi ("Sağ"), cüzdan bakiyesi ("1.250 ₺"), güven puanı ("100") ve kart gücü (88
+  overall, altın seviye) **tamamen sabit/sahte değerlerdi** — uygulamaya giren **her
+  kullanıcı, kendi profilinde aynı sahte oyuncuyu görüyordu.** Bu, ürünün en temel kimlik
+  ekranında ciddi bir güven ve doğruluk sorunuydu.
+  **Yapılan düzeltme:** Ekran artık `profiles` tablosundan gerçek `full_name`,
+  `avatar_url`, `wallet_balance`, `reliability_score`, `win_count`, `total_matches`,
+  `player_card` değerlerini çekiyor. Sahte yaş/ayak rozetleri kaldırıldı (hiçbir
+  kullanıcı için gerçek karşılığı olmadığından). Kart gücü için gerçek `player_card`
+  verisi varsa o kullanılıyor; yoksa abartılı sahte "88 altın kart" yerine dürüst,
+  mütevazı bir "çaylak" varsayım kartı (60 overall, bronz) gösteriliyor. Maç
+  geçmişi listesi gerçek `total_matches` 0 olduğunda artık sahte 5 maçlık demo
+  listesini göstermiyor (boş durum mesajı çıkıyor) — tutarsız "0 maç ama 5 maç
+  listesi" görünümü önlendi. `tsc` + `build` temiz.
+- 🗑️ **SİLİNDİ (ölü/yanıltıcı kod):** `services/profileAdapter.ts` hiçbir yerden
+  çağrılmıyordu (sadece kendi dosyasında tanımlıydı) ve dosyanın kendi yorumu "DB'ye
+  yazarken HER ZAMAN bunu kullan" diyerek yanlış sütun adlarına (`name`, `wallet`,
+  `is_verified`) yönlendiriyordu — bunlar DB'de var ama **eski/pasif kopyalar.**
+  İleride bir geliştirici (veya AI) bu dosyayı "doğru yöntem" zannedip kullansaydı,
+  veriler gerçek (`full_name`/`wallet_balance`) sütunlarından sessizce ayrışırdı. Şu an
+  hiçbir çağrı noktası olmadığından silinmesi güvenli; `tsc`/`build` temiz kaldı.
+- ⚠️ **AÇIK NOT 1 — Geçmiş maç listesi hâlâ tasarım/demo verisi (`MATCH_HISTORY`):**
+  Gerçek, kullanıcıya özel maç geçmişini veritabanından çekecek bir servis/sorgu henüz
+  yok (bu, henüz incelenmemiş **Modül 5 — Maç Sistemi** kapsamına giriyor: `matches`,
+  `match_registrations`, `player_ratings` tabloları). Bu yüzden bilinçli olarak kapsamı
+  Modül 3'te genişletmedim; Modül 5'te ele alınacak.
+- ⚠️ **AÇIK NOT 2 — `profiles` tablosunda sütun ikilemesi (Modül 15'i ilgilendirir):**
+  `name`/`full_name`, `wallet`/`wallet_balance` gibi çift sütunlar canlı DB'de duruyor.
+  Hangisinin "tek doğru kaynak" olduğu artık nettir (`full_name`/`wallet_balance`) ama
+  eski sütunları temizlemek (DROP COLUMN) veri kaybı riski taşıdığından kullanıcı onayı
+  gerektirir — bu karar Modül 15'e (Veritabanı & Güvenlik Derin Denetim) bırakıldı,
+  şimdilik dokunulmadı.
+- ✅ FIFA kartı bileşeni (`PlayerCard.tsx`) ve "Çaylak Vitrini" (`RookieShowcase.tsx`)
+  görsel/etkileşim açısından sağlam; `RookieShowcase` zaten kasıtlı olarak sabit tanıtım
+  verisiyle çalışıyor, bu bir hata değil.
+- ⚠️ **Liderlik Tablosu (`Leaderboards.tsx`) tamamen sabit demo verisiyle çalışıyor**
+  (`TEAMS_DATA`, `PLAYERS_DATA`, `MY_RANK`). Gerçek puan/sıralama hesaplaması Modül 11
+  (İtibar & Adalet Motoru) ve Modül 5'in tamamlanmasına bağlı; bu modülde erken/yanlış
+  bir bağlama yapmak yerine net biçimde "demo veri" olarak işaretliyorum.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] `ProfileScreen` gerçek kullanıcı verisine bağlandı (isim, foto, cüzdan, güven,
+      maç/galibiyet sayıları, kart verisi varsa kullanılıyor).
+- [x] Sahte yaş/ayak rozetleri ve sahte "88 overall altın kart" kaldırıldı.
+- [x] Ölü/yanıltıcı `profileAdapter.ts` silindi.
+- [ ] Modül 5'te gerçek maç geçmişi sorgusu yazılıp `ProfileScreen` + `MATCH_HISTORY`
+      kullanan diğer ekranlara (PostMatchReport, MatchDiaryDetail) bağlanmalı.
+- [ ] Modül 15'te `profiles` tablosundaki çift/eski sütunların (`name`, `wallet`, vb.)
+      temizliği için kullanıcı onayıyla bir plan yapılmalı.
+- [ ] `Leaderboards.tsx` gerçek puan kaynağına (TP/Fair Play hesaplaması) bağlanmalı —
+      Modül 11 tamamlandıktan sonra.
+- [ ] `player_card` jsonb alanının nasıl/ne zaman doldurulacağına dair bir ürün kararı
+      gerekiyor (örn. maç sonu derecelendirmelerden otomatik hesaplama mı, admin
+      onayıyla mı). Şu an gerçek kullanıcılarda bu alan boş (`{}`).
 
