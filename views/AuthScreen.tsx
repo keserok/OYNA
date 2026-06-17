@@ -36,7 +36,7 @@ const THEMES: Record<string, {
     orb1: 'rgba(51,136,255,0.3)', orb2: 'rgba(51,136,255,0.18)',
   },
   default: {
-    label: 'Oyuncu', badge: 'OYNCU',
+    label: 'Oyuncu', badge: 'OYUNCU',
     color: '#FFFF00', glow: 'rgba(255,255,0,0.35)',
     tagline: 'SAHAYA ÇIKMA VAKTİ.',
     orb1: 'rgba(255,255,0,0.3)', orb2: 'rgba(255,255,0,0.18)',

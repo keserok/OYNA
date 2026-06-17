@@ -70,6 +70,7 @@ const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
 const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
 const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
+const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
 const MyBookings = lazy(() => import('./views/MyBookings'));
@@ -183,8 +184,11 @@ const App: React.FC = () => {
               console.error('[App] Error creating user profile:', insertError);
             }
             setRole(currentRole);
-            if (currentRole === UserRole.OWNER || currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
-              setView('PENDING_VERIFICATION');
+            // Kaleci/Hakem → detaylı başvuru formu; Tesis → tesis kurulum sihirbazı; diğer → konum
+            if (currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
+              setView('SERVICE_APPLICATION');
+            } else if (currentRole === UserRole.OWNER) {
+              setView('PARTNER_ONBOARDING');
             } else {
               setView('LOCATION_PROMPT');
             }
@@ -364,9 +368,15 @@ const App: React.FC = () => {
       case 'SERVICE_DASHBOARD':
         return <ServiceDashboard role={role!} onBack={() => setView('ROLE_SELECTION')} onNavigate={(v) => setView(v)} />;
       case 'PARTNER_ONBOARDING':
-        return <PartnerOnboarding 
-          onComplete={() => setView('OWNER_PANEL')} 
+        return <PartnerOnboarding
+          onComplete={() => setView('OWNER_PANEL')}
           onClose={() => setView('ROLE_SELECTION')}
+        />;
+      case 'SERVICE_APPLICATION':
+        return <ServiceApplication
+          role={(role === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}
+          onSubmitted={() => setView('PENDING_VERIFICATION')}
+          onBack={() => setView('ROLE_SELECTION')}
         />;
       case 'QR_SCANNER':
         return <QRScannerView 
