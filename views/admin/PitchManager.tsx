@@ -9,9 +9,18 @@ interface PitchManagerProps {
     facilityId?: string;
     pitches: PitchCourt[];
     onUpdatePitches: (pitches: PitchCourt[]) => void;
+    readOnly?: boolean;
+    maxCourts?: number;
 }
 
-export const PitchManager: React.FC<PitchManagerProps> = ({ onBack, facilityId, pitches, onUpdatePitches }) => {
+export const PitchManager: React.FC<PitchManagerProps> = ({
+    onBack,
+    facilityId,
+    pitches,
+    onUpdatePitches,
+    readOnly = false,
+    maxCourts = 5,
+}) => {
     const [editingPitch, setEditingPitch] = useState<PitchCourt | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
@@ -21,11 +30,17 @@ export const PitchManager: React.FC<PitchManagerProps> = ({ onBack, facilityId, 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleEdit = (pitch: PitchCourt) => {
+        if (readOnly) return;
         setEditingPitch({ ...pitch });
         setSaveError(null);
     };
 
     const handleAddNew = () => {
+        if (readOnly) return;
+        if (pitches.length >= maxCourts) {
+            alert(`Mevcut planınız en fazla ${maxCourts} saha destekliyor.`);
+            return;
+        }
         const newPitch: PitchCourt = {
             id: '',
             pitch_id: facilityId ?? '',
@@ -47,7 +62,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({ onBack, facilityId, 
     };
 
     const handleSave = async () => {
-        if (!editingPitch || !facilityId) return;
+        if (readOnly || !editingPitch || !facilityId) return;
         setIsSaving(true);
         setSaveError(null);
         try {
@@ -92,6 +107,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({ onBack, facilityId, 
     };
 
     const handleDelete = async (id: string) => {
+        if (readOnly) return;
         if (!confirm('Bu sahayı silmek istediğinize emin misiniz?')) return;
         try {
             if (isRealFacility && id) {
@@ -380,7 +396,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({ onBack, facilityId, 
                 </div>
                 <button
                     onClick={handleAddNew}
-                    disabled={!facilityId}
+                    disabled={!facilityId || readOnly}
                     className="p-2 px-4 rounded-xl bg-blue-500 text-white font-bold text-xs flex items-center gap-2 hover:bg-blue-400 transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] disabled:opacity-40"
                 >
                     <Plus size={16} /> SAHA EKLE
@@ -397,7 +413,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({ onBack, facilityId, 
                         <p className="text-gray-500 text-sm max-w-[250px] mb-6">Müşterilerinizin rezervasyon yapabilmesi için en az bir saha eklemelisiniz.</p>
                         <button
                             onClick={handleAddNew}
-                            disabled={!facilityId}
+                            disabled={!facilityId || readOnly}
                             className="px-6 py-3 rounded-full bg-[#FFFF00] text-black font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,0,0.2)] hover:bg-yellow-300 transition-all disabled:opacity-40"
                         >
                             <Plus size={18} /> YENİ SAHA OLUŞTUR

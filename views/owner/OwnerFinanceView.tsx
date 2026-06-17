@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import {
   addExpense,
+  addDebtor,
   getDebtors,
   getFinanceDashboard,
   getOwnerExpenses,
@@ -22,9 +23,10 @@ const EXPENSE_COLORS: Record<string, string> = {
 interface OwnerFinanceViewProps {
   pitchId: string;
   isDemoMode?: boolean;
+  readOnly?: boolean;
 }
 
-export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isDemoMode }) => {
+export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isDemoMode, readOnly = false }) => {
   const [financeTab, setFinanceTab] = useState<'INCOME' | 'EXPENSE' | 'DATA'>('INCOME');
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<FinanceDashboardData | null>(null);
@@ -32,7 +34,9 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const [debtors, setDebtors] = useState<Awaited<ReturnType<typeof getDebtors>>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+  const [isAddDebtorModalOpen, setIsAddDebtorModalOpen] = useState(false);
   const [newExpense, setNewExpense] = useState({ title: '', amount: '', category: 'Diğer' });
+  const [newDebtor, setNewDebtor] = useState({ name: '', phone: '', amount: '' });
 
   const monthKey = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
@@ -83,6 +87,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }, [expenses]);
 
   const handleAddExpense = async () => {
+    if (readOnly) return;
     if (!newExpense.title || !newExpense.amount || !pitchId) return;
     try {
       await addExpense(pitchId, {
@@ -92,6 +97,23 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
       });
       setNewExpense({ title: '', amount: '', category: 'Diğer' });
       setIsAddExpenseModalOpen(false);
+      await load();
+    } catch (err) {
+      alert(toTurkishError(err));
+    }
+  };
+
+  const handleAddDebtor = async () => {
+    if (readOnly) return;
+    if (!newDebtor.name || !newDebtor.amount || !pitchId) return;
+    try {
+      await addDebtor(pitchId, {
+        name: newDebtor.name,
+        phone: newDebtor.phone || undefined,
+        amount_owed: parseFloat(newDebtor.amount),
+      });
+      setNewDebtor({ name: '', phone: '', amount: '' });
+      setIsAddDebtorModalOpen(false);
       await load();
     } catch (err) {
       alert(toTurkishError(err));
@@ -128,11 +150,16 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
           DEMO MODU — Finans verileri demo tesise aittir
         </div>
       )}
+      {readOnly && (
+        <div className="mb-4 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] font-bold text-center">
+          Salt okunur mod — finans kayıtları düzenlenemez
+        </div>
+      )}
 
       <div className="relative group cursor-pointer mb-6" onClick={() => setFinanceTab('DATA')}>
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#00F5FF] via-[#FF00FF] to-[#FFFF00] rounded-[32px] opacity-20 group-hover:opacity-40 blur transition duration-1000" />
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600/25 via-blue-600/20 to-transparent rounded-[32px] opacity-40 group-hover:opacity-60 blur transition duration-500" />
         <div className="relative bg-[#161B22] border border-white/10 rounded-[32px] p-6 shadow-2xl overflow-hidden">
-          <p className="text-[10px] font-black text-[#00F5FF] uppercase tracking-[0.2em] mb-1">NET KAZANÇ (BU AY)</p>
+          <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">NET KAZANÇ (BU AY)</p>
           <h2 className={`text-4xl font-black ${netProfit >= 0 ? 'text-white' : 'text-red-400'} tracking-tight`}>
             {netProfit.toLocaleString('tr-TR')}₺
           </h2>
@@ -154,8 +181,8 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
           <button
             key={tab}
             onClick={() => setFinanceTab(tab)}
-            className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest ${
-              financeTab === tab ? 'bg-white/10 text-white' : 'text-gray-500'
+            className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors ${
+              financeTab === tab ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
             {tab === 'INCOME' ? 'Akış' : tab === 'EXPENSE' ? 'Giderler' : 'Veriler'}
@@ -167,13 +194,13 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         <div className="space-y-6">
           <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6 h-80">
             <h3 className="text-xs font-black text-gray-400 uppercase mb-6 flex items-center gap-2">
-              <TrendingUp size={16} className="text-[#00F5FF]" /> HAFTALIK GELİR
+              <TrendingUp size={16} className="text-emerald-400" /> HAFTALIK GELİR
             </h3>
             <div className="h-48 flex items-end justify-between gap-3">
               {weeklyData.map((item) => (
                 <div key={item.date} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
                   <div
-                    className="w-full rounded-t-xl bg-gradient-to-t from-[#005080] to-[#00F5FF]"
+                    className="w-full rounded-t-xl bg-gradient-to-t from-emerald-900 to-emerald-400"
                     style={{ height: `${(item.collected / maxWeekVal) * 100}%`, minHeight: item.collected > 0 ? 8 : 0 }}
                   />
                   <span className="text-[10px] font-black text-gray-500">{item.label}</span>
@@ -273,28 +300,42 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             )}
           </div>
 
-          {debtors.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-black text-gray-500 uppercase px-2">VERESİYE</h3>
-              {debtors.map((d) => (
-                <div key={d.id} className="bg-[#161B22] p-4 rounded-2xl border border-red-500/20 flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-bold text-white">{d.name}</p>
-                    <p className="text-[10px] text-gray-500">{d.phone ?? ''}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-red-400 font-black">{d.amount_owed}₺</span>
-                    <button
-                      onClick={() => resolveDebtor(d.id).then(load)}
-                      className="text-[10px] font-bold text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded-lg"
-                    >
-                      Kapat
-                    </button>
-                  </div>
-                </div>
-              ))}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center px-2">
+              <h3 className="text-[10px] font-black text-gray-500 uppercase">VERESİYE</h3>
+              <button
+                type="button"
+                onClick={() => { if (!readOnly) setIsAddDebtorModalOpen(true); }}
+                className="text-[10px] font-black text-red-400 flex items-center gap-1"
+              >
+                <Plus size={12} /> Ekle
+              </button>
             </div>
-          )}
+            {debtors.length === 0 && (
+              <p className="text-sm text-gray-500 px-2">Açık veresiye kaydı yok.</p>
+            )}
+            {debtors.map((d) => (
+              <div key={d.id} className="bg-[#161B22] p-4 rounded-2xl border border-red-500/20 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-bold text-white">{d.name}</p>
+                  <p className="text-[10px] text-gray-500">{d.phone ?? ''}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-red-400 font-black">{d.amount_owed}₺</span>
+                  <button
+                    onClick={() => {
+                      if (readOnly) return;
+                      resolveDebtor(d.id).then(load).catch((err) => alert(toTurkishError(err)));
+                    }}
+                    disabled={readOnly}
+                    className="text-[10px] font-bold text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded-lg disabled:opacity-40"
+                  >
+                    Kapat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -302,7 +343,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-xs font-black text-gray-400 uppercase">GİDERLER</h3>
-            <button onClick={() => setIsAddExpenseModalOpen(true)} className="p-2 bg-white/5 rounded-xl text-white">
+            <button onClick={() => { if (!readOnly) setIsAddExpenseModalOpen(true); }} className="p-2 bg-white/5 rounded-xl text-white">
               <Plus size={18} />
             </button>
           </div>
@@ -350,6 +391,39 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             </select>
             <button onClick={handleAddExpense} className="w-full py-4 bg-[#FF00FF] text-white font-black rounded-2xl">
               GİDERİ KAYDET
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isAddDebtorModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4">
+          <div className="bg-[#161B22] w-full max-w-md rounded-t-3xl p-6 border border-white/10">
+            <div className="flex justify-between mb-4">
+              <h3 className="text-lg font-black text-white">Veresiye Ekle</h3>
+              <button type="button" onClick={() => setIsAddDebtorModalOpen(false)}><X size={20} className="text-gray-400" /></button>
+            </div>
+            <input
+              className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3"
+              placeholder="Müşteri adı"
+              value={newDebtor.name}
+              onChange={(e) => setNewDebtor({ ...newDebtor, name: e.target.value })}
+            />
+            <input
+              className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3"
+              placeholder="Telefon (opsiyonel)"
+              value={newDebtor.phone}
+              onChange={(e) => setNewDebtor({ ...newDebtor, phone: e.target.value })}
+            />
+            <input
+              type="number"
+              className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-4"
+              placeholder="Borç tutarı (₺)"
+              value={newDebtor.amount}
+              onChange={(e) => setNewDebtor({ ...newDebtor, amount: e.target.value })}
+            />
+            <button type="button" onClick={handleAddDebtor} className="w-full py-4 bg-red-600 text-white font-black rounded-2xl">
+              KAYDET
             </button>
           </div>
         </div>

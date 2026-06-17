@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MapPin, Banknote, Check, X, RefreshCw, ExternalLink, AlertTriangle, Building2, Clock } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { moderatePitch, processWithdrawal, toTurkishAdminError } from '../../services/adminService';
 
 interface PendingPitch {
   id: string;
@@ -49,11 +50,11 @@ const OwnerModerationTab: React.FC = () => {
   const namesByIds = async (ids: string[]): Promise<Record<string, string>> => {
     const unique = Array.from(new Set(ids.filter(Boolean)));
     if (unique.length === 0) return {};
-    const { data } = await supabase.from('profiles').select('id, name').in('id', unique);
+    const { data } = await supabase.from('profiles').select('id, full_name').in('id', unique);
     const map: Record<string, string> = {};
     (data ?? []).forEach((r) => {
-      const row = r as { id: string; name: string | null };
-      map[row.id] = row.name ?? 'Bilinmeyen';
+      const row = r as { id: string; full_name: string | null };
+      map[row.id] = row.full_name ?? 'Bilinmeyen';
     });
     return map;
   };
@@ -119,25 +120,15 @@ const OwnerModerationTab: React.FC = () => {
     void fetchData();
   }, [fetchData]);
 
-  const notify = async (userId: string | null, title: string, body: string, typeKey: string) => {
-    if (!userId) return;
-    await supabase.from('notifications').insert({ user_id: userId, title, body, type_key: typeKey });
-  };
-
   const approvePitch = async (p: PendingPitch) => {
     setActioningId(p.id);
     setError(null);
     try {
-      const { error: e } = await supabase
-        .from('pitches')
-        .update({ verification_status: 'approved' })
-        .eq('id', p.id);
-      if (e) throw e;
-      await notify(p.owner_id, 'Tesisiniz Onaylandı', `${p.name} tesisiniz onaylandı ve oyunculara görünür hale geldi.`, 'PITCH_APPROVED');
+      await moderatePitch(p.id, true);
       await fetchData();
     } catch (err) {
       console.error('approvePitch:', err);
-      setError('Onaylama başarısız. ADMIN yetkinizi kontrol edin.');
+      setError(toTurkishAdminError(err));
     } finally {
       setActioningId(null);
     }
@@ -147,17 +138,11 @@ const OwnerModerationTab: React.FC = () => {
     setActioningId(w.id);
     setError(null);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { error: e } = await supabase
-        .from('owner_withdrawal_requests')
-        .update({ status: 'APPROVED', processed_at: new Date().toISOString(), processed_by: userData.user?.id ?? null })
-        .eq('id', w.id);
-      if (e) throw e;
-      await notify(w.owner_id, 'Para Çekme Talebiniz Onaylandı', `${w.amount.toLocaleString('tr-TR')}₺ tutarındaki talebiniz onaylandı. Ödeme en kısa sürede hesabınıza geçecek.`, 'WITHDRAWAL_APPROVED');
+      await processWithdrawal(w.id, true);
       await fetchData();
     } catch (err) {
       console.error('approveWithdrawal:', err);
-      setError('İşlem başarısız. ADMIN yetkinizi kontrol edin.');
+      setError(toTurkishAdminError(err));
     } finally {
       setActioningId(null);
     }
@@ -174,27 +159,16 @@ const OwnerModerationTab: React.FC = () => {
     setError(null);
     try {
       if (rejectTarget.kind === 'pitch') {
-        const { error: e } = await supabase
-          .from('pitches')
-          .update({ verification_status: 'rejected', verification_notes: reason })
-          .eq('id', rejectTarget.id);
-        if (e) throw e;
-        await notify(rejectTarget.ownerId, 'Tesisiniz Onaylanmadı', `${rejectTarget.name}: ${reason}`, 'PITCH_REJECTED');
+        await moderatePitch(rejectTarget.id, false, reason);
       } else {
-        const { data: userData } = await supabase.auth.getUser();
-        const { error: e } = await supabase
-          .from('owner_withdrawal_requests')
-          .update({ status: 'REJECTED', admin_notes: reason, processed_at: new Date().toISOString(), processed_by: userData.user?.id ?? null })
-          .eq('id', rejectTarget.id);
-        if (e) throw e;
-        await notify(rejectTarget.ownerId, 'Para Çekme Talebiniz Reddedildi', reason, 'WITHDRAWAL_REJECTED');
+        await processWithdrawal(rejectTarget.id, false, reason);
       }
       setRejectTarget(null);
       setRejectReason('');
       await fetchData();
     } catch (err) {
       console.error('submitReject:', err);
-      setError('İşlem başarısız. ADMIN yetkinizi kontrol edin.');
+      setError(toTurkishAdminError(err));
     } finally {
       setActioningId(null);
     }

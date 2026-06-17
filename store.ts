@@ -163,6 +163,7 @@ interface AppState {
   adminUsers: AdminUser[];
   adminNotifications: AdminNotification[];
   adminLogs: AdminLog[];
+  adminDashboardStats: Record<string, number | string> | null;
   adminTeams: Team[];
   appSettings: AppSettings;
 
@@ -303,9 +304,16 @@ interface AppState {
 
   // ─── Logs ──────────────────────────────────────────────────────
   addAdminLog: (log: Omit<AdminLog, 'id' | 'timestamp'>) => void;
+  loadAdminData: (data: {
+    users: AdminUser[];
+    settings: Partial<AppSettings> | null;
+    auditLogs: AdminLog[];
+    stats: Record<string, number | string> | null;
+    texts?: Record<string, string>;
+  }) => void;
 
   // ─── App Settings ──────────────────────────────────────────────
-  updateAppSettings: (settings: Partial<AppSettings>) => void;
+  updateAppSettings: (settings: Partial<AppSettings>) => Promise<void>;
 
   // ─── User Notifications ──────────────────────────────────────────
   userNotifications: UserNotificationItem[];
@@ -338,12 +346,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
     try {
-      const [sessionRes, pitchesRes, matchesRes, teamsRes, servicesRes] = await Promise.allSettled([
+      const [sessionRes, pitchesRes, matchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
         withTimeout(supabase.auth.getSession()),
         withTimeout(FB.fbGetPitches()),
         withTimeout(FB.fbGetMatches()),
         withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
+        withTimeout(supabase.from('texts').select('key, value')),
       ]);
 
       if (pitchesRes.status === 'fulfilled' && pitchesRes.value) {
@@ -354,6 +363,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (teamsRes.status === 'fulfilled' && teamsRes.value) {
         set({ adminTeams: teamsRes.value as Team[] });
+      }
+      if (textsRes.status === 'fulfilled' && textsRes.value && !textsRes.value.error) {
+        const rows = textsRes.value.data as Array<{ key: string; value: string }> | null;
+        if (rows?.length) {
+          const map: Record<string, string> = {};
+          rows.forEach((row) => { map[row.key] = row.value; });
+          set((state) => ({ globalTexts: { ...state.globalTexts, ...map } }));
+        }
       }
     } catch (e) {
       console.error('Hydration error:', e);
@@ -420,11 +437,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminUsers: INITIAL_USERS,
   adminNotifications: INITIAL_NOTIFICATIONS,
   adminLogs: [],
+  adminDashboardStats: null,
   adminTeams: USER_TEAMS,
   appSettings: INITIAL_SETTINGS,
   
-  loadOwnerData: async (_facilityId?: string) => {
-    // CRM / UI Builder kaldırıldı — saha sahibi verisi pitchOwnerService üzerinden yüklenir.
+  loadOwnerData: async (ownerUserId?: string) => {
+    if (!ownerUserId) return;
+    await import('./services/ownerAccountService').then(({ getOrCreateOwnerAccount }) =>
+      getOrCreateOwnerAccount(ownerUserId),
+    );
   },
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
@@ -710,10 +731,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Load Services from DB
   loadServices: async () => {
     try {
-      const gks = await FB.fbGetGoalkeepers();
-      if (gks && gks.length > 0) set({ adminGoalkeepers: gks });
-      const refs = await FB.fbGetReferees();
-      if (refs && refs.length > 0) set({ adminReferees: refs });
+      const [gks, refs] = await Promise.all([FB.fbGetGoalkeepers(), FB.fbGetReferees()]);
+      set({ adminGoalkeepers: gks || [], adminReferees: refs || [] });
     } catch (err) {
       console.error('Error loading services', err);
     }
@@ -865,14 +884,50 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (notif) FB.fbToggleNotificationAlert(id, !notif.isActive);
   },
 
-  // App Settings
-  updateAppSettings: (settings) => FB.fbUpdateAppSettings(settings),
-  addAdminLog: (log) => set((state) => ({
-    adminLogs: [
-      { ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() },
-      ...state.adminLogs
-    ]
+  loadAdminData: ({ users, settings, auditLogs, stats, texts }) => set((state) => ({
+    adminUsers: users,
+    appSettings: settings ? { ...state.appSettings, ...settings } : state.appSettings,
+    adminLogs: auditLogs,
+    adminDashboardStats: stats,
+    globalTexts: texts ? { ...state.globalTexts, ...texts } : state.globalTexts,
+    announcementBanner: settings?.announcementBanner ?? state.announcementBanner,
+    showAnnouncementBanner: settings?.showAnnouncementBanner ?? state.showAnnouncementBanner,
   })),
+
+  // App Settings
+  updateAppSettings: async (settings) => {
+    const prev = get().appSettings;
+    const next = { ...prev, ...settings };
+    set({ appSettings: next });
+    try {
+      const { updateSettingsAdmin, settingsToDbPayload } = await import('./services/adminService');
+      await updateSettingsAdmin(settingsToDbPayload({
+        ...settings,
+        payoutMode: settings.payoutMode as 'cash' | 'online' | 'deposit' | undefined,
+      }));
+    } catch (e) {
+      set({ appSettings: prev });
+      throw e;
+    }
+  },
+  addAdminLog: (log) => {
+    const entry: AdminLog = {
+      ...log,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toISOString(),
+    };
+    set((state) => ({ adminLogs: [entry, ...state.adminLogs] }));
+    import('./services/adminService').then(({ persistAdminLog }) => {
+      persistAdminLog(
+        log.action,
+        'system',
+        log.targetId || null,
+        log.targetName,
+        undefined,
+        { details: log.details },
+      ).catch((err) => console.warn('Audit log persist failed:', err));
+    });
+  },
 
   // User Notifications
   userNotifications: [],

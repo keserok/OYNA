@@ -1,36 +1,57 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { useAppStore } from '../../store';
 import { AdminLayout } from './layout/AdminLayout';
-
-import {
-    PitchModal, MatchModal, BanModal, PushModal,
-    AddPlayerModal, ContactModal, LogModal, RevenueModal, MoreMenu
-} from './GodViewModals';
+import { PageShell } from './components/PageShell';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { AnimatePresence } from 'framer-motion';
 import { PendingVerificationsTab } from './PendingVerificationsTab';
 import OwnerModerationTab from './OwnerModerationTab';
+import OwnerAccountsTab from './OwnerAccountsTab';
+import { Clock, Shield, Building2 } from 'lucide-react';
+import type { AdminSession } from '../../services/adminService';
 
-// Lazy loaded page components
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const CommandCenterPage = lazy(() => import('./pages/CommandCenterPage').then(m => ({ default: m.CommandCenterPage })));
 const PitchesPage = lazy(() => import('./pages/PitchesPage').then(m => ({ default: m.PitchesPage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
 const MatchesPage = lazy(() => import('./pages/MatchesPage').then(m => ({ default: m.MatchesPage })));
 const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => ({ default: m.CommunitiesPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
+const FinancePage = lazy(() => import('./pages/FinancePage').then(m => ({ default: m.FinancePage })));
+const DisputesPage = lazy(() => import('./pages/DisputesPage').then(m => ({ default: m.DisputesPage })));
+const CampaignsPage = lazy(() => import('./pages/CampaignsPage').then(m => ({ default: m.CampaignsPage })));
+const PromoCodesPage = lazy(() => import('./pages/PromoCodesPage').then(m => ({ default: m.PromoCodesPage })));
+const ACLPage = lazy(() => import('./pages/ACLPage').then(m => ({ default: m.ACLPage })));
+const SegmentationPage = lazy(() => import('./pages/SegmentationPage').then(m => ({ default: m.SegmentationPage })));
+
+export type GodViewSubRoute =
+  | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
+  | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
+  | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'
+  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
 
 interface Props {
     onBack: () => void;
     onNavigate?: (tab: string) => void;
+    mode?: 'embedded' | 'standalone';
+    adminSession?: AdminSession | null;
+    onRefreshData?: () => Promise<void>;
 }
 
-export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
+export const GodViewPanel: React.FC<Props> = ({
+    onBack,
+    onNavigate,
+    mode = 'embedded',
+    adminSession,
+    onRefreshData,
+}) => {
     const { deletePitch } = useAppStore();
-    const [subRoute, setSubRoute] = useState<'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'>('GENEL');
+    const [subRoute, setSubRoute] = useState<GodViewSubRoute>('GENEL');
     const [modal, setModal] = useState<any>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
-    const handleNavigate = (route: typeof subRoute) => {
+    const handleNavigate = (route: GodViewSubRoute) => {
         setSubRoute(route);
         if (onNavigate) onNavigate(route);
     };
@@ -40,37 +61,62 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
     const renderPage = () => {
         switch (subRoute) {
             case 'GENEL':
+                return <DashboardPage onRefresh={onRefreshData} />;
             case 'CONTROL':
-                return <DashboardPage />;
+                return <CommandCenterPage mode={mode} onNavigate={(r) => handleNavigate(r as GodViewSubRoute)} />;
+            case 'FINANCE':
+                return <FinancePage />;
+            case 'DISPUTES':
+                return <DisputesPage />;
+            case 'PROMO_CODES':
+                return <PromoCodesPage onRefresh={onRefreshData} />;
+            case 'ACL':
+                return <ACLPage />;
             case 'SAHALAR':
                 return (
                     <PitchesPage
                         onEditPitch={(pitch) => setModal({ type: 'deepEditPitch', data: pitch })}
                         onDeletePitch={(id) => deletePitch(id)}
+                        onRefresh={onRefreshData}
                     />
                 );
             case 'KULLANICILAR':
             case 'KALECİLER':
             case 'HAKEMLER':
-                return <UsersPage subRoute={subRoute} />;
+                return <UsersPage subRoute={subRoute} mode={mode} onRefresh={onRefreshData} />;
             case 'PENDING_VERIFICATIONS':
                 return (
-                    <div className="p-6">
+                    <PageShell route="PENDING_VERIFICATIONS" icon={<Clock size={20} />}>
                         <PendingVerificationsTab onBadgeCount={setPendingVerifCount} />
-                    </div>
+                    </PageShell>
                 );
             case 'MATCHES':
-                return <MatchesPage />;
+                return <MatchesPage onRefresh={onRefreshData} />;
             case 'TOPLULUKLAR':
             case 'TAKIMLAR':
             case 'TURNUVALAR':
-                return <CommunitiesPage subRoute={subRoute} />;
+                return <CommunitiesPage subRoute={subRoute} onRefresh={onRefreshData} />;
             case 'SETTINGS':
             case 'CONTENT':
+                return <SettingsPage subRoute={subRoute} onRefresh={onRefreshData} />;
             case 'NOTIFICATIONS':
-                return <SettingsPage subRoute={subRoute} />;
+                return <CampaignsPage />;
+            case 'SEGMENTATION':
+                return <SegmentationPage />;
             case 'MODERATION':
-                return <OwnerModerationTab />;
+                return (
+                    <PageShell route="MODERATION" icon={<Shield size={20} />}>
+                        <OwnerModerationTab />
+                    </PageShell>
+                );
+            case 'OWNER_ACCOUNTS':
+                return (
+                    <PageShell route="OWNER_ACCOUNTS" icon={<Building2 size={20} />}>
+                        <OwnerAccountsTab />
+                    </PageShell>
+                );
+            case 'AUDIT_LOG':
+                return <AuditLogPage onRefresh={onRefreshData} />;
             default:
                 return (
                     <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">
@@ -87,6 +133,8 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 onNavigate={handleNavigate}
                 onBack={onBack}
                 pendingVerifCount={pendingVerifCount}
+                mode={mode}
+                adminSession={adminSession}
             >
                 <Suspense fallback={
                     <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-3">
@@ -98,7 +146,6 @@ export const GodViewPanel: React.FC<Props> = ({ onBack, onNavigate }) => {
                 </Suspense>
             </AdminLayout>
 
-            {/* Deep-edit modals */}
             <AnimatePresence>
                 {modal.type === 'deepEditPitch' && (
                     <DeepEditPitchModal pitch={modal.data} onClose={closeModal} />

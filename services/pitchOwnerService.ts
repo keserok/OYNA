@@ -22,6 +22,11 @@ import type {
   PitchSubscription,
   PitchTariff,
   FlashDeal,
+  PitchAvailabilityException,
+  PitchPaymentSettings,
+  PitchBankAccount,
+  PitchStaffMember,
+  PitchStaffTask,
 } from '../types';
 
 // ----------------------------------------------------------------------------
@@ -79,6 +84,7 @@ export interface SubscriptionInput {
   price: number;
   court_id?: string | null;
   start_date?: string;
+  end_date?: string | null;
   notes?: string;
 }
 
@@ -284,57 +290,11 @@ export async function cancelConfirmedBooking(
   reason: string,
 ): Promise<void> {
   try {
-    const uid = await getCurrentUserId();
-
-    const { data: booking, error: fetchErr } = await supabase
-      .from('pitch_bookings')
-      .select('user_id, match_id, paid_amount, price, payment_status')
-      .eq('id', bookingId)
-      .single();
-    if (fetchErr) throw fetchErr;
-
-    const b = booking as {
-      user_id: string | null;
-      match_id: string | null;
-      paid_amount: number | null;
-      price: number | null;
-      payment_status: string | null;
-    };
-
-    const { error } = await supabase
-      .from('pitch_bookings')
-      .update({
-        status: 'CANCELLED',
-        cancellation_reason: reason,
-        cancelled_at: new Date().toISOString(),
-        cancelled_by: uid,
-        payment_status: (b.paid_amount ?? 0) > 0 ? 'REFUNDED' : b.payment_status,
-      })
-      .eq('id', bookingId);
+    const { error } = await supabase.rpc('owner_cancel_confirmed_booking', {
+      p_booking_id: bookingId,
+      p_reason: reason,
+    });
     if (error) throw error;
-
-    // Cüzdandan ödeme yapan oyuncuya iade
-    const refundAmount = b.paid_amount ?? 0;
-    if (b.user_id && refundAmount > 0) {
-      const { error: refundErr } = await supabase.rpc('process_match_refund', {
-        p_user_id: b.user_id,
-        p_match_id: b.match_id,
-        p_amount: refundAmount,
-      });
-      if (refundErr) console.warn('İade işlenemedi:', refundErr);
-    }
-
-    if (b.user_id) {
-      await supabase.from('notifications').insert({
-        user_id: b.user_id,
-        title: 'Rezervasyonunuz İptal Edildi',
-        body:
-          refundAmount > 0
-            ? `Rezervasyonunuz iptal edildi. ${refundAmount}₺ cüzdanınıza iade edildi.`
-            : 'Rezervasyonunuz tesis tarafından iptal edildi.',
-        type_key: 'BOOKING_CANCELLED',
-      });
-    }
   } catch (error) {
     console.error('cancelConfirmedBooking:', error);
     throw new Error(toTurkishError(error));
@@ -414,6 +374,29 @@ export async function closeSlot(params: {
   }
 }
 
+export async function getAvailabilityExceptions(
+  pitchId: string,
+  date: string,
+  courtId?: string | null,
+): Promise<PitchAvailabilityException[]> {
+  try {
+    let query = supabase
+      .from('pitch_availability_exceptions')
+      .select('*')
+      .eq('pitch_id', pitchId)
+      .eq('exception_date', date);
+    if (courtId) {
+      query = query.or(`court_id.is.null,court_id.eq.${courtId}`);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchAvailabilityException[];
+  } catch (error) {
+    console.error('getAvailabilityExceptions:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 // ----------------------------------------------------------------------------
 // TARIFFS / WORKING HOURS / OPEN
 // ----------------------------------------------------------------------------
@@ -465,6 +448,65 @@ export async function getTariffs(pitchId: string): Promise<PitchTariff[]> {
   }
 }
 
+/** Belirli gün/saat için prime-time (SPECIAL) tarife ekler veya günceller. */
+export async function upsertSpecialSlotTariff(
+  pitchId: string,
+  params: {
+    courtId?: string | null;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    pricePerHour: number;
+    name?: string;
+  },
+): Promise<void> {
+  try {
+    const date = new Date(`${params.bookingDate}T12:00:00`);
+    const jsDay = date.getDay();
+    const weekday = jsDay === 0 ? 7 : jsDay;
+
+    const existing = await getTariffs(pitchId);
+    const filtered = existing.filter((t) => {
+      if (t.tariff_type !== 'SPECIAL') return true;
+      const sameDay = Array.isArray(t.applies_to_days) && t.applies_to_days.includes(weekday);
+      const sameCourt = (t.court_id ?? null) === (params.courtId ?? null);
+      const sameSlot =
+        (t.start_time ?? '').slice(0, 5) === params.startTime.slice(0, 5) &&
+        (t.end_time ?? '').slice(0, 5) === params.endTime.slice(0, 5);
+      return !(sameDay && sameCourt && sameSlot);
+    });
+
+    const rows: TariffInput[] = filtered.map((t, idx) => ({
+      name: t.name,
+      tariff_type: t.tariff_type as TariffInput['tariff_type'],
+      applies_to_days: t.applies_to_days ?? [1, 2, 3, 4, 5],
+      start_time: (t.start_time ?? '08:00').slice(0, 5),
+      end_time: (t.end_time ?? '23:00').slice(0, 5),
+      price_per_hour: t.price_per_hour,
+      deposit_amount: t.deposit_amount ?? 0,
+      sort_order: t.sort_order ?? idx,
+      is_active: t.is_active !== false,
+      court_id: t.court_id ?? null,
+    }));
+
+    rows.push({
+      name: params.name ?? `Özel ${params.bookingDate}`,
+      tariff_type: 'SPECIAL',
+      applies_to_days: [weekday],
+      start_time: params.startTime.slice(0, 5),
+      end_time: params.endTime.slice(0, 5),
+      price_per_hour: params.pricePerHour,
+      sort_order: rows.length,
+      court_id: params.courtId ?? null,
+    });
+
+    await saveTariffs(pitchId, rows);
+  } catch (error) {
+    console.error('upsertSpecialSlotTariff:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 export async function saveWorkingHours(pitchId: string, days: WorkingDay[]): Promise<void> {
   try {
     const { error } = await supabase
@@ -487,6 +529,57 @@ export async function togglePitchOpen(pitchId: string, isOpen: boolean): Promise
     if (error) throw error;
   } catch (error) {
     console.error('togglePitchOpen:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export interface PitchOperationsSettings {
+  is_open: boolean;
+  auto_approve_enabled: boolean;
+  auto_approve_minutes: number;
+}
+
+export async function getPitchOperationsSettings(pitchId: string): Promise<PitchOperationsSettings> {
+  try {
+    const { data, error } = await supabase
+      .from('pitches')
+      .select('is_open, auto_approve_enabled, auto_approve_minutes')
+      .eq('id', pitchId)
+      .single();
+    if (error) throw error;
+    const row = data as {
+      is_open?: boolean;
+      auto_approve_enabled?: boolean;
+      auto_approve_minutes?: number;
+    };
+    return {
+      is_open: row.is_open ?? true,
+      auto_approve_enabled: row.auto_approve_enabled ?? true,
+      auto_approve_minutes: row.auto_approve_minutes ?? 35,
+    };
+  } catch (error) {
+    console.error('getPitchOperationsSettings:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function updatePitchOperationsSettings(
+  pitchId: string,
+  settings: Partial<Pick<PitchOperationsSettings, 'auto_approve_enabled' | 'auto_approve_minutes'>>,
+): Promise<void> {
+  try {
+    const payload: Record<string, unknown> = {};
+    if (settings.auto_approve_enabled !== undefined) {
+      payload.auto_approve_enabled = settings.auto_approve_enabled;
+    }
+    if (settings.auto_approve_minutes !== undefined) {
+      payload.auto_approve_minutes = settings.auto_approve_minutes;
+    }
+    if (Object.keys(payload).length === 0) return;
+    const { error } = await supabase.from('pitches').update(payload).eq('id', pitchId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('updatePitchOperationsSettings:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -609,19 +702,92 @@ export async function createFlashDeal(deal: FlashDealInput): Promise<void> {
   }
 }
 
-export async function getActiveFlashDeals(pitchId: string): Promise<FlashDeal[]> {
+export async function getActiveFlashDeals(
+  pitchId: string,
+  date?: string,
+  courtId?: string | null,
+): Promise<FlashDeal[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('pitch_flash_deals')
       .select('*')
       .eq('pitch_id', pitchId)
       .eq('is_claimed', false)
-      .gt('expires_at', new Date().toISOString())
-      .order('expires_at', { ascending: true });
+      .gt('expires_at', new Date().toISOString());
+    if (date) query = query.eq('booking_date', date);
+    if (courtId) query = query.or(`court_id.is.null,court_id.eq.${courtId}`);
+    const { data, error } = await query.order('expires_at', { ascending: true });
     if (error) throw error;
     return (data ?? []) as unknown as FlashDeal[];
   } catch (error) {
     console.error('getActiveFlashDeals:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function deleteFlashDeal(dealId: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('pitch_flash_deals').delete().eq('id', dealId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('deleteFlashDeal:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export interface PitchAppMatchRow {
+  id: string;
+  bookingId: string;
+  title: string;
+  pitchName: string;
+  time: string;
+  price: number;
+  maxPlayers: number;
+  joinedPlayers: number;
+  status: string;
+}
+
+export async function getPitchAppMatches(pitchId: string): Promise<PitchAppMatchRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_bookings')
+      .select('id, booking_date, start_time, price, status, match_id, courts(name), matches(id, title, status, slots, away_slots, date, time, location)')
+      .eq('pitch_id', pitchId)
+      .eq('source', 'APP_MATCH')
+      .neq('status', 'CANCELLED')
+      .not('match_id', 'is', null)
+      .order('booking_date', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+
+    return (data ?? []).map((row: Record<string, unknown>) => {
+      const match = row.matches as Record<string, unknown> | null;
+      const slots = (match?.slots as unknown[]) ?? [];
+      const awaySlots = (match?.away_slots as unknown[]) ?? [];
+      const allSlots = [...slots, ...awaySlots];
+      const taken = allSlots.filter((s) => {
+        const slot = s as { status?: string };
+        return slot.status === 'TAKEN';
+      }).length;
+      const courtName = (row.courts as { name?: string } | null)?.name ?? 'Saha';
+      const bookingDate = String(row.booking_date ?? '');
+      const startTime = String(row.start_time ?? '').slice(0, 5);
+      const matchDate = String(match?.date ?? bookingDate);
+      const matchTime = String(match?.time ?? startTime);
+      return {
+        id: String(match?.id ?? row.match_id),
+        bookingId: String(row.id),
+        title: String(match?.title ?? 'Oyuncu Maçı'),
+        pitchName: courtName,
+        time: `${matchDate} ${matchTime}`.trim(),
+        price: Number(row.price ?? 0),
+        maxPlayers: allSlots.length || 14,
+        joinedPlayers: taken,
+        status: String(match?.status ?? row.status ?? 'ACTIVE'),
+      };
+    });
+  } catch (error) {
+    console.error('getPitchAppMatches:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -754,6 +920,7 @@ export async function addSubscription(
       end_time: sub.end_time ?? null,
       price: sub.price,
       start_date: sub.start_date ?? todayISO(),
+      end_date: sub.end_date ?? null,
       notes: sub.notes ?? null,
       status: 'ACTIVE',
     });
@@ -932,7 +1099,7 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
     const payload = {
       pitch_id: pitchId,
       name: court.name.trim(),
-      court_type: court.court_type ?? 'TURF',
+      court_type: court.court_type ?? 'OPEN',
       size: court.size ?? null,
       is_active: court.is_active ?? true,
       sort_order: court.sort_order ?? 0,
@@ -961,6 +1128,17 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
     console.error('upsertCourt:', error);
     throw new Error(toTurkishError(error));
   }
+}
+
+export async function uploadPitchImage(file: File, pitchId: string): Promise<string> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `pitches/${pitchId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage
+    .from('images')
+    .upload(path, file, { cacheControl: '3600', upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from('images').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function updatePitchProfile(
@@ -1129,6 +1307,302 @@ export async function deleteCourt(courtId: string): Promise<void> {
     if (error) throw error;
   } catch (error) {
     console.error('deleteCourt:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// ----------------------------------------------------------------------------
+// ÖDEME AYARLARI
+// ----------------------------------------------------------------------------
+
+export async function getPaymentSettings(pitchId: string): Promise<PitchPaymentSettings> {
+  const defaults: PitchPaymentSettings = {
+    paymentOptions: { online: true, deposit: false, cash: true },
+    paramMerchantId: '',
+    paramClientId: '',
+    paramApiKey: '',
+  };
+  try {
+    const { data, error } = await supabase
+      .from('pitches')
+      .select('payment_options, param_merchant_id, param_client_id, param_api_key')
+      .eq('id', pitchId)
+      .single();
+    if (error) throw error;
+    const row = data as {
+      payment_options?: { online?: boolean; deposit?: boolean; cash?: boolean } | null;
+      param_merchant_id?: string | null;
+      param_client_id?: string | null;
+      param_api_key?: string | null;
+    };
+    const opts = row.payment_options ?? {};
+    return {
+      paymentOptions: {
+        online: opts.online ?? true,
+        deposit: opts.deposit ?? false,
+        cash: opts.cash ?? true,
+      },
+      paramMerchantId: row.param_merchant_id ?? '',
+      paramClientId: row.param_client_id ?? '',
+      paramApiKey: row.param_api_key ?? '',
+    };
+  } catch (error) {
+    console.error('getPaymentSettings:', error);
+    return defaults;
+  }
+}
+
+export async function savePaymentSettings(
+  pitchId: string,
+  settings: PitchPaymentSettings,
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitches')
+      .update({
+        payment_options: settings.paymentOptions,
+        param_merchant_id: settings.paramMerchantId || null,
+        param_client_id: settings.paramClientId || null,
+        param_api_key: settings.paramApiKey || null,
+      })
+      .eq('id', pitchId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('savePaymentSettings:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// ----------------------------------------------------------------------------
+// BANKA HESAPLARI
+// ----------------------------------------------------------------------------
+
+export async function getBankAccounts(pitchId: string): Promise<PitchBankAccount[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_bank_accounts')
+      .select('*')
+      .eq('pitch_id', pitchId)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchBankAccount[];
+  } catch (error) {
+    console.error('getBankAccounts:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function upsertBankAccount(
+  pitchId: string,
+  account: { id?: string; bank_name: string; account_holder: string; iban: string; is_primary?: boolean },
+): Promise<PitchBankAccount> {
+  try {
+    const payload = {
+      pitch_id: pitchId,
+      bank_name: account.bank_name.trim(),
+      account_holder: account.account_holder.trim(),
+      iban: account.iban.replace(/\s/g, '').toUpperCase(),
+      is_primary: account.is_primary ?? false,
+    };
+    if (account.is_primary) {
+      await supabase
+        .from('pitch_bank_accounts')
+        .update({ is_primary: false })
+        .eq('pitch_id', pitchId);
+    }
+    if (account.id) {
+      const { data, error } = await supabase
+        .from('pitch_bank_accounts')
+        .update(payload)
+        .eq('id', account.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as PitchBankAccount;
+    }
+    const { data, error } = await supabase
+      .from('pitch_bank_accounts')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as unknown as PitchBankAccount;
+  } catch (error) {
+    console.error('upsertBankAccount:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function deleteBankAccount(accountId: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('pitch_bank_accounts').delete().eq('id', accountId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('deleteBankAccount:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// ----------------------------------------------------------------------------
+// PERSONEL & GÖREVLER
+// ----------------------------------------------------------------------------
+
+export async function getStaffMembers(pitchId: string): Promise<PitchStaffMember[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_staff_members')
+      .select('*')
+      .eq('pitch_id', pitchId)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchStaffMember[];
+  } catch (error) {
+    console.error('getStaffMembers:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function upsertStaffMember(
+  pitchId: string,
+  member: {
+    id?: string;
+    name: string;
+    role_title?: string;
+    status?: PitchStaffMember['status'];
+    avatar_url?: string | null;
+    phone?: string | null;
+    sort_order?: number;
+  },
+): Promise<PitchStaffMember> {
+  try {
+    const payload = {
+      pitch_id: pitchId,
+      name: member.name.trim(),
+      role_title: member.role_title?.trim() || 'Personel',
+      status: member.status ?? 'OFF_DUTY',
+      avatar_url: member.avatar_url ?? null,
+      phone: member.phone ?? null,
+      sort_order: member.sort_order ?? 0,
+    };
+    if (member.id) {
+      const { data, error } = await supabase
+        .from('pitch_staff_members')
+        .update(payload)
+        .eq('id', member.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as PitchStaffMember;
+    }
+    const { data, error } = await supabase
+      .from('pitch_staff_members')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as unknown as PitchStaffMember;
+  } catch (error) {
+    console.error('upsertStaffMember:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function deleteStaffMember(memberId: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('pitch_staff_members').delete().eq('id', memberId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('deleteStaffMember:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function getStaffTasks(pitchId: string): Promise<PitchStaffTask[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_staff_tasks')
+      .select('*')
+      .eq('pitch_id', pitchId)
+      .neq('status', 'CANCELLED')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchStaffTask[];
+  } catch (error) {
+    console.error('getStaffTasks:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function upsertStaffTask(
+  pitchId: string,
+  task: {
+    id?: string;
+    title: string;
+    assigned_to?: string | null;
+    assigned_name?: string | null;
+    priority?: PitchStaffTask['priority'];
+    status?: PitchStaffTask['status'];
+    due_time?: string | null;
+    due_date?: string | null;
+  },
+): Promise<PitchStaffTask> {
+  try {
+    const payload = {
+      pitch_id: pitchId,
+      title: task.title.trim(),
+      assigned_to: task.assigned_to ?? null,
+      assigned_name: task.assigned_name ?? null,
+      priority: task.priority ?? 'MEDIUM',
+      status: task.status ?? 'PENDING',
+      due_time: task.due_time ?? null,
+      due_date: task.due_date ?? null,
+    };
+    if (task.id) {
+      const { data, error } = await supabase
+        .from('pitch_staff_tasks')
+        .update(payload)
+        .eq('id', task.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as PitchStaffTask;
+    }
+    const { data, error } = await supabase
+      .from('pitch_staff_tasks')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as unknown as PitchStaffTask;
+  } catch (error) {
+    console.error('upsertStaffTask:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function toggleStaffTaskStatus(taskId: string, completed: boolean): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitch_staff_tasks')
+      .update({ status: completed ? 'COMPLETED' : 'PENDING' })
+      .eq('id', taskId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('toggleStaffTaskStatus:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export async function deleteStaffTask(taskId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitch_staff_tasks')
+      .update({ status: 'CANCELLED' })
+      .eq('id', taskId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('deleteStaffTask:', error);
     throw new Error(toTurkishError(error));
   }
 }

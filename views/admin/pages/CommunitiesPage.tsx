@@ -1,114 +1,245 @@
-import React, { useState } from 'react';
-import { Globe, Trophy, Users, Check, X, Settings2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Globe, Trophy, Users, Check, X, Trash2 } from 'lucide-react';
+import { DataTable } from '../components/DataTable';
+import { ModuleCrudBar } from '../components/ModuleCrudBar';
+import { PageShell } from '../components/PageShell';
+import {
+  fetchCommunities, fetchCommunityCreationRequests, fetchTeamsFromDb, fetchTournaments,
+  moderateCommunityCreation, deleteCommunity, createCommunityAdmin,
+  deleteTeamAdmin, createTeamAdmin, deleteTournament, createTournamentAdmin,
+  toTurkishAdminError,
+  type CommunityRow, type CommunityCreationRequest,
+} from '../../../services/adminService';
+import { useAdminToast } from '../context/AdminToastContext';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface CommunitiesPageProps {
-    subRoute: 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR';
+  subRoute: 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR';
+  onRefresh?: () => Promise<void>;
 }
 
-export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute }) => {
-    // Initial static mock data derived from original logic
-    const [communities, setCommunities] = useState([
-        {
-            id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', logo: '🦅',
-            memberCount: 1250, isVerified: true,
-            modules: { transferMarket: true, leaderboards: true, tournaments: true },
-            teams: [
-                { id: 't1', name: 'BOUN Crows', wins: 15, losses: 3 },
-                { id: 't2', name: 'BOUN Lions', wins: 10, losses: 8 }
-            ]
-        },
-        {
-            id: 'c2', name: 'İstanbul Teknik Üniversitesi', domain: '@itu.edu.tr', logo: '🐝',
-            memberCount: 980, isVerified: true,
-            modules: { transferMarket: true, leaderboards: true, tournaments: false },
-            teams: [
-                { id: 't3', name: 'ITU Hornets', wins: 12, losses: 6 }
-            ]
-        }
-    ]);
+export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRefresh }) => {
+  const [communities, setCommunities] = useState<CommunityRow[]>([]);
+  const [requests, setRequests] = useState<CommunityCreationRequest[]>([]);
+  const [teams, setTeams] = useState<Array<{ id: string; name: string; captain_id: string | null; created_at: string; is_demo?: boolean }>>([]);
+  const [tournaments, setTournaments] = useState<Array<{ id: string; name: string; status: string; max_teams: number; is_demo: boolean; starts_at: string | null }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const { success, error: toastError } = useAdminToast();
 
-    const [toast, setToast] = useState<string | null>(null);
-
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 2500);
-    };
-
-    const toggleModule = (cId: string, modKey: string) => {
-        setCommunities(prev => prev.map(c => {
-            if (c.id === cId) {
-                return { ...c, modules: { ...c.modules, [modKey]: !(c.modules as any)[modKey] } };
-            }
-            return c;
-        }));
-        showToast('Modül durumu güncellendi ✓');
-    };
-
-    if (subRoute === 'TOPLULUKLAR') {
-        return (
-            <div className="p-6 space-y-6">
-                <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
-                    <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-6">
-                        <Globe size={16} className="text-blue-400" /> Üniversite Toplulukları
-                    </h2>
-
-                    <div className="space-y-4">
-                        {communities.map(c => (
-                            <div key={c.id} className="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center text-2xl">
-                                        {c.logo}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="text-sm font-bold text-white">{c.name}</h3>
-                                            {c.isVerified && <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-[8px] font-black rounded border border-blue-500/20 uppercase">Doğrulanmış</span>}
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 font-mono mt-1">{c.domain} • {c.memberCount} Üye • {c.teams.length} Takım</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2">
-                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Aktif Modüller</p>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => toggleModule(c.id, 'transferMarket')} className={`px-2 py-1 text-[9px] font-bold rounded-lg border flex items-center gap-1 ${c.modules.transferMarket ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-gray-500 border-white/10'}`}>
-                                            {c.modules.transferMarket ? <Check size={10} /> : <X size={10} />} Transfer Pazarı
-                                        </button>
-                                        <button onClick={() => toggleModule(c.id, 'tournaments')} className={`px-2 py-1 text-[9px] font-bold rounded-lg border flex items-center gap-1 ${c.modules.tournaments ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-white/5 text-gray-500 border-white/10'}`}>
-                                            {c.modules.tournaments ? <Check size={10} /> : <X size={10} />} Turnuva Motoru
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                {toast && <div className="fixed bottom-10 right-10 bg-green-500/10 text-green-400 px-4 py-2 rounded-lg border border-green-500/20 text-xs font-bold animate-pulse">{toast}</div>}
-            </div>
-        );
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [c, r, t, tour] = await Promise.all([
+        fetchCommunities(),
+        fetchCommunityCreationRequests(),
+        fetchTeamsFromDb(),
+        fetchTournaments(),
+      ]);
+      setCommunities(c);
+      setRequests(r);
+      setTeams(t);
+      setTournaments(tour);
+    } catch (err) {
+      setError(toTurkishAdminError(err));
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    if (subRoute === 'TURNUVALAR') {
-        return (
-            <div className="p-6 space-y-6">
-                <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
-                    <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-6">
-                        <Trophy size={16} className="text-yellow-400" /> Turnuva Fikstür Yönetimi
-                    </h2>
-                    <div className="py-10 text-center flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl bg-black/20">
-                        <Trophy size={48} className="text-gray-600 mb-4" />
-                        <p className="text-xs text-gray-400 font-mono">Boğaziçi Süper Kupa 2026 - Yarı Final Aşaması</p>
-                        <p className="text-[10px] text-gray-600 mt-2">Bracket görünümü yakında Supabase üzerinden entegre edilecek.</p>
-                    </div>
-                </div>
-            </div>
-        );
+  useEffect(() => { void load(); }, [load]);
+
+  const refresh = async () => {
+    await load();
+    if (onRefresh) await onRefresh();
+  };
+
+  const handleModerate = async (id: string, approved: boolean) => {
+    const notes = approved ? undefined : prompt('Red sebebi:') || undefined;
+    if (!approved && !notes) return;
+    setActioningId(id);
+    try {
+      await moderateCommunityCreation(id, approved, notes);
+      success(approved ? 'Topluluk onaylandı' : 'Talep reddedildi');
+      await load();
+    } catch (err) {
+      setError(toTurkishAdminError(err));
+    } finally {
+      setActioningId(null);
     }
+  };
 
+  const handleAdd = async () => {
+    if (!newName.trim()) return;
+    try {
+      if (subRoute === 'TOPLULUKLAR') await createCommunityAdmin({ name: newName.trim() });
+      else if (subRoute === 'TAKIMLAR') await createTeamAdmin(newName.trim());
+      else await createTournamentAdmin({ name: newName.trim() });
+      setNewName('');
+      setShowAdd(false);
+      success('Kayıt eklendi');
+      await load();
+    } catch (err) {
+      setError(toTurkishAdminError(err));
+    }
+  };
+
+  const handleDelete = (id: string, label: string) => setDeleteTarget({ id, label });
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      if (subRoute === 'TOPLULUKLAR') await deleteCommunity(deleteTarget.id);
+      else if (subRoute === 'TAKIMLAR') await deleteTeamAdmin(deleteTarget.id);
+      else await deleteTournament(deleteTarget.id);
+      success('Silindi');
+      await load();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const deleteDialog = (
+    <ConfirmDialog
+      open={!!deleteTarget}
+      title="Kaydı sil"
+      description={deleteTarget ? `"${deleteTarget.label}" kalıcı olarak silinecek.` : ''}
+      confirmLabel="Sil"
+      destructive
+      onConfirm={() => void confirmDelete()}
+      onCancel={() => setDeleteTarget(null)}
+    />
+  );
+
+  const addForm = showAdd && (
+    <div className="flex gap-2 max-w-md p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+      <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ad girin..." className="flex-1 h-9 bg-black/40 border border-white/10 rounded-lg px-3 text-white text-sm focus:outline-none focus:border-white/20" />
+      <button onClick={() => void handleAdd()} className="h-9 px-4 bg-white text-black text-xs font-bold rounded-lg">Kaydet</button>
+      <button onClick={() => setShowAdd(false)} className="h-9 px-3 text-gray-500 text-xs hover:text-white">İptal</button>
+    </div>
+  );
+
+  if (subRoute === 'TAKIMLAR') {
     return (
-        <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">
-            {subRoute} Sayfası Yapım Aşamasında 🚀
-        </div>
+      <>
+      <PageShell route="TAKIMLAR" icon={<Users size={20} />} actions={
+        <ModuleCrudBar moduleKey="teams" addLabel="Yeni Takım" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
+      }>
+        {addForm}
+        <DataTable
+          columns={[
+            { header: 'Takım', render: (t) => (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-white">{t.name}</span>
+                {t.is_demo && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">DEMO</span>}
+              </div>
+            )},
+            { header: 'Kaptan', render: (t) => <span className="font-mono text-[11px] text-gray-500">{t.captain_id?.slice(0, 8) ?? '—'}</span> },
+            { header: 'Tarih', render: (t) => <span className="text-[11px] text-gray-500">{t.created_at ? new Date(t.created_at).toLocaleDateString('tr-TR') : '—'}</span> },
+            { header: '', render: (t) => (
+              <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10"><Trash2 size={14} /></button>
+            )},
+          ]}
+          data={teams}
+          loading={loading}
+        />
+      </PageShell>
+      {deleteDialog}
+      </>
     );
+  }
+
+  if (subRoute === 'TURNUVALAR') {
+    return (
+      <>
+      <PageShell route="TURNUVALAR" icon={<Trophy size={20} />} actions={
+        <ModuleCrudBar moduleKey="tournaments" addLabel="Yeni Turnuva" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
+      }>
+        {addForm}
+        <DataTable
+          columns={[
+            { header: 'Turnuva', render: (t) => (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-white">{t.name}</span>
+                {t.is_demo && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">DEMO</span>}
+              </div>
+            )},
+            { header: 'Durum', render: (t) => <span className="text-[11px] text-gray-500">{t.status}</span> },
+            { header: 'Kapasite', render: (t) => <span className="text-[11px] text-gray-500">{t.max_teams} takım</span> },
+            { header: 'Başlangıç', render: (t) => <span className="text-[11px] text-gray-500">{t.starts_at ? new Date(t.starts_at).toLocaleDateString('tr-TR') : '—'}</span> },
+            { header: '', render: (t) => (
+              <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10"><Trash2 size={14} /></button>
+            )},
+          ]}
+          data={tournaments}
+          loading={loading}
+        />
+      </PageShell>
+      {deleteDialog}
+      </>
+    );
+  }
+
+  return (
+    <>
+    <PageShell route="TOPLULUKLAR" icon={<Globe size={20} />} actions={
+      <ModuleCrudBar moduleKey="communities" addLabel="Yeni Topluluk" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
+    }>
+      {addForm}
+      {error && <p className="text-red-400 text-xs px-1">{error}</p>}
+
+      {requests.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Onay Bekleyen Talepler ({requests.length})</h3>
+          {requests.map((req) => (
+            <div key={req.id} className="bg-[#161B22] border border-yellow-500/20 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-white">{req.name}</p>
+                <p className="text-[10px] text-gray-400">{req.type} • {req.requesterName} • {req.location || '—'}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => void handleModerate(req.id, true)} disabled={actioningId === req.id} className="flex items-center gap-1 text-xs font-bold text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg">
+                  <Check size={12} /> Onayla
+                </button>
+                <button onClick={() => void handleModerate(req.id, false)} disabled={actioningId === req.id} className="flex items-center gap-1 text-xs font-bold text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg">
+                  <X size={12} /> Reddet
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section className="space-y-2">
+        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kayıtlı Topluluklar ({communities.length})</h3>
+        {communities.length === 0 && !loading ? (
+          <p className="text-center text-gray-600 text-xs py-8 border border-dashed border-white/5 rounded-xl">Henüz topluluk yok</p>
+        ) : (
+          communities.map((c) => (
+            <div key={c.id} className="bg-black/30 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white">{c.name}</h3>
+                  {c.is_verified && <span className="text-[8px] font-black text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">DOĞRULANMIŞ</span>}
+                </div>
+                <p className="text-[10px] text-gray-500 font-mono mt-1">{c.type} • {c.member_count} üye • {c.join_mode}</p>
+              </div>
+              <button onClick={() => handleDelete(c.id, c.name)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg" title="Sil">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))
+        )}
+      </section>
+    </PageShell>
+    {deleteDialog}
+    </>
+  );
 };

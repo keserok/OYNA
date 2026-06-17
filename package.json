@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:admin": "vite --open /admin.html",
+    "test:admin": "playwright test tests/admin.spec.ts",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "owner:demo:seed": "node scripts/owner-demo.mjs seed",
-    "owner:demo:purge": "node scripts/owner-demo.mjs purge"
+    "owner:demo:purge": "node scripts/owner-demo.mjs purge",
+    "owner:menu:live-test": "node scripts/owner-menu-live-test.mjs",
+    "godview:demo:seed": "node scripts/godview-demo.mjs seed",
+    "godview:demo:purge": "node scripts/godview-demo.mjs purge"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
@@ -42,6 +47,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.4",
+    "@playwright/test": "^1.61.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.0.8",

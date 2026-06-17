@@ -1,15 +1,48 @@
 import React, { useState } from 'react';
-import AdminLogin from './AdminLogin';
+import AdminAuthGate from './AdminAuthGate';
 import GodViewPanel from './GodViewPanel';
+import { useAppStore } from '../../store';
+import { loadAdminOperationalData, loadAdminExtendedData, signOutAdmin, type AdminSession } from '../../services/adminService';
 
 interface Props { onBack: () => void; }
 
 const AdminPanel: React.FC<Props> = ({ onBack }) => {
-    const [unlocked, setUnlocked] = useState(false);
+    const { loadAdminData } = useAppStore();
+    const [session, setSession] = useState<AdminSession | null>(null);
 
-    if (!unlocked) return <AdminLogin onUnlock={() => setUnlocked(true)} onBack={onBack} />;
+    const handleAuthenticated = async (adminSession: AdminSession) => {
+        setSession(adminSession);
+        try {
+            const data = await loadAdminOperationalData();
+            const extended = await loadAdminExtendedData();
+            loadAdminData({ ...data, texts: extended.texts });
+        } catch (err) {
+            console.error('Embedded admin data load failed:', err);
+        }
+    };
 
-    return <GodViewPanel onBack={onBack} />;
+    const handleLogout = async () => {
+        await signOutAdmin();
+        setSession(null);
+        onBack();
+    };
+
+    if (!session) {
+        return <AdminAuthGate onAuthenticated={handleAuthenticated} />;
+    }
+
+    return (
+        <GodViewPanel
+            mode="embedded"
+            adminSession={session}
+            onBack={handleLogout}
+            onRefreshData={async () => {
+                const data = await loadAdminOperationalData();
+                const extended = await loadAdminExtendedData();
+                loadAdminData({ ...data, texts: extended.texts });
+            }}
+        />
+    );
 };
 
 export default AdminPanel;

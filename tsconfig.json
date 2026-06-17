@@ -48,6 +48,8 @@
     "test_compile.js",
     "test_page.ts",
     "test_scanner.js",
-    "test_vite_start.js"
+    "test_vite_start.js",
+    "tests",
+    "playwright.config.ts"
   ]
 }
