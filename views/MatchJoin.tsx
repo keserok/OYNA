@@ -11,7 +11,7 @@ import { MatchListing, PositionSlot, UserRole, Player } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { joinMatchSlot, subscribeToMatchUpdates } from '../services/matchService';
+import { subscribeToMatchUpdates } from '../services/matchService';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';

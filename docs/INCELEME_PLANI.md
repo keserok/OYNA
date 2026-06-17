@@ -16,7 +16,7 @@
 | 2 | Kimlik & Üyelik (Onboarding) | Giriş, kayıt, rol seçimi, doğrulama, konum izni | ✅ İncelendi — 1 kod düzeltildi, 1 DB notu |
 | 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ✅ İncelendi — 1 kritik kod düzeltildi, 2 büyük not |
 | 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ✅ İncelendi — 1 kritik para hatası düzeltildi, 1 tutarlılık hatası düzeltildi |
-| 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ⬜ Bekliyor |
+| 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ✅ İncelendi — 3 kod hatası düzeltildi, 3 büyük not |
 | 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ⬜ Bekliyor |
 | 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ⬜ Bekliyor |
 | 8 | Ödeme & Cüzdan | Ödeme ekranı, cüzdan, bölünmüş ödeme, premium, sadakat | ⬜ Bekliyor |
@@ -495,4 +495,121 @@ Saha sahibi onay/red işlemleri ise RLS korumalı doğrudan tablo güncellemesiy
       kurulmalı (şu an manuel/SIMULATION) — Modül 8'de ele alınacak.
 - [ ] `BOOKING_ADDONS` (kaleci/hakem ek hizmet) akışının rezervasyon yolculuğuna geri
       bağlanıp bağlanmayacağına dair bir ürün kararı verilmeli.
+
+---
+
+## ✅ Modül 5 — Maç Sistemi (Tamamlandı)
+
+**1) Ne işe yarar?**
+Kaptanın saha tutup maç kurması, kadro doldurması; diğer oyuncuların maç keşfedip
+katılması; maç günü lobi/bilet ekranları; maç sonrası değerlendirme (puan, maçın adamı,
+skor onayı).
+
+**2) Hangi dosyalar?**
+`MatchCreate.tsx` + `hooks/useMatchCreate.ts`, `MatchDiscovery.tsx`, `MatchJoin.tsx`,
+`MatchCalendar.tsx`, `UpcomingMatchesView.tsx`, `Dashboard.tsx`, `Marketplace.tsx`,
+`MatchTicket.tsx`, `PostMatchEval.tsx`, `VotingScreen.tsx`, `MotmReveal.tsx`,
+`PostMatchReport.tsx`, `services/matchService.ts`, `store.ts` (`addMatch`/`updateMatch`),
+`supabaseMutations.ts`. Backend: `matches` tablosu (`supabase_schema.sql`),
+`join_public_match_slot`/`leave_public_match_slot`/`pay_public_match_deposit` RPC'leri
+(`20260608_match_join_rpc_fixes.sql`), `player_ratings` tablosu ve
+`match_score_tokens` + `get_or_create_match_score_token`/`submit_match_score` RPC'leri
+(`20260526000000_plei_fubles_schema.sql`, `20260607000001_owner_module_complete.sql`).
+
+**3) Nasıl çalışıyor?**
+Kaptan `MatchCreate`'de saha/saat/format seçip kadroyu (arkadaş davetiyle) doldurur,
+`publishMatch()` ile `matches` tablosuna gerçek bir satır eklenir (`addMatch` →
+`fbAddMatch` → gerçek Supabase insert, optimistic update + hata durumunda rollback).
+Diğer oyuncular `MatchDiscovery`/`Marketplace`'te bu maçları görüp `MatchJoin`'den
+katılır; katılım `join_public_match_slot` RPC'si üzerinden `SELECT ... FOR UPDATE`
+ile atomik şekilde yapılıyor ve `process_match_payment` ile cüzdandan kapora
+düşülüyor (yetersiz bakiyede otomatik rollback) — bu kısım sağlam ve para güvenliği
+açısından doğru tasarlanmış, bu modülde dokunulmadı.
+
+**4) Veri & bağlantı**
+`matches` tablosu (`status` kolonu `TEXT`, CHECK constraint yok, varsayılan `'OPEN'`).
+`player_ratings` ve `match_score_tokens` tabloları RLS ile sıkı korunuyor ve teknik
+olarak kullanıma hazır, ama hiçbir ekran şu an bunlara gerçek yazma/okuma yapmıyor.
+
+**5) Durum tespiti**
+- 🔧 **DÜZELTİLDİ (kritik, herkesi etkileyen kod hatası):** `Dashboard.tsx` ve
+  `UpcomingMatchesView.tsx` içinde "şu anki kullanıcı" `const currentUserUid = 'u1'`
+  şeklinde **sabit/hardcoded** tutuluyordu — yani hangi gerçek kullanıcı giriş yapmış
+  olursa olsun, "Maçlarım", "Taslaklarım", "Yaklaşan Maçlarım" gibi bütün filtreler
+  hep aynı sahte `u1` kullanıcısına göre çalışıyordu. Gerçek kullanıcılar kendi
+  maçlarını listede hiç göremeyecekti. Düzeltme: `store.ts`'in başka yerlerinde
+  zaten kullanılan doğru kalıba (`auth.currentUser?.uid || 'u1'`) geçirildi — artık
+  gerçek oturum açan kullanıcının kimliği kullanılıyor, demo/local test için eski
+  `'u1'` sadece fallback olarak kaldı.
+- 🔧 **DÜZELTİLDİ (kritik, sahte veri gösteren ekran):** `MatchCalendar.tsx`
+  ("Maç Takvimim" ekranı) tamamen **3 satır sabit/mock maç verisiyle** çalışıyordu
+  (`useState<UpcomingMatch[]>([...])`) — Supabase/store'a hiç bağlı değildi, her
+  kullanıcıya birebir aynı 3 sahte maç ("Akşam Kapışması", "Haftalık Rutin", "Derbi
+  Maçı") gösteriliyordu. Ayrıca maça tıklanınca lobiye giderken maçın kimliği
+  (`match.id`) hiç iletilmiyordu (`onNavigate('MATCH_LOBBY')` parametresiz) — lobi
+  ekranı hangi maçın gösterileceğini bilemeyecekti. Düzeltme: ekran artık
+  `UpcomingMatchesView.tsx`'teki doğru kalıbı izleyerek gerçek `adminMatches`'ten
+  kullanıcının içinde olduğu, iptal/tamamlanmamış maçları süresine göre sıralı
+  listeliyor; tıklamada `setSelectedMatch(match)` çağrılıp gerçek maç state'e
+  yazıldıktan sonra lobiye gidiliyor.
+- 🔧 **DÜZELTİLDİ (ölü kod temizliği):** `services/matchService.ts`'teki
+  `createMatch` ve `joinMatchSlot` fonksiyonlarının hiçbir çağıranı yoktu (gerçek
+  maç oluşturma `store.ts`/`addMatch` üzerinden, gerçek slota katılım
+  `join_public_match_slot` RPC'si üzerinden yapılıyor — bu iki eski fonksiyon hiç
+  kullanılmıyordu). `MatchJoin.tsx`'teki `joinMatchSlot` import'u da hiç
+  çağrılmadan duruyordu (ölü import). Üçü de kaldırıldı; kullanılmayan
+  `PositionSlot` import'u da temizlendi.
+- ⚠️ **AÇIK NOT — "Taslak maç" özelliği koddan tamamen erişilemez durumda:**
+  `useMatchCreate.ts`'teki `activeDraftId`/`draftMatch`/`isDraftMode` mekanizması
+  (bir maçı "taslak" olarak yarıda kaydedip sonra düzenleyerek yayınlama) ve
+  `Dashboard.tsx`/`Marketplace.tsx`/`UpcomingMatchesView.tsx`'teki `status ===
+  'DRAFT'` filtreleri kodda duruyor, ama `setActiveDraftId(...)` fonksiyonu
+  **hiçbir yerden gerçek bir maç ID'siyle çağrılmıyor** — yani bu "taslak"
+  moduna girmenin koddan hiçbir yolu yok, tamamen erişilemez/ölü bir dal. Aynı
+  şekilde gerçek bir maç hiçbir zaman `status: 'DRAFT'` ile oluşturulmuyor (sadece
+  `constants.ts`'teki başlangıç mock verisinde var, gerçek veri yüklenince
+  kaybolur). Bu, ürün kararı gerektiren bir konu: (a) "taslak kaydet, sonra
+  düzenle" akışı tamamlanıp `MatchCreate.tsx`'e gerçek bir "Taslak Olarak Kaydet"
+  butonu eklenmeli, yoksa (b) bu özellik hiç bitirilmediyse ölü kod olarak
+  tamamen kaldırılmalı. Şu an çalışan hiçbir akışı bozmuyor, sadece kullanılamıyor
+  — bu modülde tek başına silinmedi, kapsamı netleşsin diye not edildi.
+- ⚠️ **AÇIK NOT — Maç sonu ekranları (`PostMatchEval`, `VotingScreen`,
+  `MotmReveal`, `MatchTicket`, `PostMatchReport`) gerçek veriye hiç bağlı değil:**
+  Bu beş ekran tamamen sabit/demo veriyle çalışıyor:
+  - `PostMatchEval.tsx`/`VotingScreen.tsx`: oyuncu listesi (`PLAYERS`,
+    `MY_TEAM.roster`) sabit, puanlama tamamen local state'te kalıyor; arka planda
+    hazır ve RLS ile korunan `player_ratings` tablosuna (DB'de zaten var,
+    `UNIQUE(match_id, rater_id, ratee_id)` kısıtlı, sağlam tasarlanmış) hiçbir
+    INSERT gitmiyor.
+  - `PostMatchEval.tsx`'in "Skor Onayı" ekranı skor olarak sabit `5-3` gösteriyor;
+    arka planda hazır olan `get_or_create_match_score_token`/`submit_match_score`
+    RPC'leri (tek kullanımlık token, kaptan/hakem/saha sahibi yetkisiyle skor
+    girişi — sağlam tasarlanmış) hiç çağrılmıyor.
+  - `MotmReveal.tsx` "Maçın Adamı" olarak her zaman sabit "BURAK" ismini ve sabit
+    bir avatarı gösteriyor; DB'de gerçek bir MOTM/MVP hesaplama mekanizması
+    (ör. `player_ratings` üzerinden agregasyon) hiç yok.
+  - `MatchTicket.tsx` sahte bir QR ikonu ve sabit `ID: OYNA-8293-TX` metni
+    gösteriyor; gerçek, doğrulanabilir bir bilet kimliği üretilmiyor.
+  - `PostMatchReport.tsx` "Simulate API Save" yorumuyla sahte bir kayıt
+    animasyonu oynatıyor, gerçek bir tabloya yazmıyor.
+  Bunların hepsi "bug" değil, **bilinçli olarak yarım bırakılmış / iskelet
+  (mockup) ekranlar** — gerçek veriye bağlamak küçük bir düzeltme değil, her biri
+  kendi başına bir özellik inşası (gerçek kadro/rakip oyuncu listesini nereden
+  çekeceğiz, MOTM nasıl hesaplanacak, bilet kimliği neye dayanacak gibi ürün
+  kararları gerektiriyor). Bu yüzden bu turda yarım/riskli bir şekilde
+  bağlanmadı; ayrı bir iş kalemi olarak burada kayda geçirildi.
+- ✅ Maça gerçek katılım/kapora akışı (`join_public_match_slot`,
+  `leave_public_match_slot`, `pay_public_match_deposit` RPC'leri,
+  `process_match_payment` ile cüzdan düşümü) zaten sağlam, atomik ve para
+  güvenliği açısından doğru — bu modülde hiçbir değişiklik gerekmedi.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] `Dashboard.tsx`/`UpcomingMatchesView.tsx` artık gerçek oturum açan kullanıcının
+      kimliğini kullanıyor (`'u1'` sabit değeri kaldırıldı).
+- [x] `MatchCalendar.tsx` artık gerçek maç verisiyle çalışıyor, lobiye doğru maç
+      kimliğiyle yönlendiriyor.
+- [x] `matchService.ts`'teki ölü/kullanılmayan fonksiyonlar temizlendi.
+- [ ] "Taslak maç" özelliği için ürün kararı: tamamla ya da kaldır.
+- [ ] Maç sonu ekranlarının (puanlama, MOTM, skor onayı, bilet, rapor) gerçek
+      veriye bağlanması — her biri ayrı bir özellik inşası olarak planlanmalı.
 

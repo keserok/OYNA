@@ -11,6 +11,7 @@ import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { useAppStore } from '../store';
 import { check90MinAutoCancel } from '../utils/gameRules';
+import { auth } from '../supabaseAuth';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
@@ -299,7 +300,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
   const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
 
   const currentUserUid = React.useMemo(() => {
-    return 'u1'; // Default / local testing user
+    return auth.currentUser?.uid || 'u1';
   }, []);
 
   const currentUserProfile = React.useMemo(() => {

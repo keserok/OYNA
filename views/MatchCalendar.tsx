@@ -1,8 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Plus, Calendar, MapPin, Clock, Users, ArrowRight, Search, Key, LayoutGrid, X } from 'lucide-react';
 import { AppView } from '../types';
+import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
 
 interface MatchCalendarProps {
   onBack: () => void;
@@ -20,58 +22,73 @@ interface UpcomingMatch {
   maxPlayers: number;
 }
 
+const parseMatchDate = (date: string, time: string): Date | null => {
+  try {
+    if (date.includes('-')) {
+      return new Date(`${date}T${time}:00`);
+    }
+    const today = new Date();
+    const [hours, minutes] = time.split(':').map(Number);
+    today.setHours(hours, minutes, 0, 0);
+    if (date === 'Yarın') {
+      today.setDate(today.getDate() + 1);
+    }
+    return today;
+  } catch {
+    return null;
+  }
+};
+
+const countFilledSlots = (slots?: { player?: unknown }[]) =>
+  (slots || []).filter(s => !!s.player).length;
+
 const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => {
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [showJoinCodeInput, setShowJoinCodeInput] = useState(false);
   const [joinCode, setJoinCode] = useState('');
+  const [now, setNow] = useState(() => Date.now());
 
-  // Mock upcoming matches
-  const [matches, setMatches] = useState<UpcomingMatch[]>([
-    {
-      id: 'm1',
-      title: 'Akşam Kapışması',
-      pitchName: 'Arena Sport Center',
-      time: '21:00',
-      date: 'Bugün • 02.11.2026',
-      timeLeftSeconds: 3600 * 2, // 2 hours
-      playersCount: 12,
-      maxPlayers: 14
-    },
-    {
-      id: 'm2',
-      title: 'Haftalık Rutin',
-      pitchName: 'Vadi Spor Tesisleri',
-      time: '20:00',
-      date: 'Yarın • 03.11.2026',
-      timeLeftSeconds: 3600 * 24 + 3600 * 1, // 25 hours
-      playersCount: 10,
-      maxPlayers: 14
-    },
-    {
-      id: 'm3',
-      title: 'Derbi Maçı',
-      pitchName: 'Yıldız Halı Saha',
-      time: '22:00',
-      date: 'Cuma • 06.11.2026',
-      timeLeftSeconds: 3600 * 48 + 3600 * 3, // ~51 hours
-      playersCount: 14,
-      maxPlayers: 14
-    }
-  ]);
+  const { adminMatches, setSelectedMatch } = useAppStore();
+  const currentUserUid = auth.currentUser?.uid || 'u1';
 
-  // Update time left every second
   useEffect(() => {
-    const timer = setInterval(() => {
-      setMatches(prev => prev.map(m => ({
-        ...m,
-        timeLeftSeconds: Math.max(0, m.timeLeftSeconds - 1)
-      })));
-    }, 1000);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  const matches = useMemo<UpcomingMatch[]>(() => {
+    return adminMatches
+      .filter(m => {
+        if (m.status === 'CANCELLED' || m.status === 'COMPLETED') return false;
+        return m.slots?.some(s => s.player?.id === currentUserUid) || m.awaySlots?.some(s => s.player?.id === currentUserUid);
+      })
+      .map(m => {
+        const matchDate = parseMatchDate(m.date, m.time);
+        const timeLeftSeconds = matchDate ? Math.max(0, Math.floor((matchDate.getTime() - now) / 1000)) : 0;
+        const playersCount = countFilledSlots(m.slots) + countFilledSlots(m.awaySlots);
+        const maxPlayers = (m.slots?.length || 0) + (m.awaySlots?.length || 0);
+        return {
+          id: m.id,
+          title: m.title,
+          pitchName: m.location,
+          time: m.time,
+          date: m.date,
+          timeLeftSeconds,
+          playersCount,
+          maxPlayers: maxPlayers || playersCount,
+        };
+      })
+      .sort((a, b) => a.timeLeftSeconds - b.timeLeftSeconds);
+  }, [adminMatches, currentUserUid, now]);
+
+  const handleSelectMatch = (matchId: string) => {
+    const match = adminMatches.find(m => m.id === matchId);
+    if (match) setSelectedMatch(match);
+    onNavigate('MATCH_LOBBY');
+  };
+
   // Calculate pulse speed based on time left
-  // Closer = faster. 
+  // Closer = faster.
   // Under 1 hour: very fast (0.5s)
   // Under 5 hours: fast (1s)
   // Under 24 hours: medium (2s)
@@ -114,7 +131,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            onClick={() => onNavigate('MATCH_LOBBY')}
+            onClick={() => handleSelectMatch(match.id)}
             className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FFFF00]/30 transition-all duration-500"
           >
             {/* Dynamic Pulse Strip */}

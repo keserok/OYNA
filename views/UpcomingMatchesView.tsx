@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Clock, MapPin, Calendar, Info } from 'lucide-react';
 import { AppView, MatchListing } from '../types';
 import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
 
 interface UpcomingMatchesViewProps {
   onBack: () => void;
@@ -89,7 +90,7 @@ const KalanSure: React.FC<{ timeStr: string; dateStr: string }> = ({ timeStr, da
 
 const UpcomingMatchesView: React.FC<UpcomingMatchesViewProps> = ({ onBack, onNavigate }) => {
   const { adminMatches, setSelectedMatch } = useAppStore();
-  const currentUserUid = 'u1';
+  const currentUserUid = auth.currentUser?.uid || 'u1';
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'CANCELLED'>('UPCOMING');
 
   const userMatches = useMemo(() => {

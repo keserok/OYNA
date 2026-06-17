@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { MatchListing, PositionSlot } from '../types';
+import { MatchListing } from '../types';
 
 export interface Match {
   id?: string;
@@ -25,27 +25,6 @@ export interface Match {
 // ============================================================================
 // 1. OYUNCU (KAPTAN) UYGULAMASI FONKSİYONLARI
 // ============================================================================
-
-export const createMatch = async (matchData: Omit<Match, 'id' | 'createdAt' | 'status' | 'applicants'>) => {
-  try {
-    const { data, error } = await supabase.from('matches').insert([{
-      pitch_id: matchData.pitchId,
-      pitch_name: matchData.pitchName,
-      captain_id: matchData.captainId,
-      captain_name: matchData.captainName,
-      date: matchData.date,
-      time: matchData.time,
-      status: 'OPEN',
-      applicants: []
-    }]).select().single();
-
-    if (error) throw error;
-    return data.id;
-  } catch (error) {
-    console.error("Maç oluşturulurken hata oluştu: ", error);
-    throw error;
-  }
-};
 
 export const approveApplicant = async (matchId: string, applicantUid: string, role: 'GOALKEEPER' | 'REFEREE') => {
   try {
@@ -158,21 +137,6 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
   } catch (error) {
     console.error("Maç detayları çekilirken hata:", error);
     return null;
-  }
-};
-
-export const joinMatchSlot = async (
-  matchId: string, 
-  updatedSlots: PositionSlot[], 
-  isAway: boolean
-): Promise<void> => {
-  try {
-    const updateData = isAway ? { away_slots: updatedSlots } : { slots: updatedSlots };
-    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
-    if (error) throw error;
-  } catch (error) {
-    console.error("Slota katılırken hata:", error);
-    throw error;
   }
 };
 
