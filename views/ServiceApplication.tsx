@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Scale, User, Smartphone, FileText, MapPin,
-  Check, ArrowRight, Banknote, Ruler, Calendar, Award, ChevronDown, Sparkles, XCircle,
+  Check, ArrowRight, Banknote, Ruler, Calendar, Award, ChevronDown, Sparkles, XCircle, Search,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { auth } from '../supabaseAuth';
 import { submitServiceApplication, ServiceApplicationData } from '../services/serviceProviderService';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
+import { TURKEY_REGIONS, districtsOfCity } from '../data/turkeyRegions';
 
 interface ServiceApplicationProps {
   role: UserRole.GOALKEEPER | UserRole.REFEREE;
@@ -47,11 +48,16 @@ const COUNTRY_CODES = [
   { code: '+1', flag: '🇺🇸' },
 ];
 
-const REGIONS: { city: string; districts: string[] }[] = [
-  { city: 'İstanbul', districts: ['Kadıköy', 'Beşiktaş', 'Şişli', 'Ümraniye', 'Maltepe', 'Üsküdar', 'Bağcılar', 'Pendik', 'Sarıyer', 'Bakırköy'] },
-  { city: 'Ankara', districts: ['Çankaya', 'Keçiören', 'Yenimahalle', 'Mamak', 'Etimesgut'] },
-  { city: 'İzmir', districts: ['Karşıyaka', 'Bornova', 'Buca', 'Konak', 'Çiğli'] },
-];
+// Türkçe arama için aksan/normalize yardımcısı (İ/ı, ş, ğ vb.)
+const normalizeTr = (s: string) =>
+  s.toLocaleLowerCase('tr')
+    .replace(/ı/g, 'i')
+    .replace(/ş/g, 's')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .trim();
 
 const formatPhoneDisplay = (digits: string) => {
   const d = digits.slice(0, 10);
@@ -90,7 +96,9 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [bio, setBio] = useState('');
   const [style, setStyle] = useState('');
   const [zones, setZones] = useState<string[]>([]);
-  const [activeCity, setActiveCity] = useState(REGIONS[0].city);
+  const [activeCity, setActiveCity] = useState('İstanbul');
+  const [citySearch, setCitySearch] = useState('');
+  const [showCityList, setShowCityList] = useState(false);
 
   // GK
   const [height, setHeight] = useState('');
@@ -150,7 +158,12 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   };
 
   const HeaderIcon = theme.icon;
-  const districts = REGIONS.find((r) => r.city === activeCity)?.districts ?? [];
+  const districts = districtsOfCity(activeCity);
+  const filteredCities = useMemo(() => {
+    const q = normalizeTr(citySearch);
+    if (!q) return TURKEY_REGIONS;
+    return TURKEY_REGIONS.filter((r) => normalizeTr(r.city).includes(q));
+  }, [citySearch]);
 
   return (
     <PageLayout showSafeBottom={false} onBack={onBack} className="relative z-10">
@@ -391,22 +404,60 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider flex items-center gap-1.5">
               <MapPin size={12} style={{ color }} /> Tercih Edilen Bölgeler
             </label>
-            <div className="flex gap-2 mb-3">
-              {REGIONS.map((r) => (
-                <button
-                  key={r.city}
-                  type="button"
-                  onClick={() => setActiveCity(r.city)}
-                  className="px-3 h-8 rounded-lg text-[11px] font-bold transition-all"
-                  style={{
-                    background: activeCity === r.city ? 'rgba(255,255,255,0.1)' : 'transparent',
-                    color: activeCity === r.city ? '#fff' : 'rgba(255,255,255,0.4)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                >
-                  {r.city}
-                </button>
-              ))}
+            {/* Şehir seçici (aranabilir — 81 il) */}
+            <div className="relative mb-3">
+              <button
+                type="button"
+                onClick={() => setShowCityList((v) => !v)}
+                className="w-full h-11 px-3 rounded-2xl flex items-center justify-between text-sm font-bold text-white bg-[#0A0E14] border border-gray-800 outline-none focus:border-white/40 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <MapPin size={14} style={{ color }} /> {activeCity}
+                </span>
+                <ChevronDown size={14} className={`text-gray-500 transition-transform ${showCityList ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showCityList && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute top-full mt-2 left-0 right-0 z-50 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+                    style={{ background: '#161B22' }}
+                  >
+                    <div className="p-2 border-b border-white/5">
+                      <div className="flex items-center gap-2 bg-[#0A0E14] rounded-xl px-3 h-9 border border-gray-800">
+                        <Search size={14} className="text-gray-500 shrink-0" />
+                        <input
+                          autoFocus
+                          value={citySearch}
+                          onChange={(e) => setCitySearch(e.target.value)}
+                          placeholder="İl ara…"
+                          className="bg-transparent w-full outline-none text-white text-sm placeholder:text-gray-600"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto">
+                      {filteredCities.length === 0 ? (
+                        <p className="text-xs text-gray-500 text-center py-4">İl bulunamadı</p>
+                      ) : (
+                        filteredCities.map((r) => (
+                          <button
+                            key={r.city}
+                            type="button"
+                            onClick={() => { setActiveCity(r.city); setShowCityList(false); setCitySearch(''); }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-white hover:bg-white/10 transition-colors outline-none"
+                            style={{ background: activeCity === r.city ? 'rgba(255,255,255,0.06)' : 'transparent' }}
+                          >
+                            <span className="font-bold">{r.city}</span>
+                            {activeCity === r.city && <Check size={14} style={{ color }} />}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div className="flex flex-wrap gap-2">
               {districts.map((d) => {
