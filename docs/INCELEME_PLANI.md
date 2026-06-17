@@ -271,14 +271,16 @@ Roller: PLAYER, CAPTAIN, GOALKEEPER, REFEREE, OWNER, COMMUNITY_ADMIN, SUPER_ADMI
   bunları yazmadığı için Modül 2 etkilenmiyor; fakat **admin panelinden rol değiştirme**
   ve **topluluk yöneticisi atama** akışları canlıda kısıt ihlaliyle kırılır. Düzeltme,
   canlı kısıta `CAPTAIN`/`COMMUNITY_ADMIN` (ve `ORGANIZER`) eklemek — yalnızca genişletme
-  olduğu için güvenli ve geri alınabilir. Kullanıcı onayıyla uygulanacak.
+  olduğu için güvenli ve geri alınabilir. **✅ ÇÖZÜLDÜ:** Kullanıcı onayıyla canlı DB'ye
+  uygulandı ve migration olarak kaydedildi (`20260617000000`).
 - ⚠️ **Küçük not:** "Misafir girişi" hiç oturum açmadan uygulamaya sokuyor; bazı
   ekranlar `auth.currentUser` beklediği için misafir akışında hatalar görülebilir.
   Ürünsel bir karar; ileride netleştirilecek.
 
 **6) Piyasa öncesi yapılacaklar**
 - [x] `handleRoleSelect` sütun uyuşmazlığı düzeltildi.
-- [ ] Canlı `role`/`roles` kısıtına `CAPTAIN` + `COMMUNITY_ADMIN` eklensin (Modül 10/14
-      öncesi). Kullanıcı onayı bekliyor.
+- [x] Canlı `role`/`roles` kısıtına `CAPTAIN` + `COMMUNITY_ADMIN` (+ `ORGANIZER`)
+      eklendi. Canlı DB'ye uygulandı ve `migrations/20260617000000_align_profiles_role_constraints.sql`
+      olarak repoya kaydedildi. Doğrulandı: her iki kısıt da 9 rolü kapsıyor. ✅
 - [ ] "Misafir" akışının kapsamı netleştirilsin (salt görüntüleme mi, yoksa kaldırılsın mı).
 
