@@ -6,7 +6,6 @@ import { UserRole } from '../types';
 export interface ServiceApplicationData {
   fullName: string;
   phone: string;          // E.164 (+90...) formatında
-  tcNumber: string;       // 11 haneli TC kimlik no
   fee: number;            // Maç başı ücret (₺)
   bio: string;
   style: string;          // Kaleci stili / Hakem yaklaşımı

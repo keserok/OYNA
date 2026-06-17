@@ -7,6 +7,8 @@ import { auth, logout } from '../supabaseAuth';
 interface PendingVerificationViewProps {
   onApproved: () => void;
   onLogout: () => void;
+  /** Reddedilen kullanıcı "Tekrar Başvur" dediğinde başvuru formuna yönlendirir */
+  onReapply?: (rejectionNote: string | null) => void;
 }
 
 // Basit confetti patlaması — sadece CSS animasyonu, bağımlılık gerektirmez
@@ -22,7 +24,7 @@ const ConfettiPiece: React.FC<{ x: number; color: string; delay: number }> = ({ 
 
 const CONFETTI_COLORS = ['#FFFF00', '#39FF14', '#FF3333', '#3388FF', '#FF69B4', '#FFA500'];
 
-const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApproved, onLogout }) => {
+const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApproved, onLogout, onReapply }) => {
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [rejectionNotes, setRejectionNotes] = useState<string | null>(null);
   const [showRejectedModal, setShowRejectedModal] = useState(false);
@@ -297,7 +299,10 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
               </p>
               <div className="space-y-3">
                 <button
-                  onClick={() => setShowRejectedModal(false)}
+                  onClick={() => {
+                    setShowRejectedModal(false);
+                    if (onReapply) onReapply(rejectionNotes);
+                  }}
                   className="w-full h-12 rounded-2xl font-black text-sm bg-[#FFFF00] text-black"
                 >
                   Tekrar Başvur

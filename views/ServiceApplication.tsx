@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Shield, Scale, User, Smartphone, Fingerprint, FileText, MapPin,
-  Check, ArrowRight, Banknote, Ruler, Calendar, Award, ChevronDown, Sparkles,
+  Shield, Scale, User, Smartphone, FileText, MapPin,
+  Check, ArrowRight, Banknote, Ruler, Calendar, Award, ChevronDown, Sparkles, XCircle,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { auth } from '../supabaseAuth';
@@ -14,6 +14,8 @@ interface ServiceApplicationProps {
   role: UserRole.GOALKEEPER | UserRole.REFEREE;
   onSubmitted: () => void;
   onBack: () => void;
+  /** Önceki başvuru reddedildiyse, admin'in red notu (varsa) */
+  rejectionNote?: string | null;
 }
 
 const THEME = {
@@ -56,8 +58,6 @@ const formatPhoneDisplay = (digits: string) => {
   return [d.slice(0, 3), d.slice(3, 6), d.slice(6, 8), d.slice(8, 10)].filter(Boolean).join(' ');
 };
 
-const isValidTc = (tc: string) => /^[1-9]\d{10}$/.test(tc);
-
 // ─── Ortak alan sarmalayıcı ──────────────────────────────────────────────────
 const Field: React.FC<{ label: string; icon: React.ReactNode; children: React.ReactNode; color: string }> = ({ label, icon, children, color }) => (
   <div className="group">
@@ -72,7 +72,7 @@ const Field: React.FC<{ label: string; icon: React.ReactNode; children: React.Re
   </div>
 );
 
-const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitted, onBack }) => {
+const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitted, onBack, rejectionNote }) => {
   const theme = THEME[role];
   const { color, glow } = theme;
   const isGk = role === UserRole.GOALKEEPER;
@@ -86,7 +86,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [countryCode, setCountryCode] = useState('+90');
   const [showCodes, setShowCodes] = useState(false);
   const [phoneDigits, setPhoneDigits] = useState('');
-  const [tcNumber, setTcNumber] = useState('');
   const [fee, setFee] = useState('');
   const [bio, setBio] = useState('');
   const [style, setStyle] = useState('');
@@ -111,7 +110,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const baseValid =
     fullName.trim().length >= 3 &&
     phoneDigits.length === 10 &&
-    isValidTc(tcNumber) &&
     Number(fee) > 0 &&
     bio.trim().length >= 10 &&
     style.length > 0 &&
@@ -132,7 +130,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
       const payload: ServiceApplicationData = {
         fullName: fullName.trim(),
         phone: `${countryCode}${phoneDigits}`,
-        tcNumber,
         fee: Number(fee),
         bio: bio.trim(),
         style,
@@ -211,6 +208,26 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           </p>
         </motion.div>
 
+        {/* ─── Red notu (yeniden başvuru) ─── */}
+        {rejectionNote && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.07 }}
+            className="rounded-2xl p-4 mb-5 flex items-start gap-3"
+            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}
+          >
+            <XCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] font-black text-red-400 uppercase tracking-wider mb-1">
+                Önceki başvurun onaylanmadı
+              </p>
+              <p className="text-[11px] text-gray-300 leading-relaxed">{rejectionNote}</p>
+              <p className="text-[10px] text-gray-500 mt-1">Bilgilerini güncelleyip tekrar gönderebilirsin.</p>
+            </div>
+          </motion.div>
+        )}
+
         {/* ─── Form kartı ─── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -271,19 +288,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               onChange={(e) => { setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null); }}
               className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 tracking-wide text-sm"
               placeholder="5XX XXX XX XX"
-            />
-          </Field>
-
-          {/* TC */}
-          <Field label="TC Kimlik Numarası" icon={<Fingerprint size={20} />} color={color}>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={11}
-              value={tcNumber}
-              onChange={(e) => { setTcNumber(e.target.value.replace(/\D/g, '').slice(0, 11)); setError(null); }}
-              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 tracking-widest font-mono text-sm"
-              placeholder="12345678901"
             />
           </Field>
 
@@ -464,7 +468,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               {agreed && <Check size={12} className="text-black" />}
             </button>
             <p className="text-[10px] text-gray-400 leading-relaxed font-bold tracking-wide">
-              Verdiğim bilgilerin doğru olduğunu, kimlik ve lisans bilgilerimin doğrulama amacıyla işlenmesini (KVKK) onaylıyorum.
+              Verdiğim bilgilerin doğru olduğunu ve iletişim ile lisans bilgilerimin doğrulama amacıyla işlenmesini (KVKK) onaylıyorum.
             </p>
           </div>
 

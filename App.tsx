@@ -97,6 +97,7 @@ const DEV_MODE =
 
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
+  const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
   const {
     view,
     role,
@@ -159,7 +160,7 @@ const App: React.FC = () => {
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role, roles, verification_status, is_admin, wallet_balance, phone, email')
+            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email')
             .eq('id', user.uid)
             .single();
 
@@ -205,12 +206,35 @@ const App: React.FC = () => {
 
             const currentView = useAppStore.getState().view;
             if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'LOCATION_PROMPT'].includes(currentView)) {
-              if (profile.verification_status === 'pending') {
+              const isProvider = primaryRole === UserRole.GOALKEEPER || primaryRole === UserRole.REFEREE;
+
+              if (isProvider) {
+                // Kaleci/Hakem: başvuru tamamlandı mı + onay durumu birlikte değerlendirilir
+                const providerTable = primaryRole === UserRole.GOALKEEPER ? 'goalkeepers' : 'referees';
+                const { data: providerRow } = await supabase
+                  .from(providerTable)
+                  .select('id')
+                  .eq('id', user.uid)
+                  .maybeSingle();
+                const hasApplication = !!providerRow;
+
+                if (profile.verification_status === 'rejected') {
+                  // Reddedildi → red notuyla yeniden başvuru formuna
+                  setVerificationNote(profile.verification_notes ?? null);
+                  setView('SERVICE_APPLICATION');
+                } else if (!hasApplication) {
+                  // Giriş yapmış ama formu hiç doldurmamış → forma geri dön
+                  setVerificationNote(null);
+                  setView('SERVICE_APPLICATION');
+                } else if (profile.verification_status === 'pending') {
+                  setView('PENDING_VERIFICATION');
+                } else {
+                  setView('SERVICE_DASHBOARD');
+                }
+              } else if (profile.verification_status === 'pending') {
                 setView('PENDING_VERIFICATION');
               } else if (primaryRole === UserRole.OWNER) {
                 setView('LOCATION_PROMPT');
-              } else if (primaryRole === UserRole.GOALKEEPER || primaryRole === UserRole.REFEREE) {
-                setView('SERVICE_DASHBOARD');
               } else {
                 setView('LOCATION_PROMPT');
               }
@@ -354,6 +378,7 @@ const App: React.FC = () => {
         return <PendingVerificationView
           onApproved={() => setView(navigateBasedOnRole(role))}
           onLogout={() => setView('SPLASH')}
+          onReapply={(note) => { setVerificationNote(note); setView('SERVICE_APPLICATION'); }}
         />;
       case 'ADMIN_PANEL':
         return <AdminPanel onBack={() => setView('ROLE_SELECTION')} />;
@@ -375,8 +400,9 @@ const App: React.FC = () => {
       case 'SERVICE_APPLICATION':
         return <ServiceApplication
           role={(role === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}
-          onSubmitted={() => setView('PENDING_VERIFICATION')}
-          onBack={() => setView('ROLE_SELECTION')}
+          rejectionNote={verificationNote}
+          onSubmitted={() => { setVerificationNote(null); setView('PENDING_VERIFICATION'); }}
+          onBack={() => { setVerificationNote(null); setView('ROLE_SELECTION'); }}
         />;
       case 'QR_SCANNER':
         return <QRScannerView 
