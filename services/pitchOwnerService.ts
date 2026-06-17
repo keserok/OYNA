@@ -244,10 +244,12 @@ export async function rejectBooking(bookingId: string, reason: string): Promise<
 
     const { data: booking, error: fetchErr } = await supabase
       .from('pitch_bookings')
-      .select('user_id, pitch_id')
+      .select('user_id, pitch_id, paid_amount')
       .eq('id', bookingId)
       .single();
     if (fetchErr) throw fetchErr;
+
+    const paidAmount = Number((booking as { paid_amount?: number } | null)?.paid_amount ?? 0);
 
     const { error } = await supabase
       .from('pitch_bookings')
@@ -256,6 +258,9 @@ export async function rejectBooking(bookingId: string, reason: string): Promise<
         cancellation_reason: reason,
         cancelled_at: new Date().toISOString(),
         cancelled_by: uid,
+        // Tesis tarafından reddedilen rezervasyonda alınmış kapora varsa,
+        // ödeme durumunu da gerçeğe uygun şekilde işaretle (oyuncuya iade borcu olduğunu gösterir).
+        ...(paidAmount > 0 ? { payment_status: 'REFUNDED' } : {}),
       })
       .eq('id', bookingId);
     if (error) throw error;

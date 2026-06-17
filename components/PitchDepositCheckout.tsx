@@ -3,9 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Calendar, Clock, CreditCard, CheckCircle2, Layers } from 'lucide-react';
 import type { Pitch, Court, SavedPaymentCard } from '../types';
 import { parseSlotLabel } from '../services/availabilityService';
+import { toPlayerErrorMessage } from '../services/playerBookingService';
+import { payBookingDeposit, toPaymentErrorMessage } from '../services/paymentService';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { Particles } from './Particles';
+
+const BOOKING_ERROR_CODES = ['SLOT_TAKEN', 'NO_TARIFF', 'SLOT_UNAVAILABLE'];
+
+function toCheckoutErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (BOOKING_ERROR_CODES.some((code) => msg.includes(code))) return toPlayerErrorMessage(e);
+  return toPaymentErrorMessage(e);
+}
 
 type CheckoutStep = 'CONFIRM' | 'PROCESSING' | 'SUCCESS';
 
@@ -61,9 +71,9 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
     return () => clearInterval(interval);
   }, [step]);
 
-  const createBooking = async () => {
+  const createBooking = async (): Promise<string> => {
     const { startTime, endTime } = parseSlotLabel(slotLabel);
-    const { error: rpcError } = await supabase.rpc('create_pitch_booking', {
+    const { data, error: rpcError } = await supabase.rpc('create_pitch_booking', {
       p_pitch_id: pitch.id,
       p_court_id: court.id,
       p_booking_date: bookingDateISO,
@@ -73,6 +83,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
       p_title: auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : 'Kullanıcı',
     });
     if (rpcError) throw rpcError;
+    return data as string;
   };
 
   const handleConfirm = async () => {
@@ -80,7 +91,17 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
     setStep('PROCESSING');
     try {
       await new Promise((r) => setTimeout(r, 400));
-      await createBooking();
+      const bookingId = await createBooking();
+      const payment = await payBookingDeposit(bookingId);
+      if (payment.redirected) {
+        // Gerçek sağlayıcı ödeme sayfasına yönlendiriliyor; sayfa zaten ayrılıyor.
+        return;
+      }
+      if (payment.result?.status !== 'PAID') {
+        setStep('CONFIRM');
+        setError('Rezervasyon oluşturuldu ancak ödeme tamamlanamadı. Kaporayı "Rezervasyonlarım" ekranından ödeyebilirsin.');
+        return;
+      }
       setProgress(100);
       await new Promise((r) => setTimeout(r, 700));
       setStep('SUCCESS');
@@ -89,7 +110,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
     } catch (e) {
       console.error('PitchDepositCheckout:', e);
       setStep('CONFIRM');
-      setError(e instanceof Error ? e.message : 'Ödeme alınamadı. Lütfen tekrar deneyin.');
+      setError(e instanceof Error ? toCheckoutErrorMessage(e) : 'Ödeme alınamadı. Lütfen tekrar deneyin.');
     }
   };
 

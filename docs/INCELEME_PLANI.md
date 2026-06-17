@@ -15,7 +15,7 @@
 | 1 | Çekirdek & Açılış Altyapısı | App.tsx, store, types, açılış, Supabase bağlantısı | ✅ Doğrulandı — ÇALIŞIYOR |
 | 2 | Kimlik & Üyelik (Onboarding) | Giriş, kayıt, rol seçimi, doğrulama, konum izni | ✅ İncelendi — 1 kod düzeltildi, 1 DB notu |
 | 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ✅ İncelendi — 1 kritik kod düzeltildi, 2 büyük not |
-| 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ⬜ Bekliyor |
+| 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ✅ İncelendi — 1 kritik para hatası düzeltildi, 1 tutarlılık hatası düzeltildi |
 | 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ⬜ Bekliyor |
 | 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ⬜ Bekliyor |
 | 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ⬜ Bekliyor |
@@ -379,4 +379,120 @@ geçmişteki Firebase→Supabase geçişinden kalma):
 - [ ] `player_card` jsonb alanının nasıl/ne zaman doldurulacağına dair bir ürün kararı
       gerekiyor (örn. maç sonu derecelendirmelerden otomatik hesaplama mı, admin
       onayıyla mı). Şu an gerçek kullanıcılarda bu alan boş (`{}`).
+
+---
+
+## ✅ Modül 4 — Saha Keşfi & Rezervasyon (Tamamlandı)
+
+Bu modül iki taraflı incelendi: **oyuncu** (saha bulma + rezervasyon) ve **saha sahibi**
+(takvim, onay/red, manuel rezervasyon, fiyatlandırma).
+
+**1) Ne işe yarar?**
+Oyuncunun haritada/listede saha bulup belirli bir gün/saat için rezervasyon yapması ve
+kapora ödemesi; saha sahibinin de gelen rezervasyon taleplerini görüp onaylaması,
+reddetmesi veya kendi takviminden telefonla gelen müşteri için manuel rezervasyon
+girmesi.
+
+**2) Hangi dosyalar?**
+- Oyuncu tarafı: `PitchDiscovery.tsx`, `PitchDepositCheckout.tsx`, `MyBookings.tsx`,
+  `BookingAddons.tsx`, `services/playerBookingService.ts`, `services/paymentService.ts`,
+  `services/availabilityService.ts`, `services/pitchBookingService.ts`,
+  `services/tariffService.ts`.
+- Saha sahibi tarafı: `OwnerPanel.tsx` (Takvim sekmesi + Onay Bekleyen Talepler),
+  `services/pitchOwnerService.ts`.
+- Backend: `supabase/migrations/20260613090000_faz1_player_booking_flow.sql` (RPC'ler:
+  `get_pitch_availability`, `create_pitch_booking`, `cancel_app_booking`,
+  `auto_approve_pending_bookings` + pg_cron), `20260615091000_faz2_payment_intents_and_rpcs.sql`
+  (`create_payment_intent`, `apply_booking_payment`), `supabase/functions/create-payment/`.
+
+**3) Nasıl çalışıyor?**
+- Oyuncu `PitchDiscovery`'de haritadan/listeden gerçek, onaylı (`verification_status =
+  approved`, `is_open = true`) sahaları görür, saat seçer, fiyat/kapora `pitch_tariffs`
+  tablosundan canlı hesaplanır. Kart eklenmişse `PitchDepositCheckout` açılır; kart
+  yoksa önce `WALLET` ekranına yönlendirilip kart eklettirilir.
+- Rezervasyon `create_pitch_booking` RPC'siyle oluşturulur (çakışma kontrolü DB
+  seviyesinde exclusion constraint ile yapılır → `SLOT_TAKEN`). Saha sahibi
+  `auto_approve_enabled` açıksa belirlenen dakika (varsayılan 35) sonunda pg_cron job'ı
+  rezervasyonu otomatik `CONFIRMED` yapar; kapalıysa sahibi elle onaylar/reddeder.
+- Saha sahibi `OwnerPanel` → Takvim sekmesinde günlük/haftalık dolulukları görür, telefonla
+  gelen müşteri için "Hızlı Oluştur" ile manuel rezervasyon girip nakit/kapora durumunu
+  işaretleyebilir (`createManualBooking` + `recordBookingPayment` RPC'leri — gerçek
+  sahalar için doğru bağlı). "Onay Bekleyen Talepler" ekranı uygulamadan gelen
+  `PENDING` rezervasyonları canlı (realtime) listeler, sahibi "Erken Onayla"/"Reddet"
+  yapabilir.
+
+**4) Veri & bağlantı**
+`pitches`, `courts`, `pitch_tariffs`, `pitch_bookings`, `pitch_availability_exceptions`,
+`payment_intents`, `booking_payments` tabloları. Tüm yazma işlemleri SECURITY DEFINER
+RPC'ler üzerinden gidiyor (oyuncu tarafı `create_pitch_booking`/`cancel_app_booking`;
+ödeme tarafı `create_payment_intent`/`apply_booking_payment` — bunlar yalnızca
+service-role/edge function tarafından çağrılabiliyor, istemciden direkt çağrılamıyor).
+Saha sahibi onay/red işlemleri ise RLS korumalı doğrudan tablo güncellemesiyle yapılıyor
+(`approveBooking`/`rejectBooking`).
+
+**5) Durum tespiti**
+- 🔧 **DÜZELTİLDİ (kritik, parayla ilgili kod hatası):** `PitchDepositCheckout.tsx` —
+  oyuncu "Kapora Öde & Onayla" butonuna bastığında ekran sadece rezervasyonu oluşturuyordu
+  (`create_pitch_booking` RPC'si çağrılıyordu, dönen rezervasyon ID'si **kullanılmadan
+  atılıyordu**); ardından gerçek bir ödeme işlemi **hiç başlatılmıyor**, sadece sahte bir
+  ilerleme çubuğu animasyonu oynatılıp "Rezervasyon Onaylandı! X₺ kapora alındı" mesajı
+  gösteriliyordu. Gerçekte veritabanında o rezervasyonun `paid_amount` değeri `0`,
+  `payment_status` değeri `'PENDING'` kalıyordu — yani **hem oyuncuya hem dolaylı olarak
+  saha sahibine yalan bilgi veriliyordu**: oyuncu parasının kapora olarak alındığını
+  düşünüyor, saha sahibi de no-show'a karşı bir güvence olduğunu zannediyordu, ama hiçbiri
+  gerçek değildi. Bu, "Rezervasyonlarım" ekranındaki (`MyBookings.tsx`) doğru çalışan
+  ödeme akışıyla doğrudan çelişiyordu (orada gerçek `payBookingDeposit()` çağrılıyor).
+  **Yapılan düzeltme:** `createBooking()` artık RPC'nin döndürdüğü rezervasyon ID'sini
+  yakalıyor; ardından `services/paymentService.ts`'teki gerçek `payBookingDeposit(bookingId)`
+  çağrılıyor (gerçek sağlayıcıya yönlendirme veya SIMULATION modunda anlık onay — proje
+  şu an `PAYMENT_PROVIDER=SIMULATION` ile çalışıyor, gerçek para hareketi yok ama akış
+  uçtan uca doğru). Ödeme gerçekten `'PAID'` durumuna geçmeden "Onaylandı" ekranı artık
+  gösterilmiyor; ödeme tamamlanamazsa kullanıcıya "rezervasyon oluştu ama ödeme
+  tamamlanamadı, kaporayı Rezervasyonlarım'dan ödeyebilirsin" mesajı net şekilde
+  gösteriliyor. Hata mesajları da rezervasyon RPC'sinden mi (`SLOT_TAKEN`, `NO_TARIFF`...)
+  yoksa ödeme adımından mı (`PROVIDER_NOT_CONFIGURED`...) geldiğine göre doğru Türkçe
+  metne çevriliyor. `tsc`/`build`/`lint` temiz.
+- 🔧 **DÜZELTİLDİ (tutarlılık hatası, saha sahibi tarafı):** `pitchOwnerService.ts` →
+  `rejectBooking()` bir rezervasyonu reddederken `status`'u `CANCELLED` yapıyordu ama
+  oyuncu zaten kapora ödemişse `payment_status` alanını güncellemiyordu — yukarıdaki
+  düzeltmeyle artık gerçek ödemeler olacağından, reddedilen-ama-"ödendi" görünen
+  rezervasyonlar saha sahibinin finans ekranında yanlış gelir gösterebilirdi ve oyuncuya
+  iade borcu olduğu hiçbir yerde görünmüyordu. Düzeltme: `paid_amount > 0` ise
+  `payment_status` artık `'REFUNDED'` olarak işaretleniyor — oyuncunun `cancel_app_booking`
+  RPC'sindeki aynı mantığa paralel.
+- ✅ Backend (RPC'ler, exclusion constraint, 48 saatlik iptal kuralı, %90 iade hesabı,
+  auto-approve pg_cron job'ı, tarife zorunluluğu trigger'ı) zaten sağlam ve doğru
+  tasarlanmıştı — bulunan hata tamamen frontend'in mevcut ödeme adımını atlamasıydı, DB
+  tarafında hiçbir değişiklik gerekmedi.
+- ✅ Saha sahibi takvim/manuel rezervasyon/onay-red akışları (`OwnerPanel.tsx`) gerçek
+  sahalar için doğru RPC'lere bağlı; sadece saha sahibinin **henüz hiç gerçek sahası
+  yoksa** (yeni kayıt/onboarding öncesi) `localStorage` tabanlı demo veriyle çalışıyor —
+  bu kasıtlı ve doğru bir davranış (boş/yanıltıcı ekran yerine demo deneyimi).
+- ⚠️ **AÇIK NOT — Gerçek para iadesi henüz otomatik değil:** `cancel_app_booking` RPC'si
+  iade tutarını (%90) hesaplayıp `payment_status = 'REFUNDED'` olarak işaretliyor, ama
+  proje şu an SIMULATION modunda olduğundan gerçek bir ödeme sağlayıcısına iade isteği
+  göndermiyor (kod içinde bunun bilerek "ödeme entegrasyonu geldiğinde tetiklenecek"
+  şeklinde not edildiği görüldü). Gerçek sağlayıcı (iyzico/PayTR vb.) bağlandığında bu
+  iade adımının da otomatikleştirilmesi gerekecek — bu, Modül 8 (Ödeme & Cüzdan)
+  kapsamına giren ayrı bir görev.
+  Aynı not, saha sahibinin reddettiği rezervasyonlar için de geçerli.
+- ⚠️ **AÇIK NOT — `BOOKING_ADDONS` (kaleci/hakem ek hizmet) akışı şu an ulaşılamıyor:**
+  `PitchDiscovery.tsx`'in `onBook` prop'u (App.tsx'te `BOOKING_ADDONS` ekranına
+  yönlendirecek şekilde bağlı) kod içinde hiçbir yerden çağrılmıyor — oyuncu doğrudan
+  `PitchDepositCheckout`'a gidiyor, kadro takviyesi (kaleci/hakem kiralama) adımına asla
+  uğramıyor. Bu, ürün kararı gerektiren bir konu: (a) bu adım rezervasyon akışına geri
+  bağlanmalı mı (slot seçiminden sonra, ödemeden önce), yoksa (b) kaleci/hakem kiralama
+  zaten ayrı bir akışla (Pazaryeri/Modül 7) çözüldüğü için bu eski/yedek kod tamamen
+  kaldırılmalı mı? Kod çalışır durumda ve hata vermiyor; sadece ulaşılamıyor —
+  bilinçli olarak bu modülde silinmedi/değiştirilmedi, ürün kararı gerektirir.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] `PitchDepositCheckout.tsx` gerçek ödeme adımını (`payBookingDeposit`) çağıracak
+      şekilde düzeltildi — artık "ödendi" demeden önce gerçekten ödeniyor.
+- [x] Saha sahibinin reddettiği, kaporası ödenmiş rezervasyonlarda `payment_status`
+      artık `'REFUNDED'` olarak işaretleniyor.
+- [ ] Gerçek bir ödeme sağlayıcısı (iyzico/PayTR) bağlandığında otomatik iade akışı
+      kurulmalı (şu an manuel/SIMULATION) — Modül 8'de ele alınacak.
+- [ ] `BOOKING_ADDONS` (kaleci/hakem ek hizmet) akışının rezervasyon yolculuğuna geri
+      bağlanıp bağlanmayacağına dair bir ürün kararı verilmeli.
 
