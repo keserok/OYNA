@@ -13,7 +13,7 @@
 | # | Modül | Kapsam | Durum |
 |---|-------|--------|-------|
 | 1 | Çekirdek & Açılış Altyapısı | App.tsx, store, types, açılış, Supabase bağlantısı | ✅ Doğrulandı — ÇALIŞIYOR |
-| 2 | Kimlik & Üyelik (Onboarding) | Giriş, kayıt, rol seçimi, doğrulama, konum izni | ⬜ Bekliyor |
+| 2 | Kimlik & Üyelik (Onboarding) | Giriş, kayıt, rol seçimi, doğrulama, konum izni | ✅ İncelendi — 1 kod düzeltildi, 1 DB notu |
 | 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ⬜ Bekliyor |
 | 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ⬜ Bekliyor |
 | 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ⬜ Bekliyor |
@@ -225,4 +225,60 @@ sonrası kayboldu.
 500 kB'ı aştığı uyarısı çıkıyor (`index` ~637 kB, `ui-vendor` ~580 kB, `QRScannerView`
 ~385 kB). Uygulama çalışıyor ama mobilde ilk açılışı hızlandırmak için ileride paket
 bölme (code-splitting) iyileştirilebilir. Acil değil, lansman engelleyicisi değil.
+
+---
+
+## ✅ Modül 2 — Kimlik & Üyelik / Onboarding (Tamamlandı)
+
+**1) Ne işe yarar?**
+Kullanıcının uygulamaya ilk adımı: açılış (Splash) → rol seçimi → giriş/kayıt
+(e-posta/telefon kodu, Google, Apple, misafir) → konum izni → (Kaleci/Hakem ise)
+admin onayı bekleme. 7 farklı kullanıcı tipini doğru kapıya yönlendirir.
+
+**2) Hangi dosyalar?**
+`SplashScreen`, `AuthScreen`, `RoleSelection`, `LocationPrompt`, `PendingVerificationView`,
+`PartnerOnboarding` + `supabaseAuth.ts` (giriş/kayıt/çıkış) + `services/userService.ts`
+(profil senkronizasyonu, rol güncelleme).
+
+**3) Nasıl çalışıyor?**
+- **AuthScreen:** E-posta veya SMS ile 6 haneli kod (OTP) gönderip doğruluyor;
+  Google/Apple ile sosyal giriş ve "misafir" girişi var. KVKK + sözleşme onay kutusu
+  giriş için zorunlu — yasal açıdan doğru kurgu.
+- **RoleSelection:** Oyuncu doğrudan; Kaleci/Hakem/Tesis ek bilgi (TC, telefon, fiziksel
+  künye) adımlarından geçiyor. Kaleci/Hakem seçilince "onay bekliyor" moduna giriyor.
+- **PendingVerificationView:** Supabase Realtime ile `verification_status` değişimini
+  canlı dinliyor; admin onaylayınca konfeti + otomatik yönlendirme. Çok iyi tasarlanmış.
+- **LocationPrompt:** Tarayıcı/cihaz konumunu alıp veritabanına yazıyor.
+
+**4) Veri & bağlantı**
+`profiles` tablosu (role, roles, verification_status, full_name, email, phone, konum).
+Roller: PLAYER, CAPTAIN, GOALKEEPER, REFEREE, OWNER, COMMUNITY_ADMIN, SUPER_ADMIN.
+
+**5) Durum tespiti**
+- ✅ Giriş, OTP, sosyal giriş, onay-bekleme akışları sağlam ve profesyonel.
+- ✅ Canlı veritabanı doğrulandı: onboarding'in yazdığı roller (PLAYER/GOALKEEPER/
+  REFEREE/OWNER) canlı `role` kısıtında geçerli → **kayıt akışı canlıda çalışıyor.**
+- 🔧 **DÜZELTİLDİ (kod):** `App.tsx → handleRoleSelect`, rol seçimindeki form verisini
+  (camelCase: `fullName`, `tcNumber`, `age`, `height`, `weight`, `position`) doğrudan
+  `profiles` tablosuna yazmaya çalışıyordu. Bu sütunlar tabloda yok (`full_name` var,
+  `fullName` değil). Özellikle **Tesis Sahibi kaydında** her seferinde sessiz hata +
+  veri kaybı oluyordu. Artık yalnızca gerçekten var olan sütunlar (`full_name`, `email`,
+  `phone`) yazılıyor. tsc + build temiz.
+- ⚠️ **DB NOTU (Modül 10 & 14'ü etkiler):** Canlı veritabanının `role` kısıtı yalnızca
+  `PLAYER, GOALKEEPER, REFEREE, ADMIN, SUPER_ADMIN, OWNER` değerlerine izin veriyor;
+  ama uygulama `CAPTAIN` ve `COMMUNITY_ADMIN` rollerini de kullanıyor (migration dosyası
+  bunları içermesi gerektiğini söylüyor — **canlı DB migration ile uyumsuz**). Onboarding
+  bunları yazmadığı için Modül 2 etkilenmiyor; fakat **admin panelinden rol değiştirme**
+  ve **topluluk yöneticisi atama** akışları canlıda kısıt ihlaliyle kırılır. Düzeltme,
+  canlı kısıta `CAPTAIN`/`COMMUNITY_ADMIN` (ve `ORGANIZER`) eklemek — yalnızca genişletme
+  olduğu için güvenli ve geri alınabilir. Kullanıcı onayıyla uygulanacak.
+- ⚠️ **Küçük not:** "Misafir girişi" hiç oturum açmadan uygulamaya sokuyor; bazı
+  ekranlar `auth.currentUser` beklediği için misafir akışında hatalar görülebilir.
+  Ürünsel bir karar; ileride netleştirilecek.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] `handleRoleSelect` sütun uyuşmazlığı düzeltildi.
+- [ ] Canlı `role`/`roles` kısıtına `CAPTAIN` + `COMMUNITY_ADMIN` eklensin (Modül 10/14
+      öncesi). Kullanıcı onayı bekliyor.
+- [ ] "Misafir" akışının kapsamı netleştirilsin (salt görüntüleme mi, yoksa kaldırılsın mı).
 

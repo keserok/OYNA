@@ -316,10 +316,20 @@ const App: React.FC = () => {
     setRole(selectedRole);
     if (auth.currentUser) {
       try {
-        await supabase.from('profiles').update({
-          role: selectedRole,
-          ...data
-        }).eq('id', auth.currentUser.uid);
+        // Yalnızca profiles tablosunda gerçekten var olan sütunları yaz.
+        // RoleSelection'dan gelen form verisi camelCase ve bir kısmının
+        // (tcNumber, age, height, weight, position) tabloda karşılığı yok;
+        // ham spread Supabase'de "column does not exist" hatası verirdi.
+        const payload: Record<string, any> = { role: selectedRole };
+        if (data?.fullName) payload.full_name = data.fullName;
+        if (data?.email) payload.email = data.email;
+        if (data?.phone) payload.phone = data.phone;
+
+        const { error } = await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', auth.currentUser.uid);
+        if (error) console.error('Error saving role:', error.message);
       } catch (error) {
         console.error('Error saving role:', error);
       }
