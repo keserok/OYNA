@@ -12,7 +12,7 @@
 
 | # | Modül | Kapsam | Durum |
 |---|-------|--------|-------|
-| 1 | Çekirdek & Açılış Altyapısı | App.tsx, store, types, açılış, Supabase bağlantısı | ✅ İncelendi (küçük notlar var) |
+| 1 | Çekirdek & Açılış Altyapısı | App.tsx, store, types, açılış, Supabase bağlantısı | ✅ Doğrulandı — ÇALIŞIYOR |
 | 2 | Kimlik & Üyelik (Onboarding) | Giriş, kayıt, rol seçimi, doğrulama, konum izni | ⬜ Bekliyor |
 | 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ⬜ Bekliyor |
 | 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ⬜ Bekliyor |
@@ -207,8 +207,22 @@ mock/sabit veriler) → `supabaseClient.ts` (veritabanı bağlantısı). Ayar do
   testi için bağımlılıklar kurulup `npm run lint` çalıştırılmalı.
 
 **6) Piyasa öncesi yapılacaklar**
-- [ ] `npm install` sonrası `npm run lint` ile tam derleme hatasız mı doğrula.
+- [x] `npm install` + `npm run lint` (tsc) → **0 hata.** ✅
+- [x] `npm run build` (production derleme) → **başarılı, 11.7 sn'de tamamlandı.** ✅
+- [x] `npm run preview` → sunucu **HTTP 200** döndü, `<title>OYNA</title>` ve React
+      `#root` mount noktası sayfada mevcut. **Uygulama açılıyor.** ✅
 - [ ] Production derlemesinde `.env` değişkenlerinin (Supabase URL/key) kesinlikle
-      dolu olduğunu garanti et (boşsa uygulama mock moda düşer).
+      dolu olduğunu garanti et (boşsa uygulama otomatik mock/offline moda düşer —
+      kod hatası değil, dağıtım/kurulum adımı).
 - [ ] Profil oluşturma akışının RLS ile korunduğu Modül 15'te teyit edilecek.
+
+**🔎 Bu kısımda düzeltilen kod hatası:** YOK. Çekirdek modülde uygulamayı çalışmaktan
+alıkoyan bir kod sorunu bulunamadı. Derleme, build ve sunucu testlerinin üçü de temiz
+geçti. Önceki incelemedeki 2 uyarı yalnızca `node_modules` kurulu olmamasındandı; kurulum
+sonrası kayboldu.
+
+**💡 Gelecek için optimizasyon notu (engelleyici değil):** Build sırasında bazı paketlerin
+500 kB'ı aştığı uyarısı çıkıyor (`index` ~637 kB, `ui-vendor` ~580 kB, `QRScannerView`
+~385 kB). Uygulama çalışıyor ama mobilde ilk açılışı hızlandırmak için ileride paket
+bölme (code-splitting) iyileştirilebilir. Acil değil, lansman engelleyicisi değil.
 
