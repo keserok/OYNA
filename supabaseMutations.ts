@@ -86,12 +86,9 @@ const mapUserToDb = (user: Partial<AdminUser>) => {
   if (user.isBanned !== undefined) mapped.is_banned = user.isBanned;
   if (user.isPro !== undefined) mapped.is_pro = user.isPro;
   if (user.wallet !== undefined) mapped.wallet_balance = user.wallet;
-  if (user.matchCount !== undefined || user.rating !== undefined) {
-    mapped.stats = {
-      matchesPlayed: user.matchCount || 0,
-      rating: user.rating || 5.0
-    };
-  }
+  // NOT: profiles tablosunda 'stats' kolonu yok. Gerçek kolonlara yaz (F4).
+  if (user.matchCount !== undefined) mapped.match_count = user.matchCount;
+  if (user.rating !== undefined) mapped.rating = user.rating;
   return mapped;
 };
 
@@ -201,7 +198,7 @@ export const fbDeleteReferee = async (id: string) => {
 };
 
 export const fbUpdateAppSettings = async (settings: any) => {
-  const { error } = await supabase.from('settings').update(settings).eq('id', 1);
+  const { error } = await supabase.from('settings').update(settings).eq('id', 'main');
   if (error) throw new Error(`Ayarlar güncellenemedi: ${error.message}`);
 };
 
@@ -270,7 +267,7 @@ export const fbDeleteUser = async (id: string) => {
 };
 
 export const fbGetAppSettings = async () => {
-  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
+  const { data, error } = await supabase.from('settings').select('*').eq('id', 'main').maybeSingle();
   if (error) throw new Error(`Ayarlar yüklenemedi: ${error.message}`);
   return data;
 };

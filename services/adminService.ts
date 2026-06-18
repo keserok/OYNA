@@ -281,7 +281,7 @@ export async function fetchAdminProfiles(options?: { offset?: number; limit?: nu
 }
 
 export async function fetchAdminSettings(): Promise<AppSettingsDb | null> {
-  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
+  const { data, error } = await supabase.from('settings').select('*').eq('id', 'main').maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
   return mapSettingsRow(data as Record<string, unknown>);
