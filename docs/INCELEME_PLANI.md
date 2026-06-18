@@ -19,7 +19,7 @@
 | 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ✅ İncelendi — 3 kod hatası düzeltildi, 3 büyük not |
 | 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ✅ İncelendi — 1 kod hatası düzeltildi, 3 büyük not |
 | 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ✅ İncelendi — 4 kod hatası düzeltildi, 3 büyük not |
-| 8 | Ödeme & Cüzdan | Ödeme ekranı, cüzdan, bölünmüş ödeme, premium, sadakat | ⬜ Bekliyor |
+| 8 | Ödeme & Cüzdan | Ödeme ekranı, cüzdan, bölünmüş ödeme, premium, sadakat | ✅ İncelendi — 2 kod hatası düzeltildi, 4 kritik açık not |
 | 9 | B2B Saha Sahibi Paneli (OPanel) | Doluluk, fiyat/tarife, finans, demo, moderasyon | ⬜ Bekliyor |
 | 10 | Topluluk Sistemi | Topluluk görünümü, başvuru, topluluk yönetimi | ⬜ Bekliyor |
 | 11 | İtibar & Adalet Motoru | Fair Play puanı, kart cezaları, sportmenlik kuralları | ⬜ Bekliyor |
@@ -815,4 +815,160 @@ arıyor; bu turun düzeltmesi canlı şema doğrulanarak buna göre yazıldı.
       özellik olarak inşa edilecek mi — ürün kararı + yeni tablo/RLS gerekiyor.
 - [ ] ServiceDashboard.tsx'in icat istatistik kategorileri ve cüzdan sekmesi
       Modül 8 ile birlikte ele alınacak.
+
+## ✅ Modül 8 — Ödeme & Cüzdan (Tamamlandı)
+
+**1) Ne işe yarar?**
+Kullanıcının nakit cüzdanını görmesi ve yüklemesi, saha kaporası/maç havuzu
+ödemelerini yapması, PRO üyeliğe yükselmesi ve sadakat kartını takip etmesi.
+Para ile ilgili olduğu için bu uygulamanın en hassas modülü.
+
+**2) Hangi dosyalar?**
+`WalletScreen.tsx`, `PaymentScreen.tsx`, `PremiumScreen.tsx`, `LoyaltyCard.tsx`,
+`OpponentFinder.tsx` (PaymentScreen'e giden ikinci giriş noktası olduğu için
+bu turda incelendi), `services/paymentService.ts`, `supabaseMutations.ts`
+(`fbToggleUserPro`). Backend: `wallet_transactions`, `payment_intents`,
+`booking_payments` tabloları, `create-payment`/`payment-webhook` Edge
+Function'ları, `process_match_payment`/`process_match_refund` RPC'leri
+(Modül 5'te zaten doğrulanmıştı).
+
+**3) Nasıl çalışıyor?**
+- **Cüzdan (`WalletScreen`):** Nakit bakiye gösterir, kart ekleme/çıkarma
+  (SIMULATION modu — gerçek tokenizasyon yok, uygulamanın her yerinde aynı
+  kalıp) ve "Bakiye Yükle" butonu sunar.
+- **Ödeme (`PaymentScreen`):** "Kaptan Garantisi" ile kapora ödeyip rezervasyon
+  oluşturma, ardından "Maç Havuzu" (diğer oyuncularla bölüşüm) ekranı.
+- **PRO (`PremiumScreen`):** Aylık/yıllık plan seçip "HEMEN YÜKSELT" ile
+  yükseltme.
+- **Sadakat (`LoyaltyCard`):** 10 damgalık sadakat kartı, dolunca ücretsiz
+  maç bileti QR'ı.
+
+**4) Veri & bağlantı**
+Canlı veritabanı doğrulandı (`execute_sql` ile): `wallet_transactions`,
+`payment_intents`, `booking_payments`, `owner_withdrawal_requests` tabloları
+gerçek ve mevcut. `wallet_transactions` üzerinde **doğrudan client INSERT
+artık kapalı** (`wallet_no_direct_insert_secure` politikası) — yalnızca
+`process_match_payment`/`process_match_refund` gibi `SECURITY DEFINER`
+RPC'ler satır ekleyebiliyor; bu, Modül 5'te bulunan sağlam tasarımla uyumlu.
+Cüzdana **gerçek para yükleme (top-up) için canlı veritabanında veya kodda
+hiçbir RPC/Edge Function yok** — `create-payment` Edge Function'ı sadece
+saha kaporası akışını destekliyor (`action: 'create' | 'confirm-sim'`,
+`bookingId` zorunlu).
+
+**5) Durum tespiti**
+- 🔧 **DÜZELTİLDİ (kod hatası):** `WalletScreen.tsx` nakit bakiyeyi sabit
+  `450.0`₺ olarak gösteriyordu — gerçek bakiyeyle hiçbir ilişkisi yoktu,
+  her kullanıcı aynı sahte rakamı görüyordu. Artık `profiles.wallet_balance`
+  gerçek değeri yükleniyor.
+- 🔧 **DÜZELTİLDİ (kod hatası):** `App.tsx` giriş akışında `profiles.is_pro`
+  hiç okunmuyordu — `isUserPro` store alanı oturum başına her zaman `false`
+  ile başlıyordu, yani PRO bir kullanıcı bile uygulamayı her açtığında
+  "standart" kullanıcı gibi davranılıyordu (komisyon indirimi rozeti,
+  öncelik vb. hiç görünmüyordu). Artık girişte gerçek `is_pro` değeri okunup
+  store'a yazılıyor.
+- ❗ **KRİTİK AÇIK NOT 1 — "Bakiye Yükle" tamamen sahte, gerçek altyapı hiç
+  yok:** `WalletScreen.tsx → handleTopUpSubmit` bir `setTimeout` ile sahte
+  "İşlem Onaylanıyor" → "Ödeme Başarılı" animasyonu oynatıp seçilen tutarı
+  **yalnızca ekran içi local state'e** ekliyor (`setCashBalance(prev =>
+  prev + amountToAdd)`). Veritabanında **hiçbir satır eklenmiyor, hiçbir
+  RPC çağrılmıyor, `wallet_balance` hiç değişmiyor.** Kullanıcı "500₺
+  yüklendi" görüp ekrandan çıkıp geri girdiğinde bakiye gerçek (değişmemiş)
+  değerine sessizce dönüyor — kullanıcıya yanlış bilgi veriliyor. Bunu
+  düzeltmek Modül 4'teki kapora hatası gibi küçük bir bağlantı eksikliği
+  değil: canlı veritabanında cüzdana para yükleme için **hiçbir RPC/Edge
+  Function/`wallet_transactions` INSERT yetkisi yok** — gerçek bir ödeme
+  sağlayıcısı entegrasyonu + yeni bir `SECURITY DEFINER` "top-up" RPC'si
+  gerektiren ayrı bir özellik inşası. Bu turda yapılmadı, ürün/ödeme
+  sağlayıcısı kararı bekliyor.
+- ❗ **KRİTİK AÇIK NOT 2 — PRO satın alma da tamamen sahte, DB'ye hiç
+  yazılmıyor; düzeltmesi Modül 15'teki güvenlik açığına bağlı:**
+  `PremiumScreen.tsx → handlePurchase` hiçbir ödeme/yetki kontrolü yapmadan
+  3 saniye sonra `onUpgrade()` çağırıyor; `App.tsx` bunu yalnızca
+  `setIsUserPro(true)` ile **local store'a** yazıyor, `profiles.is_pro`
+  hiç güncellenmiyor — kullanıcı "ARTIK EFSANESİN!" ekranını görse de bir
+  sayfa yenilemesinde PRO durumu kaybolur. Bunu basitçe
+  `supabaseMutations.ts`'teki mevcut `fbToggleUserPro(id, true)` ile
+  DB'ye yazdırmak **bilerek yapılmadı**: önceki turda canlı veritabanında
+  tespit edilen `protect_profile_columns` tetikleyicisinin yalnızca
+  `role/roles/is_banned/ban_expires_at/is_verified` alanlarını koruduğu,
+  **`is_pro`, `wallet_balance`, `trust_score`, `skill_rating` gibi hassas
+  alanları HİÇ korumadığı** doğrulandı (kullanıcı bu bulguyu Modül 15'e
+  bırakmayı seçti). O boşluk açıkken PRO satın alma butonunu doğrudan bu
+  yazmaya bağlamak, "ödeme yapmadan PRO ol" açığını UI üzerinden daha da
+  görünür/kullanılabilir hale getirir. Doğru sıralama: **(1) Modül 15'te
+  `protect_profile_columns` bu alanları da kapsayacak şekilde güncellenmeli,
+  (2) ardından gerçek bir ödeme adımıyla birlikte `is_pro` yazımı sunucu
+  tarafında (yeni bir `SECURITY DEFINER` RPC ile) yapılmalı.** Bu sıralama
+  bozulmadan iki görev de tamamlanana kadar buton bilerek "sahte" bırakıldı.
+- ❗ **AÇIK NOT 3 — `PaymentScreen.tsx` kapora adımı da hiç para tahsil
+  etmiyor (Modül 4'teki hatayla aynı sınıf, ayrı bir bileşende):**
+  `handleDepositPay` yalnızca `create_pitch_booking` RPC'sini çağırıp
+  rezervasyon oluşturuyor (`createBookingInDatabase`), Modül 4'te
+  `PitchDepositCheckout.tsx`'e eklenen gerçek `payBookingDeposit()` çağrısı
+  burada **yok**. Ayrıca `bookingPitch/bookingCourt/bookingDate/bookingSlot`
+  store'da boşsa fonksiyon sessizce hiçbir şey yapmadan geri dönüyor, ama
+  ekran yine de "REZERVE EDİLİYOR..." gösterip kullanıcıyı "Maç Havuzu"
+  adımına geçiriyor. Bu ekrana ulaşan iki yol var: (a) `PitchDiscovery`'nin
+  `onBook` prop'u — Modül 4'te zaten "hiçbir yerden çağrılmıyor" olarak not
+  edilmişti, hâlâ öyle; (b) `OpponentFinder.tsx`'teki "rakip takım bul ve
+  meydan oku" akışının sonu — ama bu akış `MOCK_TEAMS` sabit verisiyle
+  çalışıyor (gerçek rakip/maç eşleşme backend'i yok), yani şu an **gerçek
+  hiçbir kullanıcı bu ekrana gerçek bir rezervasyonla ulaşamıyor.** Ardından
+  gelen "Maç Havuzu" (bölünmüş ödeme) ekranı da tamamen `useState` ile
+  yönetiliyor — `wallet_transactions`'a veya başka bir tabloya hiçbir yazma
+  yapılmıyor, kimsenin cüzdanından gerçekten para çekilmiyor; bu özelliğin
+  arkasında hiçbir backend tablosu (örn. "havuz katkı" kaydı) yok. Şu an
+  kimseyi etkilemediği için bu turda dokunulmadı, ama PitchDiscovery'nin
+  `onBook` akışı ileride bağlanırsa (Modül 4'ün açık notu) bu ekran da
+  birlikte ele alınmalı; "Havuz" özelliğinin gerçek hale getirilmesi ayrı
+  bir özellik inşası (yeni tablo + RLS) gerektiriyor.
+- ❗ **AÇIK NOT 4 — `LoyaltyCard.tsx` koddan tamamen erişilemez ve hiçbir
+  backend'i yok:** `types.ts`'te `'LOYALTY_CARD'` bir `AppView` olarak
+  tanımlı, ama `App.tsx`'in router'ında bu view için **hiçbir `case` yok**
+  ve kod tabanının başka hiçbir yerinde `LoyaltyCard` import edilmiyor —
+  ekrana ulaşmanın koddan hiçbir yolu yok. İçeriği de tamamen sabit
+  (`useState(9)` damga sayısı). Sadakat puanlama mantığı (gerçek maç sayısına
+  göre damga biriktirme) için şemada hiçbir tablo/alan da yok. Ürün kararı:
+  (a) router'a bağlanıp gerçek bir sadakat sistemi inşa edilsin, ya da
+  (b) tamamen ölü kod olduğundan kaldırılsın.
+- ⚠️ **Küçük not — `OpponentFinder.tsx`:** Modül 6'nın kapsamında listelenmiş
+  olmasına rağmen o turda fiilen incelenmemişti; bu turda `PaymentScreen`'e
+  giden ikinci yol olduğu için incelendi. Tüm rakip takım listesi/profili/
+  "meydan okuma" akışı `MOCK_TEAMS` sabit verisiyle çalışıyor — Modül 6'daki
+  `TransferCenter.tsx` ile aynı kategoride (gerçek backend'i olmayan, sahte
+  veriyle çalışan bir eşleşme özelliği). Aynı ürün kararına bağlı olarak
+  birlikte ele alınmalı.
+- ✅ **Doğrulandı, sağlam:** `services/paymentService.ts` (saha kaporası
+  ödeme akışı, Modül 4'te doğrulanmıştı) ve `process_match_payment`/
+  `process_match_refund` RPC'leri (Modül 5'te doğrulanmıştı) bu modülün
+  gerçek, çalışan tek para hareketi yolları — değişiklik gerekmedi.
+  `wallet_transactions` tablosundaki RLS de canlıda doğru: kullanıcı kendi
+  geçmişini görebiliyor ama doğrudan satır ekleyemiyor/değiştiremiyor/
+  silemiyor; tüm yazmalar `SECURITY DEFINER` fonksiyonlar üzerinden gidiyor.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] `WalletScreen.tsx` gerçek `wallet_balance` değerini gösteriyor.
+- [x] `App.tsx` girişte gerçek `is_pro` değerini okuyup store'a yazıyor.
+- [ ] **Modül 15'te** `protect_profile_columns` tetikleyicisi `is_pro`,
+      `wallet_balance`, `trust_score`, `skill_rating`, `reliability_score`,
+      `win_count`, `total_matches` alanlarını da kapsayacak şekilde
+      genişletilmeli (kullanıcı onayı bekliyor).
+- [ ] Modül 15'teki açık kapatıldıktan **sonra**: PRO satın alma için gerçek
+      ödeme + sunucu tarafı `SECURITY DEFINER` RPC ile `is_pro` yazımı
+      kurulmalı.
+- [ ] Cüzdana gerçek para yükleme (top-up) için ödeme sağlayıcısı + yeni
+      `SECURITY DEFINER` RPC/Edge Function tasarlanmalı — şu an hiçbir
+      backend yok.
+- [ ] `PaymentScreen.tsx`'in kapora adımına Modül 4'teki gibi gerçek
+      `payBookingDeposit()` çağrısı eklenmeli — ama önce bu ekrana giden
+      yolların (`PitchDiscovery.onBook`, `OpponentFinder`) gerçek hale
+      getirilip getirilmeyeceğine karar verilmeli.
+- [ ] "Maç Havuzu" (bölünmüş ödeme) özelliği gerçek bir backend'e
+      (katkı kayıtları + cüzdan düşümü) bağlanmalı — yeni tablo/RLS gerekiyor.
+- [ ] `LoyaltyCard.tsx` için erişim noktası eklenip gerçek bir sadakat
+      sistemi mi kurulacak, yoksa ekran tamamen kaldırılacak mı — ürün
+      kararı gerekiyor.
+- [ ] `OpponentFinder.tsx`'in "rakip bul / meydan oku" akışı gerçek bir
+      backend'e bağlanmalı (Modül 6'daki `TransferCenter` kararıyla birlikte
+      ele alınmalı) — yeni tablo/RLS gerekiyor.
 

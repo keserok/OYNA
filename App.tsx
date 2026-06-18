@@ -158,7 +158,7 @@ const App: React.FC = () => {
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role, roles, verification_status, is_admin, wallet_balance, phone, email')
+            .select('role, roles, verification_status, is_admin, wallet_balance, is_pro, phone, email')
             .eq('id', user.uid)
             .single();
 
@@ -192,6 +192,7 @@ const App: React.FC = () => {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
             setRole(primaryRole);
+            setIsUserPro(!!profile.is_pro);
 
             // last_active_at background güncelleme
             supabase

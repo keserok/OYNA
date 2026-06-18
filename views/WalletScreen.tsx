@@ -3,6 +3,8 @@ import { ArrowLeft, Wallet, Zap, CheckCircle2, Settings, CreditCard, Plus, Trash
 import { motion, AnimatePresence } from 'framer-motion';
 import { Particles } from '../components/Particles';
 import { useAppStore } from '../store';
+import { supabase } from '../supabaseClient';
+import { auth } from '../supabaseAuth';
 
 interface WalletScreenProps {
   onBack: () => void;
@@ -23,7 +25,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   } = useAppStore();
 
   const [currentView, setCurrentView] = useState<'MAIN' | 'CARD_SETTINGS'>(walletInitialTab);
-  const [cashBalance, setCashBalance] = useState(450.0);
+  const [cashBalance, setCashBalance] = useState(0);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(savedCards[0]?.id ?? null);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
@@ -32,6 +34,21 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   useEffect(() => {
     setCurrentView(walletInitialTab);
   }, [walletInitialTab]);
+
+  // Cüzdandaki gerçek bakiyeyi (profiles.wallet_balance) yükle — önceden burada
+  // sabit 450₺ gösteriliyordu ve gerçek bakiyeyle hiçbir ilişkisi yoktu.
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    supabase
+      .from('profiles')
+      .select('wallet_balance')
+      .eq('id', uid)
+      .single()
+      .then(({ data }) => {
+        if (data) setCashBalance(Number(data.wallet_balance ?? 0));
+      });
+  }, []);
 
   useEffect(() => {
     if (savedCards.length > 0 && !savedCards.find((c) => c.id === selectedCardId)) {
