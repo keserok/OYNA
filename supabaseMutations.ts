@@ -162,8 +162,9 @@ const mapToSnakeCase = (obj: any) => {
 };
 
 export const fbAddGoalkeeper = async (gk: Goalkeeper) => {
+  // F6: Raw INSERT yerine RPC — is_platform_admin() guard + denetim logu
   const mapped = mapProviderToDb(gk as unknown as Record<string, unknown>);
-  const { error } = await supabase.from('goalkeepers').insert(mapped);
+  const { error } = await supabase.rpc('admin_create_goalkeeper', { p_data: mapped });
   if (error) throw new Error(`Kaleci eklenemedi: ${error.message}`);
 };
 
@@ -180,8 +181,9 @@ export const fbDeleteGoalkeeper = async (id: string) => {
 };
 
 export const fbAddReferee = async (ref: Referee) => {
+  // F6: Raw INSERT yerine RPC — is_platform_admin() guard + denetim logu
   const mapped = mapProviderToDb(ref as unknown as Record<string, unknown>);
-  const { error } = await supabase.from('referees').insert(mapped);
+  const { error } = await supabase.rpc('admin_create_referee', { p_data: mapped });
   if (error) throw new Error(`Hakem eklenemedi: ${error.message}`);
 };
 
