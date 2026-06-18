@@ -164,7 +164,7 @@ const App: React.FC = () => {
     const ghostName = params.get('name') || 'Kullanıcı';
 
     void (async () => {
-      const { fetchProfileById, logImpersonation } = await import('./services/adminService');
+      const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
       try { await logImpersonation(ghostId); } catch { /* audit optional if not admin session */ }
       const profile = await fetchProfileById(ghostId);
       setOriginalRole(role);

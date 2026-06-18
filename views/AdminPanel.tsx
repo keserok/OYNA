@@ -1,3 +1,2 @@
-// This file is kept for backwards compatibility.
-// The actual AdminPanel has moved to ./admin/AdminPanel.tsx
-export { default } from './admin/AdminPanel';
+// Standalone admin panel lives under admin-panel/
+export { default } from '../admin-panel/views/AdminPanel';
