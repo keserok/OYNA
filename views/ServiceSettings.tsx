@@ -46,8 +46,8 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   const accentBg = isRef ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)';
 
   const { adminGoalkeepers, adminReferees, updateGoalkeeper, updateReferee } = useAppStore();
-  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
-  
+  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1'));
+
   const savedSettings = me?.settings || {};
 
   const [openSection, setOpenSection] = useState<SectionKey>(null);
@@ -69,6 +69,24 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   // Appearance
   const [darkMode, setDarkMode] = useState(savedSettings.darkMode ?? true);
   const [language, setLanguage] = useState<'TR' | 'EN'>(savedSettings.language ?? 'TR');
+
+  // me, store yüklendikten sonra (mock veriden gerçek veriye geçtiğinde) değişebiliyor;
+  // o anda ekrandaki anahtarların gerçek kayıtlı ayarlarla senkronlanması gerekiyor.
+  useEffect(() => {
+    if (!me) return;
+    const s = me.settings || {};
+    setNotifNewOffer(s.notifNewOffer ?? true);
+    setNotifReminder(s.notifReminder ?? true);
+    setNotifPayment(s.notifPayment ?? true);
+    setNotifMarketing(s.notifMarketing ?? false);
+    setNotifWeekly(s.notifWeekly ?? true);
+    setShowProfile(s.showProfile ?? true);
+    setShowRating(s.showRating ?? true);
+    setHidePhone(s.hidePhone ?? false);
+    setAllowOffer(s.allowOffer ?? true);
+    setDarkMode(s.darkMode ?? true);
+    setLanguage(s.language ?? 'TR');
+  }, [me?.id, me?.settings]);
 
   // Save changes to DB
   const updateSettings = (key: string, value: any) => {
@@ -179,14 +197,14 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
             {isRef ? '⚖️' : '🧤'}
           </div>
           <div className="flex-1">
-            <p className="font-black">{isRef ? 'CÜNEYT A.' : 'UĞURCAN Ç.'}</p>
+            <p className="font-black">{me?.name || (isRef ? 'Hakem' : 'Kaleci')}</p>
             <p className="text-[10px] text-gray-400 font-medium">
               {isRef ? 'FIFA Lisanslı Hakem' : 'Elit Kaleci'}
             </p>
             <div className="flex items-center gap-1 mt-1">
               <Star size={10} className="text-yellow-400" fill="currentColor" />
-              <span className="text-[10px] font-black">4.9</span>
-              <span className="text-[10px] text-gray-500">• {isRef ? '150' : '42'} maç</span>
+              <span className="text-[10px] font-black">{me?.rating ?? '–'}</span>
+              <span className="text-[10px] text-gray-500">• {me?.matchCount ?? 0} maç</span>
             </div>
           </div>
         </motion.div>

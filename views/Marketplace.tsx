@@ -6,6 +6,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
+import { supabase } from '../supabaseClient';
+import { auth } from '../supabaseAuth';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { MarketplaceMap } from '../components/Marketplace/MarketplaceMap';
 
@@ -102,10 +104,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
         setShowMatchSelection(true);
     };
 
-    const handleConfirmMatch = (match: any) => {
+    const handleConfirmMatch = async (match: any) => {
         setSelectedMatchForHire(match);
         setIsHiring(true);
-        
+
         if (hireMode === 'DIRECT') {
             let updatedMatch = { ...match };
             if (activeTab === 'GK') {
@@ -130,9 +132,21 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                 setAdminMatches(adminMatches.map(m => m.id === match.id ? updatedMatch : m));
             }
         } else {
-            // BID Mode: Don't update the match. Instead, create an offer.
-            // Example: await supabase.from('offers').insert({...})
-            console.log(`Bid created for Match: ${match.id}, Profile: ${selectedProfile?.id}, Amount: ${bidAmount}`);
+            // BID Mode: maçı değiştirme, kaleci/hakeme gerçek bir teklif (service_offers satırı) gönder.
+            try {
+                const { error } = await supabase.from('service_offers').insert({
+                    match_id: match.id,
+                    provider_id: selectedProfile?.id,
+                    captain_id: auth.currentUser?.uid || 'u1',
+                    amount: bidAmount,
+                });
+                if (error) throw error;
+            } catch (err) {
+                console.error('Teklif gönderilemedi:', err);
+                setIsHiring(false);
+                alert('Teklif gönderilemedi, lütfen tekrar deneyin.');
+                return;
+            }
         }
 
         setTimeout(() => {

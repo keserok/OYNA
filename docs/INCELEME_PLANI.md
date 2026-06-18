@@ -18,7 +18,7 @@
 | 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ✅ İncelendi — 1 kritik para hatası düzeltildi, 1 tutarlılık hatası düzeltildi |
 | 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ✅ İncelendi — 3 kod hatası düzeltildi, 3 büyük not |
 | 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ✅ İncelendi — 1 kod hatası düzeltildi, 3 büyük not |
-| 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ⬜ Bekliyor |
+| 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ✅ İncelendi — 4 kod hatası düzeltildi, 3 büyük not |
 | 8 | Ödeme & Cüzdan | Ödeme ekranı, cüzdan, bölünmüş ödeme, premium, sadakat | ⬜ Bekliyor |
 | 9 | B2B Saha Sahibi Paneli (OPanel) | Doluluk, fiyat/tarife, finans, demo, moderasyon | ⬜ Bekliyor |
 | 10 | Topluluk Sistemi | Topluluk görünümü, başvuru, topluluk yönetimi | ⬜ Bekliyor |
@@ -703,4 +703,116 @@ bulunmuyor.
       gerektirir).
 - [ ] `MyTeam.tsx`'teki oyuncu davet modalı gerçek arama + davet mekanizmasına
       bağlanmalı.
+
+## ✅ Modül 7 — Pazaryeri & Hizmetler (Tamamlandı)
+
+**1) Ne işe yarar?**
+Kaptanların maçları için kaleci/hakem bulup teklif vermesi ya da direkt
+kiralaması; kaleci ve hakemlerin kendi hizmet panolarından (Service Dashboard)
+gelen teklifleri yönetmesi, müsaitlik/ayar/profil bilgilerini düzenlemesi.
+
+**2) Hangi dosyalar?**
+`Marketplace.tsx`, `ServiceDashboard.tsx`, `ServiceSettings.tsx`,
+`ServiceProfile.tsx`, `MyListings.tsx`, `ListingDetails.tsx`,
+`ScoutDashboard.tsx`, `components/Marketplace/MarketplaceCard.tsx`,
+`components/Marketplace/MarketplaceMap.tsx`, `RefereeScoreModule.tsx` (sadece
+`RookieShowcase.tsx` tanıtım ekranında kullanılıyor, gerçek akışın parçası
+değil). Backend: `goalkeepers`, `referees`, `service_offers` tabloları;
+`supabaseMutations.ts` (`fbCreateOffer`, `fbUpdateOfferStatus`,
+`fbGetProviderOffers`), `store.ts` (`updateGoalkeeper`, `updateReferee`).
+
+**3) Nasıl çalışıyor?**
+Kaptan `Marketplace.tsx`'te kaleci/hakem listesini (`adminGoalkeepers`/
+`adminReferees`) filtreleyip seçtiği profille "Direkt Kirala" ya da "Teklif
+Gönder" akışını başlatıyor. Direkt kiralamada maç kaydı (`updateMatch`)
+güncelleniyor; teklif modunda artık gerçek bir `service_offers` satırı
+ekleniyor (bu turda eklendi, aşağıda detay var). Kaleci/hakem tarafında
+`ServiceDashboard.tsx` kendi `userProfile`'ını gerçek diziden buluyor, açık
+maçları `subscribeToOpenMatches` ile realtime dinliyor, gelen teklifleri
+`service_offers` tablosundan PENDING durumda çekiyor. `ServiceSettings.tsx`
+bildirim/gizlilik/görünüm tercihlerini `me.settings` JSONB alanına gerçek
+zamanlı kaydediyor. `ServiceProfile.tsx` isim/ücret/tarz/biyografi/fotoğraf
+gibi profil alanlarını ve konum yarıçapını düzenliyor.
+
+**4) Veri & bağlantı**
+`goalkeepers`/`referees` tabloları gerçek, RLS `auth.uid() = id` ile korunuyor.
+`service_offers` tablosunun **canlı şeması, repodaki ilk migration dosyasından
+(`20260530000000_service_integration.sql`) farklı**: gerçek sütunlar `id,
+match_id, provider_id, captain_id, amount, status, created_at, offer_date,
+offer_time` (migration dosyasındaki `offered_by`/`provider_type` değil,
+`captain_id` kullanılıyor — muhtemelen sonraki bir migration ile değiştirilmiş
+ama repodaki migration geçmişi bunu yansıtmıyor; Modül 15'te derinlemesine
+incelenecek bir not). RLS INSERT politikası `auth.uid() = captain_id` şartını
+arıyor; bu turun düzeltmesi canlı şema doğrulanarak buna göre yazıldı.
+
+**5) Durum tespiti**
+- 🔧 **DÜZELTİLDİ — ServiceDashboard.tsx:** tehlikeli `[0]` profil yedeği
+  kaldırıldı (bulunamayınca başka birinin gerçek profiline düşülüyordu),
+  `matchCount || 42` sahte varsayılanı düzeltildi, kullanılmayan
+  `walletBalance: 1250` literal'i silindi.
+- 🔧 **DÜZELTİLDİ — ServiceSettings.tsx:** aynı tehlikeli `[0]` yedeği
+  kaldırıldı; toggle state'leri artık `me` değiştiğinde (`useEffect` ile)
+  gerçek kayıtlı ayarlarla yeniden senkronize oluyor; hesap özeti kartındaki
+  sabit "CÜNEYT A./UĞURCAN Ç. — 4.9 — 150/42 maç" yerine gerçek
+  `me.name/me.rating/me.matchCount` gösteriliyor.
+- 🔧 **DÜZELTİLDİ — ServiceProfile.tsx:** ana "KAYDET" butonu (`handleSave`)
+  sadece `bio`'yu yerel state'e yazıp sahte "Kaydedildi" gösteriyor, hiçbir
+  Supabase güncellemesi yapmıyordu — kullanıcı isim/ücret/tarz/fotoğraf
+  değiştirip kaydetse de hiçbiri kalıcı olmuyordu (ekrandan çıkınca kaybolur).
+  Artık `updateGoalkeeper`/`updateReferee` ile gerçek kayıt yapıyor.
+- 🔧 **DÜZELTİLDİ — Marketplace.tsx:** "Teklif Gönder" (BID) modu sadece
+  `console.log` yapıp kullanıcıya sahte "TEKLİFİNİZ GÖNDERİLDİ" başarı ekranı
+  gösteriyordu — hiçbir teklif veritabanına yazılmıyordu. Artık gerçek
+  `service_offers` satırı ekleniyor (canlı şema doğrulanarak: `match_id,
+  provider_id, captain_id, amount`); ekleme başarısız olursa sahte başarı
+  ekranı gösterilmiyor, kullanıcı uyarılıyor.
+- ⚠️ **AÇIK NOT — `MyListings.tsx` + `ListingDetails.tsx`:** "İlan ver / teklif
+  al" akışı (kaptanın açık ilan vermesi, kalecilerin/hakemlerin teklif vermesi)
+  uçtan uca sahte veriyle çalışıyor (`mockListings`, `MOCK_BIDS`); "Yeni İlan
+  Oluştur" butonunun hiçbir onClick'i yok. Bu, Marketplace.tsx'teki (kaptanın
+  doğrudan bir profile teklif gönderdiği) akıştan farklı, ters yönlü bir akış
+  — şemada bunu karşılayan bir "ilan" tablosu da yok. Gerçek hale getirmek
+  yeni bir özellik inşası (yeni tablo + RLS) demek; canlı şema değişikliği
+  gerektirdiğinden kullanıcı onayı alınmadan yapılmadı.
+- ⚠️ **AÇIK NOT — `ScoutDashboard.tsx`:** saha sahibi yönlendirme/komisyon
+  ("Scout") paneli tamamen sahte (`REFERRED_PITCHES`, sabit "1.080₺" bakiye,
+  sabit referans kodu). Komisyon/yönlendirme sistemi için şemada hiçbir tablo
+  yok — yeni özellik inşası gerektiriyor, canlı şema değişikliği onayı
+  gerektirdiğinden bu turda yapılmadı.
+- ⚠️ **AÇIK NOT — `ServiceDashboard.tsx`'in dekoratif istatistik/cüzdan
+  görünümleri:** kimlik kartındaki Hakem için "YÖNETİM 150", "VAR %98" gibi
+  şemada karşılığı olmayan icat istatistik kategorileri ve cüzdan sekmesindeki
+  sabit "Toplam Kazanç 4.250₺" + `WALLET_HISTORY` mock import — gerçek
+  para/kazanç akışı kavramsal olarak Modül 8'in (Ödeme & Cüzdan) kapsamına
+  giriyor, orada birlikte ele alınacak.
+- ✅ **Doğrulandı, hata değil:** daha önceki bir araştırma turunun "ServiceProfile
+  /ScoutDashboard kaydetme butonları sadece local store'a yazıyor, Supabase'e
+  değil" iddiası **yanlış** çıktı — `store.ts`'teki `updateGoalkeeper`/
+  `updateReferee` aslında optimistic-update + gerçek Supabase yazma + hata
+  durumunda geri alma yapan gerçek fonksiyonlar. (ServiceProfile.tsx'in ana
+  KAYDET butonu gerçekten bozuktu ama sebebi farklıydı: bu fonksiyonları hiç
+  çağırmıyordu — "sadece local'e yazıyor" iddiası teknik olarak yanlıştı.)
+- ✅ **Doğrulandı, dokunulmadı:** `ServiceProfile.tsx`'teki kimlik eşleştirme
+  (`r.authUid === currentUser.uid || r.id === currentUser.uid`) ve "LOKASYONU
+  KAYDET" butonu zaten doğru/gerçek Supabase çağrısı yapıyor.
+  `MarketplaceCard.tsx`/`MarketplaceMap.tsx`: gerçek hata yok, sadece kozmetik
+  yer tutucular (favori kalp ikonu kalıcı değil, harita yakınlaştırma
+  butonlarının onClick'i yok) — bilinçli stilize tasarım, dokunulmadı.
+  `RefereeScoreModule.tsx`: sadece `RookieShowcase.tsx` (Modül 3'te zaten
+  "kasıtlı statik tanıtım ekranı" olarak belgelenmiş) içinde kullanılıyor,
+  gerçek maç skor akışının parçası değil — `alert()` kalıntısı kozmetik,
+  dokunulmadı.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] ServiceDashboard.tsx, ServiceSettings.tsx, ServiceProfile.tsx,
+      Marketplace.tsx'teki gerçek kod hataları düzeltildi.
+- [ ] `service_offers` tablosunun canlı şemasıyla repodaki migration
+      dosyasının neden farklı olduğu Modül 15'te (Veritabanı & Güvenlik Derin
+      Denetim) araştırılmalı.
+- [ ] `MyListings.tsx` + `ListingDetails.tsx` ("açık ilan" akışı) gerçek bir
+      özellik olarak inşa edilecek mi — ürün kararı + yeni tablo/RLS gerekiyor.
+- [ ] `ScoutDashboard.tsx` (saha sahibi yönlendirme komisyonu) gerçek bir
+      özellik olarak inşa edilecek mi — ürün kararı + yeni tablo/RLS gerekiyor.
+- [ ] ServiceDashboard.tsx'in icat istatistik kategorileri ve cüzdan sekmesi
+      Modül 8 ile birlikte ele alınacak.
 

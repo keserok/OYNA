@@ -28,7 +28,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     setIsNotificationsOpen,
     updateGoalkeeper,
     updateReferee,
-    adminMatches
+    adminMatches,
+    adminGoalkeepers,
+    adminReferees
   } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>('HOME');
   const [isAvailable, setIsAvailable] = useState(true);
@@ -119,41 +121,53 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   }, [adminMatches, userProfile]);
 
   useEffect(() => {
-    let active = true;
-    
-    const loadProfile = async () => {
-        // Fetch from global store for now
-        const { adminGoalkeepers, adminReferees } = useAppStore.getState();
-        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
-        
-        if (active && me) {
-            setUserProfile({
-                id: me.id,
-                uid: me.id,
-                fullName: me.name,
-                role: role,
-                email: auth.currentUser?.email || 'test@example.com',
-                isAvailable: me.isAvailable ?? true,
-                rating: me.rating,
-                matchesPlayed: me.matchCount || 42,
-                walletBalance: 1250,
-                createdAt: new Date(),
-                stats: me.stats,
-                workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
-            });
-            setIsAvailable(me.isAvailable ?? true);
-            setBaseFee(me.fee);
-            if (me.workingHours) {
-              setActiveDays(me.workingHours.activeDays || ['Bugün']);
-              setActiveHours(me.workingHours.activeHours || '18:00 - 23:00');
-            }
+    const list = isRef ? adminReferees : adminGoalkeepers;
+    const myUid = auth.currentUser?.uid || 'u1';
+    const me = list.find(x => x.id === myUid);
+
+    if (me) {
+        setUserProfile({
+            id: me.id,
+            uid: me.id,
+            fullName: me.name,
+            role: role,
+            email: auth.currentUser?.email || 'test@example.com',
+            isAvailable: me.isAvailable ?? true,
+            rating: me.rating,
+            matchesPlayed: me.matchCount ?? 0,
+            createdAt: new Date(),
+            stats: me.stats,
+            workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
+        });
+        setIsAvailable(me.isAvailable ?? true);
+        setBaseFee(me.fee);
+        if (me.workingHours) {
+          setActiveDays(me.workingHours.activeDays || ['Bugün']);
+          setActiveHours(me.workingHours.activeHours || '18:00 - 23:00');
         }
-    };
+    } else if (list.length > 0) {
+        // Liste yüklendi ama gerçek kullanıcı kaleci/hakem listesinde bulunamadı.
+        // Başka birinin profiline (eskiden list[0]) düşmek yerine, kullanıcının
+        // kendi kimliğine ait dürüst/nötr bir profil gösteriliyor.
+        setUserProfile({
+            id: myUid,
+            uid: myUid,
+            fullName: auth.currentUser?.displayName || 'Yeni Üye',
+            role: role,
+            email: auth.currentUser?.email || 'test@example.com',
+            isAvailable: true,
+            rating: 0,
+            matchesPlayed: 0,
+            createdAt: new Date(),
+            stats: {},
+            workingHours: { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
+        });
+    }
+    // list henüz boşsa (Supabase'den yükleme sürüyor), bir şey yapma —
+    // adminGoalkeepers/adminReferees güncellenince bu effect otomatik tekrar çalışır.
+  }, [role, isRef, adminGoalkeepers, adminReferees]);
 
-    loadProfile();
-
-
-
+  useEffect(() => {
     const unsubscribe = subscribeToOpenMatches((matches) => {
       // Map matches from Supabase to JobListing format needed here
       const jobs = matches.map((m: any) => ({
@@ -173,7 +187,6 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     });
 
     return () => {
-        active = false;
         unsubscribe();
     };
   }, [role, isRef]);

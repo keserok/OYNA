@@ -55,7 +55,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
   const photoPool = isRef ? REFEREE_PHOTOS : GOALKEEPER_PHOTOS;
 
-  const { adminGoalkeepers, adminReferees } = useAppStore();
+  const { adminGoalkeepers, adminReferees, updateGoalkeeper, updateReferee } = useAppStore();
   const currentUser = auth.currentUser;
   
   const userProfile = React.useMemo(() => {
@@ -127,6 +127,20 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const handleSave = () => {
     setBio(tempBio);
     setSaving(true);
+
+    if (userProfile?.id) {
+      const update: any = {
+        id: userProfile.id,
+        name: displayName,
+        bio: tempBio,
+        fee,
+        style: selectedStyle,
+      };
+      if (customPhoto) update.avatar = customPhoto;
+      if (isRef) updateReferee(update);
+      else updateGoalkeeper(update);
+    }
+
     setTimeout(() => {
       setSaving(false);
       onBack();
