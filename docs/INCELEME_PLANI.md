@@ -17,7 +17,7 @@
 | 3 | Oyuncu Profili & Oyunlaştırma | Profil, FIFA kartları, çaylak, liderlik tablosu | ✅ İncelendi — 1 kritik kod düzeltildi, 2 büyük not |
 | 4 | Saha Keşfi & Rezervasyon | Haritalı saha bulma, ilan detay, rezervasyon, takvim | ✅ İncelendi — 1 kritik para hatası düzeltildi, 1 tutarlılık hatası düzeltildi |
 | 5 | Maç Sistemi | Maç kurma, keşif, katılım, lobi, bilet, maç sonu | ✅ İncelendi — 3 kod hatası düzeltildi, 3 büyük not |
-| 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ⬜ Bekliyor |
+| 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ✅ İncelendi — 1 kod hatası düzeltildi, 3 büyük not |
 | 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ⬜ Bekliyor |
 | 8 | Ödeme & Cüzdan | Ödeme ekranı, cüzdan, bölünmüş ödeme, premium, sadakat | ⬜ Bekliyor |
 | 9 | B2B Saha Sahibi Paneli (OPanel) | Doluluk, fiyat/tarife, finans, demo, moderasyon | ⬜ Bekliyor |
@@ -612,4 +612,95 @@ olarak kullanıma hazır, ama hiçbir ekran şu an bunlara gerçek yazma/okuma y
 - [ ] "Taslak maç" özelliği için ürün kararı: tamamla ya da kaldır.
 - [ ] Maç sonu ekranlarının (puanlama, MOTM, skor onayı, bilet, rapor) gerçek
       veriye bağlanması — her biri ayrı bir özellik inşası olarak planlanmalı.
+
+---
+
+## ✅ Modül 6 — Takım & Taktik (Tamamlandı)
+
+**1) Ne işe yarar?**
+Kullanıcının kendi sabit takımını kurması, kadrosunu (roster) oluşturup oyunculara
+saha üzerinde pozisyon/talimat ataması, taktik tahtasında (Studio) plan hazırlayıp
+kaydetmesi; ayrıca diğer takımlarla oyuncu/transfer ilanları üzerinden eşleşmesi.
+
+**2) Hangi dosyalar?**
+`TeamCreator.tsx`, `MyTeam.tsx`, `TeamBuilder.tsx`, `Studio.tsx`, `TransferCenter.tsx`,
+`services/teamService.ts`, `supabaseClient.ts` (`getTeamRolesAndInstructions`,
+`updateTeamRolesAndInstructions`, `sbRemovePlayerFromTeam`), `store.ts` (`createTeam`,
+`myTeams` state), `CommunityView.tsx` (TransferCenter'a giriş noktası). Backend:
+`teams`, `team_members`, `tactics` tabloları.
+
+**3) Nasıl çalışıyor?**
+`TeamCreator` 3 adımlı sihirbazla yeni takım bilgisini toplar; `onComplete`
+callback'i `App.tsx` üzerinden `store.createTeam()`'i tetikler → bu da
+`services/teamService.ts` ile gerçek `teams` + `team_members` insert'i yapar.
+`MyTeam` ekranı gerçek `myTeams` store state'inden aktif takımı bulur, roster'ı
+Supabase'den gelen pozisyon/talimat verisiyle zenginleştirir
+(`getTeamRolesAndInstructions`); sürükle-bırak ile pozisyon değiştirildiğinde veya
+talimat atandığında her değişiklik `updateTeamRolesAndInstructions` ile gerçek
+zamanlı Supabase'e yazılıyor; oyuncu çıkarma `sbRemovePlayerFromTeam` ile gerçek
+silme yapıyor. `Studio` ekranı taktik planlarını (`tactics` tablosu) kullanıcının
+kendi `userId`'sine bağlı olarak yükler/kaydeder.
+
+**4) Veri & bağlantı**
+`teams`, `team_members`, `tactics` tabloları gerçek ve RLS korumalı
+(`userId = auth.uid()`). `transfers`/`transfer_offers` gibi bir tablo şemada
+**hiç yok** — `TransferCenter.tsx` ekranının arkasında hiçbir backend altyapısı
+bulunmuyor.
+
+**5) Durum tespiti**
+- 🔧 **DÜZELTİLDİ (sahte veri, yanlış kadro dolduran kod hatası):** `Studio.tsx`'te
+  "Seçili Takımı Onayla" otomatik kadro doldurma butonu gerçek bir takımı
+  seçtiriyordu (`myTeams`'ten) ama saha üzerindeki kadroyu her zaman 10 satırlık
+  sabit `MOCK_POOL` ("Ahmet Y.", "Mehmet K." ... gibi var olmayan oyuncular)
+  listesiyle dolduruyordu — yani kullanıcı kendi gerçek takımını seçse de sahaya,
+  o takımda hiç olmayan hayalet oyuncular diziliyordu. Düzeltme: artık seçilen
+  takımın gerçek `roster`'ı kullanılıyor, varsa arkadaş listesinden (`friends`)
+  pozisyon/rating eşleşmesiyle zenginleştiriliyor — modaldeki "Takımlar"
+  sekmesinde zaten kullanılan doğru kalıpla birebir aynı hale getirildi.
+  Kullanılmayan `MOCK_POOL` ve `MOCK_TEAMS` sabitleri de koddan temizlendi.
+- ✅ **Doğrulandı (sağlam, dokunulmadı):** `TeamCreator.tsx → store.createTeam() →
+  services/teamService.ts` gerçek Supabase insert zinciri eksiksiz çalışıyor;
+  `MyTeam.tsx`'in roster/pozisyon/talimat kaydetme ve oyuncu çıkarma akışları
+  gerçek Supabase fonksiyonlarını çağırıyor.
+- ⚠️ **AÇIK NOT — `TeamBuilder.tsx` ekranına ulaşan hiçbir giriş noktası yok:**
+  `App.tsx`'te `case 'TEAM_BUILDER'` yönlendirmesi tanımlı (yani ekran "ölü kod"
+  değil, router'a bağlı), ama kod tabanının hiçbir yerinde
+  `onNavigate('TEAM_BUILDER')` çağıran bir buton/link bulunmuyor — kullanıcı bu
+  ekrana hiçbir şekilde ulaşamıyor. Ekran ayrıca sabit `MOCK_FRIENDS` listesiyle
+  çalışıyor, gerçek arkadaş/roster verisine bağlı değil. Erişim noktası
+  eklenip eklenmeyeceği bir ürün kararı; ekrana kimse ulaşamazken sahte veri
+  kaynağını değiştirmenin kullanıcıya hiçbir faydası olmayacağından bu turda
+  dokunulmadı.
+- ⚠️ **AÇIK NOT — `TransferCenter.tsx` tamamen sahte veriyle çalışıyor, gerçek
+  backend yok:** `CommunityView.tsx` üzerinden canlıda erişilebilir bir ekran,
+  ama "takım arıyor" ilanları, haber bandı, teklif/mesajlaşma — hepsi sabit
+  diziler (`LFP_LISTINGS`, `TICKER_ITEMS` vb.). Şemada `transfers` ya da
+  `transfer_offers` gibi bir tablo hiç yok. Gerçek hale getirmek yeni bir
+  özellik inşası demek (yeni tablo + RLS + muhtemelen bildirim/mesajlaşma) —
+  canlı veritabanı şema değişikliği gerektirdiğinden kullanıcı onayı almadan
+  yapılmadı, burada iş kalemi olarak not edildi.
+- ⚠️ **AÇIK NOT — `MyTeam.tsx`'teki "Oyuncu Davet Et" modalı tamamen sahte:**
+  Modal canlıda "Ekle" butonuyla erişilebiliyor, ama sabit iki isim ("Ahmet K.",
+  "Mehmet Y.") gösteriyor; arama kutusu hiçbir şey yapmıyor, "Davet Et" ve
+  "Bağlantı Paylaş" butonlarının ikisi de işlevsiz. Gerçek bir davet sistemi
+  (kullanıcı arama + bildirim/davet kaydı) yeni bir özellik inşası gerektiriyor;
+  yarım/riskli bağlanmadı, burada not edildi.
+- 🔁 **Yeniden değerlendirildi, hata değil:** Önceki araştırma turunda
+  `TeamBuilder.tsx`'teki `generateBalancedTeams()` fonksiyonunun `sumA <= sumB`
+  karşılaştırmasının "eşitlik durumunda dengesiz takım üreten bir hata" olduğu
+  öne sürülmüştü. Kendi simülasyonumla kontrol edildi (`[90,80,70,60,50,40]` gibi
+  örnek kadrolarla) — algoritma beklenen şekilde dengeli sonuç üretiyor (örn.
+  200'e 190 gibi yakın toplamlar). Gerçek bir hata olmadığından değiştirilmedi;
+  bu, otomatik ön-araştırmanın yanlış pozitif bir tespitiydi.
+
+**6) Piyasa öncesi yapılacaklar**
+- [x] `Studio.tsx`'teki "Takımı Onayla" otomatik kadro doldurma artık gerçek
+      takım roster'ını kullanıyor, sahte oyuncu listesi kaldırıldı.
+- [ ] `TeamBuilder.tsx` için erişim noktası eklenecek mi, yoksa ekran tamamen
+      kaldırılacak mı — ürün kararı gerekiyor.
+- [ ] `TransferCenter.tsx`'i gerçek bir transfer/ilan sistemine bağlamak için
+      yeni tablo + RLS tasarımı gerekiyor (canlı DB şema değişikliği — onay
+      gerektirir).
+- [ ] `MyTeam.tsx`'teki oyuncu davet modalı gerçek arama + davet mekanizmasına
+      bağlanmalı.
 

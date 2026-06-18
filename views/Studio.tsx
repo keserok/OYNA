@@ -274,25 +274,6 @@ const FORMATIONS: Record<SquadSize, Record<string, Slot[]>> = {
     }
 };
 
-const MOCK_POOL: Player[] = [
-    { id: 'p1', name: 'Ahmet Y.', role: 'FW', rating: 85, code: 'AHM85' },
-    { id: 'p2', name: 'Mehmet K.', role: 'CM', rating: 82, code: 'MEH82' },
-    { id: 'p3', name: 'Caner T.', role: 'LB', rating: 78, code: 'CAN78' },
-    { id: 'p4', name: 'Burak S.', role: 'CB', rating: 88, code: 'BUR88' },
-    { id: 'p5', name: 'Ali R.', role: 'RB', rating: 79, code: 'ALI79' },
-    { id: 'p6', name: 'Veli M.', role: 'GK', rating: 81, code: 'VEL81' },
-    { id: 'p7', name: 'Hasan B.', role: 'CM', rating: 80, code: 'HAS80' },
-    { id: 'p8', name: 'Ozan O.', role: 'FW', rating: 84, code: 'OZA84' },
-    { id: 'p9', name: 'Kemal A.', role: 'CB', rating: 77, code: 'KEM77' },
-    { id: 'p10', name: 'Sinan D.', role: 'GK', rating: 86, code: 'SIN86' },
-];
-
-const MOCK_TEAMS = [
-    { id: 't1', name: 'Yıldızlar FC', rating: 84 },
-    { id: 't2', name: 'Karakartallar', rating: 87 },
-    { id: 't3', name: 'Zehir Hafiye', rating: 79 }
-];
-
 const INSTRUCTIONS = ['Hücuma Çık', 'Geride Kal', 'Serbest', 'Markaj', 'Oyun Kurucu', 'Pres Yap'];
 
 interface StudioProps {
@@ -2309,8 +2290,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button
                                 onClick={() => {
                                     const newSlots = [...activeTactic.slots];
-                                    const availablePlayers = [...MOCK_POOL];
-                                    
+                                    const teamData = myTeams.find(t => t.id === selectedTeamId);
+                                    const availablePlayers: Player[] = (teamData?.roster || []).map(p => {
+                                        const matchedFriend = (friends || []).find(f => f.id === p.id);
+                                        return {
+                                            id: p.id,
+                                            name: p.name,
+                                            role: matchedFriend?.pos || p.position || 'CM',
+                                            rating: matchedFriend?.fp || p.rating || 80,
+                                            isCustom: false
+                                        };
+                                    });
+
                                     // İlk olarak kaleciyi (GK) yerleştir
                                     const gkSlotIndex = newSlots.findIndex(s => s.role === 'GK');
                                     if (gkSlotIndex !== -1 && !newSlots[gkSlotIndex].player) {
@@ -2320,15 +2311,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             availablePlayers.splice(gkIndex, 1);
                                         }
                                     }
-                                    
+
                                     // Kalan slotları diğer oyuncularla doldur
                                     newSlots.forEach((slot, idx) => {
                                         if (!slot.player && availablePlayers.length > 0) {
                                             newSlots[idx] = { ...slot, player: availablePlayers.shift() };
                                         }
                                     });
-                                    
-                                    const teamData = myTeams.find(t => t.id === selectedTeamId);
+
                                     setActiveTactic({ ...activeTactic, slots: newSlots, teamName: teamData?.name });
                                     setIsTeamConfirmed(true);
                                 }}
