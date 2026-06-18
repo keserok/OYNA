@@ -53,3 +53,29 @@ export function getRouteMeta(route: string): AdminRouteMeta {
     accent: 'red',
   };
 }
+
+/** Command palette navigasyon listesi — sidebar ile senkron tutun */
+export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRoute; category: string }> = [
+  { label: 'Genel Bakış', route: 'GENEL', category: 'Komuta' },
+  { label: 'Komuta Merkezi', route: 'CONTROL', category: 'Komuta' },
+  { label: 'Finans Merkezi', route: 'FINANCE', category: 'Finans' },
+  { label: 'İhtilaflar', route: 'DISPUTES', category: 'Finans' },
+  { label: 'Sahalar', route: 'SAHALAR', category: 'Operasyon' },
+  { label: 'Kullanıcılar', route: 'KULLANICILAR', category: 'Operasyon' },
+  { label: 'Kaleciler', route: 'KALECİLER', category: 'Operasyon' },
+  { label: 'Hakemler', route: 'HAKEMLER', category: 'Operasyon' },
+  { label: 'Onay Bekleyenler', route: 'PENDING_VERIFICATIONS', category: 'Operasyon' },
+  { label: 'Tesis Onayları', route: 'MODERATION', category: 'Operasyon' },
+  { label: 'SaaS Hesapları', route: 'OWNER_ACCOUNTS', category: 'Operasyon' },
+  { label: 'Maçlar', route: 'MATCHES', category: 'Operasyon' },
+  { label: 'Topluluklar', route: 'TOPLULUKLAR', category: 'Topluluk' },
+  { label: 'Takımlar', route: 'TAKIMLAR', category: 'Topluluk' },
+  { label: 'Turnuvalar', route: 'TURNUVALAR', category: 'Topluluk' },
+  { label: 'Kampanyalar', route: 'NOTIFICATIONS', category: 'Pazarlama' },
+  { label: 'Segmentasyon', route: 'SEGMENTATION', category: 'Pazarlama' },
+  { label: 'İndirim Kodları', route: 'PROMO_CODES', category: 'Pazarlama' },
+  { label: 'Denetim Kayıtları', route: 'AUDIT_LOG', category: 'Sistem' },
+  { label: 'CMS Metinler', route: 'CONTENT', category: 'Sistem' },
+  { label: 'Sistem Ayarları', route: 'SETTINGS', category: 'Sistem' },
+  { label: 'Ekipler & Yetkiler', route: 'ACL', category: 'Sistem' },
+];

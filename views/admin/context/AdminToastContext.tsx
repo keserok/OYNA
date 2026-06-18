@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 
@@ -21,16 +21,15 @@ const AdminToastContext = createContext<AdminToastContextValue | null>(null);
 
 export const AdminToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<ToastItem[]>([]);
-  const [counter, setCounter] = useState(0);
+  const counterRef = useRef(0);
 
   const push = useCallback((text: string, kind: ToastKind = 'success') => {
-    const id = counter + 1;
-    setCounter(id);
+    const id = ++counterRef.current;
     setItems((prev) => [...prev.slice(-2), { id, text, kind }]);
     setTimeout(() => {
       setItems((prev) => prev.filter((t) => t.id !== id));
     }, 3200);
-  }, [counter]);
+  }, []);
 
   const value: AdminToastContextValue = {
     toast: push,

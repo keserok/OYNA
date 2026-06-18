@@ -10,6 +10,7 @@ import { auth } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
+import type { AdminSession } from './services/adminService';
 
 const MOCK_TACTICS = [
   {
@@ -210,6 +211,8 @@ interface AppState {
   setBanExpiresAt: (dateStr: string | null) => void;
   impersonatedUser: AdminUser | null;
   setImpersonatedUser: (user: AdminUser | null) => void;
+  adminSession: AdminSession | null;
+  setAdminSession: (session: AdminSession | null) => void;
   originalRole: UserRole | null;
   setOriginalRole: (role: UserRole | null) => void;
 
@@ -388,6 +391,15 @@ interface AppState {
     stats: Record<string, number | string> | null;
     texts?: Record<string, string>;
   }) => void;
+  clearAdminMockState: () => void;
+  setAdminInventoryData: (data: {
+    pitches: Pitch[];
+    matches: MatchListing[];
+    teams: Team[];
+    goalkeepers: Goalkeeper[];
+    referees: Referee[];
+    texts?: Record<string, string>;
+  }) => void;
 
   // ─── App Settings ──────────────────────────────────────────────
   updateAppSettings: (settings: Partial<AppSettings>) => Promise<void>;
@@ -484,6 +496,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setBanExpiresAt: (banExpiresAt) => set({ banExpiresAt }),
   impersonatedUser: null,
   setImpersonatedUser: (impersonatedUser) => set({ impersonatedUser }),
+  adminSession: null,
+  setAdminSession: (adminSession) => set({ adminSession }),
   originalRole: null,
   setOriginalRole: (originalRole) => set({ originalRole }),
   globalTexts: {
@@ -507,15 +521,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
   searchRadius: 50,
   setSearchRadius: (searchRadius) => set({ searchRadius }),
-  adminPitches: PITCHES,
-  adminGoalkeepers: GOALKEEPERS,
-  adminReferees: REFEREES,
-  adminMatches: MATCH_LISTINGS,
+  adminPitches: IS_LOCAL_DEV ? PITCHES : [],
+  adminGoalkeepers: IS_LOCAL_DEV ? GOALKEEPERS : [],
+  adminReferees: IS_LOCAL_DEV ? REFEREES : [],
+  adminMatches: IS_LOCAL_DEV ? MATCH_LISTINGS : [],
   adminUsers: INITIAL_USERS,
-  adminNotifications: INITIAL_NOTIFICATIONS,
+  adminNotifications: IS_LOCAL_DEV ? INITIAL_NOTIFICATIONS : [],
   adminLogs: [],
   adminDashboardStats: null,
-  adminTeams: USER_TEAMS,
+  adminTeams: IS_LOCAL_DEV ? USER_TEAMS : [],
   appSettings: INITIAL_SETTINGS,
   
   loadOwnerData: async (ownerUserId?: string) => {
@@ -890,20 +904,52 @@ export const useAppStore = create<AppState>((set, get) => ({
   addPitch: async (pitch) => {
     const prev = get().adminPitches;
     set({ adminPitches: [pitch, ...prev] });
-    try { await FB.fbAddPitch(pitch); }
-    catch (e) { set({ adminPitches: prev }); throw e; }
+    try {
+      const { createPitchAdmin, buildPitchPayloadFromUi } = await import('./services/adminService');
+      try {
+        const newId = await createPitchAdmin(buildPitchPayloadFromUi(pitch));
+        set({ adminPitches: [{ ...pitch, id: newId }, ...prev] });
+      } catch {
+        await FB.fbAddPitch(pitch);
+        if (get().adminSession) {
+          const { persistAdminLog } = await import('./services/adminService');
+          await persistAdminLog('PITCH_CREATE', 'pitch', pitch.id, pitch.name).catch(() => {});
+        }
+      }
+    } catch (e) { set({ adminPitches: prev }); throw e; }
   },
   updatePitch: async (pitch) => {
     const prev = get().adminPitches;
     set({ adminPitches: prev.map(p => p.id === pitch.id ? pitch : p) });
-    try { await FB.fbUpdatePitch(pitch); }
-    catch (e) { set({ adminPitches: prev }); throw e; }
+    try {
+      const { updatePitchAdmin, buildPitchPayloadFromUi } = await import('./services/adminService');
+      try {
+        await updatePitchAdmin(pitch.id, buildPitchPayloadFromUi(pitch));
+      } catch {
+        await FB.fbUpdatePitch(pitch);
+        if (get().adminSession) {
+          const { persistAdminLog } = await import('./services/adminService');
+          await persistAdminLog('PITCH_UPDATE', 'pitch', pitch.id, pitch.name).catch(() => {});
+        }
+      }
+    } catch (e) { set({ adminPitches: prev }); throw e; }
   },
   deletePitch: async (id) => {
     const prev = get().adminPitches;
+    const pitch = prev.find(p => p.id === id);
     set({ adminPitches: prev.filter(p => p.id !== id) });
-    try { await FB.fbDeletePitch(id); }
-    catch (e) { set({ adminPitches: prev }); throw e; }
+    try {
+      const { deletePitchAdmin } = await import('./services/adminService');
+      try {
+        await deletePitchAdmin(id);
+      } catch {
+        await FB.fbDeletePitch(id);
+        if (get().adminSession && pitch) {
+          const { persistAdminLog } = await import('./services/adminService');
+          await persistAdminLog('PITCH_DELETE', 'pitch', id, pitch.name).catch(() => {});
+        }
+      }
+    } catch (e) { set({ adminPitches: prev }); throw e; }
   },
 
   // Goalkeeper
@@ -916,14 +962,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateGoalkeeper: async (gk) => {
     const prev = get().adminGoalkeepers;
     set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? gk : g) });
-    try { await FB.fbUpdateGoalkeeper(gk); }
-    catch (e) { set({ adminGoalkeepers: prev }); throw e; }
+    try {
+      const { updateGoalkeeperAdmin } = await import('./services/adminService');
+      await updateGoalkeeperAdmin(gk);
+    } catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
   deleteGoalkeeper: async (id) => {
     const prev = get().adminGoalkeepers;
+    const gk = prev.find(g => g.id === id);
     set({ adminGoalkeepers: prev.filter(g => g.id !== id) });
-    try { await FB.fbDeleteGoalkeeper(id); }
-    catch (e) { set({ adminGoalkeepers: prev }); throw e; }
+    try {
+      const { deleteGoalkeeperAdmin } = await import('./services/adminService');
+      try {
+        await deleteGoalkeeperAdmin(id);
+      } catch {
+        await FB.fbDeleteGoalkeeper(id);
+        if (get().adminSession && gk) {
+          const { persistAdminLog } = await import('./services/adminService');
+          await persistAdminLog('GK_DELETE', 'goalkeeper', id, gk.name).catch(() => {});
+        }
+      }
+    } catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
 
   // Referee
@@ -936,20 +995,34 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateReferee: async (ref) => {
     const prev = get().adminReferees;
     set({ adminReferees: prev.map(r => r.id === ref.id ? ref : r) });
-    try { await FB.fbUpdateReferee(ref); }
-    catch (e) { set({ adminReferees: prev }); throw e; }
+    try {
+      const { updateRefereeAdmin } = await import('./services/adminService');
+      await updateRefereeAdmin(ref);
+    } catch (e) { set({ adminReferees: prev }); throw e; }
   },
   deleteReferee: async (id) => {
     const prev = get().adminReferees;
+    const ref = prev.find(r => r.id === id);
     set({ adminReferees: prev.filter(r => r.id !== id) });
-    try { await FB.fbDeleteReferee(id); }
-    catch (e) { set({ adminReferees: prev }); throw e; }
+    try {
+      const { deleteRefereeAdmin } = await import('./services/adminService');
+      try {
+        await deleteRefereeAdmin(id);
+      } catch {
+        await FB.fbDeleteReferee(id);
+        if (get().adminSession && ref) {
+          const { persistAdminLog } = await import('./services/adminService');
+          await persistAdminLog('REF_DELETE', 'referee', id, ref.name).catch(() => {});
+        }
+      }
+    } catch (e) { set({ adminReferees: prev }); throw e; }
   },
 
   // Load Services from DB
   loadServices: async () => {
     try {
-      const [gks, refs] = await Promise.all([FB.fbGetGoalkeepers(), FB.fbGetReferees()]);
+      const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./services/adminService');
+      const [gks, refs] = await Promise.all([fetchGoalkeepersAdmin(), fetchRefereesAdmin()]);
       set({ adminGoalkeepers: gks || [], adminReferees: refs || [] });
     } catch (err) {
       console.error('Error loading services', err);
@@ -960,20 +1033,29 @@ export const useAppStore = create<AppState>((set, get) => ({
   addMatch: async (match) => {
     const prev = get().adminMatches;
     set({ adminMatches: [match, ...prev] });
-    try { await FB.fbAddMatch(match as any); }
-    catch (e) { set({ adminMatches: prev }); throw e; }
+    try {
+      const { createMatchAdmin } = await import('./services/adminService');
+      const { listingToMatchPayload } = await import('./utils/matchMapper');
+      const newId = await createMatchAdmin(listingToMatchPayload(match));
+      set({ adminMatches: [{ ...match, id: newId }, ...prev] });
+    } catch (e) { set({ adminMatches: prev }); throw e; }
   },
   updateMatch: async (match) => {
     const prev = get().adminMatches;
     set({ adminMatches: prev.map(m => m.id === match.id ? match : m) });
-    try { await FB.fbUpdateMatch(match as any); }
-    catch (e) { set({ adminMatches: prev }); throw e; }
+    try {
+      const { updateMatchAdmin } = await import('./services/adminService');
+      const { listingToMatchPayload } = await import('./utils/matchMapper');
+      await updateMatchAdmin(match.id, listingToMatchPayload(match));
+    } catch (e) { set({ adminMatches: prev }); throw e; }
   },
   deleteMatch: async (id) => {
     const prev = get().adminMatches;
     set({ adminMatches: prev.filter(m => m.id !== id) });
-    try { await FB.fbDeleteMatch(id); }
-    catch (e) { set({ adminMatches: prev }); throw e; }
+    try {
+      const { deleteMatchAdmin } = await import('./services/adminService');
+      await deleteMatchAdmin(id);
+    } catch (e) { set({ adminMatches: prev }); throw e; }
   },
 
   // Supabase Plei/Fubles Hybrid
@@ -1040,9 +1122,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   // User
   updateUser: async (user) => {
     const prev = get().adminUsers;
+    const existing = prev.find(u => u.id === user.id);
     set({ adminUsers: prev.map(u => u.id === user.id ? user : u) });
-    try { await FB.fbUpdateUser(user); }
-    catch (e) { set({ adminUsers: prev }); throw e; }
+    try {
+      const svc = await import('./services/adminService');
+      if (existing && existing.isBanned !== user.isBanned) {
+        await svc.banUserAdmin(user.id, user.isBanned, user.banExpiresAt ?? null);
+      }
+      await svc.updateUserProfileAdmin(user);
+    } catch (e) { set({ adminUsers: prev }); throw e; }
   },
   setNewMatchBadge: async (val) => {
     const uid = auth.currentUser?.uid || 'u1';
@@ -1057,29 +1145,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   banUser: async (id) => {
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: true } : u) });
-    try { await FB.fbBanUser(id, true); }
-    catch (e) { set({ adminUsers: prev }); throw e; }
+    try {
+      const { banUserAdmin } = await import('./services/adminService');
+      await banUserAdmin(id, true);
+    } catch (e) { set({ adminUsers: prev }); throw e; }
   },
   unbanUser: async (id) => {
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: false } : u) });
-    try { await FB.fbBanUser(id, false); }
-    catch (e) { set({ adminUsers: prev }); throw e; }
+    try {
+      const { banUserAdmin } = await import('./services/adminService');
+      await banUserAdmin(id, false);
+    } catch (e) { set({ adminUsers: prev }); throw e; }
   },
   toggleUserPro: async (id) => {
     const user = get().adminUsers.find(u => u.id === id);
     if (user) {
       const prev = get().adminUsers;
-      set({ adminUsers: prev.map(u => u.id === id ? { ...u, isPro: !u.isPro } : u) });
-      try { await FB.fbToggleUserPro(id, !user.isPro); }
-      catch (e) { set({ adminUsers: prev }); throw e; }
+      const nextPro = !user.isPro;
+      set({ adminUsers: prev.map(u => u.id === id ? { ...u, isPro: nextPro } : u) });
+      try {
+        const { toggleUserProAdmin } = await import('./services/adminService');
+        await toggleUserProAdmin(id, nextPro);
+      } catch (e) { set({ adminUsers: prev }); throw e; }
     }
   },
   verifyUser: async (id) => {
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isVerified: true } : u) });
-    try { await FB.fbVerifyUser(id); }
-    catch (e) { set({ adminUsers: prev }); throw e; }
+    try {
+      const { verifyUserAdmin } = await import('./services/adminService');
+      await verifyUserAdmin(id);
+    } catch (e) { set({ adminUsers: prev }); throw e; }
   },
   addUser: async (user) => {
     const prev = get().adminUsers;
@@ -1090,8 +1187,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteUser: async (id) => {
     const prev = get().adminUsers;
     set({ adminUsers: prev.filter(u => u.id !== id) });
-    try { await FB.fbDeleteUser(id); }
-    catch (e) { set({ adminUsers: prev }); throw e; }
+    try {
+      const { processAccountDeletion } = await import('./services/adminService');
+      await processAccountDeletion(id, true);
+    } catch (e) { set({ adminUsers: prev }); throw e; }
   },
 
   // Notifications
@@ -1112,6 +1211,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     showAnnouncementBanner: settings?.showAnnouncementBanner ?? state.showAnnouncementBanner,
   })),
 
+  clearAdminMockState: () => set({
+    adminPitches: [],
+    adminMatches: [],
+    adminTeams: [],
+    adminGoalkeepers: [],
+    adminReferees: [],
+    adminUsers: [],
+    adminNotifications: [],
+    adminDashboardStats: null,
+    adminLogs: [],
+  }),
+
+  setAdminInventoryData: ({ pitches, matches, teams, goalkeepers, referees, texts }) =>
+    set((state) => ({
+      adminPitches: pitches,
+      adminMatches: matches,
+      adminTeams: teams,
+      adminGoalkeepers: goalkeepers,
+      adminReferees: referees,
+      globalTexts: texts ? { ...state.globalTexts, ...texts } : state.globalTexts,
+    })),
+
   // App Settings
   updateAppSettings: async (settings) => {
     const prev = get().appSettings;
@@ -1129,8 +1250,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   addAdminLog: (log) => {
+    const adminId = log.adminId || get().adminSession?.userId || 'system';
     const entry: AdminLog = {
       ...log,
+      adminId,
       id: Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toISOString(),
     };

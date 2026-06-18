@@ -67,7 +67,7 @@ export const ModuleCrudBar: React.FC<ModuleCrudBarProps> = ({
             <Plus size={14} strokeWidth={2.5} /> {addLabel}
           </button>
         )}
-        {showDemo && moduleKey && (
+        {showDemo && moduleKey && import.meta.env.DEV && (
           <>
             <button
               onClick={() => setConfirm('seed')}

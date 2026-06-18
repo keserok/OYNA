@@ -1,14 +1,19 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store';
 import { AdminLayout } from './layout/AdminLayout';
-import { PageShell } from './components/PageShell';
 import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
 import { AnimatePresence } from 'framer-motion';
-import { PendingVerificationsTab } from './PendingVerificationsTab';
-import OwnerModerationTab from './OwnerModerationTab';
-import OwnerAccountsTab from './OwnerAccountsTab';
-import { Clock, Shield, Building2 } from 'lucide-react';
+import { PageLoadingSkeleton } from './components/PageLoadingSkeleton';
 import type { AdminSession } from '../../services/adminService';
+import {
+  AdminNavigationProvider,
+  useAdminNavigation,
+  type AdminNavParams,
+} from './context/AdminNavigationContext';
+import { AdminPermissionsProvider, useAdminPermissions } from './context/AdminPermissionsContext';
+import { useAdminToast } from './context/AdminToastContext';
+
+const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const CommandCenterPage = lazy(() => import('./pages/CommandCenterPage').then(m => ({ default: m.CommandCenterPage })));
@@ -23,7 +28,8 @@ const DisputesPage = lazy(() => import('./pages/DisputesPage').then(m => ({ defa
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage').then(m => ({ default: m.CampaignsPage })));
 const PromoCodesPage = lazy(() => import('./pages/PromoCodesPage').then(m => ({ default: m.PromoCodesPage })));
 const ACLPage = lazy(() => import('./pages/ACLPage').then(m => ({ default: m.ACLPage })));
-const SegmentationPage = lazy(() => import('./pages/SegmentationPage').then(m => ({ default: m.SegmentationPage })));
+const PendingVerificationsPage = lazy(() => import('./pages/PendingVerificationsPage').then(m => ({ default: m.PendingVerificationsPage })));
+const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
@@ -31,43 +37,74 @@ export type GodViewSubRoute =
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
 
+export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
+
 interface Props {
     onBack: () => void;
     onNavigate?: (tab: string) => void;
     mode?: 'embedded' | 'standalone';
     adminSession?: AdminSession | null;
     onRefreshData?: () => Promise<void>;
+    initialSubRoute?: GodViewSubRoute;
+    initialNavParams?: AdminNavParams;
 }
 
-export const GodViewPanel: React.FC<Props> = ({
+const GodViewPanelInner: React.FC<Props> = ({
     onBack,
     onNavigate,
     mode = 'embedded',
     adminSession,
     onRefreshData,
+    initialSubRoute,
+    initialNavParams,
 }) => {
-    const { deletePitch } = useAppStore();
-    const [subRoute, setSubRoute] = useState<GodViewSubRoute>('GENEL');
+    const deletePitch = useAppStore((s) => s.deletePitch);
+    const { setParams } = useAdminNavigation();
+    const { canAccess, defaultRoute } = useAdminPermissions();
+    const { info } = useAdminToast();
+    const [subRoute, setSubRoute] = useState<GodViewSubRoute>(initialSubRoute ?? 'GENEL');
     const [modal, setModal] = useState<any>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
-    const handleNavigate = (route: GodViewSubRoute) => {
+    useEffect(() => {
+        if (initialNavParams) setParams(initialNavParams);
+    }, [initialNavParams, setParams]);
+
+    useEffect(() => {
+        const start = initialSubRoute ?? defaultRoute;
+        if (!canAccess(start)) setSubRoute(defaultRoute);
+    }, [initialSubRoute, defaultRoute, canAccess]);
+
+    const handleNavigate: AdminNavigateFn = useCallback((route, params) => {
+        if (!canAccess(route)) {
+            info('Bu sayfaya erişim yetkiniz yok');
+            return;
+        }
         setSubRoute(route);
+        if (params) setParams(params);
         if (onNavigate) onNavigate(route);
-    };
+    }, [onNavigate, setParams, canAccess, info]);
 
     const closeModal = () => setModal({ type: 'none' });
 
     const renderPage = () => {
+        if (!canAccess(subRoute)) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
+                    <p className="text-sm font-bold">Bu sayfaya erişim yetkiniz yok.</p>
+                    <button onClick={() => setSubRoute(defaultRoute)} className="text-xs text-red-400 hover:text-red-300">Ana sayfaya dön</button>
+                </div>
+            );
+        }
         switch (subRoute) {
             case 'GENEL':
-                return <DashboardPage onRefresh={onRefreshData} />;
+                return <DashboardPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             case 'CONTROL':
-                return <CommandCenterPage mode={mode} onNavigate={(r) => handleNavigate(r as GodViewSubRoute)} />;
+                return <CommandCenterPage mode={mode} onNavigate={handleNavigate} />;
             case 'FINANCE':
-                return <FinancePage />;
+                return <FinancePage onNavigate={handleNavigate} />;
             case 'DISPUTES':
-                return <DisputesPage />;
+                return <DisputesPage onNavigate={handleNavigate} />;
             case 'PROMO_CODES':
                 return <PromoCodesPage onRefresh={onRefreshData} />;
             case 'ACL':
@@ -85,13 +122,9 @@ export const GodViewPanel: React.FC<Props> = ({
             case 'HAKEMLER':
                 return <UsersPage subRoute={subRoute} mode={mode} onRefresh={onRefreshData} />;
             case 'PENDING_VERIFICATIONS':
-                return (
-                    <PageShell route="PENDING_VERIFICATIONS" icon={<Clock size={20} />}>
-                        <PendingVerificationsTab onBadgeCount={setPendingVerifCount} />
-                    </PageShell>
-                );
+                return <PendingVerificationsPage onBadgeCount={setPendingVerifCount} />;
             case 'MATCHES':
-                return <MatchesPage onRefresh={onRefreshData} />;
+                return <MatchesPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             case 'TOPLULUKLAR':
             case 'TAKIMLAR':
             case 'TURNUVALAR':
@@ -100,29 +133,17 @@ export const GodViewPanel: React.FC<Props> = ({
             case 'CONTENT':
                 return <SettingsPage subRoute={subRoute} onRefresh={onRefreshData} />;
             case 'NOTIFICATIONS':
-                return <CampaignsPage />;
+                return <CampaignsPage route="NOTIFICATIONS" />;
             case 'SEGMENTATION':
-                return <SegmentationPage />;
+                return <CampaignsPage route="SEGMENTATION" />;
             case 'MODERATION':
-                return (
-                    <PageShell route="MODERATION" icon={<Shield size={20} />}>
-                        <OwnerModerationTab />
-                    </PageShell>
-                );
+                return <ModerationPage />;
             case 'OWNER_ACCOUNTS':
-                return (
-                    <PageShell route="OWNER_ACCOUNTS" icon={<Building2 size={20} />}>
-                        <OwnerAccountsTab />
-                    </PageShell>
-                );
+                return <OwnerAccountsPage />;
             case 'AUDIT_LOG':
-                return <AuditLogPage onRefresh={onRefreshData} />;
+                return <AuditLogPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             default:
-                return (
-                    <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">
-                        {subRoute} Sayfası Yapım Aşamasında 🚀
-                    </div>
-                );
+                return <DashboardPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
         }
     };
 
@@ -130,18 +151,13 @@ export const GodViewPanel: React.FC<Props> = ({
         <>
             <AdminLayout
                 activeSubRoute={subRoute}
-                onNavigate={handleNavigate}
+                onNavigate={(r) => handleNavigate(r)}
                 onBack={onBack}
                 pendingVerifCount={pendingVerifCount}
                 mode={mode}
                 adminSession={adminSession}
             >
-                <Suspense fallback={
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-3">
-                        <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-xs font-mono font-black tracking-widest uppercase">Sayfa Yükleniyor...</span>
-                    </div>
-                }>
+                <Suspense fallback={<PageLoadingSkeleton />}>
                     {renderPage()}
                 </Suspense>
             </AdminLayout>
@@ -163,5 +179,13 @@ export const GodViewPanel: React.FC<Props> = ({
         </>
     );
 };
+
+export const GodViewPanel: React.FC<Props> = (props) => (
+    <AdminNavigationProvider>
+        <AdminPermissionsProvider session={props.adminSession}>
+            <GodViewPanelInner {...props} />
+        </AdminPermissionsProvider>
+    </AdminNavigationProvider>
+);
 
 export default GodViewPanel;

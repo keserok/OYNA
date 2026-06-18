@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { CommandPalette } from '../components/CommandPalette';
+import { AdminStatusBar } from '../components/AdminStatusBar';
 import { AdminToastProvider } from '../context/AdminToastContext';
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../../services/adminService';
@@ -21,6 +22,17 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
     const [cmdOpen, setCmdOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setCmdOpen((open) => !open);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
 
     return (
         <AdminToastProvider>
@@ -52,10 +64,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 </div>
 
                 <main className="flex-1 flex flex-col overflow-hidden w-full bg-black/20">
+                    <AdminStatusBar />
                     <TopBar 
                         activeSubRoute={activeSubRoute}
                         onOpenCommandPalette={() => setCmdOpen(true)}
                         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        onNavigate={(route) => onNavigate(route as GodViewSubRoute)}
                     />
 
                     {/* Page Content */}

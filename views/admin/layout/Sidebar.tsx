@@ -2,10 +2,11 @@ import React from 'react';
 import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
-    ChevronLeft, Radio, Swords, LogOut, Lock, Filter, Globe, Trophy, Clock, ScrollText, Building2
+    ChevronLeft, Radio, Swords, LogOut, Lock, Globe, Trophy, Clock, ScrollText, Building2
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../../services/adminService';
+import { useAdminPermissions } from '../context/AdminPermissionsContext';
 
 interface SidebarProps {
     activeSubRoute: string;
@@ -25,13 +26,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
     mode = 'embedded',
     adminSession,
 }) => {
-    const { adminPitches, adminUsers, adminGoalkeepers, adminReferees, adminMatches, adminDashboardStats } = useAppStore();
+    const { canAccess, roleLabel } = useAdminPermissions();
+    const stats = useAppStore((s) => s.adminDashboardStats);
+    const missingAlerts = useAppStore((s) =>
+        s.adminMatches.reduce((n, m) => n + (m.missingPositions?.some((p) => p.count > 0) ? 1 : 0), 0),
+    );
 
-    const missingAlerts = adminMatches.filter(m => m.missingPositions?.some(p => p.count > 0)).length;
-    const pendingPitches = Number(adminDashboardStats?.pending_pitches ?? 0);
-    const openDisputes = Number(adminDashboardStats?.open_disputes ?? 0);
-    const communityCount = Number(adminDashboardStats?.total_communities ?? 0);
-    const deletionRequests = Number(adminDashboardStats?.deletion_requests ?? 0);
+    const totalPitches = Number(stats?.total_pitches ?? 0);
+    const totalUsers = Number(stats?.total_users ?? 0);
+    const totalMatches = Number(stats?.total_matches ?? 0);
+    const totalGk = Number(stats?.active_goalkeepers ?? 0);
+    const totalRef = Number(stats?.active_referees ?? 0);
+    const pendingPitches = Number(stats?.pending_pitches ?? 0);
+    const openDisputes = Number(stats?.open_disputes ?? 0);
+    const communityCount = Number(stats?.total_communities ?? 0);
+
+    const routeForLabel = (label: string): GodViewSubRoute | null => {
+        const map: Record<string, GodViewSubRoute> = {
+            'Genel': 'GENEL', 'Komuta Merkezi': 'CONTROL', 'Sahalar': 'SAHALAR', 'Kullanıcılar': 'KULLANICILAR',
+            'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Tesis Onayları': 'MODERATION', 'SaaS Hesapları': 'OWNER_ACCOUNTS',
+            'Maçlar': 'MATCHES', 'Kaleciler': 'KALECİLER', 'Hakemler': 'HAKEMLER', 'Topluluklar': 'TOPLULUKLAR',
+            'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS',
+            'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES',
+            'Denetim Kayıtları': 'AUDIT_LOG', 'Metinler': 'CONTENT', 'Ayarlar': 'SETTINGS', 'Ekipler & Yetkiler': 'ACL',
+        };
+        return map[label] ?? null;
+    };
 
     const SIDEBAR_GROUPS = [
         {
@@ -44,14 +64,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
             label: 'OPERASYON',
             items: [
-                { icon: MapPin, label: 'Sahalar', badge: adminPitches.length, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
-                { icon: Users, label: 'Kullanıcılar', badge: adminUsers.length, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
+                { icon: MapPin, label: 'Sahalar', badge: totalPitches || null, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
+                { icon: Users, label: 'Kullanıcılar', badge: totalUsers || null, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
                 { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: activeSubRoute === 'PENDING_VERIFICATIONS', action: () => onNavigate('PENDING_VERIFICATIONS') },
                 { icon: Shield, label: 'Tesis Onayları', badge: pendingPitches > 0 ? String(pendingPitches) : null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
                 { icon: Building2, label: 'SaaS Hesapları', badge: null, active: activeSubRoute === 'OWNER_ACCOUNTS', action: () => onNavigate('OWNER_ACCOUNTS') },
-                { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : adminMatches.length, active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
-                { icon: Shield, label: 'Kaleciler', badge: adminGoalkeepers.length, active: activeSubRoute === 'KALECİLER', action: () => onNavigate('KALECİLER') },
-                { icon: Scale, label: 'Hakemler', badge: adminReferees.length, active: activeSubRoute === 'HAKEMLER', action: () => onNavigate('HAKEMLER') },
+                { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : (totalMatches || null), active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
+                { icon: Shield, label: 'Kaleciler', badge: totalGk || null, active: activeSubRoute === 'KALECİLER', action: () => onNavigate('KALECİLER') },
+                { icon: Scale, label: 'Hakemler', badge: totalRef || null, active: activeSubRoute === 'HAKEMLER', action: () => onNavigate('HAKEMLER') },
             ]
         },
         {
@@ -65,9 +85,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
             label: 'PAZARLAMA',
             items: [
-                { icon: Megaphone, label: 'Kampanyalar', badge: null, active: activeSubRoute === 'NOTIFICATIONS', action: () => onNavigate('NOTIFICATIONS') },
-                { icon: Zap, label: 'İndirim Kodları', badge: Number(adminDashboardStats?.active_promo_codes ?? 0) || null, active: activeSubRoute === 'PROMO_CODES', action: () => onNavigate('PROMO_CODES') },
-                { icon: Filter, label: 'Segmentasyon', badge: null, active: activeSubRoute === 'SEGMENTATION', action: () => onNavigate('SEGMENTATION') },
+                { icon: Megaphone, label: 'Kampanyalar', badge: null, active: activeSubRoute === 'NOTIFICATIONS' || activeSubRoute === 'SEGMENTATION', action: () => onNavigate('NOTIFICATIONS') },
+                { icon: Zap, label: 'İndirim Kodları', badge: Number(stats?.active_promo_codes ?? 0) || null, active: activeSubRoute === 'PROMO_CODES', action: () => onNavigate('PROMO_CODES') },
             ]
         },
         {
@@ -83,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: ScrollText, label: 'Denetim Kayıtları', badge: null, active: activeSubRoute === 'AUDIT_LOG', action: () => onNavigate('AUDIT_LOG') },
                 { icon: Type, label: 'Metinler', badge: null, active: activeSubRoute === 'CONTENT', action: () => onNavigate('CONTENT') },
                 { icon: Settings, label: 'Ayarlar', badge: null, active: activeSubRoute === 'SETTINGS', action: () => onNavigate('SETTINGS') },
-                { icon: Lock, label: 'Ekipler & Yetkiler', badge: deletionRequests > 0 ? `${deletionRequests}!` : null, active: activeSubRoute === 'ACL', action: () => onNavigate('ACL') },
+                { icon: Lock, label: 'Ekipler & Yetkiler', badge: null, active: activeSubRoute === 'ACL', action: () => onNavigate('ACL') },
             ]
         },
     ];
@@ -116,14 +135,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <p className="px-3 py-1.5 text-[8.5px] text-gray-600 font-black uppercase tracking-wider">
                             {group.label}
                         </p>
-                        {group.items.map(({ icon: Icon, label, badge, active, action }) => (
+                        {group.items
+                            .filter(({ label }) => {
+                                const route = routeForLabel(label);
+                                return !route || canAccess(route);
+                            })
+                            .map(({ icon: Icon, label, badge, active, action }) => (
                             <button
                                 key={label}
                                 onClick={action}
-                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-150 border border-transparent ${
+                                className={`relative w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-150 border ${
                                     active
-                                        ? 'bg-red-600/10 border-red-500/20 text-white font-bold'
-                                        : 'text-gray-500 hover:text-gray-250 hover:bg-white/[0.03]'
+                                        ? 'bg-red-600/10 border-red-500/20 text-white font-bold shadow-[inset_3px_0_0_0_rgba(239,68,68,0.8)]'
+                                        : 'border-transparent text-gray-500 hover:text-gray-250 hover:bg-white/[0.03]'
                                 }`}
                             >
                                 <div className="flex items-center gap-3">
@@ -157,14 +181,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Admin Profile & Logout section at the bottom */}
             <div className="border-t border-white/5 p-4 bg-black/10 flex items-center gap-3">
                 <img
-                    src="https://i.pravatar.cc/150?u=patron"
+                    src={adminSession?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(adminSession.name)}&background=dc2626&color=fff` : 'https://i.pravatar.cc/150?u=patron'}
                     alt="Profil"
                     className="w-9 h-9 rounded-full border border-red-500/20 object-cover shadow-md"
                 />
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-white truncate leading-tight">{adminSession?.name || 'Admin'}</p>
                     <span className="inline-block text-[8px] px-1.5 py-0.5 mt-0.5 bg-red-600/20 text-red-400 font-black rounded-md border border-red-500/10 uppercase tracking-widest scale-90 origin-left">
-                        {mode === 'standalone' ? 'OYNA OS' : 'PATRON'}
+                        {mode === 'standalone' ? roleLabel : 'PATRON'}
                     </span>
                 </div>
                 <button

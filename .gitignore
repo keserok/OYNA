@@ -18,6 +18,10 @@ reports/
 scripts/*
 !scripts/owner-demo.mjs
 !scripts/owner-menu-live-test.mjs
+!scripts/admin-panel-verify.mjs
+!scripts/admin-supabase-deploy.mjs
+!scripts/start-admin-local.mjs
+!scripts/supabase-interactive-deploy.sh
 DATABASE_README.md
 # scratch / debug files
 test_browser.cjs
@@ -45,3 +49,6 @@ android/local.properties
 android/.idea/
 android/captures/
 
+.vercel
+supabase/.temp/
+test-results/

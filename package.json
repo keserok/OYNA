@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:admin": "vite --open /admin.html",
+    "dev:admin": "node scripts/start-admin-local.mjs",
     "test:admin": "playwright test tests/admin.spec.ts",
+    "admin:verify": "node scripts/admin-panel-verify.mjs",
+    "admin:deploy": "node scripts/admin-supabase-deploy.mjs",
+    "admin:deploy:interactive": "bash scripts/supabase-interactive-deploy.sh",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",

@@ -8,12 +8,20 @@ interface TopBarProps {
     activeSubRoute: string;
     onOpenCommandPalette: () => void;
     onToggleMobileMenu?: () => void;
+    onNavigate?: (route: string) => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ activeSubRoute, onOpenCommandPalette, onToggleMobileMenu }) => {
-    const { appSettings, updateAppSettings } = useAppStore();
+export const TopBar: React.FC<TopBarProps> = ({ activeSubRoute, onOpenCommandPalette, onToggleMobileMenu, onNavigate }) => {
+    const appSettings = useAppStore((s) => s.appSettings);
+    const updateAppSettings = useAppStore((s) => s.updateAppSettings);
+    const adminDashboardStats = useAppStore((s) => s.adminDashboardStats);
     const { info } = useAdminToast();
     const meta = getRouteMeta(activeSubRoute);
+
+    const opsCount = Number(adminDashboardStats?.pending_verifications ?? 0)
+        + Number(adminDashboardStats?.pending_pitches ?? 0)
+        + Number(adminDashboardStats?.open_disputes ?? 0)
+        + Number(adminDashboardStats?.pending_withdrawals ?? 0);
 
     return (
         <header className="h-14 bg-[#0D1117]/90 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-4 md:px-6 shrink-0 z-20 sticky top-0">
@@ -46,9 +54,18 @@ export const TopBar: React.FC<TopBarProps> = ({ activeSubRoute, onOpenCommandPal
                     <kbd className="hidden md:inline ml-1 text-[9px] font-mono text-gray-600 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">⌘K</kbd>
                 </button>
 
-                <button className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-gray-500 hover:text-white relative">
+                <button
+                    type="button"
+                    onClick={() => onNavigate?.('CONTROL')}
+                    title={opsCount > 0 ? `${opsCount} operasyon bekliyor` : 'Komuta Merkezi'}
+                    className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-gray-500 hover:text-white relative"
+                >
                     <Bell size={14} />
-                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                    {opsCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                            {opsCount > 9 ? '9+' : opsCount}
+                        </span>
+                    )}
                 </button>
 
                 <button

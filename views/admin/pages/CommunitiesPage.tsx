@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Globe, Trophy, Users, Check, X, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
+import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
 import {
@@ -29,7 +30,27 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
+  const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
+
+  const teamSearch = useCallback((t: (typeof teams)[number], q: string) => t.name.toLowerCase().includes(q), []);
+  const tourSearch = useCallback((t: (typeof tournaments)[number], q: string) => t.name.toLowerCase().includes(q), []);
+  const commSearch = useCallback((c: CommunityRow, q: string) => [c.name, c.type, c.domain].filter(Boolean).join(' ').toLowerCase().includes(q), []);
+  const filteredTeams = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return teams;
+    return teams.filter((t) => teamSearch(t, q));
+  }, [teams, query, teamSearch]);
+  const filteredTournaments = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tournaments;
+    return tournaments.filter((t) => tourSearch(t, q));
+  }, [tournaments, query, tourSearch]);
+  const filteredCommunities = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return communities;
+    return communities.filter((c) => commSearch(c, q));
+  }, [communities, query, commSearch]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,6 +154,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
         <ModuleCrudBar moduleKey="teams" addLabel="Yeni Takım" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
       }>
         {addForm}
+        <AdminSearchBar value={query} onChange={setQuery} placeholder="Takım ara..." resultCount={filteredTeams.length} className="mb-4" />
         <DataTable
           columns={[
             { header: 'Takım', render: (t) => (
@@ -147,7 +169,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
               <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10"><Trash2 size={14} /></button>
             )},
           ]}
-          data={teams}
+          data={filteredTeams}
           loading={loading}
         />
       </PageShell>
@@ -163,6 +185,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
         <ModuleCrudBar moduleKey="tournaments" addLabel="Yeni Turnuva" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
       }>
         {addForm}
+        <AdminSearchBar value={query} onChange={setQuery} placeholder="Turnuva ara..." resultCount={filteredTournaments.length} className="mb-4" />
         <DataTable
           columns={[
             { header: 'Turnuva', render: (t) => (
@@ -178,7 +201,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
               <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10"><Trash2 size={14} /></button>
             )},
           ]}
-          data={tournaments}
+          data={filteredTournaments}
           loading={loading}
         />
       </PageShell>
@@ -193,6 +216,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
       <ModuleCrudBar moduleKey="communities" addLabel="Yeni Topluluk" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
     }>
       {addForm}
+      <AdminSearchBar value={query} onChange={setQuery} placeholder="Topluluk ara..." resultCount={filteredCommunities.length} className="mb-4" />
       {error && <p className="text-red-400 text-xs px-1">{error}</p>}
 
       {requests.length > 0 && (
@@ -218,11 +242,11 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
       )}
 
       <section className="space-y-2">
-        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kayıtlı Topluluklar ({communities.length})</h3>
-        {communities.length === 0 && !loading ? (
+        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kayıtlı Topluluklar ({filteredCommunities.length})</h3>
+        {filteredCommunities.length === 0 && !loading ? (
           <p className="text-center text-gray-600 text-xs py-8 border border-dashed border-white/5 rounded-xl">Henüz topluluk yok</p>
         ) : (
-          communities.map((c) => (
+          filteredCommunities.map((c) => (
             <div key={c.id} className="bg-black/30 border border-white/5 rounded-xl p-4 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">

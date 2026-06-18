@@ -1,41 +1,86 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../../store';
 import {
-  fetchOpsQueue, processAccountDeletion, toTurkishAdminError,
+  fetchOpsQueue, processAccountDeletion, logImpersonation, toTurkishAdminError,
   type OpsQueue,
 } from '../../../services/adminService';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { PageShell } from '../components/PageShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAdminToast } from '../context/AdminToastContext';
+import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
+import { supabase } from '../../../supabaseClient';
 import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle } from 'lucide-react';
+import type { AdminNavigateFn, GodViewSubRoute } from '../GodViewPanel';
 
 interface CommandCenterPageProps {
   mode?: 'embedded' | 'standalone';
-  onNavigate?: (route: string) => void;
+  onNavigate?: AdminNavigateFn;
 }
 
 export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'embedded', onNavigate }) => {
-  const { adminUsers } = useAppStore();
+  const adminUsers = useAppStore((s) => s.adminUsers);
   const [queue, setQueue] = useState<OpsQueue | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [ghostQuery, setGhostQuery] = useState('');
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const { success, error: toastError } = useAdminToast();
+  const initialLoadDone = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) {
+      if (initialLoadDone.current) setRefreshing(true);
+      else setLoading(true);
+    }
+    setLoadError(null);
     try {
       setQueue(await fetchOpsQueue());
+      initialLoadDone.current = true;
     } catch (err) {
-      toastError(toTurkishAdminError(err));
+      const msg = toTurkishAdminError(err);
+      if (!silent) {
+        setLoadError(msg);
+        toastError(msg);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [toastError]);
 
+  const debouncedSilentReload = useDebouncedCallback(() => { void load({ silent: true }); }, 2000);
+
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const interval = setInterval(() => { void load({ silent: true }); }, 30_000);
+    const channel = supabase
+      .channel('admin-ops-queue')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, debouncedSilentReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pitches' }, debouncedSilentReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_disputes' }, debouncedSilentReload)
+      .subscribe();
+    return () => {
+      clearInterval(interval);
+      void supabase.removeChannel(channel);
+    };
+  }, [load, debouncedSilentReload]);
+
+  const openGhost = async (userId: string, userName: string) => {
+    try {
+      await logImpersonation(userId);
+      openGhostInConsumerApp(userId, userName);
+      success(`🕵️ ${userName} — consumer app'te açılıyor`);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    }
+  };
 
   const confirmDeletion = async () => {
     if (!deleteUserId) return;
@@ -59,7 +104,7 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
       ).slice(0, 8)
     : [];
 
-  const QueueSection: React.FC<{ title: string; count: number; children: React.ReactNode; route?: string }> = ({
+  const QueueSection: React.FC<{ title: string; count: number; children: React.ReactNode; route?: GodViewSubRoute }> = ({
     title, count, children, route,
   }) => (
     <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4">
@@ -79,8 +124,8 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
         route="CONTROL"
         icon={<Zap size={20} />}
         actions={
-          <button onClick={() => void load()} disabled={loading} className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-50">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Yenile
+          <button onClick={() => void load()} disabled={loading || refreshing} className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-50">
+            <RefreshCw size={14} className={loading || refreshing ? 'animate-spin' : ''} /> Yenile
           </button>
         }
       >
@@ -104,7 +149,8 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
                   </div>
                   {mode === 'standalone' ? (
                     <button
-                      onClick={() => openGhostInConsumerApp(u.id, u.name)}
+                      type="button"
+                      onClick={() => void openGhost(u.id, u.name)}
                       className="flex items-center gap-1 text-[10px] font-bold text-red-400 border border-red-500/30 px-2 py-1 rounded-lg hover:bg-red-500/10"
                     >
                       <ExternalLink size={10} /> Uygulamada Aç
@@ -125,7 +171,14 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
 
         {loading && !queue ? (
           <div className="text-center text-gray-500 text-sm py-12">Kuyruk yükleniyor...</div>
-        ) : queue && (
+        ) : loadError && !queue ? (
+          <div className="text-center py-12 space-y-3">
+            <p className="text-sm text-red-400">{loadError}</p>
+            <button type="button" onClick={() => void load()} className="text-xs font-bold text-gray-400 hover:text-white px-4 py-2 rounded-xl border border-white/10">
+              Yeniden dene
+            </button>
+          </div>
+        ) : queue ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <QueueSection title="GK/Ref Onay" count={queue.pending_verifications?.length ?? 0} route="PENDING_VERIFICATIONS">
               {(queue.pending_verifications ?? []).slice(0, 5).map((v) => (
@@ -148,7 +201,14 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
 
             <QueueSection title="Skor İhtilafları" count={queue.open_disputes?.length ?? 0} route="DISPUTES">
               {(queue.open_disputes ?? []).slice(0, 5).map((d) => (
-                <p key={d.id} className="text-[11px] text-yellow-400 py-1 border-b border-white/[0.06]">Maç {d.match_id.slice(0, 8)}… — {d.status}</p>
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => onNavigate?.('DISPUTES', { disputeMatchId: d.match_id })}
+                  className="w-full text-left text-[11px] text-yellow-400 py-1 border-b border-white/[0.06] hover:text-yellow-300"
+                >
+                  Maç {d.match_id.slice(0, 8)}… — {d.status}
+                </button>
               ))}
             </QueueSection>
 
@@ -176,6 +236,8 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
               ))}
             </QueueSection>
           </div>
+        ) : (
+          <div className="text-center text-gray-500 text-sm py-12">Operasyon kuyruğu boş</div>
         )}
       </PageShell>
 

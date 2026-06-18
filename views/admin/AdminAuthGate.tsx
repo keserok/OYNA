@@ -1,20 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Terminal, ChevronLeft, Mail, AlertTriangle } from 'lucide-react';
+import { Lock, Terminal, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { signInAdmin, toTurkishAdminError, type AdminSession } from '../../services/adminService';
+
+const EMAIL_KEY = 'oyna_admin_email';
 
 interface Props {
   onAuthenticated: (session: AdminSession) => void;
   bootError?: string | null;
 }
 
-const DEV_BYPASS = import.meta.env.VITE_ADMIN_DEV_BYPASS === 'true';
-
 const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem(EMAIL_KEY) || ''; } catch { return ''; }
+  });
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(() => {
+    try { return !!localStorage.getItem(EMAIL_KEY); } catch { return false; }
+  });
   const [err, setErr] = useState<string | null>(bootError || null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (bootError) setErr(bootError);
+  }, [bootError]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +32,10 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
     setErr(null);
     try {
       const session = await signInAdmin(email.trim(), password);
+      try {
+        if (remember) localStorage.setItem(EMAIL_KEY, email.trim());
+        else localStorage.removeItem(EMAIL_KEY);
+      } catch { /* storage optional */ }
       onAuthenticated(session);
     } catch (error) {
       setErr(toTurkishAdminError(error));
@@ -38,7 +52,7 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md z-10">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md z-10">
         <div className="text-center mb-8">
           <div className="w-20 h-20 mx-auto bg-gradient-to-br from-red-500 to-purple-900 rounded-2xl flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.3)] mb-6 border border-red-500/30">
             <Lock size={32} className="text-white" />
@@ -48,23 +62,30 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
         </div>
 
         {err && (
-          <div className="mb-4 flex items-start gap-2 text-red-300 text-xs bg-red-900/30 border border-red-500/30 rounded-xl p-3">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mb-4 flex items-start gap-2 text-red-300 text-xs bg-red-900/30 border border-red-500/30 rounded-xl p-3"
+            role="alert"
+          >
             <AlertTriangle size={14} className="shrink-0 mt-0.5" />
             <span>{err}</span>
-          </div>
+          </motion.div>
         )}
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Admin E-posta</label>
+            <label htmlFor="admin-email" className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Admin E-posta</label>
             <div className="relative">
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
+                id="admin-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
+                autoComplete="email"
                 placeholder="admin@oyna.app"
                 className="w-full h-14 bg-black/50 border-2 border-white/10 rounded-2xl pl-12 pr-4 text-white font-medium focus:outline-none focus:border-red-500/50 transition-colors"
               />
@@ -72,34 +93,58 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Şifre</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="w-full h-14 bg-black/50 border-2 border-white/10 rounded-2xl px-4 text-white font-medium focus:outline-none focus:border-red-500/50 transition-colors"
-            />
+            <label htmlFor="admin-password" className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Şifre</label>
+            <div className="relative">
+              <input
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="w-full h-14 bg-black/50 border-2 border-white/10 rounded-2xl pl-4 pr-12 text-white font-medium focus:outline-none focus:border-red-500/50 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-white rounded-lg"
+                aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
+
+          <label className="flex items-center gap-2 text-[11px] text-gray-500 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="rounded border-white/20 bg-black/40 text-red-500 focus:ring-red-500/30"
+            />
+            E-postayı bu cihazda hatırla
+          </label>
 
           <button
             type="submit"
             disabled={loading}
             className="w-full h-14 mt-2 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            {loading ? 'DOĞRULANIYOR...' : <>SİSTEME GİRİŞ <Terminal size={16} /></>}
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Doğrulanıyor...
+              </>
+            ) : (
+              <>Sisteme Giriş <Terminal size={16} /></>
+            )}
           </button>
         </form>
 
         <p className="text-center text-[10px] text-gray-600 font-mono mt-8 uppercase tracking-widest">
           Supabase Auth • Platform Admin Yetkisi Gerekli
         </p>
-        {DEV_BYPASS && (
-          <p className="text-center text-[9px] text-yellow-600/80 font-mono mt-2">
-            Dev bypass aktif — gerçek admin hesabı kullanın
-          </p>
-        )}
       </motion.div>
     </div>
   );

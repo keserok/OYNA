@@ -54,9 +54,9 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
     return (
         <div className="w-full bg-[#161B22]/40 border border-white/[0.06] rounded-xl overflow-hidden">
-            <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                    <thead>
+            <div className="overflow-x-auto custom-scrollbar -mx-px">
+                <table className="w-full text-left border-collapse min-w-[640px]">
+                    <thead className="sticky top-0 z-10">
                         <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                             {columns.map((col, idx) => (
                                 <th

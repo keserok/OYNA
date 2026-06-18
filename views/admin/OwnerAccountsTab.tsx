@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Building2, RefreshCw, Save, Shield } from 'lucide-react';
 import {
   listOwnerAccountsForAdmin,
-  updateOwnerAccountForAdmin,
   planTierLabel,
   accountStatusLabel,
   type OwnerAccountAdminRow,
 } from '../../services/ownerAccountService';
-import { toTurkishError } from '../../services/pitchOwnerService';
+import { updateOwnerAccountAdmin, toTurkishAdminError } from '../../services/adminService';
+import { useAdminToast } from './context/AdminToastContext';
 import type { OwnerAccount, OwnerEntitlements } from '../../types';
 
 const PLAN_OPTIONS: OwnerAccount['plan_tier'][] = ['starter', 'pro', 'enterprise'];
@@ -16,6 +16,7 @@ const STATUS_OPTIONS: OwnerAccount['status'][] = [
 ];
 
 const OwnerAccountsTab: React.FC = () => {
+  const { success, error: toastError } = useAdminToast();
   const [rows, setRows] = useState<OwnerAccountAdminRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ const OwnerAccountsTab: React.FC = () => {
       });
       setDrafts(nextDrafts);
     } catch (err) {
-      setError(toTurkishError(err));
+      toastError(toTurkishAdminError(err));
     } finally {
       setIsLoading(false);
     }
@@ -82,14 +83,15 @@ const OwnerAccountsTab: React.FC = () => {
     if (!draft) return;
     setSavingId(userId);
     try {
-      await updateOwnerAccountForAdmin(userId, {
+      await updateOwnerAccountAdmin(userId, {
         plan_tier: draft.plan_tier,
         status: draft.status,
         entitlements: draft.entitlements,
       });
+      success('SaaS hesabı güncellendi');
       await load();
     } catch (err) {
-      alert(toTurkishError(err));
+      toastError(toTurkishAdminError(err));
     } finally {
       setSavingId(null);
     }

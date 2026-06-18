@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Users, Swords, Settings, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Users, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../../../store';
+import { COMMAND_PALETTE_ROUTES } from '../design/adminRoutes';
+import type { GodViewSubRoute } from '../GodViewPanel';
 
 interface CommandPaletteProps {
     isOpen: boolean;
     onClose: () => void;
-    onNavigate: (route: 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER' | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS') => void;
-    onSelectPitch?: (pitch: any) => void;
-    onSelectUser?: (user: any) => void;
+    onNavigate: (route: GodViewSubRoute) => void;
+    onSelectPitch?: (pitch: { id: string; name: string }) => void;
+    onSelectUser?: (user: { id: string; name: string }) => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -16,10 +18,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     onClose,
     onNavigate,
     onSelectPitch,
-    onSelectUser
+    onSelectUser,
 }) => {
     const [query, setQuery] = useState('');
-    const { adminPitches, adminUsers, adminMatches } = useAppStore();
+    const { adminPitches, adminUsers } = useAppStore();
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -29,48 +31,50 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         }
     }, [isOpen]);
 
-    // Handle ESC and Enter or hotkeys
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                if (isOpen) onClose();
-            }
-            if (e.key === 'Escape' && isOpen) {
-                onClose();
-            }
+            if (e.key === 'Escape' && isOpen) onClose();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
 
+    const q = query.trim().toLowerCase();
+
+    const filteredRoutes = useMemo(() => {
+        const list = COMMAND_PALETTE_ROUTES.filter(
+            (r) => !q || r.label.toLowerCase().includes(q) || r.category.toLowerCase().includes(q),
+        );
+        return list.slice(0, 8);
+    }, [q]);
+
+    const filteredPitches = useMemo(
+        () => adminPitches.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 3),
+        [adminPitches, q],
+    );
+
+    const filteredUsers = useMemo(
+        () => adminUsers
+            .filter((u) => u.name.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
+            .slice(0, 3),
+        [adminUsers, q],
+    );
+
+    const routesByCategory = useMemo(() => {
+        const map = new Map<string, typeof filteredRoutes>();
+        for (const r of filteredRoutes) {
+            const arr = map.get(r.category) || [];
+            arr.push(r);
+            map.set(r.category, arr);
+        }
+        return map;
+    }, [filteredRoutes]);
+
     if (!isOpen) return null;
-
-    // Filter results
-    const filteredPitches = adminPitches
-        .filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 3);
-
-    const filteredUsers = adminUsers
-        .filter(u => u.name.toLowerCase().includes(query.toLowerCase()) || u.email.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 3);
-
-    const filteredRoutes = [
-        { label: 'GENEL PANEL', route: 'GENEL', category: 'Navigasyon' },
-        { label: 'KOMUTA MERKEZİ (GHOST MODE)', route: 'CONTROL', category: 'Navigasyon' },
-        { label: 'SAHA YÖNETİMİ', route: 'SAHALAR', category: 'Operasyon' },
-        { label: 'KULLANICI BİLGİ BANKASI', route: 'KULLANICILAR', category: 'Operasyon' },
-        { label: 'MAÇ OPERASYONLARI', route: 'MATCHES', category: 'Operasyon' },
-        { label: 'TOPLULUK MERKEZİ', route: 'TOPLULUKLAR', category: 'Topluluk' },
-        { label: 'TURNUVA MOTORU', route: 'TURNUVALAR', category: 'Topluluk' },
-        { label: 'CMS METİN EDİTÖRÜ', route: 'CONTENT', category: 'Sistem' },
-        { label: 'SİSTEM AYARLARI', route: 'SETTINGS', category: 'Sistem' }
-    ].filter(r => r.label.toLowerCase().includes(query.toLowerCase())).slice(0, 4);
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] p-4">
-                {/* Backdrop */}
+            <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[12vh] p-4">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -79,7 +83,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     className="absolute inset-0 bg-black/60 backdrop-blur-md"
                 />
 
-                {/* Palette Container */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.97, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -87,15 +90,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     transition={{ duration: 0.2 }}
                     className="w-full max-w-xl bg-[#0D1117]/95 border border-white/10 rounded-2xl shadow-[0_32px_64px_rgba(0,0,0,0.8)] overflow-hidden z-10 font-sans"
                 >
-                    {/* Search Bar */}
                     <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/5 bg-black/10">
                         <Search size={18} className="text-gray-400 shrink-0" />
                         <input
                             ref={inputRef}
-                            type="text"
+                            type="search"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Saha, kullanıcı veya sayfa arayın... (Örn: 'Maslak')"
+                            placeholder="Sayfa, saha veya kullanıcı ara..."
                             className="w-full bg-transparent border-0 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-0"
                         />
                         <span className="text-[10px] font-mono bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-gray-500 shrink-0">
@@ -103,52 +105,47 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         </span>
                     </div>
 
-                    {/* Results Area */}
-                    <div className="max-h-[360px] overflow-y-auto custom-scrollbar p-2 space-y-3">
-                        {/* Navigasyon Sonuçları */}
-                        {filteredRoutes.length > 0 && (
-                            <div>
-                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">NAVİGASYON</p>
+                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2 space-y-3">
+                        {Array.from(routesByCategory.entries()).map(([category, routes]) => (
+                            <div key={category}>
+                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">{category}</p>
                                 <div className="space-y-0.5 mt-1">
-                                    {filteredRoutes.map((r, i) => (
+                                    {routes.map((r) => (
                                         <button
-                                            key={i}
-                                            onClick={() => {
-                                                onNavigate(r.route as any);
-                                                onClose();
-                                            }}
+                                            key={r.route}
+                                            type="button"
+                                            onClick={() => { onNavigate(r.route); onClose(); }}
                                             className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-white/5 text-gray-300 hover:text-white transition-all text-xs group"
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Settings size={12} className="text-gray-400 group-hover:text-red-400" />
-                                                <span className="font-bold uppercase tracking-wide">{r.label}</span>
-                                            </div>
-                                            <span className="text-[8px] bg-red-650/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/10 font-bold opacity-0 group-hover:opacity-100 transition-opacity">GİT <ArrowRight size={8} className="inline ml-0.5" /></span>
+                                            <span className="font-bold">{r.label}</span>
+                                            <span className="text-[8px] text-red-400 opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+                                                GİT <ArrowRight size={8} />
+                                            </span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                        )}
+                        ))}
 
-                        {/* Sahalar */}
                         {filteredPitches.length > 0 && (
                             <div>
-                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">SAHALAR</p>
+                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">Sahalar</p>
                                 <div className="space-y-0.5 mt-1">
-                                    {filteredPitches.map((p, i) => (
+                                    {filteredPitches.map((p) => (
                                         <button
-                                            key={i}
+                                            key={p.id}
+                                            type="button"
                                             onClick={() => {
-                                                if (onSelectPitch) onSelectPitch(p);
+                                                onSelectPitch?.(p);
                                                 onNavigate('SAHALAR');
                                                 onClose();
                                             }}
-                                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-white/5 text-gray-300 hover:text-white transition-all text-xs group"
+                                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-white/5 text-gray-300 hover:text-white transition-all text-xs"
                                         >
                                             <div className="flex items-center gap-2.5">
-                                                <MapPin size={12} className="text-gray-400 group-hover:text-red-400" />
+                                                <MapPin size={12} className="text-gray-400" />
                                                 <span className="font-bold">{p.name}</span>
-                                                <span className="text-[9px] text-gray-500 font-mono">({p.district || 'Bilinmiyor'})</span>
+                                                <span className="text-[9px] text-gray-500 font-mono">({p.district || '—'})</span>
                                             </div>
                                             <span className="text-[9px] font-mono font-black text-red-400">₺{p.pricePerPerson}</span>
                                         </button>
@@ -157,23 +154,23 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                             </div>
                         )}
 
-                        {/* Kullanıcılar */}
                         {filteredUsers.length > 0 && (
                             <div>
-                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">KULLANICILAR</p>
+                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">Kullanıcılar</p>
                                 <div className="space-y-0.5 mt-1">
-                                    {filteredUsers.map((u, i) => (
+                                    {filteredUsers.map((u) => (
                                         <button
-                                            key={i}
+                                            key={u.id}
+                                            type="button"
                                             onClick={() => {
-                                                if (onSelectUser) onSelectUser(u);
+                                                onSelectUser?.(u);
                                                 onNavigate('KULLANICILAR');
                                                 onClose();
                                             }}
-                                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-white/5 text-gray-300 hover:text-white transition-all text-xs group"
+                                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-white/5 text-gray-300 hover:text-white transition-all text-xs"
                                         >
                                             <div className="flex items-center gap-2.5">
-                                                <Users size={12} className="text-gray-400 group-hover:text-red-400" />
+                                                <Users size={12} className="text-gray-400" />
                                                 <span className="font-bold">{u.name}</span>
                                                 <span className="text-[9px] text-gray-500 font-mono">({u.role})</span>
                                             </div>
@@ -184,18 +181,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                             </div>
                         )}
 
-                        {/* Boş Durum */}
                         {filteredRoutes.length === 0 && filteredPitches.length === 0 && filteredUsers.length === 0 && (
                             <div className="py-8 text-center text-xs text-gray-500 font-mono">
-                                "{query}" ile eşleşen sonuç bulunamadı.
+                                {query ? `"${query}" ile eşleşen sonuç yok.` : 'Aramaya başlayın veya bir kategori seçin.'}
                             </div>
                         )}
                     </div>
 
-                    {/* Footer */}
                     <div className="px-4 py-2 bg-black/20 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-600 font-mono">
-                        <span>Seçmek için tıklayın</span>
-                        <span>Kapatmak için ESC</span>
+                        <span>⌘K ile aç / kapat</span>
+                        <span>ESC ile kapat</span>
                     </div>
                 </motion.div>
             </div>

@@ -1,11 +1,34 @@
 import path from 'path';
+import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
+const ADMIN_DEV = process.env.ADMIN_DEV === '1';
+
+function adminDevRedirect(): Plugin {
+  return {
+    name: 'admin-dev-root-redirect',
+    configureServer(server) {
+      if (!ADMIN_DEV) return;
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0] ?? '';
+        if (url === '/' || url === '/index.html') {
+          const qs = req.url?.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+          res.writeHead(302, { Location: `/admin.html${qs}` });
+          res.end();
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   server: {
-    port: Number(process.env.PORT) || 4000,
+    port: Number(process.env.PORT) || (ADMIN_DEV ? 4005 : 4000),
+    strictPort: ADMIN_DEV,
     host: '0.0.0.0',
     watch: {
       ignored: [
@@ -25,7 +48,7 @@ export default defineConfig({
   optimizeDeps: {
     entries: ['index.html', 'admin.html']
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [adminDevRedirect(), react(), tailwindcss()],
   build: {
     rollupOptions: {
       input: {

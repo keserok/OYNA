@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AddPitchModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (pitch: Pitch) => void;
+    onAdd: (pitch: Pitch) => void | Promise<void>;
 }
 
 export const AddPitchModal: React.FC<AddPitchModalProps> = ({ isOpen, onClose, onAdd }) => {
+    const [saving, setSaving] = useState(false);
     const [name, setName] = useState('');
     const [district, setDistrict] = useState('');
     const [location, setLocation] = useState('');
@@ -20,11 +21,11 @@ export const AddPitchModal: React.FC<AddPitchModalProps> = ({ isOpen, onClose, o
     const [grassGrade, setGrassGrade] = useState<'A'|'B'|'C'>('B');
     const [lockerRoomGrade, setLockerRoomGrade] = useState<'A'|'B'|'C'>('B');
 
-    const handleSave = () => {
-        if (!name || !pricePerPerson || !totalPrice) return;
-        
+    const handleSave = async () => {
+        if (!name || !pricePerPerson || !totalPrice || saving) return;
+        setSaving(true);
         const newPitch: Pitch = {
-            id: 'pitch_' + Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             name,
             district: district || 'Bilinmiyor',
             location: location || 'Bilinmiyor',
@@ -49,10 +50,13 @@ export const AddPitchModal: React.FC<AddPitchModalProps> = ({ isOpen, onClose, o
             slots: []
         };
 
-        onAdd(newPitch);
-        onClose();
-        // Reset form
-        setName(''); setDistrict(''); setLocation(''); setPricePerPerson(''); setTotalPrice(''); setImage('');
+        try {
+            await onAdd(newPitch);
+            onClose();
+            setName(''); setDistrict(''); setLocation(''); setPricePerPerson(''); setTotalPrice(''); setImage('');
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -144,8 +148,8 @@ export const AddPitchModal: React.FC<AddPitchModalProps> = ({ isOpen, onClose, o
                     <div className="mt-6 pt-4 border-t border-white/5 flex justify-end gap-3">
                         <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white transition-colors">İptal</button>
                         <button 
-                            onClick={handleSave}
-                            disabled={!name || !pricePerPerson || !totalPrice}
+                            onClick={() => void handleSave()}
+                            disabled={!name || !pricePerPerson || !totalPrice || saving}
                             className="flex items-center gap-2 px-5 py-2 bg-[#39FF14] text-black text-xs font-black uppercase tracking-widest rounded-xl hover:bg-[#39FF14]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(57,255,20,0.3)]"
                         >
                             <Save size={14} /> Kaydet

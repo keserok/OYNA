@@ -1,15 +1,25 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '../components/DataTable';
+import { AdminSearchBar } from '../components/AdminSearchBar';
 import { fetchMatchDisputes, resolveDispute, toTurkishAdminError, type MatchDisputeRow } from '../../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAdminToast } from '../context/AdminToastContext';
+import { useAdminNavigation } from '../context/AdminNavigationContext';
 import { Scale, RefreshCw, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { AdminNavigateFn } from '../GodViewPanel';
 
-export const DisputesPage: React.FC = () => {
+interface DisputesPageProps {
+  onNavigate?: AdminNavigateFn;
+}
+
+export const DisputesPage: React.FC<DisputesPageProps> = ({ onNavigate }) => {
+  const { params, consumeParam } = useAdminNavigation();
   const [rows, setRows] = useState<MatchDisputeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [highlightMatchId, setHighlightMatchId] = useState<string | undefined>(params.disputeMatchId);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [resolveTarget, setResolveTarget] = useState<{ id: string; status: 'RESOLVED' | 'DISMISSED' } | null>(null);
   const [notes, setNotes] = useState('');
@@ -27,6 +37,21 @@ export const DisputesPage: React.FC = () => {
   }, [toastError]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (params.disputeMatchId) {
+      setHighlightMatchId(params.disputeMatchId);
+      consumeParam('disputeMatchId');
+    }
+  }, [params.disputeMatchId, consumeParam]);
+
+  const filtered = useMemo(() => {
+    let list = rows;
+    if (highlightMatchId) list = list.filter((r) => r.match_id === highlightMatchId);
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((r) => r.match_id.toLowerCase().includes(q) || r.status.toLowerCase().includes(q));
+  }, [rows, highlightMatchId, query]);
 
   const openResolve = (id: string, status: 'RESOLVED' | 'DISMISSED') => {
     setResolveTarget({ id, status });
@@ -59,9 +84,25 @@ export const DisputesPage: React.FC = () => {
           </button>
         }
       >
+        {highlightMatchId && (
+          <div className="mb-3 flex items-center justify-between text-xs bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-3 py-2">
+            <span className="text-cyan-300 font-mono">Maç filtresi: {highlightMatchId.slice(0, 8)}…</span>
+            <button type="button" onClick={() => setHighlightMatchId(undefined)} className="text-gray-400 hover:text-white">Temizle</button>
+          </div>
+        )}
+        <AdminSearchBar value={query} onChange={setQuery} placeholder="Maç ID veya durum ara..." resultCount={filtered.length} totalCount={rows.length} className="mb-4" />
         <DataTable
           columns={[
-            { header: 'Maç', render: (r: MatchDisputeRow) => <span className="font-mono text-[11px] text-gray-400">{r.match_id.slice(0, 8)}…</span> },
+            { header: 'Maç', render: (r: MatchDisputeRow) => (
+              <button
+                type="button"
+                onClick={() => onNavigate?.('MATCHES', { matchId: r.match_id })}
+                className="font-mono text-[11px] text-cyan-400 hover:text-cyan-300 underline-offset-2 hover:underline"
+                title={r.match_id}
+              >
+                {r.match_id.slice(0, 8)}…
+              </button>
+            )},
             { header: 'Skorlar', render: (r: MatchDisputeRow) => (
               <span className="text-sm text-white">{r.home_claimed_score ?? '?'} — {r.away_claimed_score ?? '?'}</span>
             )},
@@ -79,7 +120,7 @@ export const DisputesPage: React.FC = () => {
               </div>
             ) : <span className="text-[11px] text-gray-500">{r.resolution_notes || '—'}</span> },
           ]}
-          data={rows}
+          data={filtered}
           loading={loading}
           emptyMessage="Açık ihtilaf yok"
         />

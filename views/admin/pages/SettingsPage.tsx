@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../../store';
 import { Settings, Type, Database, Save } from 'lucide-react';
 import { updateCmsTexts, toTurkishAdminError } from '../../../services/adminService';
-import { DemoDataPanel } from '../components/DemoDataPanel';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
 import { useAdminToast } from '../context/AdminToastContext';
@@ -53,7 +52,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                                         disabled={saving}
                                         className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-pink-500/40 focus:outline-none transition-colors"
                                     />
-                                    <button className="px-3 bg-pink-500/10 text-pink-400 border border-pink-500/20 rounded-lg">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            const input = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement);
+                                            if (input && input.value !== value) void persistText(key, input.value);
+                                        }}
+                                        disabled={saving}
+                                        className="px-3 bg-pink-500/10 text-pink-400 border border-pink-500/20 rounded-lg hover:bg-pink-500/20 disabled:opacity-40"
+                                        title="Kaydet"
+                                    >
                                         <Save size={14} />
                                     </button>
                                 </div>
@@ -99,6 +107,99 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                             <p className="text-[11px] text-gray-500 mt-2">Platform hizmet bedeli yüzdesi.</p>
                         </div>
                         
+                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">PRO Üyelik Fiyatı (₺/ay)</label>
+                            <input
+                                type="number"
+                                defaultValue={appSettings.proPrice ?? 99}
+                                onBlur={(e) => {
+                                    void updateAppSettings({ proPrice: Number(e.target.value) }).then(() => success('PRO fiyatı güncellendi'));
+                                }}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
+                            />
+                        </div>
+
+                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Min. Oyun Puanı</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                defaultValue={appSettings.minRatingToPlay ?? 3}
+                                onBlur={(e) => {
+                                    void updateAppSettings({ minRatingToPlay: Number(e.target.value) }).then(() => success('Min. puan güncellendi'));
+                                }}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
+                            />
+                        </div>
+
+                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5 flex items-center justify-between gap-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Kayıt Açık</label>
+                                <p className="text-[11px] text-gray-500">Yeni kullanıcı kaydına izin ver</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    void updateAppSettings({ registrationOpen: !appSettings.registrationOpen }).then(() =>
+                                      success(appSettings.registrationOpen ? 'Kayıt kapatıldı' : 'Kayıt açıldı')
+                                    );
+                                }}
+                                className={`px-4 py-2 rounded-xl text-xs font-black ${appSettings.registrationOpen !== false ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}
+                            >
+                                {appSettings.registrationOpen !== false ? 'AÇIK' : 'KAPALI'}
+                            </button>
+                        </div>
+
+                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Uygulama Adı</label>
+                            <input
+                                type="text"
+                                defaultValue={appSettings.appName ?? 'OYNA'}
+                                onBlur={(e) => {
+                                    void updateAppSettings({ appName: e.target.value }).then(() => success('Uygulama adı güncellendi'));
+                                }}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
+                            />
+                        </div>
+
+                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Günlük Maç Limiti</label>
+                            <input
+                                type="number"
+                                defaultValue={appSettings.maxMatchsPerDay ?? 3}
+                                onBlur={(e) => {
+                                    void updateAppSettings({ maxMatchsPerDay: Number(e.target.value) }).then(() => success('Maç limiti güncellendi'));
+                                }}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
+                            />
+                        </div>
+
+                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5 md:col-span-2">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Duyuru Bandı Metni</label>
+                            <input
+                                type="text"
+                                defaultValue={appSettings.announcementBanner ?? ''}
+                                onBlur={(e) => {
+                                    void updateAppSettings({ announcementBanner: e.target.value }).then(() => success('Duyuru metni güncellendi'));
+                                }}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
+                            />
+                            <div className="flex items-center justify-between mt-3">
+                                <p className="text-[11px] text-gray-500">Duyuru bandını uygulamada göster</p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        void updateAppSettings({ showAnnouncementBanner: !appSettings.showAnnouncementBanner }).then(() =>
+                                          success(appSettings.showAnnouncementBanner ? 'Duyuru bandı gizlendi' : 'Duyuru bandı açıldı')
+                                        );
+                                    }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black ${appSettings.showAnnouncementBanner !== false ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}
+                                >
+                                    {appSettings.showAnnouncementBanner !== false ? 'GÖSTERİLİYOR' : 'GİZLİ'}
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5 md:col-span-2 flex items-center justify-between gap-4">
                             <div>
                                 <label className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1 block flex items-center gap-2">
@@ -123,8 +224,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                         </div>
                     </div>
                 </div>
-
-                <DemoDataPanel onRefresh={onRefresh} />
             </PageShell>
         );
     }

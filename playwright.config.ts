@@ -3,12 +3,12 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   use: {
-    baseURL: 'http://localhost:4000',
+    baseURL: 'http://localhost:4005',
     channel: 'chrome',
   },
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:4000/admin.html',
+    command: 'ADMIN_DEV=1 PORT=4005 npx vite --host --strictPort',
+    url: 'http://localhost:4005/admin.html',
     reuseExistingServer: true,
     timeout: 120000,
   },

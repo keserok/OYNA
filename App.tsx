@@ -162,22 +162,28 @@ const App: React.FC = () => {
     if (!ghostId) return;
 
     const ghostName = params.get('name') || 'Kullanıcı';
-    setOriginalRole(role);
-    setImpersonatedUser({
-      id: ghostId,
-      name: ghostName,
-      email: '',
-      avatar: '',
-      role: UserRole.PLAYER,
-      rating: 5,
-      isVerified: false,
-      isBanned: false,
-      isPro: false,
-      joinDate: new Date().toISOString(),
-      matchCount: 0,
-    });
-    setView('DASHBOARD');
-    window.history.replaceState({}, '', window.location.pathname);
+
+    void (async () => {
+      const { fetchProfileById, logImpersonation } = await import('./services/adminService');
+      try { await logImpersonation(ghostId); } catch { /* audit optional if not admin session */ }
+      const profile = await fetchProfileById(ghostId);
+      setOriginalRole(role);
+      setImpersonatedUser(profile ?? {
+        id: ghostId,
+        name: ghostName,
+        email: '',
+        avatar: '',
+        role: UserRole.PLAYER,
+        rating: 5,
+        isVerified: false,
+        isBanned: false,
+        isPro: false,
+        joinDate: new Date().toISOString(),
+        matchCount: 0,
+      });
+      setView('DASHBOARD');
+      window.history.replaceState({}, '', window.location.pathname);
+    })();
   }, []);
 
   useEffect(() => {

@@ -156,17 +156,17 @@ export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pi
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'general' | 'amenities' | 'pricing_hours' | 'courts' | 'slots'>('general');
     const { showOk, Toast } = useToast();
-    const adminUsers = useAppStore(state => state.adminUsers);
+    const { updatePitch, adminUsers } = useAppStore();
     const owners = adminUsers.filter(u => u.role === UserRole.OWNER);
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            await FB.fbUpdatePitch(edit);
+            await updatePitch(edit);
             showOk('✅ Saha başarıyla güncellendi');
             setTimeout(onClose, 1000);
-        } catch (e: any) {
-            alert('Hata: ' + e.message);
+        } catch (e: unknown) {
+            alert('Hata: ' + (e instanceof Error ? e.message : 'Kayıt başarısız'));
         } finally {
             setSaving(false);
         }
@@ -739,15 +739,15 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
     const [edit, setEdit] = useState<any>(item);
     const [saving, setSaving] = useState(false);
     const { showOk, Toast } = useToast();
-    const { loadServices } = useAppStore();
+    const { loadServices, updateGoalkeeper, updateReferee } = useAppStore();
 
     const label = typeParam === 'GK' ? 'KALECİ' : 'HAKEM';
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            if (typeParam === 'GK') await FB.fbUpdateGoalkeeper(edit);
-            else await FB.fbUpdateReferee(edit);
+            if (typeParam === 'GK') await updateGoalkeeper(edit);
+            else await updateReferee(edit);
             await loadServices();
             showOk(`✅ ${item.name} veritabanına kaydedildi`);
             setTimeout(onClose, 1000);

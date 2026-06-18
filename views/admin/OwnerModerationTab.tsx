@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MapPin, Banknote, Check, X, RefreshCw, ExternalLink, AlertTriangle, Building2, Clock } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
-import { moderatePitch, processWithdrawal, toTurkishAdminError } from '../../services/adminService';
+import { moderatePitch, processWithdrawal, fetchPitchesAdmin, fetchWithdrawalRequests, toTurkishAdminError } from '../../services/adminService';
 
 interface PendingPitch {
   id: string;
@@ -38,7 +37,7 @@ const fmtDate = (iso: string | null): string => {
   }
 };
 
-const OwnerModerationTab: React.FC = () => {
+const OwnerModerationTab: React.FC<{ pitchesOnly?: boolean }> = ({ pitchesOnly = false }) => {
   const [pitches, setPitches] = useState<PendingPitch[]>([]);
   const [withdrawals, setWithdrawals] = useState<PendingWithdrawal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,65 +47,47 @@ const OwnerModerationTab: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
 
   const namesByIds = async (ids: string[]): Promise<Record<string, string>> => {
-    const unique = Array.from(new Set(ids.filter(Boolean)));
-    if (unique.length === 0) return {};
-    const { data } = await supabase.from('profiles').select('id, full_name').in('id', unique);
-    const map: Record<string, string> = {};
-    (data ?? []).forEach((r) => {
-      const row = r as { id: string; full_name: string | null };
-      map[row.id] = row.full_name ?? 'Bilinmeyen';
-    });
-    return map;
+    const { fetchProfileNamesAdmin } = await import('../../services/adminService');
+    return fetchProfileNamesAdmin(ids);
   };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [pitchRes, wdRes] = await Promise.all([
-        supabase
-          .from('pitches')
-          .select('id, name, city, district, owner_id, created_at')
-          .eq('verification_status', 'pending')
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('owner_withdrawal_requests')
-          .select('id, pitch_id, owner_id, amount, iban, iban_photo_url, created_at')
-          .eq('status', 'PENDING')
-          .order('created_at', { ascending: true }),
-      ]);
-
-      if (pitchRes.error) throw pitchRes.error;
-      if (wdRes.error) throw wdRes.error;
-
-      const pitchRows = (pitchRes.data ?? []) as Omit<PendingPitch, 'ownerName'>[];
-      const wdRows = (wdRes.data ?? []) as Omit<PendingWithdrawal, 'ownerName' | 'pitchName'>[];
+      const pitchPromise = fetchPitchesAdmin({ status: 'pending', limit: 200 });
+      const wdPromise = pitchesOnly
+        ? Promise.resolve([] as Awaited<ReturnType<typeof fetchWithdrawalRequests>>)
+        : fetchWithdrawalRequests('PENDING', 100);
+      const [{ pitches: pitchRows }, wdRows] = await Promise.all([pitchPromise, wdPromise]);
 
       const ownerIds = [
         ...pitchRows.map((p) => p.owner_id ?? ''),
         ...wdRows.map((w) => w.owner_id),
       ];
-      const pitchIds = wdRows.map((w) => w.pitch_id);
-
       const ownerNames = await namesByIds(ownerIds);
 
-      let pitchNames: Record<string, string> = {};
-      if (pitchIds.length > 0) {
-        const { data: pn } = await supabase.from('pitches').select('id, name').in('id', pitchIds);
-        (pn ?? []).forEach((r) => {
-          const row = r as { id: string; name: string };
-          pitchNames[row.id] = row.name;
-        });
-      }
+      setPitches(pitchRows.map((p) => ({
+        id: p.id,
+        name: p.name,
+        city: p.city,
+        district: p.district,
+        owner_id: p.owner_id,
+        created_at: p.created_at,
+        ownerName: ownerNames[p.owner_id ?? ''] ?? 'Bilinmeyen',
+      })));
 
-      setPitches(pitchRows.map((p) => ({ ...p, ownerName: ownerNames[p.owner_id ?? ''] ?? 'Bilinmeyen' })));
-      setWithdrawals(
-        wdRows.map((w) => ({
-          ...w,
-          ownerName: ownerNames[w.owner_id] ?? 'Bilinmeyen',
-          pitchName: pitchNames[w.pitch_id] ?? 'Tesis',
-        })),
-      );
+      setWithdrawals(pitchesOnly ? [] : wdRows.map((w) => ({
+        id: w.id,
+        pitch_id: w.pitch_id,
+        owner_id: w.owner_id,
+        amount: w.amount,
+        iban: w.iban,
+        iban_photo_url: w.iban_photo_url,
+        created_at: w.created_at,
+        ownerName: w.owner_name ?? ownerNames[w.owner_id] ?? 'Bilinmeyen',
+        pitchName: w.pitch_name ?? 'Tesis',
+      })));
     } catch (err) {
       console.error('OwnerModerationTab fetch:', err);
       const raw = err instanceof Error ? err.message : String(err);
@@ -114,7 +95,7 @@ const OwnerModerationTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pitchesOnly]);
 
   useEffect(() => {
     void fetchData();
@@ -178,7 +159,7 @@ const OwnerModerationTab: React.FC = () => {
     <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
-          <Building2 size={16} className="text-[#FFFF00]" /> Tesis Onayları & Para Çekme
+          <Building2 size={16} className="text-[#FFFF00]" /> {pitchesOnly ? 'Tesis Onayları' : 'Tesis Onayları & Para Çekme'}
         </h2>
         <button onClick={() => void fetchData()} disabled={loading} className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white px-3 py-2 rounded-lg bg-white/5 border border-white/10 disabled:opacity-50">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Yenile
@@ -222,6 +203,7 @@ const OwnerModerationTab: React.FC = () => {
       </section>
 
       {/* Pending withdrawals */}
+      {!pitchesOnly && (
       <section>
         <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
           <Banknote size={14} /> Bekleyen Para Çekme Talepleri ({withdrawals.length})
@@ -258,6 +240,7 @@ const OwnerModerationTab: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
       {/* Reject reason modal */}
       {rejectTarget && (

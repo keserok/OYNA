@@ -50,6 +50,7 @@ export interface AdminLog {
   details: string;
   timestamp: string;
   adminId: string;
+  adminName?: string;
 }
 
 export interface IUser {
