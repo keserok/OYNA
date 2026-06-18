@@ -10,7 +10,7 @@ import { auth } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
-import type { AdminSession } from './services/adminService';
+import type { AdminSession } from './admin-panel/services/adminService';
 
 const MOCK_TACTICS = [
   {
@@ -905,14 +905,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminPitches;
     set({ adminPitches: [pitch, ...prev] });
     try {
-      const { createPitchAdmin, buildPitchPayloadFromUi } = await import('./services/adminService');
+      const { createPitchAdmin, buildPitchPayloadFromUi } = await import('./admin-panel/services/adminService');
       try {
         const newId = await createPitchAdmin(buildPitchPayloadFromUi(pitch));
         set({ adminPitches: [{ ...pitch, id: newId }, ...prev] });
       } catch {
         await FB.fbAddPitch(pitch);
         if (get().adminSession) {
-          const { persistAdminLog } = await import('./services/adminService');
+          const { persistAdminLog } = await import('./admin-panel/services/adminService');
           await persistAdminLog('PITCH_CREATE', 'pitch', pitch.id, pitch.name).catch(() => {});
         }
       }
@@ -922,13 +922,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminPitches;
     set({ adminPitches: prev.map(p => p.id === pitch.id ? pitch : p) });
     try {
-      const { updatePitchAdmin, buildPitchPayloadFromUi } = await import('./services/adminService');
+      const { updatePitchAdmin, buildPitchPayloadFromUi } = await import('./admin-panel/services/adminService');
       try {
         await updatePitchAdmin(pitch.id, buildPitchPayloadFromUi(pitch));
       } catch {
         await FB.fbUpdatePitch(pitch);
         if (get().adminSession) {
-          const { persistAdminLog } = await import('./services/adminService');
+          const { persistAdminLog } = await import('./admin-panel/services/adminService');
           await persistAdminLog('PITCH_UPDATE', 'pitch', pitch.id, pitch.name).catch(() => {});
         }
       }
@@ -939,13 +939,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const pitch = prev.find(p => p.id === id);
     set({ adminPitches: prev.filter(p => p.id !== id) });
     try {
-      const { deletePitchAdmin } = await import('./services/adminService');
+      const { deletePitchAdmin } = await import('./admin-panel/services/adminService');
       try {
         await deletePitchAdmin(id);
       } catch {
         await FB.fbDeletePitch(id);
         if (get().adminSession && pitch) {
-          const { persistAdminLog } = await import('./services/adminService');
+          const { persistAdminLog } = await import('./admin-panel/services/adminService');
           await persistAdminLog('PITCH_DELETE', 'pitch', id, pitch.name).catch(() => {});
         }
       }
@@ -963,7 +963,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminGoalkeepers;
     set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? gk : g) });
     try {
-      const { updateGoalkeeperAdmin } = await import('./services/adminService');
+      const { updateGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
       await updateGoalkeeperAdmin(gk);
     } catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
@@ -972,13 +972,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const gk = prev.find(g => g.id === id);
     set({ adminGoalkeepers: prev.filter(g => g.id !== id) });
     try {
-      const { deleteGoalkeeperAdmin } = await import('./services/adminService');
+      const { deleteGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
       try {
         await deleteGoalkeeperAdmin(id);
       } catch {
         await FB.fbDeleteGoalkeeper(id);
         if (get().adminSession && gk) {
-          const { persistAdminLog } = await import('./services/adminService');
+          const { persistAdminLog } = await import('./admin-panel/services/adminService');
           await persistAdminLog('GK_DELETE', 'goalkeeper', id, gk.name).catch(() => {});
         }
       }
@@ -996,7 +996,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminReferees;
     set({ adminReferees: prev.map(r => r.id === ref.id ? ref : r) });
     try {
-      const { updateRefereeAdmin } = await import('./services/adminService');
+      const { updateRefereeAdmin } = await import('./admin-panel/services/adminService');
       await updateRefereeAdmin(ref);
     } catch (e) { set({ adminReferees: prev }); throw e; }
   },
@@ -1005,13 +1005,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const ref = prev.find(r => r.id === id);
     set({ adminReferees: prev.filter(r => r.id !== id) });
     try {
-      const { deleteRefereeAdmin } = await import('./services/adminService');
+      const { deleteRefereeAdmin } = await import('./admin-panel/services/adminService');
       try {
         await deleteRefereeAdmin(id);
       } catch {
         await FB.fbDeleteReferee(id);
         if (get().adminSession && ref) {
-          const { persistAdminLog } = await import('./services/adminService');
+          const { persistAdminLog } = await import('./admin-panel/services/adminService');
           await persistAdminLog('REF_DELETE', 'referee', id, ref.name).catch(() => {});
         }
       }
@@ -1021,7 +1021,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Load Services from DB
   loadServices: async () => {
     try {
-      const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./services/adminService');
+      const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./admin-panel/services/adminService');
       const [gks, refs] = await Promise.all([fetchGoalkeepersAdmin(), fetchRefereesAdmin()]);
       set({ adminGoalkeepers: gks || [], adminReferees: refs || [] });
     } catch (err) {
@@ -1034,8 +1034,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: [match, ...prev] });
     try {
-      const { createMatchAdmin } = await import('./services/adminService');
-      const { listingToMatchPayload } = await import('./utils/matchMapper');
+      const { createMatchAdmin } = await import('./admin-panel/services/adminService');
+      const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
       const newId = await createMatchAdmin(listingToMatchPayload(match));
       set({ adminMatches: [{ ...match, id: newId }, ...prev] });
     } catch (e) { set({ adminMatches: prev }); throw e; }
@@ -1044,8 +1044,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: prev.map(m => m.id === match.id ? match : m) });
     try {
-      const { updateMatchAdmin } = await import('./services/adminService');
-      const { listingToMatchPayload } = await import('./utils/matchMapper');
+      const { updateMatchAdmin } = await import('./admin-panel/services/adminService');
+      const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
       await updateMatchAdmin(match.id, listingToMatchPayload(match));
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
@@ -1053,7 +1053,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: prev.filter(m => m.id !== id) });
     try {
-      const { deleteMatchAdmin } = await import('./services/adminService');
+      const { deleteMatchAdmin } = await import('./admin-panel/services/adminService');
       await deleteMatchAdmin(id);
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
@@ -1125,7 +1125,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const existing = prev.find(u => u.id === user.id);
     set({ adminUsers: prev.map(u => u.id === user.id ? user : u) });
     try {
-      const svc = await import('./services/adminService');
+      const svc = await import('./admin-panel/services/adminService');
       if (existing && existing.isBanned !== user.isBanned) {
         await svc.banUserAdmin(user.id, user.isBanned, user.banExpiresAt ?? null);
       }
@@ -1146,7 +1146,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: true } : u) });
     try {
-      const { banUserAdmin } = await import('./services/adminService');
+      const { banUserAdmin } = await import('./admin-panel/services/adminService');
       await banUserAdmin(id, true);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1154,7 +1154,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: false } : u) });
     try {
-      const { banUserAdmin } = await import('./services/adminService');
+      const { banUserAdmin } = await import('./admin-panel/services/adminService');
       await banUserAdmin(id, false);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1165,7 +1165,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const nextPro = !user.isPro;
       set({ adminUsers: prev.map(u => u.id === id ? { ...u, isPro: nextPro } : u) });
       try {
-        const { toggleUserProAdmin } = await import('./services/adminService');
+        const { toggleUserProAdmin } = await import('./admin-panel/services/adminService');
         await toggleUserProAdmin(id, nextPro);
       } catch (e) { set({ adminUsers: prev }); throw e; }
     }
@@ -1174,7 +1174,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isVerified: true } : u) });
     try {
-      const { verifyUserAdmin } = await import('./services/adminService');
+      const { verifyUserAdmin } = await import('./admin-panel/services/adminService');
       await verifyUserAdmin(id);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1189,7 +1189,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.filter(u => u.id !== id) });
     try {
-      const { processAccountDeletion } = await import('./services/adminService');
+      const { processAccountDeletion } = await import('./admin-panel/services/adminService');
       await processAccountDeletion(id, true);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1240,7 +1240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = { ...prev, ...settings };
     set({ appSettings: next });
     try {
-      const { updateSettingsAdmin, settingsToDbPayload } = await import('./services/adminService');
+      const { updateSettingsAdmin, settingsToDbPayload } = await import('./admin-panel/services/adminService');
       await updateSettingsAdmin(settingsToDbPayload({
         ...settings,
         payoutMode: settings.payoutMode as 'cash' | 'online' | 'deposit' | undefined,
@@ -1259,7 +1259,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: new Date().toISOString(),
     };
     set((state) => ({ adminLogs: [entry, ...state.adminLogs] }));
-    import('./services/adminService').then(({ persistAdminLog }) => {
+    import('./admin-panel/services/adminService').then(({ persistAdminLog }) => {
       persistAdminLog(
         log.action,
         'system',

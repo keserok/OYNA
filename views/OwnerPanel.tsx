@@ -8,7 +8,7 @@ import {
 
 import { PITCHES } from '../constants';
 import { useAppStore } from '../store';
-import { PitchManager } from './admin/PitchManager';
+import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { OwnerTeamView } from './owner/OwnerTeamView';
 import { OwnerBankAccountsModal } from './owner/OwnerBankAccountsModal';

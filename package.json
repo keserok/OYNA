@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:admin": "node scripts/start-admin-local.mjs",
+    "dev:admin": "node admin-panel/scripts/start-admin-local.mjs",
+    "test:unit": "vitest run tests/unit",
     "test:admin": "playwright test tests/admin.spec.ts",
-    "admin:verify": "node scripts/admin-panel-verify.mjs",
-    "admin:deploy": "node scripts/admin-supabase-deploy.mjs",
-    "admin:deploy:interactive": "bash scripts/supabase-interactive-deploy.sh",
+    "admin:verify": "node admin-panel/scripts/admin-panel-verify.mjs",
+    "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",
+    "admin:deploy:interactive": "bash admin-panel/scripts/supabase-interactive-deploy.sh",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
@@ -56,9 +57,11 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/ui": "^4.1.9",
     "playwright": "^1.58.2",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^4.1.9"
   }
 }

@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import path from 'path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
@@ -13,6 +14,11 @@ function adminDevRedirect(): Plugin {
       if (!ADMIN_DEV) return;
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0] ?? '';
+        if (url === '/admin.html') {
+          req.url = `/admin-panel/admin.html${req.url?.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
+          next();
+          return;
+        }
         if (url === '/' || url === '/index.html') {
           const qs = req.url?.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
           res.writeHead(302, { Location: `/admin.html${qs}` });
@@ -46,14 +52,14 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    entries: ['index.html', 'admin.html']
+    entries: ['index.html', 'admin-panel/admin.html']
   },
   plugins: [adminDevRedirect(), react(), tailwindcss()],
   build: {
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        admin: path.resolve(__dirname, 'admin.html'),
+        admin: path.resolve(__dirname, 'admin-panel/admin.html'),
       },
       output: {
         manualChunks: {
@@ -68,5 +74,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
     }
-  }
+  },
+  test: {
+    environment: 'node',
+    include: ['tests/unit/**/*.test.ts'],
+    globals: true,
+  },
 });
