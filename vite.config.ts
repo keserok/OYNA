@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: Number(process.env.PORT) || 4000,
     host: '0.0.0.0',
+    allowedHosts: true,
     watch: {
       ignored: [
         '**/ios/**',
