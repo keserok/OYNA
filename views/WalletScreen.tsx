@@ -19,7 +19,6 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     walletPendingDeposit,
     setWalletInitialTab,
     setWalletPendingDeposit,
-    walletReturnView,
   } = useAppStore();
 
   const [currentView, setCurrentView] = useState<'MAIN' | 'CARD_SETTINGS'>(walletInitialTab);
@@ -77,7 +76,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       holder: 'OYNA KULLANICI',
     });
 
-    if (walletPendingDeposit && walletReturnView) {
+    if (walletPendingDeposit) {
       setWalletInitialTab('MAIN');
       onBack();
     }

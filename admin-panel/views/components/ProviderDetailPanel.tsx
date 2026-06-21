@@ -38,7 +38,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
         'Maçlara teklif gönderebilir / kabul edilebilir',
         'ServiceDashboard\'da müsaitlik ve ücret yönetir',
         'Profil fotoğrafı, bio, bölge ve istatistikler görünür',
-        'Oyuncular BookingAddons ile kiralayabilir',
+        'Oyuncular maç oluştururken kiralayabilir',
       ]
     : [
         'Marketplace\'te hakem olarak listelenir',

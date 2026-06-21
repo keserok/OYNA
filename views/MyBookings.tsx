@@ -11,6 +11,7 @@ import {
   type CancelResult,
 } from '../services/playerBookingService';
 import { payBookingDeposit, toPaymentErrorMessage } from '../services/paymentService';
+import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
 
 interface MyBookingsProps {
   onBack: () => void;
@@ -111,24 +112,15 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
 
       <main className="p-6 max-w-2xl mx-auto">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-500">
-            <Loader2 size={32} className="animate-spin mb-3" />
-            <p className="text-xs font-bold uppercase tracking-widest">Yükleniyor...</p>
-          </div>
+          <LoadingState message="Rezervasyonlar yükleniyor..." />
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <AlertTriangle size={32} className="text-red-400 mb-3" />
-            <p className="text-sm text-gray-400">{error}</p>
-            <button onClick={load} className="mt-4 text-[#FFFF00] text-xs font-black uppercase tracking-widest underline">Tekrar Dene</button>
-          </div>
+          <ErrorState message={error} onRetry={load} />
         ) : bookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <Calendar size={32} className="text-gray-600" />
-            </div>
-            <h3 className="text-lg font-black italic text-white">HENÜZ REZERVASYON YOK</h3>
-            <p className="text-gray-500 text-xs mt-2">Saha Vitrini'nden ilk rezervasyonunu oluştur.</p>
-          </div>
+          <EmptyState
+            title="HENÜZ REZERVASYON YOK"
+            message="Saha Vitrini'nden ilk rezervasyonunu oluştur."
+            icon={<Calendar size={32} />}
+          />
         ) : (
           <div className="space-y-4">
             {bookings.map((b) => {

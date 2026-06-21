@@ -464,7 +464,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // ── Store ─────────────────────────────────────────────────────────────────
   const { 
     adminUsers, friends, updateMatch, addUserNotification, adminPitches, 
-    userTeams, myTeams, setView, setMarketplaceReturnView, setSelectedMatch,
+    userTeams, myTeams, setSelectedMatch,
     setNewMatchBadge
   } = useAppStore();
 

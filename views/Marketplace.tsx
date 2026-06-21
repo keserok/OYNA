@@ -8,6 +8,7 @@ import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { MarketplaceMap } from '../components/Marketplace/MarketplaceMap';
+import { EmptyState } from '../components/common/StatusState';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -254,9 +255,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                     <div className="h-full px-6 pb-24 overflow-y-auto custom-scrollbar">
                         <div className="grid grid-cols-1 gap-6 pt-2">
                             {filteredProfiles.length === 0 ? (
-                                <div className="text-center py-10">
-                                    <p className="text-white/40 text-xs font-black uppercase tracking-widest">Bu kriterlere uygun profil bulunamadı.</p>
-                                </div>
+                                <EmptyState title="Profil Bulunamadı" message="Bu kriterlere uygun bir profil bulunamadı." />
                             ) : (
                                 filteredProfiles.map(p => (
                                     <MarketplaceCard

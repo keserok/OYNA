@@ -287,9 +287,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     setActiveStudioTeam, 
     setActiveDraftId, 
     setSelectedMatch, 
-    updateMatch, 
-    addUserNotification, 
-    setMatchJoinReturnView,
+    updateMatch,
+    addUserNotification,
     adminUsers,
     setNewMatchBadge,
     setIsNotificationsOpen

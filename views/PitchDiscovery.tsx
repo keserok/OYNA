@@ -356,7 +356,6 @@ const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center }: Map
 
 interface PitchDiscoveryProps {
   onBack: () => void;
-  onBook?: () => void;
   isSelectionMode?: boolean;
   onSelectTime?: (pitch: Pitch, court: Court, date: string, time: string) => void;
   onNavigate?: (view: string) => void;
@@ -495,9 +494,9 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = {
   'Etiler': [41.0850, 29.0350]
 };
 
-const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelectionMode, onSelectTime, onNavigate }) => {
-  const { 
-    userLocation, 
+const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode, onSelectTime, onNavigate }) => {
+  const {
+    userLocation,
     addUserNotification,
     setBookingPitch,
     setBookingCourt,
@@ -505,13 +504,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     setBookingSlot,
     setBookingPrice,
     setBookingDeposit,
-    setView,
+    navigateTo,
     savedCards,
-    setWalletReturnView,
     setWalletInitialTab,
     setWalletPendingDeposit,
     walletPendingDeposit,
-    walletReturnView,
   } = useAppStore();
 
   // Canlı saha verisi (onaylı + açık). Mock'a düşme — vitrin yalnızca gerçek veriyi gösterir.
@@ -713,10 +710,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     persistBookingSelection();
 
     if (savedCards.length === 0) {
-      setWalletReturnView('PITCH_DISCOVERY');
       setWalletInitialTab('CARD_SETTINGS');
       setWalletPendingDeposit(true);
-      setView('WALLET');
+      navigateTo('WALLET');
       return;
     }
 
@@ -739,14 +735,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
     if (onNavigate) {
       onNavigate('MY_BOOKINGS');
     } else {
-      setView('MATCH_TICKET');
+      navigateTo('MATCH_TICKET');
     }
   };
 
   useEffect(() => {
     if (
       walletPendingDeposit &&
-      walletReturnView === 'PITCH_DISCOVERY' &&
       savedCards.length > 0 &&
       selectedSlot &&
       selectedSlotQuote &&
@@ -755,20 +750,17 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, onBook, isSelec
       !depositCheckoutOpen
     ) {
       setWalletPendingDeposit(false);
-      setWalletReturnView(null);
       setDepositCheckoutOpen(true);
     }
   }, [
     savedCards.length,
     walletPendingDeposit,
-    walletReturnView,
     selectedSlot,
     selectedSlotQuote,
     selectedPitch,
     selectedCourt,
     depositCheckoutOpen,
     setWalletPendingDeposit,
-    setWalletReturnView,
   ]);
 
   const districts = useMemo(() => ['Tümü', ...Array.from(new Set(sourcePitches.map(p => p.district).filter(Boolean)))], [sourcePitches]);

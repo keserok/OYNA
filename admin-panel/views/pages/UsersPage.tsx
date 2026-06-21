@@ -34,7 +34,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const { 
         adminUsers, adminGoalkeepers, adminReferees, adminSession,
         addUser, deleteUser, banUser, unbanUser, toggleUserPro, verifyUser, addGoalkeeper, deleteGoalkeeper, addReferee, deleteReferee,
-        setImpersonatedUser, setOriginalRole, setRole, setView, role, addAdminLog, loadServices
+        setImpersonatedUser, setOriginalRole, setRole, resetNavigation, role, addAdminLog, loadServices
     } = useAppStore();
 
     const { success, error: toastError } = useAdminToast();
@@ -89,9 +89,9 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 setOriginalRole(role);
                 setImpersonatedUser(targetUser as any);
                 setRole((targetUser as any).role || 'PLAYER');
-                if ((targetUser as any).role === 'OWNER') setView('OWNER_PANEL');
-                else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') setView('SERVICE_DASHBOARD');
-                else setView('DASHBOARD');
+                if ((targetUser as any).role === 'OWNER') resetNavigation('OWNER_PANEL');
+                else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') resetNavigation('SERVICE_DASHBOARD');
+                else resetNavigation('DASHBOARD');
 
                 try { await logImpersonation(targetUser.id); } catch { /* audit optional */ }
                 addAdminLog({
