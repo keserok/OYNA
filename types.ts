@@ -70,6 +70,13 @@ export interface ICommunity {
   memberCount: number;
   activeMatches: number;
   isVerified: boolean;
+  type?: string;
+  description?: string | null;
+  location?: string | null;
+  isPrivate?: boolean;
+  joinMode?: string;
+  inviteCode?: string | null;
+  ownerId?: string | null;
 }
 
 export interface ITeam {

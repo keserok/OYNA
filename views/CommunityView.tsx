@@ -12,12 +12,15 @@ import { CommunityHub } from '../components/CommunityHub';
 import { TeamDashboard } from '../components/TeamDashboard';
 import { CommunityApplicationWizard } from '../components/CommunityApplicationWizard';
 import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
+import {
+  fetchMyCommunities, fetchDiscoverCommunities,
+  joinCommunity, joinCommunityByInviteCode,
+} from '../services/communityService';
 
 interface CommunityViewProps {
   onBack: () => void;
   onNavigate: (view: AppView) => void;
-  community: ICommunity;
-  currentUser: IUser;
 }
 
 // ─── Rich Data ────────────────────────────────────────────────────────────────
@@ -79,25 +82,56 @@ const AnimNum: React.FC<{ to: number; suffix?: string }> = ({ to, suffix = '' })
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, community, currentUser }) => {
+const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate }) => {
+  const uid = auth.currentUser?.uid || 'u1';
   const [mainTab, setMainTab] = useState<'COMMUNITIES' | 'TEAMS' | 'FRIENDS'>('COMMUNITIES');
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   const [showAppWizard, setShowAppWizard] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any | null>(null);
   const [selectedFriendModal, setSelectedFriendModal] = useState<any | null>(null);
-  const { 
+  const {
     myTeams, addMyTeam, setActiveStudioTeam, friends: storeFriends,
-    adminMatches, adminTeams, setSelectedMatch 
+    adminMatches, adminTeams, setSelectedMatch
   } = useAppStore();
 
-  const communityMatches = adminMatches.filter(m => 
-    m.communityId === community.id || 
-    m.communityId === 'c1' ||
-    m.location?.toLowerCase().includes('boun') ||
-    m.location?.toLowerCase().includes('boğaziçi') ||
-    m.location?.toLowerCase().includes('beşiktaş') ||
-    m.location?.toLowerCase().includes('maslak')
-  );
+  // ── Gerçek topluluk verisi ─────────────────────────────────────────────
+  const [myCommunities, setMyCommunities] = useState<ICommunity[]>([]);
+  const [discoverCommunities, setDiscoverCommunities] = useState<ICommunity[]>([]);
+  const [communitiesLoading, setCommunitiesLoading] = useState(true);
+
+  const refreshCommunities = async () => {
+    setCommunitiesLoading(true);
+    const [mine, discover] = await Promise.all([
+      fetchMyCommunities(uid),
+      fetchDiscoverCommunities(uid),
+    ]);
+    setMyCommunities(mine);
+    setDiscoverCommunities(discover);
+    setCommunitiesLoading(false);
+  };
+
+  useEffect(() => {
+    refreshCommunities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleJoinHub = async (communityId: string) => {
+    await joinCommunity(communityId, uid);
+    await refreshCommunities();
+  };
+
+  const handleJoinByCode = async (code: string): Promise<ICommunity> => {
+    const community = await joinCommunityByInviteCode(code, uid);
+    await refreshCommunities();
+    return community;
+  };
+
+  const selectedCommunity = [...myCommunities, ...discoverCommunities].find(c => c.id === selectedCommunityId) || null;
+  const isMember = myCommunities.some(c => c.id === selectedCommunityId);
+  const isOwner = !!selectedCommunity && selectedCommunity.ownerId === uid;
+
+  // Topluluğa bağlı maçlar: maç kaydındaki communityId, seçili topluluğun gerçek ID'si ile eşleşmeli.
+  const communityMatches = adminMatches.filter(m => !!selectedCommunityId && m.communityId === selectedCommunityId);
 
   const [activeTab, setActiveTab] = useState<'TEAMS' | 'PLAYERS'>('TEAMS');
   
@@ -158,7 +192,6 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
   };
 
   const [ticker, setTicker] = useState(0);
-  const isMember = currentUser.communities.includes(community.id);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -231,7 +264,15 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
             {showAppWizard && <CommunityApplicationWizard onClose={() => setShowAppWizard(false)} />}
         </AnimatePresence>
         {mainTab === 'COMMUNITIES' && !selectedCommunityId && (
-            <CommunityHub onSelect={(id) => setSelectedCommunityId(id)} onNewNetwork={() => setShowAppWizard(true)} />
+            <CommunityHub
+              myHubs={myCommunities}
+              discoverHubs={discoverCommunities}
+              isLoading={communitiesLoading}
+              onSelect={(id) => setSelectedCommunityId(id)}
+              onNewNetwork={() => setShowAppWizard(true)}
+              onJoin={handleJoinHub}
+              onJoinByCode={handleJoinByCode}
+            />
         )}
 
         {mainTab === 'COMMUNITIES' && selectedCommunityId && (
@@ -251,21 +292,21 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h1 className="text-[22px] font-black tracking-tighter italic leading-none">{selectedCommunityId === 'c1' ? 'Boğaziçi Üniversitesi' : selectedCommunityId === 'c2' ? 'Trendyol Tech' : selectedCommunityId === 'c3' ? 'Kadıköy Ligi' : 'İTÜ Futbol'}</h1>
-                  {community.isVerified && (
+                  <h1 className="text-[22px] font-black tracking-tighter italic leading-none">{selectedCommunity?.name || 'Topluluk'}</h1>
+                  {selectedCommunity?.isVerified && (
                     <ShieldCheck size={16} className="text-emerald-400 flex-shrink-0" />
                   )}
                 </div>
-                <p className="text-emerald-400/60 text-[10px] font-bold tracking-wide">{community.domain}</p>
+                <p className="text-emerald-400/60 text-[10px] font-bold tracking-wide">{selectedCommunity?.domain || selectedCommunity?.type || ''}</p>
               </div>
             </div>
 
             {/* Stat pills */}
             <div className="flex gap-2.5 mb-5 relative z-10">
           {[
-            { label: 'Üye', val: community.memberCount, Icon: Users, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
-            { label: 'Aktif Maç', val: community.activeMatches ?? 2, Icon: Swords, color: 'text-rose-400', border: 'border-rose-500/20', bg: 'bg-rose-500/5' },
-            { label: 'FP Ort.', val: '91', Icon: ShieldCheck, color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
+            { label: 'Üye', val: selectedCommunity?.memberCount ?? 0, Icon: Users, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
+            { label: 'Aktif Maç', val: communityMatches.length, Icon: Swords, color: 'text-rose-400', border: 'border-rose-500/20', bg: 'bg-rose-500/5' },
+            { label: 'FP Ort.', val: '—', Icon: ShieldCheck, color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
           ].map(({ label, val, Icon, color, border, bg }) => (
             <div key={label} className={`flex-1 ${bg} border ${border} rounded-2xl py-2.5 px-2 text-center`}>
               <Icon size={13} className={`${color} mx-auto mb-1`} />
@@ -313,7 +354,9 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
             </motion.div>
             <h2 className="text-xl font-black mb-2 text-center">Bu Topluluk Gizli</h2>
             <p className="text-slate-400 text-center mb-8 max-w-xs text-sm leading-relaxed">
-              İçerikleri görmek için <b className="text-white">{community.domain}</b> uzantılı e-posta ile doğrulamalısın.
+              {selectedCommunity?.domain
+                ? <>İçerikleri görmek için <b className="text-white">{selectedCommunity.domain}</b> uzantılı e-posta ile doğrulamalısın.</>
+                : <>İçerikleri görmek için bu topluluğa katılmalısın.</>}
             </p>
             <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               className="w-full max-w-xs bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
@@ -424,6 +467,7 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
                 </motion.button>
               ))}
 
+              {isOwner && (
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                 onClick={() => onNavigate('COMMUNITY_ADMIN_DASHBOARD')}
                 className="col-span-2 bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:bg-white/[0.05] transition-all group"
@@ -439,6 +483,7 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
                 </div>
                 <ChevronRight size={17} className="text-slate-600 group-hover:translate-x-1 transition-transform" />
               </motion.button>
+              )}
             </div>
           </section>
 
@@ -652,7 +697,7 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{t.name}</h3>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{(t.captain === currentUser.id || t.captains?.includes(currentUser.id)) ? 'Kaptansın' : 'Oyuncu'} • {t.players?.length || 0} Oyuncu</p>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{(t.captain === uid || t.captains?.includes(uid)) ? 'Kaptansın' : 'Oyuncu'} • {t.players?.length || 0} Oyuncu</p>
                                         </div>
                                     </div>
                                     <ChevronRight className="text-gray-500 group-hover:translate-x-1 transition-transform" />

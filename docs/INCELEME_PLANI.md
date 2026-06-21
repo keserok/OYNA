@@ -20,8 +20,8 @@
 | 6 | Takım & Taktik | Takım kurma, kadro, Studio taktik tahtası, transfer | ✅ İncelendi — 1 kod hatası düzeltildi, 3 büyük not |
 | 7 | Pazaryeri & Hizmetler | Kaleci/Hakem ilanları, teklif, hizmet panosu | ✅ İncelendi — 4 kod hatası düzeltildi, 3 büyük not |
 | 8 | Ödeme & Cüzdan | Ödeme ekranı, cüzdan, bölünmüş ödeme, premium, sadakat | ✅ İncelendi — 2 kod hatası düzeltildi, 4 kritik açık not |
-| 9 | B2B Saha Sahibi Paneli (OPanel) | Doluluk, fiyat/tarife, finans, demo, moderasyon | ⬜ Bekliyor |
-| 10 | Topluluk Sistemi | Topluluk görünümü, başvuru, topluluk yönetimi | ⬜ Bekliyor |
+| 9 | B2B Saha Sahibi Paneli (OPanel) | Doluluk, fiyat/tarife, finans, demo, moderasyon | ⏭️ Kullanıcı isteğiyle şimdilik atlandı — sonra dönülecek |
+| 10 | Topluluk Sistemi | Topluluk görünümü, başvuru, topluluk yönetimi | 🔄 İnceleniyor |
 | 11 | İtibar & Adalet Motoru | Fair Play puanı, kart cezaları, sportmenlik kuralları | ⬜ Bekliyor |
 | 12 | Bildirimler (Push & Uygulama İçi) | Push servisi, tercihler, Edge Function, tetikleyiciler | ⬜ Bekliyor |
 | 13 | AI & Ekstra Deneyim | AI Koç (Gemini), OYNA TV, sohbet | ⬜ Bekliyor |

@@ -553,8 +553,6 @@ const App: React.FC = () => {
         return <CommunityView
           onBack={() => setView('DASHBOARD')}
           onNavigate={(v) => setView(v)}
-          community={{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }}
-          currentUser={{ id: 'u1', name: 'Ahmet', email: 'ahmet@boun.edu.tr', roles: [], communities: ['c1'], fairPlayScore: 100 }}
         />;
       case 'TEAM_CREATOR':
         return <TeamCreator

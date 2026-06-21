@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Network, Target, MapPin, FileText, CheckCircle2 } from 'lucide-react';
+import { auth } from '../supabaseAuth';
+import { createCommunityRequest } from '../services/communityService';
 
 interface CommunityApplicationWizardProps {
   onClose: () => void;
@@ -10,7 +12,8 @@ export const CommunityApplicationWizard: React.FC<CommunityApplicationWizardProp
   const [step, setStep] = useState(1);
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
-  
+  const [sendError, setSendError] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     audience: 'Kurumsal', // 'Kurumsal', 'Üniversite', 'Semt', 'Bağımsız'
@@ -25,15 +28,26 @@ export const CommunityApplicationWizard: React.FC<CommunityApplicationWizardProp
       { id: 'Bağımsız', desc: 'Genel ve karma oyuncu kitleleri' }
   ];
 
-  const handleSend = () => {
+  const handleSend = async () => {
+      const uid = auth.currentUser?.uid || 'u1';
       setIsSending(true);
-      setTimeout(() => {
-          setIsSending(false);
+      setSendError('');
+      try {
+          await createCommunityRequest(uid, {
+              name: formData.name,
+              type: formData.audience,
+              location: formData.locations,
+              description: formData.manifesto,
+          });
           setIsSent(true);
           setTimeout(() => {
               onClose();
           }, 3000);
-      }, 2500);
+      } catch (e: any) {
+          setSendError(e?.message || 'Başvuru gönderilemedi. Lütfen tekrar deneyin.');
+      } finally {
+          setIsSending(false);
+      }
   };
 
   return (
@@ -159,8 +173,10 @@ export const CommunityApplicationWizard: React.FC<CommunityApplicationWizardProp
 
           {/* Footer Actions */}
           {!isSending && !isSent && (
-              <div className="px-8 py-5 border-t border-white/5 flex items-center justify-between bg-[#0A0E14]">
-                  <button 
+              <div className="px-8 py-5 border-t border-white/5 flex flex-col gap-3 bg-[#0A0E14]">
+                  {sendError && <p className="text-[10px] text-rose-400 font-bold text-center">{sendError}</p>}
+                  <div className="flex items-center justify-between">
+                  <button
                       onClick={() => setStep(s => Math.max(1, s - 1))}
                       className={`text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors ${step === 1 ? 'opacity-0 pointer-events-none' : ''}`}
                   >
@@ -190,6 +206,7 @@ export const CommunityApplicationWizard: React.FC<CommunityApplicationWizardProp
                           Başvuruyu Gönder <Send size={14} />
                       </button>
                   )}
+                  </div>
               </div>
           )}
       </motion.div>
