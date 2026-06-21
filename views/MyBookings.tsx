@@ -12,6 +12,8 @@ import {
 } from '../services/playerBookingService';
 import { payBookingDeposit, toPaymentErrorMessage } from '../services/paymentService';
 import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
+import { Toast } from '../components/common/Toast';
+import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
 
 interface MyBookingsProps {
   onBack: () => void;
@@ -218,27 +220,19 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
 
       {/* Ödeme hatası toast */}
       <AnimatePresence>
-        {payError && (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-sm w-[90%] bg-red-950/95 backdrop-blur-xl border border-red-500/40 rounded-2xl px-5 py-4 shadow-2xl flex items-start gap-3"
-          >
-            <XCircle size={18} className="text-red-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-100 leading-relaxed flex-1">{payError}</p>
-          </motion.div>
-        )}
+        {payError && <Toast message={payError} variant="error" />}
       </AnimatePresence>
 
       {/* İptal Onay Modalı */}
       <AnimatePresence>
         {cancelTarget && (
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            {...MODAL_BACKDROP}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6"
             onClick={() => setCancelTarget(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              {...MODAL_CARD}
               onClick={(e) => e.stopPropagation()}
               className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-white/10 p-7 text-center"
             >
@@ -280,12 +274,12 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
       <AnimatePresence>
         {cancelResult && (
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            {...MODAL_BACKDROP}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6"
             onClick={() => setCancelResult(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              {...MODAL_CARD}
               onClick={(e) => e.stopPropagation()}
               className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-white/10 p-7 text-center"
             >

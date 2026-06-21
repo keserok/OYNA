@@ -13,6 +13,8 @@ import { fbUpdateUserLocation } from '../supabaseMutations';
 import { NOTIFICATION_CATEGORIES, fetchNotificationTemplates, updateNotificationPreference, NotificationTemplateInfo } from '../notifications/notificationPreferences';
 import type { NotificationPreferenceKey } from '../notifications/pushService';
 import { Capacitor } from '@capacitor/core';
+import { Toast } from '../components/common/Toast';
+import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -27,35 +29,30 @@ const DeleteAccountModal: React.FC<{
   const [step, setStep] = useState<1 | 2>(1);
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
 
   const handleConfirm = async () => {
     if (confirmText !== 'HESABIMI SİL') return;
     setLoading(true);
     try {
       await supabase.rpc('request_account_deletion');
-      setToast('Silme talebiniz alındı. 30 gün içinde hesabınız silinecek.');
+      setToast({ message: 'Silme talebiniz alındı. 30 gün içinde hesabınız silinecek.', variant: 'success' });
       setTimeout(() => {
         onConfirmed();
       }, 2000);
     } catch {
-      setToast('Bir hata oluştu. Lütfen tekrar deneyin.');
+      setToast({ message: 'Bir hata oluştu. Lütfen tekrar deneyin.', variant: 'error' });
       setLoading(false);
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...MODAL_BACKDROP}
       className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
     >
       <motion.div
-        initial={{ scale: 0.88, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.88, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        {...MODAL_CARD}
         className="w-full max-w-sm rounded-[28px] p-6"
         style={{
           background: 'linear-gradient(180deg, #1a0808 0%, #0A0E14 100%)',
@@ -72,8 +69,12 @@ const DeleteAccountModal: React.FC<{
         </div>
 
         {toast && (
-          <div className="mb-4 p-3 bg-green-500/15 border border-green-500/25 rounded-xl text-sm text-green-300 font-bold text-center">
-            {toast}
+          <div className={`mb-4 p-3 rounded-xl text-sm font-bold text-center border ${
+            toast.variant === 'success'
+              ? 'bg-green-500/15 border-green-500/25 text-green-300'
+              : 'bg-red-500/15 border-red-500/25 text-red-300'
+          }`}>
+            {toast.message}
           </div>
         )}
 
@@ -145,6 +146,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [isOwner, setIsOwner] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMsg(message);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
 
   const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref } = useAppStore();
 
@@ -261,7 +268,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         (err) => {
           console.error(err);
           setIsUpdatingLocation(false);
-          alert('Konum alınamadı. Lütfen cihaz ayarlarından izin verin.');
+          showToast('Konum alınamadı. Lütfen cihaz ayarlarından izin verin.');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
@@ -276,6 +283,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       onNavigate('SPLASH');
     } catch (error) {
       console.error('Error logging out:', error);
+      showToast('Çıkış yapılırken bir hata oluştu. Lütfen tekrar dene.');
     }
   };
 
@@ -632,20 +640,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       </main>
 
+      {/* Aksiyon hatası toast */}
+      <AnimatePresence>
+        {toastMsg && <Toast message={toastMsg} variant="error" />}
+      </AnimatePresence>
+
       {/* Kişisel veri indirme placeholder modal */}
       <AnimatePresence>
         {showDataDownloadModal && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            {...MODAL_BACKDROP}
             className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
             onClick={() => setShowDataDownloadModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.88, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.88, opacity: 0 }}
+              {...MODAL_CARD}
               className="w-full max-w-sm rounded-[28px] p-6 text-center"
               style={{ background: '#161B22', border: '1px solid rgba(255,255,255,0.08)' }}
               onClick={e => e.stopPropagation()}

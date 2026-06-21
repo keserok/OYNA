@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers, Zap, Shield,
@@ -14,6 +14,8 @@ import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
 import PitchDepositCheckout from '../components/PitchDepositCheckout';
 import { supabase } from '../supabaseClient';
+import { LoadingState, ErrorState } from '../components/common/StatusState';
+import { Toast } from '../components/common/Toast';
 import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel } from '../services/availabilityService';
 import {
@@ -514,47 +516,55 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   // Canlı saha verisi (onaylı + açık). Mock'a düşme — vitrin yalnızca gerçek veriyi gösterir.
   const [realPitches, setRealPitches] = useState<Pitch[]>([]);
   const [pitchesLoading, setPitchesLoading] = useState(true);
+  const [pitchesError, setPitchesError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const showActionError = (msg: string) => {
+    setActionError(msg);
+    setTimeout(() => setActionError(null), 4000);
+  };
+
+  const fetchPitches = useCallback(async () => {
+    setPitchesLoading(true);
+    setPitchesError(null);
+    try {
+      const [pitchRes, dealRes] = await Promise.all([
+        supabase
+          .from('pitches')
+          .select('*, courts(id, name, court_type, price, is_active, description, images, lighting_grade, grass_grade, locker_grade), pitch_tariffs(*)')
+          .eq('verification_status', 'approved')
+          .eq('is_open', true),
+        supabase
+          .from('pitch_flash_deals')
+          .select('id, pitch_id, discount_percent, expires_at, is_claimed')
+          .eq('is_claimed', false)
+          .gt('expires_at', new Date().toISOString()),
+      ]);
+
+      if (pitchRes.error) throw pitchRes.error;
+
+      const rows = (pitchRes.data ?? []) as unknown as DbPitchRow[];
+      const flashByPitch: Record<string, { id: string; discount: number }> = {};
+      ((dealRes.data ?? []) as { id: string; pitch_id: string; discount_percent: number }[]).forEach((d) => {
+        const existing = flashByPitch[d.pitch_id];
+        if (!existing || d.discount_percent > existing.discount) {
+          flashByPitch[d.pitch_id] = { id: d.id, discount: d.discount_percent };
+        }
+      });
+
+      setRealPitches(rows.map((r) => mapDbPitchToUiPitch(r, flashByPitch[r.id])));
+    } catch (err) {
+      console.error('PitchDiscovery fetch:', err);
+      setRealPitches([]);
+      setPitchesError('Sahalar yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      setPitchesLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      setPitchesLoading(true);
-      try {
-        const [pitchRes, dealRes] = await Promise.all([
-          supabase
-            .from('pitches')
-            .select('*, courts(id, name, court_type, price, is_active, description, images, lighting_grade, grass_grade, locker_grade), pitch_tariffs(*)')
-            .eq('verification_status', 'approved')
-            .eq('is_open', true),
-          supabase
-            .from('pitch_flash_deals')
-            .select('id, pitch_id, discount_percent, expires_at, is_claimed')
-            .eq('is_claimed', false)
-            .gt('expires_at', new Date().toISOString()),
-        ]);
-
-        if (!active) return;
-        if (pitchRes.error) throw pitchRes.error;
-
-        const rows = (pitchRes.data ?? []) as unknown as DbPitchRow[];
-        const flashByPitch: Record<string, { id: string; discount: number }> = {};
-        ((dealRes.data ?? []) as { id: string; pitch_id: string; discount_percent: number }[]).forEach((d) => {
-          const existing = flashByPitch[d.pitch_id];
-          if (!existing || d.discount_percent > existing.discount) {
-            flashByPitch[d.pitch_id] = { id: d.id, discount: d.discount_percent };
-          }
-        });
-
-        setRealPitches(rows.map((r) => mapDbPitchToUiPitch(r, flashByPitch[r.id])));
-      } catch (err) {
-        console.error('PitchDiscovery fetch:', err);
-        if (active) setRealPitches([]);
-      } finally {
-        if (active) setPitchesLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, []);
+    fetchPitches();
+  }, [fetchPitches]);
 
   const sourcePitches = realPitches;
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
@@ -582,6 +592,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         if (active) setBookings(data);
       } catch (e) {
         console.error('Error fetching bookings:', e);
+        showActionError('Müsaitlik bilgisi yüklenemedi. Lütfen tekrar dene.');
       }
     };
     load();
@@ -894,7 +905,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             </div>
 
             <AnimatePresence mode="popLayout">
-              {!pitchesLoading && (
+              {!pitchesLoading && !pitchesError && (
                 <div className="grid grid-cols-2 gap-3.5 pb-8">
                   {filteredPitches.map((pitch) => (
                     <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />
@@ -904,10 +915,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             </AnimatePresence>
 
             {pitchesLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-12 h-12 border-2 border-[#FFFF00] border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Sahalar yükleniyor...</p>
-              </div>
+              <LoadingState message="Sahalar yükleniyor..." />
+            ) : pitchesError ? (
+              <ErrorState message={pitchesError} onRetry={fetchPitches} />
             ) : filteredPitches.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
@@ -1425,6 +1435,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           onSuccess={handleDepositSuccess}
         />
       )}
+
+      <AnimatePresence>
+        {actionError && <Toast message={actionError} variant="error" />}
+      </AnimatePresence>
 
     </div>
   );

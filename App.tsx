@@ -7,20 +7,7 @@ import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import PendingVerificationView from './views/PendingVerificationView';
-
-// ─── Page transition wrapper ─────────────────────────────────────────────────
-const PageTransition: React.FC<{ children: React.ReactNode; viewKey: string }> = ({ children, viewKey }) => (
-  <motion.div
-    key={viewKey}
-    initial={{ opacity: 0, y: 12, scale: 0.99 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -8, scale: 0.995 }}
-    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-    style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}
-  >
-    {children}
-  </motion.div>
-);
+import { PAGE_TRANSITION } from './components/common/motion';
 
 // Eagerly loaded for immediate display
 import SplashScreen from './views/SplashScreen';
@@ -626,10 +613,7 @@ const App: React.FC = () => {
       <AnimatePresence mode="popLayout">
         <motion.div
           key={view}
-          initial={{ opacity: 0, y: 16, scale: 0.99 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -10, scale: 0.995 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          {...PAGE_TRANSITION}
           className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : ''}`}
         >
           <Suspense fallback={<ViewLoader />}>

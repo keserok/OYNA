@@ -15,6 +15,7 @@ import { joinMatchSlot, subscribeToMatchUpdates } from '../services/matchService
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Toast } from '../components/common/Toast';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -431,6 +432,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'rules' | 'finance'>('rules');
 
+  // Aksiyon hatası/başarı toast'ı
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const showActionError = (msg: string) => {
+    setActionError(msg);
+    setTimeout(() => setActionError(null), 4000);
+  };
+  const showActionSuccess = (msg: string) => {
+    setActionSuccess(msg);
+    setTimeout(() => setActionSuccess(null), 4000);
+  };
+
   // Lobi Sekmesi & Sohbet & Taktik Kenarı
   const [lobbyTab, setLobbyTab] = useState<'squad' | 'chat'>('squad');
   const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
@@ -703,6 +716,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setChatInputText('');
     } catch (err) {
       console.error(err);
+      showActionError('Mesaj gönderilemedi. Lütfen tekrar dene.');
     }
   };
 
@@ -789,7 +803,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setLobbyTab('chat');
     } catch (e: any) {
       console.error('Join error:', e);
-      alert(e.message || 'Maça katılırken bir hata oluştu. Lütfen tekrar deneyin.');
+      showActionError(e.message || 'Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -858,7 +872,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await updateMatch({ ...match, reservePlayers: updatedReserves });
     } catch (e: any) {
       console.error('Join reserve error:', e);
-      alert(e.message || 'Yedek olarak katılırken bir hata oluştu.');
+      showActionError(e.message || 'Yedek olarak katılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -884,7 +898,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setShowLeaveConfirm(false);
     } catch (e: any) {
       console.error('Leave reserves error:', e);
-      alert(e.message || 'Yedek listesinden çıkarken bir hata oluştu.');
+      showActionError(e.message || 'Yedek listesinden çıkarken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -934,6 +948,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         setActivePlayerSlotId(null);
       } catch (e) {
         console.error(e);
+        showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
       }
     } else {
       const { updatedSlots, remainingReserves } = fillVacatedSlot(match.awaySlots || [], reserves, slotId);
@@ -948,6 +963,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         setActivePlayerSlotId(null);
       } catch (e) {
         console.error(e);
+        showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
       }
     }
   };
@@ -1038,7 +1054,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       onBack();
     } catch (e: any) {
       console.error('Leave match error:', e);
-      alert(e.message || 'Maçtan ayrılırken bir hata oluştu.');
+      showActionError(e.message || 'Maçtan ayrılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -1221,10 +1237,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                   status: nextStatus
                                 });
                                 setActivePlayerSlotId(null);
-                                alert("Kapora ödemesi başarıyla gerçekleştirildi! ⚽");
+                                showActionSuccess('Kapora ödemesi başarıyla gerçekleştirildi! ⚽');
                               } catch (e: any) {
                                 console.error(e);
-                                alert(e.message || 'Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
+                                showActionError(e.message || 'Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
                               } finally {
                                 setIsProcessing(false);
                               }
@@ -1600,9 +1616,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 read: false,
                               });
                               setShowOpponentModal(false);
-                              alert(`${t.name} takımına meydan okuma daveti gönderildi!`);
+                              showActionSuccess(`${t.name} takımına meydan okuma daveti gönderildi!`);
                             } catch (err) {
                               console.error(err);
+                              showActionError('Meydan okuma daveti gönderilemedi. Lütfen tekrar dene.');
                             } finally {
                               setIsProcessing(false);
                             }
@@ -1686,9 +1703,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             read: false,
                           });
                           setShowJoinOpponentModal(false);
-                          alert(`Takımınız (${t.name}) başarıyla maça rakip olarak kaydedildi!`);
+                          showActionSuccess(`Takımınız (${t.name}) başarıyla maça rakip olarak kaydedildi!`);
                         } catch (err) {
                           console.error(err);
+                          showActionError('Takımınız maça kaydedilemedi. Lütfen tekrar dene.');
                         } finally {
                           setIsProcessing(false);
                         }
@@ -2286,6 +2304,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         }
                       } catch (err) {
                         console.error(err);
+                        showActionError('Diziliş güncellenemedi. Lütfen tekrar dene.');
                       } finally {
                         setIsProcessing(false);
                       }
@@ -2315,7 +2334,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   setInviteModalSlotId(firstOpenAwaySlot.id);
                   setFriendSearch('');
                 } else {
-                  alert("Deplasman takımında boş pozisyon bulunmuyor!");
+                  showActionError('Deplasman takımında boş pozisyon bulunmuyor.');
                 }
               }}
               className="p-4 rounded-2xl bg-[#161B22]/80 border border-white/5 hover:border-pink-500/30 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
@@ -2788,6 +2807,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {actionError && <Toast message={actionError} variant="error" />}
+        {actionSuccess && <Toast message={actionSuccess} variant="success" />}
       </AnimatePresence>
 
     </div>
