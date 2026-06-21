@@ -12,6 +12,7 @@ import {
   toTurkishError,
   type FinanceDashboardData,
 } from '../../services/pitchOwnerService';
+import { useOwnerToast } from './components/useOwnerToast';
 
 const EXPENSE_COLORS: Record<string, string> = {
   Fatura: '#00F5FF',
@@ -27,6 +28,7 @@ interface OwnerFinanceViewProps {
 }
 
 export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isDemoMode, readOnly = false }) => {
+  const notify = useOwnerToast();
   const [financeTab, setFinanceTab] = useState<'INCOME' | 'EXPENSE' | 'DATA'>('INCOME');
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<FinanceDashboardData | null>(null);
@@ -56,11 +58,11 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
       setExpenses(exp);
       setDebtors(deb);
     } catch (err) {
-      console.warn('Finans verileri yüklenemedi:', err);
+      notify(toTurkishError(err), 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [pitchId, monthKey]);
+  }, [pitchId, monthKey, notify]);
 
   useEffect(() => {
     load();
@@ -99,7 +101,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
       setIsAddExpenseModalOpen(false);
       await load();
     } catch (err) {
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     }
   };
 
@@ -116,7 +118,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
       setIsAddDebtorModalOpen(false);
       await load();
     } catch (err) {
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     }
   };
 
@@ -325,7 +327,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
                   <button
                     onClick={() => {
                       if (readOnly) return;
-                      resolveDebtor(d.id).then(load).catch((err) => alert(toTurkishError(err)));
+                      resolveDebtor(d.id).then(load).catch((err) => notify(toTurkishError(err), 'error'));
                     }}
                     disabled={readOnly}
                     className="text-[10px] font-bold text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded-lg disabled:opacity-40"

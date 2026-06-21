@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, QrCode, X, XCircle } from 'lucide-react';
 import { cancelConfirmedBooking, toTurkishError } from '../../services/pitchOwnerService';
+import { useOwnerToast } from './components/useOwnerToast';
 
 export interface BookingDetailData {
   id: string;
@@ -28,6 +29,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
   onCancelled,
   onNavigateQr,
 }) => {
+  const notify = useOwnerToast();
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -37,7 +39,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
 
   const handleCancel = async () => {
     if (!cancelReason.trim()) {
-      alert('İptal nedeni zorunludur.');
+      notify('İptal nedeni zorunludur.', 'warning');
       return;
     }
     if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz? Ödenmiş tutar varsa iade işlemi başlatılır.')) {
@@ -49,7 +51,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       onCancelled();
       onClose();
     } catch (err) {
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     } finally {
       setIsCancelling(false);
     }
@@ -104,7 +106,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button
               type="button"
-              onClick={() => alert('Kaptan mesajlaşması yakında aktif olacak.')}
+              onClick={() => notify('Kaptan mesajlaşması yakında aktif olacak.', 'info')}
               className="py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[11px] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
             >
               <MessageSquare size={16} /> Kaptana Mesaj
