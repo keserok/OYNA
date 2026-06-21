@@ -1,0 +1,1 @@
+import{c as i,l,b as s,e as u}from"./main-CHE9iZ-S.js";function d(t,e,c){e.center!==c.center&&t.setLatLng(e.center),e.radius!=null&&e.radius!==c.radius&&t.setRadius(e.radius)}const C=i(function({center:e,children:c,...a},r){const n=new l.Circle(e,a);return s(n,u(r,{overlayContainer:n}))},d);export{C};

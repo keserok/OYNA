@@ -1,0 +1,1 @@
+function t(o,n){const e=window.location.origin.replace("/admin.html",""),r=new URLSearchParams({ghost:o,...n?{name:n}:{}});return`${e}/?${r.toString()}`}function a(o,n){const e=t(o,n);window.open(e,"_blank","noopener,noreferrer")}export{a as o};

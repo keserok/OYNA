@@ -1,0 +1,1 @@
+import{r as s}from"./ui-vendor-Ctxy24-g.js";import{u as f}from"./useDebouncedValue-C226KkmQ.js";function m(e,r,c=""){const[t,o]=s.useState(c),u=f(t,300),a=s.useMemo(()=>{const n=u.trim().toLowerCase();return n?e.filter(i=>r(i,n)):e},[e,u,r]);return{query:t,setQuery:o,filtered:a,clear:()=>o("")}}export{m as u};

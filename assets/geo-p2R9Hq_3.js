@@ -1,0 +1,1 @@
+function e(t,M,a,c){const n=(a-t)*Math.PI/180,s=(c-M)*Math.PI/180,h=Math.sin(n/2)*Math.sin(n/2)+Math.cos(t*Math.PI/180)*Math.cos(a*Math.PI/180)*Math.sin(s/2)*Math.sin(s/2);return 6371*(2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h)))}export{e as g};

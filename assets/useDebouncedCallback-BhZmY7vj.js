@@ -1,0 +1,1 @@
+import{r}from"./ui-vendor-Ctxy24-g.js";function o(t,u=1500){const c=r.useRef(t),e=r.useRef(null);return c.current=t,r.useEffect(()=>()=>{e.current&&clearTimeout(e.current)},[]),r.useCallback(()=>{e.current&&clearTimeout(e.current),e.current=setTimeout(()=>{e.current=null,c.current()},u)},[u])}export{o as u};
