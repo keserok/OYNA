@@ -15,7 +15,11 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavigate }) => {
-    const { adminMatches, adminPitches, adminUsers, appSettings, adminDashboardStats } = useAppStore();
+    const adminMatches = useAppStore((s) => s.adminMatches);
+    const adminPitches = useAppStore((s) => s.adminPitches);
+    const adminUsers = useAppStore((s) => s.adminUsers);
+    const appSettings = useAppStore((s) => s.appSettings);
+    const adminDashboardStats = useAppStore((s) => s.adminDashboardStats);
     const [dateRange, setDateRange] = React.useState<'7D' | '30D' | 'ALL'>('7D');
     const [refreshing, setRefreshing] = React.useState(false);
     const [financeLoading, setFinanceLoading] = useState(true);
@@ -26,7 +30,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
 
     const stats = adminDashboardStats;
     const commissionRate = Number(stats?.commission_rate ?? appSettings.commissionRate ?? 10);
-    const missingAlerts = adminMatches.filter(m => m.missingPositions?.some(p => p.count > 0)).length;
+    const missingAlerts = useMemo(
+        () => adminMatches.filter((m) => m.missingPositions?.some((p) => p.count > 0)).length,
+        [adminMatches],
+    );
 
     const days = dateRange === '7D' ? 7 : dateRange === '30D' ? 30 : 90;
 

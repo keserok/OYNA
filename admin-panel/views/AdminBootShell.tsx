@@ -1,26 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import type { AdminBootPhase } from '../services/adminBootstrap';
 
-const STEPS = ['Oturum', 'Veritabanı', 'Envanter', 'Hazır'];
+const STEPS = ['Oturum', 'Envanter', 'Operasyonel', 'Hazır'];
+
+const PHASE_STEP: Record<AdminBootPhase, number> = {
+  session: 0,
+  inventory: 1,
+  operational: 2,
+  ready: 3,
+};
 
 interface Props {
   mode: 'loading' | 'error';
+  phase?: AdminBootPhase;
   message?: string;
   onRetry?: () => void;
 }
 
-const AdminBootShell: React.FC<Props> = ({ mode, message, onRetry }) => {
-  const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    if (mode !== 'loading') return;
-    const timers = [
-      setTimeout(() => setStep(1), 400),
-      setTimeout(() => setStep(2), 1200),
-      setTimeout(() => setStep(3), 2200),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, [mode]);
+const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onRetry }) => {
+  const step = PHASE_STEP[phase];
+  const allDone = phase === 'ready';
 
   return (
     <div className="min-h-screen bg-[#050812] flex flex-col items-center justify-center gap-8 p-6 text-white">
@@ -37,13 +37,16 @@ const AdminBootShell: React.FC<Props> = ({ mode, message, onRetry }) => {
               OYNA OS Başlatılıyor
             </p>
             <p className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">
-              Supabase&apos;den canlı veri yükleniyor
+              {phase === 'session' && 'Oturum doğrulanıyor…'}
+              {phase === 'inventory' && 'Saha ve maç envanteri yükleniyor…'}
+              {phase === 'operational' && 'Kullanıcılar ve KPI verileri yükleniyor…'}
+              {phase === 'ready' && 'Panel hazırlanıyor…'}
             </p>
           </div>
           <ol className="flex flex-col gap-2 w-full max-w-xs">
             {STEPS.map((label, i) => {
-              const done = i < step;
-              const current = i === step;
+              const done = allDone || i < step;
+              const current = !allDone && i === step;
               return (
                 <li
                   key={label}

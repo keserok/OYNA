@@ -72,7 +72,6 @@ export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRou
   { label: 'Takımlar', route: 'TAKIMLAR', category: 'Topluluk' },
   { label: 'Turnuvalar', route: 'TURNUVALAR', category: 'Topluluk' },
   { label: 'Kampanyalar', route: 'NOTIFICATIONS', category: 'Pazarlama' },
-  { label: 'Segmentasyon', route: 'SEGMENTATION', category: 'Pazarlama' },
   { label: 'İndirim Kodları', route: 'PROMO_CODES', category: 'Pazarlama' },
   { label: 'Denetim Kayıtları', route: 'AUDIT_LOG', category: 'Sistem' },
   { label: 'CMS Metinler', route: 'CONTENT', category: 'Sistem' },

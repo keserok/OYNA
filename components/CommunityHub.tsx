@@ -1,26 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ShieldCheck, Users, Swords, PlusCircle, ArrowRight, Lock, Building2, MapPin, Check } from 'lucide-react';
+import { fetchPublicCommunities } from '../services/communityService';
 
 interface CommunityHubProps {
   onSelect: (id: string) => void;
   onNewNetwork: () => void;
 }
 
-const MY_HUBS = [
+const HUB_STYLES = [
+  { bg: 'from-emerald-500/20 to-emerald-900/40', border: 'border-emerald-500/30', color: 'text-emerald-400' },
+  { bg: 'from-orange-500/20 to-orange-900/40', border: 'border-orange-500/30', color: 'text-orange-400' },
+  { bg: 'from-blue-500/20 to-blue-900/40', border: 'border-blue-500/30', color: 'text-blue-400' },
+  { bg: 'from-indigo-500/20 to-indigo-900/40', border: 'border-indigo-500/30', color: 'text-indigo-400' },
+];
+
+const MOCK_MY_HUBS = [
   { id: 'c1', name: 'Boğaziçi Üniversitesi', type: 'Üniversite', members: 1250, activeMatches: 12, bg: 'from-emerald-500/20 to-emerald-900/40', border: 'border-emerald-500/30', color: 'text-emerald-400', initial: 'B' },
   { id: 'c2', name: 'Trendyol Tech', type: 'Kurumsal', members: 340, activeMatches: 4, bg: 'from-orange-500/20 to-orange-900/40', border: 'border-orange-500/30', color: 'text-orange-400', initial: 'T' }
 ];
 
-const DISCOVER_HUBS = [
+const MOCK_DISCOVER = [
   { id: 'c3', name: 'Kadıköy Ligi', type: 'Semt', members: 8900, activeMatches: 45, bg: 'from-blue-500/20 to-blue-900/40', border: 'border-blue-500/30', color: 'text-blue-400', initial: 'K', locked: false },
   { id: 'c4', name: 'İTÜ Futbol', type: 'Üniversite', members: 2100, activeMatches: 8, bg: 'from-indigo-500/20 to-indigo-900/40', border: 'border-indigo-500/30', color: 'text-indigo-400', initial: 'İ', locked: true }
 ];
+
+type HubCard = {
+  id: string;
+  name: string;
+  type: string;
+  members: number;
+  activeMatches: number;
+  bg: string;
+  border: string;
+  color: string;
+  initial: string;
+  locked?: boolean;
+  isVerified?: boolean;
+  joinMode?: string;
+};
 
 export const CommunityHub: React.FC<CommunityHubProps> = ({ onSelect, onNewNetwork }) => {
   const [showJoinCode, setShowJoinCode] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [myHubs, setMyHubs] = useState<HubCard[]>(MOCK_MY_HUBS);
+  const [discoverHubs, setDiscoverHubs] = useState<HubCard[]>(MOCK_DISCOVER);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const rows = await fetchPublicCommunities(24);
+        const dbHubs: HubCard[] = rows.map((r, i) => {
+          const style = HUB_STYLES[i % HUB_STYLES.length];
+          return {
+            id: r.id,
+            name: r.name,
+            type: r.type,
+            members: r.member_count ?? 0,
+            activeMatches: r.active_matches ?? 0,
+            initial: r.name.charAt(0).toUpperCase(),
+            locked: r.join_mode === 'INVITE_ONLY' || r.is_private,
+            isVerified: r.is_verified,
+            joinMode: r.join_mode,
+            ...style,
+          };
+        });
+        if (dbHubs.length > 0) {
+          setMyHubs(dbHubs.slice(0, Math.min(4, dbHubs.length)));
+          setDiscoverHubs(dbHubs.slice(Math.min(4, dbHubs.length)));
+        }
+      } catch {
+        /* mock fallback */
+      }
+    })();
+  }, []);
 
   const handleJoin = () => {
     setIsJoining(true);
@@ -99,7 +153,7 @@ export const CommunityHub: React.FC<CommunityHubProps> = ({ onSelect, onNewNetwo
       <div className="space-y-4">
         <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Dahil Olduğum Ağlar</h3>
         <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-4 -mx-5 px-5">
-            {MY_HUBS.map(hub => (
+            {myHubs.map(hub => (
                 <motion.div 
                     key={hub.id}
                     onClick={() => onSelect(hub.id)}
@@ -114,7 +168,10 @@ export const CommunityHub: React.FC<CommunityHubProps> = ({ onSelect, onNewNetwo
                             {hub.initial}
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-white leading-tight">{hub.name}</h4>
+                            <h4 className="text-sm font-black text-white leading-tight flex items-center gap-1">
+                              {hub.name}
+                              {hub.isVerified && <ShieldCheck size={12} className="text-emerald-400" />}
+                            </h4>
                             <div className="flex items-center gap-1 mt-0.5">
                                 {hub.type === 'Üniversite' ? <Building2 size={10} className="text-gray-400" /> : <MapPin size={10} className="text-gray-400" />}
                                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{hub.type}</span>
@@ -154,16 +211,19 @@ export const CommunityHub: React.FC<CommunityHubProps> = ({ onSelect, onNewNetwo
       <div className="space-y-4">
         <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Keşfet & Katıl</h3>
         <div className="grid gap-3">
-            {DISCOVER_HUBS.map(hub => (
-                <div key={hub.id} className="bg-[#161B22] border border-white/5 hover:border-white/20 rounded-2xl p-4 flex items-center justify-between transition-colors group cursor-pointer">
+            {discoverHubs.map(hub => (
+                <div key={hub.id} onClick={() => onSelect(hub.id)} className="bg-[#161B22] border border-white/5 hover:border-white/20 rounded-2xl p-4 flex items-center justify-between transition-colors group cursor-pointer">
                     <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${hub.bg} border ${hub.border} flex items-center justify-center text-lg font-black ${hub.color}`}>
                             {hub.initial}
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-black text-white">{hub.name}</h4>
-                                {hub.locked && <Lock size={12} className="text-rose-400" />}
+                                <h4 className="text-sm font-black text-white flex items-center gap-1">
+                                  {hub.name}
+                                  {hub.isVerified && <ShieldCheck size={12} className="text-emerald-400" />}
+                                </h4>
+                                {(hub.locked || hub.joinMode === 'INVITE_ONLY') && <Lock size={12} className="text-rose-400" />}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{hub.type}</span>
