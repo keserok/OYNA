@@ -2,6 +2,9 @@
 -- is_admin / has_role tanımları + RLS birleştirme (is_platform_admin)
 
 -- ─── Yardımcı yetki fonksiyonları ─────────────────────────────
+-- NOT: is_admin()/has_role() canlıda zaten vardı; parametre adı (check_role)
+-- ve sıfır-parametre imzaları korunuyor ki bağımlı RLS politikaları
+-- (15+ tablo) DROP CASCADE ile silinmesin — sadece gövde güncelleniyor.
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -12,7 +15,7 @@ AS $$
   SELECT public.is_platform_admin();
 $$;
 
-CREATE OR REPLACE FUNCTION public.has_role(p_role text)
+CREATE OR REPLACE FUNCTION public.has_role(check_role text)
 RETURNS boolean
 LANGUAGE plpgsql
 STABLE
@@ -38,22 +41,22 @@ BEGIN
     RETURN false;
   END IF;
 
-  IF v_role = p_role THEN
+  IF v_role = check_role THEN
     RETURN true;
   END IF;
 
-  IF v_roles_json IS NOT NULL AND v_roles_json ? p_role THEN
+  IF v_roles_json IS NOT NULL AND v_roles_json ? check_role THEN
     RETURN true;
   END IF;
 
-  IF v_roles_arr IS NOT NULL AND p_role = ANY(v_roles_arr) THEN
+  IF v_roles_arr IS NOT NULL AND check_role = ANY(v_roles_arr) THEN
     RETURN true;
   END IF;
 
   RETURN false;
 EXCEPTION
   WHEN OTHERS THEN
-    RETURN v_role = p_role;
+    RETURN v_role = check_role;
 END;
 $$;
 
