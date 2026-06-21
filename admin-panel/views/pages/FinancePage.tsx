@@ -26,15 +26,15 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [query, setQuery] = useState('');
   const { error: toastError } = useAdminToast();
 
-  const filterRows = useCallback(<T,>(rows: T[]) => {
+  const filterRows = <T,>(rows: T[]): T[] => {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((row) => JSON.stringify(row).toLowerCase().includes(q));
-  }, [query]);
+  };
 
-  const filteredLedger = useMemo(() => filterRows(ledger), [ledger, filterRows]);
-  const filteredPayments = useMemo(() => filterRows(payments), [payments, filterRows]);
-  const filteredBilling = useMemo(() => filterRows(billing), [billing, filterRows]);
+  const filteredLedger = useMemo(() => filterRows(ledger), [ledger, query]);
+  const filteredPayments = useMemo(() => filterRows(payments), [payments, query]);
+  const filteredBilling = useMemo(() => filterRows(billing), [billing, query]);
 
   const load = useCallback(async () => {
     setLoading(true);

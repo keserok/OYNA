@@ -7,13 +7,12 @@ import { useAppStore } from '../store';
 import { signOutAdmin, type AdminSession } from './services/adminService';
 import {
   bootstrapAdminPlatform,
-  refreshAdminPlatform,
+  refreshAdminStatsOnly,
   resolveAdminSession,
+  resolveBootFatalError,
   withAdminTimeout,
+  type AdminBootPhase,
 } from './services/adminBootstrap';
-
-/** Boot shell must never spin longer than this — even if network hangs */
-const BOOT_READY_MAX_MS = 5_000;
 
 function getBootstrapDeps() {
   const s = useAppStore.getState();
@@ -26,7 +25,8 @@ function getBootstrapDeps() {
 
 const AdminApp: React.FC = () => {
   const [session, setSession] = useState<AdminSession | null>(null);
-  const [phase, setPhase] = useState<'boot' | 'ready'>('boot');
+  const [bootPhase, setBootPhase] = useState<AdminBootPhase>('session');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [dataSyncing, setDataSyncing] = useState(false);
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootWarnings, setBootWarnings] = useState<string[]>([]);
@@ -36,16 +36,24 @@ const AdminApp: React.FC = () => {
     try {
       const result = await withAdminTimeout(
         'Platform verileri',
-        () => bootstrapAdminPlatform(getBootstrapDeps()),
+        () => bootstrapAdminPlatform(getBootstrapDeps(), setBootPhase),
         25_000,
       );
       setBootWarnings(result.warnings);
-      setBootError(null);
+      const state = useAppStore.getState();
+      setBootError(resolveBootFatalError(result.warnings, {
+        pitches: state.adminPitches.length,
+        matches: state.adminMatches.length,
+      }));
+      setBootPhase('ready');
+      setInitialLoadDone(true);
       return result;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Veriler kısmen yüklendi';
       setBootWarnings((prev) => (prev.includes(msg) ? prev : [...prev, msg]));
       console.warn('[Admin] Veri senkronu:', err);
+      setBootPhase('ready');
+      setInitialLoadDone(true);
       return null;
     } finally {
       setDataSyncing(false);
@@ -56,9 +64,8 @@ const AdminApp: React.FC = () => {
     useAppStore.getState().clearAdminMockState();
 
     let stale = false;
-    const forceReadyTimer = window.setTimeout(() => {
-      setPhase('ready');
-    }, BOOT_READY_MAX_MS);
+    setBootPhase('session');
+    setInitialLoadDone(false);
 
     void (async () => {
       try {
@@ -67,23 +74,24 @@ const AdminApp: React.FC = () => {
         setSession(adminSession);
         useAppStore.getState().setAdminSession(adminSession);
         if (adminSession) {
-          void syncPlatformData();
+          await syncPlatformData();
+        } else {
+          setInitialLoadDone(true);
+          setBootPhase('ready');
         }
       } catch (err) {
         console.warn('[Admin] Başlangıç oturumu:', err);
         if (!stale) {
           setSession(null);
           useAppStore.getState().setAdminSession(null);
+          setInitialLoadDone(true);
+          setBootPhase('ready');
         }
-      } finally {
-        window.clearTimeout(forceReadyTimer);
-        setPhase('ready');
       }
     })();
 
     return () => {
       stale = true;
-      window.clearTimeout(forceReadyTimer);
     };
   }, [syncPlatformData]);
 
@@ -92,12 +100,16 @@ const AdminApp: React.FC = () => {
     useAppStore.getState().setAdminSession(adminSession);
     setBootError(null);
     setBootWarnings([]);
+    setInitialLoadDone(false);
+    setBootPhase('inventory');
     await syncPlatformData();
   };
 
   const handleRetryAfterAuth = async () => {
     if (!session) return;
     setBootError(null);
+    setInitialLoadDone(false);
+    setBootPhase('inventory');
     await syncPlatformData();
   };
 
@@ -107,11 +119,15 @@ const AdminApp: React.FC = () => {
     useAppStore.getState().setAdminSession(null);
     setBootError(null);
     setBootWarnings([]);
+    setInitialLoadDone(false);
+    setBootPhase('session');
     useAppStore.getState().clearAdminMockState();
   };
 
-  if (phase === 'boot') {
-    return <AdminBootShell mode="loading" />;
+  const showBootShell = !initialLoadDone || (bootPhase !== 'ready' && !!session);
+
+  if (!session && !initialLoadDone) {
+    return <AdminBootShell mode="loading" phase={bootPhase} />;
   }
 
   if (!session) {
@@ -126,6 +142,10 @@ const AdminApp: React.FC = () => {
         onRetry={() => void handleRetryAfterAuth()}
       />
     );
+  }
+
+  if (showBootShell) {
+    return <AdminBootShell mode="loading" phase={bootPhase} />;
   }
 
   const urlParams = parseAdminUrlParams();
@@ -145,9 +165,12 @@ const AdminApp: React.FC = () => {
         adminSession={session}
         onBack={handleLogout}
         initialSubRoute={urlParams.route}
-        initialNavParams={urlParams.matchId ? { matchId: urlParams.matchId } : undefined}
+        initialNavParams={{
+          ...(urlParams.matchId ? { matchId: urlParams.matchId } : {}),
+          ...(urlParams.communityId ? { communityId: urlParams.communityId } : {}),
+        }}
         onRefreshData={async () => {
-          const result = await refreshAdminPlatform(getBootstrapDeps());
+          const result = await refreshAdminStatsOnly(getBootstrapDeps());
           setBootWarnings(result.warnings);
         }}
       />

@@ -71,6 +71,10 @@ export interface ICommunity {
   memberCount: number;
   activeMatches: number;
   isVerified: boolean;
+  joinMode?: 'OPEN' | 'REQUEST' | 'INVITE_ONLY' | string;
+  isPrivate?: boolean;
+  type?: string;
+  location?: string;
 }
 
 export interface ITeam {
