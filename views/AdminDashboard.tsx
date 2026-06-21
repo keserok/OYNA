@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store';
 import { MatchListing, PositionSlot, Player, Pitch } from '../types';
+import { EmptyState } from '../components/common/StatusState';
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -684,7 +685,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 ))}
 
                 {filteredUsersForOverride.length === 0 && (
-                  <div className="text-center py-6 text-xs text-gray-600 font-bold uppercase">Aramaya uygun aktif oyuncu bulunamadı.</div>
+                  <EmptyState title="Oyuncu Bulunamadı" message="Aramaya uygun aktif bir oyuncu bulunamadı." />
                 )}
               </div>
             </motion.div>

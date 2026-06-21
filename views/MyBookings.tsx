@@ -73,7 +73,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
       setBookings(await fetchMyBookings());
     } catch (err) {
       console.error('Rezervasyonlar yüklenemedi:', err);
-      setError('Rezervasyonların yüklenemedi. Lütfen tekrar dene.');
+      setError('Rezervasyonlar yüklenemedi. Lütfen tekrar dene.');
     } finally {
       setLoading(false);
     }

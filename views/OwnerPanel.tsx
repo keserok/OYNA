@@ -10,6 +10,7 @@ import { PITCHES } from '../constants';
 import { useAppStore } from '../store';
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
+import { LoadingState, EmptyState } from '../components/common/StatusState';
 import { OwnerTeamView } from './owner/OwnerTeamView';
 import { OwnerBankAccountsModal } from './owner/OwnerBankAccountsModal';
 import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
@@ -1031,9 +1032,13 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
                 </h3>
                 <button onClick={load} className="text-gray-400 hover:text-white" title="Yenile"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>
             </div>
-            {rows.length === 0 ? (
-                <div className="bg-[#161B22] border border-white/5 rounded-2xl p-5 text-center text-xs text-gray-500">
-                    {loading ? 'Yükleniyor...' : 'Onay bekleyen uygulama rezervasyonu yok.'}
+            {loading ? (
+                <div className="bg-[#161B22] border border-white/5 rounded-2xl">
+                    <LoadingState message="Yükleniyor..." size="sm" />
+                </div>
+            ) : rows.length === 0 ? (
+                <div className="bg-[#161B22] border border-white/5 rounded-2xl">
+                    <EmptyState title="Bekleyen Talep Yok" message="Onay bekleyen uygulama rezervasyonu bulunmuyor." />
                 </div>
             ) : (
                 <div className="space-y-3">
