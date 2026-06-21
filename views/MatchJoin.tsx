@@ -803,7 +803,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setLobbyTab('chat');
     } catch (e: any) {
       console.error('Join error:', e);
-      showActionError(e.message || 'Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
+      showActionError('Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -872,7 +872,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await updateMatch({ ...match, reservePlayers: updatedReserves });
     } catch (e: any) {
       console.error('Join reserve error:', e);
-      showActionError(e.message || 'Yedek olarak katılırken bir hata oluştu.');
+      showActionError('Yedek olarak katılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -898,7 +898,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setShowLeaveConfirm(false);
     } catch (e: any) {
       console.error('Leave reserves error:', e);
-      showActionError(e.message || 'Yedek listesinden çıkarken bir hata oluştu.');
+      showActionError('Yedek listesinden çıkarken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -1054,7 +1054,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       onBack();
     } catch (e: any) {
       console.error('Leave match error:', e);
-      showActionError(e.message || 'Maçtan ayrılırken bir hata oluştu.');
+      showActionError('Maçtan ayrılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -1240,7 +1240,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 showActionSuccess('Kapora ödemesi başarıyla gerçekleştirildi! ⚽');
                               } catch (e: any) {
                                 console.error(e);
-                                showActionError(e.message || 'Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
+                                showActionError('Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
                               } finally {
                                 setIsProcessing(false);
                               }
