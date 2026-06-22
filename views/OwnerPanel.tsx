@@ -10,6 +10,7 @@ import { PITCHES } from '../constants';
 import { useAppStore } from '../store';
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
+import { LoadingState, EmptyState } from '../components/common/StatusState';
 import { OwnerTeamView } from './owner/OwnerTeamView';
 import { OwnerBankAccountsModal } from './owner/OwnerBankAccountsModal';
 import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
@@ -308,6 +309,7 @@ const FinancialCalendarView: React.FC<{
   onNavigate?: (view: string) => void;
   onPricingUpdated?: () => void;
 }> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, onNavigate, onPricingUpdated }) => {
+    const notify = useOwnerToast();
     const weekDates = useMemo(() => getWeekDates(), []);
     const todayIndex = useMemo(() => {
         const today = todayISO();
@@ -356,7 +358,7 @@ const FinancialCalendarView: React.FC<{
             const rows = await getPitchBookings(pitchId, selectedDateISO, selectedCourtId || undefined);
             setBookings(rows.map(mapDbBookingToCalendar));
         } catch (err) {
-            console.warn('Takvim rezervasyonları yüklenemedi:', err);
+            notify(toTurkishError(err), 'error');
             setBookings([]);
         } finally {
             setIsLoadingBookings(false);
@@ -393,7 +395,7 @@ const FinancialCalendarView: React.FC<{
             setFlashDeals(deals);
             setClosedSlots(exceptions);
         } catch (err) {
-            console.warn('Slot meta yüklenemedi:', err);
+            notify(toTurkishError(err), 'error');
             setFlashDeals([]);
             setClosedSlots([]);
         }
@@ -510,7 +512,7 @@ const FinancialCalendarView: React.FC<{
                                 <button 
                                     onClick={() => {
                                       if (readOnly) {
-                                        alert('Hesabınız salt okunur modda.');
+                                        notify('Hesabınız salt okunur modda.', 'warning');
                                         return;
                                       }
                                       setIsSubscriptionModalOpen(true);
@@ -629,7 +631,7 @@ const FinancialCalendarView: React.FC<{
                                         <button 
                                             onClick={() => {
                                               if (readOnly) {
-                                                alert('Hesabınız salt okunur modda. Yeni rezervasyon oluşturulamaz.');
+                                                notify('Hesabınız salt okunur modda. Yeni rezervasyon oluşturulamaz.', 'warning');
                                                 return;
                                               }
                                               handleQuickCreate(time);
@@ -649,7 +651,7 @@ const FinancialCalendarView: React.FC<{
                                         <button 
                                             onClick={() => {
                                               if (!canFlashDeals) {
-                                                alert('Flash deal mevcut planınızda aktif değil.');
+                                                notify('Flash deal mevcut planınızda aktif değil.', 'warning');
                                                 return;
                                               }
                                               setFlashDealModalOpen(time);
@@ -767,7 +769,7 @@ const FinancialCalendarView: React.FC<{
                             onClick={async () => {
                                 if (!isQuickCreateOpen || !selectedCourtId) return;
                                 if (!isRealPitch) {
-                                    alert('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.');
+                                    notify('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.', 'warning');
                                     return;
                                 }
                                 setIsAddingSlot(true);
@@ -798,7 +800,7 @@ const FinancialCalendarView: React.FC<{
                                     setCustomerPhone('');
                                     setPaymentStatus('PENDING');
                                 } catch (err) {
-                                    alert(toTurkishError(err));
+                                    notify(toTurkishError(err), 'error');
                                 } finally {
                                     setIsAddingSlot(false);
                                 }
@@ -968,6 +970,7 @@ interface RealPendingBooking {
 }
 
 const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) => {
+    const notify = useOwnerToast();
     const [rows, setRows] = useState<RealPendingBooking[]>([]);
     const [loading, setLoading] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
@@ -987,11 +990,11 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
             if (error) throw error;
             setRows((data ?? []) as unknown as RealPendingBooking[]);
         } catch (err) {
-            console.error('Bekleyen rezervasyonlar yüklenemedi:', err);
+            notify(toTurkishError(err), 'error');
         } finally {
             setLoading(false);
         }
-    }, [pitchId]);
+    }, [pitchId, notify]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -1014,7 +1017,7 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
             }
             setRows(prev => prev.filter(r => r.id !== id));
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'İşlem başarısız.');
+            notify(toTurkishError(err), 'error');
         } finally {
             setBusyId(null);
         }
@@ -1031,9 +1034,13 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
                 </h3>
                 <button onClick={load} className="text-gray-400 hover:text-white" title="Yenile"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>
             </div>
-            {rows.length === 0 ? (
-                <div className="bg-[#161B22] border border-white/5 rounded-2xl p-5 text-center text-xs text-gray-500">
-                    {loading ? 'Yükleniyor...' : 'Onay bekleyen uygulama rezervasyonu yok.'}
+            {loading ? (
+                <div className="bg-[#161B22] border border-white/5 rounded-2xl">
+                    <LoadingState message="Yükleniyor..." size="sm" />
+                </div>
+            ) : rows.length === 0 ? (
+                <div className="bg-[#161B22] border border-white/5 rounded-2xl">
+                    <EmptyState title="Bekleyen Talep Yok" message="Onay bekleyen uygulama rezervasyonu bulunmuyor." />
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -1081,6 +1088,7 @@ interface PendingActionsViewProps {
 }
 
 const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, onApprove, onReject, onBack }) => {
+    const notify = useOwnerToast();
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
     const [publicMatches, setPublicMatches] = useState<Array<{
@@ -1105,12 +1113,12 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
             const rows = await getPitchAppMatches(realPitchId);
             setPublicMatches(rows);
         } catch (err) {
-            console.warn('Oyuncu maçları yüklenemedi:', err);
+            notify(toTurkishError(err), 'error');
             setPublicMatches([]);
         } finally {
             setMatchesLoading(false);
         }
-    }, [realPitchId]);
+    }, [realPitchId, notify]);
 
     useEffect(() => {
         if (subTab === 'PUBLIC_MATCHES') loadPublicMatches();
@@ -1419,9 +1427,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       setHourlyOccupancy(buildHourlyOccupancyGrid(bookings, courtMeta));
       setPendingRequests(pending.map((b) => bookingToPendingRequest(b, approveMins)));
     } catch (err) {
-      console.warn('Panel verileri yüklenemedi:', err);
+      notify(toTurkishError(err), 'error');
     }
-  }, [courts]);
+  }, [courts, notify]);
 
   const applyPitch = React.useCallback(async (pitch: OwnerPitch, demo: boolean, uid: string) => {
     const facilityCourts = (pitch.courts ?? []).filter((c) => c.is_active !== false);
@@ -1488,7 +1496,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         await applyPitch(next, false, uid);
       }
     } catch (err) {
-      console.warn('Tesis değiştirilemedi:', err);
+      notify(toTurkishError(err), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -1544,7 +1552,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
         await applyPitch(pitch, demo, uid);
       } catch (err) {
-        console.warn('Tesis yüklenemedi:', err);
+        if (active) notify(toTurkishError(err), 'error');
       } finally {
         if (active) setIsLoading(false);
       }
@@ -1675,7 +1683,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     if (!guardWrite()) return;
     if (!facilityData?.id) return;
     if (!isDemoMode && facilityData.verificationStatus !== 'approved') {
-      alert('Tesis admin onayından sonra yayına alınabilir.');
+      notify('Tesis admin onayından sonra yayına alınabilir.', 'warning');
       return;
     }
 

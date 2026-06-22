@@ -12,6 +12,7 @@ import {
   toTurkishError,
 } from '../../services/pitchOwnerService';
 import type { PitchStaffMember, PitchStaffTask } from '../../types';
+import { useOwnerToast } from './components/useOwnerToast';
 
 interface OwnerTeamViewProps {
   pitchId: string;
@@ -38,6 +39,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   readOnly = false,
   maxStaff = 10,
 }) => {
+  const notify = useOwnerToast();
   const [teamTab, setTeamTab] = useState<'TASKS' | 'STAFF'>('TASKS');
   const [staff, setStaff] = useState<PitchStaffMember[]>([]);
   const [tasks, setTasks] = useState<PitchStaffTask[]>([]);
@@ -88,7 +90,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
       await toggleStaffTaskStatus(task.id, nextCompleted);
     } catch (err) {
       await load();
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     }
   };
 
@@ -108,7 +110,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
       setIsAddTaskOpen(false);
       await load();
     } catch (err) {
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -117,7 +119,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   const handleCreateStaff = async () => {
     if (!canUseDb || readOnly || !newStaff.name.trim()) return;
     if (staff.length >= maxStaff) {
-      alert(`Mevcut planınız en fazla ${maxStaff} personel destekliyor.`);
+      notify(`Mevcut planınız en fazla ${maxStaff} personel destekliyor.`, 'warning');
       return;
     }
     setIsSaving(true);
@@ -132,7 +134,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
       setIsAddStaffOpen(false);
       await load();
     } catch (err) {
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -146,7 +148,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
       await upsertStaffMember(pitchId, { id: member.id, name: member.name, status: next });
     } catch (err) {
       await load();
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     }
   };
 
@@ -156,7 +158,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
       await deleteStaffMember(memberId);
       await load();
     } catch (err) {
-      alert(toTurkishError(err));
+      notify(toTurkishError(err), 'error');
     }
   };
 
@@ -228,7 +230,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                     onClick={() => {
                       if (readOnly) return;
                       if (staff.length >= maxStaff) {
-                        alert(`Mevcut planınız en fazla ${maxStaff} personel destekliyor.`);
+                        notify(`Mevcut planınız en fazla ${maxStaff} personel destekliyor.`, 'warning');
                         return;
                       }
                       setIsAddStaffOpen(true);

@@ -140,7 +140,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   const rawNotifs = isGK ? GK_NOTIFICATIONS : isRef ? REF_NOTIFICATIONS : GENERAL_NOTIFICATIONS;
   
-  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, setSelectedMatch, setView, clearUnreadNotifications, markAllNotificationsAsRead } = useAppStore();
+  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, setSelectedMatch, navigateTo, clearUnreadNotifications, markAllNotificationsAsRead } = useAppStore();
   
   const storeNotifs = userNotifications.map(n => ({
     id: n.id,
@@ -295,7 +295,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                         const m = adminMatches.find(x => x.id === n.payload?.matchId);
                         if (m) {
                           setSelectedMatch(m);
-                          setView('MATCH_JOIN' as AppView);
+                          navigateTo('MATCH_JOIN' as AppView);
                         }
                       }
                     }}
@@ -462,7 +462,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                               setIsPaying(false);
                               setPaySuccess(false);
                               onBack();
-                              setView('UPCOMING_MATCHES' as AppView);
+                              navigateTo('UPCOMING_MATCHES' as AppView);
                             }, 1500);
                           }, 1500);
                         }}

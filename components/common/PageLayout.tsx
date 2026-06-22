@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 
 interface PageLayoutProps {
@@ -22,11 +21,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   scrollable = true,
 }) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.995 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.995 }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+    <div
       className={`flex flex-col w-full min-h-screen bg-[#0A0E14] text-white overflow-hidden max-w-lg md:max-w-2xl mx-auto md:border-x md:border-white/5 md:shadow-2xl relative ${className}`}
     >
       {/* Dynamic top safe area header */}
@@ -69,6 +64,6 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
         {children}
       </main>
 
-    </motion.div>
+    </div>
   );
 };

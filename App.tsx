@@ -7,20 +7,7 @@ import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import PendingVerificationView from './views/PendingVerificationView';
-
-// ─── Page transition wrapper ─────────────────────────────────────────────────
-const PageTransition: React.FC<{ children: React.ReactNode; viewKey: string }> = ({ children, viewKey }) => (
-  <motion.div
-    key={viewKey}
-    initial={{ opacity: 0, y: 12, scale: 0.99 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -8, scale: 0.995 }}
-    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-    style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}
-  >
-    {children}
-  </motion.div>
-);
+import { PAGE_TRANSITION } from './components/common/motion';
 
 // Eagerly loaded for immediate display
 import SplashScreen from './views/SplashScreen';
@@ -40,7 +27,6 @@ const MyListings = lazy(() => import('./views/MyListings'));
 const ListingDetails = lazy(() => import('./views/ListingDetails'));
 const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
 const Notifications = lazy(() => import('./views/Notifications'));
-const BookingAddons = lazy(() => import('./views/BookingAddons'));
 const SettingsScreen = lazy(() => import('./views/SettingsScreen'));
 const VotingScreen = lazy(() => import('./views/VotingScreen'));
 const MotmReveal = lazy(() => import('./views/MotmReveal'));
@@ -98,32 +84,27 @@ const DEV_MODE =
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
-  const [studioReturnView, setStudioReturnView] = React.useState<AppView>('DASHBOARD');
   const {
     view,
     role,
     isAuthReady,
-    addOnTotal,
     hasMotmCoupon,
     selectedMatch,
     isUserPro,
     selectedDiaryId,
     selectedGk,
     selectedRef,
-    marketplaceReturnView,
-    matchJoinReturnView,
-    setView,
+    navigateTo,
+    goBack,
+    resetNavigation,
     setRole,
     setIsAuthReady,
-    setAddOnTotal,
     setHasMotmCoupon,
     setSelectedMatch,
     setIsUserPro,
     setSelectedDiaryId,
     setSelectedGk,
     setSelectedRef,
-    setMarketplaceReturnView,
-    setMatchJoinReturnView,
     impersonatedUser,
     setImpersonatedUser,
     originalRole,
@@ -141,10 +122,10 @@ const App: React.FC = () => {
       // 🛠️ Geliştirme: direkt Dashboard — login yok
       setRole(UserRole.CAPTAIN);
       setIsAuthReady(true);
-      setView('DASHBOARD');
+      resetNavigation('DASHBOARD');
     } else {
       // 🚀 Prodüksiyon: normal akış
-      setView('SPLASH');
+      resetNavigation('SPLASH');
     }
   }, []);
 
@@ -181,7 +162,7 @@ const App: React.FC = () => {
         joinDate: new Date().toISOString(),
         matchCount: 0,
       });
-      setView('DASHBOARD');
+      resetNavigation('DASHBOARD');
       window.history.replaceState({}, '', window.location.pathname);
     })();
   }, []);
@@ -219,11 +200,11 @@ const App: React.FC = () => {
             setRole(currentRole);
             // Kaleci/Hakem → detaylı başvuru formu; Tesis → owner panel; diğer → konum
             if (currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
-              setView('SERVICE_APPLICATION');
+              resetNavigation('SERVICE_APPLICATION');
             } else if (currentRole === UserRole.OWNER) {
-              setView('OWNER_PANEL');
+              resetNavigation('OWNER_PANEL');
             } else {
-              setView('LOCATION_PROMPT');
+              resetNavigation('LOCATION_PROMPT');
             }
           } else {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
@@ -252,40 +233,40 @@ const App: React.FC = () => {
 
                 if (profile.verification_status === 'rejected') {
                   setVerificationNote(profile.verification_notes ?? null);
-                  setView('SERVICE_APPLICATION');
+                  resetNavigation('SERVICE_APPLICATION');
                 } else if (!hasApplication) {
                   setVerificationNote(null);
-                  setView('SERVICE_APPLICATION');
+                  resetNavigation('SERVICE_APPLICATION');
                 } else if (profile.verification_status === 'pending') {
-                  setView('PENDING_VERIFICATION');
+                  resetNavigation('PENDING_VERIFICATION');
                 } else {
-                  setView('SERVICE_DASHBOARD');
+                  resetNavigation('SERVICE_DASHBOARD');
                 }
               } else if (profile.verification_status === 'pending' && primaryRole !== UserRole.OWNER) {
-                setView('PENDING_VERIFICATION');
+                resetNavigation('PENDING_VERIFICATION');
               } else if (primaryRole === UserRole.OWNER) {
-                setView('OWNER_PANEL');
+                resetNavigation('OWNER_PANEL');
               } else {
-                setView('LOCATION_PROMPT');
+                resetNavigation('LOCATION_PROMPT');
               }
             }
           }
         } else {
           setRole(UserRole.PLAYER);
-          setView('SPLASH');
+          resetNavigation('SPLASH');
         }
       } catch (error: any) {
         console.error('[App] Auth state error:', error);
         if (error?.message?.includes('JWT') || error?.message?.includes('Auth') || error?.code === 'PGRST301') {
           logout().catch(e => console.error('[App] Sign out error on invalid session:', e));
-          setView('ROLE_SELECTION');
+          resetNavigation('ROLE_SELECTION');
         }
       } finally {
         setIsAuthReady(true);
       }
     });
     return () => unsubscribe();
-  }, [setRole, setView, setIsAuthReady]);
+  }, [setRole, resetNavigation, setIsAuthReady]);
 
   // ─── Push Notification Entegrasyonu ────────────────────────────────────────
   useEffect(() => {
@@ -323,7 +304,7 @@ const App: React.FC = () => {
             supabase.from('matches').select('*').eq('id', parts[1]).single().then(({ data }) => {
               if (data) {
                 useAppStore.getState().setSelectedMatch(data as any);
-                setView('MATCH_JOIN');
+                useAppStore.getState().navigateTo('MATCH_JOIN');
               }
             });
           }
@@ -381,9 +362,9 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Error saving role:', error);
       }
-      setView(navigateBasedOnRole(selectedRole));
+      resetNavigation(navigateBasedOnRole(selectedRole));
     } else {
-      setView('AUTH');
+      navigateTo('AUTH');
     }
   };
 
@@ -392,265 +373,229 @@ const App: React.FC = () => {
       case 'SPLASH':
         return <SplashScreen onStart={() => {
           if (!auth.currentUser) {
-            setView('ROLE_SELECTION');
+            resetNavigation('ROLE_SELECTION');
             return;
           }
-          setView(navigateBasedOnRole(role));
+          resetNavigation(navigateBasedOnRole(role));
         }} />;
       case 'AUTH':
-        return <AuthScreen role={role} onSuccess={() => setView(navigateBasedOnRole(role))} onBack={() => setView('ROLE_SELECTION')} />;
+        return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('ROLE_SELECTION')} />;
       case 'LOCATION_PROMPT':
         return <LocationPrompt
-          onPermissionGranted={() => setView(navigateBasedOnRole(role))}
-          onSkip={() => setView(navigateBasedOnRole(role))}
+          onPermissionGranted={() => resetNavigation(navigateBasedOnRole(role))}
+          onSkip={() => resetNavigation(navigateBasedOnRole(role))}
         />;
       case 'ROLE_SELECTION':
         return <RoleSelection
           onSelect={handleRoleSelect}
           onBack={() => { }}
-          onNavigate={(v) => setView(v)}
+          onNavigate={(v) => navigateTo(v)}
         />;
       case 'PENDING_VERIFICATION':
         return <PendingVerificationView
-          onApproved={() => setView(navigateBasedOnRole(role))}
-          onLogout={() => setView('SPLASH')}
-          onReapply={(note) => { setVerificationNote(note); setView('SERVICE_APPLICATION'); }}
+          onApproved={() => resetNavigation(navigateBasedOnRole(role))}
+          onLogout={() => resetNavigation('SPLASH')}
+          onReapply={(note) => { setVerificationNote(note); navigateTo('SERVICE_APPLICATION'); }}
         />;
       case 'ADMIN_PANEL':
-        return <AdminPanel onBack={() => setView('ROLE_SELECTION')} />;
+        return <AdminPanel onBack={() => goBack('ROLE_SELECTION')} />;
       case 'OWNER_PANEL':
         return (
           <OwnerPanel
-            onBack={() => setView('ROLE_SELECTION')}
-            onNavigate={(v) => setView(v as AppView)}
-            onNeedOnboarding={() => setView('PARTNER_ONBOARDING')}
+            onBack={() => goBack('ROLE_SELECTION')}
+            onNavigate={(v) => navigateTo(v as AppView)}
+            onNeedOnboarding={() => navigateTo('PARTNER_ONBOARDING')}
           />
         );
       case 'SERVICE_DASHBOARD':
-        return <ServiceDashboard role={role!} onBack={() => setView('ROLE_SELECTION')} onNavigate={(v) => setView(v)} />;
+        return <ServiceDashboard role={role!} onBack={() => goBack('ROLE_SELECTION')} onNavigate={(v) => navigateTo(v)} />;
       case 'PARTNER_ONBOARDING':
         return <PartnerOnboarding
-          onComplete={() => setView('OWNER_PANEL')}
-          onClose={() => setView('ROLE_SELECTION')}
+          onComplete={() => resetNavigation('OWNER_PANEL')}
+          onClose={() => goBack('ROLE_SELECTION')}
         />;
       case 'SERVICE_APPLICATION':
         return <ServiceApplication
           role={(role === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}
           rejectionNote={verificationNote}
-          onSubmitted={() => { setVerificationNote(null); setView('PENDING_VERIFICATION'); }}
-          onBack={() => { setVerificationNote(null); setView('ROLE_SELECTION'); }}
+          onSubmitted={() => { setVerificationNote(null); resetNavigation('PENDING_VERIFICATION'); }}
+          onBack={() => { setVerificationNote(null); goBack('ROLE_SELECTION'); }}
         />;
       case 'QR_SCANNER':
-        return <QRScannerView 
-          onBack={() => setView('OWNER_PANEL')} 
+        return <QRScannerView
+          onBack={() => goBack('OWNER_PANEL')}
           onResult={(res) => {
             setMatches(prev => [res, ...prev]);
-          }} 
+          }}
         />;
       case 'MATCHES':
-        return <MatchesView onBack={() => setView('OWNER_PANEL')} matches={matches} />;
+        return <MatchesView onBack={() => goBack('OWNER_PANEL')} matches={matches} />;
       case 'UPCOMING_MATCHES':
-        return <UpcomingMatchesView onBack={() => setView('DASHBOARD')} onNavigate={(v) => {
-          if (v === 'MATCH_JOIN') setMatchJoinReturnView('UPCOMING_MATCHES');
-          setView(v);
-        }} />;
+        return <UpcomingMatchesView onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'DASHBOARD':
         return <Dashboard
-          onNavigate={(newView) => {
-            if (newView === 'MARKETPLACE_GK' || newView === 'MARKETPLACE_REF') {
-              setMarketplaceReturnView('DASHBOARD');
-            }
-            if (newView === 'STUDIO') {
-              setStudioReturnView('DASHBOARD');
-            }
-            setView(newView);
-          }}
-          onBack={() => setView('ROLE_SELECTION')}
+          onNavigate={(newView) => navigateTo(newView)}
+          onBack={() => goBack('ROLE_SELECTION')}
           selectedGk={selectedGk}
           selectedRef={selectedRef}
         />;
       case 'PITCH_DISCOVERY':
         return <PitchDiscovery
-          onBack={() => setView('DASHBOARD')}
-          onBook={() => setView('BOOKING_ADDONS')}
-          onNavigate={(v) => setView(v as AppView)}
+          onBack={() => goBack('DASHBOARD')}
+          onNavigate={(v) => navigateTo(v as AppView)}
         />;
       case 'MY_BOOKINGS':
-        return <MyBookings onBack={() => setView('DASHBOARD')} />;
+        return <MyBookings onBack={() => goBack('DASHBOARD')} />;
       case 'LEGAL':
-        return <LegalScreen onBack={() => setView('SETTINGS')} />;
+        return <LegalScreen onBack={() => goBack('SETTINGS')} />;
       case 'MARKETPLACE_GK':
         return <Marketplace
           type="GK"
-          onBack={() => setView(marketplaceReturnView)}
+          onBack={() => goBack('DASHBOARD')}
           onSelect={(gk) => {
             setSelectedGk(gk as Goalkeeper);
-            setView(marketplaceReturnView);
+            goBack('DASHBOARD');
           }}
         />;
       case 'MARKETPLACE_REF':
         return <Marketplace
           type="REF"
-          onBack={() => setView(marketplaceReturnView)}
+          onBack={() => goBack('DASHBOARD')}
           onSelect={(ref) => {
             setSelectedRef(ref as Referee);
-            setView(marketplaceReturnView);
+            goBack('DASHBOARD');
           }}
         />;
       case 'MY_LISTINGS':
-        return <MyListings onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <MyListings onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'LISTING_DETAILS':
-        return <ListingDetails onBack={() => setView('MY_LISTINGS')} />;
-      case 'BOOKING_ADDONS':
-        return <BookingAddons
-          onBack={() => setView('PITCH_DISCOVERY')}
-          selectedGk={selectedGk}
-          selectedRef={selectedRef}
-          onRemoveGk={() => setSelectedGk(null)}
-          onRemoveRef={() => setSelectedRef(null)}
-          onNavigate={(newView) => {
-            if (newView === 'MARKETPLACE_GK' || newView === 'MARKETPLACE_REF') {
-              setMarketplaceReturnView('BOOKING_ADDONS');
-            }
-            setView(newView);
-          }}
-          onContinue={(total) => {
-            setAddOnTotal(total);
-            setView('PAYMENT');
-          }}
-        />;
+        return <ListingDetails onBack={() => goBack('MY_LISTINGS')} />;
       case 'PAYMENT':
         return <PaymentScreen
-          extraFee={addOnTotal}
           hasMotmCoupon={hasMotmCoupon}
-          onBack={() => setView('BOOKING_ADDONS')}
-          onUpgradeRequest={() => setView('PREMIUM')}
-          onViewTicket={() => setView('MATCH_TICKET')}
+          onBack={() => goBack('OPPONENT_FINDER')}
+          onUpgradeRequest={() => navigateTo('PREMIUM')}
+          onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
-        return <MyTeam onBack={() => setView('DASHBOARD')} onNavigate={(v) => {
-          if (v === 'STUDIO') setStudioReturnView('MY_TEAM');
-          setView(v);
-        }} />;
+        return <MyTeam onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'STUDIO':
-        return <Studio onBack={() => setView(studioReturnView)} onNavigate={(v) => setView(v)} />;
+        return <Studio onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'PROFILE':
         return <ProfileScreen
           role={role || UserRole.PLAYER}
-          onBack={() => setView('DASHBOARD')}
-          onNavigate={(v) => setView(v)}
+          onBack={() => goBack('DASHBOARD')}
+          onNavigate={(v) => navigateTo(v)}
           onOpenDiaryEntry={(id) => {
             setSelectedDiaryId(id);
-            setView('MATCH_DIARY_DETAIL');
+            navigateTo('MATCH_DIARY_DETAIL');
           }}
           isPro={isUserPro}
         />;
       case 'WALLET':
         return <WalletScreen
           onBack={() => {
-            const ret = useAppStore.getState().walletReturnView;
             useAppStore.getState().setWalletInitialTab('MAIN');
-            setView(ret ?? 'DASHBOARD');
+            goBack('DASHBOARD');
           }}
         />;
       // MATCH_LOBBY kaldırıldı — tüm işlemler MatchJoin'de yapılıyor
       case 'OPPONENT_FINDER':
-        return <OpponentFinder onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <OpponentFinder onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_CALENDAR':
-        return <MatchCalendar onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <MatchCalendar onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DIARY_DETAIL':
         return <MatchDiaryDetail
           diaryId={selectedDiaryId}
-          onBack={() => setView('PROFILE')}
+          onBack={() => goBack('PROFILE')}
         />;
 
       case 'SETTINGS':
-        return <SettingsScreen onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <SettingsScreen onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'VOTING':
-        return <VotingScreen onBack={() => setView('DASHBOARD')} onComplete={() => setView('MOTM_REVEAL')} />;
+        return <VotingScreen onBack={() => goBack('DASHBOARD')} onComplete={() => navigateTo('MOTM_REVEAL')} />;
       case 'MOTM_REVEAL':
         return <MotmReveal
           onClaim={() => {
             setHasMotmCoupon(true);
-            setView('DASHBOARD');
+            resetNavigation('DASHBOARD');
           }}
-          onBack={() => setView('DASHBOARD')}
+          onBack={() => goBack('DASHBOARD')}
         />;
       case 'OYNA_TV':
-        return <OynaTv onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <OynaTv onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DISCOVERY':
         return <MatchDiscovery
-          onBack={() => setView('DASHBOARD')}
+          onBack={() => goBack('DASHBOARD')}
           onSelect={(match) => {
             setSelectedMatch(match);
-            setMatchJoinReturnView('MATCH_DISCOVERY');
-            setView('MATCH_JOIN');
+            navigateTo('MATCH_JOIN');
           }}
         />;
       case 'MATCH_JOIN':
         return <MatchJoin
           match={selectedMatch}
-          onBack={() => setView(matchJoinReturnView)}
-          onJoin={() => setView('DASHBOARD')} // Kadro kaydından sonra Dashboard'a dön
+          onBack={() => goBack('MATCH_DISCOVERY')}
+          onJoin={() => resetNavigation('DASHBOARD')} // Kadro kaydından sonra Dashboard'a dön
         />;
       case 'PREMIUM':
         return <PremiumScreen
-          onBack={() => setView('DASHBOARD')}
+          onBack={() => goBack('DASHBOARD')}
           onUpgrade={() => {
             setIsUserPro(true);
-            setView('PROFILE');
+            navigateTo('PROFILE');
           }}
         />;
       case 'CHAT':
-        return <ChatScreen 
-          targetName={chatTarget?.name} 
-          targetRole={chatTarget?.role} 
-          targetAvatar={chatTarget?.avatar} 
-          onBack={() => setView('MATCH_DISCOVERY')} 
+        return <ChatScreen
+          targetName={chatTarget?.name}
+          targetRole={chatTarget?.role}
+          targetAvatar={chatTarget?.avatar}
+          onBack={() => goBack('MATCH_DISCOVERY')}
         />;
       case 'MATCH_TICKET':
-        return <MatchTicket onBack={() => setView('DASHBOARD')} />;
+        return <MatchTicket onBack={() => goBack('DASHBOARD')} />;
       case 'SCOUT_DASHBOARD':
-        return <ScoutDashboard onBack={() => setView('PROFILE')} />;
+        return <ScoutDashboard onBack={() => goBack('PROFILE')} />;
       case 'POST_MATCH':
-        return <PostMatchReport onBack={() => setView('PROFILE')} />;
+        return <PostMatchReport onBack={() => goBack('PROFILE')} />;
       case 'TEAM_BUILDER':
-        return <TeamBuilder onBack={() => setView('PROFILE')} />;
+        return <TeamBuilder onBack={() => goBack('PROFILE')} />;
       case 'COMMUNITY_VIEW':
         return <CommunityView
-          onBack={() => setView('DASHBOARD')}
-          onNavigate={(v) => setView(v)}
+          onBack={() => goBack('DASHBOARD')}
+          onNavigate={(v) => navigateTo(v)}
           community={{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }}
           currentUser={{ id: 'u1', name: 'Ahmet', email: 'ahmet@boun.edu.tr', roles: [], communities: ['c1'], fairPlayScore: 100 }}
         />;
       case 'TEAM_CREATOR':
         return <TeamCreator
-          onBack={() => setView('PROFILE')}
+          onBack={() => goBack('PROFILE')}
           onComplete={async (teamData) => {
             try {
               await useAppStore.getState().createTeam(teamData);
-              setView('MY_TEAM');
+              navigateTo('MY_TEAM');
             } catch (error) {
               console.error('Takım oluşturulamadı:', error);
-              setView('PROFILE');
+              goBack('PROFILE');
             }
           }}
           communities={[{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }]}
         />;
       case 'TRANSFER_CENTER':
-        return <TransferCenter onBack={() => setView('COMMUNITY_VIEW')} />;
+        return <TransferCenter onBack={() => goBack('COMMUNITY_VIEW')} />;
       case 'LEADERBOARDS':
-        return <Leaderboards onBack={() => setView('COMMUNITY_VIEW')} />;
+        return <Leaderboards onBack={() => goBack('COMMUNITY_VIEW')} />;
       case 'POST_MATCH_EVAL':
-        return <PostMatchEval onBack={() => setView('COMMUNITY_VIEW')} onComplete={() => setView('COMMUNITY_VIEW')} />;
+        return <PostMatchEval onBack={() => goBack('COMMUNITY_VIEW')} onComplete={() => goBack('COMMUNITY_VIEW')} />;
       case 'TOURNAMENT_BRACKET':
-        return <TournamentBracket onBack={() => setView('COMMUNITY_VIEW')} />;
+        return <TournamentBracket onBack={() => goBack('COMMUNITY_VIEW')} />;
       case 'COMMUNITY_ADMIN_DASHBOARD':
-        return <CommunityAdminDashboard onBack={() => setView('COMMUNITY_VIEW')} />;
+        return <CommunityAdminDashboard onBack={() => goBack('COMMUNITY_VIEW')} />;
       case 'MATCH_CREATE':
-        return <MatchCreate onBack={() => setView('DASHBOARD')} onNavigate={(v) => setView(v)} />;
+        return <MatchCreate onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       default:
-        return <SplashScreen onStart={() => setView('AUTH')} />;
+        return <SplashScreen onStart={() => navigateTo('AUTH')} />;
     }
   };
 
@@ -668,10 +613,7 @@ const App: React.FC = () => {
       <AnimatePresence mode="popLayout">
         <motion.div
           key={view}
-          initial={{ opacity: 0, y: 16, scale: 0.99 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -10, scale: 0.995 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          {...PAGE_TRANSITION}
           className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : ''}`}
         >
           <Suspense fallback={<ViewLoader />}>
@@ -682,7 +624,7 @@ const App: React.FC = () => {
 
       <AnimatePresence>
         {showBottomNav && (
-          <BottomNav currentView={view} onNavigate={setView} />
+          <BottomNav currentView={view} onNavigate={resetNavigation} />
         )}
       </AnimatePresence>
 
@@ -719,7 +661,7 @@ const App: React.FC = () => {
                 }
                 setImpersonatedUser(null);
                 setOriginalRole(null);
-                setView('ADMIN_PANEL');
+                resetNavigation('ADMIN_PANEL');
               }}
               className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full transition-all"
             >

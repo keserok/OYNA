@@ -48,7 +48,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const setImpersonatedUser = useAppStore((s) => s.setImpersonatedUser);
     const setOriginalRole = useAppStore((s) => s.setOriginalRole);
     const setRole = useAppStore((s) => s.setRole);
-    const setView = useAppStore((s) => s.setView);
+    const resetNavigation = useAppStore((s) => s.resetNavigation);
     const role = useAppStore((s) => s.role);
     const addAdminLog = useAppStore((s) => s.addAdminLog);
     const loadServices = useAppStore((s) => s.loadServices);
@@ -138,9 +138,9 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 setOriginalRole(role);
                 setImpersonatedUser(targetUser as any);
                 setRole((targetUser as any).role || 'PLAYER');
-                if ((targetUser as any).role === 'OWNER') setView('OWNER_PANEL');
-                else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') setView('SERVICE_DASHBOARD');
-                else setView('DASHBOARD');
+                if ((targetUser as any).role === 'OWNER') resetNavigation('OWNER_PANEL');
+                else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') resetNavigation('SERVICE_DASHBOARD');
+                else resetNavigation('DASHBOARD');
 
                 try { await logImpersonation(targetUser.id); } catch { /* audit optional */ }
                 addAdminLog({

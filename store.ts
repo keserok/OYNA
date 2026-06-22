@@ -194,17 +194,15 @@ interface AppState {
   isHydrated: boolean;
   initApp: () => Promise<void>;
   view: AppView;
+  navigationStack: AppView[];
   role: UserRole | null;
   isAuthReady: boolean;
-  addOnTotal: number;
   hasMotmCoupon: boolean;
   selectedMatch: MatchListing | null;
   isUserPro: boolean;
   selectedDiaryId: string | null;
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
-  marketplaceReturnView: AppView;
-  matchJoinReturnView: AppView;
   reliabilityScore: number;
   banExpiresAt: string | null;
   setReliabilityScore: (score: number) => void;
@@ -292,9 +290,14 @@ interface AppState {
 
   // ─── Basic actions ───────────────────────────────────────────────
   setView: (view: AppView) => void;
+  /** Geçerli ekranı geçmiş yığınına ekleyip yeni ekrana geçer. */
+  navigateTo: (view: AppView) => void;
+  /** Yığından bir önceki ekrana döner; yığın boşsa fallback (veya mevcut ekran) kullanılır. */
+  goBack: (fallback?: AppView) => void;
+  /** Geçmiş yığınını temizleyip verilen ekranı yeni kök olarak ayarlar. */
+  resetNavigation: (view: AppView) => void;
   setRole: (role: UserRole | null) => void;
   setIsAuthReady: (isReady: boolean) => void;
-  setAddOnTotal: (total: number) => void;
   setHasMotmCoupon: (hasCoupon: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
   setIsUserPro: (isPro: boolean) => void;
@@ -303,8 +306,6 @@ interface AppState {
   setActiveDraftId: (id: string | null) => void;
   setSelectedGk: (gk: Goalkeeper | null) => void;
   setSelectedRef: (ref: Referee | null) => void;
-  setMarketplaceReturnView: (view: AppView) => void;
-  setMatchJoinReturnView: (view: AppView) => void;
   bookingPitch: Pitch | null;
   bookingCourt: Court | null;
   bookingDate: string | null;
@@ -319,12 +320,10 @@ interface AppState {
   setBookingDeposit: (deposit: number | null) => void;
 
   savedCards: SavedPaymentCard[];
-  walletReturnView: AppView | null;
   walletInitialTab: WalletTab;
   walletPendingDeposit: boolean;
   addSavedCard: (card: Omit<SavedPaymentCard, 'id'>) => void;
   removeSavedCard: (id: string) => void;
-  setWalletReturnView: (view: AppView | null) => void;
   setWalletInitialTab: (tab: WalletTab) => void;
   setWalletPendingDeposit: (pending: boolean) => void;
 
@@ -468,9 +467,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   view: IS_LOCAL_DEV ? 'DASHBOARD' : 'SPLASH',
+  navigationStack: [],
   role: IS_LOCAL_DEV ? UserRole.CAPTAIN : UserRole.PLAYER,
   isAuthReady: true,
-  addOnTotal: 0,
   hasMotmCoupon: false,
   selectedMatch: null,
   isUserPro: false,
@@ -485,11 +484,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   bookingPrice: null,
   bookingDeposit: null,
   savedCards: loadSavedCards(),
-  walletReturnView: null,
   walletInitialTab: 'MAIN',
   walletPendingDeposit: false,
-  marketplaceReturnView: 'DASHBOARD',
-  matchJoinReturnView: 'MATCH_DISCOVERY',
   reliabilityScore: 100,
   banExpiresAt: null,
   setReliabilityScore: (score) => set({ reliabilityScore: score }),
@@ -852,9 +848,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Basic
   setView: (view) => set({ view }),
+  navigateTo: (newView) => set((state) => {
+    if (state.view === newView) return {};
+    return { navigationStack: [...state.navigationStack, state.view], view: newView };
+  }),
+  goBack: (fallback) => set((state) => {
+    const stack = [...state.navigationStack];
+    const previous = stack.pop();
+    return { navigationStack: stack, view: previous ?? fallback ?? state.view };
+  }),
+  resetNavigation: (newView) => set({ navigationStack: [], view: newView }),
   setRole: (role) => set({ role }),
   setIsAuthReady: (isAuthReady) => set({ isAuthReady }),
-  setAddOnTotal: (addOnTotal) => set({ addOnTotal }),
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),
   setIsUserPro: (isPro) => set({ isUserPro: isPro }),
@@ -862,8 +867,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
   setSelectedRef: (selectedRef) => set({ selectedRef }),
-  setMarketplaceReturnView: (marketplaceReturnView) => set({ marketplaceReturnView }),
-  setMatchJoinReturnView: (matchJoinReturnView) => set({ matchJoinReturnView }),
   setBookingPitch: (bookingPitch) => set({ bookingPitch }),
   setBookingCourt: (bookingCourt) => set({ bookingCourt }),
   setBookingDate: (bookingDate) => set({ bookingDate }),
@@ -885,7 +888,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { savedCards };
     });
   },
-  setWalletReturnView: (walletReturnView) => set({ walletReturnView }),
   setWalletInitialTab: (walletInitialTab) => set({ walletInitialTab }),
   setWalletPendingDeposit: (walletPendingDeposit) => set({ walletPendingDeposit }),
 

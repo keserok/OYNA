@@ -11,6 +11,9 @@ import {
   type CancelResult,
 } from '../services/playerBookingService';
 import { payBookingDeposit, toPaymentErrorMessage } from '../services/paymentService';
+import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
+import { Toast } from '../components/common/Toast';
+import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
 
 interface MyBookingsProps {
   onBack: () => void;
@@ -72,7 +75,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
       setBookings(await fetchMyBookings());
     } catch (err) {
       console.error('Rezervasyonlar yüklenemedi:', err);
-      setError('Rezervasyonların yüklenemedi. Lütfen tekrar dene.');
+      setError('Rezervasyonlar yüklenemedi. Lütfen tekrar dene.');
     } finally {
       setLoading(false);
     }
@@ -111,24 +114,15 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
 
       <main className="p-6 max-w-2xl mx-auto">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-500">
-            <Loader2 size={32} className="animate-spin mb-3" />
-            <p className="text-xs font-bold uppercase tracking-widest">Yükleniyor...</p>
-          </div>
+          <LoadingState message="Rezervasyonlar yükleniyor..." />
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <AlertTriangle size={32} className="text-red-400 mb-3" />
-            <p className="text-sm text-gray-400">{error}</p>
-            <button onClick={load} className="mt-4 text-[#FFFF00] text-xs font-black uppercase tracking-widest underline">Tekrar Dene</button>
-          </div>
+          <ErrorState message={error} onRetry={load} />
         ) : bookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <Calendar size={32} className="text-gray-600" />
-            </div>
-            <h3 className="text-lg font-black italic text-white">HENÜZ REZERVASYON YOK</h3>
-            <p className="text-gray-500 text-xs mt-2">Saha Vitrini'nden ilk rezervasyonunu oluştur.</p>
-          </div>
+          <EmptyState
+            title="HENÜZ REZERVASYON YOK"
+            message="Saha Vitrini'nden ilk rezervasyonunu oluştur."
+            icon={<Calendar size={32} />}
+          />
         ) : (
           <div className="space-y-4">
             {bookings.map((b) => {
@@ -226,27 +220,19 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
 
       {/* Ödeme hatası toast */}
       <AnimatePresence>
-        {payError && (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-sm w-[90%] bg-red-950/95 backdrop-blur-xl border border-red-500/40 rounded-2xl px-5 py-4 shadow-2xl flex items-start gap-3"
-          >
-            <XCircle size={18} className="text-red-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-100 leading-relaxed flex-1">{payError}</p>
-          </motion.div>
-        )}
+        {payError && <Toast message={payError} variant="error" />}
       </AnimatePresence>
 
       {/* İptal Onay Modalı */}
       <AnimatePresence>
         {cancelTarget && (
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            {...MODAL_BACKDROP}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6"
             onClick={() => setCancelTarget(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              {...MODAL_CARD}
               onClick={(e) => e.stopPropagation()}
               className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-white/10 p-7 text-center"
             >
@@ -288,12 +274,12 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
       <AnimatePresence>
         {cancelResult && (
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            {...MODAL_BACKDROP}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6"
             onClick={() => setCancelResult(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              {...MODAL_CARD}
               onClick={(e) => e.stopPropagation()}
               className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-white/10 p-7 text-center"
             >

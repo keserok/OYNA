@@ -10,6 +10,8 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
+import { LoadingState, ErrorState } from '../components/common/StatusState';
+import { Toast } from '../components/common/Toast';
 
 interface ServiceDashboardProps {
   role: UserRole;
@@ -70,6 +72,20 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [myOffers, setMyOffers] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [offersLoading, setOffersLoading] = useState(true);
+  const [offersError, setOffersError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const showActionError = (msg: string) => {
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 4000);
+  };
+
+  const showActionSuccess = (msg: string) => {
+      setActionSuccess(msg);
+      setTimeout(() => setActionSuccess(null), 4000);
+  };
 
   const [timeLeft, setTimeLeft] = useState('--:--:--');
 
@@ -178,45 +194,66 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     };
   }, [role, isRef]);
 
+  const fetchOffers = async () => {
+    if (!userProfile?.id) return;
+    setOffersLoading(true);
+    setOffersError(null);
+    try {
+      const { data, error } = await supabase
+        .from('service_offers')
+        .select('*')
+        .eq('provider_id', userProfile.id)
+        .eq('status', 'PENDING');
+      if (!error && data) {
+        const mappedOffers = data.map((o: any) => {
+          const match: any = adminMatches.find((m: any) => m.id === o.match_id);
+          return {
+            id: o.id,
+            matchId: o.match_id,
+            pitchName: match?.pitch_name || match?.location || 'Özel Maç Teklifi',
+            teamName: match?.captain_name ? `${match.captain_name} Takımı` : 'Özel Grup',
+            captainName: match?.captain_name || 'Kaptan',
+            offerAmount: o.amount,
+            time: match?.time || 'Belirsiz',
+            date: match?.date || 'Belirsiz',
+            message: o.message || 'Seni maçımızda görmek istiyoruz!',
+            expiresIn: '24s'
+          };
+        });
+        setMyOffers(mappedOffers);
+      } else if (error) {
+        console.error("Error fetching offers", error);
+        setOffersError('Teklifler yüklenemedi. Lütfen tekrar dene.');
+      }
+    } catch (err) {
+      console.error("Error fetching offers", err);
+      setOffersError('Teklifler yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      setOffersLoading(false);
+    }
+  };
+
+  const fetchWallet = async () => {
+      if (!userProfile?.id) return;
+      try {
+          const { data, error } = await supabase.from('profiles').select('wallet_balance').eq('id', userProfile.id).single();
+          if (error) {
+              console.error("Error fetching wallet balance", error);
+              showActionError('Bakiye bilgisi alınamadı. Lütfen tekrar dene.');
+              return;
+          }
+          if (data) {
+              setWalletBalance(data.wallet_balance || 0);
+          }
+      } catch (err) {
+          console.error("Error fetching wallet balance", err);
+          showActionError('Bakiye bilgisi alınamadı. Lütfen tekrar dene.');
+      }
+  };
+
   useEffect(() => {
     if (!userProfile?.id) return;
-    const fetchOffers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('service_offers')
-          .select('*')
-          .eq('provider_id', userProfile.id)
-          .eq('status', 'PENDING');
-        if (!error && data) {
-          const mappedOffers = data.map((o: any) => {
-            const match: any = adminMatches.find((m: any) => m.id === o.match_id);
-            return {
-              id: o.id,
-              matchId: o.match_id,
-              pitchName: match?.pitch_name || match?.location || 'Özel Maç Teklifi',
-              teamName: match?.captain_name ? `${match.captain_name} Takımı` : 'Özel Grup',
-              captainName: match?.captain_name || 'Kaptan',
-              offerAmount: o.amount,
-              time: match?.time || 'Belirsiz',
-              date: match?.date || 'Belirsiz',
-              message: o.message || 'Seni maçımızda görmek istiyoruz!',
-              expiresIn: '24s'
-            };
-          });
-          setMyOffers(mappedOffers);
-        }
-      } catch (err) {
-        console.error("Error fetching offers", err);
-      }
-    };
     fetchOffers();
-
-    const fetchWallet = async () => {
-        const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', userProfile.id).single();
-        if (data) {
-            setWalletBalance(data.wallet_balance || 0);
-        }
-    };
     fetchWallet();
   }, [userProfile]);
 
@@ -302,9 +339,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               setTimeout(() => setTransferSuccess(false), 3000);
           } else {
               console.error("Error withdrawing:", error);
+              showActionError('Para çekme işlemi başarısız oldu. Lütfen tekrar dene.');
           }
       } catch (err) {
           console.error("Transfer error:", err);
+          showActionError('Para çekme işlemi başarısız oldu. Lütfen tekrar dene.');
       } finally {
           setIsTransferring(false);
       }
@@ -333,7 +372,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       if (match) {
           const hasConflict = myUpcomingMatches.some(um => um.date === match.date && um.time === match.time);
           if (hasConflict) {
-              alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır. Lütfen teklifi reddedin.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
               return;
           }
       }
@@ -344,7 +383,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             .from('service_offers')
             .update({ status: 'ACCEPTED' })
             .eq('id', selectedOffer.id);
-          
+
           if (!error) {
               setMyOffers(prev => prev.filter(o => o.id !== selectedOffer.id));
               console.log(`Accepted offer ${selectedOffer.id} for match ${selectedOffer.matchId}`);
@@ -356,15 +395,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           } else {
               console.error("Error from supabase:", error);
               if (error.message && error.message.includes('CONFLICT_DETECTED')) {
-                  alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır. Lütfen teklifi reddedin.');
+                  showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
               } else {
-                  alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+                  showActionError('Bir hata oluştu. Lütfen tekrar dene.');
               }
           }
       } catch (error: any) {
           console.error("Error accepting offer:", error);
           if (error.message && error.message.includes('CONFLICT_DETECTED')) {
-              alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır. Lütfen teklifi reddedin.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+          } else {
+              showActionError('Teklif kabul edilemedi. Lütfen tekrar dene.');
           }
       } finally {
           setIsTransferring(false);
@@ -386,11 +427,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       if (selectedJob) {
           const hasConflict = myUpcomingMatches.some(um => um.date === selectedJob.date && um.time === selectedJob.time);
           if (hasConflict) {
-              alert('HATA: Bu tarih ve saatte zaten onaylanmış bir maçınız bulunmaktadır.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var.');
               return;
           }
       }
-      
+
       setIsTransferring(true);
       try {
           await applyToMatch(selectedJob.id, {
@@ -400,7 +441,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             photoURL
           });
           console.log("Applied to match:", selectedJob.id);
-          
+
           setShowBidSuccess(true);
           setTimeout(() => {
               setShowBidSuccess(false);
@@ -408,7 +449,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           }, 2000);
       } catch (error) {
           console.error("Error submitting bid:", error);
-          alert("Başvuru yapılırken bir hata oluştu.");
+          showActionError('Başvuru yapılırken bir hata oluştu. Lütfen tekrar dene.');
       } finally {
           setIsTransferring(false);
       }
@@ -844,7 +885,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <h3 className="font-black text-white text-sm tracking-wide uppercase">ÖZEL TEKLİFLER</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
-                  {myOffers.length > 0 ? myOffers.map(offer => (
+                  {offersLoading ? (
+                    <LoadingState message="Teklifler yükleniyor..." size="sm" />
+                  ) : offersError ? (
+                    <ErrorState message={offersError} onRetry={fetchOffers} />
+                  ) : myOffers.length > 0 ? myOffers.map(offer => (
                       <motion.div 
                         key={offer.id} 
                         whileHover={{ y: -5 }}
@@ -1754,9 +1799,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   }
                   setMatchLiveStatus(updatedStatus);
                   if (isRef) {
-                      alert('Raporunuz başarıyla gönderildi. Her iki kaptana skor onayı için bildirim iletildi.');
+                      showActionSuccess('Raporunuz gönderildi. Her iki kaptana skor onayı için bildirim iletildi.');
                   } else {
-                      alert('Raporunuz başarıyla gönderildi. Kazancınız cüzdanınıza aktarıldı.');
+                      showActionSuccess('Raporunuz gönderildi. Kazancınız cüzdanınıza aktarıldı.');
                   }
                 }}
                 className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg`}
@@ -1776,6 +1821,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         .rotate-y-180 { transform: rotateY(180deg); }
       `}</style>
       </>)}
+
+      <AnimatePresence>
+        {actionError && <Toast message={actionError} variant="error" />}
+        {actionSuccess && <Toast message={actionSuccess} variant="success" />}
+      </AnimatePresence>
     </div>
   );
 };

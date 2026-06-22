@@ -9,6 +9,7 @@ import { MatchListing, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { subscribeToOpenMatches, fetchNearbyMatches } from '../services/matchService';
+import { EmptyState } from '../components/common/StatusState';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -41,8 +42,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     playerSeekAds, 
     toggleJoinPlayerSeekAd, 
     acceptPlayerSeekAdRequest, 
-    setChatTarget, 
-    setView,
+    setChatTarget,
+    navigateTo,
     userLocation,
     searchRadius,
     setSearchRadius
@@ -674,7 +675,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                         </h2>
                     )}
                     {otherMatches.length === 0 ? (
-                      <div className="text-center py-20 text-white/50 font-bold uppercase tracking-widest text-xs">Aktif maç bulunamadı.</div>
+                      <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
                     ) : (
                       otherMatches.map((match, index) => (
                         <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
@@ -688,9 +689,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             {activeSection === 'takim' && (
               <div className="space-y-6">
                 {playerSeekAds.length === 0 ? (
-                  <div className="text-center py-20 text-white/50 font-black uppercase tracking-widest text-xs">
-                    Aktif oyuncu ilanı bulunamadı.
-                  </div>
+                  <EmptyState title="Aktif Oyuncu İlanı Bulunamadı" message="Şu an takım arayan bir oyuncu ilanı yok." />
                 ) : (
                   playerSeekAds.map((ad, index) => {
                     const isJoined = ad.joinedPlayers?.includes(currentUserUid);
@@ -799,7 +798,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                                   role: 'Takım Kaptanı',
                                   avatar: ad.creatorAvatar
                                 });
-                                setView('CHAT');
+                                navigateTo('CHAT');
                               }}
                               className="px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-gradient-to-r from-emerald-500 to-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.5)] border-2 border-white/30 hover:brightness-110 flex items-center gap-1.5 transition-all cursor-pointer"
                             >
