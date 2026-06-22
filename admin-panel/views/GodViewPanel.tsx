@@ -5,6 +5,14 @@ import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchM
 import { AnimatePresence } from 'framer-motion';
 import { PageLoadingSkeleton } from './components/PageLoadingSkeleton';
 import type { AdminSession } from '../services/adminService';
+import type { Pitch, AdminUser, Goalkeeper, Referee } from '../../types';
+
+type AdminModalState =
+  | { type: 'none' }
+  | { type: 'addPitch' }
+  | { type: 'deepEditPitch'; data: Pitch }
+  | { type: 'deepEditUser'; data: AdminUser }
+  | { type: 'deepEditProvider'; data: Goalkeeper | Referee; typeParam: 'GK' | 'REF' };
 import {
   AdminNavigationProvider,
   useAdminNavigation,
@@ -66,7 +74,7 @@ const GodViewPanelInner: React.FC<Props> = ({
         const r = initialSubRoute ?? 'GENEL';
         return r === 'SEGMENTATION' ? 'NOTIFICATIONS' : r;
     });
-    const [modal, setModal] = useState<any>({ type: 'none' });
+    const [modal, setModal] = useState<AdminModalState>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
     useEffect(() => {

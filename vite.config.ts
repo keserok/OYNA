@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import path from 'path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
@@ -73,5 +74,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
     }
-  }
+  },
+  test: {
+    environment: 'node',
+    include: ['tests/unit/**/*.test.ts'],
+    globals: true,
+  },
 });

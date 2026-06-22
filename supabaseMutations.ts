@@ -86,12 +86,9 @@ const mapUserToDb = (user: Partial<AdminUser>) => {
   if (user.isBanned !== undefined) mapped.is_banned = user.isBanned;
   if (user.isPro !== undefined) mapped.is_pro = user.isPro;
   if (user.wallet !== undefined) mapped.wallet_balance = user.wallet;
-  if (user.matchCount !== undefined || user.rating !== undefined) {
-    mapped.stats = {
-      matchesPlayed: user.matchCount || 0,
-      rating: user.rating || 5.0
-    };
-  }
+  // NOT: profiles tablosunda 'stats' kolonu yok. Gerçek kolonlara yaz (F4).
+  if (user.matchCount !== undefined) mapped.match_count = user.matchCount;
+  if (user.rating !== undefined) mapped.rating = user.rating;
   return mapped;
 };
 
@@ -165,8 +162,9 @@ const mapToSnakeCase = (obj: any) => {
 };
 
 export const fbAddGoalkeeper = async (gk: Goalkeeper) => {
+  // F6: Raw INSERT yerine RPC — is_platform_admin() guard + denetim logu
   const mapped = mapProviderToDb(gk as unknown as Record<string, unknown>);
-  const { error } = await supabase.from('goalkeepers').insert(mapped);
+  const { error } = await supabase.rpc('admin_create_goalkeeper', { p_data: mapped });
   if (error) throw new Error(`Kaleci eklenemedi: ${error.message}`);
 };
 
@@ -183,8 +181,9 @@ export const fbDeleteGoalkeeper = async (id: string) => {
 };
 
 export const fbAddReferee = async (ref: Referee) => {
+  // F6: Raw INSERT yerine RPC — is_platform_admin() guard + denetim logu
   const mapped = mapProviderToDb(ref as unknown as Record<string, unknown>);
-  const { error } = await supabase.from('referees').insert(mapped);
+  const { error } = await supabase.rpc('admin_create_referee', { p_data: mapped });
   if (error) throw new Error(`Hakem eklenemedi: ${error.message}`);
 };
 
@@ -201,7 +200,7 @@ export const fbDeleteReferee = async (id: string) => {
 };
 
 export const fbUpdateAppSettings = async (settings: any) => {
-  const { error } = await supabase.from('settings').update(settings).eq('id', 1);
+  const { error } = await supabase.from('settings').update(settings).eq('id', 'main');
   if (error) throw new Error(`Ayarlar güncellenemedi: ${error.message}`);
 };
 
@@ -270,7 +269,7 @@ export const fbDeleteUser = async (id: string) => {
 };
 
 export const fbGetAppSettings = async () => {
-  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
+  const { data, error } = await supabase.from('settings').select('*').eq('id', 'main').maybeSingle();
   if (error) throw new Error(`Ayarlar yüklenemedi: ${error.message}`);
   return data;
 };

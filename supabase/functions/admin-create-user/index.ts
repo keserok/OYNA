@@ -3,8 +3,12 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// F9: ADMIN_ALLOWED_ORIGIN env var ile production'da origin kısıtlaması yapılmalı.
+// Örnek: supabase secrets set ADMIN_ALLOWED_ORIGIN=https://admin.oyna.app
+const allowedOrigin = Deno.env.get('ADMIN_ALLOWED_ORIGIN') ?? '*';
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -56,7 +60,13 @@ Deno.serve(async (req) => {
     });
 
     if (profileErr) {
-      console.warn('Profile upsert warning:', profileErr.message);
+      // F9: Profile oluşturmazsa auth kullanıcısını geri al (orphan auth user önleme)
+      console.error('Profile upsert failed, rolling back auth user:', profileErr.message);
+      await admin.auth.admin.deleteUser(authData.user.id);
+      return new Response(
+        JSON.stringify({ error: `Kullanıcı profili oluşturulamadı: ${profileErr.message}` }),
+        { status: 500, headers: corsHeaders },
+      );
     }
 
     return new Response(JSON.stringify({

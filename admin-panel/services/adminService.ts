@@ -187,9 +187,20 @@ export async function resolveAdminSession(userId: string, email: string): Promis
   const role = data?.role as string | undefined;
   const roleList: string[] = Array.isArray(data?.roles) ? (data?.roles as string[]) : [];
   const hasRole = (r: string) => role === r || roleList.includes(r);
-  const isAdmin = Boolean(
+  let isAdmin = Boolean(
     data?.is_admin || hasRole('ADMIN') || hasRole('SUPER_ADMIN'),
   );
+
+  // F5 güvenlik ağı: admin_set_platform_role is_admin=true yazar, ama admin_team_members'ta
+  // doğrudan eklenen (RPC dışı) satırlar için profiles.is_admin hâlâ false olabilir.
+  if (!isAdmin) {
+    const { data: memberRow } = await supabase
+      .from('admin_team_members')
+      .select('admin_role')
+      .eq('user_id', userId)
+      .maybeSingle();
+    isAdmin = Boolean(memberRow);
+  }
 
   return {
     userId,
@@ -306,7 +317,7 @@ export async function fetchAdminProfiles(options?: {
 }
 
 export async function fetchAdminSettings(): Promise<AppSettingsDb | null> {
-  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).maybeSingle();
+  const { data, error } = await supabase.from('settings').select('*').eq('id', 'main').maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
   return mapSettingsRow(data as Record<string, unknown>);

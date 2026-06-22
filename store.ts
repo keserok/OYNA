@@ -1181,10 +1181,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
   addUser: async (user) => {
-    const prev = get().adminUsers;
-    set({ adminUsers: [user, ...prev] });
-    try { await FB.fbAddUser(user); }
-    catch (e) { set({ adminUsers: prev }); throw e; }
+    // Kullanıcı zaten createUserAdmin (admin-create-user edge function) ile
+    // Auth + profiles'a kalıcı yazılmış oluyor. Burada tekrar ham insert yapmak
+    // PK çakışması/şema hatasına yol açıp optimistic kaydı geri alıyordu (F4).
+    // Sadece yerel listeye ekle.
+    set((state) => ({ adminUsers: [user, ...state.adminUsers] }));
   },
   deleteUser: async (id) => {
     const prev = get().adminUsers;
