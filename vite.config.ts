@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+/// <reference types="vitest/config" />
 import path from 'path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
