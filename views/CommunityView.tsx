@@ -12,6 +12,12 @@ import { CommunityHub } from '../components/CommunityHub';
 import { TeamDashboard } from '../components/TeamDashboard';
 import { CommunityApplicationWizard } from '../components/CommunityApplicationWizard';
 import { useAppStore } from '../store';
+import {
+  fetchCommunityById,
+  isCommunityUuid,
+  mapCommunityToICommunity,
+  subscribeCommunityUpdates,
+} from '../services/communityService';
 
 interface CommunityViewProps {
   onBack: () => void;
@@ -78,10 +84,18 @@ const AnimNum: React.FC<{ to: number; suffix?: string }> = ({ to, suffix = '' })
   return <>{val}{suffix}</>;
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+const MOCK_COMMUNITY_NAMES: Record<string, string> = {
+  c1: 'Boğaziçi Üniversitesi',
+  c2: 'Trendyol Tech',
+  c3: 'Kadıköy Ligi',
+  c4: 'İTÜ Futbol',
+};
+
+// ─── Main Component ───────────────────────────────────────────
 const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, community, currentUser }) => {
   const [mainTab, setMainTab] = useState<'COMMUNITIES' | 'TEAMS' | 'FRIENDS'>('COMMUNITIES');
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [liveCommunity, setLiveCommunity] = useState<ICommunity>(community);
   const [showAppWizard, setShowAppWizard] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any | null>(null);
   const [selectedFriendModal, setSelectedFriendModal] = useState<any | null>(null);
@@ -158,8 +172,38 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
   };
 
   const [ticker, setTicker] = useState(0);
-  const isMember = currentUser.communities.includes(community.id);
+  const isMember = currentUser.communities.includes(liveCommunity.id) || currentUser.communities.includes(selectedCommunityId || '');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const resolvedCommunityName = selectedCommunityId
+    ? (isCommunityUuid(selectedCommunityId) ? liveCommunity.name : (MOCK_COMMUNITY_NAMES[selectedCommunityId] || liveCommunity.name))
+    : liveCommunity.name;
+
+  const joinMode = liveCommunity.joinMode || 'OPEN';
+  const requiresInvite = joinMode === 'INVITE_ONLY' || liveCommunity.isPrivate;
+
+  useEffect(() => {
+    if (!selectedCommunityId || !isCommunityUuid(selectedCommunityId)) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const row = await fetchCommunityById(selectedCommunityId);
+        if (row && !cancelled) setLiveCommunity(mapCommunityToICommunity(row));
+      } catch {
+        /* keep previous */
+      }
+    })();
+
+    const unsub = subscribeCommunityUpdates(selectedCommunityId, (row) => {
+      setLiveCommunity(mapCommunityToICommunity(row));
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [selectedCommunityId]);
 
   useEffect(() => {
     const t = setInterval(() => setTicker(i => (i + 1) % LIVE_TICKER.length), 3800);
@@ -251,20 +295,25 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h1 className="text-[22px] font-black tracking-tighter italic leading-none">{selectedCommunityId === 'c1' ? 'Boğaziçi Üniversitesi' : selectedCommunityId === 'c2' ? 'Trendyol Tech' : selectedCommunityId === 'c3' ? 'Kadıköy Ligi' : 'İTÜ Futbol'}</h1>
-                  {community.isVerified && (
+                  <h1 className="text-[22px] font-black tracking-tighter italic leading-none">{resolvedCommunityName}</h1>
+                  {liveCommunity.isVerified && (
                     <ShieldCheck size={16} className="text-emerald-400 flex-shrink-0" />
                   )}
                 </div>
-                <p className="text-emerald-400/60 text-[10px] font-bold tracking-wide">{community.domain}</p>
+                <p className="text-emerald-400/60 text-[10px] font-bold tracking-wide">{liveCommunity.domain || community.domain}</p>
+                {joinMode !== 'OPEN' && (
+                  <p className="text-[9px] font-black uppercase tracking-widest text-amber-400/80 mt-1">
+                    Katılım: {joinMode === 'INVITE_ONLY' ? 'Davet Kodu' : 'Onay Gerekli'}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Stat pills */}
             <div className="flex gap-2.5 mb-5 relative z-10">
           {[
-            { label: 'Üye', val: community.memberCount, Icon: Users, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
-            { label: 'Aktif Maç', val: community.activeMatches ?? 2, Icon: Swords, color: 'text-rose-400', border: 'border-rose-500/20', bg: 'bg-rose-500/5' },
+            { label: 'Üye', val: liveCommunity.memberCount, Icon: Users, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
+            { label: 'Aktif Maç', val: liveCommunity.activeMatches ?? 2, Icon: Swords, color: 'text-rose-400', border: 'border-rose-500/20', bg: 'bg-rose-500/5' },
             { label: 'FP Ort.', val: '91', Icon: ShieldCheck, color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
           ].map(({ label, val, Icon, color, border, bg }) => (
             <div key={label} className={`flex-1 ${bg} border ${border} rounded-2xl py-2.5 px-2 text-center`}>
@@ -305,15 +354,18 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
 
         {mainTab === 'COMMUNITIES' && selectedCommunityId && (
           <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}}>
-            {!isMember && (
+            {!isMember && requiresInvite && (
           <div className="absolute inset-0 z-30 backdrop-blur-xl bg-black/70 flex flex-col items-center justify-center p-6">
             <motion.div animate={{ rotate: [0, -5, 5, 0] }} transition={{ duration: 3, repeat: Infinity }}
               className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
               <Lock size={30} className="text-slate-400" />
             </motion.div>
-            <h2 className="text-xl font-black mb-2 text-center">Bu Topluluk Gizli</h2>
+            <h2 className="text-xl font-black mb-2 text-center">
+              {joinMode === 'INVITE_ONLY' ? 'Davet Kodu Gerekli' : 'Bu Topluluk Gizli'}
+            </h2>
             <p className="text-slate-400 text-center mb-8 max-w-xs text-sm leading-relaxed">
-              İçerikleri görmek için <b className="text-white">{community.domain}</b> uzantılı e-posta ile doğrulamalısın.
+              İçerikleri görmek için {joinMode === 'REQUEST' ? 'katılma talebinin onaylanması' : 'geçerli bir davet koduna'} ihtiyacın var.
+              {liveCommunity.domain ? <> <b className="text-white">{liveCommunity.domain}</b> doğrulaması gerekebilir.</> : null}
             </p>
             <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               className="w-full max-w-xs bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
@@ -322,7 +374,7 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
           </div>
         )}
 
-        <div className={`space-y-5 px-4 pt-4 ${!isMember ? 'pointer-events-none select-none blur-sm' : ''}`}>
+        <div className={`space-y-5 px-4 pt-4 ${!isMember && requiresInvite ? 'pointer-events-none select-none blur-sm' : ''}`}>
 
 
           {/* ── Match Results & Upcoming ────────────────────────────── */}

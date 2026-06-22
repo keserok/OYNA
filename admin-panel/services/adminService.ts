@@ -236,16 +236,30 @@ export async function signOutAdmin(): Promise<void> {
   }
 }
 
-export async function fetchAdminProfiles(options?: { offset?: number; limit?: number }): Promise<{
+export type AdminProfileStatusFilter = 'all' | 'active' | 'banned' | 'pro';
+
+export async function fetchAdminProfiles(options?: {
+  offset?: number;
+  limit?: number;
+  search?: string;
+  status?: AdminProfileStatusFilter;
+}): Promise<{
   users: AdminUser[];
   total: number;
 }> {
   const limit = options?.limit ?? 500;
   const offset = options?.offset ?? 0;
-  const { data, error } = await supabase.rpc('admin_fetch_profiles', {
+  const search = options?.search?.trim() || null;
+  const status = options?.status && options.status !== 'all' ? options.status : null;
+
+  const rpcParams: Record<string, unknown> = {
     p_offset: offset,
     p_limit: limit,
-  });
+  };
+  if (search) rpcParams.p_search = search;
+  if (status) rpcParams.p_status = status;
+
+  const { data, error } = await supabase.rpc('admin_fetch_profiles', rpcParams);
   if (!error && data) {
     const rows = data as Array<Record<string, unknown>>;
     const total = Number(rows[0]?.total_count ?? rows.length);
@@ -256,18 +270,29 @@ export async function fetchAdminProfiles(options?: { offset?: number; limit?: nu
   }
   if (error && !isRpcFallback(error)) throw new Error(error.message);
 
-  const { data: fallback, error: fbErr, count } = await supabase
+  let q = supabase
     .from('profiles')
     .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+    .order('created_at', { ascending: false });
+
+  if (search) {
+    q = q.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%,role.ilike.%${search}%`);
+  }
+  if (status === 'banned') q = q.eq('is_banned', true);
+  else if (status === 'pro') q = q.eq('is_pro', true);
+  else if (status === 'active') q = q.eq('is_banned', false);
+
+  const { data: fallback, error: fbErr, count } = await q.range(offset, offset + limit - 1);
 
   if (fbErr) {
-    const retry = await supabase
+    let retryQ = supabase
       .from('profiles')
       .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
-      .order('join_date', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('join_date', { ascending: false });
+    if (search) {
+      retryQ = retryQ.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+    const retry = await retryQ.range(offset, offset + limit - 1);
     if (retry.error) throw new Error(retry.error.message);
     return {
       users: (retry.data || []).map((row) => mapProfileRow(row as Record<string, unknown>)),
@@ -298,10 +323,73 @@ export async function fetchAdminAuditLogs(limit = 100): Promise<AdminLog[]> {
   return (data || []).map((row) => mapAuditRow(row as DbAuditLogRow));
 }
 
+async function countRows(
+  table: string,
+  filter?: { column: string; op: 'eq' | 'in'; value: unknown },
+): Promise<number> {
+  let q = supabase.from(table).select('*', { count: 'exact', head: true });
+  if (filter?.op === 'eq') q = q.eq(filter.column, filter.value);
+  if (filter?.op === 'in') q = q.in(filter.column, filter.value as string[]);
+  const { count, error } = await q;
+  if (error) return 0;
+  return count ?? 0;
+}
+
+async function fetchDashboardStatsFallback(): Promise<Record<string, number | string | null>> {
+  const [
+    total_users,
+    total_pitches,
+    total_matches,
+    total_communities,
+    pending_verifications,
+    pending_pitches,
+    pending_withdrawals,
+    open_disputes,
+    banned_users,
+    active_goalkeepers,
+    active_referees,
+    active_promo_codes,
+    settingsRes,
+  ] = await Promise.all([
+    countRows('profiles'),
+    countRows('pitches'),
+    countRows('matches'),
+    countRows('communities'),
+    countRows('profiles', { column: 'verification_status', op: 'eq', value: 'pending' }),
+    countRows('pitches', { column: 'verification_status', op: 'eq', value: 'pending' }),
+    countRows('owner_withdrawal_requests', { column: 'status', op: 'eq', value: 'PENDING' }),
+    countRows('match_disputes', { column: 'status', op: 'in', value: ['OPEN', 'UNDER_REVIEW'] }),
+    countRows('profiles', { column: 'is_banned', op: 'eq', value: true }),
+    countRows('goalkeepers'),
+    countRows('referees'),
+    countRows('promo_codes', { column: 'is_active', op: 'eq', value: true }),
+    supabase.from('settings').select('commission_rate').eq('id', 1).maybeSingle(),
+  ]);
+
+  return {
+    total_users,
+    total_pitches,
+    total_matches,
+    total_communities,
+    pending_verifications,
+    pending_pitches,
+    pending_withdrawals,
+    open_disputes,
+    banned_users,
+    active_goalkeepers,
+    active_referees,
+    active_promo_codes,
+    commission_rate: Number(settingsRes.data?.commission_rate ?? 10),
+  };
+}
+
 export async function fetchDashboardStats(): Promise<AdminDashboardStats | null> {
   const { data, error } = await supabase.rpc('admin_dashboard_stats');
   if (error) {
-    if (isRpcFallback(error)) return null;
+    if (isRpcFallback(error)) {
+      const fallback = await fetchDashboardStatsFallback();
+      return fallback as unknown as AdminDashboardStats;
+    }
     throw new Error(error.message);
   }
   return data as AdminDashboardStats;
@@ -426,6 +514,14 @@ export interface OpsQueue {
   open_disputes: Array<{ id: string; match_id: string; status: string; created_at: string }>;
   deletion_requests: Array<{ id: string; name: string; email: string; requested_at: string }>;
   community_requests: Array<{ id: string; name: string; requester_id: string; created_at: string }>;
+  community_join_requests: Array<{
+    id: string;
+    community_id: string;
+    community_name: string;
+    user_id: string;
+    user_name: string | null;
+    created_at: string;
+  }>;
 }
 
 export interface FinanceStats {
@@ -473,10 +569,65 @@ export interface CommunityRow {
   name: string;
   type: string;
   domain: string | null;
+  description?: string | null;
+  location?: string | null;
+  owner_id?: string | null;
+  owner_name?: string | null;
   member_count: number;
   is_verified: boolean;
+  is_private?: boolean;
+  is_demo?: boolean;
   join_mode: string;
+  invite_code?: string | null;
+  active_matches?: number;
   created_at: string;
+  updated_at?: string | null;
+}
+
+export interface CommunityMemberRow {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string | null;
+  role: string;
+  notifications_enabled: boolean;
+  joined_at: string;
+}
+
+export interface CommunityJoinRequestRow {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface CommunityDetail {
+  community: CommunityRow & {
+    rules?: string | null;
+    logo_url?: string | null;
+    banner_url?: string | null;
+  };
+  members: CommunityMemberRow[];
+  pending_join_requests: CommunityJoinRequestRow[];
+}
+
+export interface CommunityAdminInput {
+  name: string;
+  type?: string;
+  description?: string;
+  rules?: string;
+  domain?: string;
+  location?: string;
+  logo_url?: string;
+  banner_url?: string;
+  owner_id?: string | null;
+  is_verified?: boolean;
+  is_private?: boolean;
+  is_demo?: boolean;
+  join_mode?: 'OPEN' | 'REQUEST' | 'INVITE_ONLY';
 }
 
 export interface CommunityCreationRequest {
@@ -526,6 +677,7 @@ export async function fetchOpsQueue(): Promise<OpsQueue> {
     open_disputes: [],
     deletion_requests: [],
     community_requests: [],
+    community_join_requests: [],
   };
 
   const [verif, pitches, withdrawals, disputes] = await Promise.allSettled([
@@ -648,13 +800,154 @@ export async function broadcastNotification(
   return Number(data);
 }
 
-export async function fetchCommunities(): Promise<CommunityRow[]> {
+export async function fetchCommunitiesAdmin(opts?: {
+  search?: string;
+  verifiedOnly?: boolean | null;
+  type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ communities: CommunityRow[]; total: number }> {
+  const { data, error } = await supabase.rpc('admin_fetch_communities', {
+    p_search: opts?.search ?? null,
+    p_verified_only: opts?.verifiedOnly ?? null,
+    p_type: opts?.type ?? null,
+    p_limit: opts?.limit ?? 100,
+    p_offset: opts?.offset ?? 0,
+  });
+  if (error) {
+    if (isRpcFallback(error)) {
+      const rows = await fetchCommunitiesLegacy();
+      return { communities: rows, total: rows.length };
+    }
+    throw new Error(error.message);
+  }
+  const rows = (data || []) as Array<CommunityRow & { total_count?: number }>;
+  const total = rows.length > 0 ? Number(rows[0].total_count ?? rows.length) : 0;
+  return {
+    communities: rows.map(({ total_count: _tc, ...row }) => row),
+    total,
+  };
+}
+
+async function fetchCommunitiesLegacy(): Promise<CommunityRow[]> {
   const { data, error } = await supabase
     .from('communities')
-    .select('id, name, type, domain, member_count, is_verified, join_mode, created_at')
+    .select('id, name, type, domain, description, location, owner_id, member_count, is_verified, is_private, is_demo, join_mode, invite_code, active_matches, created_at, updated_at')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data || []) as CommunityRow[];
+}
+
+export async function fetchCommunities(): Promise<CommunityRow[]> {
+  const res = await fetchCommunitiesAdmin({ limit: 200 });
+  return res.communities;
+}
+
+export async function adminGetCommunity(id: string): Promise<CommunityDetail> {
+  const { data, error } = await supabase.rpc('admin_get_community', { p_id: id });
+  if (error) throw new Error(error.message);
+  return data as CommunityDetail;
+}
+
+export async function createCommunityAdmin(input: CommunityAdminInput): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_create_community', {
+    p_payload: {
+      name: input.name,
+      type: input.type,
+      description: input.description,
+      rules: input.rules,
+      domain: input.domain,
+      location: input.location,
+      logo_url: input.logo_url,
+      banner_url: input.banner_url,
+      owner_id: input.owner_id,
+      is_verified: input.is_verified,
+      is_private: input.is_private,
+      is_demo: input.is_demo,
+      join_mode: input.join_mode,
+    },
+  });
+  if (error) {
+    if (isRpcFallback(error)) {
+      const { data: row, error: fb } = await supabase.from('communities').insert({
+        name: input.name,
+        type: input.type || 'Bağımsız',
+        description: input.description || '',
+        location: input.location || '',
+        owner_id: input.owner_id ?? null,
+        is_verified: input.is_verified ?? false,
+        is_private: input.is_private ?? false,
+        join_mode: input.join_mode || 'OPEN',
+        is_demo: input.is_demo ?? false,
+      }).select('id').single();
+      if (fb) throw new Error(fb.message);
+      return row.id as string;
+    }
+    throw new Error(error.message);
+  }
+  return data as string;
+}
+
+export async function updateCommunityAdmin(id: string, input: Partial<CommunityAdminInput>): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_community', {
+    p_id: id,
+    p_payload: input,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteCommunity(id: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_community', { p_id: id });
+  if (error) {
+    if (isRpcFallback(error)) {
+      const fb = await supabase.from('communities').delete().eq('id', id);
+      if (fb.error) throw new Error(fb.error.message);
+      return;
+    }
+    throw new Error(error.message);
+  }
+}
+
+export async function manageCommunityMember(
+  communityId: string,
+  userId: string,
+  action: 'ADD' | 'REMOVE' | 'SET_ROLE',
+  role: 'MEMBER' | 'ADMIN' = 'MEMBER',
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_manage_community_member', {
+    p_community_id: communityId,
+    p_user_id: userId,
+    p_action: action,
+    p_role: role,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function moderateJoinRequest(
+  requestId: string,
+  approved: boolean,
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_moderate_join_request', {
+    p_request_id: requestId,
+    p_approved: approved,
+    p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function notifyCommunityMembers(
+  communityId: string,
+  title: string,
+  body: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_notify_community', {
+    p_community_id: communityId,
+    p_title: title,
+    p_body: body,
+  });
+  if (error) throw new Error(error.message);
+  return Number(data);
 }
 
 export async function fetchCommunityCreationRequests(): Promise<CommunityCreationRequest[]> {
@@ -776,7 +1069,10 @@ export interface RevenueTrendRow {
 
 export async function fetchRevenueTrend(days = 30): Promise<RevenueTrendRow[]> {
   const { data, error } = await supabase.rpc('admin_fetch_revenue_trend', { p_days: days });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isRpcFallback(error)) return [];
+    throw new Error(error.message);
+  }
   return (data || []) as RevenueTrendRow[];
 }
 
@@ -793,7 +1089,10 @@ export interface OwnerBillingEventRow {
 
 export async function fetchOwnerBillingEvents(limit = 100): Promise<OwnerBillingEventRow[]> {
   const { data, error } = await supabase.rpc('admin_fetch_owner_billing_events', { p_limit: limit });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isRpcFallback(error)) return [];
+    throw new Error(error.message);
+  }
   return (data || []) as OwnerBillingEventRow[];
 }
 
@@ -878,7 +1177,10 @@ export async function fetchTeamsFromDb(): Promise<Array<{ id: string; name: stri
 
 export async function fetchSegmentPreview(segment: string): Promise<number> {
   const { data, error } = await supabase.rpc('admin_segment_preview', { p_segment: segment });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isRpcFallback(error)) return 0;
+    throw new Error(error.message);
+  }
   return Number((data as { count?: number })?.count ?? 0);
 }
 
@@ -930,27 +1232,6 @@ export async function setPromoCodeActive(id: string, isActive: boolean): Promise
     }
     throw new Error(error.message);
   }
-}
-
-export async function deleteCommunity(id: string): Promise<void> {
-  const { error } = await supabase.from('communities').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-}
-
-export async function createCommunityAdmin(input: {
-  name: string; type?: string; description?: string; location?: string; isDemo?: boolean;
-}): Promise<string> {
-  const { data, error } = await supabase.from('communities').insert({
-    name: input.name,
-    type: input.type || 'Semt',
-    description: input.description || '',
-    location: input.location || '',
-    is_verified: false,
-    member_count: 0,
-    is_demo: input.isDemo ?? false,
-  }).select('id').single();
-  if (error) throw new Error(error.message);
-  return data.id as string;
 }
 
 export async function deleteTeamAdmin(id: string): Promise<void> {

@@ -59,10 +59,13 @@ const GodViewPanelInner: React.FC<Props> = ({
     initialNavParams,
 }) => {
     const deletePitch = useAppStore((s) => s.deletePitch);
-    const { setParams } = useAdminNavigation();
+    const { setParams, params, consumeParam } = useAdminNavigation();
     const { canAccess, defaultRoute } = useAdminPermissions();
     const { info } = useAdminToast();
-    const [subRoute, setSubRoute] = useState<GodViewSubRoute>(initialSubRoute ?? 'GENEL');
+    const [subRoute, setSubRoute] = useState<GodViewSubRoute>(() => {
+        const r = initialSubRoute ?? 'GENEL';
+        return r === 'SEGMENTATION' ? 'NOTIFICATIONS' : r;
+    });
     const [modal, setModal] = useState<any>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
@@ -71,19 +74,30 @@ const GodViewPanelInner: React.FC<Props> = ({
     }, [initialNavParams, setParams]);
 
     useEffect(() => {
-        const start = initialSubRoute ?? defaultRoute;
+        const start = initialSubRoute === 'SEGMENTATION' ? 'NOTIFICATIONS' : (initialSubRoute ?? defaultRoute);
         if (!canAccess(start)) setSubRoute(defaultRoute);
     }, [initialSubRoute, defaultRoute, canAccess]);
 
     const handleNavigate: AdminNavigateFn = useCallback((route, params) => {
-        if (!canAccess(route)) {
+        const effectiveRoute = route === 'SEGMENTATION' ? 'NOTIFICATIONS' : route;
+        if (!canAccess(effectiveRoute)) {
             info('Bu sayfaya erişim yetkiniz yok');
             return;
         }
-        setSubRoute(route);
+        setSubRoute(effectiveRoute);
         if (params) setParams(params);
-        if (onNavigate) onNavigate(route);
-    }, [onNavigate, setParams, canAccess, info]);
+        if (onNavigate) onNavigate(effectiveRoute);
+        if (mode === 'standalone' && typeof window !== 'undefined') {
+            const sp = new URLSearchParams(window.location.search);
+            sp.set('route', effectiveRoute);
+            if (params?.matchId) sp.set('matchId', params.matchId);
+            else sp.delete('matchId');
+            if (params?.communityId) sp.set('communityId', params.communityId);
+            else sp.delete('communityId');
+            const next = `${window.location.pathname}?${sp.toString()}`;
+            window.history.replaceState(null, '', next);
+        }
+    }, [onNavigate, setParams, canAccess, info, mode]);
 
     const closeModal = () => setModal({ type: 'none' });
 
@@ -128,14 +142,20 @@ const GodViewPanelInner: React.FC<Props> = ({
             case 'TOPLULUKLAR':
             case 'TAKIMLAR':
             case 'TURNUVALAR':
-                return <CommunitiesPage subRoute={subRoute} onRefresh={onRefreshData} />;
+                return (
+                  <CommunitiesPage
+                    subRoute={subRoute}
+                    onRefresh={onRefreshData}
+                    openCommunityId={subRoute === 'TOPLULUKLAR' ? (params.communityId ?? null) : null}
+                    onOpenCommunityConsumed={() => consumeParam('communityId')}
+                  />
+                );
             case 'SETTINGS':
             case 'CONTENT':
                 return <SettingsPage subRoute={subRoute} onRefresh={onRefreshData} />;
             case 'NOTIFICATIONS':
-                return <CampaignsPage route="NOTIFICATIONS" />;
             case 'SEGMENTATION':
-                return <CampaignsPage route="SEGMENTATION" />;
+                return <CampaignsPage route="NOTIFICATIONS" />;
             case 'MODERATION':
                 return <ModerationPage />;
             case 'OWNER_ACCOUNTS':

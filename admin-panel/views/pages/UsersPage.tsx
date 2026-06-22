@@ -5,9 +5,9 @@ import { ActionConfirmModal, ActionConfirmOptions } from '../components/ActionCo
 import { AddUserModal } from '../components/AddUserModal';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
-import { useAdminFilter } from '../hooks/useAdminFilter';
 import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, Star, BadgeCheck } from 'lucide-react';
-import { logImpersonation } from '../../services/adminService';
+import { logImpersonation, fetchAdminProfiles, toTurkishAdminError } from '../../services/adminService';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
 import { DeepEditProviderModal, DeepEditUserModal } from '../DeepEditModals';
@@ -31,11 +31,27 @@ const DEMO_MODULE: Record<UsersPageProps['subRoute'], DemoModuleKey | null> = {
 };
 
 export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded', onRefresh }) => {
-    const { 
-        adminUsers, adminGoalkeepers, adminReferees, adminSession,
-        addUser, deleteUser, banUser, unbanUser, toggleUserPro, verifyUser, addGoalkeeper, deleteGoalkeeper, addReferee, deleteReferee,
-        setImpersonatedUser, setOriginalRole, setRole, resetNavigation, role, addAdminLog, loadServices
-    } = useAppStore();
+    const adminUsers = useAppStore((s) => s.adminUsers);
+    const adminGoalkeepers = useAppStore((s) => s.adminGoalkeepers);
+    const adminReferees = useAppStore((s) => s.adminReferees);
+    const adminSession = useAppStore((s) => s.adminSession);
+    const addUser = useAppStore((s) => s.addUser);
+    const deleteUser = useAppStore((s) => s.deleteUser);
+    const banUser = useAppStore((s) => s.banUser);
+    const unbanUser = useAppStore((s) => s.unbanUser);
+    const toggleUserPro = useAppStore((s) => s.toggleUserPro);
+    const verifyUser = useAppStore((s) => s.verifyUser);
+    const addGoalkeeper = useAppStore((s) => s.addGoalkeeper);
+    const deleteGoalkeeper = useAppStore((s) => s.deleteGoalkeeper);
+    const addReferee = useAppStore((s) => s.addReferee);
+    const deleteReferee = useAppStore((s) => s.deleteReferee);
+    const setImpersonatedUser = useAppStore((s) => s.setImpersonatedUser);
+    const setOriginalRole = useAppStore((s) => s.setOriginalRole);
+    const setRole = useAppStore((s) => s.setRole);
+    const resetNavigation = useAppStore((s) => s.resetNavigation);
+    const role = useAppStore((s) => s.role);
+    const addAdminLog = useAppStore((s) => s.addAdminLog);
+    const loadServices = useAppStore((s) => s.loadServices);
 
     const { success, error: toastError } = useAdminToast();
     const [confirmModal, setConfirmModal] = useState<ActionConfirmOptions | null>(null);
@@ -45,11 +61,44 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const [editUser, setEditUser] = useState<AdminUser | null>(null);
     const [page, setPage] = useState(0);
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned' | 'pro'>('all');
+    const [query, setQuery] = useState('');
+    const debouncedQuery = useDebouncedValue(query, 300);
+    const [serverUsers, setServerUsers] = useState<AdminUser[]>([]);
+    const [serverTotal, setServerTotal] = useState(0);
+    const [usersLoading, setUsersLoading] = useState(false);
     const PAGE_SIZE = 50;
+
+    const loadServerUsers = useCallback(async () => {
+        if (subRoute !== 'KULLANICILAR') return;
+        setUsersLoading(true);
+        try {
+            const { users, total } = await fetchAdminProfiles({
+                offset: page * PAGE_SIZE,
+                limit: PAGE_SIZE,
+                search: debouncedQuery || undefined,
+                status: statusFilter,
+            });
+            setServerUsers(users);
+            setServerTotal(total);
+        } catch (err) {
+            toastError(toTurkishAdminError(err));
+        } finally {
+            setUsersLoading(false);
+        }
+    }, [subRoute, page, debouncedQuery, statusFilter, toastError]);
+
+    useEffect(() => {
+        if (subRoute === 'KULLANICILAR') void loadServerUsers();
+    }, [subRoute, loadServerUsers]);
+
+    useEffect(() => {
+        setPage(0);
+    }, [debouncedQuery, statusFilter, subRoute]);
 
     const refresh = async () => {
         await loadServices();
         if (onRefresh) await onRefresh();
+        if (subRoute === 'KULLANICILAR') await loadServerUsers();
     };
 
     const notify = (msg: string) => success(msg);
@@ -123,6 +172,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     if (u.isBanned) await unbanUser(u.id);
                     else await banUser(u.id);
                     notify(u.isBanned ? 'Ban kaldırıldı' : 'Kullanıcı banlandı');
+                    if (subRoute === 'KULLANICILAR') await loadServerUsers();
                 } catch (err) {
                     toastError(err instanceof Error ? err.message : 'Ban işlemi başarısız');
                 }
@@ -150,6 +200,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                         await deleteUser(u.id);
                     }
                     notify(`🗑️ ${u.name} silindi`);
+                    if (subRoute === 'KULLANICILAR') await loadServerUsers();
                 } catch (err) {
                     toastError(err instanceof Error ? err.message : 'Silme başarısız');
                 }
@@ -159,7 +210,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     };
 
     let icon = <Users size={18} />;
-    let sourceData: any[] = adminUsers;
+    let sourceData: any[] = subRoute === 'KULLANICILAR' ? serverUsers : adminUsers;
     if (subRoute === 'KALECİLER') {
         icon = <Shield size={18} />;
         sourceData = adminGoalkeepers;
@@ -173,33 +224,30 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
         return hay.includes(q);
     }, []);
 
-    const { query, setQuery, filtered: searched } = useAdminFilter(sourceData, searchFn);
+    const providerFiltered = useMemo(() => {
+        if (subRoute === 'KULLANICILAR') return [];
+        const q = query.trim().toLowerCase();
+        if (!q) return sourceData;
+        return sourceData.filter((u) => searchFn(u, q));
+    }, [subRoute, sourceData, query, searchFn]);
 
     const statusFiltered = useMemo(() => {
-        if (subRoute !== 'KULLANICILAR' || statusFilter === 'all') return searched;
-        if (statusFilter === 'active') return searched.filter((u) => !u.isBanned);
-        if (statusFilter === 'banned') return searched.filter((u) => u.isBanned);
-        return searched.filter((u) => u.isPro);
-    }, [searched, statusFilter, subRoute]);
+        if (subRoute === 'KULLANICILAR') return serverUsers;
+        return providerFiltered;
+    }, [subRoute, serverUsers, providerFiltered]);
 
-    useEffect(() => { setPage(0); }, [query, statusFilter, subRoute]);
-
-    const totalUsers = statusFiltered.length;
-    let data = statusFiltered;
-    if (subRoute === 'KULLANICILAR') {
-        data = statusFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-    }
+    const totalUsers = subRoute === 'KULLANICILAR' ? serverTotal : statusFiltered.length;
+    const data = subRoute === 'KULLANICILAR' ? serverUsers : statusFiltered;
 
     const statusChips = useMemo(() => {
         if (subRoute !== 'KULLANICILAR') return [];
-        const base = searched;
         return [
-            { id: 'all', label: 'Tümü', count: base.length },
-            { id: 'active', label: 'Aktif', count: base.filter((u) => !u.isBanned).length },
-            { id: 'banned', label: 'Banlı', count: base.filter((u) => u.isBanned).length },
-            { id: 'pro', label: 'Pro', count: base.filter((u) => u.isPro).length },
+            { id: 'all', label: 'Tümü' },
+            { id: 'active', label: 'Aktif' },
+            { id: 'banned', label: 'Banlı' },
+            { id: 'pro', label: 'Pro' },
         ];
-    }, [searched, subRoute]);
+    }, [subRoute]);
 
     let buttonIconColor = 'text-blue-400';
     let rowIconColor = 'text-blue-400';
@@ -302,7 +350,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                         <button
                             type="button"
                             title={u.isPro ? 'PRO kaldır' : 'PRO ver'}
-                            onClick={async () => { try { await toggleUserPro(u.id); success(u.isPro ? 'PRO kaldırıldı' : 'PRO verildi'); } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); } }}
+                            onClick={async () => { try { await toggleUserPro(u.id); success(u.isPro ? 'PRO kaldırıldı' : 'PRO verildi'); if (subRoute === 'KULLANICILAR') await loadServerUsers(); } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); } }}
                             className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black ${u.isPro ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
                         >
                             <Star size={11} /> PRO
@@ -311,7 +359,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                             <button
                                 type="button"
                                 title="Doğrula"
-                                onClick={async () => { try { await verifyUser(u.id); success('Hesap doğrulandı'); } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); } }}
+                                onClick={async () => { try { await verifyUser(u.id); success('Hesap doğrulandı'); if (subRoute === 'KULLANICILAR') await loadServerUsers(); } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); } }}
                                 className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black bg-blue-500/10 text-blue-400 border-blue-500/30"
                             >
                                 <BadgeCheck size={11} /> DOĞRULA
@@ -353,22 +401,27 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     value={query}
                     onChange={setQuery}
                     placeholder={subRoute === 'KULLANICILAR' ? 'İsim, e-posta veya rol ara...' : 'İsim veya seviye ara...'}
-                    resultCount={statusFiltered.length}
-                    totalCount={sourceData.length}
+                    resultCount={subRoute === 'KULLANICILAR' ? serverUsers.length : statusFiltered.length}
+                    totalCount={totalUsers}
                 />
                 {statusChips.length > 0 && (
                     <AdminFilterChips chips={statusChips} active={statusFilter} onChange={(id) => setStatusFilter(id as typeof statusFilter)} />
                 )}
             </div>
 
-            <DataTable columns={columns} data={data} emptyDescription={query ? 'Arama kriterlerine uygun kayıt yok.' : 'Yeni kayıt ekleyin veya demo verileri yükleyin.'} />
+            <DataTable
+                columns={columns}
+                data={data}
+                loading={subRoute === 'KULLANICILAR' && usersLoading}
+                emptyDescription={query ? 'Arama kriterlerine uygun kayıt yok.' : 'Yeni kayıt ekleyin veya demo verileri yükleyin.'}
+            />
 
             {subRoute === 'KULLANICILAR' && totalUsers > PAGE_SIZE && (
                 <div className="flex items-center justify-between mt-4 text-xs text-gray-500">
                     <span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalUsers)} / {totalUsers}</span>
                     <div className="flex gap-2">
-                        <button type="button" disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="px-3 py-1 rounded-lg border border-white/10 disabled:opacity-40">Önceki</button>
-                        <button type="button" disabled={(page + 1) * PAGE_SIZE >= totalUsers} onClick={() => setPage((p) => p + 1)} className="px-3 py-1 rounded-lg border border-white/10 disabled:opacity-40">Sonraki</button>
+                        <button type="button" disabled={page === 0 || usersLoading} onClick={() => setPage((p) => p - 1)} className="px-3 py-1 rounded-lg border border-white/10 disabled:opacity-40">Önceki</button>
+                        <button type="button" disabled={(page + 1) * PAGE_SIZE >= totalUsers || usersLoading} onClick={() => setPage((p) => p + 1)} className="px-3 py-1 rounded-lg border border-white/10 disabled:opacity-40">Sonraki</button>
                     </div>
                 </div>
             )}
@@ -382,6 +435,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 onAddUser={async (u) => {
                     if (onRefresh) await onRefresh();
                     else useAppStore.setState({ adminUsers: [u, ...useAppStore.getState().adminUsers] });
+                    if (subRoute === 'KULLANICILAR') await loadServerUsers();
                     notify(`✅ ${u.name} eklendi`);
                 }}
                 onAddGoalkeeper={(gk) => { addGoalkeeper(gk); notify(`✅ ${gk.name} eklendi`); }}

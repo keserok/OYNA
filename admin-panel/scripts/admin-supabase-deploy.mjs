@@ -20,6 +20,9 @@ const MIGRATIONS = [
   resolve(root, 'supabase/migrations/20260626000001_admin_full_authority.sql'),
   resolve(root, 'supabase/migrations/20260628000001_admin_panel_ready.sql'),
   resolve(root, 'supabase/migrations/20260629000001_admin_bootstrap_fix.sql'),
+  resolve(root, 'supabase/migrations/20260630000001_admin_community_control.sql'),
+  resolve(root, 'supabase/migrations/20260630000002_admin_ops_foundation.sql'),
+  resolve(root, 'supabase/migrations/20260630000003_admin_profiles_search.sql'),
 ];
 
 function loadEnv() {

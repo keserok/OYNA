@@ -4,13 +4,14 @@ import AdminBootShell from './AdminBootShell';
 import GodViewPanel from './GodViewPanel';
 import { useAppStore } from '../../store';
 import { signOutAdmin, type AdminSession } from '../services/adminService';
-import { bootstrapAdminPlatform, refreshAdminStatsOnly } from '../services/adminBootstrap';
+import { bootstrapAdminPlatform, refreshAdminStatsOnly, resolveBootFatalError, type AdminBootPhase } from '../services/adminBootstrap';
 
 interface Props { onBack: () => void; }
 
 const AdminPanel: React.FC<Props> = ({ onBack }) => {
     const { loadAdminData, clearAdminMockState, setAdminInventoryData, setAdminSession } = useAppStore();
     const [session, setSession] = useState<AdminSession | null>(null);
+    const [bootPhase, setBootPhase] = useState<AdminBootPhase>('session');
     const [booting, setBooting] = useState(false);
     const [bootError, setBootError] = useState<string | null>(null);
 
@@ -21,7 +22,15 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
     };
 
     const loadPlatformData = useCallback(async () => {
-        await bootstrapAdminPlatform(bootstrapDeps);
+        const result = await bootstrapAdminPlatform(bootstrapDeps, setBootPhase);
+        const state = useAppStore.getState();
+        const fatal = resolveBootFatalError(result.warnings, {
+            pitches: state.adminPitches.length,
+            matches: state.adminMatches.length,
+        });
+        if (fatal) setBootError(fatal);
+        setBootPhase('ready');
+        return result;
     }, [clearAdminMockState, setAdminInventoryData, loadAdminData]);
 
     const handleAuthenticated = async (adminSession: AdminSession) => {
@@ -29,6 +38,7 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
         setAdminSession(adminSession);
         setBooting(true);
         setBootError(null);
+        setBootPhase('inventory');
         try {
             await loadPlatformData();
         } catch (err) {
@@ -43,6 +53,7 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
         if (!session) return;
         setBooting(true);
         setBootError(null);
+        setBootPhase('inventory');
         try {
             await loadPlatformData();
         } catch (err) {
@@ -61,7 +72,7 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
     };
 
     if (booting) {
-        return <AdminBootShell mode="loading" />;
+        return <AdminBootShell mode="loading" phase={bootPhase} />;
     }
 
     if (bootError && session) {

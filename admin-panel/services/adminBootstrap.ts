@@ -33,8 +33,23 @@ export interface AdminInventoryData {
   texts: Record<string, string>;
 }
 
+export type AdminBootPhase = 'session' | 'inventory' | 'operational' | 'ready';
+
 export interface AdminBootstrapResult {
   warnings: string[];
+}
+
+/** Tam envanter yüklenemediyse ve store boşsa fatal boot hatası döndür */
+export function resolveBootFatalError(
+  warnings: string[],
+  inventory: { pitches: number; matches: number },
+): string | null {
+  const inventoryEmpty = inventory.pitches === 0 && inventory.matches === 0;
+  const inventoryFailed = warnings.some((w) => w.startsWith('Envanter yüklenemedi'));
+  if (inventoryFailed && inventoryEmpty) {
+    return warnings.find((w) => w.startsWith('Envanter yüklenemedi')) ?? 'Platform verileri yüklenemedi';
+  }
+  return null;
 }
 
 type LoadAdminDataFn = (data: Awaited<ReturnType<typeof loadAdminOperationalData>> & {
@@ -53,12 +68,16 @@ export async function loadAdminInventoryData(): Promise<AdminInventoryData & { w
   return { ...inventory, warnings };
 }
 
-export async function bootstrapAdminPlatform(deps: AdminBootstrapDeps): Promise<AdminBootstrapResult> {
+export async function bootstrapAdminPlatform(
+  deps: AdminBootstrapDeps,
+  onPhase?: (phase: AdminBootPhase) => void,
+): Promise<AdminBootstrapResult> {
   const warnings: string[] = [];
   deps.clearAdminMockState();
 
   let inventoryTexts: Record<string, string> = {};
 
+  onPhase?.('inventory');
   try {
     const inventory = await loadAdminInventoryData();
     warnings.push(...inventory.warnings);
@@ -79,6 +98,7 @@ export async function bootstrapAdminPlatform(deps: AdminBootstrapDeps): Promise<
     });
   }
 
+  onPhase?.('operational');
   try {
     const [operational, extended] = await Promise.all([
       withAdminTimeout('Operasyonel veriler', () => loadAdminOperationalData()),
@@ -101,6 +121,7 @@ export async function bootstrapAdminPlatform(deps: AdminBootstrapDeps): Promise<
     });
   }
 
+  onPhase?.('ready');
   return { warnings };
 }
 

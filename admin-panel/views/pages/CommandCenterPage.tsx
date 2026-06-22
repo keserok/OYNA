@@ -65,6 +65,8 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, debouncedSilentReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pitches' }, debouncedSilentReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_disputes' }, debouncedSilentReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_creation_requests' }, debouncedSilentReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_join_requests' }, debouncedSilentReload)
       .subscribe();
     return () => {
       clearInterval(interval);
@@ -234,6 +236,20 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
               {(queue.community_requests ?? []).slice(0, 5).map((c) => (
                 <p key={c.id} className="text-[11px] text-blue-400 py-1 border-b border-white/[0.06]">{c.name}</p>
               ))}
+            </QueueSection>
+
+            <QueueSection title="Katılma Talepleri" count={queue.community_join_requests?.length ?? 0} route="TOPLULUKLAR">
+              {(queue.community_join_requests ?? []).slice(0, 5).map((jr) => (
+                <button
+                  key={jr.id}
+                  type="button"
+                  onClick={() => onNavigate?.('TOPLULUKLAR', { communityId: jr.community_id })}
+                  className="w-full text-left text-[11px] text-cyan-400 py-1 border-b border-white/[0.06] hover:text-cyan-300"
+                >
+                  {jr.community_name} — {jr.user_name || jr.user_id.slice(0, 8)}
+                </button>
+              ))}
+              {(queue.community_join_requests ?? []).length === 0 && <p className="text-[11px] text-gray-600">Boş</p>}
             </QueueSection>
           </div>
         ) : (

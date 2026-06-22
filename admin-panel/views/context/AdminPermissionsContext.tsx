@@ -21,7 +21,7 @@ export const AdminPermissionsProvider: React.FC<{
   session: AdminSession | null | undefined;
   children: React.ReactNode;
 }> = ({ session, children }) => {
-  const role = (session?.adminRole || 'ADMIN') as AdminRole;
+  const role = (session?.adminRole ?? 'SUPPORT') as AdminRole;
   const value = useMemo<AdminPermissionsContextValue>(() => ({
     role,
     canAccess: (route) => canAccessRoute(role, route),

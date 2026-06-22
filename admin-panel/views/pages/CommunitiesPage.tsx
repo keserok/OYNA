@@ -1,26 +1,34 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Globe, Trophy, Users, Check, X, Trash2 } from 'lucide-react';
+import { Globe, Trophy, Users, Check, X, Trash2, Eye } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
+import { CommunityDetailDrawer } from '../components/CommunityDetailDrawer';
+import { CommunityFormModal } from '../components/CommunityFormModal';
 import {
-  fetchCommunities, fetchCommunityCreationRequests, fetchTeamsFromDb, fetchTournaments,
-  moderateCommunityCreation, deleteCommunity, createCommunityAdmin,
+  fetchCommunitiesAdmin, fetchCommunityCreationRequests, fetchTeamsFromDb, fetchTournaments,
+  moderateCommunityCreation, deleteCommunity, createCommunityAdmin, updateCommunityAdmin,
   deleteTeamAdmin, createTeamAdmin, deleteTournament, createTournamentAdmin,
   toTurkishAdminError,
-  type CommunityRow, type CommunityCreationRequest,
+  type CommunityRow, type CommunityCreationRequest, type CommunityAdminInput,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 interface CommunitiesPageProps {
   subRoute: 'TOPLULUKLAR' | 'TAKIMLAR' | 'TURNUVALAR';
   onRefresh?: () => Promise<void>;
+  openCommunityId?: string | null;
+  onOpenCommunityConsumed?: () => void;
 }
 
-export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRefresh }) => {
+export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
+  subRoute, onRefresh, openCommunityId, onOpenCommunityConsumed,
+}) => {
   const [communities, setCommunities] = useState<CommunityRow[]>([]);
+  const [communityTotal, setCommunityTotal] = useState(0);
   const [requests, setRequests] = useState<CommunityCreationRequest[]>([]);
   const [teams, setTeams] = useState<Array<{ id: string; name: string; captain_id: string | null; created_at: string; is_demo?: boolean }>>([]);
   const [tournaments, setTournaments] = useState<Array<{ id: string; name: string; status: string; max_teams: number; is_demo: boolean; starts_at: string | null }>>([]);
@@ -28,14 +36,25 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
   const [error, setError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [editCommunity, setEditCommunity] = useState<CommunityRow | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query, 350);
   const { success, error: toastError } = useAdminToast();
+
+  useEffect(() => {
+    if (openCommunityId && subRoute === 'TOPLULUKLAR') {
+      setDetailId(openCommunityId);
+      onOpenCommunityConsumed?.();
+    }
+  }, [openCommunityId, subRoute, onOpenCommunityConsumed]);
 
   const teamSearch = useCallback((t: (typeof teams)[number], q: string) => t.name.toLowerCase().includes(q), []);
   const tourSearch = useCallback((t: (typeof tournaments)[number], q: string) => t.name.toLowerCase().includes(q), []);
-  const commSearch = useCallback((c: CommunityRow, q: string) => [c.name, c.type, c.domain].filter(Boolean).join(' ').toLowerCase().includes(q), []);
   const filteredTeams = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return teams;
@@ -46,32 +65,38 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
     if (!q) return tournaments;
     return tournaments.filter((t) => tourSearch(t, q));
   }, [tournaments, query, tourSearch]);
-  const filteredCommunities = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return communities;
-    return communities.filter((c) => commSearch(c, q));
-  }, [communities, query, commSearch]);
+
+  const loadCommunities = useCallback(async () => {
+    const res = await fetchCommunitiesAdmin({
+      search: debouncedQuery.trim() || undefined,
+      limit: 100,
+    });
+    setCommunities(res.communities);
+    setCommunityTotal(res.total);
+  }, [debouncedQuery]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [c, r, t, tour] = await Promise.all([
-        fetchCommunities(),
-        fetchCommunityCreationRequests(),
-        fetchTeamsFromDb(),
-        fetchTournaments(),
-      ]);
-      setCommunities(c);
-      setRequests(r);
-      setTeams(t);
-      setTournaments(tour);
+      if (subRoute === 'TOPLULUKLAR') {
+        const r = await fetchCommunityCreationRequests();
+        await loadCommunities();
+        setRequests(r);
+      } else {
+        const [t, tour] = await Promise.all([
+          fetchTeamsFromDb(),
+          fetchTournaments(),
+        ]);
+        setTeams(t);
+        setTournaments(tour);
+      }
     } catch (err) {
       setError(toTurkishAdminError(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [subRoute, loadCommunities]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -98,8 +123,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
   const handleAdd = async () => {
     if (!newName.trim()) return;
     try {
-      if (subRoute === 'TOPLULUKLAR') await createCommunityAdmin({ name: newName.trim() });
-      else if (subRoute === 'TAKIMLAR') await createTeamAdmin(newName.trim());
+      if (subRoute === 'TAKIMLAR') await createTeamAdmin(newName.trim());
       else await createTournamentAdmin({ name: newName.trim() });
       setNewName('');
       setShowAdd(false);
@@ -108,6 +132,17 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
     } catch (err) {
       setError(toTurkishAdminError(err));
     }
+  };
+
+  const handleCommunitySave = async (data: CommunityAdminInput) => {
+    if (formMode === 'create') {
+      await createCommunityAdmin(data);
+      success('Topluluk oluşturuldu');
+    } else if (editCommunity) {
+      await updateCommunityAdmin(editCommunity.id, data);
+      success('Topluluk güncellendi');
+    }
+    await load();
   };
 
   const handleDelete = (id: string, label: string) => setDeleteTarget({ id, label });
@@ -213,15 +248,19 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
   return (
     <>
     <PageShell route="TOPLULUKLAR" icon={<Globe size={20} />} actions={
-      <ModuleCrudBar moduleKey="communities" addLabel="Yeni Topluluk" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
+      <ModuleCrudBar
+        moduleKey="communities"
+        addLabel="Yeni Topluluk"
+        onAdd={() => { setFormMode('create'); setEditCommunity(null); setFormOpen(true); }}
+        onRefresh={refresh}
+      />
     }>
-      {addForm}
-      <AdminSearchBar value={query} onChange={setQuery} placeholder="Topluluk ara..." resultCount={filteredCommunities.length} className="mb-4" />
-      {error && <p className="text-red-400 text-xs px-1">{error}</p>}
+      <AdminSearchBar value={query} onChange={setQuery} placeholder="Topluluk ara..." resultCount={communityTotal} className="mb-4" />
+      {error && <p className="text-red-400 text-xs px-1 mb-2">{error}</p>}
 
       {requests.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Onay Bekleyen Talepler ({requests.length})</h3>
+        <section className="space-y-2 mb-6">
+          <h3 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Oluşturma Talepleri ({requests.length})</h3>
           {requests.map((req) => (
             <div key={req.id} className="bg-[#161B22] border border-yellow-500/20 rounded-xl p-4 flex items-center justify-between gap-3">
               <div>
@@ -241,28 +280,53 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({ subRoute, onRe
         </section>
       )}
 
-      <section className="space-y-2">
-        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kayıtlı Topluluklar ({filteredCommunities.length})</h3>
-        {filteredCommunities.length === 0 && !loading ? (
-          <p className="text-center text-gray-600 text-xs py-8 border border-dashed border-white/5 rounded-xl">Henüz topluluk yok</p>
-        ) : (
-          filteredCommunities.map((c) => (
-            <div key={c.id} className="bg-black/30 border border-white/5 rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">{c.name}</h3>
-                  {c.is_verified && <span className="text-[8px] font-black text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">DOĞRULANMIŞ</span>}
-                </div>
-                <p className="text-[10px] text-gray-500 font-mono mt-1">{c.type} • {c.member_count} üye • {c.join_mode}</p>
+      <DataTable
+        columns={[
+          { header: 'Topluluk', render: (c) => (
+            <button type="button" onClick={() => setDetailId(c.id)} className="text-left group">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-white group-hover:text-blue-300">{c.name}</span>
+                {c.is_verified && <span className="text-[8px] font-black text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">DOĞRULANMIŞ</span>}
+                {c.is_demo && <span className="text-[8px] font-black text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">DEMO</span>}
               </div>
-              <button onClick={() => handleDelete(c.id, c.name)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg" title="Sil">
+              <p className="text-[10px] text-gray-500 mt-0.5">{c.type} • {c.member_count} üye</p>
+            </button>
+          )},
+          { header: 'Katılım', render: (c) => <span className="text-[11px] text-gray-400 font-mono">{c.join_mode}</span> },
+          { header: 'Sahip', render: (c) => <span className="text-[11px] text-gray-500">{c.owner_name || '—'}</span> },
+          { header: 'Tarih', render: (c) => <span className="text-[11px] text-gray-500">{new Date(c.created_at).toLocaleDateString('tr-TR')}</span> },
+          { header: '', render: (c) => (
+            <div className="flex gap-1">
+              <button onClick={() => setDetailId(c.id)} className="p-1.5 text-gray-500 hover:text-blue-400 rounded-lg hover:bg-blue-500/10" title="Detay">
+                <Eye size={14} />
+              </button>
+              <button onClick={() => handleDelete(c.id, c.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10" title="Sil">
                 <Trash2 size={14} />
               </button>
             </div>
-          ))
-        )}
-      </section>
+          )},
+        ]}
+        data={communities}
+        loading={loading}
+      />
     </PageShell>
+
+    <CommunityFormModal
+      open={formOpen}
+      mode={formMode}
+      community={editCommunity}
+      onClose={() => setFormOpen(false)}
+      onSave={handleCommunitySave}
+    />
+
+    {detailId && (
+      <CommunityDetailDrawer
+        communityId={detailId}
+        onClose={() => setDetailId(null)}
+        onUpdated={() => void loadCommunities()}
+      />
+    )}
+
     {deleteDialog}
     </>
   );

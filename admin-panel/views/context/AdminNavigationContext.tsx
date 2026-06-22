@@ -5,6 +5,7 @@ export interface AdminNavParams {
   matchId?: string;
   disputeMatchId?: string;
   userId?: string;
+  communityId?: string;
 }
 
 interface AdminNavigationContextValue {
@@ -60,10 +61,12 @@ export function useAdminNavigationOptional() {
 }
 
 /** Parse ?route=MATCHES&matchId=... from admin entry URL */
-export function parseAdminUrlParams(): { route?: GodViewSubRoute; matchId?: string } {
+export function parseAdminUrlParams(): { route?: GodViewSubRoute; matchId?: string; communityId?: string } {
   if (typeof window === 'undefined') return {};
   const sp = new URLSearchParams(window.location.search);
-  const route = sp.get('route') as GodViewSubRoute | null;
+  const raw = sp.get('route') as GodViewSubRoute | null;
+  const route = raw === 'SEGMENTATION' ? 'NOTIFICATIONS' : (raw ?? undefined);
   const matchId = sp.get('matchId') ?? undefined;
-  return { route: route ?? undefined, matchId };
+  const communityId = sp.get('communityId') ?? undefined;
+  return { route, matchId, communityId };
 }
