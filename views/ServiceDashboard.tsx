@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment } from '../types';
 import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { UPCOMING_JOBS, WALLET_HISTORY, DIRECT_OFFERS_MOCK } from '../constants';
+import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
@@ -72,6 +72,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [myOffers, setMyOffers] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [walletHistory, setWalletHistory] = useState<WalletHistoryItem[]>([]);
+  const [walletHistoryLoading, setWalletHistoryLoading] = useState(false);
+  const [walletHistoryError, setWalletHistoryError] = useState<string | null>(null);
   const [offersLoading, setOffersLoading] = useState(true);
   const [offersError, setOffersError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -251,10 +254,27 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }
   };
 
+  const fetchWalletHistory = async () => {
+    if (!userProfile?.id) return;
+    setWalletHistoryLoading(true);
+    setWalletHistoryError(null);
+    try {
+      const history = await getWalletHistory(userProfile.id);
+      setWalletHistory(history);
+    } catch (err) {
+      console.error('fetchWalletHistory:', err);
+      setWalletHistoryError('İşlem geçmişi yüklenemedi.');
+    } finally {
+      setWalletHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!userProfile?.id) return;
     fetchOffers();
     fetchWallet();
+    fetchWalletHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const handleToggleClick = () => {
@@ -1150,12 +1170,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
           <section>
               <h3 className="font-bold text-white text-sm px-2 mb-3 uppercase tracking-wide">İŞLEM GEÇMİŞİ</h3>
+              {walletHistoryLoading ? (
+                  <LoadingState message="İşlemler yükleniyor..." />
+              ) : walletHistoryError ? (
+                  <ErrorState message={walletHistoryError} onRetry={fetchWalletHistory} />
+              ) : walletHistory.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500 text-xs font-bold uppercase tracking-widest">Henüz işlem yok</div>
+              ) : (
               <div className="space-y-3">
-                  {WALLET_HISTORY.map((tx) => (
+                  {walletHistory.map((tx) => (
                       <div key={tx.id} className="bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
                           <div>
                               <p className="font-bold text-sm text-white">{tx.description}</p>
-                              <p className="text-[10px] text-gray-500">{tx.date} • Komisyon: -{tx.commission}₺</p>
+                              <p className="text-[10px] text-gray-500">{tx.date}</p>
                           </div>
                           <div className={`text-right ${tx.amount > 0 ? 'text-white' : 'text-red-400'}`}>
                               <p className="font-black text-sm">{tx.amount > 0 ? '+' : ''}{tx.amount}₺</p>
@@ -1166,6 +1193,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                   ))}
               </div>
+              )}
           </section>
       </motion.div>
   );
@@ -1315,8 +1343,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
          {activeTab === 'HOME' && renderHomeView()}
          {activeTab === 'JOBS' && renderJobFeedView()}
-         
-         
+         {activeTab === 'WALLET' && renderWalletView()}
          {activeTab === 'MENU' && renderMenuView()}
       </main>
 

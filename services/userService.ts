@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
+import { PlayerCardData } from '../types';
 
 export interface OynaUser {
   id: string;
@@ -15,8 +16,17 @@ export interface OynaUser {
     matchesPlayed: number;
     rating: number;
   };
+  playerCard?: PlayerCardData | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface MatchHistorySummary {
+  id: string;
+  date: string;
+  pitchName: string;
+  score: string;
+  result: 'WIN' | 'LOSS' | 'DRAW';
 }
 
 // ─── GK/Ref rolleri onay gerektiren roller ─────────────────────────────────
@@ -166,8 +176,91 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     verification_status: data.verification_status ?? 'approved',
     is_admin: data.is_admin ?? false,
     walletBalance: data.wallet_balance ?? 0,
-    stats: { matchesPlayed: 0, rating: 5.0 },
+    stats: data.stats || { matchesPlayed: 0, rating: 5.0 },
+    playerCard: (data.player_card as PlayerCardData) || null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
+};
+
+export interface WalletHistoryItem {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  commission: number;
+  status: 'CLEARED' | 'PENDING';
+}
+
+/**
+ * Servis sağlayıcının cüzdan işlem geçmişini döndürür.
+ */
+export const getWalletHistory = async (userId: string): Promise<WalletHistoryItem[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('wallet_transactions')
+      .select('id, amount, type, status, description, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      id: row.id as string,
+      date: row.created_at
+        ? new Date(row.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })
+        : '—',
+      description: row.description || row.type || 'İşlem',
+      amount: Number(row.amount ?? 0),
+      commission: 0,
+      status: (row.status === 'COMPLETED' || row.status === 'CLEARED') ? 'CLEARED' : 'PENDING',
+    }));
+  } catch (err) {
+    console.error('[UserService] Cüzdan geçmişi çekme hatası:', err);
+    throw err;
+  }
+};
+
+/**
+ * Kullanıcının tamamlanmış maçlardaki geçmişini (home/away katılımına göre) döndürür.
+ */
+export const getMatchHistory = async (userId: string): Promise<MatchHistorySummary[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('status', 'COMPLETED')
+      .order('date', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    return (data || [])
+      .map((row: any) => {
+        const slots = row.slots || [];
+        const awaySlots = row.away_slots || row.awaySlots || [];
+        const isAway = awaySlots.some((s: any) => s?.player?.id === userId);
+        const isHome = slots.some((s: any) => s?.player?.id === userId);
+        return { row, slots, awaySlots, isAway, isParticipant: isHome || isAway };
+      })
+      .filter(x => x.isParticipant)
+      .map(({ row, isAway }) => {
+        const homeScore = row.homeScore ?? row.home_score ?? 0;
+        const awayScore = row.awayScore ?? row.away_score ?? 0;
+        const result: 'WIN' | 'LOSS' | 'DRAW' = homeScore === awayScore
+          ? 'DRAW'
+          : (isAway ? awayScore > homeScore : homeScore > awayScore) ? 'WIN' : 'LOSS';
+        return {
+          id: row.id as string,
+          date: row.date as string,
+          pitchName: (row.pitchName || row.pitch_name || row.location || 'Saha') as string,
+          score: `${homeScore} - ${awayScore}`,
+          result,
+        };
+      });
+  } catch (err) {
+    console.error('[UserService] Maç geçmişi çekme hatası:', err);
+    throw err;
+  }
 };

@@ -1,3 +1,5 @@
+> **ARŞİV — Supabase öncesi.** Bu belge, proje Firebase/Firestore kullanırken yazılmıştır. Backend artık tamamen Supabase'e taşınmıştır (`supabaseClient.ts`, `supabaseAuth.ts`); aşağıdaki Firestore'a özgü sorular ve mimari önerileri güncel mimariyi yansıtmıyor. Yalnızca tarihsel referans ve henüz cevaplanmamış iş mantığı sorularını (örn. anlaşmazlıklı maç skoru senaryosu) görmek için saklanmaktadır.
+
 # ⚡ OYNA Backend Geçiş Planı & Sıfır Hata Soru Manifestosu
 
 Bu belge, **OYNA** premium, oyunlaştırılmış ve modern spor ekosisteminin frontend ve mevcut Firebase mock/listener yapısını, **sıfır hata (zero-defect) ve sıfır eksik** ile üretim (production) kalitesinde bir backend mimarisine taşımak için yanıtlanması gereken kritik mimari, veri ve iş mantığı sorularını içerir.

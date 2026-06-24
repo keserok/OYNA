@@ -2,23 +2,57 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Bot, Send, Sparkles, Trophy, ShieldAlert, Zap } from 'lucide-react';
 import { ChatMessage, Team } from '../types';
-import { MY_TEAM } from '../constants';
+import { auth } from '../supabaseAuth';
+import { fetchMyTeams } from '../services/teamService';
+import { LoadingState, ErrorState } from '../components/common/StatusState';
 
 interface AICoachProps {
   onBack: () => void;
 }
 
 const AICoach: React.FC<AICoachProps> = ({ onBack }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      sender: 'AI',
-      text: `Merhaba Kaptan! **${MY_TEAM.name}** için analizlerim hazır. Kadronuzda belirgin bir **${MY_TEAM.playStyle}** yapısı görüyorum. Bugün nasıl yardımcı olabilirim?`,
-      timestamp: 'Simdi'
-    }
-  ]);
+  const [team, setTeam] = useState<Team | null>(null);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const loadTeam = async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      setTeamError('Oturum bulunamadı.');
+      setTeamLoading(false);
+      return;
+    }
+    setTeamLoading(true);
+    setTeamError(null);
+    try {
+      const teams = await fetchMyTeams(uid);
+      const myTeam = teams[0] || null;
+      setTeam(myTeam);
+      if (myTeam) {
+        setMessages([{
+          id: '1',
+          sender: 'AI',
+          text: `Merhaba Kaptan! **${myTeam.name}** için analizlerim hazır. Kadronuzda belirgin bir **${myTeam.playStyle}** yapısı görüyorum. Bugün nasıl yardımcı olabilirim?`,
+          timestamp: 'Simdi'
+        }]);
+      } else {
+        setTeamError('Önce bir takım kurmalısın.');
+      }
+    } catch (err) {
+      console.error('AICoach fetch:', err);
+      setTeamError('Takım bilgisi yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -96,6 +130,12 @@ const AICoach: React.FC<AICoachProps> = ({ onBack }) => {
 
       {/* Chat Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+        {teamLoading ? (
+          <LoadingState message="Takım yükleniyor..." />
+        ) : teamError ? (
+          <ErrorState message={teamError} onRetry={loadTeam} />
+        ) : (
+        <>
         <div className="text-center py-4">
            <span className="text-[10px] bg-white/5 text-gray-500 px-3 py-1 rounded-full">Bugün, 14:30</span>
         </div>
@@ -134,11 +174,13 @@ const AICoach: React.FC<AICoachProps> = ({ onBack }) => {
              </div>
           </div>
         )}
+        </>
+        )}
       </div>
 
       {/* Quick Actions / Input */}
       <div className="p-4 bg-[#161B22] border-t border-white/5">
-         {!isTyping && (
+         {!isTyping && !teamLoading && !teamError && (
              <div className="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar">
                 <button 
                   onClick={() => handleQuickAction('TACTIC')}
@@ -166,9 +208,9 @@ const AICoach: React.FC<AICoachProps> = ({ onBack }) => {
               type="text" 
               placeholder="Koç'a bir şey sor..." 
               className="w-full bg-[#0A0E14] text-white rounded-2xl pl-4 pr-12 py-4 border border-white/10 focus:border-[#FFFF00] outline-none text-sm transition-colors"
-              disabled={isTyping}
+              disabled={isTyping || teamLoading || !!teamError}
             />
-            <button className="absolute right-2 top-2 p-2 bg-[#FFFF00] text-black rounded-xl hover:bg-yellow-300 transition-colors disabled:opacity-50">
+            <button disabled={isTyping || teamLoading || !!teamError} className="absolute right-2 top-2 p-2 bg-[#FFFF00] text-black rounded-xl hover:bg-yellow-300 transition-colors disabled:opacity-50">
                 <Send size={18} />
             </button>
          </div>

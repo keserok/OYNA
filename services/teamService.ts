@@ -145,3 +145,46 @@ export const removeTeamMember = async (teamId: string, userId: string) => {
     .eq('user_id', userId);
   if (error) throw error;
 };
+
+export const getFriendsWithStats = async (userId: string): Promise<(Player & { overall: number })[]> => {
+  const { data: rows, error: fErr } = await supabase
+    .from('friendships')
+    .select('sender_id, receiver_id')
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .eq('status', 'ACCEPTED');
+
+  if (fErr) {
+    console.error('[teamService] Arkadaşlar çekilemedi:', fErr.message);
+    return [];
+  }
+
+  const friendIds = (rows || [])
+    .map(r => (r.sender_id === userId ? r.receiver_id : r.sender_id))
+    .filter(Boolean);
+
+  if (friendIds.length === 0) return [];
+
+  const { data: profiles, error: pErr } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url, stats')
+    .in('id', friendIds);
+
+  if (pErr) {
+    console.error('[teamService] Arkadaş profilleri çekilemedi:', pErr.message);
+    return [];
+  }
+
+  return (profiles || []).map((p: any) => {
+    const rating = Number((p.stats as any)?.rating ?? 5);
+    return {
+      id: p.id as string,
+      name: (p.full_name as string) || 'Oyuncu',
+      avatar: (p.avatar_url as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`,
+      rating,
+      position: 'OYUNCU',
+      x: 0,
+      y: 0,
+      overall: Math.round(rating * 20),
+    };
+  });
+};

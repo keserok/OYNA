@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pitch, Match, AppView, PositionSlot, Player } from '../types';
+import { Pitch, AppView, PositionSlot, Player } from '../types';
 import { useAppStore } from '../store';
 
 export const FORMATS = [

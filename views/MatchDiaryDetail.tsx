@@ -1,17 +1,126 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Share2, Users, Layout } from 'lucide-react';
-import { MatchHistoryItem } from '../types';
-import { MATCH_HISTORY } from '../constants';
+import { MatchListing } from '../types';
+import { auth } from '../supabaseAuth';
+import { getMatchDetails } from '../services/matchService';
+import { LoadingState, ErrorState } from '../components/common/StatusState';
 
 interface MatchDiaryDetailProps {
     diaryId: string | null;
     onBack: () => void;
 }
 
-const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) => {
-    const match = MATCH_HISTORY.find(m => m.id === diaryId);
+interface DiaryMatchView {
+    score: string;
+    pitchName: string;
+    date: string;
+    formation: string;
+    result: 'WIN' | 'LOSS' | 'DRAW';
+    rosterSnapshot: { name: string; avatar: string; x: number; y: number; isMe: boolean }[];
+    personalNote?: string;
+}
 
-    if (!match) return null;
+const buildDiaryView = (listing: MatchListing, uid?: string): DiaryMatchView => {
+    const homeSlots = listing.slots || [];
+    const awaySlots = listing.awaySlots || [];
+    const isAwayPlayer = awaySlots.some(s => s.player?.id === uid);
+    const homeScore = listing.homeScore ?? 0;
+    const awayScore = listing.awayScore ?? 0;
+    const result: 'WIN' | 'LOSS' | 'DRAW' = homeScore === awayScore
+        ? 'DRAW'
+        : (isAwayPlayer ? awayScore > homeScore : homeScore > awayScore) ? 'WIN' : 'LOSS';
+
+    return {
+        score: `${homeScore} - ${awayScore}`,
+        pitchName: listing.pitchName || listing.location,
+        date: listing.date,
+        formation: listing.format || '—',
+        result,
+        rosterSnapshot: [...homeSlots, ...awaySlots]
+            .filter(s => s.player)
+            .map(s => ({
+                name: s.player!.name,
+                avatar: s.player!.avatar,
+                x: s.x,
+                y: s.y,
+                isMe: s.player!.id === uid,
+            })),
+        personalNote: undefined,
+    };
+};
+
+const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) => {
+    const [match, setMatch] = useState<DiaryMatchView | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadMatch = async () => {
+        if (!diaryId) {
+            setError('Maç bulunamadı.');
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const listing = await getMatchDetails(diaryId);
+            if (!listing) {
+                setError('Maç bulunamadı.');
+                setMatch(null);
+                return;
+            }
+            setMatch(buildDiaryView(listing, auth.currentUser?.uid));
+        } catch (err) {
+            console.error('MatchDiaryDetail fetch:', err);
+            setError('Maç detayları yüklenemedi. Lütfen tekrar dene.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadMatch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [diaryId]);
+
+    const header = (
+        <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
+            <button
+                onClick={onBack}
+                className="absolute left-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+            >
+                <ArrowLeft size={20} />
+            </button>
+            <div className="text-center">
+                <h1 className="text-sm font-black text-white tracking-widest uppercase">MAÇ DETAYI</h1>
+            </div>
+            <button className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
+                <Share2 size={20} />
+            </button>
+        </header>
+    );
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
+                {header}
+                <div className="flex-1 flex items-center justify-center">
+                    <LoadingState message="Maç detayları yükleniyor..." />
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !match) {
+        return (
+            <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
+                {header}
+                <div className="flex-1 flex items-center justify-center">
+                    <ErrorState message={error || 'Maç bulunamadı.'} onRetry={loadMatch} />
+                </div>
+            </div>
+        );
+    }
 
     const isWin = match.result === 'WIN';
     const isLoss = match.result === 'LOSS';
@@ -22,21 +131,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     return (
         <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
-            {/* Header */}
-            <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
-                <button
-                    onClick={onBack}
-                    className="absolute left-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <div className="text-center">
-                    <h1 className="text-sm font-black text-white tracking-widest uppercase">MAÇ DETAYI</h1>
-                </div>
-                <button className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
-                    <Share2 size={20} />
-                </button>
-            </header>
+            {header}
 
             <main className="flex-1 p-6 space-y-8 overflow-y-auto custom-scrollbar flex flex-col items-center">
 
@@ -122,7 +217,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
                         {/* Players */}
                         {match.rosterSnapshot.map((player, idx) => {
-                            const isMe = player.name === "Burak";
+                            const isMe = player.isMe;
 
                             return (
                                 <div
