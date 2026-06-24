@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Users, RefreshCw } from 'lucide-react';
-import { Player, AppView } from '../types';
-import { MOCK_FRIENDS } from '../constants';
+import { Player } from '../types';
+import { auth } from '../supabaseAuth';
+import { getFriendsWithStats } from '../services/teamService';
+import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
 
 interface TeamBuilderProps {
   onBack: () => void;
@@ -12,12 +14,21 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [isBalanced, setIsBalanced] = useState(false);
+  const [friends, setFriends] = useState<(Player & { overall: number })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Add mock overall scores to players for balancing
-  const playersWithScores = MOCK_FRIENDS.map((p, i) => ({
-    ...p,
-    overall: 70 + (i % 20) // Mock score between 70 and 89
-  }));
+  const uid = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (!uid) { setLoading(false); return; }
+    setLoading(true);
+    setError(null);
+    getFriendsWithStats(uid)
+      .then(setFriends)
+      .catch(() => setError('Arkadaş listesi yüklenemedi. Tekrar dene.'))
+      .finally(() => setLoading(false));
+  }, [uid]);
 
   const togglePlayer = (player: any) => {
     if (selectedPlayers.find(p => p.id === player.id)) {
@@ -94,33 +105,45 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {playersWithScores.map((player) => {
-                const isSelected = selectedPlayers.find(p => p.id === player.id);
-                return (
-                  <div 
-                    key={player.id}
-                    onClick={() => togglePlayer(player)}
-                    className={`p-3 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center gap-2 ${
-                      isSelected 
-                        ? 'bg-green-500/10 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)]' 
-                        : 'bg-[#161B22] border-white/5 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="relative">
-                      <img src={player.avatar} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
-                      <div className="absolute -bottom-2 -right-2 bg-[#0A0E14] border border-white/20 rounded-full w-6 h-6 flex items-center justify-center">
-                        <span className="text-[10px] font-black text-[#FFFF00]">{player.overall}</span>
+            {loading ? (
+              <LoadingState message="Arkadaşlar yükleniyor..." />
+            ) : error ? (
+              <ErrorState message={error} onRetry={() => {
+                if (!uid) return;
+                setLoading(true); setError(null);
+                getFriendsWithStats(uid).then(setFriends).catch(() => setError('Arkadaş listesi yüklenemedi. Tekrar dene.')).finally(() => setLoading(false));
+              }} />
+            ) : friends.length === 0 ? (
+              <EmptyState title="Arkadaş Bulunamadı" message="Takım kurmak için önce arkadaş ekle." />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {friends.map((player) => {
+                  const isSelected = selectedPlayers.find(p => p.id === player.id);
+                  return (
+                    <div
+                      key={player.id}
+                      onClick={() => togglePlayer(player)}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center gap-2 ${
+                        isSelected
+                          ? 'bg-green-500/10 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)]'
+                          : 'bg-[#161B22] border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="relative">
+                        <img src={player.avatar} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
+                        <div className="absolute -bottom-2 -right-2 bg-[#0A0E14] border border-white/20 rounded-full w-6 h-6 flex items-center justify-center">
+                          <span className="text-[10px] font-black text-[#FFFF00]">{player.overall}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white truncate w-full">{player.name}</p>
+                        <p className="text-[9px] text-gray-500 uppercase">{player.position}</p>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white truncate w-full">{player.name}</p>
-                      <p className="text-[9px] text-gray-500 uppercase">{player.position}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6 animate-in slide-in-from-bottom-4">

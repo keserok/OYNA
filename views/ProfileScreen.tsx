@@ -1,10 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, AppView, PlayerCardData } from '../types';
 import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy, Users } from 'lucide-react';
-import { MATCH_HISTORY } from '../constants';
 import { PlayerCard } from '../components/PlayerCard';
 import { useAppStore } from '../store';
 import { motion } from 'framer-motion';
+import { auth } from '../supabaseAuth';
+import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser } from '../services/userService';
+import { LoadingState, ErrorState } from '../components/common/StatusState';
+
+const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
+
+const buildCardData = (profile: OynaUser | null, wins: number, total: number): PlayerCardData => {
+    if (profile?.playerCard && Object.keys(profile.playerCard).length > 0) {
+        return profile.playerCard;
+    }
+    const overall = Math.round((profile?.stats.rating ?? 5) * 20);
+    return {
+        overall,
+        tier: overall >= 80 ? 'gold' : overall >= 65 ? 'silver' : 'bronze',
+        isStatsVerified: false,
+        diamondValue: 0,
+        winCount: wins,
+        totalMatches: total,
+        stats: {
+            pace: { ...DEFAULT_CARD_STAT },
+            shooting: { ...DEFAULT_CARD_STAT },
+            passing: { ...DEFAULT_CARD_STAT },
+            dribbling: { ...DEFAULT_CARD_STAT },
+            defense: { ...DEFAULT_CARD_STAT },
+            physical: { ...DEFAULT_CARD_STAT },
+        }
+    };
+};
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -14,10 +41,10 @@ interface ProfileScreenProps {
     isPro?: boolean;
 }
 
-const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze' }> = ({ tier }) => {
-    const last5 = MATCH_HISTORY.slice(0, 5);
-    const wins = MATCH_HISTORY.filter(m => m.result === 'WIN').length;
-    const total = MATCH_HISTORY.length;
+const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHistorySummary[] }> = ({ tier, matches }) => {
+    const last5 = matches.slice(0, 5);
+    const wins = matches.filter(m => m.result === 'WIN').length;
+    const total = matches.length;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
     const colors = {
@@ -85,7 +112,7 @@ const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze' }> = ({ tier }) =>
     );
 };
 
-const MatchBanner: React.FC<{ item: typeof MATCH_HISTORY[0]; isMvp?: boolean; onClick: () => void }> = ({ item, isMvp, onClick }) => (
+const MatchBanner: React.FC<{ item: MatchHistorySummary; isMvp?: boolean; onClick: () => void }> = ({ item, isMvp, onClick }) => (
     <button onClick={onClick} className="w-full relative group hover:scale-[1.01] active:scale-[0.99] transition-all text-left">
         <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-[24px] pointer-events-none" />
         <div className="relative bg-[#161B22]/80 backdrop-blur-xl border border-white/5 rounded-[24px] p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all overflow-hidden">
@@ -119,31 +146,51 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const [activeFilter, setActiveFilter] = useState<'ALL' | 'WIN' | 'PERFORMANCE' | 'MVP'>('ALL');
     const { globalTexts } = useAppStore();
 
-    const total = MATCH_HISTORY.length;
-    const wins = MATCH_HISTORY.filter(m => m.result === 'WIN').length;
-    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const [profile, setProfile] = useState<OynaUser | null>(null);
+    const [matchHistory, setMatchHistory] = useState<MatchHistorySummary[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const mockCardData: PlayerCardData = {
-        overall: 88,
-        tier: 'gold',
-        isStatsVerified: true,
-        diamondValue: 75000,
-        winCount: wins,
-        totalMatches: total,
-        stats: {
-            pace: { value: 85, videoUrl: null },
-            shooting: { value: 88, videoUrl: null },
-            passing: { value: 82, videoUrl: null },
-            dribbling: { value: 90, videoUrl: null },
-            defense: { value: 45, videoUrl: null },
-            physical: { value: 78, videoUrl: null }
+    const uid = auth.currentUser?.uid;
+
+    const loadProfile = async () => {
+        if (!uid) {
+            setError('Oturum bulunamadı.');
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const [profileData, history] = await Promise.all([
+                getFullUserProfile(uid),
+                getMatchHistory(uid),
+            ]);
+            setProfile(profileData);
+            setMatchHistory(history);
+        } catch (err) {
+            console.error('ProfileScreen fetch:', err);
+            setError('Profil yüklenemedi. Lütfen tekrar dene.');
+        } finally {
+            setLoading(false);
         }
     };
 
+    useEffect(() => {
+        loadProfile();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [uid]);
+
+    const total = matchHistory.length;
+    const wins = matchHistory.filter(m => m.result === 'WIN').length;
+    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+    const cardData = buildCardData(profile, wins, total);
+
     // Filter match history
-    const filteredMatches = MATCH_HISTORY.filter(item => {
+    const filteredMatches = matchHistory.filter(item => {
         if (activeFilter === 'WIN') return item.result === 'WIN';
-        if (activeFilter === 'MVP') return item.id === 'm1'; // Simulate m1 as MVP match
+        if (activeFilter === 'MVP') return false; // Maçın adamı oylaması henüz kayıt altına alınmıyor
         return true; // ALL or PERFORMANCE shows all matches
     });
 
@@ -173,7 +220,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
 
             {/* ═══ NATURAL SCROLLABLE BODY ═══ */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar pb-28">
-                
+                {loading ? (
+                    <LoadingState message="Profil yükleniyor..." />
+                ) : error ? (
+                    <ErrorState message={error} onRetry={loadProfile} />
+                ) : (
+                <>
                 {/* Flitable Player Card */}
                 <div className="flex flex-col items-center gap-6">
                     <div className="w-full max-w-[240px] cursor-pointer" style={{ perspective: '1200px' }} onClick={() => setIsFlipped(!isFlipped)}>
@@ -185,11 +237,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         >
                             {/* Front */}
                             <div style={{ backfaceVisibility: 'hidden' }}>
-                                <PlayerCard name="Burak Kaptan" photo="/player_card_photo.png" position="OS" cardData={mockCardData} />
+                                <PlayerCard name={profile?.full_name || 'Oyuncu'} photo={profile?.avatar_url || '/player_card_photo.png'} position="OS" cardData={cardData} />
                             </div>
                             {/* Back */}
                             <div className="absolute inset-0 w-full" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                                <div style={{ aspectRatio: '2 / 3' }}><CardBack tier={mockCardData.tier} /></div>
+                                <div style={{ aspectRatio: '2 / 3' }}><CardBack tier={cardData.tier} matches={matchHistory} /></div>
                             </div>
                         </motion.div>
                     </div>
@@ -241,7 +293,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <div className="text-left">
                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">OYNA CÜZDAN</p>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black italic text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">1,250</span>
+                                <span className="text-2xl font-black italic text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{(profile?.walletBalance ?? 0).toLocaleString('tr-TR')}</span>
                                 <span className="text-sm font-bold text-[#39FF14]">₺</span>
                             </div>
                         </div>
@@ -334,7 +386,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1.5">MVP SEÇİLDİN</p>
                                 </div>
                             </div>
-                            <span className={`text-4xl font-black italic ${activeFilter === 'MVP' ? 'text-indigo-300' : 'text-indigo-400'}`}>4</span>
+                            <span className={`text-4xl font-black italic ${activeFilter === 'MVP' ? 'text-indigo-300' : 'text-indigo-400'}`}>0</span>
                         </button>
                     </div>
                 </div>
@@ -358,11 +410,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     <div className="space-y-4">
                         {filteredMatches.length > 0 ? (
                             filteredMatches.map(item => (
-                                <MatchBanner 
-                                    key={item.id} 
-                                    item={item} 
-                                    isMvp={item.id === 'm1'} 
-                                    onClick={() => onOpenDiaryEntry(item.id)} 
+                                <MatchBanner
+                                    key={item.id}
+                                    item={item}
+                                    isMvp={false}
+                                    onClick={() => onOpenDiaryEntry(item.id)}
                                 />
                             ))
                         ) : (
@@ -372,6 +424,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         )}
                     </div>
                 </div>
+                </>
+                )}
             </div>
 
             {/* ═══ FIXED BOTTOM BAR ═══ */}

@@ -3,7 +3,6 @@ import { X, Bell, Shield, Clock, Star, CheckCircle, AlertTriangle, Zap, DollarSi
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole, AppView } from '../types';
 import { useAppStore } from '../store';
-import { PITCHES } from '../constants';
 
 interface NotificationsProps {
   onBack: () => void;
@@ -140,7 +139,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   const rawNotifs = isGK ? GK_NOTIFICATIONS : isRef ? REF_NOTIFICATIONS : GENERAL_NOTIFICATIONS;
   
-  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, setSelectedMatch, navigateTo, clearUnreadNotifications, markAllNotificationsAsRead } = useAppStore();
+  const { userNotifications, acceptMatchInvite, rejectMatchInvite, removeUserNotification, adminMatches, adminPitches, setSelectedMatch, navigateTo, clearUnreadNotifications, markAllNotificationsAsRead } = useAppStore();
   
   const storeNotifs = userNotifications.map(n => ({
     id: n.id,
@@ -386,7 +385,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           >
             {(() => {
               const match = adminMatches.find(m => m.id === selectedInvite.payload?.matchId) as any;
-              const pitch = PITCHES.find(p => p.id === match?.pitchId);
+              const pitch = adminPitches.find(p => p.id === match?.pitchId);
               const cost = match?.costPerPerson || match?.price || 150;
               
               return (

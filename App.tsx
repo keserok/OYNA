@@ -566,7 +566,7 @@ const App: React.FC = () => {
           onBack={() => goBack('DASHBOARD')}
           onNavigate={(v) => navigateTo(v)}
           community={{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }}
-          currentUser={{ id: 'u1', name: 'Ahmet', email: 'ahmet@boun.edu.tr', roles: [], communities: ['c1'], fairPlayScore: 100 }}
+          currentUser={{ id: auth.currentUser?.uid || '', name: auth.currentUser?.displayName || 'Oyuncu', email: auth.currentUser?.email || '', avatar: auth.currentUser?.photoURL || undefined, roles: [], communities: [], fairPlayScore: 100 }}
         />;
       case 'TEAM_CREATOR':
         return <TeamCreator

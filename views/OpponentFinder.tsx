@@ -7,7 +7,7 @@ import {
   Navigation, CreditCard, CheckCircle2, Loader2, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppView, Team, PlayerCard, MatchScore } from '../types';
+import { AppView, Team, FieldPlayerCard, MatchScore } from '../types';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -468,7 +468,7 @@ const OpponentFinder: React.FC<OpponentFinderProps> = ({ onBack, onNavigate }) =
       </div>
 
       {/* Players */}
-      {formation.players.map((player: PlayerCard) => (
+      {formation.players.map((player: FieldPlayerCard) => (
         <motion.div
           key={player.id}
           initial={{ scale: 0, opacity: 0 }}

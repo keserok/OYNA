@@ -114,7 +114,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            onClick={() => onNavigate('MATCH_LOBBY')}
+            onClick={() => onNavigate('MATCH_JOIN')}
             className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FFFF00]/30 transition-all duration-500"
           >
             {/* Dynamic Pulse Strip */}
@@ -332,7 +332,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                   onClick={() => {
                     if (joinCode.length === 6) {
                       setShowJoinCodeInput(false);
-                      onNavigate('MATCH_LOBBY');
+                      onNavigate('MATCH_JOIN');
                     }
                   }}
                   disabled={joinCode.length !== 6}

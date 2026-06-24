@@ -1,7 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Award, Crown } from 'lucide-react';
-import { MY_TEAM } from '../constants';
+import { Player } from '../types';
+import { auth } from '../supabaseAuth';
+import { fetchMyTeams } from '../services/teamService';
+import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
 
 interface VotingScreenProps {
   onBack: () => void;
@@ -11,9 +14,38 @@ interface VotingScreenProps {
 const VotingScreen: React.FC<VotingScreenProps> = ({ onBack, onComplete }) => {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roster, setRoster] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter out self (Assuming current user is 'p1' Burak for demo, so filter him out)
-  const votablePlayers = MY_TEAM.roster.filter(p => p.id !== 'p1');
+  const uid = auth.currentUser?.uid;
+
+  const loadRoster = async () => {
+    if (!uid) {
+      setError('Oturum bulunamadı.');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const teams = await fetchMyTeams(uid);
+      setRoster(teams[0]?.roster || []);
+    } catch (err) {
+      console.error('VotingScreen fetch:', err);
+      setError('Kadro yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRoster();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
+
+  // Maçın adamı oylamasında kendine oy verilemez
+  const votablePlayers = roster.filter(p => p.id !== uid);
 
   const handleVote = () => {
       setIsSubmitting(true);
@@ -36,15 +68,21 @@ const VotingScreen: React.FC<VotingScreenProps> = ({ onBack, onComplete }) => {
        </header>
 
        <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar">
-           {votablePlayers.map(player => {
+           {loading ? (
+               <LoadingState message="Kadro yükleniyor..." />
+           ) : error ? (
+               <ErrorState message={error} onRetry={loadRoster} />
+           ) : votablePlayers.length === 0 ? (
+               <EmptyState title="Oy Verilecek Oyuncu Yok" message="Kadronuzda oy verebileceğiniz başka oyuncu bulunmuyor." />
+           ) : votablePlayers.map(player => {
                const isSelected = selectedPlayerId === player.id;
                return (
-                   <div 
+                   <div
                      key={player.id}
                      onClick={() => setSelectedPlayerId(player.id)}
                      className={`relative p-4 rounded-[24px] border-2 transition-all cursor-pointer flex items-center gap-4 group ${
-                         isSelected 
-                         ? 'bg-[#FFFF00]/10 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.2)]' 
+                         isSelected
+                         ? 'bg-[#FFFF00]/10 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.2)]'
                          : 'bg-[#161B22] border-white/5 hover:border-white/20'
                      }`}
                    >
@@ -56,7 +94,7 @@ const VotingScreen: React.FC<VotingScreenProps> = ({ onBack, onComplete }) => {
                                </div>
                            )}
                        </div>
-                       
+
                        <div className="flex-1">
                            <h3 className={`text-lg font-black ${isSelected ? 'text-[#FFFF00]' : 'text-white'}`}>{player.name}</h3>
                            <div className="flex items-center gap-2 mt-1">
@@ -67,8 +105,8 @@ const VotingScreen: React.FC<VotingScreenProps> = ({ onBack, onComplete }) => {
                        </div>
 
                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                           isSelected 
-                           ? 'bg-[#FFFF00] border-[#FFFF00]' 
+                           isSelected
+                           ? 'bg-[#FFFF00] border-[#FFFF00]'
                            : 'border-gray-600 group-hover:border-gray-400'
                        }`}>
                            {isSelected && <div className="w-3 h-3 bg-black rounded-full"></div>}
