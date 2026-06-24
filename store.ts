@@ -463,6 +463,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     } finally {
       set({ isHydrated: true, initialLoadComplete: true });
     }
+
+    // Maç listesini canlı tut: admin panelden veya başka bir oyuncudan gelen
+    // ekleme/güncelleme/silme işlemleri sayfa yenilenmeden burada görünsün.
+    supabase
+      .channel('matches-list-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const oldId = (payload.old as any)?.id;
+          if (!oldId) return;
+          set((state) => ({ adminMatches: state.adminMatches.filter(m => m.id !== oldId) }));
+          return;
+        }
+        const row = payload.new as unknown as MatchListing;
+        if (!row?.id) return;
+        set((state) => {
+          const exists = state.adminMatches.some(m => m.id === row.id);
+          return {
+            adminMatches: exists
+              ? state.adminMatches.map(m => m.id === row.id ? { ...m, ...row } : m)
+              : [row, ...state.adminMatches]
+          };
+        });
+      })
+      .subscribe();
   },
   view: IS_LOCAL_DEV ? 'DASHBOARD' : 'SPLASH',
   navigationStack: [],
@@ -1032,19 +1056,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: [match, ...prev] });
     try {
-      const { createMatchAdmin } = await import('./admin-panel/services/adminService');
       const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
-      const newId = await createMatchAdmin(listingToMatchPayload(match));
-      set({ adminMatches: [{ ...match, id: newId }, ...prev] });
+      const { data, error } = await supabase.rpc('player_create_match', { p_payload: listingToMatchPayload(match) });
+      if (error) throw error;
+      set({ adminMatches: [{ ...match, id: data as string }, ...prev] });
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
   updateMatch: async (match) => {
     const prev = get().adminMatches;
     set({ adminMatches: prev.map(m => m.id === match.id ? match : m) });
     try {
-      const { updateMatchAdmin } = await import('./admin-panel/services/adminService');
       const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
-      await updateMatchAdmin(match.id, listingToMatchPayload(match));
+      const { error } = await supabase.rpc('player_update_match', { p_match_id: match.id, p_payload: listingToMatchPayload(match) });
+      if (error) throw error;
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
   deleteMatch: async (id) => {

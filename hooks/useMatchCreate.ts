@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Pitch, AppView, PositionSlot, Player } from '../types';
 import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
 
 export const FORMATS = [
   { v: '3v3', label: '3v3', players: 6,  popular: false },
@@ -185,6 +186,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
 
     const matchData = {
         id: 'm_' + Math.random().toString(36).substr(2, 9),
+        creatorId: auth.currentUser?.uid,
         title: `${selectedPitch?.name || 'Saha'} Maçı`,
         location: selectedPitch?.district || 'Belirtilmedi',
         time: selectedTimeSlot?.time || '',
