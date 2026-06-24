@@ -277,7 +277,7 @@ export const fbGetAppSettings = async () => {
 export const fbGetAdminProfiles = async () => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at')
+    .select('id, full_name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at')
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) throw new Error(`Kullanıcılar yüklenemedi: ${error.message}`);

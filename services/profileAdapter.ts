@@ -16,7 +16,7 @@ import { AdminUser, UserRole } from '../types';
 export function fromProfileRow(row: Record<string, any>): AdminUser {
   return {
     id: row.id ?? '',
-    name: row.name ?? '',
+    name: row.full_name ?? row.name ?? '',
     email: row.email ?? '',
     phone: row.phone ?? undefined,
     avatar: row.avatar_url ?? '',
@@ -28,7 +28,7 @@ export function fromProfileRow(row: Record<string, any>): AdminUser {
     isPro: Boolean(row.is_pro),
     joinDate: row.join_date ?? row.created_at ?? '',
     matchCount: Number(row.match_count) || 0,
-    wallet: Number(row.wallet) || 0,
+    wallet: Number(row.wallet_balance ?? row.wallet ?? 0),
     reliabilityScore: Number(row.reliability_score) ?? 100,
     banExpiresAt: row.ban_expires_at ?? null,
     communities: Array.isArray(row.communities) ? row.communities : [],
@@ -47,7 +47,7 @@ export function toProfileRow(user: Partial<AdminUser>): Record<string, any> {
   const row: Record<string, any> = {};
 
   if (user.id !== undefined)               row.id = user.id;
-  if (user.name !== undefined)             row.name = user.name;
+  if (user.name !== undefined)             row.full_name = user.name;
   if (user.email !== undefined)            row.email = user.email;
   if (user.phone !== undefined)            row.phone = user.phone;
   if (user.avatar !== undefined)           row.avatar_url = user.avatar;
@@ -59,7 +59,7 @@ export function toProfileRow(user: Partial<AdminUser>): Record<string, any> {
   if (user.isPro !== undefined)            row.is_pro = user.isPro;
   if (user.joinDate !== undefined)         row.join_date = user.joinDate;
   if (user.matchCount !== undefined)       row.match_count = user.matchCount;
-  if (user.wallet !== undefined)           row.wallet = user.wallet;
+  if (user.wallet !== undefined)           row.wallet_balance = user.wallet;
   if (user.reliabilityScore !== undefined) row.reliability_score = user.reliabilityScore;
   if (user.banExpiresAt !== undefined)     row.ban_expires_at = user.banExpiresAt;
   if (user.communities !== undefined)      row.communities = user.communities;
@@ -82,12 +82,12 @@ export function newProfileFromAuth(authUser: {
 }): Record<string, any> {
   return {
     id: authUser.id,
-    name: authUser.displayName || authUser.email?.split('@')[0] || '',
+    full_name: authUser.displayName || authUser.email?.split('@')[0] || '',
     email: authUser.email ?? null,
     avatar_url: authUser.photoURL ?? '',
     role: 'PLAYER',
     rating: 5.0,
-    wallet: 0,
+    wallet_balance: 0,
     is_verified: false,
     is_banned: false,
     is_pro: false,

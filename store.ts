@@ -1102,19 +1102,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   initSupabaseRealtime: () => {
-    supabase
-      .channel('public:match_registrations')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_registrations' }, (payload) => {
-        console.log('Realtime Match Registration Update:', payload);
-      })
-      .subscribe();
-      
-    supabase
-      .channel('public:waitlist')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'waitlist' }, (payload) => {
-        console.log('Realtime Waitlist Update:', payload);
-      })
-      .subscribe();
+    // Unused realtime subscriptions to match_registrations and waitlist dropped
+    // as slots are now managed directly in the matches table JSONB.
   },
 
   // User
