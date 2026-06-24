@@ -40,7 +40,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
                 onClick={() => onNavigate(item.id as AppView)}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className="relative -top-6 flex flex-col items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161B22] rounded-full min-h-[48px]"
+                className="flex-1 relative -top-6 flex flex-col items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161B22] rounded-full min-h-[48px]"
               >
                 <motion.div 
                   whileHover={{ scale: 1.05 }}

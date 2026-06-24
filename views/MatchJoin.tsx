@@ -1760,7 +1760,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           {(isAlreadyJoined || isAlreadyJoinedReserve) ? (
             <button 
               onClick={() => setShowLeaveConfirm(true)}
-              className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
+              className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
               {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
             </button>
           ) : (
@@ -2699,7 +2699,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               <Shield size={14} className="text-white/40" />
                               <span className="text-[11px] text-white/50 font-bold uppercase tracking-wider">HAKEM DURUMU</span>
                             </div>
-                            <span className={`text-xs font-black uppercase italic ${hasReferee ? 'text-[#39FF14]' : 'text-white/50'}`}>
+                            <span className={`text-xs font-black uppercase italic text-right max-w-[200px] leading-tight ${hasReferee ? 'text-[#39FF14]' : 'text-white/50'}`}>
                               {hasReferee ? 'RESMİ LİSANSLI HAKEM' : 'HAKEMSİZ (KAPTAN KONTROLÜ)'}
                             </span>
                           </div>
