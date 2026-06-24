@@ -51,7 +51,6 @@ const FORMATS = [
   { v: '11v11', label: '11v11', players: 22, popular: false },
 ];
 
-const BUDGET_OPTIONS = ['Ücretsiz', '150-200₺', '200-250₺', '250-300₺', '300-350₺'];
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
 
@@ -1857,7 +1856,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     draftMatch, isDraftMode,
     perTeam, isReady,
     handleSlotMove, pitchSlots,
-    toggleOrientation, calculatedBudget, costPerPerson,
+    toggleOrientation, costPerPerson,
     publishMatch
   } = useMatchCreate(onNavigate);
 
