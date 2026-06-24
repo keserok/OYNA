@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Clock, MapPin, Calendar, Info } from 'lucide-react';
 import { AppView, MatchListing } from '../types';
 import { useAppStore } from '../store';
+import { useMyMatches } from '../hooks/useMyMatches';
 
 interface UpcomingMatchesViewProps {
   onBack: () => void;
@@ -88,36 +89,9 @@ const KalanSure: React.FC<{ timeStr: string; dateStr: string }> = ({ timeStr, da
 };
 
 const UpcomingMatchesView: React.FC<UpcomingMatchesViewProps> = ({ onBack, onNavigate }) => {
-  const { adminMatches, setSelectedMatch } = useAppStore();
-  const currentUserUid = 'u1';
+  const { setSelectedMatch } = useAppStore();
+  const { upcoming: sortedActiveMatches, cancelled: cancelledMatches } = useMyMatches();
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'CANCELLED'>('UPCOMING');
-
-  const userMatches = useMemo(() => {
-    return adminMatches.filter(m => {
-      // 1. If draft, show
-      if (m.status === 'DRAFT') return true;
-      // 2. If cancelled, show
-      if (m.status === 'CANCELLED') return true;
-      // 3. If user is in it
-      const userInMatch = m.slots?.some(s => s.player?.id === currentUserUid) || m.awaySlots?.some(s => s.player?.id === currentUserUid);
-      return userInMatch;
-    });
-  }, [adminMatches]);
-
-  const sortedActiveMatches = useMemo(() => {
-    const active = userMatches.filter(m => m.status !== 'CANCELLED');
-    // Sort by date and time (closest first)
-    active.sort((a, b) => {
-      const dateA = parseMatchDate(a.date, a.time) || new Date();
-      const dateB = parseMatchDate(b.date, b.time) || new Date();
-      return dateA.getTime() - dateB.getTime();
-    });
-    return active;
-  }, [userMatches]);
-
-  const cancelledMatches = useMemo(() => {
-    return userMatches.filter(m => m.status === 'CANCELLED');
-  }, [userMatches]);
 
   const displayList = activeTab === 'UPCOMING' ? sortedActiveMatches : cancelledMatches;
 

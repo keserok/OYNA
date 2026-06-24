@@ -11,7 +11,7 @@ import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { useAppStore } from '../store';
 import { check90MinAutoCancel } from '../utils/gameRules';
-import { auth } from '../supabaseAuth';
+import { useMyMatches } from '../hooks/useMyMatches';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
@@ -298,25 +298,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
   const myDrafts = React.useMemo(() => adminMatches.filter(m => m.status === 'DRAFT'), [adminMatches]);
   const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
 
-  const currentUserUid = React.useMemo(() => {
-    return auth.currentUser?.uid || 'u1';
-  }, []);
+  const { all: userMatches, closest: closestMatch, currentUserUid } = useMyMatches();
 
   const currentUserProfile = React.useMemo(() => {
     return adminUsers.find(u => u.id === currentUserUid);
   }, [adminUsers, currentUserUid]);
-
-  const userMatches = React.useMemo(() => {
-    return adminMatches.filter(m => {
-      // 1. If draft, show
-      if (m.status === 'DRAFT') return true;
-      // 2. If cancelled, show
-      if (m.status === 'CANCELLED') return true;
-      // 3. If user u1 is in it
-      const userInMatch = m.slots?.some(s => s.player?.id === currentUserUid) || m.awaySlots?.some(s => s.player?.id === currentUserUid);
-      return userInMatch;
-    });
-  }, [adminMatches, currentUserUid]);
 
   const closestMatchPulse = React.useMemo(() => {
     const now = new Date();
@@ -341,17 +327,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     if (diffHours < 6) return 0.8; // medium
     return 1.8; // slow
   }, [userMatches]);
-
-  const closestMatch = React.useMemo(() => {
-    const activeUpcoming = userMatches.filter(m => m.status !== 'CANCELLED');
-    if (activeUpcoming.length === 0) return null;
-    return activeUpcoming.map(m => {
-      const matchDate = parseMatchDate(m.date, m.time);
-      return { match: m, date: matchDate };
-    })
-    .filter((entry): entry is { match: typeof adminMatches[0]; date: Date } => entry.date !== null)
-    .sort((a, b) => a.date.getTime() - b.date.getTime())[0]?.match;
-  }, [userMatches, adminMatches]);
 
   const buttonSubtitle = React.useMemo(() => {
     if (closestMatch) {
