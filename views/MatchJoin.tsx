@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Calendar, Zap, Hand, Scale,
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
@@ -11,7 +11,7 @@ import { MatchListing, PositionSlot, UserRole, Player, Team } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { joinMatchSlot, subscribeToMatchUpdates } from '../services/matchService';
+import { subscribeToMatchUpdates } from '../services/matchService';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -403,28 +403,20 @@ const generateDefaultSlots = (size: string, prefixId: string): PositionSlot[] =>
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 
 const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJoin }) => {
-  // Format string tespiti: Önce açık format alanı, sonra "7v7" gibi kesin regex, son çare slot sayısından
-  const badgeFormat = originalMatch?.badges?.find(b => /^\d+v\d+$/i.test(b.trim()))?.toLowerCase();
-  const slotCountFormat = originalMatch?.slots && originalMatch.slots.length > 0
-    ? inferSquadSize(originalMatch.slots.length)
-    : null;
-  const matchFormatStr = originalMatch?.format || badgeFormat || slotCountFormat || '7v7';
-
-  // Home slotları: mevcut varsa kullan, yoksa format'a göre üret
-  const homeSlots = (originalMatch?.slots && originalMatch.slots.length > 0)
-    ? originalMatch.slots
-    : generateDefaultSlots(matchFormatStr, (originalMatch?.id || 'match') + '_home');
-
-  // Away slotları: mevcut varsa kullan, yoksa HER ZAMAN HOME slot sayısıyla aynı üret
-  const awaySlots = (originalMatch?.awaySlots && originalMatch.awaySlots.length > 0)
-    ? originalMatch.awaySlots
-    : generateDefaultSlots(inferSquadSize(homeSlots.length), (originalMatch?.id || 'match') + '_away');
-
-  const match = originalMatch ? {
-    ...originalMatch,
-    slots: homeSlots,
-    awaySlots: awaySlots,
-  } : null as any;
+  const match = useMemo(() => {
+    if (!originalMatch) return null as any;
+    const badgeFormat = originalMatch.badges?.find(b => /^\d+v\d+$/i.test(b.trim()))?.toLowerCase();
+    const slotCountFormat = originalMatch.slots?.length > 0 ? inferSquadSize(originalMatch.slots.length) : null;
+    const fmt = originalMatch.format || badgeFormat || slotCountFormat || '7v7';
+    const homeSlots = originalMatch.slots?.length > 0
+      ? originalMatch.slots
+      : generateDefaultSlots(fmt, (originalMatch.id || 'match') + '_home');
+    const awaySlots = originalMatch.awaySlots?.length > 0
+      ? originalMatch.awaySlots
+      : generateDefaultSlots(inferSquadSize(homeSlots.length), (originalMatch.id || 'match') + '_away');
+    return { ...originalMatch, slots: homeSlots, awaySlots };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originalMatch?.id, originalMatch?.slots, originalMatch?.awaySlots, originalMatch?.format]);
 
   // ── State ────────────────────────────────────────────────────────────────
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -1771,137 +1763,118 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           )}
         </div>
 
-        {/* Maç Bilgi Şeridi */}
-        <div className="px-5 pb-4">
-          <div className="bg-[#161B22]/80 backdrop-blur-md rounded-2xl border border-white/5 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-            {/* VS Matchup Row */}
-            <div className="flex flex-col gap-4 mb-3">
-              <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-2xl p-4 relative overflow-hidden">
-                {/* Diagonal background glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-red-500/5 pointer-events-none" />
-                
-                {/* Ev Sahibi Takım / Beyaz Takım */}
-                <button
-                  onClick={() => setPitchSide('home')}
-                  className={`flex-1 flex flex-col items-center text-center min-w-0 p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                    pitchSide === 'home'
-                      ? (homeTeam ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'bg-white/10 border-white/30 shadow-[0_0_20px_rgba(255,255,255,0.2)]')
-                      : 'bg-transparent border-transparent opacity-50 hover:opacity-80'
-                  }`}
-                >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl mb-1 overflow-hidden ${
-                    homeTeam ? 'bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'bg-white/10 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.15)]'
-                  }`}>
-                    {homeTeam?.logo ? (
-                      homeTeam.logo.startsWith('http') ? (
-                        <img src={homeTeam.logo} alt={homeTeam.name} className="w-full h-full object-cover" />
-                      ) : (
-                        homeTeam.logo
-                      )
-                    ) : (
-                      <Shield className="w-6 h-6 text-white" />
-                    )}
-                  </div>
-                  <span className={`text-[8px] font-black uppercase tracking-widest block leading-tight ${homeTeam ? 'text-emerald-400' : 'text-white'}`}>
-                    {homeTeam ? 'EV SAHİBİ' : 'BEYAZ TAKIM'}
-                  </span>
-                  <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">
-                    {homeTeam?.name || 'BEYAZ TAKIM'}
-                  </h4>
-                  <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
-                    <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
-                    <span className="text-[9px] text-[#FFFF00] font-black italic">{homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue)/1000) : 80}</span>
-                  </div>
-                </button>
-
-                {/* VS Badge */}
-                <div className="flex flex-col items-center justify-center px-2 z-10">
-                  <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-[#FFFF00] font-black italic text-[10px] shadow-[0_0_15px_rgba(255,255,0,0.2)]">
-                    VS
-                  </div>
-                </div>
-
-                {/* Deplasman Takımı / Kırmızı Takım */}
-                <button
-                  onClick={() => setPitchSide('away')}
-                  className={`flex-1 flex flex-col items-center text-center min-w-0 p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                    pitchSide === 'away'
-                      ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
-                      : 'bg-transparent border-transparent opacity-50 hover:opacity-80'
-                  }`}
-                >
-                  <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)] mb-1 overflow-hidden">
-                    {awayTeam?.logo ? (
-                      awayTeam.logo.startsWith('http') ? (
-                        <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
-                      ) : (
-                        awayTeam.logo
-                      )
-                    ) : (
-                      <Shield className="w-6 h-6 text-red-500" />
-                    )}
-                  </div>
-                  <span className="text-[8px] font-black text-red-400 uppercase tracking-widest block leading-tight">
-                    {awayTeam ? 'DEPLASMAN' : 'KIRMIZI TAKIM'}
-                  </span>
-                  <h4 className="text-[11px] font-black text-white italic uppercase tracking-tighter truncate w-full mt-0.5">
-                    {awayTeam?.name || 'KIRMIZI TAKIM'}
-                  </h4>
-                  <div className="mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 inline-flex items-center gap-1">
-                    <span className="text-[7px] text-white/50 font-bold uppercase tracking-wider">OVR</span>
-                    <span className="text-[9px] text-[#FFFF00] font-black italic">{awayTeam?.teamValue ? Math.round(parseInt(awayTeam.teamValue)/1000) : 78}</span>
-                  </div>
-                </button>
+        {/* ── Minimalist Maç Başlığı ── */}
+        <div className="px-4 pb-3">
+          {/* VS Şeridi */}
+          <div className="flex items-stretch gap-2 mb-2">
+            {/* Ev Sahibi */}
+            <button
+              onClick={() => setPitchSide('home')}
+              className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.97] ${
+                pitchSide === 'home'
+                  ? 'bg-white/8 border-white/25'
+                  : 'bg-transparent border-white/5 opacity-55'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
+                homeTeam ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-white/10 border border-white/15'
+              }`}>
+                {homeTeam?.logo ? (
+                  homeTeam.logo.startsWith('http')
+                    ? <img src={homeTeam.logo} alt={homeTeam.name} className="w-full h-full object-cover" />
+                    : <span className="text-sm">{homeTeam.logo}</span>
+                ) : <Shield className="w-4 h-4 text-white/70" />}
               </div>
-
-              {/* Detay Bilgileri Şeridi */}
-              <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                <div className="flex flex-col gap-1.5">
-                  <button onClick={() => setShowMapModal(true)} className="flex items-center gap-1.5 text-white text-[11px] font-black uppercase tracking-widest hover:text-[#39FF14] transition-colors cursor-pointer group text-left">
-                    <MapPin size={11} className="text-[#39FF14] group-hover:scale-110 transition-transform shrink-0" />
-                    <span className="truncate max-w-[200px] border-b border-dashed border-white/20 group-hover:border-[#39FF14]/50">{match.location || 'Konum Belirtilmemiş'}</span>
-                  </button>
-                  <div className="flex items-center gap-2 text-white text-[11px] font-black uppercase tracking-widest">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={11} className="text-white/80" />
-                      <span>{match.date || '—'}</span>
-                    </div>
-                    <span className="text-white/40">•</span>
-                    <div className="flex items-center gap-1">
-                      <Clock size={11} className="text-white/80" />
-                      <span>{match.time || '—'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Badgeler */}
-                <div className="flex items-center gap-1.5">
-                  <div className="px-2.5 py-1 rounded-full font-black text-[10px] uppercase tracking-widest border"
-                    style={{
-                      color: diffConf.color,
-                      borderColor: diffConf.color + '40',
-                      background: diffConf.color + '15',
-                      boxShadow: `0 0 10px ${diffConf.glow}`,
-                    }}>
-                    {diffConf.label}
-                  </div>
-                  <div className="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 font-black text-[10px] uppercase tracking-widest text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                    {squadSize.toUpperCase()}
-                  </div>
-                </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/40 leading-none mb-0.5">
+                  {homeTeam ? 'EV SAHİBİ' : 'BEYAZ TAKIM'}
+                </p>
+                <p className="text-[12px] font-black text-white uppercase italic tracking-tight truncate leading-tight">
+                  {homeTeam?.name || 'BEYAZ TAKIM'}
+                </p>
               </div>
+              <div className="flex flex-col items-end shrink-0">
+                <span className="text-[7px] text-white/30 font-bold uppercase tracking-wider">OVR</span>
+                <span className="text-[13px] font-black text-white italic leading-none">
+                  {homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue) / 1000) : 80}
+                </span>
+              </div>
+            </button>
+
+            {/* VS */}
+            <div className="flex items-center justify-center w-8 shrink-0">
+              <span className="text-[10px] font-black text-white/30 italic">VS</span>
             </div>
 
-            {/* Maç Detayları Bağlantısı */}
+            {/* Deplasman */}
             <button
-              onClick={() => setShowInfoModal(true)}
-              className="w-full flex items-center justify-center gap-2 transition-all py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer active:scale-95 mt-1 bg-[#FFFF00]/10 border border-[#FFFF00]/25 hover:border-[#FFFF00] text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.1)]"
+              onClick={() => setPitchSide('away')}
+              className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.97] ${
+                pitchSide === 'away'
+                  ? 'bg-red-500/8 border-red-500/25'
+                  : 'bg-transparent border-white/5 opacity-55'
+              }`}
             >
-              <Info size={13} className="animate-pulse" />
-              <span>MAÇ KURALLARI & FİNANS</span>
-              <ChevronRight size={12} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden bg-red-500/15 border border-red-500/30">
+                {awayTeam?.logo ? (
+                  awayTeam.logo.startsWith('http')
+                    ? <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
+                    : <span className="text-sm">{awayTeam.logo}</span>
+                ) : <Shield className="w-4 h-4 text-red-400/80" />}
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[9px] font-black uppercase tracking-widest text-red-400/60 leading-none mb-0.5">
+                  {awayTeam ? 'DEPLASMAN' : 'KIRMIZI TAKIM'}
+                </p>
+                <p className="text-[12px] font-black text-white uppercase italic tracking-tight truncate leading-tight">
+                  {awayTeam?.name || 'KIRMIZI TAKIM'}
+                </p>
+              </div>
+              <div className="flex flex-col items-end shrink-0">
+                <span className="text-[7px] text-white/30 font-bold uppercase tracking-wider">OVR</span>
+                <span className="text-[13px] font-black text-white italic leading-none">
+                  {awayTeam?.teamValue ? Math.round(parseInt(awayTeam.teamValue) / 1000) : 78}
+                </span>
+              </div>
             </button>
           </div>
+
+          {/* Bilgi + Badge Şeridi */}
+          <div className="flex items-center gap-2 mb-2">
+            <button onClick={() => setShowMapModal(true)}
+              className="flex items-center gap-1 text-[10px] font-bold text-white/50 hover:text-[#39FF14] transition-colors min-w-0 flex-1">
+              <MapPin size={9} className="text-[#39FF14] shrink-0" />
+              <span className="truncate">{match.location || 'Konum'}</span>
+            </button>
+            <div className="flex items-center gap-1 text-[10px] font-bold text-white/40 shrink-0">
+              <Calendar size={9} />
+              <span>{match.date || '—'}</span>
+              <span className="text-white/20">•</span>
+              <Clock size={9} />
+              <span>{match.time || '—'}</span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border"
+                style={{ color: diffConf.color, borderColor: diffConf.color + '40', background: diffConf.color + '12' }}>
+                {diffConf.label}
+              </span>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase text-white/70 bg-white/8 border border-white/10">
+                {squadSize.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          {/* Kurallar Butonu */}
+          <button
+            onClick={() => setShowInfoModal(true)}
+            className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-white/4 border border-white/8 hover:border-white/20 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Info size={11} className="text-white/40" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Maç Kuralları & Finans</span>
+            </div>
+            <ChevronRight size={11} className="text-white/30" />
+          </button>
         </div>
       </header>
 
