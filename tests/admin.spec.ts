@@ -9,7 +9,7 @@ test.describe('Admin panel — yükleme ve ayrı giriş noktası', () => {
   });
 
   test('admin.html, main uygulamayla aynı URL değil', async ({ page }) => {
-    const res = await page.goto('/admin.html');
+    const res = await page.goto('/admin.html', { waitUntil: 'domcontentloaded' });
     expect(res?.ok()).toBeTruthy();
     await expect(page).toHaveURL(/admin\.html/);
   });
