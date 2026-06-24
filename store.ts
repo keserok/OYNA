@@ -144,7 +144,7 @@ export interface AppSettings {
 }
 // ─────────────────────────────────────────────────────────────────────
 
-const IS_LOCAL_DEV =
+export const IS_LOCAL_DEV =
   import.meta.env.VITE_DEV_MODE === 'true' ||
   !import.meta.env.VITE_SUPABASE_URL;
 
@@ -445,7 +445,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ adminPitches: pitchesRes.value as Pitch[] });
       }
       if (matchesRes.status === 'fulfilled' && matchesRes.value) {
-        set({ adminMatches: matchesRes.value as MatchListing[] });
+        const dbMatches = matchesRes.value as MatchListing[];
+        if (IS_LOCAL_DEV) {
+          const demoIds = new Set(MATCH_LISTINGS.map(m => m.id));
+          set({ adminMatches: [...MATCH_LISTINGS, ...dbMatches.filter(m => !demoIds.has(m.id))] });
+        } else {
+          set({ adminMatches: dbMatches });
+        }
       }
       if (teamsRes.status === 'fulfilled' && teamsRes.value) {
         set({ adminTeams: teamsRes.value as Team[] });

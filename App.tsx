@@ -166,6 +166,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (DEV_MODE) { setIsAuthReady(true); return; }
       try {
         if (user) {
           const { data: profile } = await supabase
