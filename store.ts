@@ -199,7 +199,6 @@ interface AppState {
   isAuthReady: boolean;
   hasMotmCoupon: boolean;
   selectedMatch: MatchListing | null;
-  isUserPro: boolean;
   selectedDiaryId: string | null;
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
@@ -300,7 +299,6 @@ interface AppState {
   setIsAuthReady: (isReady: boolean) => void;
   setHasMotmCoupon: (hasCoupon: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
-  setIsUserPro: (isPro: boolean) => void;
   setSelectedDiaryId: (id: string | null) => void;
   activeDraftId: string | null;
   setActiveDraftId: (id: string | null) => void;
@@ -472,7 +470,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthReady: true,
   hasMotmCoupon: false,
   selectedMatch: null,
-  isUserPro: false,
   selectedDiaryId: null,
   activeDraftId: null,
   selectedGk: null,
@@ -862,7 +859,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsAuthReady: (isAuthReady) => set({ isAuthReady }),
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),
-  setIsUserPro: (isPro) => set({ isUserPro: isPro }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),

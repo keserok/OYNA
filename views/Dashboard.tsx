@@ -694,7 +694,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 </motion.div>
                 <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">ORGANİZASYON</span>
               </div>
-              <h2 className="text-5xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
+              <h2 className="text-4xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
               <p className="text-[10px] text-black/60 mt-2 font-bold">Maçı organize et.</p>
             </div>
 

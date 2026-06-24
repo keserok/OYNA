@@ -31,7 +31,6 @@ const SettingsScreen = lazy(() => import('./views/SettingsScreen'));
 const VotingScreen = lazy(() => import('./views/VotingScreen'));
 const MotmReveal = lazy(() => import('./views/MotmReveal'));
 const OynaTv = lazy(() => import('./views/OynaTv'));
-const PremiumScreen = lazy(() => import('./views/PremiumScreen'));
 const ChatScreen = lazy(() => import('./views/ChatScreen'));
 const MatchTicket = lazy(() => import('./views/MatchTicket'));
 const ScoutDashboard = lazy(() => import('./views/ScoutDashboard'));
@@ -90,7 +89,6 @@ const App: React.FC = () => {
     isAuthReady,
     hasMotmCoupon,
     selectedMatch,
-    isUserPro,
     selectedDiaryId,
     selectedGk,
     selectedRef,
@@ -101,7 +99,6 @@ const App: React.FC = () => {
     setIsAuthReady,
     setHasMotmCoupon,
     setSelectedMatch,
-    setIsUserPro,
     setSelectedDiaryId,
     setSelectedGk,
     setSelectedRef,
@@ -474,7 +471,6 @@ const App: React.FC = () => {
         return <PaymentScreen
           hasMotmCoupon={hasMotmCoupon}
           onBack={() => goBack('OPPONENT_FINDER')}
-          onUpgradeRequest={() => navigateTo('PREMIUM')}
           onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
@@ -490,7 +486,6 @@ const App: React.FC = () => {
             setSelectedDiaryId(id);
             navigateTo('MATCH_DIARY_DETAIL');
           }}
-          isPro={isUserPro}
         />;
       case 'WALLET':
         return <WalletScreen
@@ -537,14 +532,6 @@ const App: React.FC = () => {
           match={selectedMatch}
           onBack={() => goBack('MATCH_DISCOVERY')}
           onJoin={() => resetNavigation('DASHBOARD')} // Kadro kaydından sonra Dashboard'a dön
-        />;
-      case 'PREMIUM':
-        return <PremiumScreen
-          onBack={() => goBack('DASHBOARD')}
-          onUpgrade={() => {
-            setIsUserPro(true);
-            navigateTo('PROFILE');
-          }}
         />;
       case 'CHAT':
         return <ChatScreen

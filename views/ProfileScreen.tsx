@@ -11,7 +11,6 @@ interface ProfileScreenProps {
     onBack: () => void;
     onNavigate?: (view: AppView) => void;
     onOpenDiaryEntry: (id: string) => void;
-    isPro?: boolean;
 }
 
 const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze' }> = ({ tier }) => {
