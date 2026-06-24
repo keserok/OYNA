@@ -117,7 +117,7 @@ const mapSettingsRow = (row: Record<string, unknown>): AppSettingsDb => ({
   featuredPitchId: (row.featured_pitch_id as string) || (row.featuredPitchId as string) || null,
   announcementBanner: (row.announcement_banner as string) || (row.announcementBanner as string) || '',
   showAnnouncementBanner: (row.show_announcement_banner ?? row.showAnnouncementBanner) !== false,
-  payoutMode: ((row.payout_mode as string) || 'cash') as 'cash' | 'online' | 'deposit',
+  payoutMode: ((row.payoutMode as string) || 'cash') as 'cash' | 'online' | 'deposit',
 });
 
 const mapAuditRow = (row: DbAuditLogRow): AdminLog => ({
@@ -374,7 +374,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     countRows('goalkeepers'),
     countRows('referees'),
     countRows('promo_codes', { column: 'is_active', op: 'eq', value: true }),
-    supabase.from('settings').select('commission_rate').eq('id', 1).maybeSingle(),
+    supabase.from('settings').select('commissionRate').eq('id', 'main').maybeSingle(),
   ]);
 
   return {
@@ -390,7 +390,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     active_goalkeepers,
     active_referees,
     active_promo_codes,
-    commission_rate: Number(settingsRes.data?.commission_rate ?? 10),
+    commission_rate: Number(settingsRes.data?.commissionRate ?? 10),
   };
 }
 

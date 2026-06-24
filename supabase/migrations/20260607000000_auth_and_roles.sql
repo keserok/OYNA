@@ -6,7 +6,7 @@
 
 -- ─── A. profiles tablosuna yeni sütunlar ─────────────────────
 ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS roles TEXT[] DEFAULT ARRAY['PLAYER'],
+  ADD COLUMN IF NOT EXISTS roles JSONB DEFAULT '["PLAYER"]'::jsonb,
   ADD COLUMN IF NOT EXISTS phone TEXT UNIQUE,
   ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false,
@@ -61,21 +61,37 @@ CREATE POLICY "No direct inserts" ON public.admin_audit_log
   FOR INSERT WITH CHECK (false);
 
 -- ─── C. protect_profile_sensitive_fields trigger güncellemesi ──
--- is_admin ve phone_verified alanlarını da koru.
--- Mevcut trigger fonksiyonu yerine geçer.
+-- is_admin, phone_verified, role, roles, wallet_balance, is_banned, ban_expires_at korunur.
+-- Platform adminleri (is_platform_admin) bu alanları RPC üzerinden değiştirebilir.
 CREATE OR REPLACE FUNCTION public.protect_profile_sensitive_fields()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Direkt client UPDATE ile bu alanlar değiştirilemez
-  IF NEW.is_admin IS DISTINCT FROM OLD.is_admin THEN
-    RAISE EXCEPTION 'SECURITY: is_admin alanı doğrudan değiştirilemez.';
-  END IF;
-  IF NEW.phone_verified IS DISTINCT FROM OLD.phone_verified THEN
-    RAISE EXCEPTION 'SECURITY: phone_verified alanı doğrudan değiştirilemez.';
+  IF auth.uid() IS NOT NULL AND NOT public.is_platform_admin() THEN
+    IF NEW.is_admin IS DISTINCT FROM OLD.is_admin THEN
+      RAISE EXCEPTION 'SECURITY: is_admin alanı doğrudan değiştirilemez.';
+    END IF;
+    IF NEW.phone_verified IS DISTINCT FROM OLD.phone_verified THEN
+      RAISE EXCEPTION 'SECURITY: phone_verified alanı doğrudan değiştirilemez.';
+    END IF;
+    IF NEW.role IS DISTINCT FROM OLD.role THEN
+      RAISE EXCEPTION 'SECURITY: role alanı doğrudan değiştirilemez.';
+    END IF;
+    IF NEW.roles IS DISTINCT FROM OLD.roles THEN
+      RAISE EXCEPTION 'SECURITY: roles alanı doğrudan değiştirilemez.';
+    END IF;
+    IF NEW.wallet_balance IS DISTINCT FROM OLD.wallet_balance THEN
+      RAISE EXCEPTION 'SECURITY: wallet_balance doğrudan değiştirilemez.';
+    END IF;
+    IF NEW.is_banned IS DISTINCT FROM OLD.is_banned THEN
+      RAISE EXCEPTION 'SECURITY: is_banned doğrudan değiştirilemez.';
+    END IF;
+    IF NEW.ban_expires_at IS DISTINCT FROM OLD.ban_expires_at THEN
+      RAISE EXCEPTION 'SECURITY: ban_expires_at doğrudan değiştirilemez.';
+    END IF;
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger varsa drop/recreate
 DROP TRIGGER IF EXISTS protect_profile_sensitive_fields_trigger ON public.profiles;
@@ -87,7 +103,7 @@ CREATE TRIGGER protect_profile_sensitive_fields_trigger
 CREATE OR REPLACE VIEW public.pending_provider_verifications AS
 SELECT
   p.id,
-  p.full_name,
+  COALESCE(p.full_name, p.name::text) AS full_name,
   p.email,
   p.avatar_url,
   p.role   AS primary_role,
@@ -101,13 +117,13 @@ SELECT
   r.bio    AS ref_bio,
   r.fee    AS ref_fee
 FROM public.profiles p
-LEFT JOIN public.goalkeepers g ON g.auth_uid = p.id
-LEFT JOIN public.referees    r ON r.auth_uid = p.id
+LEFT JOIN public.goalkeepers g ON g.id = p.id OR g."authUid" = p.id
+LEFT JOIN public.referees    r ON r.id = p.id OR r."authUid" = p.id
 WHERE p.verification_status = 'pending'
   AND (
-    p.role = 'GOALKEEPER' OR p.role = 'REFEREE'
-    OR 'GOALKEEPER' = ANY(p.roles)
-    OR 'REFEREE'    = ANY(p.roles)
+    p.role::text = ANY (ARRAY['GOALKEEPER','REFEREE'])
+    OR COALESCE(p.roles, '[]'::jsonb) ? 'GOALKEEPER'
+    OR COALESCE(p.roles, '[]'::jsonb) ? 'REFEREE'
   );
 
 -- View için RLS: sadece is_admin=true kullanıcılar görebilir
@@ -129,14 +145,11 @@ DECLARE
   v_log_id    UUID;
   v_admin_name TEXT;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND is_admin = true
-  ) THEN
-    RAISE EXCEPTION 'UNAUTHORIZED: Bu işlem sadece adminler tarafından yapılabilir.';
+  IF NOT public.is_platform_admin() THEN
+    RAISE EXCEPTION 'UNAUTHORIZED: Bu işlem sadece platform adminleri tarafından yapılabilir.';
   END IF;
 
-  SELECT full_name INTO v_admin_name
+  SELECT COALESCE(full_name, email, 'Admin') INTO v_admin_name
   FROM public.profiles WHERE id = auth.uid();
 
   INSERT INTO public.admin_audit_log
@@ -147,9 +160,10 @@ BEGIN
 
   RETURN v_log_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ─── F. approve_provider_verification SECURITY DEFINER fonksiyon ─
+-- Onay anında kaleci/hakem profilini de otomatik oluşturur.
 CREATE OR REPLACE FUNCTION public.approve_provider_verification(
   p_user_id  UUID,
   p_approved BOOLEAN,
@@ -157,16 +171,22 @@ CREATE OR REPLACE FUNCTION public.approve_provider_verification(
 ) RETURNS BOOLEAN AS $$
 DECLARE
   v_user_email TEXT;
-  v_user_name  TEXT;
+  v_name       TEXT;
+  v_role       TEXT;
+  v_roles      JSONB;
+  v_is_gk      BOOLEAN;
+  v_is_ref     BOOLEAN;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true
-  ) THEN
+  IF NOT public.is_platform_admin() THEN
     RAISE EXCEPTION 'UNAUTHORIZED';
   END IF;
 
-  SELECT email, full_name INTO v_user_email, v_user_name
+  SELECT email, COALESCE(full_name, name), role, roles
+  INTO v_user_email, v_name, v_role, v_roles
   FROM public.profiles WHERE id = p_user_id;
+
+  v_is_gk := v_role = 'GOALKEEPER' OR COALESCE(v_roles, '[]'::jsonb) ? 'GOALKEEPER';
+  v_is_ref := v_role = 'REFEREE' OR COALESCE(v_roles, '[]'::jsonb) ? 'REFEREE';
 
   UPDATE public.profiles SET
     verification_status      = CASE WHEN p_approved THEN 'approved' ELSE 'rejected' END,
@@ -176,17 +196,30 @@ BEGIN
     updated_at               = NOW()
   WHERE id = p_user_id;
 
+  IF p_approved AND v_is_gk THEN
+    INSERT INTO public.goalkeepers (id, "authUid", name, bio, fee, rating, "matchCount", style, avatar, "isElite", "isDemo", stats, skills)
+    VALUES (p_user_id, p_user_id, COALESCE(v_name, 'Kaleci'), 'Onaylanmış kaleci profili', 250, 4.5, 0, 'Dengeli',
+      'https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?w=400', false, false,
+      '{"savePercentage":"85","cleanSheets":0}'::jsonb, '{"reflexes":80,"diving":80}'::jsonb)
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, "authUid" = EXCLUDED."authUid";
+  END IF;
+
+  IF p_approved AND v_is_ref THEN
+    INSERT INTO public.referees (id, "authUid", name, bio, fee, rating, "matchCount", level, avatar, "isElite", "isDemo", stats)
+    VALUES (p_user_id, p_user_id, COALESCE(v_name, 'Hakem'), 'Onaylanmış hakem profili', 350, 4.5, 0, 'FIFA',
+      'https://images.unsplash.com/photo-1580234811497-9df7fd2f357e?w=400', false, false,
+      '{"authority":80,"fitness":80,"communication":80}'::jsonb)
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, "authUid" = EXCLUDED."authUid";
+  END IF;
+
   -- Kullanıcıya bildirim gönder
-  INSERT INTO public.notifications (user_id, title, body, type)
+  INSERT INTO public.notifications (user_id, title, body, type_key)
   VALUES (
     p_user_id,
-    CASE WHEN p_approved THEN 'Profilin Onaylandı! ✅' ELSE 'Profil Onayı Reddedildi' END,
+    CASE WHEN p_approved THEN 'Profilin Onaylandı!' ELSE 'Profil Onayı Reddedildi' END,
     CASE WHEN p_approved
-      THEN 'Tebrikler! Kaleci/Hakem profilin onaylandı. Artık maçlara teklifler alabilirsin.'
-      ELSE COALESCE(
-        'Profilin şu an için onaylanamadı. Sebep: ' || p_notes,
-        'Profilin onaylanamadı. Lütfen admin ile iletişime geç.'
-      )
+      THEN 'Tebrikler! Hizmet sağlayıcı profilin aktif.'
+      ELSE COALESCE('Sebep: ' || p_notes, 'Profilin onaylanamadı.')
     END,
     CASE WHEN p_approved THEN 'VERIFICATION_APPROVED' ELSE 'VERIFICATION_REJECTED' END
   );
@@ -206,7 +239,7 @@ BEGIN
 
   RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ─── G. request_account_deletion SECURITY DEFINER (KVKK) ────────
 CREATE OR REPLACE FUNCTION public.request_account_deletion()
@@ -222,7 +255,7 @@ BEGIN
   WHERE id = auth.uid();
 
   -- Tüm adminlere bildirim gönder
-  INSERT INTO public.notifications (user_id, title, body, type)
+  INSERT INTO public.notifications (user_id, title, body, type_key)
   SELECT
     id,
     'Hesap Silme Talebi',
@@ -233,4 +266,4 @@ BEGIN
 
   RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

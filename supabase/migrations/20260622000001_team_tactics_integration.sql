@@ -15,7 +15,7 @@ DROP POLICY IF EXISTS "tactics_team_read" ON public.tactics;
 CREATE POLICY "tactics_team_read" ON public.tactics 
 FOR SELECT USING (
   EXISTS (
-    SELECT 1 FROM public.team_members 
-    WHERE team_id = "teamId" AND player_id = auth.uid()
+    SELECT 1 FROM public.team_members
+    WHERE team_id = "teamId" AND user_id = auth.uid()
   )
 );

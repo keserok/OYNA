@@ -3,6 +3,10 @@
 -- Creates secure, concurrency-safe PostgreSQL RPC functions for public.matches.
 -- ==============================================================================
 
+-- 0. Eksik kolonlar (canlı şemaya camelCase ile hizalı — creatorId ile aynı convention)
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS "awaySlots" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS "reservePlayers" JSONB DEFAULT '[]'::jsonb;
+
 -- 1. RPC for joining a public match slot
 CREATE OR REPLACE FUNCTION join_public_match_slot(
     p_match_id UUID,
@@ -19,16 +23,16 @@ DECLARE
     v_already_joined BOOLEAN := FALSE;
 BEGIN
     -- Ban kontrolü ve profil bilgileri
-    SELECT is_banned, full_name, avatar_url, stats->>'rating' AS rating INTO v_user_profile
+    SELECT is_banned, full_name, avatar_url, rating INTO v_user_profile
     FROM public.profiles WHERE id = p_user_id;
-    
+
     IF v_user_profile.is_banned THEN
         RAISE EXCEPTION 'Kullanıcı banlı!';
     END IF;
 
     -- Eşzamanlılık kilidi (Pessimistic Lock)
     IF p_is_away THEN
-        SELECT away_slots INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
+        SELECT "awaySlots" INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
     ELSE
         SELECT slots INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
     END IF;
@@ -42,7 +46,7 @@ BEGIN
         SELECT 1 FROM (
             SELECT jsonb_array_elements(slots) AS s FROM public.matches WHERE id = p_match_id
             UNION ALL
-            SELECT jsonb_array_elements(away_slots) AS s FROM public.matches WHERE id = p_match_id
+            SELECT jsonb_array_elements(COALESCE("awaySlots", '[]'::jsonb)) AS s FROM public.matches WHERE id = p_match_id
         ) q WHERE (q.s->'player'->>'id')::UUID = p_user_id
     ) INTO v_already_joined;
 
@@ -56,7 +60,7 @@ BEGIN
             IF (v_slot->>'status') = 'TAKEN' THEN
                 RAISE EXCEPTION 'Bu slot zaten dolu!';
             END IF;
-            
+
             -- Slot durumunu TAKEN yap ve oyuncuyu ata
             v_slot := jsonb_set(v_slot, '{status}', '"TAKEN"'::jsonb);
             v_slot := jsonb_set(v_slot, '{player}', jsonb_build_object(
@@ -80,12 +84,12 @@ BEGIN
 
     -- Kaydet
     IF p_is_away THEN
-        UPDATE public.matches SET away_slots = v_updated_slots WHERE id = p_match_id;
+        UPDATE public.matches SET "awaySlots" = v_updated_slots WHERE id = p_match_id;
     ELSE
         UPDATE public.matches SET slots = v_updated_slots WHERE id = p_match_id;
     END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 2. RPC for joining as a reserve player
@@ -99,15 +103,15 @@ DECLARE
     v_already_joined BOOLEAN := FALSE;
 BEGIN
     -- Ban kontrolü ve profil bilgileri
-    SELECT is_banned, full_name, avatar_url, stats->>'rating' AS rating INTO v_user_profile
+    SELECT is_banned, full_name, avatar_url, rating INTO v_user_profile
     FROM public.profiles WHERE id = p_user_id;
-    
+
     IF v_user_profile.is_banned THEN
         RAISE EXCEPTION 'Kullanıcı banlı!';
     END IF;
 
     -- Eşzamanlılık kilidi (Pessimistic Lock)
-    SELECT reserve_players INTO v_reserve_players FROM public.matches WHERE id = p_match_id FOR UPDATE;
+    SELECT "reservePlayers" INTO v_reserve_players FROM public.matches WHERE id = p_match_id FOR UPDATE;
 
     IF v_reserve_players IS NULL THEN
         v_reserve_players := '[]'::jsonb;
@@ -118,9 +122,9 @@ BEGIN
         SELECT 1 FROM (
             SELECT jsonb_array_elements(slots) AS s FROM public.matches WHERE id = p_match_id
             UNION ALL
-            SELECT jsonb_array_elements(away_slots) AS s FROM public.matches WHERE id = p_match_id
+            SELECT jsonb_array_elements(COALESCE("awaySlots", '[]'::jsonb)) AS s FROM public.matches WHERE id = p_match_id
             UNION ALL
-            SELECT jsonb_array_elements(reserve_players) AS s FROM public.matches WHERE id = p_match_id
+            SELECT jsonb_array_elements(COALESCE("reservePlayers", '[]'::jsonb)) AS s FROM public.matches WHERE id = p_match_id
         ) q WHERE (q.s->'player'->>'id')::UUID = p_user_id OR (q.s->>'id')::UUID = p_user_id
     ) INTO v_already_joined;
 
@@ -141,9 +145,9 @@ BEGIN
     ));
 
     -- Kaydet
-    UPDATE public.matches SET reserve_players = v_reserve_players WHERE id = p_match_id;
+    UPDATE public.matches SET "reservePlayers" = v_reserve_players WHERE id = p_match_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 3. RPC for leaving a public match slot or reserve list (with auto promotion)
@@ -164,7 +168,7 @@ DECLARE
     v_remaining_reserves JSONB := '[]'::jsonb;
 BEGIN
     -- Eşzamanlılık kilidi (Pessimistic Lock)
-    SELECT slots, away_slots, creator_id, reserve_players
+    SELECT slots, "awaySlots", "creatorId", "reservePlayers"
     INTO v_slots, v_away_slots, v_creator_id, v_reserve_players
     FROM public.matches WHERE id = p_match_id FOR UPDATE;
 
@@ -210,7 +214,7 @@ BEGIN
 
     -- Deplasman kadrosunda ara
     IF NOT v_found THEN
-        FOR v_slot IN SELECT jsonb_array_elements(v_away_slots) LOOP
+        FOR v_slot IN SELECT jsonb_array_elements(COALESCE(v_away_slots, '[]'::jsonb)) LOOP
             IF (v_slot->'player'->>'id')::UUID = p_user_id THEN
                 v_found := TRUE;
                 IF v_promoted_player IS NOT NULL THEN
@@ -234,22 +238,22 @@ BEGIN
             v_updated_away_slots := v_updated_away_slots || jsonb_build_array(v_slot);
         END LOOP;
     ELSE
-        v_updated_away_slots := v_away_slots;
+        v_updated_away_slots := COALESCE(v_away_slots, '[]'::jsonb);
     END IF;
 
     -- Kadroda bulunamadıysa yedek kulübesinde ara
     IF NOT v_found THEN
         v_remaining_reserves := '[]'::jsonb;
-        FOR v_slot IN SELECT jsonb_array_elements(v_reserve_players) LOOP
+        FOR v_slot IN SELECT jsonb_array_elements(COALESCE(v_reserve_players, '[]'::jsonb)) LOOP
             IF (v_slot->>'id')::UUID <> p_user_id THEN
                 v_remaining_reserves := v_remaining_reserves || jsonb_build_array(v_slot);
             ELSE
                 v_found := TRUE;
             END IF;
         END LOOP;
-        
+
         IF v_found THEN
-            UPDATE public.matches SET reserve_players = v_remaining_reserves WHERE id = p_match_id;
+            UPDATE public.matches SET "reservePlayers" = v_remaining_reserves WHERE id = p_match_id;
             RETURN;
         END IF;
     END IF;
@@ -258,7 +262,7 @@ BEGIN
         RAISE EXCEPTION 'Kullanıcı maça kayıtlı değil!';
     END IF;
 
-    -- Eğer ayrılan kişi maçı oluşturan kaptan (creator_id) ise yeni kaptan belirle
+    -- Eğer ayrılan kişi maçı oluşturan kaptan (creatorId) ise yeni kaptan belirle
     IF v_creator_id = p_user_id THEN
         DECLARE
             v_new_creator_id UUID := NULL;
@@ -276,10 +280,10 @@ BEGIN
             LIMIT 1;
 
             IF v_new_creator_id IS NOT NULL THEN
-                UPDATE public.matches SET creator_id = v_new_creator_id WHERE id = p_match_id;
-                
+                UPDATE public.matches SET "creatorId" = v_new_creator_id WHERE id = p_match_id;
+
                 -- Yeni kaptana bildirim gönder
-                INSERT INTO public.notifications (user_id, title, body, type)
+                INSERT INTO public.notifications (user_id, title, body, type_key)
                 VALUES (
                     v_new_creator_id,
                     '👑 Yeni Kaptan Sensin!',
@@ -293,11 +297,11 @@ BEGIN
     -- Kaydet
     UPDATE public.matches
     SET slots = v_updated_slots,
-        away_slots = v_updated_away_slots,
-        reserve_players = v_remaining_reserves
+        "awaySlots" = v_updated_away_slots,
+        "reservePlayers" = v_remaining_reserves
     WHERE id = p_match_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 4. RPC to pay the match deposit from wallet balance
@@ -318,13 +322,13 @@ BEGIN
     -- 1. process_match_payment fonksiyonu ile bakiyeyi düşür ve logla
     -- Yetersiz bakiye durumunda bu çağrı hata fırlatır ve işlemi otomatik olarak rollback eder.
     SELECT process_match_payment(p_user_id, p_match_id, p_amount) INTO v_payment_success;
-    
+
     IF NOT v_payment_success THEN
         RAISE EXCEPTION 'Ödeme işlemi başarısız!';
     END IF;
 
     -- 2. Maç slotlarını çek (Eşzamanlılık kilidiyle)
-    SELECT slots, away_slots INTO v_slots, v_away_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
+    SELECT slots, "awaySlots" INTO v_slots, v_away_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
 
     -- 3. Ev sahibi kadrosunda ara ve ödemeyi işaretle
     FOR v_slot IN SELECT jsonb_array_elements(v_slots) LOOP
@@ -337,7 +341,7 @@ BEGIN
 
     -- 4. Deplasman kadrosunda ara
     IF NOT v_found THEN
-        FOR v_slot IN SELECT jsonb_array_elements(v_away_slots) LOOP
+        FOR v_slot IN SELECT jsonb_array_elements(COALESCE(v_away_slots, '[]'::jsonb)) LOOP
             IF (v_slot->'player'->>'id')::UUID = p_user_id THEN
                 v_slot := jsonb_set(v_slot, '{player,paymentStatus}', '"PAID"'::jsonb);
                 v_found := TRUE;
@@ -345,7 +349,7 @@ BEGIN
             v_updated_away_slots := v_updated_away_slots || jsonb_build_array(v_slot);
         END LOOP;
     ELSE
-        v_updated_away_slots := v_away_slots;
+        v_updated_away_slots := COALESCE(v_away_slots, '[]'::jsonb);
     END IF;
 
     IF NOT v_found THEN
@@ -355,7 +359,12 @@ BEGIN
     -- 5. Kaydet
     UPDATE public.matches
     SET slots = v_updated_slots,
-        away_slots = v_updated_away_slots
+        "awaySlots" = v_updated_away_slots
     WHERE id = p_match_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION join_public_match_slot(uuid, text, uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION join_public_match_reserve(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION leave_public_match_slot(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION pay_public_match_deposit(uuid, uuid, numeric) TO authenticated;

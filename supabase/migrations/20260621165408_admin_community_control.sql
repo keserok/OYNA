@@ -485,7 +485,7 @@ BEGIN
     ON CONFLICT (community_id, user_id) DO NOTHING;
     PERFORM public._sync_profile_communities(v_req.user_id);
 
-    INSERT INTO public.notifications (user_id, title, body, type)
+    INSERT INTO public.notifications (user_id, title, body, type_key)
     VALUES (
       v_req.user_id,
       'Topluluğa Kabul Edildin',
@@ -493,7 +493,7 @@ BEGIN
       'COMMUNITY_JOIN_APPROVED'
     );
   ELSE
-    INSERT INTO public.notifications (user_id, title, body, type)
+    INSERT INTO public.notifications (user_id, title, body, type_key)
     VALUES (
       v_req.user_id,
       'Katılma Talebi Reddedildi',
@@ -537,7 +537,7 @@ BEGIN
     RAISE EXCEPTION 'Topluluk bulunamadı';
   END IF;
 
-  INSERT INTO public.notifications (user_id, title, body, type)
+  INSERT INTO public.notifications (user_id, title, body, type_key)
   SELECT cm.user_id, p_title, p_body, 'ADMIN_COMMUNITY'
   FROM public.community_members cm
   WHERE cm.community_id = p_community_id

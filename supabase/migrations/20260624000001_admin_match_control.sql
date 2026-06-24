@@ -13,21 +13,29 @@ ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS "creatorId" UUID;
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS refund_status TEXT;
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS "awaySlots" JSONB DEFAULT '[]'::jsonb;
 
 -- RLS: is_platform_admin() kullan
+-- (idempotent: eski/yeni isimli ve önceki kısmi elle uygulamalardan kalan
+-- mükerrer "matches_*_creator_or_admin" / "matches_insert_own" politikaları da temizlenir)
 DROP POLICY IF EXISTS "Creators or Admins can update matches" ON public.matches;
+DROP POLICY IF EXISTS "Creators or platform admins can update matches" ON public.matches;
+DROP POLICY IF EXISTS "matches_update_creator_or_admin" ON public.matches;
 CREATE POLICY "Creators or platform admins can update matches" ON public.matches
 FOR UPDATE USING (
   auth.uid() = captain_id OR public.is_platform_admin()
 );
 
 DROP POLICY IF EXISTS "Creators or Admins can delete matches" ON public.matches;
+DROP POLICY IF EXISTS "Creators or platform admins can delete matches" ON public.matches;
+DROP POLICY IF EXISTS "matches_delete_creator_or_admin" ON public.matches;
 CREATE POLICY "Creators or platform admins can delete matches" ON public.matches
 FOR DELETE USING (
   auth.uid() = captain_id OR public.is_platform_admin()
 );
 
 DROP POLICY IF EXISTS "Authenticated users can create matches" ON public.matches;
+DROP POLICY IF EXISTS "matches_insert_own" ON public.matches;
 CREATE POLICY "Authenticated users can create matches" ON public.matches
 FOR INSERT WITH CHECK (
   auth.role() = 'authenticated' AND (
@@ -45,6 +53,22 @@ CREATE OR REPLACE FUNCTION public._admin_patch_slot(
     CASE WHEN elem->>'id' = p_slot_id THEN elem || p_patch ELSE elem END
   ), '[]'::jsonb)
   FROM jsonb_array_elements(COALESCE(p_slots, '[]'::jsonb)) AS elem;
+$$;
+
+-- Bir kullanıcının maçtaki kadro/yedek dizilerinde yer alıp almadığını kontrol eder
+CREATE OR REPLACE FUNCTION public._is_match_participant(p_match_id UUID, p_user_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.matches m
+    WHERE m.id = p_match_id
+    AND (
+      m."creatorId" = p_user_id OR
+      m.captain_id = p_user_id OR
+      EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(m.slots, '[]'::jsonb)) s WHERE (s->'player'->>'id')::uuid = p_user_id) OR
+      EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(m."awaySlots", '[]'::jsonb)) s WHERE (s->'player'->>'id')::uuid = p_user_id) OR
+      EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(m."reservePlayers", '[]'::jsonb)) s WHERE (s->>'id')::uuid = p_user_id)
+    )
+  );
 $$;
 
 -- Liste + arama
@@ -69,7 +93,7 @@ RETURNS TABLE (
   badges JSONB,
   "missingPositions" JSONB,
   slots JSONB,
-  away_slots JSONB,
+  "awaySlots" JSONB,
   "refereeId" UUID,
   "creatorId" UUID,
   "isDemo" BOOLEAN,
@@ -89,7 +113,7 @@ BEGIN
     m.location,
     m.date,
     m."time",
-    COALESCE(m.price, m.budget, 0)::numeric AS price,
+    COALESCE(m.price, 0)::numeric AS price,
     m.difficulty,
     m.status,
     m.format,
@@ -98,8 +122,8 @@ BEGIN
     m.badges,
     m."missingPositions",
     m.slots,
-    COALESCE(m.away_slots, '[]'::jsonb) AS away_slots,
-    COALESCE(m."refereeId", m.ref_id) AS "refereeId",
+    COALESCE(m."awaySlots", '[]'::jsonb) AS "awaySlots",
+    m."refereeId",
     COALESCE(m."creatorId", m.captain_id) AS "creatorId",
     COALESCE(m."isDemo", false) AS "isDemo",
     m.cancel_reason,
@@ -117,7 +141,7 @@ BEGIN
     p_status IS NULL OR p_status = '' OR p_status = 'ALL' OR
     m.status ILIKE p_status OR
     (p_status = 'ACTIVE' AND m.status IN ('ACTIVE', 'OPEN', 'CONFIRMED')) OR
-    (p_status = 'DRAFT' AND m.status IN ('DRAFT', 'OPEN')) 
+    (p_status = 'DRAFT' AND m.status IN ('DRAFT', 'OPEN'))
   )
   ORDER BY m.created_at DESC NULLS LAST, m.date DESC NULLS LAST
   LIMIT GREATEST(p_limit, 1)
@@ -160,8 +184,8 @@ BEGIN
   END IF;
   INSERT INTO public.matches (
     id, title, location, date, "time", price, difficulty, status, format,
-    image, badges, "minRating", "missingPositions", slots, away_slots,
-    "refereeId", ref_id, "creatorId", captain_id, "isDemo"
+    image, badges, "minRating", "missingPositions", slots, "awaySlots",
+    "refereeId", "creatorId", captain_id, "isDemo"
   ) VALUES (
     v_id,
     COALESCE(p_payload->>'title', 'Yeni Maç'),
@@ -179,7 +203,6 @@ BEGIN
     v_slots,
     COALESCE(p_payload->'awaySlots', p_payload->'away_slots', '[]'::jsonb),
     NULLIF(p_payload->>'refereeId', '')::uuid,
-    NULLIF(p_payload->>'refereeId', '')::uuid,
     NULLIF(p_payload->>'creatorId', '')::uuid,
     NULLIF(p_payload->>'creatorId', '')::uuid,
     COALESCE((p_payload->>'isDemo')::boolean, false)
@@ -190,13 +213,26 @@ END;
 $$;
 
 -- Güncelle
+-- Not: Bu fonksiyon yalnızca admin paneli için değil, store.ts'teki genel updateMatch() cache-sync
+-- akışı üzerinden normal oyuncu eylemleri (katılma/ayrılma/oyuncu çıkarma sonrası) tarafından da
+-- çağrılıyor. Bu yüzden salt admin değil, maçın kaptanı/oluşturucusu veya o anki bir katılımcısı
+-- da güncelleyebilmeli — bu noktaya gelindiğinde ilgili join/leave RPC'si zaten DB'yi güncellemiş
+-- olur, dolayısıyla katılımcı kontrolü güvenlidir.
 CREATE OR REPLACE FUNCTION public.admin_update_match(p_match_id UUID, p_payload JSONB)
 RETURNS BOOLEAN
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE v_old JSONB;
 BEGIN
-  IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
+  IF NOT (
+    public.is_platform_admin()
+    OR auth.uid() = (SELECT captain_id FROM public.matches WHERE id = p_match_id)
+    OR auth.uid() = (SELECT "creatorId" FROM public.matches WHERE id = p_match_id)
+    OR public._is_match_participant(p_match_id, auth.uid())
+  ) THEN
+    RAISE EXCEPTION 'UNAUTHORIZED';
+  END IF;
+
   SELECT to_jsonb(m.*) INTO v_old FROM public.matches m WHERE id = p_match_id;
   IF v_old IS NULL THEN RAISE EXCEPTION 'Maç bulunamadı'; END IF;
   UPDATE public.matches SET
@@ -213,10 +249,11 @@ BEGIN
     badges = COALESCE(p_payload->'badges', badges),
     "missingPositions" = COALESCE(p_payload->'missingPositions', "missingPositions"),
     slots = CASE WHEN p_payload ? 'slots' THEN p_payload->'slots' ELSE slots END,
-    away_slots = CASE WHEN p_payload ? 'awaySlots' OR p_payload ? 'away_slots'
-      THEN COALESCE(p_payload->'awaySlots', p_payload->'away_slots') ELSE away_slots END,
-    "refereeId" = COALESCE(NULLIF(p_payload->>'refereeId', '')::uuid, "refereeId"),
-    ref_id = COALESCE(NULLIF(p_payload->>'refereeId', '')::uuid, ref_id)
+    "awaySlots" = CASE WHEN p_payload ? 'awaySlots' OR p_payload ? 'away_slots'
+      THEN COALESCE(p_payload->'awaySlots', p_payload->'away_slots') ELSE "awaySlots" END,
+    "reservePlayers" = CASE WHEN p_payload ? 'reservePlayers' OR p_payload ? 'reserve_players'
+      THEN COALESCE(p_payload->'reservePlayers', p_payload->'reserve_players') ELSE "reservePlayers" END,
+    "refereeId" = COALESCE(NULLIF(p_payload->>'refereeId', '')::uuid, "refereeId")
   WHERE id = p_match_id;
   PERFORM public.log_admin_action('MATCH_UPDATE', 'match', p_match_id, p_payload->>'title', v_old, p_payload);
   RETURN TRUE;
@@ -274,19 +311,16 @@ AS $$
 DECLARE
   v_slots JSONB;
   v_updated JSONB;
-  v_col TEXT;
 BEGIN
   IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
   IF p_is_away THEN
-    SELECT away_slots INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
+    SELECT "awaySlots" INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
     v_updated := public._admin_patch_slot(v_slots, p_slot_id, '{"status":"OPEN","player":null}'::jsonb);
-    UPDATE public.matches SET away_slots = v_updated WHERE id = p_match_id;
-    v_col := 'away_slots';
+    UPDATE public.matches SET "awaySlots" = v_updated WHERE id = p_match_id;
   ELSE
     SELECT slots INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
     v_updated := public._admin_patch_slot(v_slots, p_slot_id, '{"status":"OPEN","player":null}'::jsonb);
     UPDATE public.matches SET slots = v_updated WHERE id = p_match_id;
-    v_col := 'slots';
   END IF;
   PERFORM public.log_admin_action('MATCH_KICK_SLOT', 'match', p_match_id, p_slot_id, NULL,
     jsonb_build_object('is_away', p_is_away));
@@ -315,16 +349,16 @@ BEGIN
     'id', p.id,
     'name', COALESCE(p.full_name, p.email),
     'avatar', p.avatar_url,
-    'rating', COALESCE((p.stats->>'rating')::numeric, 5.0)
+    'rating', COALESCE(p.rating, 5.0)
   ) INTO v_player FROM public.profiles p WHERE id = p_user_id;
   IF v_player IS NULL THEN RAISE EXCEPTION 'Kullanıcı bulunamadı'; END IF;
 
   IF p_is_away THEN
-    SELECT away_slots INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
+    SELECT "awaySlots" INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
     SELECT elem->>'role' INTO v_role FROM jsonb_array_elements(v_slots) elem WHERE elem->>'id' = p_slot_id;
     v_updated := public._admin_patch_slot(v_slots, p_slot_id,
       jsonb_build_object('status', 'TAKEN', 'player', v_player || jsonb_build_object('position', v_role)));
-    UPDATE public.matches SET away_slots = v_updated WHERE id = p_match_id;
+    UPDATE public.matches SET "awaySlots" = v_updated WHERE id = p_match_id;
   ELSE
     SELECT slots INTO v_slots FROM public.matches WHERE id = p_match_id FOR UPDATE;
     SELECT elem->>'role' INTO v_role FROM jsonb_array_elements(v_slots) elem WHERE elem->>'id' = p_slot_id;
@@ -346,8 +380,7 @@ AS $$
 BEGIN
   IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
   UPDATE public.matches SET
-    "refereeId" = NULLIF(p_referee_id::text, '')::uuid,
-    ref_id = NULLIF(p_referee_id::text, '')::uuid
+    "refereeId" = NULLIF(p_referee_id::text, '')::uuid
   WHERE id = p_match_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Maç bulunamadı'; END IF;
   PERFORM public.log_admin_action('MATCH_ASSIGN_REFEREE', 'match', p_match_id, p_referee_id::text, NULL, NULL);
