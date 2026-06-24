@@ -11,6 +11,7 @@ import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { useAppStore } from '../store';
 import { check90MinAutoCancel } from '../utils/gameRules';
+import { auth } from '../supabaseAuth';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
@@ -298,7 +299,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
   const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
 
   const currentUserUid = React.useMemo(() => {
-    return 'u1'; // Default / local testing user
+    return auth.currentUser?.uid || 'u1';
   }, []);
 
   const currentUserProfile = React.useMemo(() => {
@@ -356,8 +357,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     if (closestMatch) {
       return `Sıradaki: ${closestMatch.title} • ${closestMatch.time}`;
     }
+    if (userMatches.length === 0) return 'Henüz maça katılmadın · Hemen bir maç bul';
     return 'Kadro ve maç lobileri merkezi';
-  }, [closestMatch]);
+  }, [closestMatch, userMatches.length]);
 
   const COMMUNITIES = [
     { id: 'c1', name: 'Boğaziçi Üni', short: 'BOUN' },
@@ -445,13 +447,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
       </header>
 
       {/* 2. MAÇLARIM Pulsing Button */}
-      {userMatches.length > 0 && (
-        <div className="px-4 xs:px-6 mb-6 relative z-20">
+      <div className="px-6 mb-6 relative z-20">
           <motion.div
             onClick={() => {
-              // Dismiss badge
               setNewMatchBadge(false);
-              // Navigate to upcoming matches
               onNavigate('UPCOMING_MATCHES');
             }}
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -459,16 +458,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               opacity: 1,
               y: 0,
               scale: 1,
-              boxShadow: [
-                `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`,
-                `0 0 45px rgba(239, 68, 68, ${0.35 + (1.8 - closestMatchPulse) * 0.35})`,
-                `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`
-              ]
+              ...(userMatches.length > 0 ? {
+                boxShadow: [
+                  `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`,
+                  `0 0 45px rgba(239, 68, 68, ${0.35 + (1.8 - closestMatchPulse) * 0.35})`,
+                  `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`
+                ]
+              } : { boxShadow: '0 0 0px transparent' })
             }}
             transition={{
               boxShadow: {
                 duration: closestMatchPulse,
-                repeat: Infinity,
+                repeat: userMatches.length > 0 ? Infinity : 0,
                 ease: 'easeInOut'
               }
             }}
@@ -524,17 +525,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
 
             <div className="relative z-10 py-6 px-7 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                {/* Pulsing radar indicator */}
-                <div className="relative flex h-4 w-4 items-center justify-center shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                </div>
-                
+                {userMatches.length > 0 ? (
+                  <div className="relative flex h-4 w-4 items-center justify-center shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                  </div>
+                ) : (
+                  <div className="w-4 h-4 rounded-full bg-white/15 border border-white/20 shrink-0" />
+                )}
+
                 <div className="flex flex-col">
-                  <h3 className="text-white font-black text-lg sm:text-xl tracking-tighter italic uppercase leading-none">
+                  <h3 className={`font-black text-lg sm:text-xl tracking-tighter italic uppercase leading-none ${userMatches.length > 0 ? 'text-white' : 'text-white/60'}`}>
                     MAÇLARIM
                   </h3>
-                  <span className="text-xs sm:text-sm text-gray-300 font-medium uppercase tracking-wider mt-2 leading-none">
+                  <span className={`text-xs sm:text-sm font-medium uppercase tracking-wider mt-2 leading-none ${userMatches.length > 0 ? 'text-gray-300' : 'text-white/35'}`}>
                     {buttonSubtitle}
                   </span>
                 </div>
@@ -554,8 +558,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               </div>
             </div>
           </motion.div>
-        </div>
-      )}
+      </div>
 
       {/* BENTO GRID LAYOUT */}
       <motion.main
