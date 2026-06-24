@@ -1992,25 +1992,33 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
         {/* ── TAKTİK SAHA ─────────────────────────────────────────────────── */}
-        <div className="mb-6">
+        <AnimatePresence mode="wait">
+        <motion.div
+          key={pitchSide}
+          initial={{ opacity: 0, x: pitchSide === 'home' ? -18 : 18 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="mb-6"
+        >
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                pitchSide === 'home' 
-                  ? (homeTeam ? 'bg-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.9)]' : 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]')
+                pitchSide === 'home'
+                  ? 'bg-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.9)]'
                   : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]'
               }`} />
               <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
-                {pitchSide === 'home' 
-                  ? (homeTeam ? 'Ev Sahibi Kadrosu' : 'Beyaz Takım Kadrosu') 
-                  : (awayTeam ? 'Deplasman Kadrosu' : 'Kırmızı Takım Kadrosu')}
+                {pitchSide === 'home'
+                  ? `${match.homeTeamName || homeTeam?.name || 'Ev Sahibi'} Kadrosu`
+                  : `${match.awayTeamName || awayTeam?.name || 'Deplasman'} Kadrosu`}
               </p>
             </div>
             {selectedSlotId && (
               <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                 className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border animate-pulse ${
                   pitchSide === 'home'
-                    ? (homeTeam ? 'text-[#39FF14] bg-[#39FF14]/10 border-[#39FF14]/30' : 'text-white bg-white/10 border-white/30')
+                    ? 'text-[#39FF14] bg-[#39FF14]/10 border-[#39FF14]/30'
                     : 'text-red-500 bg-red-500/10 border-red-500/30'
                 }`}>
                 Pozisyon Seçildi ✓
@@ -2055,8 +2063,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
 
             {/* SLOTLAR — Kanonik Koordinatlarla */}
-            <AnimatePresence mode="wait">
-            <motion.div key={pitchSide} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.14, ease: 'easeInOut' }} className="absolute inset-0">
             {(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).map((slot) => {
               if (!slot) return null;
               const isSelected = selectedSlotId === slot.id;
@@ -2175,8 +2181,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 </div>
               );
             })}
-            </motion.div>
-            </AnimatePresence>
           </div>
 
           <p className="text-center text-[9px] text-white/25 font-bold mt-3 uppercase tracking-[0.2em]">
@@ -2274,7 +2278,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
+        </AnimatePresence>
 
         {/* ── KULÜP VE DESTEK SERVİSLERİ (2x1 Grid) ─────────────────────────── */}
         <div className="space-y-3 mt-6">
