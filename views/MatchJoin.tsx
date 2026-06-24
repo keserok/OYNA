@@ -1951,11 +1951,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <p className="text-xs font-bold text-white truncate max-w-[180px]">{match.location || 'Oyna Arena'}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Tarih & Saat</p>
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-[#00F2FE]" />
-                    <p className="text-xs font-bold text-[#00F2FE]">{match.date} • {match.time}</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Tarih & Saat</p>
+                    <p className="text-xs font-bold text-[#00F2FE] truncate max-w-[180px]">{match.date} • {match.time}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-[#00F2FE]/10 border border-[#00F2FE]/30 flex items-center justify-center shrink-0">
+                    <Clock size={14} className="text-[#00F2FE]" />
                   </div>
                 </div>
               </div>
@@ -2213,8 +2215,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     )
                   ) : (
                     /* ── Kilitli Slot ───────────────────────────── */
-                    <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center">
-                      <X size={12} className="text-white/20" />
+                    <div className="w-12 h-12 rounded-full bg-black/40 border border-white/10 flex items-center justify-center">
+                      <X size={14} className="text-white/20" />
                     </div>
                   )}
                 </div>

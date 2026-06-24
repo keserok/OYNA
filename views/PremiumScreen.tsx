@@ -59,7 +59,7 @@ const PremiumScreen: React.FC<PremiumScreenProps> = ({ onBack, onUpgrade }) => {
                 <Crown size={20} className="text-[#FFFF00] fill-[#FFFF00]" />
                 <span className="font-black text-lg text-white tracking-widest">OYNA PRO</span>
             </div>
-            <div className="w-10"></div>
+            <div className="w-11"></div>
         </header>
 
         <main className="flex-1 px-6 pb-24 relative z-10 overflow-y-auto custom-scrollbar">
@@ -75,13 +75,14 @@ const PremiumScreen: React.FC<PremiumScreenProps> = ({ onBack, onUpgrade }) => {
             {/* Toggle */}
             <div className="bg-[#161B22] p-1 rounded-2xl flex relative mb-8 border border-white/10 w-full max-w-xs mx-auto">
                 <div 
-                    className={`absolute top-1 bottom-1 w-[48%] bg-[#FFFF00] rounded-xl transition-all duration-300 ${billingCycle === 'MONTHLY' ? 'left-1' : 'left-[51%]'}`}
+                    className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] bg-[#FFFF00] rounded-xl transition-all duration-300 ${billingCycle === 'MONTHLY' ? 'left-1' : 'left-[50%]'}`}
                 ></div>
-                <button 
+                <button
                     onClick={() => setBillingCycle('MONTHLY')}
-                    className={`flex-1 py-3 text-xs font-black relative z-10 transition-colors ${billingCycle === 'MONTHLY' ? 'text-black' : 'text-gray-400'}`}
+                    className={`flex-1 py-3 text-xs font-black relative z-10 transition-colors flex flex-col items-center justify-center leading-none ${billingCycle === 'MONTHLY' ? 'text-black' : 'text-gray-400'}`}
                 >
-                    AYLIK (99₺)
+                    <span>AYLIK (99₺)</span>
+                    <span className="text-[8px] mt-0.5 opacity-0" aria-hidden="true">—</span>
                 </button>
                 <button 
                     onClick={() => setBillingCycle('YEARLY')}

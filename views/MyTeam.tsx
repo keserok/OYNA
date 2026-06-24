@@ -621,7 +621,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                     <select
                                         value={player.instruction || ''}
                                         onChange={(e) => handleSetInstruction(player.id, e.target.value)}
-                                        className="bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
+                                        className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
                                     >
                                         <option value="" className="text-gray-500">Talimat Yok</option>
                                         <option value="Hücuma Çık">Hücuma Çık</option>
@@ -633,7 +633,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                     </select>
                                     <button
                                         onClick={() => removePlayer(player.id)}
-                                        className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                                        className="p-2 shrink-0 text-gray-600 hover:text-red-500 transition-colors"
                                         title="Kadrodan Çıkar"
                                     >
                                         <Trash2 size={16} />
