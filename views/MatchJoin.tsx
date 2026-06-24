@@ -1766,76 +1766,54 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         {/* ── Minimalist Maç Başlığı ── */}
         <div className="px-4 pb-3">
           {/* VS Şeridi */}
-          <div className="flex items-stretch gap-2 mb-2">
+          <div className="flex items-stretch gap-1.5 mb-2">
             {/* Ev Sahibi */}
             <button
               onClick={() => setPitchSide('home')}
-              className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.97] ${
+              className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.97] ${
                 pitchSide === 'home'
                   ? 'bg-white/8 border-white/25'
                   : 'bg-transparent border-white/5 opacity-55'
               }`}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
-                homeTeam ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-white/10 border border-white/15'
-              }`}>
-                {homeTeam?.logo ? (
-                  homeTeam.logo.startsWith('http')
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-white/50'}`} />
+              <p className="text-[12px] font-black text-white uppercase italic tracking-tight truncate leading-tight flex-1 min-w-0 text-left">
+                {match.homeTeamName || homeTeam?.name || 'EV SAHİBİ'}
+              </p>
+              {homeTeam?.logo && (
+                <div className="w-7 h-7 rounded-lg shrink-0 overflow-hidden">
+                  {homeTeam.logo.startsWith('http')
                     ? <img src={homeTeam.logo} alt={homeTeam.name} className="w-full h-full object-cover" />
-                    : <span className="text-sm">{homeTeam.logo}</span>
-                ) : <Shield className="w-4 h-4 text-white/70" />}
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/40 leading-none mb-0.5">
-                  {homeTeam ? 'EV SAHİBİ' : 'BEYAZ TAKIM'}
-                </p>
-                <p className="text-[12px] font-black text-white uppercase italic tracking-tight truncate leading-tight">
-                  {homeTeam?.name || 'BEYAZ TAKIM'}
-                </p>
-              </div>
-              <div className="flex flex-col items-end shrink-0">
-                <span className="text-[7px] text-white/30 font-bold uppercase tracking-wider">OVR</span>
-                <span className="text-[13px] font-black text-white italic leading-none">
-                  {homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue) / 1000) : 80}
-                </span>
-              </div>
+                    : <span className="text-sm">{homeTeam.logo}</span>}
+                </div>
+              )}
             </button>
 
-            {/* VS */}
-            <div className="flex items-center justify-center w-8 shrink-0">
-              <span className="text-[10px] font-black text-white/30 italic">VS</span>
+            {/* Divider */}
+            <div className="flex items-center justify-center w-6 shrink-0">
+              <div className="w-px h-6 bg-white/10" />
             </div>
 
             {/* Deplasman */}
             <button
               onClick={() => setPitchSide('away')}
-              className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.97] ${
+              className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.97] ${
                 pitchSide === 'away'
                   ? 'bg-red-500/8 border-red-500/25'
                   : 'bg-transparent border-white/5 opacity-55'
               }`}
             >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden bg-red-500/15 border border-red-500/30">
-                {awayTeam?.logo ? (
-                  awayTeam.logo.startsWith('http')
+              {awayTeam?.logo && (
+                <div className="w-7 h-7 rounded-lg shrink-0 overflow-hidden">
+                  {awayTeam.logo.startsWith('http')
                     ? <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
-                    : <span className="text-sm">{awayTeam.logo}</span>
-                ) : <Shield className="w-4 h-4 text-red-400/80" />}
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-[9px] font-black uppercase tracking-widest text-red-400/60 leading-none mb-0.5">
-                  {awayTeam ? 'DEPLASMAN' : 'KIRMIZI TAKIM'}
-                </p>
-                <p className="text-[12px] font-black text-white uppercase italic tracking-tight truncate leading-tight">
-                  {awayTeam?.name || 'KIRMIZI TAKIM'}
-                </p>
-              </div>
-              <div className="flex flex-col items-end shrink-0">
-                <span className="text-[7px] text-white/30 font-bold uppercase tracking-wider">OVR</span>
-                <span className="text-[13px] font-black text-white italic leading-none">
-                  {awayTeam?.teamValue ? Math.round(parseInt(awayTeam.teamValue) / 1000) : 78}
-                </span>
-              </div>
+                    : <span className="text-sm">{awayTeam.logo}</span>}
+                </div>
+              )}
+              <p className="text-[12px] font-black text-white uppercase italic tracking-tight truncate leading-tight flex-1 min-w-0 text-right">
+                {match.awayTeamName || awayTeam?.name || 'DEPLASMAN'}
+              </p>
+              <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]" />
             </button>
           </div>
 
@@ -2077,6 +2055,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
 
             {/* SLOTLAR — Kanonik Koordinatlarla */}
+            <AnimatePresence mode="wait">
+            <motion.div key={pitchSide} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.14, ease: 'easeInOut' }} className="absolute inset-0">
             {(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).map((slot) => {
               if (!slot) return null;
               const isSelected = selectedSlotId === slot.id;
@@ -2195,6 +2175,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 </div>
               );
             })}
+            </motion.div>
+            </AnimatePresence>
           </div>
 
           <p className="text-center text-[9px] text-white/25 font-bold mt-3 uppercase tracking-[0.2em]">

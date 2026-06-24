@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Calendar, Shield, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, Calendar, ChevronRight } from 'lucide-react';
 import { MatchListing, PositionSlot } from '../types';
 import { useAppStore } from '../store';
 
@@ -244,32 +244,22 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
             ? 'bg-white/7 border-white/20'
             : 'bg-transparent border-white/5 opacity-60'
         }`}>
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
-            homeTeam ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-white/8 border border-white/12'
-          }`}>
-            {homeTeam?.logo ? (
-              homeTeam.logo.startsWith('http')
+          <div className={`w-2 h-2 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-white/40'}`} />
+          <p className="text-[10px] font-black text-white uppercase italic truncate leading-tight flex-1 min-w-0">
+            {match.homeTeamName || homeTeam?.name || 'EV SAHİBİ'}
+          </p>
+          {homeTeam?.logo && (
+            <div className="w-6 h-6 rounded-lg shrink-0 overflow-hidden">
+              {homeTeam.logo.startsWith('http')
                 ? <img src={homeTeam.logo} alt={homeTeam.name} className="w-full h-full object-cover" />
-                : <span className="text-sm">{homeTeam.logo}</span>
-            ) : <Shield className="w-3.5 h-3.5 text-white/50" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[7px] font-black uppercase tracking-widest text-white/35 leading-none mb-0.5">EV SAHİBİ</p>
-            <p className="text-[10px] font-black text-white uppercase italic truncate leading-tight">
-              {homeTeam?.name || 'BEYAZ TAKIM'}
-            </p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-[6px] font-bold text-white/25 uppercase">OVR</p>
-            <p className="text-[11px] font-black text-white italic leading-none mt-0.5">
-              {homeTeam?.teamValue ? Math.round(parseInt(homeTeam.teamValue) / 1000) : 80}
-            </p>
-          </div>
+                : <span className="text-sm">{homeTeam.logo}</span>}
+            </div>
+          )}
         </div>
 
-        {/* VS */}
-        <div className="flex items-center justify-center w-7 shrink-0">
-          <span className="text-[9px] font-black text-white/25 italic">VS</span>
+        {/* Divider */}
+        <div className="flex items-center justify-center w-5 shrink-0">
+          <div className="w-px h-5 bg-white/10" />
         </div>
 
         {/* Away */}
@@ -278,25 +268,17 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
             ? 'bg-red-500/8 border-red-500/25'
             : 'bg-transparent border-white/5 opacity-60'
         }`}>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 overflow-hidden bg-red-500/12 border border-red-500/25">
-            {awayTeam?.logo ? (
-              awayTeam.logo.startsWith('http')
+          {awayTeam?.logo && (
+            <div className="w-6 h-6 rounded-lg shrink-0 overflow-hidden">
+              {awayTeam.logo.startsWith('http')
                 ? <img src={awayTeam.logo} alt={awayTeam.name} className="w-full h-full object-cover" />
-                : <span className="text-sm">{awayTeam.logo}</span>
-            ) : <Shield className="w-3.5 h-3.5 text-red-400/60" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[7px] font-black uppercase tracking-widest text-red-400/50 leading-none mb-0.5">DEPLASMAN</p>
-            <p className="text-[10px] font-black text-white uppercase italic truncate leading-tight">
-              {awayTeam?.name || 'KIRMIZI TAKIM'}
-            </p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-[6px] font-bold text-white/25 uppercase">OVR</p>
-            <p className="text-[11px] font-black text-white italic leading-none mt-0.5">
-              {awayTeam?.teamValue ? Math.round(parseInt(awayTeam.teamValue) / 1000) : 78}
-            </p>
-          </div>
+                : <span className="text-sm">{awayTeam.logo}</span>}
+            </div>
+          )}
+          <p className="text-[10px] font-black text-white uppercase italic truncate leading-tight flex-1 min-w-0 text-right">
+            {match.awayTeamName || awayTeam?.name || 'DEPLASMAN'}
+          </p>
+          <div className="w-2 h-2 rounded-full shrink-0 bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.8)]" />
         </div>
       </div>
 
