@@ -10,7 +10,12 @@ function isRpcMissing(err: { message?: string; code?: string }): boolean {
 
 function isRpcDenied(err: { message?: string; code?: string }): boolean {
   const msg = (err.message || '').toUpperCase();
-  return err.code === 'P0001' || msg.includes('UNAUTHORIZED');
+  return (
+    err.code === 'P0001' ||
+    err.code === '42501' ||
+    msg.includes('UNAUTHORIZED') ||
+    msg.includes('PERMISSION DENIED')
+  );
 }
 
 /** RPC yok, yetki reddi veya şema uyumsuzluğu — doğrudan tablo okumasına düş */
