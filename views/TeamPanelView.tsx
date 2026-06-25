@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MoreHorizontal, MapPin, Crown, ChevronRight,
-  Bell, Users, BarChart3, Calendar, Loader2, Shield,
-  Swords, TrendingUp, Target, Zap
+  Bell, Users, Calendar, Loader2, Shield, Swords,
 } from 'lucide-react';
 import { AppView, Team, Player } from '../types';
 import { useAppStore } from '../store';
@@ -22,7 +21,6 @@ interface TeamPanelViewProps {
 type PanelTab = 'KADRO' | 'MACLAR' | 'ISTATISTIK';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const POSITION_ORDER = ['KALECI', 'KL', 'DEFANS', 'DEF', 'ORTA SAHA', 'OS', 'FORVET', 'FV', 'STP', 'KAPTAN', 'OYUNCU', 'YEDEK'];
 const POSITION_GROUPS: Record<string, string[]> = {
   'KALECI':     ['KALECI', 'KL', 'GK'],
   'DEFANS':     ['DEFANS', 'DEF', 'CB', 'SB', 'RB', 'LB'],
@@ -45,12 +43,6 @@ const FORM_STYLE: Record<string, string> = {
   M: 'bg-red-500 text-white',
 };
 
-const RESULT_DOT: Record<string, string> = {
-  G: 'bg-emerald-500',
-  B: 'bg-amber-500',
-  M: 'bg-red-500',
-};
-
 const AVAILABILITY_STYLE: Record<string, string> = {
   Uygun: 'text-emerald-400',
   Sakat: 'text-red-400',
@@ -60,14 +52,18 @@ const AVAILABILITY_STYLE: Record<string, string> = {
 const getInitials = (name: string) =>
   name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-// Pseudo-form from wins/losses (5 badge)
-const buildFormBadges = (matches: TeamMatchRow[], wins: number, losses: number): string[] => {
+// Pseudo-form from wins/draws/losses (5 badges, proportional)
+const buildFormBadges = (matches: TeamMatchRow[], wins: number, losses: number, draws: number = 0): string[] => {
   if (matches.length >= 5) return matches.slice(0, 5).map(m => m.result);
   const form: string[] = matches.map(m => m.result);
   const remaining = 5 - form.length;
-  for (let i = 0; i < remaining; i++) {
-    form.push(i < Math.min(wins, remaining) ? 'G' : 'M');
-  }
+  const total = wins + draws + losses || 1;
+  const padG = Math.round((wins / total) * remaining);
+  const padB = Math.round((draws / total) * remaining);
+  const padM = remaining - padG - padB;
+  for (let i = 0; i < padG; i++) form.push('G');
+  for (let i = 0; i < padB; i++) form.push('B');
+  for (let i = 0; i < padM; i++) form.push('M');
   return form;
 };
 
@@ -89,7 +85,9 @@ const buildCountdown = (date: string, time: string): string => {
 
 // Deterministic activity rate from player id (seeded)
 const playerActivityRate = (player: Player, index: number): number => {
-  const seed = (player.id.charCodeAt(0) + player.id.charCodeAt(1) + index) % 40;
+  const c0 = player.id.charCodeAt(0) || 0;
+  const c1 = player.id.length > 1 ? player.id.charCodeAt(1) : c0;
+  const seed = (c0 + c1 + index) % 40;
   return 60 + seed; // 60–99
 };
 
@@ -158,9 +156,6 @@ const KadroTab: React.FC<{ team: Team; onNavigate: (v: AppView) => void }> = ({ 
     if (!groups[g]) groups[g] = [];
     groups[g].push(p);
   });
-
-  // Top scorer (mock: most active player)
-  const topScorer = roster[0];
 
   return (
     <div className="space-y-4 pb-6">
@@ -371,21 +366,27 @@ const IstatistikTab: React.FC<{ stats: TeamStats; team: Team; loading: boolean }
     </div>
   );
 
-  const wins = stats.wins || team.wins || 0;
-  const draws = stats.draws || 0;
-  const losses = stats.losses || team.losses || 0;
-  const total = wins + draws + losses || 1;
+  // Use DB-derived stats when available; fall back to team row counters only when no match history
+  const wins   = stats.total > 0 ? stats.wins   : (team.wins   ?? 0);
+  const draws  = stats.total > 0 ? stats.draws  : 0;
+  const losses = stats.total > 0 ? stats.losses : (team.losses ?? 0);
+  const total  = wins + draws + losses || 1;
   const winRate = Math.round((wins / total) * 100);
-  const winW = Math.round((wins / total) * 100);
-  const drawW = Math.round((draws / total) * 100);
+  const winW    = Math.round((wins  / total) * 100);
+  const drawW   = Math.round((draws / total) * 100);
 
-  const topScorer = (team.roster || [])[0];
+  // Top scorer: player with highest rating in the roster
+  const topScorer = (team.roster || []).reduce<Player | null>(
+    (best, p) => (!best || (p.rating ?? 0) > (best.rating ?? 0) ? p : best),
+    null
+  );
 
+  const avgDisplay = stats.average >= 0 ? `+${stats.average}` : String(stats.average);
   const statCards = [
-    { label: 'Attığı Gol', value: stats.goalsScored || wins * 3, color: 'text-emerald-400' },
-    { label: 'Yediği Gol', value: stats.goalsConceded || losses, color: 'text-red-400' },
-    { label: 'Averaj', value: (stats.average ?? wins * 3 - losses) >= 0 ? `+${stats.average ?? wins * 3 - losses}` : `${stats.average ?? wins * 3 - losses}`, color: stats.average >= 0 ? 'text-emerald-400' : 'text-red-400' },
-    { label: 'Gol Yemedi', value: stats.cleanSheets || Math.ceil(wins * 0.4), color: 'text-white' },
+    { label: 'Attığı Gol', value: stats.goalsScored, color: 'text-emerald-400' },
+    { label: 'Yediği Gol', value: stats.goalsConceded, color: 'text-red-400' },
+    { label: 'Averaj', value: avgDisplay, color: stats.average >= 0 ? 'text-emerald-400' : 'text-red-400' },
+    { label: 'Gol Yemedi', value: stats.cleanSheets, color: 'text-white' },
   ];
 
   return (
@@ -450,7 +451,9 @@ const IstatistikTab: React.FC<{ stats: TeamStats; team: Team; loading: boolean }
               <div className="text-xs text-gray-500">{topScorer.position}</div>
             </div>
             <div className="text-right">
-              <span className="text-xl font-black text-white">{Math.ceil(wins * 0.6)}</span>
+              <span className="text-xl font-black text-white">
+                {stats.goalsScored > 0 ? Math.ceil(stats.goalsScored * 0.4) : wins}
+              </span>
               <span className="text-xs text-gray-500 ml-1">gol</span>
             </div>
           </div>
@@ -541,11 +544,11 @@ const TeamPanelView: React.FC<TeamPanelViewProps> = ({ onBack, onNavigate }) => 
   const teamColor = team.color1 || team.colors?.[0] || '#10B981';
   const wins = team.wins ?? 0;
   const losses = team.losses ?? 0;
-  const draws = stats.draws || Math.max(0, (team.matches ?? 0) - wins - losses);
+  const draws = stats.total > 0 ? stats.draws : Math.max(0, (team.matches ?? 0) - wins - losses);
   const total = wins + draws + losses;
   const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
   const fp = (team as any).karatScore ?? Math.min(99, 50 + wins * 2);
-  const formBadges = buildFormBadges(matchHistory, wins, losses);
+  const formBadges = buildFormBadges(matchHistory, wins, losses, draws);
   const isCaptain = team.captain === userId || (team as any).captain_id === userId;
   const rosterCount = (team.roster || []).length;
 
@@ -676,7 +679,7 @@ const TeamPanelView: React.FC<TeamPanelViewProps> = ({ onBack, onNavigate }) => 
 
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => onNavigate('MY_TEAM')}
+                onClick={() => onNavigate('MY_TEAM_TACTICS')}
                 className="py-3 rounded-xl text-sm font-bold text-white border border-white/10"
                 style={{ background: `linear-gradient(135deg, ${teamColor}33, transparent)` }}
               >
