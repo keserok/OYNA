@@ -243,8 +243,11 @@ export const fetchTeamMatchHistory = async (teamId: string, limit = 20): Promise
 };
 
 // Sıradaki maç
+// Not: time sütunu TEXT tipinde saklanıyor; lexicografik sıralama
+// tek haneli saat için hatalı sonuç verebilir ("9:00" > "10:00").
+// Bu yüzden DB'den en yakın tarihteki 10 maçı çekip JS'de doğru sıralıyoruz.
 export const fetchTeamNextMatch = async (teamId: string): Promise<TeamMatchRow | null> => {
-  const { data, error } = await supabase
+  const { data: rows, error } = await supabase
     .from('matches')
     .select(`
       id, date, time, location, status,
@@ -254,11 +257,20 @@ export const fetchTeamNextMatch = async (teamId: string): Promise<TeamMatchRow |
     .or(`"homeTeamId".eq.${teamId},"awayTeamId".eq.${teamId}`)
     .in('status', ['PENDING', 'OPEN', 'CONFIRMED'])
     .order('date', { ascending: true })
-    .order('time', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
 
   if (error) throw error;
+  if (!rows || rows.length === 0) return null;
+
+  // JS-level sort: date is DATE type (sorts correctly), time is TEXT so we
+  // zero-pad single-digit hours before comparing ("9:00" → "09:00").
+  const padTime = (t: string) => (t && /^\d:/.test(t) ? `0${t}` : t || '00:00');
+  const data = [...rows].sort((a, b) => {
+    const da = `${a.date}T${padTime(a.time)}`;
+    const db = `${b.date}T${padTime(b.time)}`;
+    return da < db ? -1 : da > db ? 1 : 0;
+  })[0];
+
   if (!data) return null;
 
   const isHome = data.homeTeamId === teamId;
