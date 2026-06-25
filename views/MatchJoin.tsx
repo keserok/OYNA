@@ -430,6 +430,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // Lobi Sekmesi & Sohbet & Taktik Kenarı
   const [lobbyTab, setLobbyTab] = useState<'squad' | 'chat'>('squad');
+  const [scoreEntry, setScoreEntry] = useState({ home: 0, away: 0 });
   const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
   const [chatInputText, setChatInputText] = useState('');
 
@@ -1823,6 +1824,106 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       <main className="flex-1 px-4 overflow-y-auto custom-scrollbar pb-36 pt-4">
 
         {/* Lobi Sekme Seçici */}
+        {/* ── CANLI MAÇ — Skor Girişi Paneli ─────────────────────────────── */}
+        {match.status === 'LIVE' && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-red-950/60 to-orange-950/40 border border-red-500/25 rounded-2xl p-4 mb-4"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Canlı Maç</span>
+              </div>
+              {isCaptain && !match.scoreEnteredAt && (
+                <span className="text-[9px] text-gray-500">Kaptan olarak skor girebilirsin</span>
+              )}
+              {match.scoreEnteredAt && (
+                <span className="text-[9px] text-emerald-500">✓ Skor kaydedildi</span>
+              )}
+            </div>
+
+            {/* Skor satırı */}
+            <div className="flex items-center justify-center gap-6">
+              {/* Ev takımı */}
+              <div className="flex-1 text-center">
+                <p className="text-[9px] text-gray-500 uppercase mb-1 truncate">
+                  {(homeTeam as any)?.name || 'EV'}
+                </p>
+                {isCaptain && !match.scoreEnteredAt ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setScoreEntry(p => ({ ...p, home: Math.max(0, p.home - 1) }))}
+                      className="w-7 h-7 rounded-full bg-white/10 text-white font-black text-lg flex items-center justify-center active:scale-95"
+                    >−</button>
+                    <span className="text-3xl font-black tabular-nums w-10 text-center text-white">{scoreEntry.home}</span>
+                    <button
+                      onClick={() => setScoreEntry(p => ({ ...p, home: p.home + 1 }))}
+                      className="w-7 h-7 rounded-full bg-white/10 text-white font-black text-lg flex items-center justify-center active:scale-95"
+                    >+</button>
+                  </div>
+                ) : (
+                  <p className="text-3xl font-black text-white">{match.homeScore ?? 0}</p>
+                )}
+              </div>
+
+              <span className="text-gray-600 font-black text-2xl">–</span>
+
+              {/* Deplasman takımı */}
+              <div className="flex-1 text-center">
+                <p className="text-[9px] text-gray-500 uppercase mb-1 truncate">
+                  {(awayTeam as any)?.name || 'DEP'}
+                </p>
+                {isCaptain && !match.scoreEnteredAt ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setScoreEntry(p => ({ ...p, away: Math.max(0, p.away - 1) }))}
+                      className="w-7 h-7 rounded-full bg-white/10 text-white font-black text-lg flex items-center justify-center active:scale-95"
+                    >−</button>
+                    <span className="text-3xl font-black tabular-nums w-10 text-center text-white">{scoreEntry.away}</span>
+                    <button
+                      onClick={() => setScoreEntry(p => ({ ...p, away: p.away + 1 }))}
+                      className="w-7 h-7 rounded-full bg-white/10 text-white font-black text-lg flex items-center justify-center active:scale-95"
+                    >+</button>
+                  </div>
+                ) : (
+                  <p className="text-3xl font-black text-white">{match.awayScore ?? 0}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Tamamla butonu — sadece kaptan, skor girilmemişse */}
+            {isCaptain && !match.scoreEnteredAt && (
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                disabled={isProcessing}
+                onClick={async () => {
+                  try {
+                    setIsProcessing(true);
+                    await updateMatch({
+                      ...match,
+                      homeScore: scoreEntry.home,
+                      awayScore: scoreEntry.away,
+                      scoreEnteredAt: new Date().toISOString(),
+                      status: 'COMPLETED',
+                    });
+                    showActionSuccess(`Maç tamamlandı! ${scoreEntry.home}–${scoreEntry.away} ⚽`);
+                  } catch {
+                    showActionError('Skor kaydedilemedi. Tekrar dene.');
+                  } finally {
+                    setIsProcessing(false);
+                  }
+                }}
+                className="mt-3 w-full py-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/25 transition-colors"
+              >
+                {isProcessing && <Loader2 size={12} className="animate-spin" />}
+                MAÇI TAMAMLA ({scoreEntry.home}–{scoreEntry.away})
+              </motion.button>
+            )}
+          </motion.div>
+        )}
+
         <div className="flex bg-[#161B22]/80 backdrop-blur-md rounded-2xl border border-white/5 p-1 mb-4">
           <button
             onClick={() => setLobbyTab('squad')}
