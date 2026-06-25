@@ -234,14 +234,34 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
               </select>
             </div>
 
+            {/* DRAFT maç için belirgin ONAYLA butonu */}
+            {local.status === 'DRAFT' && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleStatus('ACTIVE')}
+                className="w-full py-2.5 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-[#39FF14]/25 transition-colors"
+              >
+                ✓ ONAYLA — YAYINA AL
+              </button>
+            )}
+
             <div className="flex flex-wrap gap-2">
-              {(['ACTIVE', 'LIVE', 'COMPLETED', 'CANCELLED'] as const).map((s) => (
+              {(['DRAFT', 'ACTIVE', 'LIVE', 'COMPLETED', 'CANCELLED'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   disabled={busy || local.status === s}
                   onClick={() => void handleStatus(s)}
-                  className={`px-3 py-1.5 text-[10px] font-bold rounded-lg border ${local.status === s ? 'bg-red-500/20 border-red-500/40 text-red-300' : 'border-white/10 text-gray-500 hover:text-white'}`}
+                  className={`px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-colors ${
+                    local.status === s
+                      ? s === 'DRAFT'
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                        : s === 'ACTIVE' || s === 'LIVE'
+                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                        : 'bg-red-500/20 border-red-500/40 text-red-300'
+                      : 'border-white/10 text-gray-500 hover:text-white'
+                  }`}
                 >
                   {s}
                 </button>

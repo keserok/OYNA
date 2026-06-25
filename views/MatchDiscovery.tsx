@@ -98,7 +98,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
   const enhancedMatches = useMemo(() => {
     const sourceMatches = (userLocation && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
-    return sourceMatches.map((m, i) => {
+    // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle
+    const activeMatches = sourceMatches.filter(
+      m => !m.status || m.status === 'ACTIVE' || m.status === 'LIVE'
+    );
+    return activeMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price
       const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
       const diffStr = (m.difficulty || '').toLowerCase().trim();

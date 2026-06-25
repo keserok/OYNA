@@ -1306,51 +1306,64 @@ export const useAppStore = create<AppState>((set, get) => ({
   acceptMatchInvite: (id) => {
     const state = get();
     const notif = state.userNotifications.find((n) => n.id === id);
-    if (notif && notif.payload) {
-      const { matchId, slotId } = notif.payload;
-      const match = state.adminMatches.find((m) => m.id === matchId);
-      if (match) {
-        const slot = (match.slots || []).find(s => s?.id === slotId);
-        
-        // Race condition: Eğer slot başkası tarafından doldurulmuşsa
-        if (slot && slot.status === 'TAKEN') {
-          // Kabul edemez, hata bildirimi atalım
-          const errorNotif = {
-            id: `err_slot_${Date.now()}`,
+
+    // Bildirimi hemen kaldır (UI donmasın)
+    set((s) => ({ userNotifications: s.userNotifications.filter((n) => n.id !== id) }));
+
+    if (!notif?.payload) return;
+    const { matchId, slotId } = notif.payload;
+    const match = state.adminMatches.find((m) => m.id === matchId);
+    if (!match) return;
+
+    const isAway = (match.awaySlots || []).some(s => s?.id === slotId);
+    const targetSlots = isAway ? (match.awaySlots || []) : (match.slots || []);
+    const slot = targetSlots.find(s => s?.id === slotId);
+
+    // Local önkontrol — gerçek kilit RPC'de (FOR UPDATE)
+    if (slot?.status === 'TAKEN') {
+      set((s) => ({
+        userNotifications: [{
+          id: `err_slot_${Date.now()}`,
+          type: 'alert',
+          title: 'Slot Doldu',
+          desc: 'Davet edildiğiniz pozisyona maalesef başka bir oyuncu katılmış.',
+          time: 'Az önce',
+          iconName: 'AlertCircle',
+          color: '#ef4444',
+          textColor: '#fff',
+          read: false,
+        }, ...s.userNotifications],
+      }));
+      return;
+    }
+
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    // Atomik katılım — join_public_match_slot RPC (FOR UPDATE kilit içeriyor)
+    supabase.rpc('join_public_match_slot', {
+      p_match_id: matchId,
+      p_slot_id: slotId,
+      p_user_id: userId,
+      p_is_away: isAway,
+    }).then(({ error }) => {
+      if (error) {
+        set((s) => ({
+          userNotifications: [{
+            id: `err_join_${Date.now()}`,
             type: 'alert',
-            title: 'Slot Doldu',
-            desc: 'Davet edildiğiniz pozisyona maalesef başka bir oyuncu katılmış.',
+            title: 'Katılım Başarısız',
+            desc: error.message?.includes('dolu') ? 'Slot başka bir oyuncu tarafından dolduruldu.' : 'Maça katılırken hata oluştu.',
             time: 'Az önce',
             iconName: 'AlertCircle',
-            color: '#ef4444', // Red
+            color: '#ef4444',
             textColor: '#fff',
             read: false,
-          };
-          set((state) => ({ 
-            userNotifications: [errorNotif, ...state.userNotifications.filter((n) => n.id !== id)] 
-          }));
-          return; // İşlemi iptal et
-        }
-
-        const currentUserUid = auth.currentUser?.uid || 'u1';
-        const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1' };
-
-        const joinedPlayer: Player = {
-          id: currentUserProfile.id || 'u1',
-          name: currentUserProfile.name || 'Oyuncu',
-          avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-          rating: 4.5,
-          position: 'OYUNCU',
-          x: 50,
-          y: 50,
-        };
-        const updatedSlots = (match.slots || []).map((s) =>
-          s?.id === slotId ? { ...s, status: 'TAKEN' as const, player: joinedPlayer } : s
-        );
-        state.updateMatch({ ...match, slots: updatedSlots });
+          }, ...s.userNotifications],
+        }));
       }
-    }
-    set((state) => ({ userNotifications: state.userNotifications.filter((n) => n.id !== id) }));
+      // Başarı durumunda Realtime subscription store'u güncelleyecek
+    });
   },
   rejectMatchInvite: (id) => {
     set((state) => ({ userNotifications: state.userNotifications.filter((n) => n.id !== id) }));
