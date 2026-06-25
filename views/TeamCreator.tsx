@@ -29,9 +29,9 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
+    <div className="h-full bg-slate-950 text-white flex flex-col font-sans">
       {/* Header */}
-      <div className="pt-12 pb-6 px-6 bg-slate-900 border-b border-white/10 relative overflow-hidden">
+      <div className="pt-safe pt-12 pb-6 px-6 bg-slate-900 border-b border-white/10 relative overflow-hidden flex-shrink-0">
         <div className="absolute top-0 right-0 p-8 opacity-5">
           <Users size={120} />
         </div>
@@ -53,8 +53,8 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6 relative overflow-hidden">
+      {/* Content — scrollable so long community lists don't push footer out */}
+      <div className="flex-1 p-6 overflow-y-auto">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -184,8 +184,8 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
         </AnimatePresence>
       </div>
 
-      {/* Footer */}
-      <div className="p-6 border-t border-white/10 bg-slate-950">
+      {/* Footer — flex-shrink-0 keeps it anchored; pb-safe clears device home indicator */}
+      <div className="flex-shrink-0 p-6 pb-safe border-t border-white/10 bg-slate-950">
         <button
           onClick={handleNext}
           disabled={step === 1 && !name.trim()}
