@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** ✅ **TÜM 20 BÖLÜM TAMAMLANDI.** Tutarlılık gözden geçirmesi yapılıyor.
+> **Son güncelleme:** ✅ **TÜM 20 BÖLÜM TAMAMLANDI + tutarlılık gözden geçirmesi yapıldı** (payout/yasal/iptal/ton tutarsızlıkları düzeltildi).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -12,7 +12,7 @@
 - **Model:** Çift taraflı pazar (saha sahipleri ↔ oyuncular).
 - **Destekleyici çekirdek:** Takım kurma + **takım-içi taktik paylaşımı**.
 - **Net fark:** Saha sahibine kolaylık; oyuncuya kolay maç bulma; takım/arkadaşlarla maç.
-- **Ton:** Tüketici tarafı mevcut dil (sade); saha sahibi paneli **B2B**.
+- **Ton:** Tüketici tarafı **mevcut görsel dil korunur**; saha sahibi paneli **B2B**.
 
 ## 2. Kapsam (MVP / Lansman)
 **✅ VAR:** Saha keşfi & rezervasyon · Maç oluşturma/katılım (iki taraflı: oyuncu + saha sahibi) · Kaleci/Hakem kiralama · Takımlar + Arkadaşlar + **takım-içi Taktik Stüdyo** · Oyuncu kartları (admin) · Fair-play/güvenilirlik (admin) · Maç sonu değerlendirme · 1-1 mesajlaşma · Admin paneli.
@@ -47,7 +47,7 @@
   - **Profil fotoğrafı:** zorunlu (Supabase Storage).
   - **Konum:** zorunlu; OS'ten reddedilirse fallback = manuel şehir/ilçe (Ordu) seçimi.
 - **GK/Hakem/Saha sahibi:** o arayüze ilk girişte **ayrı başvuru + doğrulama** akışı.
-- **Yasal metinler:** Hazır (KVKK/Sözleşme/Mesafeli Satış/Gizlilik) — yerleştirilecek; onboarding'de onay zorunlu.
+- **Yasal metinler:** KVKK/Sözleşme/Mesafeli Satış/Gizlilik **hukukçu onaylı hazırlanacak** (bkz. 11.1); onboarding'de onay zorunlu.
 - **Hesap silme:** **Aktif rezervasyon varken engellenir.** Sistemde kullanıcı borcu olmayacak.
 - **Yaş politikası:** 18+ kendi kredi kartıyla öder (tam self-service). **18 yaş altı** kayıt olup oynayabilir; ancak ödemesini **zorunlu olarak bir yetişkinin kredi kartıyla** yapar → bu, ödemeyi yapan kişinin (veli/vasi) **onayı** sayılır. **Veli onayı sistemi** olarak, yasal düzenlemeye uygun kurgulanacak.
   - *Uygulama/yasal notu:* Onay iki noktada — (1) kayıt anında KVKK gereği 18 altı **veri işleme** için veli onayı, (2) **ödeme anında** yetişkinin açık (kimliklenebilir) onayı. Asgari kayıt yaşı (öneri: 15) netleştirilecek. **18 altı (yetişkin kartı yok) yalnız ücretsiz sahaları görür — bkz. 4.5.**
@@ -62,7 +62,7 @@
 - **Katılım birimi:** Boş kontenjan + **opsiyonel pozisyon etiketi**.
 - **Kaleci/Hakem ekleme:** Maç kurulduktan sonra **"Maçlarım"**dan. İki yol: (1) bir kişi **tüm ücreti ödeyip** kiralar; (2) kadro **oylar**, **%50+1** onayınca sistem uygun kaleci/hakemi **önerir/atar**; ücret **kadroya bölüşülür** ve paylara **ek blokaj** olarak eklenir (onayda birlikte tahsil; onaydan sonra eklenirse anında tahsil).
 - **Keşif:** Liste + harita + filtre (ilçe/tarih/format/saat), Ordu odaklı — yüksek kalite hedefi.
-- **Düzenleme/iptal:** Açan kişi **maça 24 saat kala**ya dek; **24 saat kuralı admin'den ayarlanabilir**. İptal/iade detayı Bölüm 12.
+- **Düzenleme/iptal:** Maç için yaşam döngüsü + iade **3.3** geçerlidir (onay/T-8s öncesi serbest; sonrası kademeli). *Doğrudan saha rezervasyonu* iptali ise **24s + kademeli** (admin ayarlı; bkz. 3.5).
 
 ## 3.3 Maç Yaşam Döngüsü: Yayın → Onay → İptal (Plei-uyarlı)
 - **Yayın:** Maç oluşturulunca **hemen Top Oyna'da** görünür (boş bile olsa). Kurucu "oynamak için **minimum oyuncu**" belirler — **varsayılan %70**, admin ayarlı.
@@ -301,7 +301,7 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Yedekleme & kurtarma:** Supabase otomatik yedek + **point-in-time recovery** + düzenli geri-yükleme provası.
 
 ## 10. Tasarım Tonu
-- Tüketici: mevcut dil (sade). Saha sahibi paneli: **B2B, sade, güven veren**.
+- Tüketici: **mevcut görsel dil korunur** (büyük yeniden tasarım yok). Saha sahibi paneli: **B2B, sade, güven veren**.
 
 ---
 
@@ -320,7 +320,7 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 |---|---|---|
 | **0** | Kapsam Daraltma & Temizlik | Kapsam dışını sil; alt navigasyonu yeniden tasarla; ölü kod/mükerrer tip temizliği. |
 | **1** | Veri Modeli & Gerçek Veri | Tek kanonik tip; mock→gerçek; DEV_MODE prod kapalı; **Ordu seed (4 tesis)**. |
-| **2** | Para Akışı & Komisyon ⚠️ | Model A + Model B; çok seviyeli ayarlanabilir komisyon; aylık payout. |
+| **2** | Para Akışı & Komisyon ⚠️ | Model A + Model B; çok seviyeli ayarlanabilir komisyon; **iki haftalık** payout (kaleci/hakem anında). |
 | **3** | Rezervasyon & Maç Çekirdeği | Uçtan uca gerçek + "başarılı maç" sinyali. |
 | **4** | Saha Sahibi B2B | Panel + B2B ton (+ saha sahibi sınırları #20'ye göre). |
 | **5** | Kaleci/Hakem | Gerçek teklif/kabul + %10 + payout. |
