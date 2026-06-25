@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–10 ✅ (… + kaleci/hakem). Sıradaki: Bölüm 11 (Para Akışı uçtan uca — en kritik teknik bölüm).
+> **Son güncelleme:** Bölüm 1–11 ✅ (… + para akışı + ücretsiz sahalar/yaşa göre erişim). Sıradaki: Bölüm 12 (Cüzdan & Sadakat; Premium kaldırıldı).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -50,7 +50,7 @@
 - **Yasal metinler:** Hazır (KVKK/Sözleşme/Mesafeli Satış/Gizlilik) — yerleştirilecek; onboarding'de onay zorunlu.
 - **Hesap silme:** **Aktif rezervasyon varken engellenir.** Sistemde kullanıcı borcu olmayacak.
 - **Yaş politikası:** 18+ kendi kredi kartıyla öder (tam self-service). **18 yaş altı** kayıt olup oynayabilir; ancak ödemesini **zorunlu olarak bir yetişkinin kredi kartıyla** yapar → bu, ödemeyi yapan kişinin (veli/vasi) **onayı** sayılır. **Veli onayı sistemi** olarak, yasal düzenlemeye uygun kurgulanacak.
-  - *Uygulama/yasal notu:* Onay iki noktada — (1) kayıt anında KVKK gereği 18 altı **veri işleme** için veli onayı, (2) **ödeme anında** yetişkinin açık (kimliklenebilir) onayı. Asgari kayıt yaşı (öneri: 15) netleştirilecek.
+  - *Uygulama/yasal notu:* Onay iki noktada — (1) kayıt anında KVKK gereği 18 altı **veri işleme** için veli onayı, (2) **ödeme anında** yetişkinin açık (kimliklenebilir) onayı. Asgari kayıt yaşı (öneri: 15) netleştirilecek. **18 altı (yetişkin kartı yok) yalnız ücretsiz sahaları görür — bkz. 4.5.**
 
 ## 3.2 Maç Oluşturma & Format
 - **Formatlar:** **2v2 → 11v11 (tümü).** Format seçici **kaydırılabilir** (kaydırdıkça bazıları görünür/gizlenir). *(XvX = taraf başına toplam oyuncu, kaleci dahil — netleşecek.)*
@@ -157,6 +157,33 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Canlı durum:** opsiyonel "yoldayım/geldim".
 - **Kaldırılan:** TransferCenter, ScoutDashboard (kapsam dışı).
 
+## 4.4 Para Akışı (Teknik)
+- **Sağlayıcı:** **iyzico** (alt üye işyeri/marketplace payout + pre-auth). *(Param alternatif; sağlayıcı+hukuk teyidi.)*
+- **Model:** OYNA pazaryeri; parayı **sağlayıcının alt-üye işyeri** çözümü tutar/payout yapar (lisans yükü sağlayıcıda). *(Hukukçu teyidi.)*
+- **Blokaj (pre-auth):** Join → karta **ön-provizyon**; **T-8s onayda capture**; tutmazsa **void** (serbest).
+- **Başarısız capture (T-8s):** O oyuncu düşer (yedek girer); maç min tutuyorsa onaylanır, yoksa iptal; bildirim.
+- **İade:** Hem **OYNA kredisi** hem **karta iade** mümkün; **kesintiler hesaplanır** (kademeli iade + alınmış komisyon/markup düşülür).
+- **OYNA bakiyesi:** Kazançlar (kaleci/hakem, owner) + iade kredileri burada toplanır; payout buradan IBAN'a.
+- **Payout:** Saha sahibi **iki haftada bir** (sabit gün, IBAN doğrulamalı); kaleci/hakem **anında (değerlendirme sonrası)**.
+- **Faturalandırma/KDV:** OYNA saha sahibine komisyon faturası; markup hizmet geliri. *(Mali müşavir teyidi.)*
+- **18 altı ödeme:** ödeme adımında **yetişkin kartı + açık onay**; çekim yetişkin kartından (Bölüm 3 veli onayı).
+- **Akış özeti:** blokaj → T-8s capture → komisyon/markup ayrılır → saha %95/%85 bakiyeye → payout.
+
+## 4.5 Ücretsiz Sahalar & Yaşa Göre Erişim
+- **Amaç:** Ödeme yapamayan gençler (18 altı, yetişkin kartı yok) uygulamayı kullanabilsin — **ücretsiz sahalarda** maç açıp arkadaşlarıyla takım kurabilsin. (Erken kullanıcı kazanımı + kapsayıcılık.)
+- **Ücretsiz saha:** Admin'in "ücretsiz" işaretlediği sahalar (belediye/okul/park/OYNA sponsorlu); **tarife/kapora yok**, komisyon/payout yok.
+- **Görünürlük matrisi:**
+
+  | Segment | Ücretsiz sahalar | Ücretli sahalar |
+  |---|---|---|
+  | 18 altı — yetişkin kartı **yok** | ✅ | ❌ |
+  | 18 altı — yetişkin kartı + ödeme onayı **var** | ✅ | ✅ |
+  | 18+ | ❌ | ✅ |
+
+- **Ücretsiz sahada akış:** Maç açma **ödemesiz** (blokaj/onay para mekaniği yok); min-oyuncu organizasyonu uygulanabilir ama tahsil yok; takım/arkadaş serbest. **Fair-play/no-show kuralları yine geçerli.**
+- **Geçiş:** 18 altı kullanıcı yetişkin kartı + ödeme onayı eklediğinde ücretli sahalar açılır.
+- **⚠️ Suistimal riski & önlem:** Yaş beyana dayalı + kimlik gevşek → yetişkin "18 altı" diyip ücretsiz sahalara erişebilir. Ücretsiz sahalar zaten OYNA'ya gelir getirmeyen halka açık sahalar (doğrudan gelir kaybı düşük); **önlem: admin izleme; ileride yaş doğrulama.**
+
 ## 5. Büyüme Stratejisi
 - **Önce arz:** Saha sahipleri/sahalarla anlaşılır; saha sahipleri OYNA'yı **kendi kanallarıyla tanıtır**; oyuncular **kendileri kayıt olur ve kendileri işlem yapar** (saha sahibi adlarına işlem yapmaz).
 
@@ -213,4 +240,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 11–20 yanıtları (para akışı detay, cüzdan/premium, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- Bölüm 12–20 yanıtları (cüzdan/sadakat, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
