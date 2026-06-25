@@ -2,121 +2,103 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1 tamamen kilitlendi (vizyon, kapsam, gelir modeli, sohbet, sahalar). Bölüm 2 (Roller) bekliyor.
-> **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya alma + store yükleme.
+> **Son güncelleme:** Bölüm 1 ✅ + Bölüm 2 (Roller) büyük ölçüde ✅ — 1 çakışma (#20 saha sahibi davet/işlem) onay bekliyor.
+> **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
 
 ## 1. Vizyon & Konumlandırma
-
-- **Gerçek ürün:** Halı saha **rezervasyon platformu**. (Sosyal ağ DEĞİL.)
+- **Gerçek ürün:** Halı saha **rezervasyon platformu** (sosyal ağ değil).
 - **Model:** Çift taraflı pazar (saha sahipleri ↔ oyuncular).
-- **Destekleyici çekirdek:** Kullanıcıların **takım kurup taktik paylaştığı** sistem (takım-içi).
-- **Net fark:** Saha sahiplerine kolaylık; oyuncuların maçı kolay bulması; takım/arkadaşlarla rahat maç yapabilmesi.
-- **Ton:** Tüketici tarafı mevcut görsel dil (sadeleştirilerek); **saha sahibi paneli B2B ton.**
+- **Destekleyici çekirdek:** Takım kurma + **takım-içi taktik paylaşımı**.
+- **Net fark:** Saha sahibine kolaylık; oyuncuya kolay maç bulma; takım/arkadaşlarla maç.
+- **Ton:** Tüketici tarafı mevcut dil (sade); saha sahibi paneli **B2B**.
 
 ## 2. Kapsam (MVP / Lansman)
+**✅ VAR:** Saha keşfi & rezervasyon · Maç oluşturma/katılım (iki taraflı: oyuncu + saha sahibi) · Kaleci/Hakem kiralama · Takımlar + Arkadaşlar + **takım-içi Taktik Stüdyo** · Oyuncu kartları (admin) · Fair-play/güvenilirlik (admin) · Maç sonu değerlendirme · 1-1 mesajlaşma · Admin paneli.
 
-**✅ Lansman İÇİ (kapsamlı yapılacak):**
-- Saha keşfi & rezervasyon
-- Maç oluşturma & katılım (OYNA organizasyonu dahil)
-- Kaleci & Hakem kiralama
-- Takımlar + Arkadaşlar + Takım-içi Taktik Stüdyo
-- Oyuncu kartları (yalnızca admin kontrolünde)
-- Fair-play / güvenilirlik (sistemsel, admin kontrollü)
-- Maç sonu oyuncu değerlendirme sayfası (UX)
-- 1-1 mesajlaşma (arkadaşlar arası)
-- Admin paneli (tek, sağlam)
+**❌ YOK (silinecek):** Turnuvalar · Topluluklar (+`COMMUNITY_ADMIN`) · AI Koç (+Gemini) · OYNA TV · Oyunlaştırma (ELMAS/KARAT, Lider tabloları, rozetler) · Saha SaaS · Oyuncu Premium · Maç içi grup sohbeti.
 
-**❌ Lansman DIŞI (kaldırılacak):**
-- Turnuvalar (`TournamentBracket`)
-- Topluluklar (`CommunityView`, `CommunityHub`, `CommunityAdminDashboard`, `communityService`, `COMMUNITY_ADMIN` rolü)
-- AI Koç (`AICoach` + Gemini bağımlılığı)
-- OYNA TV (`OynaTv`)
-- Oyunlaştırma: ELMAS/KARAT (`reputationEngine`), **Lider tabloları** (`Leaderboards`), Rozetler/başarımlar
-- Saha sahibi SaaS (`owner_accounts`, entitlements, `useOwnerEntitlements`)
-- Oyuncu Premium (`PremiumScreen`, `isPro`)
-- **Maç içi grup sohbeti** (şimdilik)
+## 3. Roller & Yetkiler
+- **Lansman rolleri:** `PLAYER`, `GOALKEEPER`, `REFEREE`, `OWNER` + Admin(ler). `CAPTAIN`(global) ve `COMMUNITY_ADMIN` kaldırıldı.
+- **Kaptanlık = takım-içi yöneticilik** (global rol değil): Takımı **kuran** otomatik yönetici olur; yönetici, takımdaki **herkese** yönetim yetkisi verebilir (çoklu yönetici mümkün).
+  - **Yönetici yetkileri:** Takım arayüzündeki **taktik stüdyo** ile taktik düzenini ayarlama/onaylama; **oyuncu ekleme/çıkarma**.
+- **Çoklu rol:** Bir kişi birden çok rol taşıyabilir; **ancak güvenlik için her rol arayüzüne geçişte yeniden giriş/çıkış (re-login) gerekir.** Aktif rol girişte seçilir.
+- **Oyuncu → kaleci/hakem:** Aynı hesaba rol başvurusu eklenir; o arayüze re-login ile geçilir.
+- **Maç açma:** Hem oyuncu/kaptan hem **saha sahibi** maç açabilir/düzenleyebilir (iki taraflı maç açma & düzenleme sistemi).
+- **Admin rolleri (ÖNERİ — onay bekliyor):**
+  - `SUPER_ADMIN` — tam yetki.
+  - `FİNANS` — komisyon oranları, payout onayı, finansal raporlar, cüzdan görünümü.
+  - `OPERASYON` — saha/kaleci/hakem doğrulama, kullanıcı yönetimi (ban/mute), dispute, maç müdahale, kart ayarları.
+  - Bootstrap: ilk `SUPER_ADMIN` DB'den; sonra panelden atama. **Tüm kritik işlemler audit log.**
+- **⚠️ Saha sahibi sınırı (#20 — çakışma, onay bekliyor):** Saha sahibi **oyuncu davet etmez** ve **oyuncu adına işlem yapamaz**.
+  - *Çelişki 1:* Önceki "owner→oyuncu davet mekanizması olsun" (FU8) kararıyla çelişiyor.
+  - *Çelişki 2:* Owner panelindeki **manuel rezervasyon** (telefonla gelen offline müşteriyi takvime kaydetme) bu kuralın istisnası mı? (B2B için kritik.)
 
-## 3. Gelir Modeli & Para Akışı 💰
+## 4. Gelir Modeli & Para Akışı 💰
+OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
 
-**Temel ilke:** OYNA tek merchant; saha sahiplerine ödemeler **ay sonunda payout** ile yapılır. Tüm oranlar admin'den **her seviyede** (global → saha → hizmet → maç) ayarlanabilir.
+**Model A — Normal rezervasyon:** OYNA **yalnızca kaporayı** tahsil eder; kaporanın **%15'i** OYNA'da kalır, kalan aylık payout; kalan saha ücreti tesiste. *(Kapora 1000₺ → OYNA 150₺.)*
 
-**İki rezervasyon modeli:**
+**Model B — OYNA-organize maç:** Saha **normal fiyatının %95'ini** alır (OYNA %5 keser); OYNA ayrıca oyunculara **değişken markup** ekler. OYNA = %5 + markup. OYNA parayı oyuncudan toplar, sahaya %95 aktarır. *(Model B'yi kimin açtığı — admin mi/saha sahibi mi — açık kalem.)*
 
-**Model A — Normal rezervasyon** (saha kendi açar / oyuncu OYNA'dan rezerve eder):
-- OYNA **yalnızca kaporayı** tahsil eder.
-- Komisyon = kaporanın **%15'i** OYNA'da kalır; kalan kapora aylık payout ile sahaya.
-- Kalan saha ücreti **tesiste** ödenir.
-- *Örnek:* Kapora 1000₺ → OYNA 150₺ alır, 850₺ payout.
+**Kaleci/Hakem:** **%10** komisyon (ayarlanabilir).
 
-**Model B — OYNA-organize maç:**
-- Saha, **normal fiyatının %95'ini** alır (OYNA saha tarafından **%5** keser).
-- OYNA ayrıca oyunculara **değişken bir ek komisyon (markup)** ekler.
-- OYNA geliri = **%5 (saha tarafı) + değişken markup (oyuncu tarafı)**.
-- *(Önceki "sabit %20" → "değişken markup"; "saha tam ücret" → "saha %95" olarak güncellendi.)*
+## 5. Büyüme Stratejisi
+- **Önce arz:** Saha sahipleri/sahalarla anlaşılır; saha sahipleri OYNA'yı **kendi kanallarıyla tanıtır**; oyuncular **kendileri kayıt olur ve kendileri işlem yapar** (saha sahibi adlarına işlem yapmaz).
 
-**Kaleci/Hakem kiralama:** **%10 komisyon** (ayarlanabilir).
+## 6. Başarı Metriği
+- **Ana metrik:** Başarılı oynatılan maç sayısı = ödendi → toplanıldı → oynandı → dağıldı → OYNA+saha parasını aldı. Admin paneli buna odaklanır.
 
-## 4. Büyüme Stratejisi
-- **Önce arz:** Saha sahipleri/sahalarla anlaşılır → saha sahipleri kendi oyuncularını uygulamaya yönlendirir (owner-led).
-- **Gereklilik:** Saha sahibi → oyuncu **davet mekanizması** (davet linki/QR, paylaşılabilir saha sayfası) — lansmanda olacak.
+## 7. Oyunlaştırma
+- **Kaldırılan:** ELMAS/KARAT, lider tabloları, rozetler.
+- **Oyuncu kartları:** yalnızca **admin** kontrolünde; kullanıcı etkisi **yok**.
+- **Fair-play/güvenilirlik:** sistemsel; admin kontrollü; profilde **uyarı** olarak gösterilebilir.
 
-## 5. Başarı Metriği
-- **Ana metrik:** Başarılı oynatılan maç sayısı. Admin paneli buna odaklanır.
-- **"Başarılı maç" tanımı:** ödeme yapıldı → kişiler toplandı → oynadılar → dağıldılar → OYNA + saha sahibi ödemesini aldı. (Finansal/operasyonel tamamlanma; skor zorunlu değil.)
-
-## 6. Oyunlaştırma Kararları
-- **Kaldırılan:** ELMAS/KARAT, lider tabloları, rozetler/başarımlar.
-- **Kalan — Oyuncu Kartları:** Yalnızca **admin panelinden** aktive edilir/ayarlanır. **Kullanıcıların kartlara hiçbir etkisi yoktur.**
-- **Kalan — Fair-play / Güvenilirlik:** Sistemsel gereklilik (no-show/iptal). Admin kontrollü; gerektiğinde profilde **uyarı** olarak gösterilebilir.
-
-## 7. Sosyal & Takım / Taktik
+## 8. Sosyal & Takım / Taktik
 - **Kaldırılan:** Topluluklar; maç içi grup sohbeti.
 - **Kalan:** Arkadaşlar arası **1-1 mesajlaşma**.
-- **Geliştirilecek:** **Takımlar** ve **Arkadaşlar** bölümleri.
-- **Taktik paylaşımı:** Takım kurulur; **yalnızca takım içi** paylaşım. Taktikler: **yüzdelik oylama + yorum + favori.**
+- **Geliştirilecek:** Takımlar + Arkadaşlar.
+- **Taktik:** **Takım-içi**; **yüzdelik oylama + yorum + favori**. Stüdyo, **takım arayüzünün içinde**.
 
-## 8. Lansman Şehri & Veri
-- **Şehir:** Ordu. Tüm demo/seed, harita merkezi, ilçe listeleri Ordu'ya göre titizlikle yeniden kurulacak.
+## 9. Lansman Şehri & Veri
+- **Şehir:** Ordu (tüm demo/seed, harita merkezi, ilçeler titizlikle yeniden kurulacak).
 - **Başlangıç sahaları (4 tesis):**
-  - **Capo Arena** — Ordu *(kort sayısı & fiyat detayı bekliyor)*
-  - **Olimpiyat** — 3 kort, fiyat 3200₺ veya 3000₺ *(hangisi netleşecek)*
-  - **VIP Arena** — 3 kort, fiyat 3000₺ veya 3200₺ *(hangisi netleşecek)*
-  - **Ahmet Kuru Tesisleri** — Ordu *(kort sayısı & fiyat detayı bekliyor)*
+  | Tesis | Kort | Fiyatlar |
+  |---|---|---|
+  | **Capo Arena** | 3 | 2000₺ · 3200₺ · 3200₺ |
+  | **Olimpiyat** | 3 | 3000₺ · 3000₺ · 3000₺ |
+  | **VIP Arena** | 3 | 3200₺ · 3200₺ · 3200₺ |
+  | **Ahmet Kuru Tesisleri** | 4 | 1200₺ · 2300₺ · 3000₺ · 3200₺ |
 
-## 9. Tasarım Tonu
-- Tüketici uygulaması: mevcut dil korunur (sadeleştirilerek).
-- Saha sahibi paneli: **B2B, sade, güven veren** ton.
+## 10. Tasarım Tonu
+- Tüketici: mevcut dil (sade). Saha sahibi paneli: **B2B, sade, güven veren**.
 
 ---
 
-## 10. Geliştirme Planı (Fazlar)
-
+## 11. Geliştirme Planı (Fazlar)
 | Faz | Başlık | Özet |
 |---|---|---|
-| **0** | Kapsam Daraltma & Temizlik | Kaldır: turnuva, topluluk (+COMMUNITY_ADMIN), AI koç (+Gemini), OYNA TV, ELMAS/KARAT & lider tablosu & rozetler, SaaS, Premium, maç içi grup sohbeti. Alt navigasyonu yeniden tasarla. Ölü kod/mükerrer tip temizliği. |
-| **1** | Veri Modeli & Gerçek Veri | Tek kanonik tip seti; mock→gerçek; DEV_MODE prod'da kapalı; **Ordu seed** (4 tesis). |
-| **2** | Para Akışı & Komisyon Motoru ⚠️ | Tek-merchant kapora tahsilatı (Model A) + organize maç (Model B); **çok seviyeli ayarlanabilir komisyon**; aylık payout. |
-| **3** | Rezervasyon & Maç Çekirdeği | Rezervasyon uçtan uca gerçek; **"başarıyla oynandı" sinyali** (admin metriği). |
-| **4** | Saha Sahibi B2B | Owner panel sağlamlaştırma + B2B ton + **oyuncu davet mekanizması**. |
-| **5** | Kaleci/Hakem | Gerçek teklif/kabul + %10 komisyon + kazanç/payout. |
-| **6** | Takım & Taktik | Takım + arkadaşlar; takım-içi taktik (oylama/yorum/favori); formasyon koordinatları tek kaynak; 1-1 mesajlaşma. |
-| **7** | Güvenlik, Altyapı & Store | RLS tamamla; edge function deploy + güvenlik (CORS/webhook imza); iOS/Android store hazırlık; test. |
+| **0** | Kapsam Daraltma & Temizlik | Kapsam dışını sil; alt navigasyonu yeniden tasarla; ölü kod/mükerrer tip temizliği. |
+| **1** | Veri Modeli & Gerçek Veri | Tek kanonik tip; mock→gerçek; DEV_MODE prod kapalı; **Ordu seed (4 tesis)**. |
+| **2** | Para Akışı & Komisyon ⚠️ | Model A + Model B; çok seviyeli ayarlanabilir komisyon; aylık payout. |
+| **3** | Rezervasyon & Maç Çekirdeği | Uçtan uca gerçek + "başarılı maç" sinyali. |
+| **4** | Saha Sahibi B2B | Panel + B2B ton (+ saha sahibi sınırları #20'ye göre). |
+| **5** | Kaleci/Hakem | Gerçek teklif/kabul + %10 + payout. |
+| **6** | Takım & Taktik | Takım + arkadaşlar + takım-içi taktik (oylama/yorum/favori) + 1-1 mesaj; çoklu yönetici. |
+| **7** | Güvenlik, Altyapı & Store | RLS; edge function deploy + güvenlik; çoklu-rol re-login; iOS/Android; test. |
 
----
+## 12. 📌 Hatırlatma / Backlog
+- [ ] Maç sonu oyuncu değerlendirme sayfası (fair-play'i besler).
+- [ ] Takımlar + Arkadaşlar geliştir.
+- [ ] Takım-içi taktik: oylama/yorum/favori; stüdyo takım arayüzünde.
+- [ ] Komisyon motoru: global/saha/hizmet/maç override.
+- [ ] Alt navigasyon yeniden tasarımı.
+- [ ] Çoklu rol + re-login akışı.
+- [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
 
-## 11. 📌 Hatırlatma / Backlog (kullanıcı talebi)
-- [ ] **Maç sonu oyuncu değerlendirme sayfası** — UX olarak yapılacak (fair-play'i besler, kartları DEĞİL).
-- [ ] **Takımlar + Arkadaşlar bölümlerini geliştir** (sosyal çekirdek).
-- [ ] **Takım-içi taktik:** oylama (yüzdelik) + yorum + favori.
-- [ ] **Saha sahibi → oyuncu davet mekanizması** (owner-led büyüme).
-- [ ] **Komisyon motoru:** global/saha/hizmet/maç seviyelerinde override.
-- [ ] **Alt navigasyon yeniden tasarımı** (orta "Sosyal/Topluluk" butonu kalkıyor).
-- [ ] **1-1 mesajlaşma** korunacak; maç içi grup sohbeti kaldırılacak.
-
-## 12. 🔓 Açık Kalemler (netleşecek)
-- Capo Arena & Ahmet Kuru Tesisleri: kort sayısı + fiyat.
-- Olimpiyat / VIP Arena: 3200₺ ve 3000₺'nin hangisi hangisine ait.
-- Model B'de OYNA paranın tamamını mı tahsil eder (oyuncudan toplayıp sahaya %95 aktarır) — çalışma varsayımı bu; onay bekliyor.
-- Bölüm 2–20 yanıtları (roller, kimlik, maç, ödeme detayları, saha, kaleci/hakem, takım, bildirim, admin, altyapı).
+## 13. 🔓 Açık Kalemler
+- **#20:** Saha sahibi "oyuncu adına işlem yapamaz/davet etmez" ↔ manuel rezervasyon + owner-led büyüme nasıl uzlaşacak?
+- Model B'yi kim açar (admin / saha sahibi)?
+- Admin rolleri önerisi onayı.
+- Rol bazlı açılış ekranı (18) onayı.
