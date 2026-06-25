@@ -22,6 +22,7 @@ const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
 const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
 const MyTeam = lazy(() => import('./views/MyTeam'));
+const TeamPanelView = lazy(() => import('./views/TeamPanelView'));
 const Marketplace = lazy(() => import('./views/Marketplace'));
 const MyListings = lazy(() => import('./views/MyListings'));
 const ListingDetails = lazy(() => import('./views/ListingDetails'));
@@ -475,7 +476,9 @@ const App: React.FC = () => {
           onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
-        return <MyTeam onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+        return <TeamPanelView onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+      case 'MY_TEAM_TACTICS':
+        return <MyTeam onBack={() => goBack('MY_TEAM')} onNavigate={(v) => navigateTo(v)} />;
       case 'STUDIO':
         return <Studio onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'PROFILE':

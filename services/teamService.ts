@@ -146,6 +146,172 @@ export const removeTeamMember = async (teamId: string, userId: string) => {
   if (error) throw error;
 };
 
+// ─── Maç Geçmişi & Sıradaki Maç ─────────────────────────────────────────────
+
+export interface TeamMatchRow {
+  id: string;
+  date: string;
+  time: string;
+  location: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamShort: string;
+  awayTeamShort: string;
+  homeTeamColor: string;
+  awayTeamColor: string;
+  // derived
+  isHome: boolean;
+  myScore: number;
+  theirScore: number;
+  opponentName: string;
+  opponentShort: string;
+  opponentColor: string;
+  result: 'G' | 'B' | 'M'; // Galibiyet / Beraberlik / Mağlubiyet
+}
+
+export interface TeamStats {
+  wins: number;
+  draws: number;
+  losses: number;
+  total: number;
+  winRate: number;
+  goalsScored: number;
+  goalsConceded: number;
+  average: number;
+  cleanSheets: number;
+}
+
+// Takım maç geçmişi (DB'den — tamamlanan maçlar)
+export const fetchTeamMatchHistory = async (teamId: string, limit = 20): Promise<TeamMatchRow[]> => {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(`
+      id, date, time, location, status,
+      "homeTeamId", "awayTeamId",
+      "homeScore", "awayScore"
+    `)
+    .or(`"homeTeamId".eq.${teamId},"awayTeamId".eq.${teamId}`)
+    .in('status', ['COMPLETED', 'FINISHED', 'SCORED'])
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  if (!data || data.length === 0) return [];
+
+  // Rakip takım isimlerini çek
+  const otherTeamIds = [
+    ...new Set(data.map(m => m.homeTeamId === teamId ? m.awayTeamId : m.homeTeamId).filter(Boolean))
+  ];
+
+  const { data: teamRows } = await supabase
+    .from('teams')
+    .select('id, name, "shortName", color1')
+    .in('id', otherTeamIds);
+
+  const teamMap = new Map((teamRows || []).map(t => [t.id, t]));
+
+  return data.map(m => {
+    const isHome = m.homeTeamId === teamId;
+    const myScore = isHome ? (m.homeScore ?? 0) : (m.awayScore ?? 0);
+    const theirScore = isHome ? (m.awayScore ?? 0) : (m.homeScore ?? 0);
+    const opponentId = isHome ? m.awayTeamId : m.homeTeamId;
+    const opp = teamMap.get(opponentId);
+    const result: 'G' | 'B' | 'M' = myScore > theirScore ? 'G' : myScore === theirScore ? 'B' : 'M';
+
+    return {
+      ...m,
+      homeTeamName: '',
+      awayTeamName: '',
+      homeTeamShort: '',
+      awayTeamShort: '',
+      homeTeamColor: '#10B981',
+      awayTeamColor: '#3B82F6',
+      isHome,
+      myScore,
+      theirScore,
+      opponentName: opp?.name || 'Rakip Takım',
+      opponentShort: opp?.shortName || '???',
+      opponentColor: opp?.color1 || '#3B82F6',
+      result,
+    };
+  });
+};
+
+// Sıradaki maç
+export const fetchTeamNextMatch = async (teamId: string): Promise<TeamMatchRow | null> => {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(`
+      id, date, time, location, status,
+      "homeTeamId", "awayTeamId",
+      "homeScore", "awayScore"
+    `)
+    .or(`"homeTeamId".eq.${teamId},"awayTeamId".eq.${teamId}`)
+    .in('status', ['PENDING', 'OPEN', 'CONFIRMED'])
+    .order('date', { ascending: true })
+    .order('time', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const isHome = data.homeTeamId === teamId;
+  const opponentId = isHome ? data.awayTeamId : data.homeTeamId;
+
+  const { data: opp } = opponentId
+    ? await supabase.from('teams').select('id, name, "shortName", color1').eq('id', opponentId).maybeSingle()
+    : { data: null };
+
+  return {
+    ...data,
+    homeTeamName: '',
+    awayTeamName: '',
+    homeTeamShort: '',
+    awayTeamShort: '',
+    homeTeamColor: '#10B981',
+    awayTeamColor: opp?.color1 || '#3B82F6',
+    isHome,
+    myScore: 0,
+    theirScore: 0,
+    opponentName: opp?.name || 'Rakip Takım',
+    opponentShort: opp?.shortName || '???',
+    opponentColor: opp?.color1 || '#3B82F6',
+    result: 'G',
+  };
+};
+
+// Takım istatistiklerini maç geçmişinden hesapla
+export const computeTeamStats = (matches: TeamMatchRow[], teamWins: number, teamLosses: number): TeamStats => {
+  if (matches.length === 0) {
+    const total = teamWins + teamLosses;
+    return {
+      wins: teamWins, draws: 0, losses: teamLosses, total,
+      winRate: total > 0 ? Math.round((teamWins / total) * 100) : 0,
+      goalsScored: 0, goalsConceded: 0, average: 0, cleanSheets: 0,
+    };
+  }
+  const wins = matches.filter(m => m.result === 'G').length;
+  const draws = matches.filter(m => m.result === 'B').length;
+  const losses = matches.filter(m => m.result === 'M').length;
+  const total = wins + draws + losses;
+  const goalsScored = matches.reduce((s, m) => s + m.myScore, 0);
+  const goalsConceded = matches.reduce((s, m) => s + m.theirScore, 0);
+  const cleanSheets = matches.filter(m => m.theirScore === 0).length;
+  return {
+    wins, draws, losses, total,
+    winRate: total > 0 ? Math.round(((wins + draws * 0.5) / total) * 100) : 0,
+    goalsScored, goalsConceded,
+    average: goalsScored - goalsConceded,
+    cleanSheets,
+  };
+};
+
 export const getFriendsWithStats = async (userId: string): Promise<(Player & { overall: number })[]> => {
   const { data: rows, error: fErr } = await supabase
     .from('friendships')
