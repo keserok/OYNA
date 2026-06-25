@@ -967,13 +967,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-between h-full py-0.5">
               <div className="flex items-center gap-1.5">
-                <svg width="11" height="11" viewBox="0 0 64 72" fill="none" style={{ transform: 'rotate(35deg)' }}>
-                  <rect x="6" y="38" width="48" height="20" rx="7" fill="#2ec40e"/>
-                  <path d="M9 48 Q3 41 2 31 Q1 22 8 18 Q14 15 18 22 Q19 32 14 48Z" fill="#39FF14"/>
-                  <rect x="8" y="4" width="12" height="36" rx="6" fill="#39FF14"/>
-                  <rect x="23" y="0" width="13" height="40" rx="6.5" fill="#39FF14"/>
-                  <rect x="39" y="3" width="11" height="37" rx="5.5" fill="#39FF14"/>
-                  <rect x="53" y="11" width="9" height="29" rx="4.5" fill="#39FF14"/>
+                <svg width="11" height="11" viewBox="0 0 24 28" fill="#39FF14" style={{ transform: 'rotate(42deg)' }}>
+                  <rect x="3" y="22" width="16" height="5" rx="2.2" opacity="0.82"/>
+                  <rect x="2" y="12" width="18" height="12" rx="2.8"/>
+                  <rect x="2.5" y="0.5" width="3.8" height="13" rx="1.9"/>
+                  <rect x="7" y="0" width="3.8" height="13.5" rx="1.9"/>
+                  <rect x="11.5" y="0.5" width="3.5" height="13" rx="1.75"/>
+                  <rect x="15.5" y="2" width="3" height="11" rx="1.5"/>
+                  <rect x="18.5" y="16" width="5.5" height="3.5" rx="1.75"/>
+                  <rect x="3" y="15" width="15" height="0.8" rx="0.4" fill="rgba(0,0,0,0.2)"/>
                 </svg>
                 <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#39FF14]">Kaleci Kimligi</span>
               </div>
@@ -982,17 +984,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             </div>
             <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
               <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
-                <svg width="36" height="36" viewBox="0 0 64 72" fill="none" style={{ transform: 'rotate(35deg)' }}>
-                  <rect x="10" y="58" width="38" height="11" rx="4" fill="#0a1808"/>
-                  <rect x="6" y="38" width="48" height="22" rx="7" fill="#2ec40e"/>
-                  <path d="M9 48 Q3 41 2 31 Q1 22 8 18 Q14 15 18 22 Q19 32 14 48Z" fill="#39FF14"/>
-                  <rect x="8" y="4" width="12" height="36" rx="6" fill="#39FF14"/>
-                  <rect x="23" y="0" width="13" height="40" rx="6.5" fill="#39FF14"/>
-                  <rect x="39" y="3" width="11" height="37" rx="5.5" fill="#39FF14"/>
-                  <rect x="53" y="11" width="9" height="29" rx="4.5" fill="#39FF14"/>
-                  <line x1="20" y1="4" x2="23" y2="40" stroke="rgba(0,0,0,0.28)" strokeWidth="1.5"/>
-                  <line x1="36" y1="0" x2="39" y2="40" stroke="rgba(0,0,0,0.28)" strokeWidth="1.5"/>
-                  <line x1="50" y1="3" x2="53" y2="40" stroke="rgba(0,0,0,0.28)" strokeWidth="1.5"/>
+                <svg width="36" height="36" viewBox="0 0 24 28" fill="#39FF14" style={{ transform: 'rotate(42deg)' }}>
+                  <rect x="3" y="22" width="16" height="5" rx="2.2" opacity="0.82"/>
+                  <rect x="2" y="12" width="18" height="12" rx="2.8"/>
+                  <rect x="2.5" y="0.5" width="3.8" height="13" rx="1.9"/>
+                  <rect x="7" y="0" width="3.8" height="13.5" rx="1.9"/>
+                  <rect x="11.5" y="0.5" width="3.5" height="13" rx="1.75"/>
+                  <rect x="15.5" y="2" width="3" height="11" rx="1.5"/>
+                  <rect x="18.5" y="16" width="5.5" height="3.5" rx="1.75"/>
+                  <rect x="3" y="15" width="15" height="0.8" rx="0.4" fill="rgba(0,0,0,0.25)"/>
                 </svg>
               </div>
             </div>
