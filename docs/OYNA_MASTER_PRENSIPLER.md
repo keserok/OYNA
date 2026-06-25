@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–16 ✅ (… + admin/GodView tam kontrol). Sıradaki: Bölüm 17 (Veri Modeli, Güvenlik & Altyapı).
+> **Son güncelleme:** Bölüm 1–16 ✅ + Bölüm 17 kısmen (veri/güvenlik 171–176). Açık: 177–179 (secret/ölçeklenme/yedekleme).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -289,6 +289,15 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
   | **VIP Arena** | 3 | 3200₺ · 3200₺ · 3200₺ |
   | **Ahmet Kuru Tesisleri** | 4 | 1200₺ · 2300₺ · 3000₺ · 3200₺ |
 
+## 9.1 Veri Modeli, Güvenlik & Altyapı
+- **Tek kanonik model (SSOT):** **Tüm uygulama genelinde** her varlık (takım/maç/oyuncu…) için **tek tanım**; mükerrerler birleştirilir/silinir.
+- **Tutarlı isimlendirme:** Her yerde **tek standart** (snake_case) + tutarlı eşleme.
+- **Demo/mock veri:** **ŞİMDİLİK TAMAMEN SİLİNİR.** Gerçek veri + boş durum ekranları (çökme değil). *(Bkz. Backlog: istek-üzerine demo veri üreteci.)*
+- **RLS (erişim kuralları):** Her tabloda RLS; eksik politikalar tamamlanır; zayıf "herkese açık" politikalar kaldırılır.
+- **RPC bütünlüğü (ÇOK ÖNEMLİ):** Tüm sunucu işlemleri listelenir, eksikler yazılır, **hepsi prod'a deploy + test** — kusursuz çalışmalı.
+- **Edge function güvenliği:** CORS kısıtlanır, **webhook imza doğrulama** eklenir, hepsi güvenli deploy.
+- *(177 secret yönetimi, 178 ölçeklenme, 179 yedekleme — bekliyor.)*
+
 ## 10. Tasarım Tonu
 - Tüketici: mevcut dil (sade). Saha sahibi paneli: **B2B, sade, güven veren**.
 
@@ -314,6 +323,10 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - [ ] Alt navigasyon yeniden tasarımı.
 - [ ] Çoklu rol + re-login akışı.
 - [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
+- [ ] **İstek-üzerine demo veri üreteci** — "oluştur" komutuyla demo veri yaratır (admin/dev); canlıda kapalı.
+- [ ] Tek kanonik veri modeli + tutarlı isimlendirme (tüm uygulama).
+- [ ] Tüm RPC'lerin envanteri + eksik tamamlama + deploy/test (kritik).
+- [ ] RLS politikalarının tamamlanması + edge function güvenliği.
 
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
