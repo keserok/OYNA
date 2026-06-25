@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CreditCard, Users, User, Share2, Ticket, CheckCircle2, ShieldCheck, AlertCircle, PieChart, Lock, ChevronRight, Copy, TicketPercent, ToggleLeft, ToggleRight, Crown, X } from 'lucide-react';
+import { ArrowLeft, CreditCard, Users, User, Share2, Ticket, CheckCircle2, ShieldCheck, AlertCircle, PieChart, Lock, Copy, TicketPercent, ToggleLeft, ToggleRight, X } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
@@ -10,13 +10,12 @@ interface PaymentScreenProps {
   onBack: () => void;
   extraFee?: number; // Equipment fee
   hasMotmCoupon?: boolean; // New Prop
-  onUpgradeRequest?: () => void;
   onViewTicket: () => void; // New Callback
 }
 
 type PaymentStep = 'DEPOSIT' | 'POOL' | 'SUCCESS';
 
-const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, hasMotmCoupon = false, onUpgradeRequest, onViewTicket }) => {
+const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, hasMotmCoupon = false, onViewTicket }) => {
   const { bookingPitch, bookingCourt, bookingDate, bookingSlot, bookingPrice, bookingDeposit } = useAppStore();
   const [step, setStep] = useState<PaymentStep>('DEPOSIT');
   const [captainGuarantee, setCaptainGuarantee] = useState(false);
@@ -26,14 +25,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, has
 
   const PITCH_PRICE = bookingPrice ?? (bookingCourt ? bookingCourt.price : (bookingPitch ? bookingPitch.totalPrice : 2800));
   const DEPOSIT_AMOUNT = bookingDeposit ?? Math.min(1000, PITCH_PRICE);
-  const COMMISSION_RATE = 0.10; 
-  const PRO_COMMISSION_RATE = 0.05; 
-  
+  const COMMISSION_RATE = 0.10;
+
   const TOTAL_AMOUNT_RAW = PITCH_PRICE + extraFee;
   const DISCOUNT_RATE = 0.05; 
   const discountAmount = applyDiscount ? TOTAL_AMOUNT_RAW * DISCOUNT_RATE : 0;
   const standardCommission = Math.floor(TOTAL_AMOUNT_RAW * COMMISSION_RATE);
-  const proCommission = Math.floor(TOTAL_AMOUNT_RAW * PRO_COMMISSION_RATE);
   const TOTAL_AMOUNT = Math.floor(TOTAL_AMOUNT_RAW - discountAmount + standardCommission);
   const PLAYER_COUNT = 14;
   const SHARE_PRICE = Math.ceil(TOTAL_AMOUNT / PLAYER_COUNT);
@@ -120,15 +117,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, extraFee = 0, has
                     <span className="font-bold text-gray-400">+{standardCommission}₺</span>
                 </div>
 
-                {/* Pro Savings Hint */}
-                <button onClick={onUpgradeRequest} className="w-full bg-gradient-to-r from-yellow-900/40 to-transparent border border-[#FFFF00]/30 p-2 rounded-xl flex justify-between items-center group">
-                    <div className="flex items-center gap-2">
-                        <Crown size={14} className="text-[#FFFF00]" />
-                        <span className="text-xs text-[#FFFF00] font-bold">PRO ile {standardCommission - proCommission}₺ Tasarruf Et</span>
-                    </div>
-                    <ChevronRight size={14} className="text-[#FFFF00] group-hover:translate-x-1 transition-transform" />
-                </button>
-                
                 {applyDiscount && (
                     <div className="flex justify-between items-center text-sm text-[#FFFF00]">
                         <span>Özel İndirim</span>

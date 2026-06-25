@@ -204,7 +204,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             {savedCards.length === 0 && (
               <button
                 onClick={() => setCurrentView('CARD_SETTINGS')}
-                className="w-full min-w-[280px] text-center p-8 bg-[#161B22] rounded-2xl border border-dashed border-[#FFFF00]/40 text-[#FFFF00] text-sm font-bold hover:bg-[#FFFF00]/5 transition-colors"
+                className="w-72 shrink-0 text-center p-8 bg-[#161B22] rounded-2xl border border-dashed border-[#FFFF00]/40 text-[#FFFF00] text-sm font-bold hover:bg-[#FFFF00]/5 transition-colors"
               >
                 <Plus size={24} className="mx-auto mb-2" />
                 Kapora ödemek için kart ekleyin

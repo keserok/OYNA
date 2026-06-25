@@ -200,7 +200,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                       {cancellable ? (
                         <button
                           onClick={() => { setCancelTarget(b); setCancelError(null); }}
-                          className="w-full py-2.5 text-red-400 hover:text-red-300 text-xs font-black uppercase tracking-widest transition-colors"
+                          className="w-full py-3 text-red-400 hover:text-red-300 text-xs font-black uppercase tracking-widest transition-colors"
                         >
                           İptal Et (%90 İade)
                         </button>

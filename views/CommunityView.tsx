@@ -522,9 +522,10 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
                 {activeTab === 'TEAMS' && (
                   <div className="space-y-2.5">
                     {/* Table header */}
-                    <div className="flex items-center px-3 pb-1 border-b border-white/5">
-                      <span className="text-[8px] text-gray-700 font-black uppercase w-6 flex-shrink-0">#</span>
-                      <span className="text-[8px] text-gray-700 font-black uppercase flex-1 ml-3">Takım</span>
+                    <div className="flex items-center gap-3 px-3 pb-1 border-b border-white/5">
+                      <span className="text-[8px] text-gray-700 font-black uppercase w-5 text-center flex-shrink-0">#</span>
+                      <span className="w-9 flex-shrink-0" aria-hidden="true" />
+                      <span className="text-[8px] text-gray-700 font-black uppercase flex-1 min-w-0">Takım</span>
                       <div className="flex items-center gap-3 text-[8px] text-gray-700 font-black uppercase flex-shrink-0">
                         <span className="w-4 text-center">G</span>
                         <span className="w-4 text-center">B</span>
@@ -576,7 +577,7 @@ const CommunityView: React.FC<CommunityViewProps> = ({ onBack, onNavigate, commu
                             <span className="text-[11px] font-black text-emerald-400 w-4">{team.wins}</span>
                             <span className="text-[11px] font-black text-gray-500 w-4">{team.draws}</span>
                             <span className="text-[11px] font-black text-rose-400 w-4">{team.losses}</span>
-                            <div className="w-8">
+                            <div className="w-8 text-center">
                               <span className="text-[9px] font-black text-blue-400">{team.fp}</span>
                             </div>
                           </div>

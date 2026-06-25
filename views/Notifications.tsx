@@ -212,7 +212,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={onBack}
-          className="p-2.5 rounded-2xl border border-white/10 text-white"
+          className="w-10 h-10 rounded-full flex items-center justify-center border border-white/10 text-white"
           style={{ background: 'rgba(255,255,255,0.05)' }}
         >
           <ArrowLeft size={18} />

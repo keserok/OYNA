@@ -254,7 +254,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
               <h1 className="text-[17px] font-black italic uppercase tracking-tighter text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
                 Oynamak istediğin maçı bul
               </h1>
-              <button onClick={() => setShowWizard(false)} className="text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors">
+              <button onClick={() => setShowWizard(false)} className="w-10 text-right text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors">
                 Geç
               </button>
             </div>

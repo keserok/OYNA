@@ -26,11 +26,12 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
     >
       {/* Dynamic top safe area header */}
       {(title || onBack || rightElement) && (
-        <header 
-          className="sticky top-0 z-40 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 px-4 flex items-center justify-between transition-all pt-safe"
+        <header
+          className="sticky top-0 z-40 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 px-4 flex items-center transition-all pt-safe relative"
           style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}
         >
-          <div className="flex items-center gap-3">
+          {/* Left slot — anchors back button, keeps title centered */}
+          <div className="w-10 shrink-0 flex items-center">
             {onBack && (
               <button
                 onClick={onBack}
@@ -40,18 +41,20 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
                 <ChevronLeft size={20} className="text-white" />
               </button>
             )}
-            {title && (
-              <h1 className="text-lg font-black tracking-tight select-none">
-                {title}
-              </h1>
-            )}
           </div>
-          
-          {rightElement && (
-            <div className="flex items-center">
-              {rightElement}
-            </div>
+
+          {/* Center — title absolutely centered in header */}
+          {title && (
+            <h1 className="absolute left-1/2 -translate-x-1/2 text-lg font-black tracking-tight select-none pointer-events-none max-w-[60%] truncate text-center">
+              {title}
+            </h1>
           )}
+          {!title && <div className="flex-1" />}
+
+          {/* Right slot — mirrors left width so title stays centered */}
+          <div className="w-10 shrink-0 ml-auto flex items-center justify-end">
+            {rightElement}
+          </div>
         </header>
       )}
 

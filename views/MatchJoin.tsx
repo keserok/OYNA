@@ -1760,7 +1760,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           {(isAlreadyJoined || isAlreadyJoinedReserve) ? (
             <button 
               onClick={() => setShowLeaveConfirm(true)}
-              className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
+              className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
               {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
             </button>
           ) : (
@@ -1951,11 +1951,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <p className="text-xs font-bold text-white truncate max-w-[180px]">{match.location || 'Oyna Arena'}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Tarih & Saat</p>
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-[#00F2FE]" />
-                    <p className="text-xs font-bold text-[#00F2FE]">{match.date} • {match.time}</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Tarih & Saat</p>
+                    <p className="text-xs font-bold text-[#00F2FE] truncate max-w-[180px]">{match.date} • {match.time}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-[#00F2FE]/10 border border-[#00F2FE]/30 flex items-center justify-center shrink-0">
+                    <Clock size={14} className="text-[#00F2FE]" />
                   </div>
                 </div>
               </div>
@@ -2213,8 +2215,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     )
                   ) : (
                     /* ── Kilitli Slot ───────────────────────────── */
-                    <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center">
-                      <X size={12} className="text-white/20" />
+                    <div className="w-12 h-12 rounded-full bg-black/40 border border-white/10 flex items-center justify-center">
+                      <X size={14} className="text-white/20" />
                     </div>
                   )}
                 </div>
@@ -2697,7 +2699,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               <Shield size={14} className="text-white/40" />
                               <span className="text-[11px] text-white/50 font-bold uppercase tracking-wider">HAKEM DURUMU</span>
                             </div>
-                            <span className={`text-xs font-black uppercase italic ${hasReferee ? 'text-[#39FF14]' : 'text-white/50'}`}>
+                            <span className={`text-xs font-black uppercase italic text-right max-w-[200px] leading-tight ${hasReferee ? 'text-[#39FF14]' : 'text-white/50'}`}>
                               {hasReferee ? 'RESMİ LİSANSLI HAKEM' : 'HAKEMSİZ (KAPTAN KONTROLÜ)'}
                             </span>
                           </div>

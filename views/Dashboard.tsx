@@ -408,7 +408,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     <div className="flex flex-col min-h-screen pb-6 bg-[#0A0E14] text-white font-sans selection:bg-[#FFFF00] selection:text-black">
 
       {/* Header */}
-      <header className="px-6 pt-safe pb-4 flex justify-between items-center bg-transparent z-30">
+      <header className="px-4 xs:px-6 pt-safe pb-4 flex justify-between items-center bg-transparent z-30">
         <div className="flex items-center gap-3">
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -446,7 +446,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
 
       {/* 2. MAÇLARIM Pulsing Button */}
       {userMatches.length > 0 && (
-        <div className="px-6 mb-6 relative z-20">
+        <div className="px-4 xs:px-6 mb-6 relative z-20">
           <motion.div
             onClick={() => {
               // Dismiss badge
@@ -603,7 +603,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           />
 
           {/* Content */}
-          <div className="absolute inset-0 p-6 flex items-center justify-between">
+          <div className="absolute inset-0 p-6 pr-[150px] flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
@@ -611,12 +611,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 </motion.div>
                 <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
-              <h2 className="text-5xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,255,0,0.3)' }}>Top<br />Oyna</h2>
+              <h2 className="text-4xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,255,0,0.3)' }}>Top<br />Oyna</h2>
               <p className="text-[10px] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
             </div>
 
             {/* OYNA LOGO — sağ taraf, siyah zemin üzerinde parlak sarı */}
-            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center">
               {/* Arka plan disk — koyu kısım */}
               <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
               {/* Dış halka */}
@@ -644,6 +644,110 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                   height={82}
                   animate={false}
                   className="drop-shadow-[0_0_16px_rgba(255,255,0,0.9)]"
+                />
+              </motion.div>
+            </div>
+          </div>
+        </AnimatedButton>
+
+        {/* 3. Pitch Booking (FULL WIDTH) */}
+        <AnimatedButton
+          as="div"
+          variants={itemVariants}
+          whileHover={{ scale: 1.02, y: -3 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => onNavigate('PITCH_DISCOVERY')}
+          className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
+          style={{ boxShadow: '0 0 60px rgba(16,185,129,0.35), 0 0 120px rgba(5,150,105,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
+        >
+          {/* Yeşil → Siyah ana gradient */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 25%, #34D399 45%, #022014 75%, #000000 100%)' }} />
+          {/* Animated sweep — koyu tarafta neon yeşil vurgu */}
+          <motion.div
+            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(16,185,129,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
+          />
+          {/* Carbon texture */}
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+          {/* Sol taraf yeşil parlaması (metin bölgesi) */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, transparent 50%)' }} />
+          {/* Shimmer */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
+          />
+
+          {/* Vektörel Futbol Sahası Deseni (Koyu Yeşil Uyumlu) */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
+            <div className="absolute inset-0 w-full h-full opacity-15">
+              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#10B981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="25" y="25" width="1000" height="630" />
+                  <line x1="525" y1="25" x2="525" y2="655" />
+                  <circle cx="525" cy="340" r="90" />
+                  <circle cx="525" cy="340" r="4" fill="#10B981" />
+                  <rect x="25" y="140" width="165" height="400" />
+                  <rect x="25" y="240" width="55" height="200" />
+                  <circle cx="120" cy="340" r="4" fill="#10B981" />
+                  <path d="M 190 260 A 90 90 0 0 1 190 420" />
+                  <rect x="860" y="140" width="165" height="400" />
+                  <rect x="970" y="240" width="55" height="200" />
+                  <circle cx="930" cy="340" r="4" fill="#10B981" />
+                  <path d="M 860 260 A 90 90 0 0 0 860 420" />
+                  <path d="M 65 25 A 40 40 0 0 0 25 65" />
+                  <path d="M 25 615 A 40 40 0 0 0 65 655" />
+                  <path d="M 985 25 A 40 40 0 0 1 1025 65" />
+                  <path d="M 1025 615 A 40 40 0 0 1 985 655" />
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="absolute inset-0 p-6 pr-[150px] flex items-center justify-between">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                  <MapPin size={16} className="text-white fill-none drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
+                </motion.div>
+                <span className="text-white/95 text-[10px] font-black uppercase tracking-[0.3em]">REZERVASYON</span>
+              </div>
+              <h2 className="text-4xl font-black text-white italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
+              <p className="text-[10px] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
+            </div>
+
+            {/* Neon Harita Diski — sağ taraf, siyah zemin üzerinde parlak yeşil MapPin */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center">
+              {/* Arka plan disk — koyu kısım */}
+              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
+              {/* Dış halka */}
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-0 rounded-full border-2"
+                style={{ borderColor: 'rgba(16,185,129,0.6)', boxShadow: '0 0 20px rgba(16,185,129,0.4), inset 0 0 10px rgba(16,185,129,0.1)' }}
+              />
+              {/* İkinci parlama halkası */}
+              <motion.div
+                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute rounded-full border"
+                style={{ inset: '-6px', borderColor: 'rgba(16,185,129,0.2)' }}
+              />
+              {/* Salınım animasyonu ile MapPin */}
+              <motion.div
+                animate={{ rotate: [0, 4, -4, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative z-10 text-[#10B981]"
+              >
+                <MapPin
+                  size={54}
+                  className="drop-shadow-[0_0_16px_rgba(16,185,129,0.9)]"
                 />
               </motion.div>
             </div>
@@ -686,7 +790,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           />
 
           {/* Content */}
-          <div className="absolute inset-0 p-6 flex items-center justify-between">
+          <div className="absolute inset-0 p-6 pr-[150px] flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
@@ -694,12 +798,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 </motion.div>
                 <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">ORGANİZASYON</span>
               </div>
-              <h2 className="text-5xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
+              <h2 className="text-4xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
               <p className="text-[10px] text-black/60 mt-2 font-bold">Maçı organize et.</p>
             </div>
 
             {/* Organizasyon Diski — sağ taraf, siyah zemin üzerinde parlak turuncu takvim + kalem */}
-            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center">
               {/* Arka plan disk — koyu kısım */}
               <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
               {/* Dış halka */}
@@ -833,110 +937,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         */}
 
 
-
-        {/* 3. Pitch Booking (FULL WIDTH) */}
-        <AnimatedButton
-          as="div"
-          variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -3 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => onNavigate('PITCH_DISCOVERY')}
-          className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
-          style={{ boxShadow: '0 0 60px rgba(16,185,129,0.35), 0 0 120px rgba(5,150,105,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
-        >
-          {/* Yeşil → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 25%, #34D399 45%, #022014 75%, #000000 100%)' }} />
-          {/* Animated sweep — koyu tarafta neon yeşil vurgu */}
-          <motion.div
-            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(16,185,129,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
-          />
-          {/* Carbon texture */}
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
-          {/* Sol taraf yeşil parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, transparent 50%)' }} />
-          {/* Shimmer */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
-          />
-
-          {/* Vektörel Futbol Sahası Deseni (Koyu Yeşil Uyumlu) */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
-            <div className="absolute inset-0 w-full h-full opacity-15">
-              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" xmlns="http://www.w3.org/2000/svg">
-                <g stroke="#10B981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="25" y="25" width="1000" height="630" />
-                  <line x1="525" y1="25" x2="525" y2="655" />
-                  <circle cx="525" cy="340" r="90" />
-                  <circle cx="525" cy="340" r="4" fill="#10B981" />
-                  <rect x="25" y="140" width="165" height="400" />
-                  <rect x="25" y="240" width="55" height="200" />
-                  <circle cx="120" cy="340" r="4" fill="#10B981" />
-                  <path d="M 190 260 A 90 90 0 0 1 190 420" />
-                  <rect x="860" y="140" width="165" height="400" />
-                  <rect x="970" y="240" width="55" height="200" />
-                  <circle cx="930" cy="340" r="4" fill="#10B981" />
-                  <path d="M 860 260 A 90 90 0 0 0 860 420" />
-                  <path d="M 65 25 A 40 40 0 0 0 25 65" />
-                  <path d="M 25 615 A 40 40 0 0 0 65 655" />
-                  <path d="M 985 25 A 40 40 0 0 1 1025 65" />
-                  <path d="M 1025 615 A 40 40 0 0 1 985 655" />
-                </g>
-              </svg>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="absolute inset-0 p-6 flex items-center justify-between">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  <MapPin size={16} className="text-white fill-none drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
-                </motion.div>
-                <span className="text-white/95 text-[10px] font-black uppercase tracking-[0.3em]">REZERVASYON</span>
-              </div>
-              <h2 className="text-5xl font-black text-white italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
-              <p className="text-[10px] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
-            </div>
-
-            {/* Neon Harita Diski — sağ taraf, siyah zemin üzerinde parlak yeşil MapPin */}
-            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-              {/* Arka plan disk — koyu kısım */}
-              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
-              {/* Dış halka */}
-              <motion.div
-                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(16,185,129,0.6)', boxShadow: '0 0 20px rgba(16,185,129,0.4), inset 0 0 10px rgba(16,185,129,0.1)' }}
-              />
-              {/* İkinci parlama halkası */}
-              <motion.div
-                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(16,185,129,0.2)' }}
-              />
-              {/* Salınım animasyonu ile MapPin */}
-              <motion.div
-                animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative z-10 text-[#10B981]"
-              >
-                <MapPin
-                  size={54}
-                  className="drop-shadow-[0_0_16px_rgba(16,185,129,0.9)]"
-                />
-              </motion.div>
-            </div>
-          </div>
-        </AnimatedButton>
 
         {/* Rezervasyonlarım — saha kiralamalarını görüntüle/iptal et */}
         <AnimatedButton

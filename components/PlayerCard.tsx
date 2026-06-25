@@ -359,7 +359,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
               <div className="w-full h-px mb-1" style={{ background: `linear-gradient(to right, transparent, ${t.sep}, transparent)` }} />
 
               {/* Stat rows */}
-              <div className="grid grid-cols-2 gap-x-3 gap-y-[6px]">
+              <div className="grid grid-cols-2 grid-rows-3 grid-flow-col gap-x-3 gap-y-[6px]">
                 {stats.slice(0, 3).map(({ key: sKey, label, stat }) => (
                   <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={!!stat.videoUrl}
                     onPlay={stat.videoUrl ? () => setActiveVideo(sKey) : undefined} />

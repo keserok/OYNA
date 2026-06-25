@@ -38,7 +38,6 @@ interface ProfileScreenProps {
     onBack: () => void;
     onNavigate?: (view: AppView) => void;
     onOpenDiaryEntry: (id: string) => void;
-    isPro?: boolean;
 }
 
 const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHistorySummary[] }> = ({ tier, matches }) => {
@@ -115,9 +114,9 @@ const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHis
 const MatchBanner: React.FC<{ item: MatchHistorySummary; isMvp?: boolean; onClick: () => void }> = ({ item, isMvp, onClick }) => (
     <button onClick={onClick} className="w-full relative group hover:scale-[1.01] active:scale-[0.99] transition-all text-left">
         <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-[24px] pointer-events-none" />
-        <div className="relative bg-[#161B22]/80 backdrop-blur-xl border border-white/5 rounded-[24px] p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all overflow-hidden">
+        <div className="relative bg-[#161B22]/80 backdrop-blur-xl border border-white/5 rounded-[24px] p-5 flex items-center gap-3 hover:bg-white/[0.08] transition-all overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="flex flex-col gap-1.5 z-10 text-left">
+            <div className="flex flex-col gap-1.5 z-10 text-left flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#c8962a]">{item.date}</span>
                     {isMvp && (
@@ -126,15 +125,15 @@ const MatchBanner: React.FC<{ item: MatchHistorySummary; isMvp?: boolean; onClic
                         </span>
                     )}
                 </div>
-                <h4 className="text-sm font-bold text-gray-300 truncate max-w-[140px] uppercase tracking-tight">{item.pitchName}</h4>
+                <h4 className="text-sm font-bold text-gray-300 truncate uppercase tracking-tight">{item.pitchName}</h4>
             </div>
-            <div className="flex flex-col items-center z-10">
+            <div className="flex flex-col items-center z-10 w-20 shrink-0">
                 <span className={`text-3xl font-black italic leading-none tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] ${item.result === 'WIN' ? 'text-[#39FF14]' : item.result === 'LOSS' ? 'text-[#FF3131]' : 'text-white'}`}>
                     {item.score}
                 </span>
                 <span className="text-[7px] font-black uppercase tracking-widest mt-1 opacity-50">SKOR</span>
             </div>
-            <div className="z-10 bg-white/5 p-2.5 rounded-xl border border-white/10 group-hover:border-[#d4a84b]/50 transition-colors">
+            <div className="z-10 shrink-0 bg-white/5 p-2.5 rounded-xl border border-white/10 group-hover:border-[#d4a84b]/50 transition-colors">
                 <ChevronRight size={16} className="text-[#d4a84b]" />
             </div>
         </div>

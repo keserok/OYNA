@@ -10,7 +10,6 @@ interface UIState {
   activeDraftId: string | null;
   marketplaceReturnView: AppView;
   matchJoinReturnView: AppView;
-  isUserPro: boolean;
   addOnTotal: number;
   hasMotmCoupon: boolean;
   chatTarget: { name: string; role: string; avatar: string } | null;
@@ -27,7 +26,6 @@ interface UIState {
   setActiveDraftId: (id: string | null) => void;
   setMarketplaceReturnView: (view: AppView) => void;
   setMatchJoinReturnView: (view: AppView) => void;
-  setIsUserPro: (isPro: boolean) => void;
   setAddOnTotal: (total: number) => void;
   setHasMotmCoupon: (hasCoupon: boolean) => void;
   setChatTarget: (target: { name: string; role: string; avatar: string } | null) => void;
@@ -49,7 +47,6 @@ export const useUIStore = create<UIState>((set) => ({
   activeDraftId: null,
   marketplaceReturnView: 'DASHBOARD',
   matchJoinReturnView: 'MATCH_DISCOVERY',
-  isUserPro: false,
   addOnTotal: 0,
   hasMotmCoupon: false,
   chatTarget: null,
@@ -76,7 +73,6 @@ export const useUIStore = create<UIState>((set) => ({
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setMarketplaceReturnView: (view) => set({ marketplaceReturnView: view }),
   setMatchJoinReturnView: (view) => set({ matchJoinReturnView: view }),
-  setIsUserPro: (isPro) => set({ isUserPro: isPro }),
   setAddOnTotal: (total) => set({ addOnTotal: total }),
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setChatTarget: (chatTarget) => set({ chatTarget }),
