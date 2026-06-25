@@ -967,13 +967,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-between h-full py-0.5">
               <div className="flex items-center gap-1.5">
-                <svg width="11" height="11" viewBox="0 0 22 27" fill="none" stroke="#39FF14" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
-                  <path d="M2,11 L2,6 Q2,2.5 4,2.5 Q6,2.5 6,6 L6,11"/>
-                  <path d="M6.5,11 L6.5,4 Q6.5,1 8.5,1 Q10.5,1 10.5,4 L10.5,11"/>
-                  <path d="M11,11 L11,6 Q11,2.5 13,2.5 Q15,2.5 15,6 L15,11"/>
-                  <path d="M15.5,11 L15.5,7.5 Q15.5,5.5 17,5.5 Q18.5,5.5 18.5,7.5 L18.5,11"/>
-                  <rect x="2" y="11" width="17" height="9" rx="2"/>
-                  <rect x="2" y="20" width="17" height="5.5" rx="2.5"/>
+                <svg width="11" height="11" viewBox="-1 0 22 24" fill="none" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
+                  <path d="M3,22 L3,14 Q1,14 0,12 Q-1,10 1,9 Q2.5,8.5 3,10 L3,8 Q3,5 5,5 Q7,5 7,8 Q7,3 9.5,3.5 Q12,4 12,8 Q12,5 14,5 Q16,5 16,9 Q16.5,7.5 17.5,8 Q19,9.5 18.5,12 L18.5,22 Z"/>
                 </svg>
                 <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#39FF14]">Kaleci Kimligi</span>
               </div>
@@ -982,21 +977,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             </div>
             <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
               <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
-                <svg width="34" height="34" viewBox="-2 0 24 27" fill="none" stroke="#39FF14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
-                  {/* index */}
-                  <path d="M2,11 L2,6 Q2,2.5 4,2.5 Q6,2.5 6,6 L6,11"/>
-                  {/* middle — tallest */}
-                  <path d="M6.5,11 L6.5,4 Q6.5,1 8.5,1 Q10.5,1 10.5,4 L10.5,11"/>
-                  {/* ring */}
-                  <path d="M11,11 L11,6 Q11,2.5 13,2.5 Q15,2.5 15,6 L15,11"/>
-                  {/* pinky — shortest */}
-                  <path d="M15.5,11 L15.5,7.5 Q15.5,5.5 17,5.5 Q18.5,5.5 18.5,7.5 L18.5,11"/>
-                  {/* palm */}
-                  <rect x="2" y="11" width="17" height="9" rx="2"/>
-                  {/* thumb — protrudes left */}
-                  <path d="M2,18.5 L2,15.5 Q2,13 0,13 Q-2,13 -2,15.5 Q-2,18 0,18 L2,18"/>
-                  {/* wrist cuff */}
-                  <rect x="2" y="20" width="17" height="5.5" rx="2.5"/>
+                <svg width="34" height="34" viewBox="-1 0 22 24" fill="none" stroke="#39FF14" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
+                  <path d="M3,22 L3,14 Q1,14 0,12 Q-1,10 1,9 Q2.5,8.5 3,10 L3,8 Q3,5 5,5 Q7,5 7,8 Q7,3 9.5,3.5 Q12,4 12,8 Q12,5 14,5 Q16,5 16,9 Q16.5,7.5 17.5,8 Q19,9.5 18.5,12 L18.5,22 Z"/>
                 </svg>
               </div>
             </div>
