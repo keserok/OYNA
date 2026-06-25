@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–14 ✅ (… + fair-play/güvenilirlik & moderasyon). Sıradaki: Bölüm 15 (Bildirimler).
+> **Son güncelleme:** Bölüm 1–15 ✅ (… + bildirim sistemi). Sıradaki: Bölüm 16 (Admin / GodView). Açık: FCM taşıma onayı.
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -244,6 +244,19 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Sağladıkları:** maça davet · takıma davet · profil görme · 1-1 mesaj.
 - **1-1 mesaj:** yalnız arkadaşlar; metin (medya sonraya); şikayet+engelle → admin OPERASYON.
 
+## 8.5 Bildirim Sistemi
+- **Tek kaynak:** Tüm bildirimler **Supabase** `notifications` (realtime). **Firebase/Firestore YOK** — backend %100 Supabase.
+- **3 kanal:** Uygulama-içi (realtime merkez) · Push (mobil) · E-posta (yalnız **makbuz + payout özeti**). **SMS YOK.**
+- **Push taşıma:** iOS **APNs**, Android **FCM** *(yalnız Google'ın zorunlu push taşıma katmanı; veri/backend Supabase'de — Firestore/Firebase backend kullanılmaz)*. Gönderim: DB trigger → **Supabase Edge Function** → APNs/FCM.
+- **Şablonlar:** `notification_templates` (TR metin, kategori, zorunlu/kapatılabilir, deep_link) — tek yerden.
+- **Olaylar:** katılım/ayrılma · maç onaylandı (T-8s) · iptal · davet · kaleci/hakem talep+kabul/red · rezervasyon onay/red · ödeme/blokaj/iade · payout · hatırlatma (24s & 1s) · yeni mesaj · fair-play uyarısı · sorun bildir.
+- **Kategoriler:** MAÇ · KADRO/HİZMET · ÖDEME/FİNANS · SİSTEM (zorunlu) + HATIRLATMA (kapatılabilir).
+- **Deep link:** `oyna://<resource>/<id>` → tıkla → ilgili ekran. *(Koddaki parse hatası düzeltilecek.)*
+- **Admin broadcast:** admin panelinden **hedefli genel bildirim** (tüm / segment: oyuncu/owner/kaleci-hakem/şehir-ilçe); şablon + önizleme + zamanlama + rate-limit + audit.
+- **Tercihler:** Ayarlar'da; zorunlular kilitli; **rate-limit + opsiyonel sessiz saatler** (kritik/zorunlu aşabilir).
+- **Okundu/okunmadı + rozet sayacı.**
+- *Üretim: APNs sertifikası + FCM anahtarı + edge function deploy gerekli (şu an boş).*
+
 ## 9. Lansman Şehri & Veri
 - **Şehir:** Ordu (tüm demo/seed, harita merkezi, ilçeler titizlikle yeniden kurulacak).
 - **Başlangıç sahaları (4 tesis):**
@@ -283,4 +296,5 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 15–20 yanıtları (bildirim, admin, altyapı/store, tasarım sistemi, lansman).
+- Push transport: Firebase backend yok; Android push için FCM yalnız taşıma katmanı — onay bekliyor.
+- Bölüm 16–20 yanıtları (admin/godview, altyapı/store, tasarım sistemi, lansman).
