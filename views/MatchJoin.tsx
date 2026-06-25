@@ -377,13 +377,6 @@ const getGradeColorClass = (grade: string): string => {
   return 'text-orange-400';
 };
 
-const getCommunityName = (id?: string): string => {
-  if (!id) return 'Genel Katılım';
-  if (id === 'c1') return 'Boğaziçi Üniversitesi';
-  if (id === 'c2') return 'Trendyol Tech';
-  if (id === 'c3') return 'Kadıköy Ligi';
-  return 'İTÜ Futbol';
-};
 
 const generateDefaultSlots = (size: string, prefixId: string): PositionSlot[] => {
   const formationsForSize = FORMATIONS[size];
@@ -422,7 +415,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'rules' | 'finance'>('rules');
 
   // Aksiyon hatası/başarı toast'ı
   const [actionError, setActionError] = useState<string | null>(null);
@@ -535,19 +527,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const ageLimit = match.badges?.find(b => b.includes('Yaş') || b.includes('Yaş Grubu'))
     || (match.difficulty === 'Ciddi' ? '20-35 Yaş' : 'Limit Yok (18+)');
 
-  const footwearRule = match.difficulty === 'Ciddi'
-    ? 'Halı Saha Dişli (AG/TF) / Krampon Yasak'
-    : 'Halı Saha Dişli (AG/TF) veya Spor Ayakkabı';
-
   const genderRule = match.badges?.find(b => b === 'Erkek' || b === 'Kadın' || b === 'Karma')
     || 'Karma Katılım';
-
-  const hasReferee = !!match.refereeId || match.badges?.some(b => b.toLowerCase().includes('hakem'));
-
-  const durationRule = match.badges?.find(b => b.toLowerCase().includes('dk') || b.toLowerCase().includes('dakika') || b.toLowerCase().includes('süre'))
-    || '60 Dakika';
-
-  const communityName = getCommunityName(match.communityId);
 
   // Home & Away Teams derived from store
   const homeTeam = match.homeTeamId ? (userTeams || []).find(t => t.id === match.homeTeamId) : null;
@@ -2548,226 +2529,62 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
               onClick={e => e.stopPropagation()}
-              className="bg-[#0A0E14] border-t border-white/10 w-full max-w-lg rounded-t-[40px] overflow-hidden max-h-[85vh] flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative"
+              className="bg-[#0A0E14] border-t border-white/10 w-full max-w-lg rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
             >
-              {/* Cover Resmi Banner */}
-              <div className="relative w-full h-40 shrink-0">
-                <img
-                  src={activePitch.image}
-                  alt={activePitch.name}
-                  className="w-full h-full object-cover opacity-75"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/40 to-black/30" />
-                
-                {/* Kapatma Butonu */}
+              {/* Başlık */}
+              <div className="flex items-center justify-between px-6 pt-7 pb-5">
+                <div>
+                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{activePitch.name}</p>
+                  <h2 className="text-base font-black text-white uppercase italic tracking-tight">MAÇ ÖZELLİKLERİ</h2>
+                </div>
                 <button
                   onClick={() => setShowInfoModal(false)}
-                  className="absolute top-5 right-5 w-9 h-9 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                  className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
                 >
                   <X size={16} />
                 </button>
+              </div>
 
-                {/* Başlık Grubu */}
-                <div className="absolute bottom-4 left-6 right-6">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[8px] font-black text-black bg-[#39FF14] px-2 py-0.5 rounded-full uppercase tracking-widest">
-                      {squadSize} FORMAT
-                    </span>
-                    <span className="text-[8px] font-black text-white bg-white/15 border border-white/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
-                      {communityName}
+              {/* Özellikler Listesi */}
+              <div className="px-6 pb-2">
+                <div className="bg-black/30 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">FORMAT</span>
+                    <span className="text-sm font-black text-white uppercase italic">{match.format || '7v7'}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">YAŞ GRUBU</span>
+                    <span className="text-sm font-black text-white uppercase italic">{match.ageGroup || ageLimit}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">CİNSİYET</span>
+                    <span className="text-sm font-black text-white uppercase italic">{match.gender || genderRule}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">OYUN SERTLİĞİ</span>
+                    <span className={`text-sm font-black uppercase italic ${
+                      match.difficulty === 'Ciddi' ? 'text-red-400' :
+                      match.difficulty === 'Taktiksel' ? 'text-[#FFFF00]' : 'text-[#39FF14]'
+                    }`}>{match.difficulty}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">KATILIM ÜCRETİ</span>
+                    <span className={`text-sm font-black uppercase italic ${match.price > 0 ? 'text-[#39FF14]' : 'text-white/50'}`}>
+                      {match.price > 0 ? `${match.price} ₺` : 'ÜCRETSİZ'}
                     </span>
                   </div>
-                  <h3 className="text-lg font-black text-white uppercase italic tracking-tight leading-tight truncate">
-                    {activePitch.name}
-                  </h3>
                 </div>
               </div>
 
-              {/* Tab Seçimi */}
-              <div className="flex px-6 pt-3 pb-1 border-b border-white/5 bg-black/20 gap-2 shrink-0">
-                {[
-                  { id: 'rules' as const, label: 'MAÇ KURALLARI', icon: Shield },
-                  { id: 'finance' as const, label: 'GİRİŞ & BARAJ', icon: DollarSign }
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className="flex-1 py-3 flex flex-col items-center justify-center gap-1.5 relative select-none cursor-pointer focus:outline-none"
-                    >
-                      <Icon size={14} className={isActive ? 'text-[#39FF14]' : 'text-white/40'} />
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-white/30'}`}>
-                        {tab.label}
-                      </span>
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeTabUnderline"
-                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#39FF14] shadow-[0_0_10px_#39FF14]"
-                          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tab İçerik Alanı */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide pb-12">
-                <AnimatePresence mode="wait">
-                  {activeTab === 'rules' && (
-                    <motion.div
-                      key="rules"
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 12 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-5"
-                    >
-                      {/* Maç Kuralları */}
-                      <div className="space-y-3">
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.25em] ml-1">Katılım & Oynanış Kuralları</p>
-                        
-                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-4">
-                          <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                            <div className="flex items-center gap-2.5">
-                              <Calendar size={14} className="text-white/40" />
-                              <span className="text-[11px] text-white/50 font-bold uppercase tracking-wider">YAŞ GRUBU</span>
-                            </div>
-                            <span className="text-xs font-black text-white uppercase italic">{ageLimit}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                            <div className="flex items-center gap-2.5">
-                              <Award size={14} className="text-white/40" />
-                              <span className="text-[11px] text-white/50 font-bold uppercase tracking-wider">AYAKKABI KURALI</span>
-                            </div>
-                            <span className="text-xs font-black text-[#FFFF00] uppercase italic text-right max-w-[200px] leading-tight">
-                              {footwearRule}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                            <div className="flex items-center gap-2.5">
-                              <Users size={14} className="text-white/40" />
-                              <span className="text-[11px] text-white/50 font-bold uppercase tracking-wider">CİNSİYET</span>
-                            </div>
-                            <span className="text-xs font-black text-white uppercase italic">{genderRule}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <Shield size={14} className="text-white/40" />
-                              <span className="text-[11px] text-white/50 font-bold uppercase tracking-wider">HAKEM DURUMU</span>
-                            </div>
-                            <span className={`text-xs font-black uppercase italic text-right max-w-[200px] leading-tight ${hasReferee ? 'text-[#39FF14]' : 'text-white/50'}`}>
-                              {hasReferee ? 'RESMİ LİSANSLI HAKEM' : 'HAKEMSİZ (KAPTAN KONTROLÜ)'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'finance' && (
-                    <motion.div
-                      key="finance"
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 12 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-5"
-                    >
-                      {/* Katılım Şartları */}
-                      <div className="space-y-3">
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.25em] ml-1">Finansal Limitler & Barajlar</p>
-                        
-                        <div className="grid grid-cols-2 gap-3.5">
-                          {/* Ücret Paneli */}
-                          <div className="bg-[#39FF14]/5 border border-[#39FF14]/15 rounded-2xl p-4 flex flex-col justify-between h-24">
-                            <div className="flex items-center gap-1.5 text-white/40">
-                              <DollarSign size={12} className="text-[#39FF14]" />
-                              <span className="text-[9px] font-black uppercase tracking-widest">KATILIM BEDELİ</span>
-                            </div>
-                            <div className="flex items-baseline gap-1 mt-2">
-                              <span className="text-2xl font-black text-[#39FF14] tracking-tight">{match.price > 0 ? `${match.price}` : 'Ücretsiz'}</span>
-                              {match.price > 0 && <span className="text-[10px] font-bold text-[#39FF14]/60">₺/Kişi</span>}
-                            </div>
-                          </div>
-
-                          {/* Min Rating Barajı */}
-                          <div className="bg-[#FFFF00]/5 border border-[#FFFF00]/15 rounded-2xl p-4 flex flex-col justify-between h-24">
-                            <div className="flex items-center gap-1.5 text-white/40">
-                              <Star size={12} className="text-[#FFFF00]" />
-                              <span className="text-[9px] font-black uppercase tracking-widest">MİN. REYTİNG</span>
-                            </div>
-                            <div className="flex items-baseline gap-1 mt-2">
-                              <span className="text-2xl font-black text-[#FFFF00] tracking-tight">{match.minRating || '4.0'}</span>
-                              <span className="text-[10px] font-bold text-[#FFFF00]/60">Baraj</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Reyting Barajı Visualizer */}
-                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-3">
-                          <span className="block text-[8px] font-bold text-white/40 uppercase tracking-widest">REYTİNG UYUMLULUĞU</span>
-                          
-                          <div className="relative h-2.5 bg-white/10 rounded-full overflow-hidden">
-                            {/* Baraj Noktası İşaretçisi (Sarı) */}
-                            <div 
-                              className="absolute top-0 bottom-0 bg-[#FFFF00]/30 shadow-[0_0_8px_#FFFF00]"
-                              style={{ left: 0, width: `${(match.minRating || 4.0) * 20}%` }}
-                            />
-                            {/* Kullanıcı Reyting Çubuğu (Neon Yeşil) */}
-                            <div 
-                              className="absolute top-0 bottom-0 bg-[#39FF14] shadow-[0_0_12px_#39FF14]"
-                              style={{ left: 0, width: `${(currentUserProfile.rating || 4.5) * 20}%` }}
-                            />
-                            {/* Baraj Çizgisi (Kırmızı Vurgulu) */}
-                            <div 
-                              className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
-                              style={{ left: `${(match.minRating || 4.0) * 20}%` }}
-                            />
-                          </div>
-                          
-                          <div className="flex justify-between text-[8px] text-white/40 font-black uppercase tracking-widest">
-                            <span>REY: 0.0</span>
-                            <span className="text-red-400">BARAJ: {match.minRating || '4.0'}</span>
-                            <span className="text-[#39FF14]">SKORUNUZ: {(currentUserProfile.rating || 4.5).toFixed(1)}</span>
-                            <span>5.0</span>
-                          </div>
-                        </div>
-
-                        {/* Topluluk Sınırlaması */}
-                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-3">
-                          <span className="block text-[8px] font-bold text-white/40 uppercase tracking-widest">ERİŞİM KONTROLÜ</span>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-white/60">Topluluk Sınırı</span>
-                            <span className="text-xs font-black text-[#00f2fe] uppercase italic">
-                              {communityName}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-white/30 leading-relaxed">
-                            Bu maç yalnızca belirtilen topluluk veya grup üyelerinin katılımına açıktır.
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Alt Buton */}
-              <div className="p-5 border-t border-white/5 bg-[#06080A]/60 backdrop-blur-md shrink-0">
+              {/* Kapat */}
+              <div className="px-6 pt-4 pb-10">
                 <button
                   onClick={() => setShowInfoModal(false)}
-                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 font-black text-xs uppercase tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 text-center cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl bg-white/5 border border-white/8 font-black text-xs uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/10 transition-all active:scale-95"
                 >
-                  Geri Dön
+                  Kapat
                 </button>
               </div>
-
             </motion.div>
           </motion.div>
         )}
