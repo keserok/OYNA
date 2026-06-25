@@ -228,6 +228,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     });
   };
 
+  const wizardCount = isFilterActive ? matchingMatches.length : enhancedMatches.length;
+  const wizardLabel = wizardCount > 0 ? `${wizardCount} MAÇI GÖSTER` : 'EŞLEŞEN MAÇ YOK';
+
+  const ROLE_LABEL_MAP: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
+
   return (
     <div className="min-h-screen max-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans selection:bg-[#FFFF00] selection:text-black">
       
@@ -475,7 +480,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   animate={{ x: ['-100%', '200%'] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 2 }}
                 />
-                <span className="relative z-10 drop-shadow-sm">MAÇLARA GİT</span>
+                <span className="relative z-10 drop-shadow-sm">{wizardLabel}</span>
               </motion.button>
             </div>
           </motion.div>
@@ -521,6 +526,52 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
             </div>
           </header>
 
+          {/* ── KALDIRILABİLİR FİLTRE ÇİPLERİ ── */}
+          {isFilterActive && (
+            <div className="flex overflow-x-auto no-scrollbar gap-2 px-5 py-2.5 border-b border-white/5 bg-black/20 backdrop-blur-md shrink-0">
+              {dna.format && (
+                <button onClick={() => setDna({ ...dna, format: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.format} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.mentality && (
+                <button onClick={() => setDna({ ...dna, mentality: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.mentality.toUpperCase()} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.role && (
+                <button onClick={() => setDna({ ...dna, role: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {ROLE_LABEL_MAP[dna.role] || dna.role} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.budget && (
+                <button onClick={() => setDna({ ...dna, budget: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.budget} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.duration && (
+                <button onClick={() => setDna({ ...dna, duration: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.duration} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.gender && (
+                <button onClick={() => setDna({ ...dna, gender: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.gender.toUpperCase()} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.age && dna.age !== 'Tümü' && (
+                <button onClick={() => setDna({ ...dna, age: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.age} YAŞ <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+              {dna.district && (
+                <button onClick={() => setDna({ ...dna, district: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.district.toUpperCase()} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* TAB SELECTION */}
           <div className="flex px-5 py-2.5 bg-black/20 backdrop-blur-md border-b border-white/5 gap-3 shrink-0">
             <button 
@@ -547,7 +598,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
           {/* QUICK FILTERS */}
           {activeSection === 'bireysel' && (
-            <div className="flex overflow-x-auto no-scrollbar gap-3 px-5 py-3 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md shrink-0">
+            <div className="relative shrink-0">
+            <div className="flex overflow-x-auto no-scrollbar gap-3 px-5 py-3 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md">
               <div className="flex gap-2 items-center shrink-0">
                 <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FFFF00]/70 mr-1">FORMAT</span>
                 {['Tümü', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'].map(f => {
@@ -612,6 +664,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                 })}
               </div>
             </div>
+            <div className="absolute right-0 top-0 bottom-0 w-11 pointer-events-none bg-gradient-to-l from-[#0A0E14] to-transparent" />
+            </div>
           )}
 
           {/* MATCH CARDS (POSTERS) */}
@@ -633,12 +687,26 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                           <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider max-w-sm">
                             Seçtiğin kriterlere uyan aktif bir maç bulunmuyor. Diğer maçları inceleyebilir ya da filtrelerini sıfırlayabilirsin.
                           </p>
-                          <button 
-                            onClick={handleClearFilters} 
-                            className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95"
-                          >
-                            Filtreleri Temizle
-                          </button>
+                          <div className="flex gap-2 flex-wrap justify-center">
+                            <button
+                              onClick={handleClearFilters}
+                              className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95"
+                            >
+                              Filtreleri Temizle
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (userLocation) {
+                                  setSearchRadius(Math.min(searchRadius + 15, 100));
+                                } else {
+                                  setShowWizard(true);
+                                }
+                              }}
+                              className="px-5 py-2.5 rounded-full bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/40 text-[10px] font-black uppercase tracking-widest text-[#39FF14] transition-all active:scale-95"
+                            >
+                              Çapı Genişlet
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-6 mb-8">
@@ -908,8 +976,19 @@ const MatchCard: React.FC<{
   // Güven skoru 3.0'ın altındakiler veya minRating'i karşılayamayanlar için kilitli premium kart mantığı
   const isLocked = match.minRating && match.minRating > trustScore;
 
+  // ── Kontenjan hesabı (gerçek slot verisi) ──
+  const homeSlots: any[] = match.slots || [];
+  const awaySlotData: any[] = match.awaySlots || [];
+  const totalSlots = homeSlots.length + awaySlotData.length;
+  const slotFilled =
+    homeSlots.filter((s: any) => s.status === 'TAKEN').length +
+    awaySlotData.filter((s: any) => s.status === 'TAKEN').length;
+  const slotRemaining = totalSlots - slotFilled;
+  const fillPct = totalSlots > 0 ? Math.round((slotFilled / totalSlots) * 100) : 0;
+
   // Maça kalan süre ticking timer state & effect
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isUrgentTime, setIsUrgentTime] = useState(false);
 
   useEffect(() => {
     const target = getMatchTargetDate(match.date, match.time);
@@ -918,11 +997,12 @@ const MatchCard: React.FC<{
       const now = new Date().getTime();
       const diff = target.getTime() - now;
       
+      setIsUrgentTime(diff > 0 && diff < 2 * 60 * 60 * 1000);
       if (diff <= 0) {
         setTimeLeft('BAŞLADI');
         return;
       }
-      
+
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -941,7 +1021,10 @@ const MatchCard: React.FC<{
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [match.date, match.time]);
-  
+
+  const urgencyType: 'son1kisi' | 'sonDakika' | null =
+    (slotRemaining <= 1 && slotRemaining > 0) ? 'son1kisi' : (isUrgentTime ? 'sonDakika' : null);
+
   return (
     <motion.div
       layout
@@ -981,7 +1064,21 @@ const MatchCard: React.FC<{
           </span>
         </div>
       </div>
- 
+
+      {/* ── ACİLİYET ROZETİ ── */}
+      {urgencyType && (
+        <div className="absolute top-[56px] left-0 right-0 flex justify-center z-10">
+          <div className="px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-[9px] font-black tracking-[0.18em] uppercase border"
+            style={{
+              borderColor: urgencyType === 'son1kisi' ? '#ef4444' : '#FFFF00',
+              color: urgencyType === 'son1kisi' ? '#ef4444' : '#FFFF00',
+              boxShadow: `0 0 10px ${urgencyType === 'son1kisi' ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,0,0.35)'}`
+            }}>
+            {urgencyType === 'son1kisi' ? 'SON 1 KİŞİ' : 'SON DAKİKA'}
+          </div>
+        </div>
+      )}
+
       {/* ── ORTA KISIM (EKSİK POZİSYONLAR - Net ve Şık) ── */}
       <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2.5 z-10">
         {match.missingPositions?.map((pos: any, i: number) => {
@@ -1011,6 +1108,23 @@ const MatchCard: React.FC<{
       <div className="absolute bottom-0 left-0 right-0 p-6 z-20 flex flex-col justify-end">
         <div className="flex items-end justify-between gap-4">
           <div className="flex-1">
+            {/* ── KONTENJAN GÖSTERGESİ ── */}
+            {totalSlots > 0 && (
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-[88px] h-[3px] rounded-full bg-white/10 overflow-hidden shrink-0">
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${fillPct}%`,
+                      backgroundColor: slotRemaining <= 1 ? '#FFFF00' : '#39FF14',
+                      boxShadow: `0 0 6px ${slotRemaining <= 1 ? 'rgba(255,255,0,0.6)' : 'rgba(57,255,20,0.6)'}`
+                    }} />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-white/60 drop-shadow-sm">
+                  {slotFilled}/{totalSlots} OYUNCU
+                </span>
+              </div>
+            )}
+
             {/* Tesis ve Lokasyon İsmi Devasa (Üst Karakter) */}
             <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2">
               {match.location.toUpperCase()}
@@ -1022,7 +1136,13 @@ const MatchCard: React.FC<{
             </div>
             
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
+              <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest backdrop-blur-sm"
+                style={{
+                  border: `1px solid ${match.mentalityColor}66`,
+                  backgroundColor: `${match.mentalityColor}22`,
+                  color: match.mentalityColor,
+                  textShadow: `0 0 6px ${match.mentalityColor}55`
+                }}>
                 {match.matchMentality}
               </span>
               <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
@@ -1049,7 +1169,8 @@ const MatchCard: React.FC<{
                 <span className="text-[10px] font-black italic uppercase tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">ÜCRETSİZ</span>
               </div>
             ) : (
-              <div className="px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl shadow-lg">
+              <div className="px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl shadow-lg flex flex-col items-center gap-0.5">
+                <span className="text-[7px] font-black uppercase tracking-wider text-white/45">KİŞİ BAŞI</span>
                 <span className="text-[13px] font-black text-[#FFFF00] tracking-wider drop-shadow-md">{match.price} ₺</span>
               </div>
             )}

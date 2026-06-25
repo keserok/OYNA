@@ -13,6 +13,8 @@ import {
   updateFriendGroup,
   FriendshipRow, FriendRequest,
 } from '../services/friendService';
+import { createTeam } from '../services/teamService';
+import { TeamCreatorWizard } from '../components/TeamCreatorWizard';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface SocialViewProps {
@@ -92,7 +94,8 @@ const TeamsTab: React.FC<{
   memberTeams: any[];
   loading: boolean;
   onNavigate: (v: AppView) => void;
-}> = ({ captainTeams, memberTeams, loading, onNavigate }) => {
+  onCreateTeam: () => void;
+}> = ({ captainTeams, memberTeams, loading, onNavigate, onCreateTeam }) => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="animate-spin text-emerald-400" size={28} />
@@ -273,7 +276,7 @@ const TeamsTab: React.FC<{
 
       {/* Create Team Button */}
       <button
-        onClick={() => onNavigate('TEAM_CREATOR')}
+        onClick={onCreateTeam}
         className="w-full py-4 border-2 border-dashed border-white/15 rounded-2xl flex items-center justify-center gap-2 text-gray-500 hover:text-gray-300 hover:border-white/25 transition-all"
       >
         <Plus size={18} />
@@ -555,6 +558,8 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
   const [memberTeams, setMemberTeams] = useState<any[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [loadingTeams, setLoadingTeams] = useState(true);
+  const [showTeamWizard, setShowTeamWizard] = useState(false);
+  const [wizardLoading, setWizardLoading] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -639,6 +644,40 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
     }
   }, [userId]);
 
+  const handleTeamWizardComplete = useCallback(async (wizardData: any) => {
+    setWizardLoading(true);
+    try {
+      const newTeam = await createTeam({
+        name: wizardData.name,
+        shortName: wizardData.shortName,
+        color1Hex: wizardData.color1,
+        color2Hex: wizardData.color2,
+        crest: wizardData.crest,
+        location: wizardData.location,
+        formation: wizardData.formation,
+        playStyle: wizardData.playStyle,
+        value: wizardData.value,
+        rosterIds: wizardData.players || [],
+        communityId: null,
+      });
+      setCaptainTeams(prev => [...prev, newTeam]);
+    } catch (e) {
+      console.error('[SocialView] takım oluşturulamadı', e);
+    } finally {
+      setWizardLoading(false);
+      setShowTeamWizard(false);
+    }
+  }, []);
+
+  // Wizard için arkadaş listesini uygun formata çevir
+  const wizardFriends = friends.map(f => ({
+    id: f.other_user.id,
+    name: f.other_user.full_name || 'Oyuncu',
+    avatar: f.other_user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.other_user.id}`,
+    group: f.myGroup || 'Diğer',
+    rating: f.other_user.player_card?.fp ?? 0,
+  }));
+
   const totalTeams = captainTeams.length + memberTeams.length;
   const captainCount = captainTeams.length;
 
@@ -660,7 +699,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
             </p>
           </div>
           <button
-            onClick={() => onNavigate('TEAM_CREATOR')}
+            onClick={() => setShowTeamWizard(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 bg-white/8 border border-white/15 rounded-2xl text-sm font-bold text-white hover:bg-white/12 transition-colors"
           >
             <Plus size={16} />
@@ -700,6 +739,29 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      {/* ── TeamCreatorWizard Modal ── */}
+      <AnimatePresence>
+        {showTeamWizard && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50"
+          >
+            <TeamCreatorWizard
+              friends={wizardFriends}
+              onClose={() => setShowTeamWizard(false)}
+              onComplete={handleTeamWizardComplete}
+            />
+            {wizardLoading && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                <Loader2 size={32} className="text-[#39FF14] animate-spin" />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto px-5 pt-5">
         <AnimatePresence mode="wait">
@@ -710,6 +772,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
                 memberTeams={memberTeams}
                 loading={loadingTeams}
                 onNavigate={onNavigate}
+                onCreateTeam={() => setShowTeamWizard(true)}
               />
             </motion.div>
           ) : (

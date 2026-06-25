@@ -655,34 +655,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       text: text.trim(),
       timestamp: timeStr
     };
-    const baseMessages = (match.chatMessages && match.chatMessages.length > 0)
-      ? match.chatMessages
-      : [
-          {
-            id: 'm1',
-            senderId: 'mock_1',
-            senderName: 'Mert H. (KL)',
-            senderAvatar: 'https://i.pravatar.cc/150?u=mock_1',
-            text: 'Beyler selam! Taktik tahtasından dizilişe göz atın, bence 2-3-1 çok dengeli.',
-            timestamp: '10:42'
-          },
-          {
-            id: 'm2',
-            senderId: 'mock_2',
-            senderName: 'Burak Y. (STP)',
-            senderAvatar: 'https://i.pravatar.cc/150?u=mock_2',
-            text: 'Aynen Mert, 2-3-1 ile savunma güvende kalır. Arka hattı Can ile süpürürüz.',
-            timestamp: '10:45'
-          },
-          {
-            id: 'm3',
-            senderId: 'mock_3',
-            senderName: 'Arda G. (SNT)',
-            senderAvatar: 'https://i.pravatar.cc/150?u=mock_3',
-            text: 'Bana uyar beyler. Kaporaları ödeyelim de live moduna geçsin maç, sayaç yeşillensin.',
-            timestamp: '10:48'
-          }
-        ];
+    const baseMessages = match.chatMessages || [];
     const updatedMessages = [...baseMessages, newMsg];
     try {
       await updateMatch({ ...match, chatMessages: updatedMessages });

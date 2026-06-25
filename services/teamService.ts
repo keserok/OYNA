@@ -11,9 +11,18 @@ import { Team, Player } from '../types';
 // TeamCreator'ın ürettiği ham veri
 export interface NewTeamInput {
   name: string;
-  color: string;       // tailwind sınıfı: 'bg-emerald-500'
-  communityId: string | null;
-  formation: string;   // '5+1' | '6+1' | '7+1'
+  // Renk: ya tailwind sınıfı (eski TeamCreator) ya da doğrudan hex (wizard)
+  color?: string;
+  color1Hex?: string;
+  color2Hex?: string;
+  shortName?: string;
+  crest?: string;
+  location?: string;
+  communityId?: string | null;
+  formation?: string;
+  playStyle?: string;
+  value?: number;
+  rosterIds?: string[];  // wizard'dan seçilen arkadaş ID'leri
 }
 
 // TeamCreator'daki tailwind renklerinin hex karşılıkları
@@ -64,7 +73,12 @@ export const createTeam = async (input: NewTeamInput): Promise<Team> => {
   const user = auth.currentUser;
   if (!user?.uid) throw new Error('Takım kurmak için giriş yapmalısınız.');
 
-  const color1 = toHex(input.color);
+  const color1 = input.color1Hex || (input.color ? toHex(input.color) : '#10B981');
+  const color2 = input.color2Hex || '#0A0E14';
+  const resolvedShortName = input.shortName || toShortName(input.name);
+  const resolvedCrest = input.crest || 'shield';
+  const resolvedFormation = input.formation || '7+1';
+
   const captainPlayer = {
     id: user.uid,
     name: user.displayName || 'Kaptan',
@@ -73,22 +87,32 @@ export const createTeam = async (input: NewTeamInput): Promise<Team> => {
     x: 50, y: 88,
   };
 
+  const rosterPlayers = withDefaultPositions([
+    captainPlayer,
+    ...(input.rosterIds || []).map(id => ({ id, name: 'Oyuncu', position: 'OYUNCU' })),
+  ]);
+
+  const allPlayerIds = [user.uid, ...(input.rosterIds || [])];
+
   const { data, error } = await supabase
     .from('teams')
     .insert({
       name: input.name.trim(),
-      shortName: toShortName(input.name),
+      shortName: resolvedShortName,
       color1,
-      color2: '#0A0E14',
-      colors: [color1, '#0A0E14'],
-      crest: 'shield',
+      color2,
+      colors: [color1, color2],
+      crest: resolvedCrest,
+      location: input.location || null,
       logo: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(input.name)}&backgroundColor=${color1.slice(1)}`,
-      formation: { name: input.formation, players: [] },
+      formation: { name: resolvedFormation, players: [] },
+      play_style: input.playStyle || null,
+      value: input.value || null,
       captain: user.uid,
       captain_id: user.uid,
       captains: [user.uid],
-      players: [user.uid],
-      roster: [captainPlayer],
+      players: allPlayerIds,
+      roster: rosterPlayers,
       wins: 0,
       losses: 0,
     })

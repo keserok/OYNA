@@ -1127,6 +1127,15 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'u4', name: 'Arda Kaya', avatar: 'https://i.pravatar.cc/150?u=arda2024', position: 'MID', rating: 3.8 } as any },
       { id: 's6', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'u5', name: 'Emre Çelik', avatar: 'https://i.pravatar.cc/150?u=emre2024', position: 'MID', rating: 4.3 } as any },
       { id: 's7', role: 'FWD', x: 50, y: 25, status: 'TAKEN', player: { id: 'u6', name: 'Cenk Tosun', avatar: 'https://i.pravatar.cc/150?u=cenk', position: 'FWD', rating: 4.6 } as any },
+    ],
+    awaySlots: [
+      { id: 'a1s1', role: 'GK',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au1', name: 'Fatih K.',    avatar: 'https://i.pravatar.cc/150?u=au1', position: 'GK',  rating: 4.2 } as any },
+      { id: 'a1s2', role: 'DEF', x: 25, y: 25, status: 'TAKEN', player: { id: 'au2', name: 'Tolga M.',    avatar: 'https://i.pravatar.cc/150?u=au2', position: 'DEF', rating: 3.9 } as any },
+      { id: 'a1s3', role: 'DEF', x: 75, y: 25, status: 'TAKEN', player: { id: 'au3', name: 'Selim B.',    avatar: 'https://i.pravatar.cc/150?u=au3', position: 'DEF', rating: 4.0 } as any },
+      { id: 'a1s4', role: 'MID', x: 20, y: 50, status: 'TAKEN', player: { id: 'au4', name: 'Erkan Ş.',    avatar: 'https://i.pravatar.cc/150?u=au4', position: 'MID', rating: 3.7 } as any },
+      { id: 'a1s5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'au5', name: 'Burak T.',    avatar: 'https://i.pravatar.cc/150?u=au5', position: 'MID', rating: 4.1 } as any },
+      { id: 'a1s6', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'au6', name: 'Can D.',      avatar: 'https://i.pravatar.cc/150?u=au6', position: 'MID', rating: 3.8 } as any },
+      { id: 'a1s7', role: 'FWD', x: 50, y: 75, status: 'TAKEN', player: { id: 'au7', name: 'İbrahim S.', avatar: 'https://i.pravatar.cc/150?u=au7', position: 'FWD', rating: 4.3 } as any },
     ]
   },
   {
@@ -1150,6 +1159,15 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's5', role: 'MID', x: 50, y: 50, status: 'OPEN' },
       { id: 's6', role: 'MID', x: 80, y: 50, status: 'OPEN' },
       { id: 's7', role: 'FWD', x: 50, y: 25, status: 'TAKEN', player: { id: 'u12', name: 'Dzeko', avatar: 'https://i.pravatar.cc/150?u=dzeko', position: 'FWD', rating: 4.8 } as any },
+    ],
+    awaySlots: [
+      { id: 'a2s1', role: 'GK',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au11', name: 'Rıdvan Y.',   avatar: 'https://i.pravatar.cc/150?u=au11', position: 'GK',  rating: 4.5 } as any },
+      { id: 'a2s2', role: 'DEF', x: 25, y: 25, status: 'TAKEN', player: { id: 'au12', name: 'Uğur A.',     avatar: 'https://i.pravatar.cc/150?u=au12', position: 'DEF', rating: 4.4 } as any },
+      { id: 'a2s3', role: 'DEF', x: 75, y: 25, status: 'TAKEN', player: { id: 'au13', name: 'Kaan A.',     avatar: 'https://i.pravatar.cc/150?u=au13', position: 'DEF', rating: 4.6 } as any },
+      { id: 'a2s4', role: 'MID', x: 20, y: 50, status: 'TAKEN', player: { id: 'au14', name: 'Okay Y.',     avatar: 'https://i.pravatar.cc/150?u=au14', position: 'MID', rating: 4.7 } as any },
+      { id: 'a2s5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'au15', name: 'Hakan Ç.',    avatar: 'https://i.pravatar.cc/150?u=au15', position: 'MID', rating: 4.9 } as any },
+      { id: 'a2s6', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'au16', name: 'Dorukhan T.', avatar: 'https://i.pravatar.cc/150?u=au16', position: 'MID', rating: 4.5 } as any },
+      { id: 'a2s7', role: 'FWD', x: 50, y: 75, status: 'TAKEN', player: { id: 'au17', name: 'Burak Y.',    avatar: 'https://i.pravatar.cc/150?u=au17', position: 'FWD', rating: 4.8 } as any },
     ]
   },
   {
@@ -1173,6 +1191,15 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'u4', name: 'Arda Kaya', avatar: 'https://i.pravatar.cc/150?u=arda2024', position: 'MID', rating: 3.8 } as any },
       { id: 's6', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'u5', name: 'Emre Çelik', avatar: 'https://i.pravatar.cc/150?u=emre2024', position: 'MID', rating: 4.3 } as any },
       { id: 's7', role: 'FWD', x: 50, y: 25, status: 'TAKEN', player: { id: 'u6', name: 'Cenk Tosun', avatar: 'https://i.pravatar.cc/150?u=cenk', position: 'FWD', rating: 4.6 } as any },
+    ],
+    awaySlots: [
+      { id: 'a3s1', role: 'GK',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au21', name: 'Çakır G.',   avatar: 'https://i.pravatar.cc/150?u=au21', position: 'GK',  rating: 4.1 } as any },
+      { id: 'a3s2', role: 'DEF', x: 25, y: 25, status: 'TAKEN', player: { id: 'au22', name: 'Taner Ö.',   avatar: 'https://i.pravatar.cc/150?u=au22', position: 'DEF', rating: 4.0 } as any },
+      { id: 'a3s3', role: 'DEF', x: 75, y: 25, status: 'TAKEN', player: { id: 'au23', name: 'Fırat K.',   avatar: 'https://i.pravatar.cc/150?u=au23', position: 'DEF', rating: 4.2 } as any },
+      { id: 'a3s4', role: 'MID', x: 20, y: 50, status: 'TAKEN', player: { id: 'au24', name: 'Deniz M.',   avatar: 'https://i.pravatar.cc/150?u=au24', position: 'MID', rating: 4.3 } as any },
+      { id: 'a3s5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'au25', name: 'Yusuf D.',   avatar: 'https://i.pravatar.cc/150?u=au25', position: 'MID', rating: 3.9 } as any },
+      { id: 'a3s6', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'au26', name: 'Serdar A.',  avatar: 'https://i.pravatar.cc/150?u=au26', position: 'MID', rating: 4.4 } as any },
+      { id: 'a3s7', role: 'FWD', x: 50, y: 75, status: 'TAKEN', player: { id: 'au27', name: 'Muhammet D.',avatar: 'https://i.pravatar.cc/150?u=au27', position: 'FWD', rating: 4.5 } as any },
     ]
   },
   {
@@ -1198,6 +1225,16 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's6', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'u18', name: 'Pirlo', avatar: 'https://i.pravatar.cc/150?u=pirlo', position: 'MID', rating: 5.0, x: 50, y: 50 } as any },
       { id: 's7', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'u19', name: 'Seedorf', avatar: 'https://i.pravatar.cc/150?u=seedorf', position: 'MID', rating: 4.8, x: 80, y: 50 } as any },
       { id: 's8', role: 'FWD', x: 50, y: 25, status: 'TAKEN', player: { id: 'u20', name: 'Shevchenko', avatar: 'https://i.pravatar.cc/150?u=sheva', position: 'FWD', rating: 5.0, x: 50, y: 25 } as any },
+    ],
+    awaySlots: [
+      { id: 'a4s1', role: 'GK',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au31', name: 'Buffon G.',  avatar: 'https://i.pravatar.cc/150?u=au31', position: 'GK',  rating: 5.0 } as any },
+      { id: 'a4s2', role: 'DEF', x: 15, y: 25, status: 'TAKEN', player: { id: 'au32', name: 'Cannavaro',  avatar: 'https://i.pravatar.cc/150?u=au32', position: 'DEF', rating: 5.0 } as any },
+      { id: 'a4s3', role: 'DEF', x: 38, y: 25, status: 'TAKEN', player: { id: 'au33', name: 'Thiago S.',  avatar: 'https://i.pravatar.cc/150?u=au33', position: 'DEF', rating: 4.9 } as any },
+      { id: 'a4s4', role: 'DEF', x: 62, y: 25, status: 'TAKEN', player: { id: 'au34', name: 'Nesta A.',   avatar: 'https://i.pravatar.cc/150?u=au34', position: 'DEF', rating: 5.0 } as any },
+      { id: 'a4s5', role: 'MID', x: 20, y: 50, status: 'TAKEN', player: { id: 'au35', name: 'Xabi A.',    avatar: 'https://i.pravatar.cc/150?u=au35', position: 'MID', rating: 4.9 } as any },
+      { id: 'a4s6', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'au36', name: 'Modric L.',  avatar: 'https://i.pravatar.cc/150?u=au36', position: 'MID', rating: 5.0 } as any },
+      { id: 'a4s7', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'au37', name: 'Kroos T.',   avatar: 'https://i.pravatar.cc/150?u=au37', position: 'MID', rating: 5.0 } as any },
+      { id: 'a4s8', role: 'FWD', x: 50, y: 75, status: 'TAKEN', player: { id: 'au38', name: 'Ronaldo C.', avatar: 'https://i.pravatar.cc/150?u=au38', position: 'FWD', rating: 5.0 } as any },
     ]
   },
   {
@@ -1222,6 +1259,15 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'u24', name: 'Kemal', avatar: 'https://i.pravatar.cc/150?u=kemal', position: 'MID', rating: 3.1, x: 50, y: 50 } as any },
       { id: 's6', role: 'MID', x: 80, y: 50, status: 'OPEN' },
       { id: 's7', role: 'FWD', x: 50, y: 25, status: 'TAKEN', player: { id: 'u25', name: 'Onur', avatar: 'https://i.pravatar.cc/150?u=onur', position: 'FWD', rating: 3.6, x: 50, y: 25 } as any },
+    ],
+    awaySlots: [
+      { id: 'a5s1', role: 'GK',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au41', name: 'Adem K.',    avatar: 'https://i.pravatar.cc/150?u=au41', position: 'GK',  rating: 3.0 } as any },
+      { id: 'a5s2', role: 'DEF', x: 25, y: 25, status: 'TAKEN', player: { id: 'au42', name: 'Caner E.',   avatar: 'https://i.pravatar.cc/150?u=au42', position: 'DEF', rating: 3.2 } as any },
+      { id: 'a5s3', role: 'DEF', x: 75, y: 25, status: 'TAKEN', player: { id: 'au43', name: 'Gökhan G.',  avatar: 'https://i.pravatar.cc/150?u=au43', position: 'DEF', rating: 2.9 } as any },
+      { id: 'a5s4', role: 'MID', x: 20, y: 50, status: 'TAKEN', player: { id: 'au44', name: 'Sühan M.',   avatar: 'https://i.pravatar.cc/150?u=au44', position: 'MID', rating: 3.1 } as any },
+      { id: 'a5s5', role: 'MID', x: 50, y: 50, status: 'TAKEN', player: { id: 'au45', name: 'Ferdi K.',   avatar: 'https://i.pravatar.cc/150?u=au45', position: 'MID', rating: 2.8 } as any },
+      { id: 'a5s6', role: 'MID', x: 80, y: 50, status: 'TAKEN', player: { id: 'au46', name: 'Taha Y.',    avatar: 'https://i.pravatar.cc/150?u=au46', position: 'MID', rating: 3.3 } as any },
+      { id: 'a5s7', role: 'FWD', x: 50, y: 75, status: 'TAKEN', player: { id: 'au47', name: 'Emrecan G.', avatar: 'https://i.pravatar.cc/150?u=au47', position: 'FWD', rating: 3.0 } as any },
     ]
   },
   {
@@ -1249,6 +1295,15 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's5', role: 'ORT', x: 50, y: 50, status: 'OPEN' },
       { id: 's6', role: 'ORT', x: 80, y: 50, status: 'OPEN' },
       { id: 's7', role: 'HÜC', x: 50, y: 25, status: 'TAKEN', player: { id: '4', name: 'Ahmet Yılmaz', avatar: 'https://i.pravatar.cc/150?u=ahmet', position: 'SNT', rating: 4.8, style: 'Fuleli' } as any }
+    ],
+    awaySlots: [
+      { id: 'a6s1', role: 'KL',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au51', name: 'Yunus A.',   avatar: 'https://i.pravatar.cc/150?u=au51', position: 'GK',  rating: 4.0 } as any },
+      { id: 'a6s2', role: 'SAV', x: 25, y: 25, status: 'TAKEN', player: { id: 'au52', name: 'Barış T.',   avatar: 'https://i.pravatar.cc/150?u=au52', position: 'DEF', rating: 4.1 } as any },
+      { id: 'a6s3', role: 'SAV', x: 75, y: 25, status: 'TAKEN', player: { id: 'au53', name: 'Umut K.',    avatar: 'https://i.pravatar.cc/150?u=au53', position: 'DEF', rating: 4.2 } as any },
+      { id: 'a6s4', role: 'ORT', x: 20, y: 50, status: 'TAKEN', player: { id: 'au54', name: 'Oğuz B.',    avatar: 'https://i.pravatar.cc/150?u=au54', position: 'MID', rating: 3.9 } as any },
+      { id: 'a6s5', role: 'ORT', x: 50, y: 50, status: 'TAKEN', player: { id: 'au55', name: 'İlker P.',   avatar: 'https://i.pravatar.cc/150?u=au55', position: 'MID', rating: 4.3 } as any },
+      { id: 'a6s6', role: 'ORT', x: 80, y: 50, status: 'TAKEN', player: { id: 'au56', name: 'Kadir H.',   avatar: 'https://i.pravatar.cc/150?u=au56', position: 'MID', rating: 4.0 } as any },
+      { id: 'a6s7', role: 'HÜC', x: 50, y: 75, status: 'TAKEN', player: { id: 'au57', name: 'Efe Ç.',    avatar: 'https://i.pravatar.cc/150?u=au57', position: 'FWD', rating: 4.4 } as any },
     ]
   },
   {
@@ -1292,6 +1347,13 @@ export const MATCH_LISTINGS: MatchListing[] = [
       { id: 's3', role: 'SAV', x: 70, y: 75, status: 'TAKEN', player: { id: '10', name: 'Sinan Gül', avatar: 'https://i.pravatar.cc/150?u=sinan', position: 'STP', rating: 4.1, style: 'Kaya' } as any },
       { id: 's4', role: 'ORT', x: 50, y: 50, status: 'TAKEN', player: { id: '13', name: 'Alperen Bal', avatar: 'https://i.pravatar.cc/150?u=alperen', position: 'OS', rating: 4.0, style: 'Dinamik' } as any },
       { id: 's5', role: 'HÜC', x: 50, y: 25, status: 'TAKEN', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', position: 'FV', rating: 4.9, style: 'Avcı' } as any }
+    ],
+    awaySlots: [
+      { id: 'a7s1', role: 'KL',  x: 50, y: 10, status: 'TAKEN', player: { id: 'au61', name: 'Levent S.',  avatar: 'https://i.pravatar.cc/150?u=au61', position: 'GK',  rating: 3.8 } as any },
+      { id: 'a7s2', role: 'SAV', x: 30, y: 25, status: 'TAKEN', player: { id: 'au62', name: 'Onur M.',    avatar: 'https://i.pravatar.cc/150?u=au62', position: 'DEF', rating: 4.0 } as any },
+      { id: 'a7s3', role: 'SAV', x: 70, y: 25, status: 'TAKEN', player: { id: 'au63', name: 'Yiğit A.',   avatar: 'https://i.pravatar.cc/150?u=au63', position: 'DEF', rating: 4.1 } as any },
+      { id: 'a7s4', role: 'ORT', x: 50, y: 50, status: 'TAKEN', player: { id: 'au64', name: 'Sergen Y.',  avatar: 'https://i.pravatar.cc/150?u=au64', position: 'MID', rating: 3.9 } as any },
+      { id: 'a7s5', role: 'HÜC', x: 50, y: 75, status: 'TAKEN', player: { id: 'au65', name: 'Batuhan K.', avatar: 'https://i.pravatar.cc/150?u=au65', position: 'FWD', rating: 4.5 } as any },
     ]
   }
 ];
