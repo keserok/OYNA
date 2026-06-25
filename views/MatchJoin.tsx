@@ -1163,23 +1163,30 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
                                 if (error) throw error;
 
-                                const updatedSlots = (match.slots || []).map(s => {
-                                  if (s?.player?.id === currentUserProfile.id) {
-                                    return {
-                                      ...s,
-                                      player: {
-                                        ...s.player!,
-                                        paymentStatus: 'PAID' as const
-                                      }
-                                    };
-                                  }
-                                  return s;
-                                });
-                                
-                                const nextStatus = checkAndGetStatus(updatedSlots);
+                                // Oyuncunun ev mi deplasman mı takımında olduğunu belirle
+                                const isInAwaySlot = (match.awaySlots || []).some(
+                                  s => s?.player?.id === currentUserProfile.id
+                                );
+
+                                const markPaid = (slots: typeof match.slots) =>
+                                  (slots || []).map(s =>
+                                    s?.player?.id === currentUserProfile.id
+                                      ? { ...s, player: { ...s.player!, paymentStatus: 'PAID' as const } }
+                                      : s
+                                  );
+
+                                const updatedSlots = isInAwaySlot
+                                  ? (match.slots || [])
+                                  : markPaid(match.slots);
+                                const updatedAwaySlots = isInAwaySlot
+                                  ? markPaid(match.awaySlots)
+                                  : (match.awaySlots || []);
+
+                                const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
                                 await updateMatch({
                                   ...match,
                                   slots: updatedSlots,
+                                  awaySlots: updatedAwaySlots,
                                   status: nextStatus
                                 });
                                 setActivePlayerSlotId(null);
