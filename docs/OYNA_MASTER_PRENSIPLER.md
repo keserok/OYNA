@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–5 ✅ (vizyon, roller, kimlik, maç oluşturma & yaşam döngüsü). Sıradaki: Bölüm 6 (Maç Günü, Skor & İtiraz).
+> **Son güncelleme:** Bölüm 1–6 ✅ (… + maç günü/skor/değerlendirme). Sıradaki: Bölüm 7 (Saha Keşfi & Rezervasyon). Açık: hakemli takım kaydı, kurucu no-show tespiti.
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -76,6 +76,18 @@
 - **Başarılı maç (Bölüm 1 metriği):** **Otomatik** — maç saati geçti + tahsil edildi + iptal yok → "başarılı" sayılır. (Saha sahibi check-in opsiyonel, zorunlu değil.)
 - *Not: Bu timeline, #49'daki bağımsız "24s kapora yanması" kuralının yerini alır — T-8s öncesi zaten tahsil yoktur.*
 
+## 3.4 Maç Günü, Skor & Değerlendirme
+- **Skor girişi (opsiyonel, çok kaynaklı):**
+  - **Oyuncu:** Skor girebilir; **kayıtlı takım** maçında **tüm takım oyuncuları onaylarsa** → **takım geçmişine** işlenir.
+  - **Hakem (hakemli maç):** Hakem skoru girer → resmi kayıt; sonuç **"Takımlar → Hakemli Maçlar"**da görünür. *(Taraflar kayıtlı takım değilse davranış AÇIK.)*
+  - **Saha sahibi:** İki kayıtlı takım talep ederse saha sahibi skoru sisteme girer; sonuç takım arayüzlerinde görünür. *(Tarafsız kayıt; "oyuncu adına işlem" değil.)*
+- **Maç sonu değerlendirme sayfası:** Atlanabilir ama **teşvik edilir**; **2 sayfa geçişiyle hızlı/keyifli** UX. İçerik: rakip/takım **fair-play yıldızı** + opsiyonel **oyuncu puanı** + opsiyonel **yorum**; **hizmet alındıysa kaleci/hakem 1–10** puanı. Sadece **fair-play + hizmet puanını** besler (kartları değil).
+- **MOTM:** Ödülsüz **kozmetik etiket**; **değerlendirme puanlarından** belirlenir.
+- **Fair-play/güvenilirlik:** Başlangıç **100**. no-show (−), geç iptal (−), kötü değerlendirme (−), sorunsuz oynama (+). Eşikler **admin'den**. Düşükse profilde **uyarı**; çok düşükse **katılım kısıtı/ban**. **Admin panelinde görüntülenir.**
+- **No-show:** Maçı **oluşturan** isterse gelmeyenleri işaretler. **Kurucu gelmezse → sistem otomatik ban**; kişi **"Sorun Bildir"**le admine ulaşır. *(Kurucu no-show tespiti AÇIK.)*
+- **Sorun Bildir:** Skor itirazı yok; **no-show / saha sorunu / iade** için "sorun bildir" → admin **OPERASYON**.
+- **Maç geçmişi:** Oyuncu kendi maçlarını görür — **tarih, saha, kadro, skor**.
+
 ## 4. Gelir Modeli & Para Akışı 💰
 OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
 
@@ -139,6 +151,8 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 - [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
 
 ## 13. 🔓 Açık Kalemler
-- Asgari kayıt yaşı (öneri: 15) — yaş politikası onaylandı, taban netleşecek.
+- Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 6–20 yanıtları (maç günü/skor/itiraz, saha keşfi, owner panel, fiyat/abonelik, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play, bildirim, admin, altyapı/store).
+- Hakemli maçta taraflar kayıtlı takım değilse skor kaydı (otomatik geçici takım mı, yalnız kayıtlılar mı?).
+- Kurucu no-show nasıl tespit edilir (check-in yok; öneri: katılımcı bildirimi/çoğunluk).
+- Bölüm 7–20 yanıtları (saha keşfi, owner panel, fiyat/abonelik, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
