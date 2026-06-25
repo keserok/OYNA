@@ -38,7 +38,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleAddNew = () => {
         if (readOnly) return;
         if (pitches.length >= maxCourts) {
-            alert(`Mevcut planınız en fazla ${maxCourts} saha destekliyor.`);
+            setSaveError(`Mevcut planınız en fazla ${maxCourts} saha destekliyor.`);
             return;
         }
         const newPitch: PitchCourt = {
@@ -115,7 +115,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             }
             onUpdatePitches(pitches.filter((p) => p.id !== id));
         } catch (err) {
-            alert(toTurkishError(err));
+            setSaveError(toTurkishError(err));
         }
     };
 
@@ -134,7 +134,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     const url = await uploadImage(file);
                     updatedImages.push(url);
                 } catch (err) {
-                    alert('Yükleme hatası: ' + err);
+                    setSaveError('Yükleme hatası: ' + (err instanceof Error ? err.message : String(err)));
                 }
             } else {
                 const reader = new FileReader();

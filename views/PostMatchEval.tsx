@@ -52,7 +52,13 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [refRating, setRefRating] = useState(0);
   const [pitchRating, setPitchRating] = useState(0);
   const [showResult, setShowResult] = useState(false);
-  
+  const [infoToast, setInfoToast] = useState<string | null>(null);
+
+  const showInfo = (msg: string) => {
+    setInfoToast(msg);
+    setTimeout(() => setInfoToast(null), 3500);
+  };
+
   // Sparkle burst coordinates
   const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
 
@@ -244,7 +250,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             <motion.button 
               whileTap={{ scale: 0.96 }}
               onClick={() => {
-                alert('Skor itirazınız hakeme ve diğer kaptana iletildi.');
+                showInfo('Skor itirazınız hakeme ve diğer kaptana iletildi.');
                 setShowHandshake(false);
               }}
               className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
@@ -259,7 +265,11 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
 
   return (
     <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col overflow-hidden select-none">
-      
+      {infoToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] bg-blue-900/90 border border-blue-500/40 text-blue-200 text-[11px] font-bold px-4 py-2 rounded-xl shadow-xl backdrop-blur-sm">
+          {infoToast}
+        </div>
+      )}
       {/* ── HEADER (Glassmorphic & safe area top) ── */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-[#0E131F]/80 backdrop-blur-xl border-b border-white/5 pb-4 pt-safe px-5">
         <div className="flex items-center justify-between pt-3 mb-3">

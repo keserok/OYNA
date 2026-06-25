@@ -2230,7 +2230,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <span className={`text-[7px] font-black uppercase truncate block whitespace-nowrap ${
                               isSelected ? 'text-[#39FF14]' : 'text-white/40'
                             }`}>
-                              {isSelected ? 'SEÇİLDİ' : (isAlreadyJoined ? 'DAVET' : 'BOŞ')}
+                              {isSelected ? 'SEÇİLDİ' : (isAlreadyJoined ? 'DAVET' : (
+                                { GOALKEEPER: 'KAL', MIDFIELDER: 'ORT', DEFENDER: 'DEF', FORWARD: 'FOR' }[slot.role] ?? slot.role?.slice(0,3) ?? 'BOŞ'
+                              ))}
                             </span>
                           </div>
                         </motion.div>

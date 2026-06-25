@@ -264,7 +264,16 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         onNavigate('MATCH_DISCOVERY');
     } catch(err) {
         console.error("Maç yayınlanamadı:", err);
-        alert("Maç yayınlanırken bir hata oluştu!");
+        addUserNotification({
+            id: `err-publish-${Date.now()}`,
+            type: 'SYSTEM',
+            title: 'Maç Yayınlanamadı',
+            desc: err instanceof Error ? err.message : 'Lütfen tekrar dene.',
+            time: 'Az önce',
+            iconName: 'AlertCircle',
+            color: 'bg-red-500',
+            textColor: 'text-red-500',
+        });
     } finally {
         setIsPublishing(false);
     }

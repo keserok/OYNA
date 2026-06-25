@@ -166,7 +166,7 @@ export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pi
             showOk('✅ Saha başarıyla güncellendi');
             setTimeout(onClose, 1000);
         } catch (e: unknown) {
-            alert('Hata: ' + (e instanceof Error ? e.message : 'Kayıt başarısız'));
+            showOk('❌ ' + (e instanceof Error ? e.message : 'Kayıt başarısız'));
         } finally {
             setSaving(false);
         }
