@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–4 ✅ + Bölüm 5 maç yaşam döngüsü (Plei-uyarlı: %70 / T-8s) işlendi. Sıradaki: Bölüm 5 kalan (davet, Maçlarım, kaleci oylama, check-in).
+> **Son güncelleme:** Bölüm 1–5 ✅ (vizyon, roller, kimlik, maç oluşturma & yaşam döngüsü). Sıradaki: Bölüm 6 (Maç Günü, Skor & İtiraz).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -58,9 +58,9 @@
 - **Oyuncu maç açma akışı:** Maç özellikleri → kadro (kendisi + arkadaşlar) → saha seç → **minimum oyuncu belirle** → **Top Oyna**'ya gönder. (Yayın/onay/ödeme için bkz. **3.3 Maç Yaşam Döngüsü**.)
 - **Kesinleşme:** Maç **onay anında (T-8s)** kesinleşir; yayın hemen yapılır, ödeme **blokajla** alınır (bkz. 3.3).
 - **Saha sahibi maç açma (Model B):** Boş saatini "OYNA maçına aç"; markup oranını **admin** belirler, **varsayılan %20** (ayarlanabilir).
-- **Açık / Özel maç:** İkisi de. Özel maça **özel kod** ile takım/oyuncu davet edilir.
+- **Açık / Özel maç:** İkisi de. Arkadaş eklenince kişi **onaylar** (otomatik kadroda değil). Özel maça **süreli özel kod/link** ile takım/oyuncu davet edilir.
 - **Katılım birimi:** Boş kontenjan + **opsiyonel pozisyon etiketi**.
-- **Kaleci/Hakem ekleme:** Maç kurulduktan sonra **"Maçlarım"**dan. İki yol: (1) bir kişi **tüm ücreti ödeyip** kiralar; (2) oyuncular **oylayıp onaylayınca** sistem takıma kaleci/hakem **önerir/atar**. *(Akış kritik — iyi tasarlanacak.)*
+- **Kaleci/Hakem ekleme:** Maç kurulduktan sonra **"Maçlarım"**dan. İki yol: (1) bir kişi **tüm ücreti ödeyip** kiralar; (2) kadro **oylar**, **%50+1** onayınca sistem uygun kaleci/hakemi **önerir/atar**; ücret **kadroya bölüşülür** ve paylara **ek blokaj** olarak eklenir (onayda birlikte tahsil; onaydan sonra eklenirse anında tahsil).
 - **Keşif:** Liste + harita + filtre (ilçe/tarih/format/saat), Ordu odaklı — yüksek kalite hedefi.
 - **Düzenleme/iptal:** Açan kişi **maça 24 saat kala**ya dek; **24 saat kuralı admin'den ayarlanabilir**. İptal/iade detayı Bölüm 12.
 
@@ -72,6 +72,8 @@
 - **Yedek:** Dolunca yeni gelen **yedek**; boşalınca **ilk yedek otomatik** girer + bildirim.
 - **Onay sonrası iptal/iade (kademeli, admin ayarlı):** T-8s → T-3s: ayrılan, **yerine biri bulunursa kredi**; **<T-3s: iade yok**; **no-show: fair-play ↓** (+opsiyonel ceza).
 - **Durum makinesi:** `TOPLANIYOR → (T-8s) CONFIRMED → COMPLETED` veya `→ CANCELLED`.
+- **"Maçlarım" yönetim ekranı:** Maç kurulduktan sonra tek ekran (kadro + ödeme/blokaj durumu + kaleci/hakem ekleme + düzenle/iptal + paylaş). *(Eski mock `MatchLobby` silinecek.)*
+- **Başarılı maç (Bölüm 1 metriği):** **Otomatik** — maç saati geçti + tahsil edildi + iptal yok → "başarılı" sayılır. (Saha sahibi check-in opsiyonel, zorunlu değil.)
 - *Not: Bu timeline, #49'daki bağımsız "24s kapora yanması" kuralının yerini alır — T-8s öncesi zaten tahsil yoktur.*
 
 ## 4. Gelir Modeli & Para Akışı 💰
@@ -139,4 +141,4 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15) — yaş politikası onaylandı, taban netleşecek.
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 5 kalan (davet/özel kod, "Maçlarım" ekranı, kaleci/hakem oylama, check-in) + Bölüm 6–20.
+- Bölüm 6–20 yanıtları (maç günü/skor/itiraz, saha keşfi, owner panel, fiyat/abonelik, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play, bildirim, admin, altyapı/store).
