@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–8 ✅ (… + saha keşfi/harita + tesis sahibi paneli B2B). Sıradaki: Bölüm 9 (Fiyatlandırma, Abonelik & Doluluk detay).
+> **Son güncelleme:** Bölüm 1–9 ✅ (… + tesis paneli + fiyat/abonelik/doluluk). Sıradaki: Bölüm 10 (Kaleci & Hakem). Açık: "komisyon sabit" yorumu.
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -135,6 +135,15 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Finans & Payout:** gelir (kapora − komisyon) + **otomatik payout: iki haftada bir**; işlem/çekim geçmişi; gider takibi opsiyonel.
 - **Ton:** sade, kurumsal, güven veren, **premium** (saha sahibini ikna).
 
+## 4.2 Fiyatlandırma, Abonelik & Doluluk (detay)
+- **Fiyat gösterimi:** Yerine göre **hem tam saha hem kişi başı** gösterilir; kapora ayrıca belirtilir.
+- **Tek kaynak (SSOT):** Fiyatın tek kaynağı = **`pitch_tariffs`**; `price_per_match/total_price/price_per_person` tarifeden türetilir/temizlenir. **Genel ilke: tüm sistem tabanları tek kaynağa bağlanır** (mükerrer kaynak yok).
+- **Çakışan tarife:** **En son yapılan/güncellenen tarife** geçerli.
+- **Abonelik (owner-yönetimli):** Oyuncu saha sahibinden talep eder **veya** saha sahibi doğrudan sisteme işler; saha sahibi **istediği tutarı kapora olarak uygulamadan tahsil** edebilir; otomatik haftalık materyalize.
+- **Fiyat/indirim:** Saha sahibi **fiyatını ve indirimini serbestçe** belirler (üst sınır yok).
+- **Komisyon:** **OYNA komisyonu saha sahibince DEĞİŞTİRİLEMEZ (sabit)**; yalnız admin ayarlar (saha/hizmet/maç bazında farklı olabilir — FU3). Saha sahibi panelde **kendi oranını + net payout'u görür** (şeffaf).
+- **Doluluk:** CONFIRMED + abonelik dolu sayılır; **PENDING de doluluğa katılır** ("geçici" gösterilir; çift rezervasyon önlenir).
+
 ## 5. Büyüme Stratejisi
 - **Önce arz:** Saha sahipleri/sahalarla anlaşılır; saha sahipleri OYNA'yı **kendi kanallarıyla tanıtır**; oyuncular **kendileri kayıt olur ve kendileri işlem yapar** (saha sahibi adlarına işlem yapmaz).
 
@@ -191,4 +200,5 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 9–20 yanıtları (fiyat/abonelik detay, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- "Komisyon sabit" yorumu: saha sahibi değiştiremez (admin saha bazında ayarlar) — onay bekliyor.
+- Bölüm 10–20 yanıtları (kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
