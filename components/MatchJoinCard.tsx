@@ -239,14 +239,14 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
       {/* ── VS Header ─────────────────────────────────────────────── */}
       <div className="flex items-stretch gap-1.5 p-3 pb-0">
         {/* Home */}
-        <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+        <div className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all ${
           !isOnAwayTeam && !isCancelled
-            ? 'bg-white/7 border-white/20'
+            ? 'bg-white/[0.07] border-white/20'
             : 'bg-transparent border-white/5 opacity-60'
         }`}>
-          <div className={`w-2 h-2 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-white/40'}`} />
-          <p className="text-[10px] font-black text-white uppercase italic truncate leading-tight flex-1 min-w-0">
-            {match.homeTeamName || homeTeam?.name || 'EV SAHİBİ'}
+          <div className={`w-2 h-2 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-white shadow-[0_0_5px_rgba(255,255,255,0.5)]'}`} />
+          <p className="text-[11px] font-black text-white uppercase italic truncate leading-tight flex-1 min-w-0">
+            {match.homeTeamName || homeTeam?.name || 'TAKIM'}
           </p>
           {homeTeam?.logo && (
             <div className="w-6 h-6 rounded-lg shrink-0 overflow-hidden">
@@ -259,13 +259,13 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
 
         {/* Divider */}
         <div className="flex items-center justify-center w-5 shrink-0">
-          <div className="w-px h-5 bg-white/10" />
+          <div className="w-px h-6 bg-white/10" />
         </div>
 
         {/* Away */}
-        <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+        <div className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all ${
           isOnAwayTeam && !isCancelled
-            ? 'bg-red-500/8 border-red-500/25'
+            ? 'bg-red-500/[0.08] border-red-500/25'
             : 'bg-transparent border-white/5 opacity-60'
         }`}>
           {awayTeam?.logo && (
@@ -275,8 +275,10 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
                 : <span className="text-sm">{awayTeam.logo}</span>}
             </div>
           )}
-          <p className="text-[10px] font-black text-white uppercase italic truncate leading-tight flex-1 min-w-0 text-right">
-            {match.awayTeamName || awayTeam?.name || 'DEPLASMAN'}
+          <p className={`text-[11px] font-black uppercase italic truncate leading-tight flex-1 min-w-0 text-right ${
+            (match.awayTeamName || awayTeam?.name) ? 'text-white' : 'text-red-400'
+          }`}>
+            {match.awayTeamName || awayTeam?.name || 'TAKIM'}
           </p>
           <div className="w-2 h-2 rounded-full shrink-0 bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.8)]" />
         </div>

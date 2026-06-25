@@ -68,7 +68,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     price: '200',
     format: '7v7',
     difficulty: 'Taktiksel' as 'Ciddi' | 'Taktiksel' | 'Rahat',
-    minRating: '3.0'
+    minRating: '3.0',
+    matchTitle: '',
+    homeTeamName: '',
+    awayTeamName: ''
   });
 
   // ─── Slot Override States ───
@@ -111,7 +114,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     const matchObj: MatchListing = {
       id: `match_${Date.now()}`,
-      title: `${selectedPitch.name} Arena`,
+      title: newMatch.matchTitle.trim() || `${selectedPitch.name} Arena`,
+      homeTeamName: newMatch.homeTeamName.trim() || undefined,
+      awayTeamName: newMatch.awayTeamName.trim() || undefined,
       location: selectedPitch.district,
       time: newMatch.time,
       date: newMatch.date,
@@ -615,7 +620,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                   </div>
                 </div>
 
-                <button 
+                {/* Opsiyonel: Maç Adı */}
+                <div>
+                  <label className="text-[9px] text-gray-500 font-black tracking-widest uppercase mb-1.5 block">MAÇ ADI <span className="text-gray-600 normal-case font-normal">(opsiyonel)</span></label>
+                  <input
+                    type="text"
+                    placeholder="Süper Lig Derbisi…"
+                    value={newMatch.matchTitle}
+                    onChange={(e) => setNewMatch({...newMatch, matchTitle: e.target.value})}
+                    maxLength={40}
+                    className="w-full h-12 bg-black/40 border border-white/10 rounded-xl px-3 text-xs font-bold text-white outline-none focus:border-[#FFFF00]/50"
+                  />
+                </div>
+
+                {/* Opsiyonel: Takım Adları */}
+                <div>
+                  <label className="text-[9px] text-gray-500 font-black tracking-widest uppercase mb-1.5 block">TAKIM ADLARI <span className="text-gray-600 normal-case font-normal">(opsiyonel)</span></label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Ev Sahibi"
+                      value={newMatch.homeTeamName}
+                      onChange={(e) => setNewMatch({...newMatch, homeTeamName: e.target.value})}
+                      maxLength={20}
+                      className="w-full h-12 bg-black/40 border border-white/10 rounded-xl px-3 text-xs font-bold text-white outline-none focus:border-white/40"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Deplasman"
+                      value={newMatch.awayTeamName}
+                      onChange={(e) => setNewMatch({...newMatch, awayTeamName: e.target.value})}
+                      maxLength={20}
+                      className="w-full h-12 bg-black/40 border border-white/10 rounded-xl px-3 text-xs font-bold text-white outline-none focus:border-red-500/40"
+                    />
+                  </div>
+                </div>
+
+                <button
                   type="submit"
                   className="w-full h-14 bg-[#39FF14] text-black font-black rounded-2xl text-xs uppercase tracking-[0.25em] shadow-[0_0_20px_rgba(57,255,20,0.2)] hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all pt-1"
                 >
