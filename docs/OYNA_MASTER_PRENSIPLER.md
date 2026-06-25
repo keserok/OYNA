@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–15 ✅ (… + bildirim sistemi). Sıradaki: Bölüm 16 (Admin / GodView). Açık: FCM taşıma onayı.
+> **Son güncelleme:** Bölüm 1–16 ✅ (… + admin/GodView tam kontrol). Sıradaki: Bölüm 17 (Veri Modeli, Güvenlik & Altyapı).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -257,6 +257,28 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Okundu/okunmadı + rozet sayacı.**
 - *Üretim: APNs sertifikası + FCM anahtarı + edge function deploy gerekli (şu an boş).*
 
+## 8.6 Admin / GodView Paneli — Tam Operasyonel Kontrol
+- **İlke:** Admin paneli uygulamaya **tam yetki + tam esneklik**le etki eder. **Herhangi bir problem panelden doğrudan çözülebilir** (god-mode). Her kritik işlem **audit**'lenir. *(Kod/plan bu ilkeye göre kurulur.)*
+- **Taban:** `admin-panel/` (**OYNA OS GodView**, `AdminAuthGate`) — `views/AdminDashboard.tsx` **kaldırılır**. Erişim: ayrı `admin.html` + admin rolü + **2FA**.
+- **Yetki matrisi:** `SUPER_ADMIN` = **sınırsız**; `FİNANS` = komisyon/payout/withdrawal/finans; `OPERASYON` = doğrulama/kullanıcı/dispute/maç/kart/bildirim.
+- **Modüller (her biri tam CRUD + müdahale):**
+  - **Kullanıcılar:** ban/unban · güvenilirlik skoru ayarı · kart ayarı · rol değiştir · cüzdan/bakiye düzelt · impersonate (ghost) · sil/anonimleştir.
+  - **Maçlar → Maç Kontrol Paneli (cockpit)** — aşağıda.
+  - **Sahalar:** ekle/düzenle/yayınla/kaldır/doğrula · **ücretsiz işaretle** · tarife/kort/müsaitlik düzenle · rezervasyon ekle/iptal.
+  - **Finans:** tüm işlemler · **force capture/void/refund** · komisyon (global/saha/hizmet/maç) · payout onay/red/tetik · manuel düzeltme.
+  - **Doğrulama kuyruğu:** kaleci/hakem/tesis başvuruları + owner "Başvuru Yap" + ücretsiz saha talepleri (tek kuyruk).
+  - **Moderasyon:** Sorun Bildir/dispute çözüm.
+  - **Bildirim:** hedefli broadcast.
+  - **İçerik/Ayarlar:** CMS metinleri · feature flag · tüm "admin ayarlı" parametreler (komisyon/eşik/süre/min-oyuncu/onay-süresi…).
+- **Maç Kontrol Paneli (cockpit) — DETAYLI** *(uygulamadaki görünümden çok daha derin):*
+  - **Liste:** tüm maçlar; filtre (durum/şehir/saha/tarih/kurucu/format); canlı durum rozetleri (TOPLANIYOR/CONFIRMED/COMPLETED/CANCELLED).
+  - **Detay:** saha/kort, tarih/saat, format, kurucu, durum, **T-8s onaya kalan**; **kadro & slotlar** (oyuncu + ödeme/blokaj durumu).
+  - **Müdahaleler:** oyuncu **ekle/çıkar/yeniden ata** · slot kilitle/aç · kaleci/hakem ata/değiştir/kaldır · **force-confirm** / **iptal (iadeli)** · saha/saat/format değiştir · **skor override** · **dispute çöz** · **force capture/void/refund** · **payout tetik** · kadroya bildirim.
+  - **Log:** maça dair tüm olaylar + admin müdahaleleri (audit).
+- **Audit:** **tek** audit tablosu; tüm kritik admin işlemleri (kim/ne/ne zaman/eski-yeni değer).
+- **Ana metrik paneli:** **"Başarılı oynatılan maç"** öne çıkan KPI + aktif maç · rezervasyon · GMV · saha/kullanıcı · bekleyen payout.
+- **Ghost mode güvenliği:** yalnız yetkili admin · **sunucu-taraf (RLS) kontrol** · her impersonation audit · süreli.
+
 ## 9. Lansman Şehri & Veri
 - **Şehir:** Ordu (tüm demo/seed, harita merkezi, ilçeler titizlikle yeniden kurulacak).
 - **Başlangıç sahaları (4 tesis):**
@@ -296,5 +318,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Push transport: Firebase backend yok; Android push için FCM yalnız taşıma katmanı — onay bekliyor.
-- Bölüm 16–20 yanıtları (admin/godview, altyapı/store, tasarım sistemi, lansman).
+- Bölüm 17–20 yanıtları (veri modeli/güvenlik/altyapı, tasarım sistemi, lansman/store, yol haritası).
