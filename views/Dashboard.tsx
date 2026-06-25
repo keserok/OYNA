@@ -980,8 +980,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
               <span className="text-[9px] font-bold text-white/40">Kaleni sağlama al.</span>
             </div>
-            <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,0,0,.35)', border: '1.5px solid rgba(57,255,20,.4)' }}>
-              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,6,1,.7)', border: '1px solid rgba(57,255,20,.6)' }}>
+            <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
+              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
                 <svg width="34" height="34" viewBox="-2 0 24 27" fill="none" stroke="#39FF14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
                   {/* index */}
                   <path d="M2,11 L2,6 Q2,2.5 4,2.5 Q6,2.5 6,6 L6,11"/>
