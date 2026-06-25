@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, MapPin, Users, User, Scale, Shield, Swords,
   Clock, Check, Wallet, Sparkles, ChevronRight,
-  Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap, PenLine
+  Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap, PenLine, Hand
 } from 'lucide-react';
 import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
@@ -947,59 +947,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('MARKETPLACE_GK')}
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
-          className="h-40 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-green"
-          style={{ borderColor: 'rgba(57,255,20,0.2)' }}
+          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
+          style={{ background: '#000', border: '1px solid rgba(0,0,0,.2)', boxShadow: '0 0 40px rgba(57,255,20,.22), 0 0 80px rgba(57,255,20,.08), inset 0 1px 0 rgba(255,255,255,.12)' }}
         >
-          {/* Fluid animated gradient */}
           <motion.div
             className="absolute inset-0"
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
             transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              background: 'linear-gradient(135deg, #011a07, #0a3d12, #39FF14, #0a3d12, #011a07)',
-              backgroundSize: '300% 300%',
-            }}
+            style={{ background: 'linear-gradient(135deg, #0a3d12 0%, #1a7a20 25%, #39FF14 45%, #0a2d0e 75%, #000 100%)', backgroundSize: '300% 300%' }}
           />
-          {/* Scale / sequin pattern — animated drift */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            animate={{ backgroundPosition: ['0px 0px', '28px 28px'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cellipse cx='14' cy='14' rx='9' ry='6' fill='none' stroke='rgba(57,255,20,0.12)' stroke-width='0.8'/%3E%3C/svg%3E")`,
-              backgroundSize: '28px 28px',
-            }}
-          />
-          {/* Depth overlay */}
-          <div className="absolute inset-0 bg-black/45" />
-          {/* Shimmer */}
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,.55) 0%, transparent 65%)' }} />
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '150%'] }}
             transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 6 }}
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', transform: 'skewX(-20deg)' }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)', transform: 'skewX(-20deg)' }}
           />
-          {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
-            <div className="flex justify-between items-start">
-              <motion.div
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-11 h-11 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(57,255,20,0.15)', border: '1px solid rgba(57,255,20,0.5)', color: '#39FF14' }}
-              >
-                <Shield size={22} />
-              </motion.div>
+          <div className="absolute inset-0 p-4 flex items-center justify-between">
+            <div className="flex flex-col justify-between h-full py-0.5">
+              <div className="flex items-center gap-1.5">
+                <Hand size={10} className="text-[#39FF14]" />
+                <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#39FF14]">Kaleci Kimligi</span>
+              </div>
+              <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
+              <span className="text-[9px] font-bold text-white/40">Kaleni sagla al</span>
             </div>
-            <div>
-              <motion.h3
-                animate={{ textShadow: ['0 0 8px rgba(57,255,20,0.5)', '0 0 24px rgba(57,255,20,1)', '0 0 8px rgba(57,255,20,0.5)'] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
-                style={{ color: '#39FF14' }}
-              >
-                KALECİ BUL
-              </motion.h3>
+            <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
+              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)', color: '#39FF14' }}>
+                <Hand size={24} />
+              </div>
             </div>
           </div>
         </AnimatedButton>
@@ -1011,59 +988,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           onClick={() => onNavigate('MARKETPLACE_REF')}
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
-          className="h-40 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer button-neon-glow-blue"
-          style={{ borderColor: 'rgba(59,130,246,0.2)' }}
+          className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
+          style={{ background: '#000', border: '1px solid rgba(0,0,0,.2)', boxShadow: '0 0 40px rgba(59,130,246,.22), 0 0 80px rgba(59,130,246,.08), inset 0 1px 0 rgba(255,255,255,.12)' }}
         >
-          {/* Fluid animated gradient */}
           <motion.div
             className="absolute inset-0"
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
             transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-            style={{
-              background: 'linear-gradient(135deg, #020b18, #0a2240, #3b82f6, #0a2240, #020b18)',
-              backgroundSize: '300% 300%',
-            }}
+            style={{ background: 'linear-gradient(135deg, #020b18 0%, #0a2240 25%, #3b82f6 45%, #061228 75%, #000 100%)', backgroundSize: '300% 300%' }}
           />
-          {/* Diamond / referee jersey pattern — animated drift */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            animate={{ backgroundPosition: ['0px 0px', '-32px 32px'] }}
-            transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cpolygon points='16,4 28,16 16,28 4,16' fill='none' stroke='rgba(96,165,250,0.13)' stroke-width='0.9'/%3E%3C/svg%3E")`,
-              backgroundSize: '32px 32px',
-            }}
-          />
-          {/* Depth overlay */}
-          <div className="absolute inset-0 bg-black/45" />
-          {/* Shimmer */}
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,.55) 0%, transparent 65%)' }} />
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '150%'] }}
             transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 7 }}
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', transform: 'skewX(-20deg)' }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)', transform: 'skewX(-20deg)' }}
           />
-          {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between p-4 xs:p-5">
-            <div className="flex justify-between items-start">
-              <motion.div
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                className="w-11 h-11 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(99,179,255,0.5)', color: '#60a5fa' }}
-              >
-                <Scale size={22} />
-              </motion.div>
+          <div className="absolute inset-0 p-4 flex items-center justify-between">
+            <div className="flex flex-col justify-between h-full py-0.5">
+              <div className="flex items-center gap-1.5">
+                <Scale size={10} className="text-[#60a5fa]" />
+                <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#60a5fa]">Hakem Kimligi</span>
+              </div>
+              <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
+              <span className="text-[9px] font-bold text-white/40">Adil oyna</span>
             </div>
-            <div>
-              <motion.h3
-                animate={{ textShadow: ['0 0 8px rgba(59,130,246,0.5)', '0 0 24px rgba(99,179,255,1)', '0 0 8px rgba(59,130,246,0.5)'] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                className="text-lg xs:text-2xl font-black italic tracking-tighter leading-none"
-                style={{ color: '#60a5fa' }}
-              >
-                HAKEM KİRALA
-              </motion.h3>
+            <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.08)', border: '1.5px solid rgba(59,130,246,.3)' }}>
+              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.14)', border: '1px solid rgba(99,179,255,.5)', color: '#60a5fa' }}>
+                <Scale size={24} />
+              </div>
             </div>
           </div>
         </AnimatedButton>
