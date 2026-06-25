@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–11 ✅ (… + para akışı + ücretsiz sahalar/yaşa göre erişim). Sıradaki: Bölüm 12 (Cüzdan & Sadakat; Premium kaldırıldı).
+> **Son güncelleme:** Bölüm 1–12 ✅ (… + cüzdan/sadakat). Sıradaki: Bölüm 13 (Takımlar, Arkadaşlar & Taktik Stüdyo).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -184,6 +184,15 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Geçiş:** 18 altı kullanıcı yetişkin kartı + ödeme onayı eklediğinde ücretli sahalar açılır.
 - **⚠️ Suistimal riski & önlem:** Yaş beyana dayalı + kimlik gevşek → yetişkin "18 altı" diyip ücretsiz sahalara erişebilir. Ücretsiz sahalar zaten OYNA'ya gelir getirmeyen halka açık sahalar (doğrudan gelir kaybı düşük); **önlem: admin izleme; ileride yaş doğrulama.**
 
+## 4.6 Cüzdan & Sadakat
+- **Cüzdan (OYNA bakiyesi) — iki tür:**
+  - **Kazanç bakiyesi** (kaleci/hakem/owner): gerçek para → **IBAN'a payout**.
+  - **İade kredisi:** yalnız **OYNA-içi** harcanır (rezervasyon/maç); **karta/IBAN'a çekilemez**; son kullanma yok/uzun.
+- **Para yükleme:** Lansmanda **YOK** (ödemeler doğrudan karttan).
+- **Sadakat (loyalty):** **Sonraya** (lansmanda yok).
+- **Promosyon/kupon kodu:** **Sonraya** (lansmanda yok).
+- **Premium/Pro:** **Kaldırıldı** — komisyon herkese aynı (admin ayarlı).
+
 ## 5. Büyüme Stratejisi
 - **Önce arz:** Saha sahipleri/sahalarla anlaşılır; saha sahipleri OYNA'yı **kendi kanallarıyla tanıtır**; oyuncular **kendileri kayıt olur ve kendileri işlem yapar** (saha sahibi adlarına işlem yapmaz).
 
@@ -240,4 +249,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 12–20 yanıtları (cüzdan/sadakat, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- Bölüm 13–20 yanıtları (takım/arkadaş/taktik, fair-play detay, bildirim, admin, altyapı/store).
