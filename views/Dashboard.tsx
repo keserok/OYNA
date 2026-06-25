@@ -967,14 +967,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-between h-full py-0.5">
               <div className="flex items-center gap-1.5">
-                <svg width="11" height="11" viewBox="0 0 90 92" fill="none">
-                  <path d="M22 74 L24 62 Q46 68 68 62 L70 74 Q70 90 46 90 Q22 90 22 74Z" fill="#0c1a0c"/>
-                  <path d="M24 62 Q18 52 18 43 Q18 37 24 35 L68 35 Q74 37 74 43 Q74 52 68 62 Q46 68 24 62Z" fill="#2ab212"/>
-                  <path d="M20 60 Q8 58 4 49 Q2 40 8 34 Q14 30 20 37 Q22 48 24 62Z" fill="#39FF14"/>
-                  <path d="M22 35 Q20 21 22 11 Q24 4 30 4 Q36 4 38 11 Q40 21 38 35Z" fill="#39FF14"/>
-                  <path d="M38 35 Q38 18 40 8 Q42 1 46 1 Q50 1 52 8 Q54 18 54 35Z" fill="#39FF14"/>
-                  <path d="M54 35 Q54 20 56 11 Q58 5 64 6 Q70 8 70 18 Q70 27 69 36Z" fill="#39FF14"/>
-                  <path d="M69 42 Q70 31 73 22 Q76 14 82 16 Q88 19 86 30 Q84 40 80 49Z" fill="#39FF14"/>
+                <svg width="11" height="11" viewBox="0 0 64 72" fill="none" style={{ transform: 'rotate(35deg)' }}>
+                  <rect x="6" y="38" width="48" height="20" rx="7" fill="#2ec40e"/>
+                  <path d="M9 48 Q3 41 2 31 Q1 22 8 18 Q14 15 18 22 Q19 32 14 48Z" fill="#39FF14"/>
+                  <rect x="8" y="4" width="12" height="36" rx="6" fill="#39FF14"/>
+                  <rect x="23" y="0" width="13" height="40" rx="6.5" fill="#39FF14"/>
+                  <rect x="39" y="3" width="11" height="37" rx="5.5" fill="#39FF14"/>
+                  <rect x="53" y="11" width="9" height="29" rx="4.5" fill="#39FF14"/>
                 </svg>
                 <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#39FF14]">Kaleci Kimligi</span>
               </div>
@@ -983,27 +982,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             </div>
             <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
               <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
-                <svg width="38" height="38" viewBox="0 0 90 92" fill="none" style={{ transform: 'rotate(10deg)' }}>
-                  <path d="M22 74 L24 62 Q46 68 68 62 L70 74 Q70 90 46 90 Q22 90 22 74Z" fill="#0c1a0c"/>
-                  <path d="M24 78 Q46 84 68 78" stroke="#1a4018" strokeWidth="1.5" fill="none"/>
-                  <path d="M68 74 L70 74 Q70 84 68 88" stroke="#f5a623" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-                  <path d="M24 62 Q18 52 18 43 Q18 37 24 35 L68 35 Q74 37 74 43 Q74 52 68 62 Q46 68 24 62Z" fill="#2ab212"/>
-                  <path d="M20 60 Q8 58 4 49 Q2 40 8 34 Q14 30 20 37 Q22 48 24 62Z" fill="#39FF14"/>
-                  <path d="M22 35 Q20 21 22 11 Q24 4 30 4 Q36 4 38 11 Q40 21 38 35Z" fill="#39FF14"/>
-                  <path d="M38 35 Q38 18 40 8 Q42 1 46 1 Q50 1 52 8 Q54 18 54 35Z" fill="#39FF14"/>
-                  <path d="M54 35 Q54 20 56 11 Q58 5 64 6 Q70 8 70 18 Q70 27 69 36Z" fill="#39FF14"/>
-                  <path d="M69 42 Q70 31 73 22 Q76 14 82 16 Q88 19 86 30 Q84 40 80 49Z" fill="#39FF14"/>
-                  <path d="M46 43 L35 55 L46 66 L57 55Z" fill="rgba(255,255,255,0.09)" stroke="rgba(0,0,0,0.22)" strokeWidth="1.5"/>
-                  <path d="M46 49 L40 55 L46 61 L52 55Z" fill="rgba(255,255,255,0.07)"/>
-                  <rect x="25" y="31" width="5" height="4" rx="1" fill="rgba(255,255,255,0.12)"/>
-                  <rect x="40" y="29" width="5" height="4" rx="1" fill="rgba(255,255,255,0.12)"/>
-                  <rect x="55" y="30" width="5" height="4" rx="1" fill="rgba(255,255,255,0.12)"/>
-                  <line x1="38" y1="4" x2="38" y2="35" stroke="rgba(0,0,0,0.32)" strokeWidth="2"/>
-                  <line x1="54" y1="8" x2="54" y2="35" stroke="rgba(0,0,0,0.32)" strokeWidth="2"/>
-                  <line x1="70" y1="17" x2="69" y2="42" stroke="rgba(0,0,0,0.32)" strokeWidth="2"/>
-                  <path d="M22 22 Q30 24 38 22" stroke="rgba(0,0,0,0.14)" strokeWidth="1" fill="none"/>
-                  <path d="M38 16 Q46 18 54 16" stroke="rgba(0,0,0,0.14)" strokeWidth="1" fill="none"/>
-                  <path d="M54 18 Q62 20 70 20" stroke="rgba(0,0,0,0.14)" strokeWidth="1" fill="none"/>
+                <svg width="36" height="36" viewBox="0 0 64 72" fill="none" style={{ transform: 'rotate(35deg)' }}>
+                  <rect x="10" y="58" width="38" height="11" rx="4" fill="#0a1808"/>
+                  <rect x="6" y="38" width="48" height="22" rx="7" fill="#2ec40e"/>
+                  <path d="M9 48 Q3 41 2 31 Q1 22 8 18 Q14 15 18 22 Q19 32 14 48Z" fill="#39FF14"/>
+                  <rect x="8" y="4" width="12" height="36" rx="6" fill="#39FF14"/>
+                  <rect x="23" y="0" width="13" height="40" rx="6.5" fill="#39FF14"/>
+                  <rect x="39" y="3" width="11" height="37" rx="5.5" fill="#39FF14"/>
+                  <rect x="53" y="11" width="9" height="29" rx="4.5" fill="#39FF14"/>
+                  <line x1="20" y1="4" x2="23" y2="40" stroke="rgba(0,0,0,0.28)" strokeWidth="1.5"/>
+                  <line x1="36" y1="0" x2="39" y2="40" stroke="rgba(0,0,0,0.28)" strokeWidth="1.5"/>
+                  <line x1="50" y1="3" x2="53" y2="40" stroke="rgba(0,0,0,0.28)" strokeWidth="1.5"/>
                 </svg>
               </div>
             </div>
