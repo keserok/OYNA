@@ -967,15 +967,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-between h-full py-0.5">
               <div className="flex items-center gap-1.5">
-                <Hand size={10} className="text-[#39FF14]" />
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#39FF14" style={{ transform: 'rotate(42deg)' }}>
+                  <rect x="3" y="19" width="16" height="5" rx="2.2" opacity="0.82"/>
+                  <rect x="2" y="9" width="18" height="12" rx="2.8"/>
+                  <rect x="2.5" y="1" width="3.8" height="9" rx="1.9"/>
+                  <rect x="7" y="0" width="3.8" height="10.5" rx="1.9"/>
+                  <rect x="11.5" y="0.5" width="3.5" height="9.5" rx="1.75"/>
+                  <rect x="15.5" y="2.5" width="3" height="7.5" rx="1.5"/>
+                  <rect x="18.5" y="13" width="5.5" height="3.5" rx="1.75"/>
+                  <rect x="3" y="12" width="15" height="0.8" rx="0.4" fill="rgba(0,0,0,0.18)"/>
+                </svg>
                 <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#39FF14]">Kaleci Kimligi</span>
               </div>
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
               <span className="text-[9px] font-bold text-white/40">Kaleni sagla al</span>
             </div>
             <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
-              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)', color: '#39FF14' }}>
-                <Hand size={24} />
+              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#39FF14" style={{ transform: 'rotate(42deg)' }}>
+                  <rect x="3" y="19" width="16" height="5" rx="2.2" opacity="0.82"/>
+                  <rect x="2" y="9" width="18" height="12" rx="2.8"/>
+                  <rect x="2.5" y="1" width="3.8" height="9" rx="1.9"/>
+                  <rect x="7" y="0" width="3.8" height="10.5" rx="1.9"/>
+                  <rect x="11.5" y="0.5" width="3.5" height="9.5" rx="1.75"/>
+                  <rect x="15.5" y="2.5" width="3" height="7.5" rx="1.5"/>
+                  <rect x="18.5" y="13" width="5.5" height="3.5" rx="1.75"/>
+                  <rect x="3" y="12" width="15" height="0.8" rx="0.4" fill="rgba(0,0,0,0.25)"/>
+                </svg>
               </div>
             </div>
           </div>
