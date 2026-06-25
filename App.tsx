@@ -600,7 +600,7 @@ const App: React.FC = () => {
         <motion.div
           key={view}
           {...PAGE_TRANSITION}
-          className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : ''}`}
+          className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : 'pb-safe'}`}
         >
           <Suspense fallback={<ViewLoader />}>
             {renderView()}
