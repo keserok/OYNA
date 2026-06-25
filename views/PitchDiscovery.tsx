@@ -91,6 +91,9 @@ const mapDbPitchToUiPitch = (
   const tariffs = mapDbTariffsToPitchTariffs(row.pitch_tariffs);
   const averagePrice =
     getAverageTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
+  const displayPrice = flash?.discount
+    ? Math.round(averagePrice * (1 - flash.discount / 100))
+    : averagePrice;
   const wh = row.working_hours;
   const courts: Court[] = (row.courts ?? [])
     .filter((c) => c.is_active !== false)
@@ -116,7 +119,8 @@ const mapDbPitchToUiPitch = (
     googleRating: row.google_rating ?? 0,
     googleReviews: row.google_review_count ?? 0,
     pricePerPerson: row.price_per_person ?? 0,
-    totalPrice: averagePrice,
+    totalPrice: displayPrice,
+    originalPrice: flash?.discount ? averagePrice : undefined,
     image: row.image ?? row.images?.[0] ?? PLACEHOLDER_IMG,
     images: row.images ?? (row.image ? [row.image] : []),
     description: row.description ?? '',
@@ -197,6 +201,7 @@ const AIRBNB_MAP_CSS = `
 
 const createPitchPin = (pitch: Pitch, isSelected: boolean) => {
   const priceLabel = pitch.totalPrice ? `~${pitch.totalPrice}₺` : pitch.name.split(' ')[0];
+  const originalLabel = pitch.originalPrice ? `<span style="text-decoration:line-through;color:#888;font-size:8px;margin-right:2px;">₺${pitch.originalPrice}</span>` : '';
   const flashBadge = pitch.flashDiscount
     ? `<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FF3B30;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:100px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,59,48,0.5);">🔥 %${pitch.flashDiscount}</div>`
     : '';
@@ -207,7 +212,7 @@ const createPitchPin = (pitch: Pitch, isSelected: boolean) => {
         ${flashBadge}
         <div class="pin-bubble ${isSelected ? 'selected' : ''}">
           <svg width="8" height="8" viewBox="0 0 8 8" fill="${isSelected ? '#000' : '#39FF14'}"><circle cx="4" cy="4" r="4"/></svg>
-          ${priceLabel}
+          ${originalLabel}${priceLabel}
         </div>
         <div class="pin-nub ${isSelected ? 'selected' : ''}"></div>
       </div>
@@ -470,10 +475,15 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
           </div>
         </div>
 
-        {/* Ortalama fiyat — saat seçilince tarife bazlı fiyat gösterilir */}
+        {/* Ortalama fiyat — flash deal varsa indirimli fiyat gösterilir */}
         <div className="mt-2 bg-black/20 border border-white/5 rounded-xl py-1.5 px-2 flex flex-col items-center justify-center">
           <span className="text-[6px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Ort. Saatlik</span>
-          <span className="text-[10px] font-black text-white tracking-tighter leading-none">~₺{avgPrice}</span>
+          <div className="flex items-baseline gap-1">
+            {pitch.originalPrice && (
+              <span className="text-[8px] font-bold text-gray-500 line-through">₺{pitch.originalPrice}</span>
+            )}
+            <span className={`text-[10px] font-black tracking-tighter leading-none ${pitch.originalPrice ? 'text-red-400' : 'text-white'}`}>~₺{avgPrice}</span>
+          </div>
         </div>
       </div>
     </motion.div>

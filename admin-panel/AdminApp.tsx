@@ -30,6 +30,7 @@ const AdminApp: React.FC = () => {
   const [dataSyncing, setDataSyncing] = useState(false);
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootWarnings, setBootWarnings] = useState<string[]>([]);
+  const [warningsExpanded, setWarningsExpanded] = useState(false);
 
   const syncPlatformData = useCallback(async () => {
     setDataSyncing(true);
@@ -153,11 +154,37 @@ const AdminApp: React.FC = () => {
   return (
     <>
       {(dataSyncing || bootWarnings.length > 0) && (
-        <div className="fixed top-0 inset-x-0 z-[200] bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-[11px] text-amber-200 text-center backdrop-blur-sm">
-          {dataSyncing
-            ? 'Veriler arka planda yükleniyor…'
-            : bootWarnings[0]}
-          {!dataSyncing && bootWarnings.length > 1 ? ` (+${bootWarnings.length - 1} uyarı)` : ''}
+        <div className="fixed top-0 inset-x-0 z-[200] border-b border-amber-500/30 backdrop-blur-sm">
+          <div className="bg-amber-500/15 px-4 py-2 flex items-center gap-2 text-[11px] text-amber-200">
+            <span className="flex-1 text-center">
+              {dataSyncing
+                ? 'Veriler arka planda yükleniyor…'
+                : bootWarnings[0]}
+            </span>
+            {!dataSyncing && bootWarnings.length > 1 && (
+              <button
+                onClick={() => setWarningsExpanded(e => !e)}
+                className="shrink-0 text-amber-400 hover:text-amber-200 font-black"
+              >
+                {warningsExpanded ? '▲' : `+${bootWarnings.length - 1}`}
+              </button>
+            )}
+            {!dataSyncing && (
+              <button
+                onClick={() => { setBootWarnings([]); setWarningsExpanded(false); }}
+                className="shrink-0 text-amber-400 hover:text-amber-200 font-black"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {warningsExpanded && bootWarnings.length > 1 && (
+            <div className="bg-amber-950/60 px-4 py-2 flex flex-col gap-1">
+              {bootWarnings.slice(1).map((w, i) => (
+                <div key={i} className="text-[10px] text-amber-300/80">• {w}</div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <GodViewPanel

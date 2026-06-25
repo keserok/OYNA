@@ -361,6 +361,8 @@ export interface Pitch {
   // Owner module — aktif flash indirim (PitchDiscovery'de rozet için)
   flashDiscount?: number;
   flashDealId?: string;
+  /** İndirim öncesi orijinal fiyat; flashDiscount varsa totalPrice indirimli gösterilir */
+  originalPrice?: number;
   /** Owner panel tarifeleri — saat bazlı fiyat/kapora hesabı için */
   tariffs?: PitchTariff[];
 }
