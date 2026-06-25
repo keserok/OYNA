@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–18 ✅ (… + tasarım sistemi & UI/UX). Sıradaki: Bölüm 19–20 (Lansman, Store & Yol Haritası — son).
+> **Son güncelleme:** ✅ **TÜM 20 BÖLÜM TAMAMLANDI.** Tutarlılık gözden geçirmesi yapılıyor.
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -327,6 +327,28 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 | **6** | Takım & Taktik | Takım + arkadaşlar + takım-içi taktik (oylama/yorum/favori) + 1-1 mesaj; çoklu yönetici. |
 | **7** | Güvenlik, Altyapı & Store | RLS; edge function deploy + güvenlik; çoklu-rol re-login; iOS/Android; test. |
 
+## 11.1 Lansman, Store & Operasyon
+- **İşletme:** Şahıs şirketi — **Miraç Kerem Çürüksulu**. Store hesapları (Apple Developer + Google Play) şirket adına.
+- **Uygulama kimliği:** `com.oyna.app`; ad **"OYNA"** (kesin).
+- **iOS:** **Sign in with Apple** (Google girişi olduğu için zorunlu) · gizlilik etiketleri (konum/ödeme/iletişim) · izin açıklama metinleri (konum/kamera/bildirim) · yaş derecesi.
+- **Android:** imza anahtarı (keystore) · izinler (internet/konum/kamera/bildirim) · güncel hedef SDK · Play "Veri Güvenliği" formu.
+- **Yaş derecesi:** ödeme + 18-altı + sosyal içeriğe uygun derece + ebeveyn bilgisi (Bölüm 3 ile uyumlu).
+- **Yasal (YAPILACAK):** KVKK/Sözleşme/Mesafeli Satış/Gizlilik metinleri **hukukçu onaylı hazırlanacak** (şirket bilgileriyle); **iyzico sözleşmesi/KYC** yapılacak. *(Şirket kuruldu.)*
+- **Aşamalı lansman:** Kapalı beta (Ordu seçili saha+kullanıcı) → soft launch (Ordu) → genişleme.
+- **Test:** Kritik akışlar (ödeme, maç katılımı, rezervasyon, payout) **uçtan uca test**; kapsam ~%5'ten yükseltilir; **test fazlara yayılır** (sadece sonda değil).
+- **İzleme & Destek:** hata izleme + temel analytics; destek kanalı **e-posta + WhatsApp**; **admin paneli ana kontrol/çözüm noktası** (god-mode).
+
+## 11.2 Lansman Checklist (olmazsa-olmaz)
+- [ ] Gerçek ödeme (iyzico) uçtan uca: blokaj → tahsil → payout → iade.
+- [ ] Tüm RLS politikaları tam + test.
+- [ ] Tüm RPC'ler deploy + test; edge function'lar güvenli deploy.
+- [ ] Push (APNs+FCM) çalışıyor; bildirim trigger'ları aktif.
+- [ ] Demo/mock veri temizlendi; Ordu gerçek verisi (4 tesis) girildi.
+- [ ] Kritik akış uçtan uca testleri geçiyor.
+- [ ] Yasal metinler (hukukçu onaylı) + iyzico sözleşmesi.
+- [ ] Store gereksinimleri (iOS/Android) tamam.
+- [ ] Yedekleme + izleme aktif.
+
 ## 12. 📌 Hatırlatma / Backlog
 - [ ] Maç sonu oyuncu değerlendirme sayfası (fair-play'i besler).
 - [ ] Takımlar + Arkadaşlar geliştir.
@@ -340,7 +362,7 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - [ ] Tüm RPC'lerin envanteri + eksik tamamlama + deploy/test (kritik).
 - [ ] RLS politikalarının tamamlanması + edge function güvenliği.
 
-## 13. 🔓 Açık Kalemler
-- Asgari kayıt yaşı (öneri: 15).
-- Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 19–20 yanıtları (lansman/store yükleme, yol haritası).
+## 13. 🔓 Açık Kalemler (dış bağımlılıklar)
+- **Yasal metinlerin hukukçu onaylı finalizasyonu** + **iyzico sözleşmesi/KYC**.
+- Asgari kayıt yaşı (öneri: 15) — son onay.
+- Format etiketi XvX kaleci dahil mi (taraf başına toplam) — uygulama detayı.
