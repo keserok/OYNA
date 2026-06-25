@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–6 ✅ tam (… + maç günü/skor/değerlendirme). Sıradaki: Bölüm 7 (Saha Keşfi & Rezervasyon).
+> **Son güncelleme:** Bölüm 1–7 ✅ (… + saha keşfi/rezervasyon + "Saha Radarı" harita markalaşması). Sıradaki: Bölüm 8 (Tesis Sahibi Paneli / B2B).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -88,6 +88,26 @@
 - **Sorun Bildir:** Skor itirazı yok; **no-show / saha sorunu / iade** için "sorun bildir" → admin **OPERASYON**.
 - **Maç geçmişi:** Oyuncu kendi maçlarını görür — **tarih, saha, kadro, skor**.
 
+## 3.5 Saha Keşfi & Rezervasyon (Oyuncu)
+*(Çoğu altyapı kodda mevcut — `PitchDiscovery.tsx` Leaflet harita+liste+filtre, `geo.ts` haversine. Aşağıdakiler kararlar + kod düzeltmeleri.)*
+- **Keşif:** Harita + liste + filtre birlikte; **varsayılan liste** (az sahaya uygun); fiyat pinli harita. Harita merkezi/ilçeler **İstanbul→Ordu**.
+- **Yakın saha:** İlçe seçimi + GPS mesafe (haversine). *(İstanbul ilçe koordinatları → Ordu ilçeleri.)*
+- **Doğrudan rezervasyon (maçsız):** Ayrı "Sahayı Kirala" akışı (kodda var); tek kişi **kaporayı** öder, saha müsaitse **anında rezerve**. Kapora **tarifedeki `deposit_amount`'tan** (yoksa %30 fallback — koddaki sabit %30 düzeltilecek). Gerçek ödeme Bölüm 12.
+- **Müsaitlik:** Gerçek zamanlı takvim = tarife + rezervasyon + **abonelik + istisna (kapalı saat)** birleşik. *(Kodda abonelik/istisna müsaitliğe DAHİL DEĞİL → eklenecek; çifte rezervasyon önlenir.)*
+- **Saha detayı:** Foto galeri + olanaklar + kort & fiyat + **çalışma saatleri** + **yol tarifi (harita linki)** + saha puanı. *(Çalışma saati & yol tarifi eklenecek.)*
+- **Saha puanı/yorumu:** Yalnızca **rezervasyon/maç tamamlamış** kişi verebilir. *(Kodda puan veriliyor ama yorum ekranı + kısıt YOK → eklenecek.)*
+- **"Rezervasyonlarım":** İptal (**24s + kademeli**, admin ayarlı — **koddaki 48s/%90 buna hizalanacak**) + **yol tarifi** + **tekrar rezerve** + **maça çevir**.
+- **Filtreler:** İlçe, **tarih, saat**, kort tipi, fiyat. *(Tarih/saat ana listeye eklenecek — kodda yalnız detayda.)*
+
+## 3.6 Harita Markalaşması — "Saha Radarı"
+- **Konsept:** Harita = OYNA'nın imza keşif yüzeyi. Metafor: **radar** (yakındaki saha/maçları tarayan). Çalışma adı: **"Saha Radarı"**.
+- **Taban harita:** Markalı, **sade/desatüre** tema (renkli pinler öne çıksın). Başlangıç: ücretsiz **Carto Positron + OYNA tint**; ileride özel **Mapbox/MapTiler** stili.
+- **Pin taksonomisi:** Fiyat pini (₺, OYNA formu) · müsaitlik renk halkası (yeşil/amber/gri) · **OYNA Onaylı** rozeti · **flash indirim** (pulse %X) · maç pini (top ikonu "X kişi aranıyor") · kullanıcı konumu (markalı oyuncu işareti) · **cluster** baloncuğu.
+- **Animasyon (radar hissi):** açılışta **radar sweep**; pinler stagger bounce; müsait sahalar pulse; pin tap → alttan saha kartı kayar.
+- **Az saha (Ordu):** radar + "yakındaki sahalar" vurgusu canlılık verir; boş bölgede "yakında daha fazla saha".
+- **Teknik:** Leaflet `DivIcon` (CSS pinler), MarkerCluster, framer-motion overlay; viewport bazlı render (ölçek için).
+- **Açık kararlar:** isim · tema (açık/koyu) · tile sağlayıcı (Carto→Mapbox).
+
 ## 4. Gelir Modeli & Para Akışı 💰
 OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
 
@@ -153,4 +173,5 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 7–20 yanıtları (saha keşfi, owner panel, fiyat/abonelik, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- Harita markalaşması kararları: isim (Saha Radarı?), tema (açık/koyu), tile sağlayıcı (Carto→Mapbox).
+- Bölüm 8–20 yanıtları (owner panel, fiyat/abonelik, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
