@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–7 ✅ (… + saha keşfi + harita markalaşması). Sıradaki: Bölüm 8 (Tesis Sahibi Paneli / B2B).
+> **Son güncelleme:** Bölüm 1–8 ✅ (… + saha keşfi/harita + tesis sahibi paneli B2B). Sıradaki: Bölüm 9 (Fiyatlandırma, Abonelik & Doluluk detay).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -110,13 +110,30 @@
 - **Teknik:** Leaflet `DivIcon` (CSS pinler), MarkerCluster, framer-motion; viewport bazlı render (ölçek).
 
 ## 4. Gelir Modeli & Para Akışı 💰
-OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
+OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
 
-**Model A — Normal rezervasyon:** OYNA **yalnızca kaporayı** tahsil eder; kaporanın **%15'i** OYNA'da kalır, kalan aylık payout; kalan saha ücreti tesiste. *(Kapora 1000₺ → OYNA 150₺.)*
+**Model A — Normal rezervasyon:** OYNA **yalnızca kaporayı** tahsil eder; kaporanın **%15'i** OYNA'da kalır, kalan **iki haftalık** payout; kalan saha ücreti tesiste. *(Kapora 1000₺ → OYNA 150₺.)*
 
 **Model B — Saha sahibinin açtığı / OYNA-organize maç:** Saha **normal fiyatının %95'ini** alır (OYNA %5 keser); OYNA ayrıca oyunculara **değişken markup** ekler. OYNA = %5 + markup. OYNA parayı oyuncudan toplar, sahaya %95 aktarır. **Tetikleyici:** oyuncu/kaptan açar → Model A; **saha sahibi (boş saat doldurma) açar → Model B.**
 
 **Kaleci/Hakem:** **%10** komisyon (ayarlanabilir).
+
+## 4.1 Tesis Sahibi Paneli (B2B)
+- **Kalite:** **Tüm modüller lansmanda, SaaS kalitesinde** (tam işlevsel, cilalı). *(Not: "SaaS kalitesi" = ürün olgunluğu; **ücretli plan/entitlement YOK** — Bölüm 1 kararı korunur.)*
+- **Modüller:** Takvim · Manuel rezervasyon · App-booking onay/red · Kort & Tarife · Çalışma saati & İstisna · Abonelik · Flash indirim · Finans & Payout · Veresiye (kendi defteri) · Personel/Görev.
+- **Tesis kurulumu (2 yol):**
+  - **(a) Admin (birincil):** Admin panelinden tesis **direkt kurulur ve yayına açılır** (her şehir); oyuncular görür.
+  - **(b) Saha sahibi başvurusu:** Tesis arayüzünde **"Başvuru Yap"** formu (numara + talep) → admin paneline düşer → admin kurar/yayınlar. *(Owner tek başına canlı tesis yayınlamaz.)*
+  - İşletme/vergi bilgisi admin kurulumunda toplanır (fatura için).
+- **Takvim:** Kort × saat matrisi; gerçek zamanlı, renk kodlu; tüm kaynaklar (manuel + app + abonelik + flash + istisna) birleşik.
+- **Manuel rezervasyon:** müşteri ad+telefon, kort, tarih/saat, ücret, ödeme durumu (ödendi/veresiye), not. (Owner'ın kendi defteri.)
+- **App-booking onay:** bildirim → onay/red; **otomatik onay süresi saha sahibi ayarlı** (varsayılan **15 dk**; **0 = anında otomatik**; "hep manuel" seçeneği de var).
+- **Tarife & kapora:** zaman bazlı tarifeler (gündüz/akşam/hafta sonu/tatil) + tarifede **kapora tutarı** (oyuncuya yansır).
+- **Müsaitlik/istisna:** kapalı saat/bakım/tatil (tekrarlı olabilir) → oyuncu müsaitliği + takvime yansır.
+- **Abonelik:** sabit haftalık saat (örn. salı 20:00); **otomatik haftalık materyalize** (Supabase zamanlanmış görev); takvimde ayrı renk.
+- **Flash indirim:** boş saatler için süreli indirim; haritada/keşifte rozet.
+- **Finans & Payout:** gelir (kapora − komisyon) + **otomatik payout: iki haftada bir**; işlem/çekim geçmişi; gider takibi opsiyonel.
+- **Ton:** sade, kurumsal, güven veren, **premium** (saha sahibini ikna).
 
 ## 5. Büyüme Stratejisi
 - **Önce arz:** Saha sahipleri/sahalarla anlaşılır; saha sahipleri OYNA'yı **kendi kanallarıyla tanıtır**; oyuncular **kendileri kayıt olur ve kendileri işlem yapar** (saha sahibi adlarına işlem yapmaz).
@@ -174,4 +191,4 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 8–20 yanıtları (owner panel, fiyat/abonelik, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- Bölüm 9–20 yanıtları (fiyat/abonelik detay, kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
