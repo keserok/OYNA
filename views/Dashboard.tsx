@@ -540,7 +540,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="px-4 xs:px-6 grid grid-cols-2 gap-3 xs:gap-4 auto-rows-min"
+        className="px-4 xs:px-6 grid grid-cols-2 gap-x-1 gap-y-3 xs:gap-y-4 auto-rows-min"
       >
 
         
