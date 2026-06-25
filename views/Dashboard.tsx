@@ -980,7 +980,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#39FF14]">Kaleci Kimligi</span>
               </div>
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
-              <span className="text-[9px] font-bold text-white/40">Kaleni sağlama al</span>
+              <span className="text-[9px] font-bold text-white/40">Kaleni sağlama al.</span>
             </div>
             <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
               <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
@@ -1030,7 +1030,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 <span className="text-[8px] font-black uppercase tracking-[.2em] text-[#60a5fa]">Hakem Kimligi</span>
               </div>
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
-              <span className="text-[9px] font-bold text-white/40">Adil oyna</span>
+              <span className="text-[9px] font-bold text-white/40">Adil oyna.</span>
             </div>
             <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.08)', border: '1.5px solid rgba(59,130,246,.3)' }}>
               <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.14)', border: '1px solid rgba(99,179,255,.5)', color: '#60a5fa' }}>
