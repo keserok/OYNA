@@ -51,7 +51,6 @@ const FORMATS = [
   { v: '11v11', label: '11v11', players: 22, popular: false },
 ];
 
-const BUDGET_OPTIONS = ['Ücretsiz', '150-200₺', '200-250₺', '250-300₺', '300-350₺'];
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
 
@@ -1846,6 +1845,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     format, setFormat,
     dna, setDna,
     manualBudget, setManualBudget,
+    matchTitle, setMatchTitle,
+    homeTeamName, setHomeTeamName,
+    awayTeamName, setAwayTeamName,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
@@ -1854,7 +1856,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     draftMatch, isDraftMode,
     perTeam, isReady,
     handleSlotMove, pitchSlots,
-    toggleOrientation, calculatedBudget, costPerPerson,
+    toggleOrientation, costPerPerson,
     publishMatch
   } = useMatchCreate(onNavigate);
 
@@ -1938,27 +1940,17 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               </motion.button>
               
               <div className="flex gap-3">
-                  {/* Kuralları Belirle Tile */}
-                  <motion.button 
+                  {/* Maç Özellikleri Tile */}
+                  <motion.button
                       whileHover={!isDraftMode ? { scale: 1.01 } : {}}
                       whileTap={!isDraftMode ? { scale: 0.99 } : {}}
                       onClick={() => { if (!isDraftMode) setActiveSheet('RULES') }}
                       className={`flex-1 bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/30 opacity-90 cursor-not-allowed' : 'border-white/10 hover:border-[#FFFF00]/50'} rounded-2xl p-4 flex flex-col justify-center items-start shadow-lg transition-colors group relative overflow-hidden`}
                   >
                       <div className="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20"><Activity size={60} className="text-[#FFFF00]" /></div>
-                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 flex items-center gap-1.5 z-10"><Activity size={12} className="text-[#FFFF00]"/> KURALLARI BELİRLE</span>
-                      <span className="text-sm font-black text-white uppercase z-10 drop-shadow-md truncate">{format.label} • {dna.duration}</span>
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 flex items-center gap-1.5 z-10"><Activity size={12} className="text-[#FFFF00]"/> MAÇ ÖZELLİKLERİ</span>
+                      <span className="text-sm font-black text-white uppercase z-10 drop-shadow-md truncate">{format.label} • {costPerPerson > 0 ? `${costPerPerson}₺` : 'Ücretsiz'}</span>
                   </motion.button>
-                  
-                  {/* Bütçe Auto-Calculated */}
-                  <div className="w-[110px] bg-[#06080A]/60 backdrop-blur-2xl border border-blue-500/30 rounded-2xl p-3 flex flex-col justify-center items-center shadow-[0_0_20px_rgba(59,130,246,0.1)] relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-t from-blue-500/10 to-transparent"></div>
-                      <span className="text-[9px] font-black uppercase text-blue-300 tracking-widest mb-1 text-center relative z-10">Kişi Başı<br/>Ücret</span>
-                      <div className="flex items-end gap-0.5 relative z-10 mt-1">
-                         <span className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{calculatedBudget > 0 ? calculatedBudget : '-'}</span>
-                         <span className="text-sm font-bold text-gray-400 mb-0.5">₺</span>
-                      </div>
-                  </div>
               </div>
           </div>
 
@@ -2006,65 +1998,39 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         {activeSheet === 'RULES' && (
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-10">
                 <header className="flex items-center justify-between px-6 pb-4 border-b border-white/5">
-                    <h2 className="text-lg font-black text-white italic tracking-tighter uppercase drop-shadow-md">OYUN KURALLARI</h2>
+                    <h2 className="text-lg font-black text-white italic tracking-tighter uppercase drop-shadow-md">MAÇ ÖZELLİKLERİ</h2>
                     <button onClick={() => setActiveSheet('NONE')} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
                 </header>
                 <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar">
+
+                   {/* Maç Adı (opsiyonel) */}
+                   <div className="space-y-2">
+                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Maç Adı <span className="text-white/25 normal-case font-normal">(opsiyonel)</span></p>
+                     <input
+                       type="text"
+                       value={matchTitle}
+                       onChange={e => setMatchTitle(e.target.value)}
+                       placeholder="Süper Lig Derbisi…"
+                       maxLength={40}
+                       className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#FFFF00]/40 transition-colors"
+                     />
+                   </div>
+
                    {/* Takım Formatı */}
                    <div className="space-y-2">
-                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Takım Formatı</p>
+                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Format</p>
                      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                        {FORMATS.map(f => (
                          <button
                            key={f.v}
                            onClick={() => setFormat(f as any)}
                            className={`shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
-                             format.v === f.v 
-                               ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
+                             format.v === f.v
+                               ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]'
                                : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
                            }`}
                          >
                            {f.v}
-                         </button>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* Bütçe */}
-                   <div className="space-y-2">
-                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Kişi Başı Ücret</p>
-                     <div className="flex flex-wrap gap-2">
-                       {BUDGET_OPTIONS.map(b => (
-                         <button
-                           key={b}
-                           onClick={() => setDna({ ...dna, budget: b })}
-                           className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
-                             dna.budget === b 
-                               ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 text-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.2)] drop-shadow-[0_0_5px_rgba(255,255,0,0.8)]' 
-                               : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
-                           }`}
-                         >
-                           {b}
-                         </button>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* Maç Süresi */}
-                   <div className="space-y-2">
-                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Maç Süresi</p>
-                     <div className="flex gap-2">
-                       {['60 Dakika', '90 Dakika', '120 Dakika'].map(d => (
-                         <button
-                           key={d}
-                           onClick={() => setDna({ ...dna, duration: d })}
-                           className={`flex-1 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
-                             dna.duration === d 
-                               ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
-                               : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
-                           }`}
-                         >
-                           {d}
                          </button>
                        ))}
                      </div>
@@ -2089,7 +2055,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        </div>
                      </div>
                      <div className="flex-[1.5] space-y-2">
-                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Yaş</p>
+                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Yaş Grubu</p>
                        <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
                          {AGE_OPTIONS.map(a => (
                            <button
@@ -2106,17 +2072,17 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                      </div>
                    </div>
 
-                   {/* MENTALİTE */}
+                   {/* Oyun Sertliği */}
                    <div className="space-y-2">
-                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Oyun Ruhun</p>
+                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Oyun Sertliği</p>
                      <div className="flex flex-col gap-2">
                        {MENTALITY_OPTIONS.map(m => (
                          <button
                            key={m.id}
                            onClick={() => setDna({ ...dna, mentality: m.id })}
                            className={`h-12 w-full rounded-2xl px-4 flex items-center justify-between border transition-all backdrop-blur-xl overflow-hidden ${
-                             dna.mentality === m.id 
-                               ? 'border-transparent' 
+                             dna.mentality === m.id
+                               ? 'border-transparent'
                                : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.06] hover:border-white/20'
                            }`}
                            style={dna.mentality === m.id ? { backgroundColor: `${m.color}15`, borderColor: `${m.color}60`, boxShadow: `0 0 30px ${m.color}20` } : {}}
@@ -2134,54 +2100,55 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        ))}
                      </div>
                    </div>
-                   
-                   {/* Uyarı Metni */}
-                   <p className="text-[10px] text-gray-500 text-center mt-4">İstediğiniz kategorileri boş bırakabilirsiniz.</p>
 
-                   <button onClick={() => setActiveSheet('NONE')} className="w-full h-[60px] mt-6 bg-[#FFFF00] text-black font-black italic uppercase text-lg rounded-[24px] transition-all shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer">
-                       KURALLARI ONAYLA
-                   </button>
-                </div>
-            </motion.div>
-        )}
-        {activeSheet === 'BUDGET' && (
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end">
-                <div className="w-full bg-[#0D1117] border-t border-white/10 rounded-t-[32px] p-6 pb-12">
-                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6" />
-                   <h2 className="text-lg font-black text-white italic uppercase tracking-tighter mb-1">Bütçe Ayarı</h2>
-                   <p className="text-xs text-gray-500 mb-6">Kişi başı talep edeceğin ücreti manuel olarak belirleyebilirsin.</p>
-                   
-                   <div className="bg-[#080C10] p-6 rounded-3xl border border-white/5 mb-6 text-center">
-                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Kişi Başı Ücret</span>
-                     <div className="flex items-center justify-center gap-1">
-                         <span className="text-5xl font-black text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]">{manualBudget === -1 ? 'BELİRSİZ' : costPerPerson}</span>
-                         {manualBudget !== -1 && <span className="text-xl font-bold text-gray-500 mt-3">₺</span>}
+                   {/* Ücret */}
+                   <div className="space-y-3">
+                     <div className="flex items-center justify-between">
+                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Ücret (Kişi Başı)</p>
+                       <span className="text-sm font-black text-white">{costPerPerson > 0 ? `${costPerPerson} ₺` : 'Ücretsiz'}</span>
                      </div>
-                     <input 
-                        type="range" min="0" max="500" step="10" value={costPerPerson} 
-                        onChange={e => setManualBudget(parseInt(e.target.value))}
-                        className="w-full mt-6 accent-blue-400" style={{ display: manualBudget === -1 ? 'none' : 'block' }}
+                     <input
+                       type="range" min="0" max="500" step="10"
+                       value={costPerPerson}
+                       onChange={e => setManualBudget(parseInt(e.target.value))}
+                       className="w-full accent-[#FFFF00]"
                      />
+                     <div className="flex justify-between text-[9px] text-white/25 font-bold">
+                       <span>Ücretsiz</span><span>500 ₺</span>
+                     </div>
                    </div>
 
-                    <button 
-                      onClick={() => setManualBudget(manualBudget === -1 ? calculatedBudget : -1)}
-                      className={`w-full py-4 mb-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all border ${
-                        manualBudget === -1 
-                          ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]' 
-                          : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {manualBudget === -1 ? 'ÜCRET BELİRLE (MANUEL)' : 'BÜTÇEYİ BELİRSİZ BIRAK'}
-                    </button>
+                   {/* Takım Adları (opsiyonel) */}
+                   <div className="space-y-3">
+                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Takım Adları <span className="text-white/25 normal-case font-normal">(opsiyonel)</span></p>
+                     <div className="flex gap-3">
+                       <input
+                         type="text"
+                         value={homeTeamName}
+                         onChange={e => setHomeTeamName(e.target.value)}
+                         placeholder="Ev Sahibi Takım"
+                         maxLength={20}
+                         className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#39FF14]/40 transition-colors"
+                       />
+                       <input
+                         type="text"
+                         value={awayTeamName}
+                         onChange={e => setAwayTeamName(e.target.value)}
+                         placeholder="Deplasman Takım"
+                         maxLength={20}
+                         className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-red-400/40 transition-colors"
+                       />
+                     </div>
+                   </div>
 
-                   <button onClick={() => setActiveSheet('NONE')} className="w-full h-16 bg-blue-500 text-white font-black uppercase text-sm rounded-2xl shadow-[0_0_20px_rgba(59,130,246,0.4)] tracking-widest">
+                   <p className="text-[10px] text-gray-500 text-center">Boş bırakılan alanlar otomatik doldurulur.</p>
+
+                   <button onClick={() => setActiveSheet('NONE')} className="w-full h-[60px] mt-4 bg-[#FFFF00] text-black font-black italic uppercase text-lg rounded-[24px] transition-all shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer">
                        ONAYLA
                    </button>
                 </div>
             </motion.div>
         )}
-        
         {activeSheet === 'SUPPORT' && (
              <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end">
                  <div className="w-full bg-[#0D1117] border-t border-white/10 rounded-t-[32px] p-6 pb-12">

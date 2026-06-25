@@ -283,6 +283,8 @@ export interface MatchListing {
   ownerCheckIn?: boolean; // Tesisin ekibi onaylama durumu
   homeTeamId?: string;
   awayTeamId?: string;
+  homeTeamName?: string;
+  awayTeamName?: string;
   homeScore?: number;
   awayScore?: number;
   scoreEnteredAt?: string; // Timestamp when referee entered score

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Pitch, AppView, PositionSlot, Player } from '../types';
 import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
 
 export const FORMATS = [
   { v: '3v3', label: '3v3', players: 6,  popular: false },
@@ -15,7 +16,7 @@ export const FORMATS = [
 ];
 
 export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
-  const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'BUDGET' | 'PLAYER_PICKER' | 'SUPPORT' | 'NONE'>('NONE');
+  const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'PLAYER_PICKER' | 'SUPPORT' | 'NONE'>('NONE');
   const [isPublishing, setIsPublishing] = useState(false);
   const [pickerTab, setPickerTab] = useState<'FRIENDS' | 'TEAMS'>('FRIENDS');
   const [pickerCategory, setPickerCategory] = useState('Tümü');
@@ -40,6 +41,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       role: ''
   });
   const [manualBudget, setManualBudget] = useState<number | null>(null);
+  const [matchTitle, setMatchTitle] = useState('');
+  const [homeTeamName, setHomeTeamName] = useState('');
+  const [awayTeamName, setAwayTeamName] = useState('');
 
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
@@ -175,7 +179,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     return selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
   }, [selectedPitch, perTeam]);
 
-  const costPerPerson = calculatedBudget;
+  const costPerPerson = (manualBudget !== null && manualBudget >= 0) ? manualBudget : calculatedBudget;
 
   const publishMatch = async () => {
     if (!isReady) {
@@ -185,7 +189,10 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
 
     const matchData = {
         id: 'm_' + Math.random().toString(36).substr(2, 9),
-        title: `${selectedPitch?.name || 'Saha'} Maçı`,
+        creatorId: auth.currentUser?.uid,
+        title: matchTitle.trim() || `${selectedPitch?.name || 'Saha'} Maçı`,
+        homeTeamName: homeTeamName.trim() || undefined,
+        awayTeamName: awayTeamName.trim() || undefined,
         location: selectedPitch?.district || 'Belirtilmedi',
         time: selectedTimeSlot?.time || '',
         date: selectedTimeSlot?.date || '',
@@ -274,6 +281,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     format, setFormat,
     dna, setDna,
     manualBudget, setManualBudget,
+    matchTitle, setMatchTitle,
+    homeTeamName, setHomeTeamName,
+    awayTeamName, setAwayTeamName,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
