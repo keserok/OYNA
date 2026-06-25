@@ -43,7 +43,6 @@ const OpponentFinder = lazy(() => import('./views/OpponentFinder'));
 const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
-const CommunityView = lazy(() => import('./views/CommunityView'));
 const SocialView = lazy(() => import('./views/SocialView'));
 const TeamCreator = lazy(() => import('./views/TeamCreator'));
 const TransferCenter = lazy(() => import('./views/TransferCenter'));

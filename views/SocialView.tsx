@@ -558,7 +558,11 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
 
   // Load data
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoadingFriends(false);
+      setLoadingTeams(false);
+      return;
+    }
 
     const loadFriends = async () => {
       setLoadingFriends(true);

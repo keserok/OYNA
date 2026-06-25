@@ -120,7 +120,7 @@ export const sendFriendRequest = async (senderId: string, receiverId: string): P
     .from('friendships')
     .select('id')
     .or(`and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`)
-    .single();
+    .maybeSingle();
 
   if (existing) return; // zaten var
 
