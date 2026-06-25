@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–16 ✅ + Bölüm 17 kısmen (veri/güvenlik 171–176). Açık: 177–179 (secret/ölçeklenme/yedekleme).
+> **Son güncelleme:** Bölüm 1–17 ✅ (… + veri/güvenlik/altyapı/ölçeklenme). Sıradaki: Bölüm 18 (Tasarım Sistemi & UI/UX).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -296,7 +296,9 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **RLS (erişim kuralları):** Her tabloda RLS; eksik politikalar tamamlanır; zayıf "herkese açık" politikalar kaldırılır.
 - **RPC bütünlüğü (ÇOK ÖNEMLİ):** Tüm sunucu işlemleri listelenir, eksikler yazılır, **hepsi prod'a deploy + test** — kusursuz çalışmalı.
 - **Edge function güvenliği:** CORS kısıtlanır, **webhook imza doğrulama** eklenir, hepsi güvenli deploy.
-- *(177 secret yönetimi, 178 ölçeklenme, 179 yedekleme — bekliyor.)*
+- **Secret yönetimi:** Client'ta yalnız anon key; **service-role / iyzico / APNs / FCM** anahtarları **Supabase secrets**'te; `.env` gitignore'da; sızıntı yok.
+- **Ölçeklenme:** Mimari **100k+ kullanıcıya rahat** ölçeklenecek şekilde kurulur; **lansman (Ordu) gerçekçi hedef:** ~10–20k kayıtlı, pik ~300–500 eşzamanlı, günde ~100 maç. Eşzamanlı katılım/blokaj **atomik** (kim kazandı net); bildirim **batch**; geo sorguları **index + viewport**; pik senaryoda **yük testi**.
+- **Yedekleme & kurtarma:** Supabase otomatik yedek + **point-in-time recovery** + düzenli geri-yükleme provası.
 
 ## 10. Tasarım Tonu
 - Tüketici: mevcut dil (sade). Saha sahibi paneli: **B2B, sade, güven veren**.
@@ -331,4 +333,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 17–20 yanıtları (veri modeli/güvenlik/altyapı, tasarım sistemi, lansman/store, yol haritası).
+- Bölüm 18–20 yanıtları (tasarım sistemi/UI-UX, lansman/store, yol haritası).
