@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1 ✅ + Bölüm 2 (Roller) büyük ölçüde ✅ — 1 çakışma (#20 saha sahibi davet/işlem) onay bekliyor.
+> **Son güncelleme:** Bölüm 1 ✅ + Bölüm 2 (Roller) ✅ tamamlandı. Sıradaki: Bölüm 3 (Kimlik & Onboarding).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -26,21 +26,23 @@
 - **Çoklu rol:** Bir kişi birden çok rol taşıyabilir; **ancak güvenlik için her rol arayüzüne geçişte yeniden giriş/çıkış (re-login) gerekir.** Aktif rol girişte seçilir.
 - **Oyuncu → kaleci/hakem:** Aynı hesaba rol başvurusu eklenir; o arayüze re-login ile geçilir.
 - **Maç açma:** Hem oyuncu/kaptan hem **saha sahibi** maç açabilir/düzenleyebilir (iki taraflı maç açma & düzenleme sistemi).
-- **Admin rolleri (ÖNERİ — onay bekliyor):**
+- **Açılış ekranı:** PLAYER→Dashboard, GK/REF→ServiceDashboard, OWNER→OwnerPanel; kaptana ayrı ekran yok ("Takımım" Dashboard içinde).
+- **Admin rolleri (onaylandı):**
   - `SUPER_ADMIN` — tam yetki.
   - `FİNANS` — komisyon oranları, payout onayı, finansal raporlar, cüzdan görünümü.
   - `OPERASYON` — saha/kaleci/hakem doğrulama, kullanıcı yönetimi (ban/mute), dispute, maç müdahale, kart ayarları.
-  - Bootstrap: ilk `SUPER_ADMIN` DB'den; sonra panelden atama. **Tüm kritik işlemler audit log.**
-- **⚠️ Saha sahibi sınırı (#20 — çakışma, onay bekliyor):** Saha sahibi **oyuncu davet etmez** ve **oyuncu adına işlem yapamaz**.
-  - *Çelişki 1:* Önceki "owner→oyuncu davet mekanizması olsun" (FU8) kararıyla çelişiyor.
-  - *Çelişki 2:* Owner panelindeki **manuel rezervasyon** (telefonla gelen offline müşteriyi takvime kaydetme) bu kuralın istisnası mı? (B2B için kritik.)
+  - Bootstrap: ilk `SUPER_ADMIN` DB'den; sonra panelden atama. **Tüm kritik işlemler audit log.** (Tek kişilik ekiple yalnız `SUPER_ADMIN` ile başlanabilir.)
+- **Saha sahibi sınırı (#20 — çözüldü):**
+  - **(a) Tanıtım serbest:** Saha sahibi OYNA'yı kendi kanallarıyla tanıtır (afiş/QR/paylaşılabilir saha sayfası); oyuncu **kendisi** kayıt olur. (Owner-led büyüme böyle işler — "davet" değil.)
+  - **(b) Yasak:** Saha sahibi bir OYNA oyuncu hesabı adına işlem yapamaz / davet gönderemez.
+  - **(c) İzinli:** Manuel rezervasyon = saha sahibinin **kendi takvimine** offline müşteri (ad+telefon, OYNA hesabı yok) kaydı; "oyuncu adına işlem" değildir.
 
 ## 4. Gelir Modeli & Para Akışı 💰
 OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
 
 **Model A — Normal rezervasyon:** OYNA **yalnızca kaporayı** tahsil eder; kaporanın **%15'i** OYNA'da kalır, kalan aylık payout; kalan saha ücreti tesiste. *(Kapora 1000₺ → OYNA 150₺.)*
 
-**Model B — OYNA-organize maç:** Saha **normal fiyatının %95'ini** alır (OYNA %5 keser); OYNA ayrıca oyunculara **değişken markup** ekler. OYNA = %5 + markup. OYNA parayı oyuncudan toplar, sahaya %95 aktarır. *(Model B'yi kimin açtığı — admin mi/saha sahibi mi — açık kalem.)*
+**Model B — Saha sahibinin açtığı / OYNA-organize maç:** Saha **normal fiyatının %95'ini** alır (OYNA %5 keser); OYNA ayrıca oyunculara **değişken markup** ekler. OYNA = %5 + markup. OYNA parayı oyuncudan toplar, sahaya %95 aktarır. **Tetikleyici:** oyuncu/kaptan açar → Model A; **saha sahibi (boş saat doldurma) açar → Model B.**
 
 **Kaleci/Hakem:** **%10** komisyon (ayarlanabilir).
 
@@ -98,7 +100,5 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 - [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
 
 ## 13. 🔓 Açık Kalemler
-- **#20:** Saha sahibi "oyuncu adına işlem yapamaz/davet etmez" ↔ manuel rezervasyon + owner-led büyüme nasıl uzlaşacak?
-- Model B'yi kim açar (admin / saha sahibi)?
-- Admin rolleri önerisi onayı.
-- Rol bazlı açılış ekranı (18) onayı.
+- Bölüm 3–20 yanıtları (kimlik, maç, saha, para detayları, kaleci/hakem, takım, bildirim, admin, altyapı/store).
+- *Bölüm 1–2'nin tüm açık kalemleri çözüldü.*
