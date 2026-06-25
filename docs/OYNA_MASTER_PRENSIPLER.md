@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–3 ✅ (vizyon, roller, kimlik/onboarding). Sıradaki: Bölüm 4 (Maç Oluşturma & Format). Açık: yaş politikası, owner veresiye.
+> **Son güncelleme:** Bölüm 1–3 ✅ + yaş politikası & owner veresiye kararları işlendi. Sıradaki: Bölüm 4 (Maç Oluşturma & Format).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -36,6 +36,7 @@
   - **(a) Tanıtım serbest:** Saha sahibi OYNA'yı kendi kanallarıyla tanıtır (afiş/QR/paylaşılabilir saha sayfası); oyuncu **kendisi** kayıt olur. (Owner-led büyüme böyle işler — "davet" değil.)
   - **(b) Yasak:** Saha sahibi bir OYNA oyuncu hesabı adına işlem yapamaz / davet gönderemez.
   - **(c) İzinli:** Manuel rezervasyon = saha sahibinin **kendi takvimine** offline müşteri (ad+telefon, OYNA hesabı yok) kaydı; "oyuncu adına işlem" değildir.
+  - **(d) Veresiye/borçlu modülü:** Saha sahibinin **kendi offline defteri** olarak kalır (OYNA para akışına karışmaz). Sistemde OYNA↔kullanıcı borcu yoktur.
 
 ## 3.1 Kimlik Doğrulama & Onboarding
 - **Giriş yöntemleri:** **Google + Apple (birincil)**, **E-posta (ikincil)**. **SMS/telefon ile giriş YOK** (telefon yalnızca profil/iletişim alanı). → Supabase Auth (OAuth) ↔ `profiles` tam entegre kurulacak.
@@ -48,7 +49,8 @@
 - **GK/Hakem/Saha sahibi:** o arayüze ilk girişte **ayrı başvuru + doğrulama** akışı.
 - **Yasal metinler:** Hazır (KVKK/Sözleşme/Mesafeli Satış/Gizlilik) — yerleştirilecek; onboarding'de onay zorunlu.
 - **Hesap silme:** **Aktif rezervasyon varken engellenir.** Sistemde kullanıcı borcu olmayacak.
-- **Yaş politikası:** [AÇIK — bkz. Açık Kalemler.]
+- **Yaş politikası:** 18+ kendi kredi kartıyla öder (tam self-service). **18 yaş altı** kayıt olup oynayabilir; ancak ödemesini **zorunlu olarak bir yetişkinin kredi kartıyla** yapar → bu, ödemeyi yapan kişinin (veli/vasi) **onayı** sayılır. **Veli onayı sistemi** olarak, yasal düzenlemeye uygun kurgulanacak.
+  - *Uygulama/yasal notu:* Onay iki noktada — (1) kayıt anında KVKK gereği 18 altı **veri işleme** için veli onayı, (2) **ödeme anında** yetişkinin açık (kimliklenebilir) onayı. Asgari kayıt yaşı (öneri: 15) netleştirilecek.
 
 ## 4. Gelir Modeli & Para Akışı 💰
 OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
@@ -113,6 +115,5 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 - [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
 
 ## 13. 🔓 Açık Kalemler
-- **Yaş politikası:** Gençlerin kayıt/ödeme yapması — asgari yaş + (gerekirse) "yetişkin öder" modeli (yasal/KVKK/kart riski).
-- **Owner veresiye/borçlu modülü:** "Borçsuz sistem" kararıyla kalkacak mı, yoksa saha sahibinin kendi offline kaydı olarak mı kalacak?
+- Asgari kayıt yaşı (öneri: 15) — yaş politikası onaylandı, taban netleşecek.
 - Bölüm 4–20 yanıtları (maç, saha, para detayları, kaleci/hakem, takım, bildirim, admin, altyapı/store).
