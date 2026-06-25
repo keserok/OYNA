@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–13 ✅ (… + takımlar/arkadaşlar/taktik stüdyo + taktik UI/UX). Sıradaki: Bölüm 14 (Fair-Play & Moderasyon).
+> **Son güncelleme:** Bölüm 1–14 ✅ (… + fair-play/güvenilirlik & moderasyon). Sıradaki: Bölüm 15 (Bildirimler).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -202,7 +202,18 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 7. Oyunlaştırma
 - **Kaldırılan:** ELMAS/KARAT, lider tabloları, rozetler.
 - **Oyuncu kartları:** yalnızca **admin** kontrolünde; kullanıcı etkisi **yok**.
-- **Fair-play/güvenilirlik:** sistemsel; admin kontrollü; profilde **uyarı** olarak gösterilebilir.
+- **Fair-play/güvenilirlik:** sistemsel; admin kontrollü. Detay: **7.1**.
+
+## 7.1 Fair-Play / Güvenilirlik & Moderasyon
+- **Tek skor:** "Güvenilirlik" (0–100, başlangıç **100**). *(Kodda `rating`/`fairPlayScore`/`reliabilityScore` üçü → tek skora indirgenir.)* Hizmet puanı (kaleci/hakem 1–10) ayrı.
+- **Olaylar (varsayılan, admin ayarlı):** no-show **−20**, geç iptal (<24s) **−10**, kötü değerlendirme **−5**, sorunsuz maç **+2**.
+- **Eşikler (admin ayarlı):** <80 **uyarı**, <60 **kısıt** (bazı maçlara giremez), <40 **geçici ban**.
+- **Toparlanma:** her sorunsuz maç +; zamanla yavaş toparlanma (kalıcı ceza değil).
+- **Admin müdahalesi:** Admin **güvenilirlik skorunu manuel ayarlayabilir** (override; audit log).
+- **Görünürlük:** Skor **yalnızca kullanıcının kendisi (+admin)** görür; **diğer kullanıcılar GÖRMEZ**. Başkaları sistemin **otomatik kısıt/ban**'ıyla korunur.
+- **Ban türleri:** lansmanda **normal ban + uyarı**; shadow ban/mute **sonraya**.
+- **Raporlama ("Sorun Bildir"):** kategoriler: no-show · sportmenlik dışı · ödeme/saha sorunu · taciz → admin **OPERASYON** kuyruğu.
+- **No-show:** maç sonu değerlendirmede işaretlenir → skor düşer; kurucu no-show → tek bildirim → admin incelemesi (Bölüm 6).
 
 ## 8. Sosyal & Takım / Taktik
 - **Kaldırılan:** Topluluklar; maç içi grup sohbeti.
@@ -272,4 +283,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 14–20 yanıtları (fair-play detay, bildirim, admin, altyapı/store).
+- Bölüm 15–20 yanıtları (bildirim, admin, altyapı/store, tasarım sistemi, lansman).
