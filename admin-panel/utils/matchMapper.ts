@@ -16,6 +16,7 @@ export interface AdminMatchRow {
   missingPositions: unknown;
   slots: unknown;
   away_slots: unknown;
+  chatMessages: unknown;
   refereeId: string | null;
   creatorId: string | null;
   isDemo: boolean | null;
@@ -70,6 +71,7 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
   const slots = parseJsonArray<PositionSlot>(r.slots);
   const awaySlots = parseJsonArray<PositionSlot>(r.away_slots);
   const missing = parseJsonArray<{ role: string; count: number }>(r.missingPositions);
+  const chatMessages = parseJsonArray<NonNullable<MatchListing['chatMessages']>[number]>(r.chatMessages);
   const difficulty = normalizeDifficulty(r.difficulty);
 
   return {
@@ -86,6 +88,7 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     missingPositions: missing.length ? missing : computeMissingFromSlots(slots),
     slots,
     awaySlots: awaySlots.length ? awaySlots : undefined,
+    chatMessages: chatMessages.length ? chatMessages : undefined,
     status: normalizeStatus(r.status),
     refereeId: r.refereeId || undefined,
     creatorId: r.creatorId || undefined,
