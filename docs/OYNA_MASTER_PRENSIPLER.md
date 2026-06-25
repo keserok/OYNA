@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–17 ✅ (… + veri/güvenlik/altyapı/ölçeklenme). Sıradaki: Bölüm 18 (Tasarım Sistemi & UI/UX).
+> **Son güncelleme:** Bölüm 1–18 ✅ (… + tasarım sistemi & UI/UX). Sıradaki: Bölüm 19–20 (Lansman, Store & Yol Haritası — son).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -305,6 +305,16 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 
 ---
 
+## 10.1 Tasarım Sistemi & UI/UX
+- **Görsel dil:** Tüketici tarafı **mevcut görsel dil korunur** (büyük yeniden tasarım yok). Saha sahibi paneli **B2B sade/premium** (Bölüm 1).
+- **Tasarım sistemi:** Ortak bileşen kütüphanesi (buton/kart/form/modal/boş-durum) + **tek renk/tipografi kaynağı**; uygulamaya uyumlu; **Claude ile fikir alışverişiyle** oluşturulur.
+- **Alt navigasyon (5 sekme):** Ana Sayfa · **Top Oyna (Maç)** · **Sosyal (Takımlar + Arkadaşlar)** · Harita/Sahalar · Profil. *(Orta "Sosyal" sekmesi **kalır**; içeriği topluluk değil **Takımlar + Arkadaşlar**'a açılır.)*
+- **Erişilebilirlik:** mevcut hal iyi; minimum standartlar (kontrast/font/dokunma hedefi/ekran okuyucu) korunur.
+- **Performans:** ağır animasyonlar optimize; **ihtiyaç tespit edilince kullanıcıya "düşük hareket" modu önerilir**.
+- **Dil:** lansmanda yalnız **Türkçe**; i18n altyapısı hazır.
+- **Durum ekranları:** tutarlı/nazik boş-yükleniyor-hata (Ordu az veri için önemli).
+- **Marka kiti:** logo/ikon/splash/ekran görüntüleri **tutarlı** (store için).
+
 ## 11. Geliştirme Planı (Fazlar)
 | Faz | Başlık | Özet |
 |---|---|---|
@@ -322,7 +332,7 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - [ ] Takımlar + Arkadaşlar geliştir.
 - [ ] Takım-içi taktik: oylama/yorum/favori; stüdyo takım arayüzünde.
 - [ ] Komisyon motoru: global/saha/hizmet/maç override.
-- [ ] Alt navigasyon yeniden tasarımı.
+- [ ] Alt navigasyon: "Sosyal" sekmesi **Takımlar + Arkadaşlar**'a açılır (topluluk içeriği yok).
 - [ ] Çoklu rol + re-login akışı.
 - [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
 - [ ] **İstek-üzerine demo veri üreteci** — "oluştur" komutuyla demo veri yaratır (admin/dev); canlıda kapalı.
@@ -333,4 +343,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 18–20 yanıtları (tasarım sistemi/UI-UX, lansman/store, yol haritası).
+- Bölüm 19–20 yanıtları (lansman/store yükleme, yol haritası).
