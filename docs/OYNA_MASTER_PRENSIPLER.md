@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–12 ✅ (… + cüzdan/sadakat). Sıradaki: Bölüm 13 (Takımlar, Arkadaşlar & Taktik Stüdyo).
+> **Son güncelleme:** Bölüm 1–13 ✅ (… + takımlar/arkadaşlar/taktik stüdyo + taktik UI/UX). Sıradaki: Bölüm 14 (Fair-Play & Moderasyon).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -206,9 +206,32 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 
 ## 8. Sosyal & Takım / Taktik
 - **Kaldırılan:** Topluluklar; maç içi grup sohbeti.
-- **Kalan:** Arkadaşlar arası **1-1 mesajlaşma**.
-- **Geliştirilecek:** Takımlar + Arkadaşlar.
-- **Taktik:** **Takım-içi**; **yüzdelik oylama + yorum + favori**. Stüdyo, **takım arayüzünün içinde**.
+
+### 8.1 Takımlar
+- **Kimlik:** ad + arma + 2 renk + kısa ad + kadro.
+- **Limit:** kurma **max 5**; üyelik **sınırsız**. *(Önemli karar.)*
+- **Üyelik/yönetim:** davet (arkadaş/özel kod) → kişi **onaylar**; **yönetici = kurucu + devredilebilir (çoklu)**; yetki: oyuncu ekle/çıkar + taktik onay. **Kurucu ayrılırsa devreder; son yönetici ayrılırsa takım arşivlenir** (geçmiş korunur).
+- **Takım sayfası sekmeleri:** Genel · Kadro · **Taktikler** · Geçmiş. **Oyuncu kartları takım arayüzünde GÖSTERİLMEZ.** W/L = **onaylı skorlardan** (Bölüm 6).
+- **Çoklu takım:** Kişi birden çok takımda olabilir; **maç açarken/girerken hangi takım adına oynadığını seçer.**
+- **Takım vs takım:** Bir takım özel maç açar, diğerini **özel kodla** davet eder; sonuç iki takımın geçmişine işlenir.
+
+### 8.2 Taktik Stüdyo
+- **Kapsam:** formasyon + oyuncu yerleştirme (sürükle) + çizim (ok=koşu, çizgi=pas) + **animasyon/oynatma (top & oyuncu hareketi)**. **IQ Akademi KALDIRILDI.**
+- **Tek kaynak:** ortak `FORMATIONS` (SSOT) → harita/maç/stüdyo aynı koordinatlar.
+- **Teknik:** 233KB `Studio.tsx` modüllere bölünecek (Board / DrawingTools / PlaybackEngine) → performans.
+
+### 8.3 Takım Taktik Sistemi (UI/UX — "muazzam akış")
+- **Taktikler bölümü:** En üstte **"En İyi Taktikler" showcase** (mini formasyon önizlemesi + oy %'si + ❤️ favori + 💬 yorum; **aktif taktik** rozetle öne çıkar). Yanında büyük **"+ Yeni Taktik"** → Stüdyo (2 tıkla erişim).
+- **Sıralama:** ortalama **oy %** (min N oy) → sonra favori; **aktif taktik** her zaman en üstte sabit.
+- **Filtre:** En iyi · En yeni · Favorilerim · Aktif.
+- **Taktik detayı:** animasyonlu tahta + açıklama; **oylama (% slider)** → ortalama % bar; **yorum** thread; **favori** ❤️; yönetici **"Aktif yap"**.
+- **Öneri akışı:** üye taktiği **kopyala & öner** → yöneticiye düşer → onaylanınca paylaşıma/aktife girer.
+- **Maça bağlama:** yönetici **aktif taktiği** takım maçına iliştirir (opsiyonel).
+
+### 8.4 Arkadaşlar & Mesaj
+- **Ekleme:** kullanıcı adı/OYNA-ID arama + **özel kod** (rehber opsiyonel/izinli); **engelleme**; profil görünürlüğü (herkes/arkadaşlar).
+- **Sağladıkları:** maça davet · takıma davet · profil görme · 1-1 mesaj.
+- **1-1 mesaj:** yalnız arkadaşlar; metin (medya sonraya); şikayet+engelle → admin OPERASYON.
 
 ## 9. Lansman Şehri & Veri
 - **Şehir:** Ordu (tüm demo/seed, harita merkezi, ilçeler titizlikle yeniden kurulacak).
@@ -249,4 +272,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- Bölüm 13–20 yanıtları (takım/arkadaş/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- Bölüm 14–20 yanıtları (fair-play detay, bildirim, admin, altyapı/store).
