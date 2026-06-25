@@ -975,9 +975,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
               <span className="text-[9px] font-bold text-white/40">Kaleni sağlama al.</span>
             </div>
-            <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.08)', border: '1.5px solid rgba(57,255,20,.3)' }}>
-              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.14)', border: '1px solid rgba(57,255,20,.5)' }}>
-                <svg width="34" height="34" viewBox="-1 0 22 24" fill="none" stroke="#39FF14" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
+            <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.1)', border: '1.5px solid rgba(57,255,20,.35)' }}>
+              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.15)', border: '1px solid rgba(57,255,20,.5)' }}>
+                <svg width="38" height="38" viewBox="-1 0 22 24" fill="none" stroke="#39FF14" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(42deg)' }}>
                   <path d="M3,22 L3,14 Q1,14 0,12 Q-1,10 1,9 Q2.5,8.5 3,10 L3,8 Q3,5 5,5 Q7,5 7,8 Q7,3 9.5,3.5 Q12,4 12,8 Q12,5 14,5 Q16,5 16,9 Q16.5,7.5 17.5,8 Q19,9.5 18.5,12 L18.5,22 Z"/>
                 </svg>
               </div>
@@ -1018,9 +1018,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
               <span className="text-[9px] font-bold text-white/40">Adil oyna.</span>
             </div>
-            <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.08)', border: '1.5px solid rgba(59,130,246,.3)' }}>
-              <div className="w-[50px] h-[50px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.14)', border: '1px solid rgba(99,179,255,.5)', color: '#60a5fa' }}>
-                <Scale size={24} />
+            <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.1)', border: '1.5px solid rgba(59,130,246,.35)' }}>
+              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.15)', border: '1px solid rgba(99,179,255,.5)', color: '#60a5fa' }}>
+                <Scale size={28} />
               </div>
             </div>
           </div>
