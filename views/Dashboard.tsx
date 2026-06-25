@@ -965,7 +965,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)', transform: 'skewX(-20deg)' }}
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
-            <div className="flex flex-col justify-center h-full gap-1.5 -translate-y-3">
+            <div className="flex flex-col justify-center h-full gap-[26px]">
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
               <span className="text-[9px] font-bold text-white/40">Kaleni sağlama al.</span>
             </div>
@@ -1002,7 +1002,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)', transform: 'skewX(-20deg)' }}
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
-            <div className="flex flex-col justify-center h-full gap-1.5 -translate-y-3">
+            <div className="flex flex-col justify-center h-full gap-[26px]">
               <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
               <span className="text-[9px] font-bold text-white/40">Adil oyna.</span>
             </div>
