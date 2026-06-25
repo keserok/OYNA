@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–3 ✅ + yaş politikası & owner veresiye kararları işlendi. Sıradaki: Bölüm 4 (Maç Oluşturma & Format).
+> **Son güncelleme:** Bölüm 1–4 ✅ (vizyon, roller, kimlik, maç oluşturma). Sıradaki: Bölüm 5 (Maç Katılımı, Kadro & Lobi).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -51,6 +51,18 @@
 - **Hesap silme:** **Aktif rezervasyon varken engellenir.** Sistemde kullanıcı borcu olmayacak.
 - **Yaş politikası:** 18+ kendi kredi kartıyla öder (tam self-service). **18 yaş altı** kayıt olup oynayabilir; ancak ödemesini **zorunlu olarak bir yetişkinin kredi kartıyla** yapar → bu, ödemeyi yapan kişinin (veli/vasi) **onayı** sayılır. **Veli onayı sistemi** olarak, yasal düzenlemeye uygun kurgulanacak.
   - *Uygulama/yasal notu:* Onay iki noktada — (1) kayıt anında KVKK gereği 18 altı **veri işleme** için veli onayı, (2) **ödeme anında** yetişkinin açık (kimliklenebilir) onayı. Asgari kayıt yaşı (öneri: 15) netleştirilecek.
+
+## 3.2 Maç Oluşturma & Format
+- **Formatlar:** **2v2 → 11v11 (tümü).** Format seçici **kaydırılabilir** (kaydırdıkça bazıları görünür/gizlenir). *(XvX = taraf başına toplam oyuncu, kaleci dahil — netleşecek.)*
+- **Saha kaynağı:** Yalnızca **OYNA'daki sahalar** gösterilir/seçilebilir. Sahalar **admin panelinden (her şehir)** eklenebilir; eklenince ödeme + oyuncu görünümü + tüm özellikler **entegre** çalışır. (Ek olarak saha sahibi self-onboarding.)
+- **Oyuncu maç açma akışı:** Maç özellikleri → kadro (kendisi + arkadaşlar) → saha seç → **kapora onayı** → **Top Oyna**'ya gönder. *(Yayın/kapora eşiği "X-4 kişi" önerildi ama küçük formatlarda bozuluyor — Bölüm 5'te genelleştirilecek.)*
+- **Kesinleşme:** Maç **kapora ödenince kesinleşir** (saha o an tutulur) ve Top Oyna'da yayınlanır.
+- **Saha sahibi maç açma (Model B):** Boş saatini "OYNA maçına aç"; markup oranını **admin** belirler, **varsayılan %20** (ayarlanabilir).
+- **Açık / Özel maç:** İkisi de. Özel maça **özel kod** ile takım/oyuncu davet edilir.
+- **Katılım birimi:** Boş kontenjan + **opsiyonel pozisyon etiketi**.
+- **Kaleci/Hakem ekleme:** Maç kurulduktan sonra **"Maçlarım"**dan. İki yol: (1) bir kişi **tüm ücreti ödeyip** kiralar; (2) oyuncular **oylayıp onaylayınca** sistem takıma kaleci/hakem **önerir/atar**. *(Akış kritik — iyi tasarlanacak.)*
+- **Keşif:** Liste + harita + filtre (ilçe/tarih/format/saat), Ordu odaklı — yüksek kalite hedefi.
+- **Düzenleme/iptal:** Açan kişi **maça 24 saat kala**ya dek; **24 saat kuralı admin'den ayarlanabilir**. İptal/iade detayı Bölüm 12.
 
 ## 4. Gelir Modeli & Para Akışı 💰
 OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
@@ -116,4 +128,6 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15) — yaş politikası onaylandı, taban netleşecek.
-- Bölüm 4–20 yanıtları (maç, saha, para detayları, kaleci/hakem, takım, bildirim, admin, altyapı/store).
+- **Yayın/kapora eşiği** ("X-4") küçük formatlarda genelleştirilecek (Bölüm 5).
+- Format etiketi XvX kaleci dahil mi (taraf başına toplam).
+- Bölüm 5–20 yanıtları (katılım/lobi, saha, para detayları, kaleci/hakem, takım, bildirim, admin, altyapı/store).
