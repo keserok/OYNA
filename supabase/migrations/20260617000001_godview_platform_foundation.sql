@@ -122,7 +122,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- approve_provider_verification güncellemesi
+-- approve_provider_verification güncellemesi — onay anında kaleci/hakem profilini de oluşturur
 CREATE OR REPLACE FUNCTION public.approve_provider_verification(
   p_user_id  UUID,
   p_approved BOOLEAN,
@@ -130,12 +130,22 @@ CREATE OR REPLACE FUNCTION public.approve_provider_verification(
 ) RETURNS BOOLEAN AS $$
 DECLARE
   v_user_email TEXT;
+  v_name       TEXT;
+  v_role       TEXT;
+  v_roles      JSONB;
+  v_is_gk      BOOLEAN;
+  v_is_ref     BOOLEAN;
 BEGIN
   IF NOT public.is_platform_admin() THEN
     RAISE EXCEPTION 'UNAUTHORIZED';
   END IF;
 
-  SELECT email INTO v_user_email FROM public.profiles WHERE id = p_user_id;
+  SELECT email, COALESCE(full_name, name), role, roles
+  INTO v_user_email, v_name, v_role, v_roles
+  FROM public.profiles WHERE id = p_user_id;
+
+  v_is_gk := v_role = 'GOALKEEPER' OR COALESCE(v_roles, '[]'::jsonb) ? 'GOALKEEPER';
+  v_is_ref := v_role = 'REFEREE' OR COALESCE(v_roles, '[]'::jsonb) ? 'REFEREE';
 
   UPDATE public.profiles SET
     verification_status      = CASE WHEN p_approved THEN 'approved' ELSE 'rejected' END,
@@ -145,13 +155,29 @@ BEGIN
     updated_at               = NOW()
   WHERE id = p_user_id;
 
-  INSERT INTO public.notifications (user_id, title, body, type)
+  IF p_approved AND v_is_gk THEN
+    INSERT INTO public.goalkeepers (id, "authUid", name, bio, fee, rating, "matchCount", style, avatar, "isElite", "isDemo", stats, skills)
+    VALUES (p_user_id, p_user_id, COALESCE(v_name, 'Kaleci'), 'Onaylanmış kaleci profili', 250, 4.5, 0, 'Dengeli',
+      'https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?w=400', false, false,
+      '{"savePercentage":"85","cleanSheets":0}'::jsonb, '{"reflexes":80,"diving":80}'::jsonb)
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, "authUid" = EXCLUDED."authUid";
+  END IF;
+
+  IF p_approved AND v_is_ref THEN
+    INSERT INTO public.referees (id, "authUid", name, bio, fee, rating, "matchCount", level, avatar, "isElite", "isDemo", stats)
+    VALUES (p_user_id, p_user_id, COALESCE(v_name, 'Hakem'), 'Onaylanmış hakem profili', 350, 4.5, 0, 'FIFA',
+      'https://images.unsplash.com/photo-1580234811497-9df7fd2f357e?w=400', false, false,
+      '{"authority":80,"fitness":80,"communication":80}'::jsonb)
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, "authUid" = EXCLUDED."authUid";
+  END IF;
+
+  INSERT INTO public.notifications (user_id, title, body, type_key)
   VALUES (
     p_user_id,
-    CASE WHEN p_approved THEN 'Profilin Onaylandı! ✅' ELSE 'Profil Onayı Reddedildi' END,
+    CASE WHEN p_approved THEN 'Profilin Onaylandı!' ELSE 'Profil Onayı Reddedildi' END,
     CASE WHEN p_approved
-      THEN 'Tebrikler! Kaleci/Hakem profilin onaylandı.'
-      ELSE COALESCE('Profilin onaylanamadı. Sebep: ' || p_notes, 'Profilin onaylanamadı.')
+      THEN 'Tebrikler! Hizmet sağlayıcı profilin aktif.'
+      ELSE COALESCE('Sebep: ' || p_notes, 'Profilin onaylanamadı.')
     END,
     CASE WHEN p_approved THEN 'VERIFICATION_APPROVED' ELSE 'VERIFICATION_REJECTED' END
   );
@@ -195,7 +221,7 @@ BEGIN
   WHERE id = p_pitch_id;
 
   IF v_owner_id IS NOT NULL THEN
-    INSERT INTO public.notifications (user_id, title, body, type)
+    INSERT INTO public.notifications (user_id, title, body, type_key)
     VALUES (
       v_owner_id,
       CASE WHEN p_approved THEN 'Tesisiniz Onaylandı' ELSE 'Tesisiniz Onaylanmadı' END,
@@ -249,7 +275,7 @@ BEGIN
     processed_by = auth.uid()
   WHERE id = p_request_id;
 
-  INSERT INTO public.notifications (user_id, title, body, type)
+  INSERT INTO public.notifications (user_id, title, body, type_key)
   VALUES (
     v_owner_id,
     CASE WHEN p_approved THEN 'Para Çekme Talebiniz Onaylandı' ELSE 'Para Çekme Talebiniz Reddedildi' END,
@@ -306,39 +332,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-CREATE OR REPLACE FUNCTION public.admin_update_settings(
-  p_settings JSONB
-) RETURNS BOOLEAN AS $$
-DECLARE
-  v_old JSONB;
-BEGIN
-  IF NOT public.is_platform_admin() THEN
-    RAISE EXCEPTION 'UNAUTHORIZED';
-  END IF;
-
-  SELECT to_jsonb(s.*) INTO v_old FROM public.settings s WHERE id = 1;
-
-  UPDATE public.settings SET
-    app_name                  = COALESCE((p_settings->>'app_name')::text, app_name),
-    maintenance_mode          = COALESCE((p_settings->>'maintenance_mode')::boolean, maintenance_mode),
-    registration_open         = COALESCE((p_settings->>'registration_open')::boolean, registration_open),
-    pro_price                 = COALESCE((p_settings->>'pro_price')::numeric, pro_price),
-    commission_rate           = COALESCE((p_settings->>'commission_rate')::numeric, commission_rate),
-    min_rating_to_play        = COALESCE((p_settings->>'min_rating_to_play')::numeric, min_rating_to_play),
-    max_matches_per_day       = COALESCE((p_settings->>'max_matches_per_day')::integer, max_matches_per_day),
-    featured_pitch_id         = COALESCE((p_settings->>'featured_pitch_id')::uuid, featured_pitch_id),
-    show_announcement_banner  = COALESCE((p_settings->>'show_announcement_banner')::boolean, show_announcement_banner),
-    announcement_banner       = COALESCE((p_settings->>'announcement_banner')::text, announcement_banner),
-    updated_at                = NOW()
-  WHERE id = 1;
-
-  PERFORM public.log_admin_action(
-    'SETTINGS_UPDATE', 'system', NULL, 'global_settings', v_old, p_settings
-  );
-
-  RETURN TRUE;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+-- admin_update_settings burada TANIMLANMAZ: doğru RBAC-korumalı, camelCase,
+-- id='main' versiyonu 20260618105120_subrole_rbac.sql migration'ında tanımlı.
 
 CREATE OR REPLACE FUNCTION public.admin_log_impersonation(
   p_target_user_id UUID
@@ -381,13 +376,20 @@ BEGIN
     'total_users',        (SELECT COUNT(*)::int FROM public.profiles),
     'total_pitches',      (SELECT COUNT(*)::int FROM public.pitches),
     'total_matches',      (SELECT COUNT(*)::int FROM public.matches),
+    'total_communities',  (SELECT COUNT(*)::int FROM public.communities),
     'pending_verifications', (SELECT COUNT(*)::int FROM public.profiles WHERE verification_status = 'pending'),
     'pending_pitches',    (SELECT COUNT(*)::int FROM public.pitches WHERE verification_status = 'pending'),
     'pending_withdrawals',(SELECT COUNT(*)::int FROM public.owner_withdrawal_requests WHERE status = 'PENDING'),
+    'open_disputes',      (SELECT COUNT(*)::int FROM public.match_disputes WHERE status IN ('OPEN','UNDER_REVIEW')),
+    'deletion_requests',  (SELECT COUNT(*)::int FROM public.profiles WHERE account_deletion_requested_at IS NOT NULL),
+    'pending_community_requests', (SELECT COUNT(*)::int FROM public.community_creation_requests WHERE status = 'PENDING'),
     'banned_users',       (SELECT COUNT(*)::int FROM public.profiles WHERE is_banned = true),
     'active_goalkeepers', (SELECT COUNT(*)::int FROM public.goalkeepers),
     'active_referees',    (SELECT COUNT(*)::int FROM public.referees),
-    'commission_rate',    (SELECT commission_rate FROM public.settings WHERE id = 1)
+    'total_booking_revenue', COALESCE((SELECT SUM(amount) FROM public.booking_payments), 0),
+    'total_wallet_volume', COALESCE((SELECT SUM(ABS(amount)) FROM public.wallet_transactions), 0),
+    'active_promo_codes', (SELECT COUNT(*)::int FROM public.promo_codes WHERE is_active = true),
+    'commission_rate',    (SELECT "commissionRate" FROM public.settings WHERE id = 'main')
   ) INTO v_result;
 
   RETURN v_result;
@@ -398,5 +400,4 @@ GRANT EXECUTE ON FUNCTION public.admin_dashboard_stats() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_moderate_pitch(uuid, boolean, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_process_withdrawal(uuid, boolean, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_ban_user(uuid, boolean, timestamptz, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_update_settings(jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_log_impersonation(uuid) TO authenticated;

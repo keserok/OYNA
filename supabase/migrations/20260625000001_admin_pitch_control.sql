@@ -20,7 +20,7 @@ RETURNS TABLE (
   verification_status TEXT,
   owner_id UUID,
   image TEXT,
-  "isDemo" BOOLEAN,
+  is_demo BOOLEAN,
   created_at TIMESTAMPTZ,
   total_count BIGINT
 )
@@ -42,7 +42,7 @@ BEGIN
     p.verification_status::text,
     p.owner_id,
     p.image::text,
-    COALESCE(p."isDemo", false) AS "isDemo",
+    COALESCE(p.is_demo, false) AS is_demo,
     p.created_at,
     COUNT(*) OVER() AS total_count
   FROM public.pitches p
@@ -73,7 +73,7 @@ BEGIN
   INSERT INTO public.pitches (
     id, name, district, city, latitude, longitude,
     price_per_match, google_rating, google_review_count,
-    verification_status, owner_id, image, "isDemo", address
+    verification_status, owner_id, image, is_demo, address
   ) VALUES (
     v_id,
     COALESCE(p_payload->>'name', 'Yeni Saha'),
@@ -114,8 +114,7 @@ BEGIN
     google_rating = COALESCE((p_payload->>'google_rating')::numeric, google_rating),
     google_review_count = COALESCE((p_payload->>'google_review_count')::int, google_review_count),
     verification_status = COALESCE(p_payload->>'verification_status', verification_status),
-    image = COALESCE(p_payload->>'image', image),
-    updated_at = NOW()
+    image = COALESCE(p_payload->>'image', image)
   WHERE id = p_pitch_id;
   PERFORM public.log_admin_action('PITCH_UPDATE', 'pitch', p_pitch_id, p_payload->>'name', v_old, p_payload);
   RETURN TRUE;

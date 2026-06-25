@@ -16,13 +16,12 @@ BEGIN
     phone = COALESCE(p_payload->>'phone', phone),
     avatar_url = COALESCE(p_payload->>'avatar_url', avatar_url),
     role = COALESCE(p_payload->>'role', role),
-    roles = CASE WHEN p_payload ? 'role' THEN ARRAY[p_payload->>'role'] ELSE roles END,
+    roles = CASE WHEN p_payload ? 'role' THEN jsonb_build_array(p_payload->>'role') ELSE roles END,
     is_verified = COALESCE((p_payload->>'is_verified')::boolean, is_verified),
     is_pro = COALESCE((p_payload->>'is_pro')::boolean, is_pro),
     wallet_balance = COALESCE((p_payload->>'wallet_balance')::numeric, wallet_balance),
     match_count = COALESCE((p_payload->>'match_count')::int, match_count),
     rating = COALESCE((p_payload->>'rating')::numeric, rating),
-    stats = COALESCE(p_payload->'stats', stats),
     player_card = COALESCE(p_payload->'player_card', player_card),
     updated_at = NOW()
   WHERE id = p_user_id;
@@ -52,20 +51,17 @@ BEGIN
     age = COALESCE((p_payload->>'age')::int, age),
     rating = COALESCE((p_payload->>'rating')::numeric, rating),
     fee = COALESCE((p_payload->>'fee')::int, fee),
-    match_count = COALESCE((p_payload->>'match_count')::int, match_count),
+    "matchCount" = COALESCE((p_payload->>'match_count')::int, "matchCount"),
     avatar = COALESCE(p_payload->>'avatar', avatar),
-    recent_awards = COALESCE(p_payload->>'recent_awards', recent_awards),
+    "recentAwards" = COALESCE(p_payload->>'recent_awards', "recentAwards"),
     style = COALESCE(p_payload->>'style', style),
     bio = COALESCE(p_payload->>'bio', bio),
-    preferred_zones = COALESCE(p_payload->'preferred_zones', preferred_zones),
-    is_elite = COALESCE((p_payload->>'is_elite')::boolean, is_elite),
+    "preferredZones" = COALESCE(p_payload->'preferred_zones', "preferredZones"),
+    "isElite" = COALESCE((p_payload->>'is_elite')::boolean, "isElite"),
     coordinates = COALESCE(p_payload->'coordinates', coordinates),
     stats = COALESCE(p_payload->'stats', stats),
     skills = COALESCE(p_payload->'skills', skills),
-    equipment = COALESCE(p_payload->'equipment', equipment),
-    is_available = COALESCE((p_payload->>'is_available')::boolean, is_available),
-    working_hours = COALESCE(p_payload->'working_hours', working_hours),
-    settings = COALESCE(p_payload->'settings', settings)
+    equipment = COALESCE(p_payload->'equipment', equipment)
   WHERE id = p_id;
 
   PERFORM public.log_admin_action('GK_UPDATE', 'goalkeeper', p_id, COALESCE(p_payload->>'name', v_old->>'name'), v_old, p_payload);
@@ -86,19 +82,16 @@ BEGIN
   UPDATE public.referees SET
     name = COALESCE(p_payload->>'name', name),
     level = COALESCE(p_payload->>'level', level),
-    match_count = COALESCE((p_payload->>'match_count')::int, match_count),
+    "matchCount" = COALESCE((p_payload->>'match_count')::int, "matchCount"),
     fee = COALESCE((p_payload->>'fee')::int, fee),
     avatar = COALESCE(p_payload->>'avatar', avatar),
     rating = COALESCE((p_payload->>'rating')::numeric, rating),
     style = COALESCE(p_payload->>'style', style),
     bio = COALESCE(p_payload->>'bio', bio),
-    preferred_zones = COALESCE(p_payload->'preferred_zones', preferred_zones),
-    is_elite = COALESCE((p_payload->>'is_elite')::boolean, is_elite),
+    "preferredZones" = COALESCE(p_payload->'preferred_zones', "preferredZones"),
+    "isElite" = COALESCE((p_payload->>'is_elite')::boolean, "isElite"),
     coordinates = COALESCE(p_payload->'coordinates', coordinates),
-    stats = COALESCE(p_payload->'stats', stats),
-    is_available = COALESCE((p_payload->>'is_available')::boolean, is_available),
-    working_hours = COALESCE(p_payload->'working_hours', working_hours),
-    settings = COALESCE(p_payload->'settings', settings)
+    stats = COALESCE(p_payload->'stats', stats)
   WHERE id = p_id;
 
   PERFORM public.log_admin_action('REF_UPDATE', 'referee', p_id, COALESCE(p_payload->>'name', v_old->>'name'), v_old, p_payload);

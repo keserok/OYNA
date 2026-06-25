@@ -15,7 +15,7 @@ RETURNS SETOF public.goalkeepers
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
-  RETURN QUERY SELECT * FROM public.goalkeepers ORDER BY created_at DESC NULLS LAST LIMIT GREATEST(p_limit, 1);
+  RETURN QUERY SELECT * FROM public.goalkeepers ORDER BY name ASC NULLS LAST LIMIT GREATEST(p_limit, 1);
 END;
 $$;
 
@@ -24,7 +24,7 @@ RETURNS SETOF public.referees
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
-  RETURN QUERY SELECT * FROM public.referees ORDER BY created_at DESC NULLS LAST LIMIT GREATEST(p_limit, 1);
+  RETURN QUERY SELECT * FROM public.referees ORDER BY name ASC NULLS LAST LIMIT GREATEST(p_limit, 1);
 END;
 $$;
 
@@ -61,7 +61,9 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.admin_fetch_profiles(
   p_offset INT DEFAULT 0,
-  p_limit INT DEFAULT 500
+  p_limit INT DEFAULT 500,
+  p_search TEXT DEFAULT NULL,
+  p_status TEXT DEFAULT NULL
 )
 RETURNS TABLE (
   id UUID,
@@ -102,10 +104,23 @@ BEGIN
     p.is_pro,
     p.wallet_balance,
     p.ban_expires_at,
-    p.created_at,
+    COALESCE(p.created_at, p.join_date, NOW()) AS created_at,
     COUNT(*) OVER() AS total_count
   FROM public.profiles p
-  ORDER BY p.created_at DESC NULLS LAST
+  WHERE
+    (p_search IS NULL OR p_search = '' OR
+      p.full_name ILIKE '%' || p_search || '%' OR
+      p.name ILIKE '%' || p_search || '%' OR
+      p.email ILIKE '%' || p_search || '%' OR
+      p.role ILIKE '%' || p_search || '%' OR
+      p.id::text ILIKE '%' || p_search || '%')
+    AND (
+      p_status IS NULL OR p_status = '' OR p_status = 'all' OR
+      (p_status = 'banned' AND p.is_banned = true) OR
+      (p_status = 'pro' AND p.is_pro = true) OR
+      (p_status = 'active' AND COALESCE(p.is_banned, false) = false)
+    )
+  ORDER BY COALESCE(p.created_at, p.join_date) DESC NULLS LAST
   LIMIT GREATEST(p_limit, 1)
   OFFSET GREATEST(p_offset, 0);
 END;
@@ -117,4 +132,4 @@ GRANT EXECUTE ON FUNCTION public.admin_fetch_referees(int) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_fetch_pending_verifications() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_fetch_cms_texts() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_fetch_profile_names(uuid[]) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_fetch_profiles(int, int) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_fetch_profiles(int, int, text, text) TO authenticated;
