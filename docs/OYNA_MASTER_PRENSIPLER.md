@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1 ✅ + Bölüm 2 (Roller) ✅ tamamlandı. Sıradaki: Bölüm 3 (Kimlik & Onboarding).
+> **Son güncelleme:** Bölüm 1–3 ✅ (vizyon, roller, kimlik/onboarding). Sıradaki: Bölüm 4 (Maç Oluşturma & Format). Açık: yaş politikası, owner veresiye.
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -36,6 +36,19 @@
   - **(a) Tanıtım serbest:** Saha sahibi OYNA'yı kendi kanallarıyla tanıtır (afiş/QR/paylaşılabilir saha sayfası); oyuncu **kendisi** kayıt olur. (Owner-led büyüme böyle işler — "davet" değil.)
   - **(b) Yasak:** Saha sahibi bir OYNA oyuncu hesabı adına işlem yapamaz / davet gönderemez.
   - **(c) İzinli:** Manuel rezervasyon = saha sahibinin **kendi takvimine** offline müşteri (ad+telefon, OYNA hesabı yok) kaydı; "oyuncu adına işlem" değildir.
+
+## 3.1 Kimlik Doğrulama & Onboarding
+- **Giriş yöntemleri:** **Google + Apple (birincil)**, **E-posta (ikincil)**. **SMS/telefon ile giriş YOK** (telefon yalnızca profil/iletişim alanı). → Supabase Auth (OAuth) ↔ `profiles` tam entegre kurulacak.
+- **Misafir girişi:** Lansmanda **YOK**; geliştirme sırasında geçici kalabilir, yayından önce kaldırılır.
+- **Kimlik esnekliği:** Telefon/hesap tekilliği zorunlu değil (ödeme yapıldığı sürece). *Not: gevşek kimlik → ban/fair-play kaçışını zayıflatır; sistem bunu göz önünde tutmalı.*
+- **Rol & giriş akışı:** **Varsayılan rol yok**; her arayüzün kendi rolü var. Akış: **Arayüz/rol seç → Auth (Google/Apple/e-posta) → (yeni hesap) Onboarding sihirbazı → ilgili arayüz.** Başka role geçiş = **re-login**.
+- **Onboarding sihirbazı (yeni kullanıcı; sayfa sayfa; hepsi zorunlu):** Ad-soyad → Telefon → Profil fotoğrafı → Konum izni. (Auth ekranından sonra.)
+  - **Profil fotoğrafı:** zorunlu (Supabase Storage).
+  - **Konum:** zorunlu; OS'ten reddedilirse fallback = manuel şehir/ilçe (Ordu) seçimi.
+- **GK/Hakem/Saha sahibi:** o arayüze ilk girişte **ayrı başvuru + doğrulama** akışı.
+- **Yasal metinler:** Hazır (KVKK/Sözleşme/Mesafeli Satış/Gizlilik) — yerleştirilecek; onboarding'de onay zorunlu.
+- **Hesap silme:** **Aktif rezervasyon varken engellenir.** Sistemde kullanıcı borcu olmayacak.
+- **Yaş politikası:** [AÇIK — bkz. Açık Kalemler.]
 
 ## 4. Gelir Modeli & Para Akışı 💰
 OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **her seviyede** (global/saha/hizmet/maç) ayarlanabilir.
@@ -100,5 +113,6 @@ OYNA tek merchant; saha ödemeleri **ay sonu payout**. Tüm oranlar admin'den **
 - [ ] İki taraflı (oyuncu + saha sahibi) maç açma/düzenleme sistemi.
 
 ## 13. 🔓 Açık Kalemler
-- Bölüm 3–20 yanıtları (kimlik, maç, saha, para detayları, kaleci/hakem, takım, bildirim, admin, altyapı/store).
-- *Bölüm 1–2'nin tüm açık kalemleri çözüldü.*
+- **Yaş politikası:** Gençlerin kayıt/ödeme yapması — asgari yaş + (gerekirse) "yetişkin öder" modeli (yasal/KVKK/kart riski).
+- **Owner veresiye/borçlu modülü:** "Borçsuz sistem" kararıyla kalkacak mı, yoksa saha sahibinin kendi offline kaydı olarak mı kalacak?
+- Bölüm 4–20 yanıtları (maç, saha, para detayları, kaleci/hakem, takım, bildirim, admin, altyapı/store).
