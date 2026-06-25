@@ -44,6 +44,7 @@ const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
 const CommunityView = lazy(() => import('./views/CommunityView'));
+const SocialView = lazy(() => import('./views/SocialView'));
 const TeamCreator = lazy(() => import('./views/TeamCreator'));
 const TransferCenter = lazy(() => import('./views/TransferCenter'));
 const Leaderboards = lazy(() => import('./views/Leaderboards'));
@@ -550,12 +551,7 @@ const App: React.FC = () => {
       case 'TEAM_BUILDER':
         return <TeamBuilder onBack={() => goBack('PROFILE')} />;
       case 'COMMUNITY_VIEW':
-        return <CommunityView
-          onBack={() => goBack('DASHBOARD')}
-          onNavigate={(v) => navigateTo(v)}
-          community={{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }}
-          currentUser={{ id: auth.currentUser?.uid || '', name: auth.currentUser?.displayName || 'Oyuncu', email: auth.currentUser?.email || '', avatar: auth.currentUser?.photoURL || undefined, roles: [], communities: [], fairPlayScore: 100 }}
-        />;
+        return <SocialView onNavigate={(v) => navigateTo(v)} />;
       case 'TEAM_CREATOR':
         return <TeamCreator
           onBack={() => goBack('PROFILE')}
