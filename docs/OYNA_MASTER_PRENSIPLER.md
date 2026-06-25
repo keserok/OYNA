@@ -2,7 +2,7 @@
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
-> **Son güncelleme:** Bölüm 1–9 ✅ (… + tesis paneli + fiyat/abonelik/doluluk). Sıradaki: Bölüm 10 (Kaleci & Hakem). Açık: "komisyon sabit" yorumu.
+> **Son güncelleme:** Bölüm 1–10 ✅ (… + kaleci/hakem). Sıradaki: Bölüm 11 (Para Akışı uçtan uca — en kritik teknik bölüm).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
 ---
@@ -144,6 +144,19 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Komisyon:** **OYNA komisyonu saha sahibince DEĞİŞTİRİLEMEZ (sabit)**; yalnız admin ayarlar (saha/hizmet/maç bazında farklı olabilir — FU3). Saha sahibi panelde **kendi oranını + net payout'u görür** (şeffaf).
 - **Doluluk:** CONFIRMED + abonelik dolu sayılır; **PENDING de doluluğa katılır** ("geçici" gösterilir; çift rezervasyon önlenir).
 
+## 4.3 Kaleci & Hakem (Hizmet Sağlayıcılar)
+- **İş bulma:** Tek yön — maç tarafı (kadro) çağırır/önerilir (Bölüm 5: grup-oylama %50+1 veya bireysel ödeme). Kaleci/hakem **müsaitlik açar**, gelen talebi **kabul/red** eder. *(Koddaki JobListing/DirectOffer/IncomingBid karmaşası → tek "talep" modeli.)*
+- **Ücret:** Kaleci/hakem **sabit ücret** koyar; pazarlık yok; OYNA **%10** komisyon.
+- **Müsaitlik & çakışma:** aktif gün/saat + bölge; çakışan saatte ikinci iş alınamaz (PENDING dahil).
+- **Eşleştirme:** Sistem **müsait + en yakın + en yüksek puanlı**yı önerir; kadro onaylar.
+- **Kazanç & payout:** **Maç bitiminde ANINDA** ödeme — **oyuncular değerlendirdikten sonra** (değerlendirme = katılım kanıtı). Değerlendirme yapılmazsa kaleci/hakem **"Sorun Bildir"**le admine ulaşıp katılımını teyit eder → admin serbest bırakır. *(Düşük puan ödemeyi engellemez, yalnız rating'i etkiler.)* **NOT: saha sahibi payout iki haftada bir; kaleci/hakem ANINDA — farklı.**
+- **Başvuru & doğrulama:** Aynı hesaba rol başvurusu + admin OPERASYON onayı; Hakem: lisans/seviye belgesi.
+- **Panel (ServiceDashboard):** müsaitlik toggle · gelen talepler · yaklaşan maçlar · kazanç/payout · profil & puan. **SaaS kalitesinde.**
+- **Hakem skoru:** hakemli maçta skor girer → resmi kayıt (Bölüm 6).
+- **Değerlendirme:** maç sonu oyuncular kaleci/hakemi **1–10** puanlar.
+- **Canlı durum:** opsiyonel "yoldayım/geldim".
+- **Kaldırılan:** TransferCenter, ScoutDashboard (kapsam dışı).
+
 ## 5. Büyüme Stratejisi
 - **Önce arz:** Saha sahipleri/sahalarla anlaşılır; saha sahipleri OYNA'yı **kendi kanallarıyla tanıtır**; oyuncular **kendileri kayıt olur ve kendileri işlem yapar** (saha sahibi adlarına işlem yapmaz).
 
@@ -200,5 +213,4 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 ## 13. 🔓 Açık Kalemler
 - Asgari kayıt yaşı (öneri: 15).
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam).
-- "Komisyon sabit" yorumu: saha sahibi değiştiremez (admin saha bazında ayarlar) — onay bekliyor.
-- Bölüm 10–20 yanıtları (kaleci/hakem, para detayları, cüzdan, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
+- Bölüm 11–20 yanıtları (para akışı detay, cüzdan/premium, takım/taktik, fair-play detay, bildirim, admin, altyapı/store).
