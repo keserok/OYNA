@@ -86,6 +86,7 @@ export interface SubscriptionInput {
   start_date?: string;
   end_date?: string | null;
   notes?: string;
+  auto_renew?: boolean;
 }
 
 export interface FlashDealInput {
@@ -895,12 +896,51 @@ export async function getSubscriptions(pitchId: string): Promise<PitchSubscripti
       .from('pitch_subscriptions')
       .select('*')
       .eq('pitch_id', pitchId)
-      .eq('status', 'ACTIVE')
+      .in('status', ['ACTIVE', 'PAUSED'])
+      .order('status', { ascending: true })
       .order('weekday', { ascending: true });
     if (error) throw error;
     return (data ?? []) as unknown as PitchSubscription[];
   } catch (error) {
     console.error('getSubscriptions:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/**
+ * Abonelik durumunu değiştirir (duraklat / devam ettir / iptal).
+ * status='CANCELLED' kalıcı iptal; 'PAUSED' geçici durdurma (otomatik üretim atlanır);
+ * 'ACTIVE' tekrar devreye alma. RLS owner_id = auth.uid() ile korunur.
+ */
+export async function updateSubscriptionStatus(
+  subscriptionId: string,
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED',
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitch_subscriptions')
+      .update({ status })
+      .eq('id', subscriptionId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('updateSubscriptionStatus:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Aboneliğin otomatik yenilenme (auto_renew) bayrağını açar/kapatır. */
+export async function setSubscriptionAutoRenew(
+  subscriptionId: string,
+  autoRenew: boolean,
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitch_subscriptions')
+      .update({ auto_renew: autoRenew })
+      .eq('id', subscriptionId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('setSubscriptionAutoRenew:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -922,6 +962,7 @@ export async function addSubscription(
       start_date: sub.start_date ?? todayISO(),
       end_date: sub.end_date ?? null,
       notes: sub.notes ?? null,
+      auto_renew: sub.auto_renew ?? true,
       status: 'ACTIVE',
     });
     if (error) throw error;
