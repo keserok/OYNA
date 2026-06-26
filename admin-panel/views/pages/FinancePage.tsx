@@ -164,15 +164,15 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         </div>
       ))}
     >
-      {stats && Number(stats.withdrawal_pending) > 0 && onNavigate && (
+      {stats && Number(stats.withdrawal_pending) > 0 && (
         <button
           type="button"
-          onClick={() => onNavigate('MODERATION')}
+          onClick={() => { setTab('payouts'); setQuery(''); }}
           className="mb-4 w-full flex items-center justify-between px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/25 text-left hover:bg-yellow-500/15 transition-colors"
         >
           <div>
             <p className="text-xs font-bold text-yellow-300">Bekleyen çekim: ₺{Number(stats.withdrawal_pending).toLocaleString('tr')}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">Tesis Onayları → Çekim Talepleri sekmesinde işleyin</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Payout Talepleri sekmesinde işleyin</p>
           </div>
           <ArrowRight size={16} className="text-yellow-400 shrink-0" />
         </button>
