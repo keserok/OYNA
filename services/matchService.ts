@@ -154,6 +154,13 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       awayTeamId: data.away_team_id || data.awayTeamId,
       refereeId: data.ref_id || data.refereeId,
       creatorId: data.captain_id || data.creatorId,
+      // FAZ 3: maç çekirdeği alanları camelCase'e map et
+      visibility: data.visibility || 'OPEN',
+      privateCode: data.private_code || data.privateCode || undefined,
+      pitchId: data.pitch_id || data.pitchId || undefined,
+      isSuccessful: data.is_successful ?? data.isSuccessful ?? undefined,
+      confirmedAt: data.confirmed_at || data.confirmedAt || undefined,
+      startsAt: data.starts_at || data.startsAt || undefined,
     } as unknown as MatchListing;
   } catch (error) {
     console.error("Maç detayları çekilirken hata:", error);
@@ -186,4 +193,38 @@ export const subscribeToMatchUpdates = (matchId: string, callback: (match: Match
   return () => {
     supabase.removeChannel(channel);
   };
+};
+
+// ============================================================================
+// 4. ÖZEL MAÇ (PRIVATE MATCH) — kod ile katılım (FAZ 3)
+// ============================================================================
+
+export interface PrivateMatchResolution {
+  matchId: string;
+  title: string;
+  status: string;
+}
+
+/**
+ * Özel maç katılım kodunu çözer (resolve_private_match RPC).
+ * Sadece visibility='PRIVATE' maçları eşler. Bulunamazsa hata fırlatır.
+ */
+export const resolvePrivateMatch = async (code: string): Promise<PrivateMatchResolution> => {
+  const { data, error } = await supabase.rpc('resolve_private_match', {
+    p_code: (code || '').trim().toUpperCase(),
+  });
+  if (error) throw error;
+  const d = (data ?? {}) as { match_id?: string; title?: string; status?: string };
+  if (!d.match_id) throw new Error('NOT_FOUND');
+  return { matchId: d.match_id, title: d.title ?? 'Özel Maç', status: d.status ?? 'ACTIVE' };
+};
+
+/** Özel maç kodu hata kodlarını kullanıcı dostu Türkçe'ye çevirir. */
+export const toPrivateMatchErrorMessage = (err: unknown): string => {
+  const raw = err instanceof Error ? err.message : String(err ?? '');
+  const code = raw.toUpperCase();
+  if (code.includes('INVALID_CODE')) return 'Kod en az 4 karakter olmalı. Lütfen kodu kontrol et.';
+  if (code.includes('NOT_FOUND')) return 'Bu koda ait özel maç bulunamadı. Kodu doğru girdiğinden emin ol.';
+  if (code.includes('UNAUTHORIZED') || code.includes('JWT')) return 'Bu işlem için giriş yapman gerekiyor.';
+  return 'Maç bulunamadı. Lütfen kodu kontrol edip tekrar dene.';
 };

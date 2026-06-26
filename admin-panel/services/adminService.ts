@@ -799,7 +799,7 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
   if (error) throw new Error(error.message);
 }
 
-export type BroadcastSegment = 'ALL' | 'PRO' | 'CAPTAIN' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
+export type BroadcastSegment = 'ALL' | 'PRO' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
 
 export async function broadcastNotification(
   title: string,
@@ -1445,8 +1445,8 @@ export function buildPitchPayloadFromUi(pitch: Partial<import('../../types').Pit
     name: pitch.name,
     district: pitch.district,
     city: pitch.district,
-    latitude: pitch.coordinates?.lat ?? 41.0,
-    longitude: pitch.coordinates?.lng ?? 29.0,
+    latitude: pitch.coordinates?.lat ?? 40.9839,
+    longitude: pitch.coordinates?.lng ?? 37.8764,
     price_per_match: pitch.totalPrice ?? pitch.pricePerPerson ?? 0,
     google_rating: pitch.googleRating ?? 4.5,
     google_review_count: pitch.googleReviews ?? 0,
@@ -1487,8 +1487,8 @@ export async function fetchPitchesAdmin(opts?: {
         name: String(p.name || ''),
         district: (p.district as string) ?? null,
         city: (p.district as string) ?? null,
-        latitude: Number((p.coordinates as { lat?: number })?.lat ?? 41),
-        longitude: Number((p.coordinates as { lng?: number })?.lng ?? 29),
+        latitude: Number((p.coordinates as { lat?: number })?.lat ?? 40.9839),
+        longitude: Number((p.coordinates as { lng?: number })?.lng ?? 37.8764),
         price_per_match: Number(p.totalPrice ?? 0),
         google_rating: Number(p.googleRating ?? 4.5),
         google_review_count: Number(p.googleReviews ?? 0),

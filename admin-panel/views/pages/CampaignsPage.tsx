@@ -12,7 +12,6 @@ import { Megaphone, Send, Users } from 'lucide-react';
 const SEGMENTS = [
   { id: 'ALL', label: 'Tüm Kullanıcılar' },
   { id: 'PRO', label: 'PRO Üyeler' },
-  { id: 'CAPTAIN', label: 'Kaptanlar' },
   { id: 'OWNER', label: 'Saha Sahipleri' },
   { id: 'NEW_USERS', label: 'Son 30 Gün' },
   { id: 'GOALKEEPER', label: 'Kaleciler' },

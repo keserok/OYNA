@@ -7,13 +7,14 @@ declare global {
 
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
-  COMMUNITY_ADMIN = 'COMMUNITY_ADMIN',
-  CAPTAIN = 'CAPTAIN',
   PLAYER = 'PLAYER',
   GOALKEEPER = 'GOALKEEPER',
   REFEREE = 'REFEREE',
   OWNER = 'OWNER'
 }
+
+/** @deprecated Kaptanlık global rol değil; takım-içi yöneticilik. Kaldırılacak. */
+export const CAPTAIN_ROLE_DEPRECATED = 'CAPTAIN' as const;
 
 export interface AdminUser {
   id: string;
@@ -77,26 +78,8 @@ export interface ICommunity {
   location?: string;
 }
 
-export interface ITeam {
-  id: string;
-  name: string;
-  color: string; // Tailwind color class
-  communityId?: string; // Optional, if independent
-  captainId: string;
-  formation: '5+1' | '6+1' | '7+1';
-  stats: {
-    wins: number;
-    losses: number;
-    fairPlayScore: number;
-  };
-  roster: {
-    userId: string;
-    position: string;
-    fairPlayScore: number;
-  }[];
-}
-
-export interface Match {
+/** Tamamlanmış bir maçın basit skor kaydı. */
+export interface BasicMatchRecord {
   id: string;
   teamA: string;
   teamB: string;
@@ -107,8 +90,12 @@ export interface Match {
   pitch: string;
 }
 
+/** Geriye dönük uyumluluk alias'ı: eski `Match` = basit maç skor kaydı.
+ *  (Lobi/keşif için MatchListing kullanılır.) */
+export type Match = BasicMatchRecord;
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL';
+
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'TEAM_CREATOR' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL';
 
 export interface SavedPaymentCard {
   id: string;
@@ -269,7 +256,7 @@ export interface MatchListing {
   badges: string[];
   missingPositions: { role: string; count: number }[];
   slots: PositionSlot[];
-  status?: 'DRAFT' | 'ACTIVE' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
+  status?: 'DRAFT' | 'ACTIVE' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
   creatorId?: string;
   communityId?: string;
   format?: string;
@@ -293,6 +280,13 @@ export interface MatchListing {
   reservePlayers?: Player[];
   cancelReason?: string;
   refundStatus?: string;
+  // FAZ 3: maç çekirdeği
+  visibility?: 'OPEN' | 'PRIVATE';
+  privateCode?: string;       // özel maç katılım kodu
+  pitchId?: string;           // rezerve edilen saha (owner kredisi + iade için)
+  isSuccessful?: boolean;     // "başarılı maç" sinyali (ödendi+oynandı+iptal yok)
+  confirmedAt?: string;       // T-8s quorum onay zamanı
+  startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
 }
 
 export interface PositionSlot {
@@ -581,6 +575,40 @@ export interface WalletTransaction {
   status: 'CLEARED' | 'PENDING';
 }
 
+// FAZ 2: iyzico pre-auth state machine
+export type PaymentIntentStatus = 'PENDING' | 'BLOCKED' | 'CAPTURED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'VOIDED';
+export type CommissionModel = 'MODEL_A' | 'MODEL_B';
+export type PaymentBalanceType = 'EARNINGS' | 'REFUND_CREDIT';
+export type PayoutType = 'OWNER_BIWEEKLY' | 'PROVIDER_INSTANT' | 'MANUAL';
+export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export interface CommissionConfig {
+  id: string;
+  scope: 'GLOBAL' | 'PITCH' | 'SERVICE_GK' | 'SERVICE_REF' | 'MATCH';
+  scope_id: string | null;
+  model: CommissionModel;
+  rate_pct: number;
+  markup_pct: number;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayoutRequest {
+  id: string;
+  user_id: string;
+  amount: number;
+  iban: string;
+  iban_holder_name: string;
+  status: PayoutStatus;
+  payout_type: PayoutType;
+  scheduled_for: string | null;
+  processed_at: string | null;
+  admin_notes: string | null;
+  created_at: string;
+}
+
 // FINANCIAL TYPES
 export interface PaymentPool {
   totalAmount: number;
@@ -689,7 +717,7 @@ export interface CRMUser {
   userId: string;
   name: string;
   avatar: string;
-  role: 'PLAYER' | 'CAPTAIN' | 'GK' | 'REF';
+  role: 'PLAYER' | 'GK' | 'REF';
   loyaltyScore: number; // Tesis bazlı sadakat skoru
   totalSpent: number; // Tesis bazlı harcama
   isVip: boolean;

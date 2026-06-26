@@ -23,6 +23,12 @@ export interface AdminMatchRow {
   cancel_reason: string | null;
   refund_status: string | null;
   created_at: string | null;
+  visibility?: string | null;
+  private_code?: string | null;
+  pitch_id?: string | null;
+  is_successful?: boolean | null;
+  confirmed_at?: string | null;
+  starts_at?: string | null;
   total_count?: number;
 }
 
@@ -36,7 +42,8 @@ function parseJsonArray<T>(val: unknown, fallback: T[] = []): T[] {
 
 function normalizeStatus(raw: string | null | undefined): MatchListing['status'] {
   const s = (raw || 'ACTIVE').toUpperCase();
-  if (s === 'OPEN' || s === 'CONFIRMED') return 'ACTIVE';
+  if (s === 'OPEN') return 'ACTIVE';
+  if (s === 'CONFIRMED') return 'CONFIRMED';   // DB onay durumunu KORU (lifecycle otoritesi)
   if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
   if (s === 'COMPLETED' || s === 'DONE') return 'COMPLETED';
   if (s === 'LIVE') return 'LIVE';
@@ -95,6 +102,12 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     cancelReason: r.cancel_reason || undefined,
     refundStatus: r.refund_status || undefined,
     format: r.format || '7v7',
+    visibility: (r.visibility === 'PRIVATE' ? 'PRIVATE' : 'OPEN'),
+    privateCode: r.private_code || undefined,
+    pitchId: r.pitch_id || undefined,
+    isSuccessful: r.is_successful || undefined,
+    confirmedAt: r.confirmed_at || undefined,
+    startsAt: r.starts_at || undefined,
     ...(r.isDemo ? { isDemo: true } : {}),
   } as MatchListing & { isDemo?: boolean };
 }
@@ -111,10 +124,17 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
   let dateIso = match.rawDate;
   if (!dateIso && match.date) {
     const labels: Record<string, number> = { Bugün: 0, Yarın: 1 };
+    const ddmmyyyy = match.date.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$/); // 27.06.2026
+    const isoMatch = match.date.match(/^\d{4}-\d{2}-\d{2}$/);                    // 2026-06-27
     if (labels[match.date] !== undefined) {
       const d = new Date();
       d.setDate(d.getDate() + labels[match.date]);
       dateIso = d.toISOString().slice(0, 10);
+    } else if (isoMatch) {
+      dateIso = match.date;
+    } else if (ddmmyyyy) {
+      const [, dd, mm, yyyy] = ddmmyyyy;
+      dateIso = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
     } else {
       dateIso = new Date().toISOString().slice(0, 10);
     }
@@ -146,6 +166,9 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
     homeScore: match.homeScore,
     awayScore: match.awayScore,
     scoreEnteredAt: match.scoreEnteredAt,
+    // FAZ 3
+    visibility: match.visibility || 'OPEN',
+    pitch_id: match.pitchId || null,
   };
 }
 

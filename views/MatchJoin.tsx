@@ -4,14 +4,16 @@ import {
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
   Plus, CheckCircle2, Users, Star, Wifi, WifiOff,
   Send, AlertCircle, Shield, Layers, Droplets, Award,
-  DollarSign, Info
+  DollarSign, Info, KeyRound, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
+import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -66,178 +68,11 @@ interface MatchJoinProps {
 
 type SlotInviteStatus = 'NONE' | 'INVITED' | 'ACCEPTED';
 
-// ─── Studio FORMATIONS — Birebir Kopya (Simetri Garantisi) ───────────────────
-// Bu koordinatlar Studio.tsx'in FORMATIONS sabitinden alınmıştır.
-// Herhangi bir hesaplama yapılmaz — direkt atama ile %100 simetri sağlanır.
-
-const FORMATIONS: Record<string, Record<string, { x: number; y: number; role: string }[]>> = {
-  '5v5': {
-    '1-2-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 50, y: 75, role: 'DEF' },
-      { x: 25, y: 50, role: 'MID' },
-      { x: 75, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-    '2-1-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 30, y: 75, role: 'DEF' },
-      { x: 70, y: 75, role: 'DEF' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-  },
-  '6v6': {
-    '2-2-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 30, y: 75, role: 'DEF' },
-      { x: 70, y: 75, role: 'DEF' },
-      { x: 30, y: 50, role: 'MID' },
-      { x: 70, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-    '3-1-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 50, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-  },
-  '7v7': {
-    '2-3-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 25, y: 75, role: 'DEF' },
-      { x: 75, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-    '3-2-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 50, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 35, y: 50, role: 'MID' },
-      { x: 65, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-    '2-2-2': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 30, y: 75, role: 'DEF' },
-      { x: 70, y: 75, role: 'DEF' },
-      { x: 30, y: 50, role: 'MID' },
-      { x: 70, y: 50, role: 'MID' },
-      { x: 35, y: 25, role: 'FWD' },
-      { x: 65, y: 25, role: 'FWD' },
-    ],
-  },
-  '8v8': {
-    '3-3-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 50, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-    '4-2-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 40, y: 75, role: 'DEF' },
-      { x: 60, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 35, y: 50, role: 'MID' },
-      { x: 65, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-  },
-  '9v9': {
-    '3-3-2': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 50, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 35, y: 25, role: 'FWD' },
-      { x: 65, y: 25, role: 'FWD' },
-    ],
-    '4-3-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 40, y: 75, role: 'DEF' },
-      { x: 60, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-  },
-  '10v10': {
-    '4-3-2': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 40, y: 75, role: 'DEF' },
-      { x: 60, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 35, y: 25, role: 'FWD' },
-      { x: 65, y: 25, role: 'FWD' },
-    ],
-    '4-4-1': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 40, y: 75, role: 'DEF' },
-      { x: 60, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 40, y: 50, role: 'MID' },
-      { x: 60, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 50, y: 25, role: 'FWD' },
-    ],
-  },
-  '11v11': {
-    '4-4-2': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 40, y: 75, role: 'DEF' },
-      { x: 60, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 40, y: 50, role: 'MID' },
-      { x: 60, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 35, y: 25, role: 'FWD' },
-      { x: 65, y: 25, role: 'FWD' },
-    ],
-    '4-3-3': [
-      { x: 50, y: 90, role: 'GK' },
-      { x: 20, y: 75, role: 'DEF' },
-      { x: 40, y: 75, role: 'DEF' },
-      { x: 60, y: 75, role: 'DEF' },
-      { x: 80, y: 75, role: 'DEF' },
-      { x: 20, y: 50, role: 'MID' },
-      { x: 50, y: 50, role: 'MID' },
-      { x: 80, y: 50, role: 'MID' },
-      { x: 20, y: 25, role: 'FWD' },
-      { x: 50, y: 25, role: 'FWD' },
-      { x: 80, y: 25, role: 'FWD' },
-    ],
-  },
-};
+// ─── Formasyonlar: tek kanonik kaynak (utils/formations.ts) ────────────────
+const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number; y: number; role: string }[]>>;
 
 // Slot sayısından format tahmini
-const inferSquadSize = (slotCount: number): string => {
+const inferSquadSize = (slotCount: number): SquadSize => {
   if (slotCount <= 5) return '5v5';
   if (slotCount <= 6) return '6v6';
   if (slotCount <= 7) return '7v7';
@@ -472,10 +307,20 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         if (foundPitch && foundPitch.coordinates) {
             setPitchCoordinates([foundPitch.coordinates.lat, foundPitch.coordinates.lng]);
         } else {
-            setPitchCoordinates([41.0433, 29.0057]);
+            setPitchCoordinates([ORDU_CENTER.lat, ORDU_CENTER.lng]);
         }
     }
   }, [match, adminPitches]);
+
+  // ── İlk hidrasyon: DB'deki yetkili satırı çek (private_code dahil) ──────
+  useEffect(() => {
+    if (!originalMatch?.id) return;
+    let alive = true;
+    getMatchDetails(originalMatch.id).then((full) => {
+      if (alive && full) updateMatch({ ...originalMatch, ...full } as MatchListing);
+    }).catch(() => { /* sessiz: prop verisiyle devam */ });
+    return () => { alive = false; };
+  }, [originalMatch?.id]);
 
   // ── Supabase Realtime: Lobideki değişiklikleri canlı dinle ──────────────
   useEffect(() => {
@@ -495,6 +340,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         homeScore: (updatedMatch as any).home_score || (updatedMatch as any).homeScore,
         awayScore: (updatedMatch as any).away_score || (updatedMatch as any).awayScore,
         scoreEnteredAt: (updatedMatch as any).score_entered_at || (updatedMatch as any).scoreEnteredAt,
+        // FAZ 3 çekirdeği — realtime'da da koru
+        visibility: (updatedMatch as any).visibility || (originalMatch as any).visibility || 'OPEN',
+        privateCode: (updatedMatch as any).private_code || (updatedMatch as any).privateCode || (originalMatch as any).privateCode,
+        pitchId: (updatedMatch as any).pitch_id || (updatedMatch as any).pitchId || (originalMatch as any).pitchId,
       };
       updateMatch({ ...originalMatch, ...mapped } as MatchListing);
     });
@@ -539,10 +388,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUserProfile = (adminUsers || []).find(u => u?.id === currentUserUid)
     || (adminUsers && adminUsers[0])
-    || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1', role: UserRole.CAPTAIN, rating: 4.9 };
+    || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1', role: UserRole.PLAYER, rating: 4.9 };
 
-  const isCaptain = currentUserProfile?.role === UserRole.CAPTAIN
-    || match.creatorId === currentUserProfile?.id;
+  // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
+  const isCaptain = match.creatorId === currentUserProfile?.id;
 
   const isHomeCaptain = match.creatorId === currentUserProfile.id || homeTeam?.captain === currentUserProfile.id || homeTeam?.captains?.includes(currentUserProfile.id);
   const isAwayCaptain = !!awayTeam && (awayTeam.captain === currentUserProfile.id || awayTeam.captains?.includes(currentUserProfile.id));
@@ -1724,6 +1573,39 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
           )}
         </div>
+
+        {/* ── Özel Maç Kodu (yalnız kaptana) ── */}
+        {match.visibility === 'PRIVATE' && match.privateCode && isCaptain && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => {
+                const code = match.privateCode!;
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(code).then(
+                    () => showActionSuccess(`Kod kopyalandı: ${code}`),
+                    () => showActionSuccess(`Kod: ${code}`),
+                  );
+                } else {
+                  showActionSuccess(`Kod: ${code}`);
+                }
+              }}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FFFF00]/[0.06] border border-[#FFFF00]/25 hover:bg-[#FFFF00]/10 active:scale-[0.98] transition-all"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex items-center justify-center shrink-0">
+                  <KeyRound size={14} className="text-[#FFFF00]" />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FFFF00]/70">Özel Maç Kodu</p>
+                  <p className="text-lg font-black tracking-[0.3em] text-white truncate">{match.privateCode}</p>
+                </div>
+              </div>
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FFFF00] shrink-0">
+                <Copy size={12} /> Paylaş
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* ── Minimalist Maç Başlığı ── */}
         <div className="px-4 pb-3">

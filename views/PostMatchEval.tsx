@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ArrowLeft, Star, ShieldCheck, Crown, Users, Trophy, MessageSquare, Scale, Droplets } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAppStore } from '../store';
+import { supabase } from '../supabaseClient';
+import { auth } from '../supabaseAuth';
+import type { PositionSlot } from '../types';
 
 interface PostMatchEvalProps {
   onBack: () => void;
   onComplete: () => void;
 }
 
-const PLAYERS = [
+interface EvalPlayer { id: string; name: string; pos: string; initials: string; color: string; tier: string }
+
+const MOCK_PLAYERS: EvalPlayer[] = [
   { id: 'p1', name: 'Ahmet Y.', pos: 'SNT',     initials: 'AY', color: '#ffd54f', tier: 'gold' },
   { id: 'p2', name: 'Caner K.', pos: 'MID',     initials: 'CK', color: '#c5cef5', tier: 'silver' },
   { id: 'p3', name: 'Emre D.',  pos: 'DEF',     initials: 'ED', color: '#d4986a', tier: 'bronze' },
   { id: 'p4', name: 'Burak Ş.', pos: 'KL',      initials: 'BŞ', color: '#ffd54f', tier: 'gold' },
   { id: 'p5', name: 'Mert A.',  pos: 'MID',     initials: 'MA', color: '#c5cef5', tier: 'silver' },
 ];
+
+const initialsOf = (name: string) =>
+  name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
 
 const FAIR_PLAY_TAGS = [
   { id: 'fair', label: '🤝 Centilmendi', positive: true },
@@ -43,6 +52,30 @@ const Sparkle: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, dela
 );
 
 const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => {
+  const { selectedMatch } = useAppStore();
+
+  // Gerçek katılımcıları maçın kadrosundan türet; yoksa demo kadroya düş
+  const PLAYERS = useMemo<EvalPlayer[]>(() => {
+    if (!selectedMatch) return MOCK_PLAYERS;
+    const uid = auth.currentUser?.uid;
+    const allSlots: PositionSlot[] = [
+      ...(selectedMatch.slots ?? []),
+      ...(selectedMatch.awaySlots ?? []),
+    ];
+    const real = allSlots
+      .filter(s => s.status === 'TAKEN' && s.player && s.player.id !== uid)
+      .map((s): EvalPlayer => ({
+        id: s.player!.id,
+        name: s.player!.name,
+        pos: s.player!.position || s.role || '—',
+        initials: initialsOf(s.player!.name),
+        color: '#c5cef5',
+        tier: 'silver',
+      }));
+    return real.length > 0 ? real : MOCK_PLAYERS;
+  }, [selectedMatch]);
+
+  const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(1);
   const [showHandshake, setShowHandshake] = useState(true);
   const [fairPlay, setFairPlay] = useState(0);
@@ -57,6 +90,43 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const showInfo = (msg: string) => {
     setInfoToast(msg);
     setTimeout(() => setInfoToast(null), 3500);
+  };
+
+  // Değerlendirmeyi kalıcılaştır: oyuncu puanları + maçı sonlandır ("başarılı maç" sinyali)
+  const persistEvaluation = async () => {
+    if (submitting) return;
+    if (!selectedMatch?.id || selectedMatch.id.startsWith('p') || selectedMatch.id.startsWith('m_')) {
+      // Gerçek (UUID) maç değil → yalnız sonuç ekranını göster (demo)
+      setShowResult(true);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const ratings = Object.entries(playerRatings).map(([ratee_id, stars]) => ({
+        ratee_id,
+        skill_score: Math.max(1, Math.min(10, Math.round((stars as number) * 2))),
+        fair_play_score: Math.max(1, Math.min(5, fairPlay || 3)),
+      }));
+      if (ratings.length > 0) {
+        const { error: evalErr } = await supabase.rpc('submit_match_evaluation', {
+          p_match_id: selectedMatch.id, p_ratings: ratings,
+        });
+        if (evalErr) throw evalErr;
+      }
+      // finalize yalnız maç sahibi/kaptan için yetkili; değilse otomatik cron sonlandırır
+      const uid = auth.currentUser?.uid;
+      const canFinalize = uid && (selectedMatch.creatorId === uid);
+      if (canFinalize) {
+        const { error: finErr } = await supabase.rpc('finalize_match', { p_match_id: selectedMatch.id });
+        if (finErr) throw finErr;
+      }
+    } catch (err) {
+      showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
+      setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
+    setShowResult(true);
   };
 
   // Sparkle burst coordinates
@@ -607,12 +677,13 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 >
                   ← GERİ
                 </motion.button>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }} 
-                  onClick={() => setShowResult(true)}
-                  className="flex-[2] h-14 bg-gradient-to-r from-emerald-600 to-[#39FF14] text-black font-black rounded-2xl text-xs uppercase tracking-[0.2em] flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.2)] hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all"
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={persistEvaluation}
+                  disabled={submitting}
+                  className="flex-[2] h-14 bg-gradient-to-r from-emerald-600 to-[#39FF14] text-black font-black rounded-2xl text-xs uppercase tracking-[0.2em] flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.2)] hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all disabled:opacity-60"
                 >
-                  DEĞERLENDİRMEYİ TAMAMLA ✓
+                  {submitting ? 'KAYDEDİLİYOR...' : 'DEĞERLENDİRMEYİ TAMAMLA ✓'}
                 </motion.button>
               </div>
             </motion.div>

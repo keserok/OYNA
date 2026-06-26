@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Pitch, Goalkeeper, Referee, AppView, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
+import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
 import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
 import SharedPitch from '../components/SharedPitch';
@@ -709,21 +710,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
 
 
 // ─── STEP 3: SAHA SEÇ ─────────────────────────────────────────────────────────
-const DISTRICT_COORDINATES: Record<string, [number, number]> = {
-  'Beşiktaş': [41.0433, 29.0057],
-  'Kadıköy': [40.9901, 29.0290],
-  'Sarıyer': [41.1686, 29.0574],
-  'Şişli': [41.0602, 28.9877],
-  'Üsküdar': [41.0267, 29.0159],
-  'Bakırköy': [40.9780, 28.8720],
-  'Fatih': [41.0165, 28.9497],
-  'Beykoz': [41.1350, 29.0950],
-  'Levent': [41.0822, 29.0120],
-  'Bağcılar': [41.0333, 28.8500],
-  'Moda': [40.9780, 29.0250],
-  'Maslak': [41.1050, 29.0230],
-  'Etiler': [41.0850, 29.0350]
-};
+const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 
 const PitchSelectStep: React.FC<{
   selectedPitch: Pitch | null;
@@ -747,8 +734,8 @@ const PitchSelectStep: React.FC<{
   });
   const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC'>('DEFAULT');
 
-  // User proximity center (defaults to Beşiktaş)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([41.0433, 29.0057]);
+  // User proximity center (kullanıcı konumu yoksa Ordu merkez)
+  const [mapCenter, setMapCenter] = useState<[number, number]>([ORDU_CENTER.lat, ORDU_CENTER.lng]);
 
   const { adminPitches } = useAppStore();
   const districts = React.useMemo(() => ['Tümü', ...Array.from(new Set(adminPitches.map((p:any) => p.district)))], [adminPitches]);
@@ -758,7 +745,7 @@ const PitchSelectStep: React.FC<{
     if (filters.district !== 'Tümü' && DISTRICT_COORDINATES[filters.district]) {
       setMapCenter(DISTRICT_COORDINATES[filters.district]);
     } else {
-      setMapCenter([41.0433, 29.0057]);
+      setMapCenter([ORDU_CENTER.lat, ORDU_CENTER.lng]);
     }
   }, [filters.district]);
 
@@ -1848,6 +1835,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     matchTitle, setMatchTitle,
     homeTeamName, setHomeTeamName,
     awayTeamName, setAwayTeamName,
+    visibility, setVisibility,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
@@ -2014,6 +2002,42 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        maxLength={40}
                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#FFFF00]/40 transition-colors"
                      />
+                   </div>
+
+                   {/* Maç Görünürlüğü: Açık (vitrin) | Özel (kodla davet) */}
+                   <div className="space-y-2">
+                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Görünürlük</p>
+                     <div className="grid grid-cols-2 gap-2">
+                       <button
+                         type="button"
+                         onClick={() => setVisibility('OPEN')}
+                         className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${
+                           visibility === 'OPEN'
+                             ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_20px_rgba(57,255,20,0.15)]'
+                             : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                         }`}
+                       >
+                         <span className={`text-xs font-black uppercase tracking-wide ${visibility === 'OPEN' ? 'text-[#39FF14]' : 'text-white'}`}>Açık</span>
+                         <span className="text-[9px] text-white/40 font-bold leading-tight">Vitrinde herkes görür</span>
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setVisibility('PRIVATE')}
+                         className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${
+                           visibility === 'PRIVATE'
+                             ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 shadow-[0_0_20px_rgba(255,255,0,0.15)]'
+                             : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                         }`}
+                       >
+                         <span className={`text-xs font-black uppercase tracking-wide ${visibility === 'PRIVATE' ? 'text-[#FFFF00]' : 'text-white'}`}>Özel</span>
+                         <span className="text-[9px] text-white/40 font-bold leading-tight">Sadece kodla katılım</span>
+                       </button>
+                     </div>
+                     {visibility === 'PRIVATE' && (
+                       <p className="text-[9px] text-[#FFFF00]/70 font-bold leading-relaxed pt-1">
+                         Maç oluşturulduktan sonra lobide bir katılım kodu görünecek; bu kodu paylaştığın kişiler maça katılabilir.
+                       </p>
+                     )}
                    </div>
 
                    {/* Takım Formatı */}

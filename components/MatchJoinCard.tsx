@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Clock, Calendar, ChevronRight } from 'lucide-react';
 import { MatchListing, PositionSlot } from '../types';
 import { useAppStore } from '../store';
+import { FORMATIONS, type SquadSize } from '../utils/formations';
 
 // ── Shared helpers (subset from MatchJoin) ───────────────────────────────────
 
@@ -17,17 +18,7 @@ const normalizeRole = (role: string): string => {
 
 const ROLE_TR: Record<string, string> = { GK: 'KL', DEF: 'SAV', MID: 'ORT', FWD: 'HÜC' };
 
-const FORMATIONS: Record<string, Record<string, { x: number; y: number; role: string }[]>> = {
-  '5v5': { '1-2-1': [{ x: 50, y: 90, role: 'GK' }, { x: 50, y: 75, role: 'DEF' }, { x: 25, y: 50, role: 'MID' }, { x: 75, y: 50, role: 'MID' }, { x: 50, y: 25, role: 'FWD' }] },
-  '6v6': { '2-2-1': [{ x: 50, y: 90, role: 'GK' }, { x: 30, y: 75, role: 'DEF' }, { x: 70, y: 75, role: 'DEF' }, { x: 30, y: 50, role: 'MID' }, { x: 70, y: 50, role: 'MID' }, { x: 50, y: 25, role: 'FWD' }] },
-  '7v7': { '2-3-1': [{ x: 50, y: 90, role: 'GK' }, { x: 25, y: 75, role: 'DEF' }, { x: 75, y: 75, role: 'DEF' }, { x: 20, y: 50, role: 'MID' }, { x: 50, y: 50, role: 'MID' }, { x: 80, y: 50, role: 'MID' }, { x: 50, y: 25, role: 'FWD' }] },
-  '8v8': { '3-3-1': [{ x: 50, y: 90, role: 'GK' }, { x: 20, y: 75, role: 'DEF' }, { x: 50, y: 75, role: 'DEF' }, { x: 80, y: 75, role: 'DEF' }, { x: 20, y: 50, role: 'MID' }, { x: 50, y: 50, role: 'MID' }, { x: 80, y: 50, role: 'MID' }, { x: 50, y: 25, role: 'FWD' }] },
-  '9v9': { '3-3-2': [{ x: 50, y: 90, role: 'GK' }, { x: 20, y: 75, role: 'DEF' }, { x: 50, y: 75, role: 'DEF' }, { x: 80, y: 75, role: 'DEF' }, { x: 20, y: 50, role: 'MID' }, { x: 50, y: 50, role: 'MID' }, { x: 80, y: 50, role: 'MID' }, { x: 35, y: 25, role: 'FWD' }, { x: 65, y: 25, role: 'FWD' }] },
-  '10v10': { '4-3-2': [{ x: 50, y: 90, role: 'GK' }, { x: 20, y: 75, role: 'DEF' }, { x: 40, y: 75, role: 'DEF' }, { x: 60, y: 75, role: 'DEF' }, { x: 80, y: 75, role: 'DEF' }, { x: 20, y: 50, role: 'MID' }, { x: 50, y: 50, role: 'MID' }, { x: 80, y: 50, role: 'MID' }, { x: 35, y: 25, role: 'FWD' }, { x: 65, y: 25, role: 'FWD' }] },
-  '11v11': { '4-4-2': [{ x: 50, y: 90, role: 'GK' }, { x: 20, y: 75, role: 'DEF' }, { x: 40, y: 75, role: 'DEF' }, { x: 60, y: 75, role: 'DEF' }, { x: 80, y: 75, role: 'DEF' }, { x: 20, y: 50, role: 'MID' }, { x: 40, y: 50, role: 'MID' }, { x: 60, y: 50, role: 'MID' }, { x: 80, y: 50, role: 'MID' }, { x: 35, y: 25, role: 'FWD' }, { x: 65, y: 25, role: 'FWD' }] },
-};
-
-const inferSquadSize = (slotCount: number): string => {
+const inferSquadSize = (slotCount: number): SquadSize => {
   if (slotCount <= 5) return '5v5';
   if (slotCount <= 6) return '6v6';
   if (slotCount <= 7) return '7v7';

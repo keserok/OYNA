@@ -14,6 +14,7 @@ interface ServiceProfileProps {
 }
 
 import { useAppStore } from '../store';
+import { ORDU_CENTER, ORDU_DISTRICT_NAMES } from '../utils/orduData';
 import { auth } from '../supabaseAuth';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
@@ -46,9 +47,7 @@ const REFEREE_PHOTOS = [
 const GK_STYLES = ['Panter', 'Duvar', 'Libero', 'Atak', 'Dengeli'];
 const REF_STYLES = ['Otoriter', 'Diyalogcu', 'Teknisyen', 'Hızlı Karar'];
 const REGIONS = [
-  { city: 'İstanbul', districts: ['Kadıköy', 'Beşiktaş', 'Şişli', 'Ümraniye', 'Maltepe', 'Üsküdar', 'Bağcılar', 'Pendik', 'Sarıyer', 'Bakırköy'] },
-  { city: 'Ankara', districts: ['Çankaya', 'Keçiören', 'Yenimahalle', 'Mamak', 'Etimesgut'] },
-  { city: 'İzmir', districts: ['Karşıyaka', 'Bornova', 'Buca', 'Konak', 'Çiğli'] }
+  { city: 'Ordu', districts: ORDU_DISTRICT_NAMES },
 ];
 
 const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
@@ -82,7 +81,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const [tempBio, setTempBio] = useState(bio);
   const [selectedStyle, setSelectedStyle] = useState(defaultStyle);
   
-  const defaultCenter: [number, number] = [41.0082, 28.9784]; // Istanbul
+  const defaultCenter: [number, number] = [ORDU_CENTER.lat, ORDU_CENTER.lng];
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     userProfile?.coordinates ? [userProfile.coordinates.lat, userProfile.coordinates.lng] : defaultCenter
   );

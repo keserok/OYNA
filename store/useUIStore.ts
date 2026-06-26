@@ -12,7 +12,6 @@ interface UIState {
   matchJoinReturnView: AppView;
   addOnTotal: number;
   hasMotmCoupon: boolean;
-  chatTarget: { name: string; role: string; avatar: string } | null;
   impersonatedUser: AdminUser | null;
   originalRole: import('../types').UserRole | null;
   globalTexts: Record<string, string>;
@@ -28,18 +27,13 @@ interface UIState {
   setMatchJoinReturnView: (view: AppView) => void;
   setAddOnTotal: (total: number) => void;
   setHasMotmCoupon: (hasCoupon: boolean) => void;
-  setChatTarget: (target: { name: string; role: string; avatar: string } | null) => void;
   setImpersonatedUser: (user: AdminUser | null) => void;
   setOriginalRole: (role: import('../types').UserRole | null) => void;
   setGlobalText: (key: string, value: string) => void;
 }
 
-const IS_LOCAL_DEV =
-  import.meta.env.VITE_DEV_MODE === 'true' ||
-  !import.meta.env.VITE_SUPABASE_URL;
-
 export const useUIStore = create<UIState>((set) => ({
-  view: IS_LOCAL_DEV ? 'DASHBOARD' : 'SPLASH',
+  view: 'SPLASH',
   selectedMatch: null,
   selectedGk: null,
   selectedRef: null,
@@ -49,7 +43,6 @@ export const useUIStore = create<UIState>((set) => ({
   matchJoinReturnView: 'MATCH_DISCOVERY',
   addOnTotal: 0,
   hasMotmCoupon: false,
-  chatTarget: null,
   impersonatedUser: null,
   originalRole: null,
   globalTexts: {
@@ -75,7 +68,6 @@ export const useUIStore = create<UIState>((set) => ({
   setMatchJoinReturnView: (view) => set({ matchJoinReturnView: view }),
   setAddOnTotal: (total) => set({ addOnTotal: total }),
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
-  setChatTarget: (chatTarget) => set({ chatTarget }),
   setImpersonatedUser: (user) => set({ impersonatedUser: user }),
   setOriginalRole: (role) => set({ originalRole: role }),
   setGlobalText: (key, value) => set((state) => ({

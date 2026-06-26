@@ -12,7 +12,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
   const navItems = [
     { id: 'DASHBOARD', icon: Home, label: 'Ana Sayfa' },
     { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Top Oyna' },
-    { id: 'COMMUNITY_VIEW', icon: Users, label: 'Sosyal', isCenter: true },
+    { id: 'SOCIAL', icon: Users, label: 'Sosyal', isCenter: true },
     { id: 'PITCH_DISCOVERY', icon: MapPin, label: 'Sahalar' },
     { id: 'PROFILE', icon: User, label: 'Profil' },
   ];

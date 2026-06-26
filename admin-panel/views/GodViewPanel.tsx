@@ -32,6 +32,7 @@ const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => (
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const FinancePage = lazy(() => import('./pages/FinancePage').then(m => ({ default: m.FinancePage })));
+const CommissionPage = lazy(() => import('./pages/CommissionPage').then(m => ({ default: m.CommissionPage })));
 const DisputesPage = lazy(() => import('./pages/DisputesPage').then(m => ({ default: m.DisputesPage })));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage').then(m => ({ default: m.CampaignsPage })));
 const PromoCodesPage = lazy(() => import('./pages/PromoCodesPage').then(m => ({ default: m.PromoCodesPage })));
@@ -43,7 +44,7 @@ export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'
-  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
+  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -125,6 +126,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <CommandCenterPage mode={mode} onNavigate={handleNavigate} />;
             case 'FINANCE':
                 return <FinancePage onNavigate={handleNavigate} />;
+            case 'COMMISSION':
+                return <CommissionPage />;
             case 'DISPUTES':
                 return <DisputesPage onNavigate={handleNavigate} />;
             case 'PROMO_CODES':

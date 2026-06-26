@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppView, Team, FieldPlayerCard, MatchScore } from '../types';
+import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -269,98 +270,12 @@ interface OpponentFinderProps {
   onNavigate: (view: AppView) => void;
 }
 
-// Mock Data for Teams with Formations and History
-const MOCK_TEAMS: Team[] = [
-  {
-    id: '1',
-    name: 'Boğaziçi United',
-    pitch: 'Sarıyer Belediye Halı Sahası',
-    time: '21:00 - 22:00',
-    date: '15 Mart 2024, Cuma',
-    weather: { temp: 14, condition: 'CLOUDY' },
-    logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=bogazici',
-    level: 'MEDIUM',
-    distance: '2.1 km',
-    winRate: '65',
-    avgAge: '24',
-    matches: 42,
-    colors: ['#EF4444', '#000000'],
-    wins: 27,
-    losses: 15,
-    playStyle: 'Teknik',
-    roster: [],
-    coordinates: { x: 30, y: 40, lat: 41.1126, lng: 29.0213 },
-    stats: { attack: 75, defense: 60, midfield: 85, physical: 70, teamwork: 80 },
-    matchHistory: [
-      { id: 'h1', opponent: 'Levent City', score: '3-1', result: 'WIN', date: '08.03.2024' },
-      { id: 'h2', opponent: 'Karakartallar', score: '2-2', result: 'DRAW', date: '01.03.2024' },
-      { id: 'h3', opponent: 'Dikilitaş SK', score: '1-2', result: 'LOSS', date: '22.02.2024' },
-    ],
-    formation: {
-      name: '2-3-1',
-      players: [
-        { id: 'p1', name: 'Kerem', position: 'GK', rating: 82, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=p1', x: 50, y: 90 },
-        { id: 'p2', name: 'Mert', position: 'DEF', rating: 88, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=p2', x: 30, y: 70 },
-        { id: 'p3', name: 'Can', position: 'DEF', rating: 81, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=p3', x: 70, y: 70 },
-        { id: 'p4', name: 'Arda', position: 'MID', rating: 85, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=p4', x: 20, y: 40 },
-        { id: 'p5', name: 'Selim', position: 'MID', rating: 92, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=p5', x: 50, y: 40 },
-        { id: 'p6', name: 'Burak', position: 'MID', rating: 84, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=p6', x: 80, y: 40 },
-        { id: 'p7', name: 'Ege', position: 'FWD', rating: 89, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=p7', x: 50, y: 15 },
-      ]
-    }
-  },
-  {
-    id: '2',
-    name: 'Karakartallar FC',
-    pitch: 'Beşiktaş Çilekli Tesisleri',
-    time: '19:00 - 20:00',
-    date: '16 Mart 2024, Cumartesi',
-    weather: { temp: 12, condition: 'RAINY' },
-    logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=kartal',
-    level: 'HARD',
-    distance: '1.5 km',
-    winRate: '82',
-    avgAge: '28',
-    matches: 156,
-    colors: ['#000000', '#EF4444'],
-    wins: 128,
-    losses: 28,
-    playStyle: 'Sert',
-    roster: [],
-    coordinates: { x: 60, y: 35, lat: 41.0422, lng: 29.0060 },
-    stats: { attack: 90, defense: 85, midfield: 75, physical: 95, teamwork: 85 },
-    matchHistory: [
-      { id: 'k1', opponent: 'Boğaziçi Utd', score: '2-2', result: 'DRAW', date: '01.03.2024' },
-      { id: 'k2', opponent: 'Yıldıztepe', score: '5-0', result: 'WIN', date: '25.02.2024' },
-    ],
-    formation: {
-      name: '3-2-1',
-      players: [
-        { id: 'k1', name: 'Hakan', position: 'GK', rating: 85, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=k1', x: 50, y: 90 },
-        { id: 'k2', name: 'Bülent', position: 'DEF', rating: 90, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=k2', x: 20, y: 70 },
-        { id: 'k3', name: 'Vedat', position: 'DEF', rating: 84, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=k3', x: 50, y: 70 },
-        { id: 'k4', name: 'Serdar', position: 'DEF', rating: 86, isSpecial: false, avatar: 'https://i.pravatar.cc/150?u=k4', x: 80, y: 70 },
-        { id: 'k5', name: 'Tümer', position: 'MID', rating: 94, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=k5', x: 35, y: 40 },
-        { id: 'k6', name: 'İlhan', position: 'MID', rating: 91, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=k6', x: 65, y: 40 },
-        { id: 'k7', name: 'Pascal', position: 'FWD', rating: 95, isSpecial: true, avatar: 'https://i.pravatar.cc/150?u=k7', x: 50, y: 15 },
-      ]
-    }
-  },
-  { id: '3', name: 'Levent City', pitch: 'Levent Spor Tesisleri', time: '22:00 - 23:00', date: '17 Mart 2024', weather: { temp: 15, condition: 'SUNNY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=levent', level: 'EASY', distance: '3.2 km', winRate: '45', avgAge: '22', matches: 12, colors: ['#0000FF', '#FFFFFF'], wins: 5, losses: 7, playStyle: 'Hızlı', roster: [], coordinates: { x: 45, y: 55, lat: 41.0822, lng: 29.0120 }, stats: { attack: 60, defense: 50, midfield: 65, physical: 80, teamwork: 55 } },
-  { id: '4', name: 'Yıldıztepe SK', pitch: 'Bağcılar Arena', time: '20:00 - 21:00', date: '18 Mart 2024', weather: { temp: 13, condition: 'CLOUDY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=yildiz', level: 'MEDIUM', distance: '5.5 km', winRate: '55', avgAge: '25', matches: 30, colors: ['#FFFF00', '#000000'], wins: 16, losses: 14, playStyle: 'Dengeli', roster: [], coordinates: { x: 25, y: 65, lat: 41.0333, lng: 28.8500 }, stats: { attack: 70, defense: 70, midfield: 70, physical: 70, teamwork: 70 } },
-  { id: '5', name: 'Kadıköy Bulls', pitch: 'Fenerbahçe Dereağzı', time: '19:00 - 20:00', date: '19 Mart 2024', weather: { temp: 16, condition: 'SUNNY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=bulls', level: 'HARD', distance: '8.1 km', winRate: '78', avgAge: '27', matches: 88, colors: ['#FF0000', '#FFFFFF'], wins: 68, losses: 20, playStyle: 'Agresif', roster: [], coordinates: { x: 75, y: 25, lat: 40.9800, lng: 29.0350 }, stats: { attack: 85, defense: 80, midfield: 80, physical: 90, teamwork: 75 } },
-  { id: '6', name: 'Moda Sahil', pitch: 'Moda Spor Kompleksi', time: '23:00 - 00:00', date: '15 Mart 2024', weather: { temp: 14, condition: 'SUNNY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=moda', level: 'EASY', distance: '9.0 km', winRate: '40', avgAge: '21', matches: 8, colors: ['#00FF00', '#000000'], wins: 3, losses: 5, playStyle: 'Eğlence', roster: [], coordinates: { x: 85, y: 85, lat: 40.9780, lng: 29.0250 }, stats: { attack: 55, defense: 45, midfield: 50, physical: 60, teamwork: 85 } },
-  { id: '7', name: 'Maslak United', pitch: 'İTÜ Stadyumu', time: '18:00 - 19:00', date: '20 Mart 2024', weather: { temp: 15, condition: 'CLOUDY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=maslak', level: 'MEDIUM', distance: '4.0 km', winRate: '60', avgAge: '23', matches: 50, colors: ['#800080', '#FFFFFF'], wins: 30, losses: 20, playStyle: 'Taktik', roster: [], coordinates: { x: 40, y: 20, lat: 41.1050, lng: 29.0230 }, stats: { attack: 65, defense: 75, midfield: 80, physical: 65, teamwork: 85 } },
-  { id: '8', name: 'Etiler Elit', pitch: 'Etiler Lisesi Sahası', time: '21:00 - 22:00', date: '21 Mart 2024', weather: { temp: 13, condition: 'RAINY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=etiler', level: 'HARD', distance: '2.5 km', winRate: '70', avgAge: '29', matches: 110, colors: ['#FFA500', '#000000'], wins: 77, losses: 33, playStyle: 'Paslı', roster: [], coordinates: { x: 55, y: 50, lat: 41.0850, lng: 29.0350 }, stats: { attack: 80, defense: 70, midfield: 90, physical: 75, teamwork: 90 } },
-  { id: '9', name: 'Beykoz 1908', pitch: 'Beykoz Korusu', time: '10:00 - 11:00', date: '23 Mart 2024', weather: { temp: 18, condition: 'SUNNY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=beykoz', level: 'MEDIUM', distance: '12.0 km', winRate: '50', avgAge: '30', matches: 200, colors: ['#000000', '#FFFF00'], wins: 100, losses: 100, playStyle: 'Dengeli', roster: [], coordinates: { x: 90, y: 10, lat: 41.1350, lng: 29.0950 }, stats: { attack: 65, defense: 65, midfield: 65, physical: 80, teamwork: 75 } },
-  { id: '10', name: 'Üsküdar SK', pitch: 'Burhan Felek', time: '20:00 - 21:00', date: '22 Mart 2024', weather: { temp: 15, condition: 'SUNNY' }, logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=uskudar', level: 'HARD', distance: '6.5 km', winRate: '75', avgAge: '26', matches: 95, colors: ['#008000', '#FFFFFF'], wins: 71, losses: 24, playStyle: 'Hızlı', roster: [], coordinates: { x: 10, y: 60, lat: 41.0150, lng: 29.0250 }, stats: { attack: 85, defense: 70, midfield: 75, physical: 85, teamwork: 70 } },
-];
-
 import { useAppStore } from '../store';
 
 const OpponentFinder: React.FC<OpponentFinderProps> = ({ onBack, onNavigate }) => {
   const { opponentAds } = useAppStore();
-  const displayTeams = [...MOCK_TEAMS, ...opponentAds];
+  // Rakip takımlar Supabase opponentAds üzerinden gelir (mock kaldırıldı).
+  const displayTeams = opponentAds;
   const [viewMode, setViewMode] = useState<'MAP' | 'LIST'>('MAP');
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [lobbyState, setLobbyState] = useState<'NONE' | 'WAITING' | 'READY'>('NONE');
@@ -374,7 +289,7 @@ const OpponentFinder: React.FC<OpponentFinderProps> = ({ onBack, onNavigate }) =
   const [showFilters, setShowFilters] = useState(false);
 
   // Map center location state (defaults to Beşiktaş)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([41.0433, 29.0057]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([ORDU_CENTER.lat, ORDU_CENTER.lng]);
 
   // Compute dynamic proximity distance and filter opponents
   const filteredTeams = useMemo(() => {
