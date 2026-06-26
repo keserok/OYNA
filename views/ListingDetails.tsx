@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Star, Handshake, Check, X, Minus, Plus, Shield, Activity } from 'lucide-react';
 import { IncomingBid } from '../types';
-import EmptyState from '../components/ui/EmptyState';
+import { EmptyState } from '../components/common/StatusState';
 
 interface ListingDetailsProps {
   onBack: () => void;
@@ -54,7 +54,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ onBack }) => {
         </div>
 
         {bids.length === 0 ? (
-          <EmptyState icon="📨" title="Henüz teklif yok" description="İlanına gelen kaleci/hakem teklifleri burada görünecek." />
+          <EmptyState title="Henüz teklif yok" message="İlanına gelen kaleci/hakem teklifleri burada görünecek." />
         ) : (
         <div className="space-y-4">
             {bids.map(bid => (
