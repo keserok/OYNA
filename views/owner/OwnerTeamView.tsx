@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ClipboardList, Plus, Users, X, CheckCircle2, Circle, AlertTriangle,
 } from 'lucide-react';
+import { LoadingState } from '../../components/common/StatusState';
 import {
   getStaffMembers,
   getStaffTasks,
@@ -163,11 +164,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <div className="p-6 pb-32 flex items-center justify-center min-h-[40vh]">
-        <p className="text-sm text-gray-500 font-bold uppercase tracking-widest animate-pulse">Ekip yükleniyor…</p>
-      </div>
-    );
+    return <div className="p-6 pb-32"><LoadingState message="Ekip yükleniyor…" /></div>;
   }
 
   return (
