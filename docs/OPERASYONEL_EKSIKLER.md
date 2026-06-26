@@ -19,6 +19,9 @@
 | 7 | Kademeli iade tetikleyici (cron + maç saati) | 2.3 | 🟡 Orta | FAZ 3.2 | 🧱 RPC hazır |
 | 8 | 18 yaş altı doğum tarihi toplama (onboarding) | 2.4 | 🟡 Orta | UI | 🧱 Kolon hazır |
 | 9 | iyzico webhook imza/secret rotasyonu | 7.1 | 🟢 Düşük | #1 | ⏳ Bekliyor |
+| 10 | Maça katılımı gerçek pre-auth blokajına bağlama | 3.2 | 🟡 Orta | #1 | 🧱 Settle/iade hazır |
+| 11 | Özel maç (private_code) katılım UI'ı | 3.3 | 🟢 Düşük | UI | 🧱 RPC hazır |
+| 12 | MyBookings: maça çevir / yol tarifi / tekrar rezerve | 3.1 | 🟢 Düşük | UI | ⏳ Bekliyor |
 
 ---
 
@@ -187,6 +190,54 @@ Webhook callback URL'ini iyzico panelinde `https://<project>.functions.supabase.
 **📦 Hazır olan:** Token-retrieve doğrulamalı webhook.
 
 **⏳ Durum:** Bekliyor (FAZ 7).
+
+---
+
+## 10. Maça Katılımı Gerçek Pre-Auth Blokajına Bağlama
+
+**🎯 Sebep:** Şu an maça katılım `pay_public_match_deposit` ile cüzdandan **anında** 50₺ çeker (gerçek kart blokajı/pre-auth değil). Gerçek blokaj iyzico go-live'a (#1) bağlı.
+
+**❗ Neden gerekli:** Roadmap §3.2 "katılım BLOKAJLA" der — para maç onaylanana (T-8s) kadar bloke tutulmalı, anında çekilmemeli.
+
+**🔧 Yapım yolu:** `pay_public_match_deposit` yerine `create_match_preauth` (BLOCKED intent) çağır; `process_match_at_deadline` zaten hem cüzdan (MATCH_FEE) hem intent (BLOCKED→CAPTURED/VOIDED) yollarını destekliyor — UI'yı intent yoluna geçir.
+
+**🔗 Bağımlılık:** #1 (gerçek iyzico).
+
+**📦 Hazır olan:** `process_match_at_deadline` çift-yol uzlaştırması (onayda settle, iptalde **gerçek iade** — smoke test geçti), `create_match_preauth`/`capture_preauth`/`void_preauth`.
+
+**⏳ Durum:** Cüzdan yolu tam çalışıyor (anında çekim + iptalde otomatik iade). Gerçek blokaj #1 ile gelecek.
+
+---
+
+## 11. Özel Maç (private_code) Katılım UI'ı
+
+**🎯 Sebep:** DB tarafı hazır; oluşturma/katılım UI akışı (kod gösterimi + kodla katılma) henüz bağlanmadı.
+
+**❗ Neden gerekli:** Roadmap §3.3 açık/özel maç (özel kod ile katılım).
+
+**🔧 Yapım yolu:** Oluşturmada PRIVATE seçeneği → dönen `private_code`'u göster/paylaş; katılımda kod girişi → `resolve_private_match(code)` → maç lobisine yönlendir. `useMatchCreate`'te `visibility:'OPEN'` sabitini seçilebilir yap.
+
+**🔗 Bağımlılık:** UI.
+
+**📦 Hazır olan:** `resolve_private_match` RPC, `player_create_match` PRIVATE→6 haneli kod üretimi, `matches.visibility/private_code` kolonları, `MatchListing.visibility/privateCode` tipleri.
+
+**⏳ Durum:** RPC hazır — katılım UI'ı bekliyor.
+
+---
+
+## 12. MyBookings İkincil İşlemler (maça çevir / yol tarifi / tekrar rezerve)
+
+**🎯 Sebep:** Çekirdek rezervasyon + iptal çalışıyor; ikincil kolaylıklar henüz eklenmedi.
+
+**❗ Neden gerekli:** Roadmap §3.1 "Rezervasyonlarım (iptal/yol tarifi/tekrar rezerve/maça çevir)".
+
+**🔧 Yapım yolu:** "Maça çevir" → rezervasyondan `player_create_match`'e pitch_id+tarih taşı; "Yol tarifi" → harita deep link; "Tekrar rezerve" → aynı slot ile booking akışını ön-doldur.
+
+**🔗 Bağımlılık:** UI.
+
+**📦 Hazır olan:** `MyBookings` iptal (`cancel_app_booking`), booking akışı, `player_create_match` (pitch_id'li).
+
+**⏳ Durum:** Bekliyor (FAZ 3.1 cilası).
 
 ---
 
