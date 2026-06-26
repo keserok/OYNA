@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppView, Team, FieldPlayerCard, MatchScore } from '../types';
+import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -290,7 +291,7 @@ const OpponentFinder: React.FC<OpponentFinderProps> = ({ onBack, onNavigate }) =
   const [showFilters, setShowFilters] = useState(false);
 
   // Map center location state (defaults to Beşiktaş)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([41.0433, 29.0057]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([ORDU_CENTER.lat, ORDU_CENTER.lng]);
 
   // Compute dynamic proximity distance and filter opponents
   const filteredTeams = useMemo(() => {

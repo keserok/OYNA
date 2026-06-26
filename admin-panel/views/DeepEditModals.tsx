@@ -412,7 +412,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
             lighting: 85, grassQuality: 85, lockerRoomQuality: 80, goalQuality: 82, occupancy: 70,
             image: '', images: [], amenities: [], distance: '1.0 km',
             lightingGrade: 'B', grassGrade: 'B', lockerRoomGrade: 'B',
-            coordinates: { lat: 41.0445, lng: 29.005 },
+            coordinates: { lat: 40.9839, lng: 37.8764 },
             slots: []
         }
     );
@@ -442,7 +442,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
             lightingGrade: edit.lightingGrade,
             grassGrade: edit.grassGrade,
             lockerRoomGrade: edit.lockerRoomGrade,
-            coordinates: edit.coordinates || { lat: 41.0445, lng: 29.005 },
+            coordinates: edit.coordinates || { lat: 40.9839, lng: 37.8764 },
             slots: [
                 { time: '19:00', status: 'available' }, { time: '20:00', status: 'available' },
                 { time: '21:00', status: 'available' }, { time: '22:00', status: 'available' }
@@ -486,8 +486,8 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
                 <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><MapPin size={11} /> GPS KOORDİNATLARI</p>
                     <div className="grid grid-cols-2 gap-4">
-                        <FI label="Enlem (Latitude)"><I type="number" step="0.000001" value={edit.coordinates?.lat} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 29.005 } })} /></FI>
-                        <FI label="Boylam (Longitude)"><I type="number" step="0.000001" value={edit.coordinates?.lng} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 41.0445, lng: +e.target.value } })} /></FI>
+                        <FI label="Enlem (Latitude)"><I type="number" step="0.000001" value={edit.coordinates?.lat} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 37.8764 } })} /></FI>
+                        <FI label="Boylam (Longitude)"><I type="number" step="0.000001" value={edit.coordinates?.lng} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 40.9839, lng: +e.target.value } })} /></FI>
                     </div>
                 </div>
 

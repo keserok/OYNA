@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Pitch, Goalkeeper, Referee, AppView, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
+import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
 import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
 import SharedPitch from '../components/SharedPitch';
@@ -709,21 +710,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
 
 
 // ─── STEP 3: SAHA SEÇ ─────────────────────────────────────────────────────────
-const DISTRICT_COORDINATES: Record<string, [number, number]> = {
-  'Beşiktaş': [41.0433, 29.0057],
-  'Kadıköy': [40.9901, 29.0290],
-  'Sarıyer': [41.1686, 29.0574],
-  'Şişli': [41.0602, 28.9877],
-  'Üsküdar': [41.0267, 29.0159],
-  'Bakırköy': [40.9780, 28.8720],
-  'Fatih': [41.0165, 28.9497],
-  'Beykoz': [41.1350, 29.0950],
-  'Levent': [41.0822, 29.0120],
-  'Bağcılar': [41.0333, 28.8500],
-  'Moda': [40.9780, 29.0250],
-  'Maslak': [41.1050, 29.0230],
-  'Etiler': [41.0850, 29.0350]
-};
+const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 
 const PitchSelectStep: React.FC<{
   selectedPitch: Pitch | null;
@@ -747,8 +734,8 @@ const PitchSelectStep: React.FC<{
   });
   const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC'>('DEFAULT');
 
-  // User proximity center (defaults to Beşiktaş)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([41.0433, 29.0057]);
+  // User proximity center (kullanıcı konumu yoksa Ordu merkez)
+  const [mapCenter, setMapCenter] = useState<[number, number]>([ORDU_CENTER.lat, ORDU_CENTER.lng]);
 
   const { adminPitches } = useAppStore();
   const districts = React.useMemo(() => ['Tümü', ...Array.from(new Set(adminPitches.map((p:any) => p.district)))], [adminPitches]);
@@ -758,7 +745,7 @@ const PitchSelectStep: React.FC<{
     if (filters.district !== 'Tümü' && DISTRICT_COORDINATES[filters.district]) {
       setMapCenter(DISTRICT_COORDINATES[filters.district]);
     } else {
-      setMapCenter([41.0433, 29.0057]);
+      setMapCenter([ORDU_CENTER.lat, ORDU_CENTER.lng]);
     }
   }, [filters.district]);
 

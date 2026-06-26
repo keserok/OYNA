@@ -12,6 +12,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
+import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
 import PitchDepositCheckout from '../components/PitchDepositCheckout';
 import { supabase } from '../supabaseClient';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
@@ -81,7 +82,7 @@ const gradeToScore = (g?: string | null): number => {
   return 0;
 };
 
-const FALLBACK_CENTER: { lat: number; lng: number } = { lat: 41.0433, lng: 29.0057 };
+const FALLBACK_CENTER: { lat: number; lng: number } = ORDU_CENTER;
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800';
 
 const mapDbPitchToUiPitch = (
@@ -490,21 +491,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
   );
 };
 
-const DISTRICT_COORDINATES: Record<string, [number, number]> = {
-  'Beşiktaş': [41.0433, 29.0057],
-  'Kadıköy': [40.9901, 29.0290],
-  'Sarıyer': [41.1686, 29.0574],
-  'Şişli': [41.0602, 28.9877],
-  'Üsküdar': [41.0267, 29.0159],
-  'Bakırköy': [40.9780, 28.8720],
-  'Fatih': [41.0165, 28.9497],
-  'Beykoz': [41.1350, 29.0950],
-  'Levent': [41.0822, 29.0120],
-  'Bağcılar': [41.0333, 28.8500],
-  'Moda': [40.9780, 29.0250],
-  'Maslak': [41.1050, 29.0230],
-  'Etiler': [41.0850, 29.0350]
-};
+const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode, onSelectTime, onNavigate }) => {
   const {
@@ -629,8 +616,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   });
   const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC'>('DEFAULT');
 
-  // User Proximity Center Coordinates (default to Beşiktaş Meydan or user location)
-  const [mapCenter, setMapCenter] = useState<[number, number]>(userLocation ? [userLocation.lat, userLocation.lng] : [41.0433, 29.0057]);
+  // User Proximity Center Coordinates (kullanıcı konumu yoksa Ordu merkez)
+  const [mapCenter, setMapCenter] = useState<[number, number]>(userLocation ? [userLocation.lat, userLocation.lng] : [ORDU_CENTER.lat, ORDU_CENTER.lng]);
 
   // Sync map center with userLocation
   useEffect(() => {
@@ -644,7 +631,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     if (filters.district !== 'Tümü' && DISTRICT_COORDINATES[filters.district]) {
       setMapCenter(DISTRICT_COORDINATES[filters.district]);
     } else {
-      setMapCenter([41.0433, 29.0057]);
+      setMapCenter([ORDU_CENTER.lat, ORDU_CENTER.lng]);
     }
   }, [filters.district]);
 

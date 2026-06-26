@@ -68,7 +68,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                     bio: 'Admin panel kaydı.',
                     matchCount: 0,
                     preferredZones: ['İstanbul'],
-                    coordinates: { lat: 41.0082, lng: 28.9784 },
+                    coordinates: { lat: 40.9839, lng: 37.8764 },
                     stats: { savePercentage: '80%', cleanSheets: 0, penaltySaveRate: '50%', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78 },
                     recentAwards: '',
                     skills: { reflexes: 85, diving: 80, handling: 78, positioning: 80, kicking: 70, speed: 75 },
@@ -89,7 +89,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                     style: 'Otoriter',
                     bio: 'Admin panel kaydı.',
                     preferredZones: ['İstanbul'],
-                    coordinates: { lat: 41.0082, lng: 28.9784 },
+                    coordinates: { lat: 40.9839, lng: 37.8764 },
                     stats: { avgCards: 2.1, avgDistance: '8km', authority: 85, fitness: 80, communication: 90 },
                     reviews: [],
                 };

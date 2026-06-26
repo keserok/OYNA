@@ -13,6 +13,7 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates } from '../services/matchService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -306,7 +307,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         if (foundPitch && foundPitch.coordinates) {
             setPitchCoordinates([foundPitch.coordinates.lat, foundPitch.coordinates.lng]);
         } else {
-            setPitchCoordinates([41.0433, 29.0057]);
+            setPitchCoordinates([ORDU_CENTER.lat, ORDU_CENTER.lng]);
         }
     }
   }, [match, adminPitches]);

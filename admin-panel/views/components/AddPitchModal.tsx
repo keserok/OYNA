@@ -46,7 +46,7 @@ export const AddPitchModal: React.FC<AddPitchModalProps> = ({ isOpen, onClose, o
             lightingGrade,
             grassGrade,
             lockerRoomGrade,
-            coordinates: { lat: 41.0082, lng: 28.9784 },
+            coordinates: { lat: 40.9839, lng: 37.8764 },
             slots: []
         };
 

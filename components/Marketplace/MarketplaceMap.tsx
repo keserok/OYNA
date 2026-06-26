@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Navigation } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
+import { ORDU_CENTER } from '../../utils/orduData';
 
 interface MarketplaceMapProps {
   items: (Goalkeeper | Referee)[];
@@ -56,8 +57,8 @@ export const MarketplaceMap: React.FC<MarketplaceMapProps> = ({ items, type, onS
         {/* Talent Pins */}
         {items.map((item, index) => {
           // Use item coordinates if available, otherwise use index-based distribution
-          const x = item.coordinates ? (item.coordinates.lng - 29.0) * 2000 : (Math.cos(index * 0.6) * 150);
-          const y = item.coordinates ? (item.coordinates.lat - 41.0) * 2000 : (Math.sin(index * 0.6) * 150);
+          const x = item.coordinates ? (item.coordinates.lng - ORDU_CENTER.lng) * 2000 : (Math.cos(index * 0.6) * 150);
+          const y = item.coordinates ? (item.coordinates.lat - ORDU_CENTER.lat) * 2000 : (Math.sin(index * 0.6) * 150);
           const isHovered = hoveredId === item.id;
           
           return (
