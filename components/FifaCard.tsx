@@ -120,7 +120,6 @@ export const FifaCard: React.FC<FifaCardProps> = ({
     const getRoleAbbr = () => {
         if (role === 'REFEREE') return 'REF';
         if (role === 'GOALKEEPER') return 'GK';
-        if (role === 'CAPTAIN') return 'CPT';
         return 'PLY';
     };
 

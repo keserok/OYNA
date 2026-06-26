@@ -799,7 +799,7 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
   if (error) throw new Error(error.message);
 }
 
-export type BroadcastSegment = 'ALL' | 'PRO' | 'CAPTAIN' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
+export type BroadcastSegment = 'ALL' | 'PRO' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
 
 export async function broadcastNotification(
   title: string,

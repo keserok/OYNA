@@ -21,10 +21,10 @@ interface TeamLineupBoardProps {
   matchId?: string;
 }
 
-// ─── FORMATIONS (Standard 7v7 layout, bottom-half based) ──────────────────────
-// x is 0-100, y is 0-100.
-// Standard positions are for Bottom half (Home team, Y: 52 to 90).
-// Top half (Away team) will be mirrored automatically using Y = 100 - Y.
+// ─── FORMATIONS (Çift-takım yarı-saha layout) ─────────────────────────────────
+// NOT: Bu board iki takımı tek sahada karşı karşıya gösterir (ev sahibi alt yarı
+// Y: 53–90, deplasman Y=100-Y ile yansıtılır). Bu yüzden tek-takım tam-saha SSOT'tan
+// (utils/formations.ts) farklı bir koordinat sistemi kullanır — bilinçli istisna.
 const FORMATIONS_BASE: Record<string, { role: string; x: number; y: number }[]> = {
   '2-3-1': [
     { role: 'GK', x: 50, y: 90 },

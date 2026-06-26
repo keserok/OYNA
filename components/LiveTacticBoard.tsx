@@ -3,38 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Wifi, ChevronDown, X, Check, MapPin, Calendar, Clock, Plus, Star, Shield } from 'lucide-react';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
+import { FORMATIONS as FORMATIONS_SSOT } from '../utils/formations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SlotPlayer { id: string; name: string; avatar: string; role: string; rating: number; }
 interface TacticSlot { id: string; role: string; x: number; y: number; player?: SlotPlayer; archetype?: string; }
 
-// ─── Formations (Extracted from Studio.tsx) ───────────────────────────────────
-const FORMATIONS: Record<string, TacticSlot[]> = {
-  '2-3-1': [
-    { id:'s1', x:50, y:90, role:'GK' },
-    { id:'s2', x:25, y:72, role:'DEF' }, { id:'s3', x:75, y:72, role:'DEF' },
-    { id:'s4', x:20, y:48, role:'MID' }, { id:'s5', x:50, y:48, role:'MID' }, { id:'s6', x:80, y:48, role:'MID' },
-    { id:'s7', x:50, y:20, role:'FWD' },
-  ],
-  '3-2-1': [
-    { id:'s1', x:50, y:90, role:'GK' },
-    { id:'s2', x:20, y:72, role:'DEF' }, { id:'s3', x:50, y:72, role:'DEF' }, { id:'s4', x:80, y:72, role:'DEF' },
-    { id:'s5', x:35, y:48, role:'MID' }, { id:'s6', x:65, y:48, role:'MID' },
-    { id:'s7', x:50, y:20, role:'FWD' },
-  ],
-  '2-2-2': [
-    { id:'s1', x:50, y:90, role:'GK' },
-    { id:'s2', x:30, y:72, role:'DEF' }, { id:'s3', x:70, y:72, role:'DEF' },
-    { id:'s4', x:30, y:48, role:'MID' }, { id:'s5', x:70, y:48, role:'MID' },
-    { id:'s6', x:35, y:20, role:'FWD' }, { id:'s7', x:65, y:20, role:'FWD' },
-  ],
-  '1-3-2': [
-    { id:'s1', x:50, y:90, role:'GK' },
-    { id:'s2', x:50, y:72, role:'DEF' },
-    { id:'s3', x:20, y:48, role:'MID' }, { id:'s4', x:50, y:48, role:'MID' }, { id:'s5', x:80, y:48, role:'MID' },
-    { id:'s6', x:35, y:20, role:'FWD' }, { id:'s7', x:65, y:20, role:'FWD' },
-  ],
-};
+// ─── Formations (tek kanonik kaynak — utils/formations.ts, 7v7) ───────────────
+const FORMATIONS = FORMATIONS_SSOT['7v7'] as Record<string, TacticSlot[]>;
 
 const MOCK_SQUAD: SlotPlayer[] = [
   { id:'p1', name:'Kerem Y.',  avatar:'https://api.dicebear.com/7.x/avataaars/svg?seed=Kerem',  role:'FWD', rating:83 },

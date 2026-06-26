@@ -21,7 +21,7 @@ export interface AdminNotification {
   title: string;
   body: string;
   type: 'INFO' | 'WARNING' | 'PROMO' | 'SYSTEM';
-  targetAudience: 'ALL' | 'PRO' | 'CAPTAIN' | 'GK' | 'REFEREE';
+  targetAudience: 'ALL' | 'PRO' | 'GK' | 'REFEREE';
   sentAt: string;
   isActive: boolean;
 }
