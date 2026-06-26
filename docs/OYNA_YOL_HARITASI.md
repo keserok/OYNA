@@ -190,6 +190,8 @@ FAZ 0 Temizlik → FAZ 1 Veri Temeli → FAZ 2 Para Motoru → FAZ 3 Rezervasyon
 
 **📦 Faz Sonu Çıktısı:** Maçlara kaleci/hakem eklenip ödenebiliyor; hakem skoru resmî kayıt. **Risk:** Eşleştirme adaleti; basit kurallarla başla.
 
+> **✅ Uygulandı** (`20260706000001_faz5_service_engine.sql` + servis/UI): Tek `service_requests` talep modeli (JobListing/DirectOffer/IncomingBid birleşti) · `find_providers_for_match` sıralı öneri (kaptan seçer) · sabit ücret + %10 komisyon · maç onayında otomatik tahsil → maç sonu **1-10** değerlendirme ile **anında** payout · onboarding (kimlik foto + tel + niyet mektubu, admin onaylı) · ilk payout öncesi **TC kimlik** kapısı. **Bireysel ödeme** yolu kuruldu; **kadro oylaması (%50+1)** hızlı takip olarak işaretlendi. **Kalan:** gerçek iyzico blokaj/capture (proje geneli #1/#2) + uçtan uca test (#15).
+
 ---
 
 # FAZ 6 — Takım & Taktik (Sosyal Çekirdek) 🧠
