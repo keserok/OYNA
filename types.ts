@@ -256,7 +256,7 @@ export interface MatchListing {
   badges: string[];
   missingPositions: { role: string; count: number }[];
   slots: PositionSlot[];
-  status?: 'DRAFT' | 'ACTIVE' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
+  status?: 'DRAFT' | 'ACTIVE' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
   creatorId?: string;
   communityId?: string;
   format?: string;

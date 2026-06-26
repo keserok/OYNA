@@ -108,10 +108,18 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         fair_play_score: Math.max(1, Math.min(5, fairPlay || 3)),
       }));
       if (ratings.length > 0) {
-        await supabase.rpc('submit_match_evaluation', { p_match_id: selectedMatch.id, p_ratings: ratings });
+        const { error: evalErr } = await supabase.rpc('submit_match_evaluation', {
+          p_match_id: selectedMatch.id, p_ratings: ratings,
+        });
+        if (evalErr) throw evalErr;
       }
-      // Maçı tamamla + "başarılı maç" sinyali (onaylı + iptal değil ise)
-      await supabase.rpc('finalize_match', { p_match_id: selectedMatch.id });
+      // finalize yalnız maç sahibi/kaptan için yetkili; değilse otomatik cron sonlandırır
+      const uid = auth.currentUser?.uid;
+      const canFinalize = uid && (selectedMatch.creatorId === uid);
+      if (canFinalize) {
+        const { error: finErr } = await supabase.rpc('finalize_match', { p_match_id: selectedMatch.id });
+        if (finErr) throw finErr;
+      }
     } catch (err) {
       showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
       setSubmitting(false);

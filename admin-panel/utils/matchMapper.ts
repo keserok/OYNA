@@ -42,7 +42,8 @@ function parseJsonArray<T>(val: unknown, fallback: T[] = []): T[] {
 
 function normalizeStatus(raw: string | null | undefined): MatchListing['status'] {
   const s = (raw || 'ACTIVE').toUpperCase();
-  if (s === 'OPEN' || s === 'CONFIRMED') return 'ACTIVE';
+  if (s === 'OPEN') return 'ACTIVE';
+  if (s === 'CONFIRMED') return 'CONFIRMED';   // DB onay durumunu KORU (lifecycle otoritesi)
   if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
   if (s === 'COMPLETED' || s === 'DONE') return 'COMPLETED';
   if (s === 'LIVE') return 'LIVE';
@@ -123,10 +124,17 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
   let dateIso = match.rawDate;
   if (!dateIso && match.date) {
     const labels: Record<string, number> = { Bugün: 0, Yarın: 1 };
+    const ddmmyyyy = match.date.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$/); // 27.06.2026
+    const isoMatch = match.date.match(/^\d{4}-\d{2}-\d{2}$/);                    // 2026-06-27
     if (labels[match.date] !== undefined) {
       const d = new Date();
       d.setDate(d.getDate() + labels[match.date]);
       dateIso = d.toISOString().slice(0, 10);
+    } else if (isoMatch) {
+      dateIso = match.date;
+    } else if (ddmmyyyy) {
+      const [, dd, mm, yyyy] = ddmmyyyy;
+      dateIso = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
     } else {
       dateIso = new Date().toISOString().slice(0, 10);
     }
