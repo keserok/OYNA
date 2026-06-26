@@ -7,11 +7,12 @@ import {
   DollarSign, Info, KeyRound, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MatchListing, PositionSlot, UserRole, Player, Team } from '../types';
+import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
+import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests } from '../services/serviceRequestService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -291,6 +292,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [showOpponentModal, setShowOpponentModal] = useState(false);
   const [showJoinOpponentModal, setShowJoinOpponentModal] = useState(false);
 
+  // ── FAZ 5: Kaleci / Hakem Talep Akışı ────────────────────────────────────
+  const [providerModalType, setProviderModalType] = useState<ProviderType | null>(null);
+  const [providerSuggestions, setProviderSuggestions] = useState<ProviderSuggestion[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [providerSubmittingId, setProviderSubmittingId] = useState<string | null>(null);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
 
@@ -348,6 +356,21 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       updateMatch({ ...originalMatch, ...mapped } as MatchListing);
     });
     return () => { unsubscribe(); };
+  }, [originalMatch?.id]);
+
+  // ── FAZ 5: Maçın kaleci/hakem hizmet taleplerini yükle ──────────────────
+  const refreshServiceRequests = async (matchId: string) => {
+    try {
+      const reqs = await getMatchServiceRequests(matchId);
+      setServiceRequests(reqs);
+    } catch (err) {
+      console.warn('[MatchJoin] hizmet talepleri yüklenemedi:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!originalMatch?.id) return;
+    refreshServiceRequests(originalMatch.id);
   }, [originalMatch?.id]);
 
   if (!match) return null;
@@ -853,6 +876,53 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       showActionError('Maçtan ayrılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // ── FAZ 5: Kaleci / Hakem Talep Handler'ları ────────────────────────────
+  const ACTIVE_REQUEST_STATUSES: ServiceRequest['status'][] = ['PENDING', 'ACCEPTED', 'CAPTURED'];
+
+  // Belirli tipte aktif (bekleyen/atanmış) talep var mı?
+  const getActiveRequestForType = (type: ProviderType): ServiceRequest | undefined =>
+    serviceRequests.find(r => r.providerType === type && ACTIVE_REQUEST_STATUSES.includes(r.status));
+
+  const handleOpenProviderModal = async (type: ProviderType) => {
+    // Aynı tipte aktif talep varsa ikinci talebe izin verme
+    if (getActiveRequestForType(type)) {
+      showActionError(
+        type === 'GK'
+          ? 'Bu maç için zaten bir kaleci talebi mevcut.'
+          : 'Bu maç için zaten bir hakem talebi mevcut.'
+      );
+      return;
+    }
+    setProviderModalType(type);
+    setProviderSuggestions([]);
+    setProvidersLoading(true);
+    try {
+      const list = await findProvidersForMatch(match.id, type);
+      setProviderSuggestions(list);
+    } catch (err: any) {
+      console.error('[MatchJoin] sağlayıcı önerileri:', err);
+      showActionError(err?.message || 'Uygun sağlayıcılar getirilemedi.');
+    } finally {
+      setProvidersLoading(false);
+    }
+  };
+
+  const handleSelectProvider = async (provider: ProviderSuggestion) => {
+    if (!providerModalType) return;
+    setProviderSubmittingId(provider.id);
+    try {
+      await createServiceRequest(match.id, provider.id, providerModalType);
+      await refreshServiceRequests(match.id);
+      setProviderModalType(null);
+      showActionSuccess(`Talep gönderildi — ${provider.name} onayını bekliyor`);
+    } catch (err: any) {
+      console.error('[MatchJoin] talep oluşturma:', err);
+      showActionError(err?.message || 'Hizmet talebi oluşturulamadı.');
+    } finally {
+      setProviderSubmittingId(null);
     }
   };
 
@@ -1538,6 +1608,128 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   ))}
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Kaleci / Hakem Seçim Modalı (Sıralı Öneri) ───────────────────── */}
+      <AnimatePresence>
+        {providerModalType && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center"
+            onClick={() => { if (!providerSubmittingId) setProviderModalType(null); }}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#161B22] border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
+            >
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+
+              {(() => {
+                const isGK = providerModalType === 'GK';
+                const accent = isGK ? '#FF9F43' : '#A78BFA';
+                const Icon = isGK ? Hand : Scale;
+                const title = isGK ? 'Kaleci Ekle' : 'Hakem Ekle';
+                return (
+                  <>
+                    <div className="flex justify-between items-center mb-5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl border" style={{ background: accent + '1a', color: accent, borderColor: accent + '33' }}>
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{title}</h3>
+                          <p className="text-[9px] font-black uppercase tracking-widest mt-0.5" style={{ color: accent }}>
+                            Sıralı Öneri • Tek Kişi Tüm Ücreti Öder
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { if (!providerSubmittingId) setProviderModalType(null); }}
+                        className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {providersLoading ? (
+                      <div className="flex flex-col items-center justify-center py-14 gap-3">
+                        <Loader2 size={28} className="animate-spin" style={{ color: accent }} />
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Uygun {isGK ? 'kaleci' : 'hakem'}ler aranıyor…</p>
+                      </div>
+                    ) : providerSuggestions.length === 0 ? (
+                      <div className="text-center py-12 space-y-3">
+                        <Icon size={34} className="text-white/20 mx-auto" />
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                          Şu an uygun {isGK ? 'kaleci' : 'hakem'} yok
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+                        {providerSuggestions.map((p) => {
+                          const submitting = providerSubmittingId === p.id;
+                          const disabled = !!providerSubmittingId;
+                          return (
+                            <div
+                              key={p.id}
+                              className="bg-black/30 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 transition-all hover:border-white/10"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="relative shrink-0">
+                                  <img
+                                    src={p.avatar || `https://i.pravatar.cc/150?u=${p.id}`}
+                                    alt={p.name}
+                                    className="w-12 h-12 rounded-xl object-cover border"
+                                    style={{ borderColor: accent + '50' }}
+                                  />
+                                  {p.is_elite && (
+                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-[#FFFF00] border-2 border-[#161B22]">
+                                      <Award size={10} className="text-black" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <h4 className="text-sm font-black text-white uppercase tracking-tight italic truncate">{p.name}</h4>
+                                    <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded text-[10px] font-black text-yellow-400 shrink-0">
+                                      <Star size={10} fill="currentColor" /> {Number(p.rating).toFixed(1)}
+                                    </div>
+                                  </div>
+                                  <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide mt-0.5 truncate">
+                                    {[p.style, p.level, `${p.match_count} Maç`].filter(Boolean).join(' • ')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1">
+                                <div>
+                                  <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Ücret</p>
+                                  <p className="text-xl font-black text-white tracking-tighter">{p.fee}₺</p>
+                                </div>
+                                <motion.button
+                                  whileHover={disabled ? undefined : { scale: 1.04 }}
+                                  whileTap={disabled ? undefined : { scale: 0.96 }}
+                                  disabled={disabled}
+                                  onClick={() => handleSelectProvider(p)}
+                                  className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                  style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
+                                >
+                                  {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
+                                </motion.button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </motion.div>
           </motion.div>
         )}
@@ -2277,6 +2469,110 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </motion.button>
           </div>
         </div>
+
+        {/* ── KALECİ & HAKEM (Yalnız Maç Sahibi / Kaptan) ──────────────────── */}
+        {isCaptain && (
+          <div className="space-y-3 mt-6">
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Kaleci & Hakem</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              {(['GK', 'REF'] as ProviderType[]).map((type) => {
+                const isGK = type === 'GK';
+                const assignedId = isGK ? match.gkId : match.refereeId;
+                const activeReq = getActiveRequestForType(type);
+                const assignedUser = assignedId
+                  ? (adminUsers || []).find(u => u?.id === assignedId)
+                  : null;
+                const accent = isGK ? '#FF9F43' : '#A78BFA';
+                const Icon = isGK ? Hand : Scale;
+                const label = isGK ? 'Kaleci' : 'Hakem';
+
+                // 1) Atanmış sağlayıcı varsa onun bilgisini göster
+                if (assignedId) {
+                  return (
+                    <div
+                      key={type}
+                      className="p-4 rounded-2xl bg-[#161B22]/80 border transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
+                      style={{ borderColor: accent + '40' }}
+                    >
+                      <div className="absolute top-0 right-0 w-12 h-12 pointer-events-none"
+                        style={{ background: `linear-gradient(to bottom left, ${accent}1a, transparent)` }} />
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={assignedUser?.avatar || `https://i.pravatar.cc/150?u=${assignedId}`}
+                          alt={assignedUser?.name || label}
+                          className="w-9 h-9 rounded-xl object-cover border"
+                          style={{ borderColor: accent + '60' }}
+                        />
+                        <div className="p-1.5 rounded-lg border" style={{ background: accent + '1a', color: accent, borderColor: accent + '33' }}>
+                          <CheckCircle2 size={13} />
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-black text-xs text-white uppercase tracking-wider truncate max-w-[120px]">
+                          {assignedUser?.name || label}
+                        </h4>
+                        <p className="text-[8px] font-bold mt-0.5 uppercase tracking-wide" style={{ color: accent }}>
+                          {label} Atandı
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // 2) Bekleyen (PENDING/ACCEPTED/CAPTURED) talep varsa durum kartı
+                if (activeReq) {
+                  const statusLabel =
+                    activeReq.status === 'PENDING' ? `${label} Talebi Bekliyor`
+                    : activeReq.status === 'ACCEPTED' ? `${label} Onayladı`
+                    : `${label} Atandı`;
+                  return (
+                    <div
+                      key={type}
+                      className="p-4 rounded-2xl bg-[#161B22]/80 border border-amber-500/30 flex flex-col items-start gap-2.5 text-left relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-amber-500/10 to-transparent pointer-events-none" />
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <Clock size={16} className={activeReq.status === 'PENDING' ? 'animate-pulse' : ''} />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-xs text-white uppercase tracking-wider">{statusLabel}</h4>
+                        <p className="text-[8px] text-white/40 font-bold mt-0.5 uppercase tracking-wide">
+                          Ücret: {activeReq.fee}₺
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // 3) Aksiyon butonu — Kaleci/Hakem Ekle
+                return (
+                  <motion.button
+                    key={type}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleOpenProviderModal(type)}
+                    className="p-4 rounded-2xl bg-[#161B22]/80 border border-white/5 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
+                    style={{ ['--accent' as any]: accent }}
+                  >
+                    <div className="absolute top-0 right-0 w-12 h-12 pointer-events-none"
+                      style={{ background: `linear-gradient(to bottom left, ${accent}1a, transparent)` }} />
+                    <div className="p-2.5 rounded-xl border transition-all"
+                      style={{ background: accent + '1a', color: accent, borderColor: accent + '33' }}>
+                      <Icon size={16} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-xs text-white uppercase tracking-wider">{label} Ekle</h4>
+                      <p className="text-[8px] text-white/40 font-bold mt-0.5 uppercase tracking-wide">
+                        {isGK ? 'Sıralı Öneriden Seç' : 'Maça Hakem Ata'}
+                      </p>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </>
     )}
   </main>

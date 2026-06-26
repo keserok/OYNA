@@ -1,10 +1,19 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Star, ShieldCheck, Crown, Users, Trophy, MessageSquare, Scale, Droplets } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ArrowLeft, Star, ShieldCheck, Crown, Users, Trophy, MessageSquare, Scale, Droplets, Hand, Gavel } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
+import { submitServiceRating } from '../services/serviceRequestService';
 import type { PositionSlot } from '../types';
+
+// FAZ 5: Maça atanmış kaleci/hakem hakkında değerlendirme ekranında gösterilecek bilgi
+interface ServiceProviderInfo {
+  id: string;
+  type: 'GK' | 'REF';
+  name: string;
+  avatar?: string | null;
+}
 
 interface PostMatchEvalProps {
   onBack: () => void;
@@ -51,6 +60,77 @@ const Sparkle: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, dela
   </motion.div>
 );
 
+// FAZ 5: Kaleci/Hakem 1-10 puanlama + opsiyonel yorum bloğu.
+// Puan girilmezse (score === 0) gönderim atlanır — değerlendirme zorunlu değildir.
+const ServiceRatingCard: React.FC<{
+  info: ServiceProviderInfo;
+  score: number;
+  comment: string;
+  onScore: (val: number) => void;
+  onComment: (val: string) => void;
+}> = ({ info, score, comment, onScore, onComment }) => {
+  const isGk = info.type === 'GK';
+  const accent = isGk ? 'text-[#FFFF00]' : 'text-blue-400';
+  const ring = isGk ? 'border-[#FFFF00]/20 bg-[#FFFF00]/10' : 'border-blue-500/20 bg-blue-500/10';
+  const Icon = isGk ? Hand : Gavel;
+  return (
+    <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 flex flex-col gap-4 relative overflow-hidden">
+      {/* Sağlayıcı kimliği */}
+      <div className="flex items-center gap-3">
+        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border overflow-hidden shrink-0 ${ring}`}>
+          {info.avatar
+            ? <img src={info.avatar} alt={info.name} className="w-full h-full object-cover" />
+            : <Icon size={20} className={accent} />}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+            {isGk ? 'Kaleci Değerlendirmesi' : 'Hakem Değerlendirmesi'}
+          </p>
+          <p className="text-sm font-black text-white uppercase tracking-tight italic truncate">{info.name}</p>
+        </div>
+        {score > 0 && (
+          <span className={`ml-auto text-lg font-black italic tracking-tighter ${accent}`}>{score}<span className="text-gray-600 text-xs">/10</span></span>
+        )}
+      </div>
+
+      {/* 1-10 puan butonları */}
+      <div className="grid grid-cols-10 gap-1.5">
+        {Array.from({ length: 10 }).map((_, i) => {
+          const val = i + 1;
+          const active = val <= score;
+          return (
+            <motion.button
+              key={val}
+              whileTap={{ scale: 0.88 }}
+              onClick={() => {
+                if (navigator.vibrate) navigator.vibrate(15);
+                onScore(score === val ? 0 : val);
+              }}
+              className={`h-9 rounded-lg border text-[11px] font-black transition-all ${
+                active
+                  ? isGk
+                    ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.3)]'
+                    : 'bg-blue-500 text-white border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
+                  : 'bg-black/30 border-white/5 text-gray-600 hover:text-white hover:border-white/10'
+              }`}
+            >
+              {val}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Opsiyonel yorum */}
+      <textarea
+        value={comment}
+        onChange={(e) => onComment(e.target.value)}
+        placeholder={isGk ? 'Kaleci hakkında not (isteğe bağlı)…' : 'Hakem hakkında not (isteğe bağlı)…'}
+        className="w-full bg-black/40 border border-white/8 rounded-2xl p-3.5 text-xs text-white focus:outline-none focus:border-white/20 min-h-[60px] resize-none placeholder-gray-700 font-bold transition-all"
+      />
+    </div>
+  );
+};
+
 const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => {
   const { selectedMatch } = useAppStore();
 
@@ -86,6 +166,42 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [pitchRating, setPitchRating] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [infoToast, setInfoToast] = useState<string | null>(null);
+
+  // FAZ 5: Maça atanmış kaleci/hakem değerlendirmesi (1-10 + opsiyonel yorum)
+  const [providers, setProviders] = useState<ServiceProviderInfo[]>([]);
+  const [serviceScores, setServiceScores] = useState<Record<string, number>>({});      // key: provider id
+  const [serviceComments, setServiceComments] = useState<Record<string, string>>({});   // key: provider id
+
+  // Atanmış sağlayıcı bilgilerini (ad/avatar) çek
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProvider = async (
+      table: 'goalkeepers' | 'referees',
+      id: string,
+      type: 'GK' | 'REF',
+      fallbackName: string,
+    ): Promise<ServiceProviderInfo> => {
+      try {
+        const { data } = await supabase.from(table).select('name,avatar').eq('id', id).maybeSingle();
+        return { id, type, name: (data as any)?.name || fallbackName, avatar: (data as any)?.avatar ?? null };
+      } catch {
+        return { id, type, name: fallbackName, avatar: null };
+      }
+    };
+
+    const loadProviders = async () => {
+      if (!selectedMatch) { setProviders([]); return; }
+      const tasks: Promise<ServiceProviderInfo>[] = [];
+      if (selectedMatch.gkId) tasks.push(fetchProvider('goalkeepers', selectedMatch.gkId, 'GK', 'Kaleci'));
+      if (selectedMatch.refereeId) tasks.push(fetchProvider('referees', selectedMatch.refereeId, 'REF', 'Hakem'));
+      const results = await Promise.all(tasks);
+      if (!cancelled) setProviders(results);
+    };
+
+    loadProviders();
+    return () => { cancelled = true; };
+  }, [selectedMatch]);
 
   const showInfo = (msg: string) => {
     setInfoToast(msg);
@@ -124,6 +240,19 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
       setSubmitting(false);
       return;
+    }
+
+    // FAZ 5: Kaleci/Hakem 1-10 puanlaması — sağlayıcı rating'ini günceller + payout serbest.
+    // Atlanabilir: yalnız puan girilmiş (score > 0) sağlayıcılar gönderilir.
+    // Hata olursa diğer gönderimleri/akışı bozmadan sessizce loglanır.
+    for (const p of providers) {
+      const score = serviceScores[p.id] ?? 0;
+      if (score <= 0) continue;
+      try {
+        await submitServiceRating(selectedMatch.id, p.id, p.type, score, serviceComments[p.id]?.trim() || undefined);
+      } catch (e) {
+        console.warn(`[PostMatchEval] ${p.type} puanlaması kaydedilemedi:`, e);
+      }
     }
     setSubmitting(false);
     setShowResult(true);
@@ -655,6 +784,25 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   <Sparkle key={s.id} x={s.x} y={s.y} delay={s.delay} />
                 ))}
               </div>
+
+              {/* FAZ 5: Atanmış Kaleci / Hakem 1-10 değerlendirmesi (varsa, atlanabilir) */}
+              {providers.length > 0 && (
+                <div className="space-y-3">
+                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block ml-1">
+                    GÖREVLİ DEĞERLENDİRMESİ <span className="text-gray-700">(İSTEĞE BAĞLI)</span>
+                  </span>
+                  {providers.map(p => (
+                    <ServiceRatingCard
+                      key={p.id}
+                      info={p}
+                      score={serviceScores[p.id] ?? 0}
+                      comment={serviceComments[p.id] ?? ''}
+                      onScore={(val) => setServiceScores(prev => ({ ...prev, [p.id]: val }))}
+                      onComment={(val) => setServiceComments(prev => ({ ...prev, [p.id]: val }))}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Feedback Textarea */}
               <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 space-y-3">

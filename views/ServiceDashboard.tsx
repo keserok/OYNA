@@ -1,8 +1,15 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment } from '../types';
-import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest } from '../types';
+import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
+import {
+  getIncomingRequests,
+  respondServiceRequest,
+  reportServiceAttendance,
+  getProviderIdentityStatus,
+  submitProviderIdentity,
+} from '../services/serviceRequestService';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
@@ -80,6 +87,25 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  // FAZ 5 — Gelen talepler (kaleci/hakem hizmet talepleri)
+  const [incomingRequests, setIncomingRequests] = useState<ServiceRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [reportingId, setReportingId] = useState<string | null>(null);
+
+  // FAZ 5 — TC kimlik doğrulama
+  const [identityStatus, setIdentityStatus] = useState<'PENDING' | 'VERIFIED' | 'REJECTED' | null>(null);
+  const [showIdentityModal, setShowIdentityModal] = useState(false);
+  const [identityTc, setIdentityTc] = useState('');
+  const [identityName, setIdentityName] = useState('');
+  const [identityBirthYear, setIdentityBirthYear] = useState('');
+  const [identitySubmitting, setIdentitySubmitting] = useState(false);
+  const [identityFormError, setIdentityFormError] = useState<string | null>(null);
+
+  // FAZ 5 — Kazanç bakiyesi (get_wallet_summary → earnings_balance)
+  const [earningsBalance, setEarningsBalance] = useState(0);
+
   const showActionError = (msg: string) => {
       setActionError(msg);
       setTimeout(() => setActionError(null), 4000);
@@ -136,6 +162,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           return m.applicants && Array.isArray(m.applicants) && m.applicants.some((a: any) => a.userId === userProfile.id || a.userId === userProfile.uid) && m.status !== 'CONFIRMED' && m.status !== 'COMPLETED';
       });
   }, [adminMatches, userProfile]);
+
+  // FAZ 5 — Gelen taleplerin durum bazlı gruplanması
+  const newRequests = useMemo(
+      () => incomingRequests.filter(r => r.status === 'PENDING'),
+      [incomingRequests]
+  );
+  const activeRequests = useMemo(
+      () => incomingRequests.filter(r => r.status === 'ACCEPTED' || r.status === 'CAPTURED'),
+      [incomingRequests]
+  );
 
   useEffect(() => {
     let active = true;
@@ -269,11 +305,115 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
+  // FAZ 5 — Gelen hizmet talepleri (PENDING/ACCEPTED/CAPTURED...)
+  const fetchIncomingRequests = async () => {
+    setRequestsLoading(true);
+    setRequestsError(null);
+    try {
+      const requests = await getIncomingRequests();
+      setIncomingRequests(requests);
+    } catch (err) {
+      console.error('fetchIncomingRequests:', err);
+      setRequestsError('Talepler yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  // FAZ 5 — Kazanç bakiyesi (anlık ödeme bakiyesi)
+  const fetchEarnings = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_wallet_summary');
+      if (error) {
+        console.warn('fetchEarnings:', error.message);
+        return;
+      }
+      if (data) {
+        setEarningsBalance(Number((data as any).earnings_balance) || 0);
+      }
+    } catch (err) {
+      console.error('fetchEarnings:', err);
+    }
+  };
+
+  // FAZ 5 — TC kimlik doğrulama durumu
+  const fetchIdentityStatus = async () => {
+    try {
+      const status = await getProviderIdentityStatus();
+      setIdentityStatus(status);
+    } catch (err) {
+      console.error('fetchIdentityStatus:', err);
+    }
+  };
+
+  // FAZ 5 — Talebe yanıt ver (kabul/red)
+  const handleRespondRequest = async (requestId: string, accept: boolean) => {
+    setRespondingId(requestId);
+    try {
+      await respondServiceRequest(requestId, accept);
+      showActionSuccess(accept ? 'Talebi kabul ettin.' : 'Talebi reddettin.');
+      await fetchIncomingRequests();
+    } catch (err: any) {
+      console.error('handleRespondRequest:', err);
+      showActionError(err?.message || 'İşlem tamamlanamadı. Lütfen tekrar dene.');
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  // FAZ 5 — Sorun Bildir (katılım bildirimi)
+  const handleReportAttendance = async (requestId: string) => {
+    setReportingId(requestId);
+    try {
+      await reportServiceAttendance(requestId);
+      showActionSuccess('Bildirimin yöneticilere iletildi.');
+      await fetchIncomingRequests();
+    } catch (err: any) {
+      console.error('handleReportAttendance:', err);
+      showActionError(err?.message || 'Bildirim gönderilemedi. Lütfen tekrar dene.');
+    } finally {
+      setReportingId(null);
+    }
+  };
+
+  // FAZ 5 — TC kimlik doğrulama gönder
+  const handleSubmitIdentity = async () => {
+    setIdentityFormError(null);
+    const tc = identityTc.trim();
+    if (!/^\d{11}$/.test(tc)) {
+      setIdentityFormError('TC kimlik numarası 11 haneli olmalıdır.');
+      return;
+    }
+    if (!identityName.trim()) {
+      setIdentityFormError('Ad soyad zorunludur.');
+      return;
+    }
+    const birthYear = identityBirthYear.trim() ? parseInt(identityBirthYear.trim(), 10) : undefined;
+    setIdentitySubmitting(true);
+    try {
+      await submitProviderIdentity(tc, identityName.trim(), birthYear);
+      showActionSuccess('Kimlik doğrulama talebin gönderildi.');
+      setShowIdentityModal(false);
+      setIdentityTc('');
+      setIdentityName('');
+      setIdentityBirthYear('');
+      await fetchIdentityStatus();
+    } catch (err: any) {
+      console.error('handleSubmitIdentity:', err);
+      setIdentityFormError(err?.message || 'Kimlik doğrulama gönderilemedi. Lütfen tekrar dene.');
+    } finally {
+      setIdentitySubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (!userProfile?.id) return;
     fetchOffers();
     fetchWallet();
     fetchWalletHistory();
+    fetchIncomingRequests();
+    fetchEarnings();
+    fetchIdentityStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
@@ -698,6 +838,153 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </div>
   );
 
+  // FAZ 5 — TC kimlik doğrulama CTA / rozet
+  const renderIdentitySection = () => (
+      <div className="px-6">
+          {identityStatus === 'VERIFIED' ? (
+              <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-2xl px-4 py-3">
+                  <div className="w-9 h-9 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 shrink-0">
+                      <BadgeCheck size={18} />
+                  </div>
+                  <div>
+                      <p className="text-sm font-black text-green-400">Kimlik doğrulandı</p>
+                      <p className="text-[10px] text-gray-400 font-bold">Ödemelerini alabilirsin.</p>
+                  </div>
+              </div>
+          ) : (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 shrink-0">
+                          <AlertTriangle size={18} />
+                      </div>
+                      <div className="flex-1">
+                          <p className="text-sm font-black text-white">
+                              {identityStatus === 'PENDING' ? 'Kimlik doğrulaması inceleniyor' : identityStatus === 'REJECTED' ? 'Kimlik doğrulaması reddedildi' : 'Kimlik doğrulaması gerekli'}
+                          </p>
+                          <p className="text-[11px] text-gray-300 font-bold mt-0.5">
+                              Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.
+                          </p>
+                      </div>
+                  </div>
+                  {identityStatus !== 'PENDING' && (
+                      <button
+                          onClick={() => { setIdentityName(userProfile?.fullName || ''); setIdentityFormError(null); setShowIdentityModal(true); }}
+                          className="w-full mt-3 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black uppercase tracking-wider transition-colors"
+                      >
+                          Kimlik Doğrula
+                      </button>
+                  )}
+              </div>
+          )}
+      </div>
+  );
+
+  // FAZ 5 — Gelen talepler bölümü
+  const renderIncomingRequestsSection = () => (
+      <div className="px-6">
+          <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                  <Inbox size={16} className={theme.primary} />
+                  <h3 className="font-black text-white text-sm tracking-wide uppercase">GELEN TALEPLER</h3>
+                  {newRequests.length > 0 && (
+                      <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{newRequests.length}</span>
+                  )}
+              </div>
+              <button onClick={fetchIncomingRequests} className="text-gray-500 hover:text-white transition-colors">
+                  <RefreshCcw size={14} />
+              </button>
+          </div>
+
+          {requestsLoading ? (
+              <LoadingState message="Talepler yükleniyor..." size="sm" />
+          ) : requestsError ? (
+              <ErrorState message={requestsError} onRetry={fetchIncomingRequests} />
+          ) : (newRequests.length === 0 && activeRequests.length === 0) ? (
+              <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
+                  <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Inbox size={24} className="text-gray-600" />
+                  </div>
+                  <p className="text-gray-400 text-sm font-bold">Henüz gelen talebin yok.</p>
+              </div>
+          ) : (
+              <div className="space-y-4">
+                  {/* Yeni Talepler */}
+                  {newRequests.length > 0 && (
+                      <div className="space-y-3">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yeni Talepler</p>
+                          {newRequests.map(req => (
+                              <div key={req.id} className="bg-gradient-to-r from-green-900/30 to-[#161B22] border border-green-500/30 rounded-[24px] p-4">
+                                  <div className="flex items-start justify-between">
+                                      <div>
+                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik Talebi' : 'Kalecilik Talebi'}</h4>
+                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                      </div>
+                                      <div className="text-right">
+                                          <p className="text-[9px] text-gray-500 font-bold uppercase">Eline geçecek</p>
+                                          <p className="text-lg font-black text-green-400">{req.providerAmount}₺</p>
+                                          <p className="text-[9px] text-gray-500 font-bold">Brüt {req.fee}₺</p>
+                                      </div>
+                                  </div>
+                                  <div className="mt-4 flex gap-2">
+                                      <button
+                                          onClick={() => handleRespondRequest(req.id, false)}
+                                          disabled={respondingId === req.id}
+                                          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-black uppercase hover:bg-white/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                      >
+                                          <X size={14} /> Reddet
+                                      </button>
+                                      <button
+                                          onClick={() => handleRespondRequest(req.id, true)}
+                                          disabled={respondingId === req.id}
+                                          className="flex-1 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-white text-xs font-black uppercase transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
+                                      >
+                                          {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <Check size={14} />}
+                                          Kabul Et
+                                      </button>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  )}
+
+                  {/* Yaklaşan / Tamamlanan (ACCEPTED / CAPTURED) */}
+                  {activeRequests.length > 0 && (
+                      <div className="space-y-3">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yaklaşan / Tamamlanan</p>
+                          {activeRequests.map(req => (
+                              <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
+                                  <div className="flex items-start justify-between">
+                                      <div>
+                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
+                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                      </div>
+                                      <div className="text-right">
+                                          <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${req.status === 'CAPTURED' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                                              {req.status === 'CAPTURED' ? 'Ödeme Bekliyor' : 'Onaylandı'}
+                                          </span>
+                                          <p className="text-sm font-black text-green-400 mt-1">{req.providerAmount}₺</p>
+                                      </div>
+                                  </div>
+                                  {/* Sorun Bildir: CAPTURED ama henüz tamamlanmamış (payout serbest değil) */}
+                                  {req.status === 'CAPTURED' && !req.payoutReleased && (
+                                      <button
+                                          onClick={() => handleReportAttendance(req.id)}
+                                          disabled={reportingId === req.id}
+                                          className="w-full mt-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[11px] font-black uppercase tracking-wider hover:bg-yellow-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                      >
+                                          {reportingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <Flag size={13} />}
+                                          Sorun Bildir
+                                      </button>
+                                  )}
+                              </div>
+                          ))}
+                      </div>
+                  )}
+              </div>
+          )}
+      </div>
+  );
+
   // --- SUB-VIEWS ---
 
   const renderHomeView = () => (
@@ -787,11 +1074,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </motion.button>
       </div>
 
+          {/* FAZ 5 — TC Kimlik Doğrulama CTA / rozet */}
+          {renderIdentitySection()}
+
           {/* Identity Card */}
           <div>
             {isRef ? renderRefereeIdentityCard() : renderGoalkeeperIdentityCard()}
           </div>
-          
+
+          {/* FAZ 5 — Gelen Talepler */}
+          {renderIncomingRequestsSection()}
+
           <div className="px-6">
               <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6 relative overflow-hidden group">
                   <motion.div 
@@ -803,12 +1096,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                       <div>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase">Bugünkü Kazanç</p>
-                          <p className="text-2xl font-black text-white">450₺</p>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase">Kazanç</p>
+                          <p className="text-2xl font-black text-white">{earningsBalance}₺</p>
                       </div>
                       <div className="text-right">
                           <p className="text-[10px] text-gray-500 font-bold uppercase">Sıradaki Maç</p>
-                          <p className="text-lg font-black text-[#FFFF00]">21:00</p>
+                          <p className="text-lg font-black text-[#FFFF00]">{myUpcomingMatches[0]?.time || '--:--'}</p>
                       </div>
                   </div>
               </div>
@@ -1111,7 +1404,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="bg-gradient-to-br from-gray-800 to-[#161B22] p-6 rounded-[32px] border border-white/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-6 opacity-5"><Wallet size={120} /></div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Toplam Kazanç</p>
-              <h2 className="text-4xl font-black text-white mt-2">4.250₺</h2>
+              <h2 className="text-4xl font-black text-white mt-2">{earningsBalance}₺</h2>
               
               <div className="mt-6 flex gap-4">
                   <div className="flex-1">
@@ -1839,6 +2132,64 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </div>
         )}
       </AnimatePresence>
+
+      {/* FAZ 5 — TC KİMLİK DOĞRULAMA MODAL */}
+      {showIdentityModal && (
+          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+                  <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-xl font-black text-white uppercase tracking-wide">KİMLİK DOĞRULA</h3>
+                      <button onClick={() => setShowIdentityModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+                  </div>
+                  <p className="text-[11px] text-gray-400 font-bold mb-6">Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.</p>
+
+                  <div className="space-y-4">
+                      <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">TC Kimlik No</p>
+                          <input
+                              value={identityTc}
+                              onChange={e => setIdentityTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                              inputMode="numeric"
+                              placeholder="11 haneli TC kimlik no"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-yellow-500/50 transition-colors"
+                          />
+                      </div>
+                      <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Ad Soyad</p>
+                          <input
+                              value={identityName}
+                              onChange={e => setIdentityName(e.target.value)}
+                              placeholder="AD SOYAD"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-yellow-500/50 transition-colors"
+                          />
+                      </div>
+                      <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Doğum Yılı (opsiyonel)</p>
+                          <input
+                              value={identityBirthYear}
+                              onChange={e => setIdentityBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              inputMode="numeric"
+                              placeholder="örn. 1995"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-yellow-500/50 transition-colors"
+                          />
+                      </div>
+
+                      {identityFormError && (
+                          <p className="text-[11px] text-red-400 font-bold">{identityFormError}</p>
+                      )}
+
+                      <button
+                          onClick={handleSubmitIdentity}
+                          disabled={identitySubmitting}
+                          className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-sm rounded-2xl transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
+                      >
+                          {identitySubmitting ? <RefreshCcw size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
+                          {identitySubmitting ? 'Gönderiliyor...' : 'Doğrulamayı Gönder'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* Custom Styles for 3D Flip */}
       <style>{`

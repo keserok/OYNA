@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Scale, User, Smartphone, FileText, MapPin,
   Check, ArrowRight, Banknote, Ruler, Calendar, Award, ChevronDown, Sparkles, XCircle, Search,
+  CreditCard, Mail,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { auth } from '../supabaseAuth';
 import { submitServiceApplication, ServiceApplicationData } from '../services/serviceProviderService';
+import { uploadProviderIdPhoto, submitProviderApplication } from '../services/serviceRequestService';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { TURKEY_REGIONS, districtsOfCity } from '../data/turkeyRegions';
@@ -95,6 +97,8 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [phoneDigits, setPhoneDigits] = useState('');
   const [fee, setFee] = useState('');
   const [bio, setBio] = useState('');
+  const [idPhoto, setIdPhoto] = useState<File | null>(null);
+  const [intentLetter, setIntentLetter] = useState('');
   const [style, setStyle] = useState('');
   const [zones, setZones] = useState<string[]>([]);
   const [activeCity, setActiveCity] = useState('İstanbul');
@@ -126,6 +130,8 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     phone: phoneDigits.length !== 10 ? 'Telefon numarası 10 haneli olmalı' : null,
     fee: !(Number(fee) > 0) ? 'Geçerli bir ücret girmelisin' : null,
     bio: bio.trim().length < 10 ? `En az 10 karakter yaz (${bio.trim().length}/10)` : null,
+    idPhoto: !idPhoto ? 'Kimlik fotoğrafı yüklemelisin' : null,
+    intentLetter: intentLetter.trim().length < 10 ? `En az 10 karakter yaz (${intentLetter.trim().length}/10)` : null,
     style: style.length === 0 ? `${theme.styleLabel} seçmelisin` : null,
     zones: zones.length === 0 ? 'En az 1 bölge seçmelisin' : null,
     agreed: !agreed ? 'Devam etmek için KVKK onayı vermelisin' : null,
@@ -161,6 +167,17 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           : { level, experienceYears: Number(experienceYears) || 0 }),
       };
       await submitServiceApplication(role, payload);
+
+      // Kaleci/Hakem onboarding: kimlik foto + niyet mektubu → admin onay kuyruğu
+      const idPhotoPath = await uploadProviderIdPhoto(idPhoto!);
+      await submitProviderApplication({
+        role,
+        idPhotoPath,
+        phone: `${countryCode}${phoneDigits}`,
+        intentLetter: intentLetter.trim(),
+        ...(isGk ? {} : { level }),
+      });
+
       if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
       onSubmitted();
     } catch (err: any) {
@@ -319,6 +336,27 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               placeholder="5XX XXX XX XX"
             />
           </Field>
+
+          {/* Kimlik Fotoğrafı */}
+          <div className="group">
+            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">Kimlik Fotoğrafı</label>
+            <label
+              className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-colors hover:border-white/40 ${visibleError('idPhoto') ? 'border-red-500/50' : 'border-gray-800'}`}
+            >
+              <CreditCard size={20} className="shrink-0 text-gray-500" />
+              <span className={`text-sm font-bold truncate ${idPhoto ? 'text-white' : 'text-gray-700'}`}>
+                {idPhoto ? idPhoto.name : 'Kimlik fotoğrafı seç (ön yüz)'}
+              </span>
+              {idPhoto && <Check size={16} className="shrink-0 ml-auto" style={{ color }} />}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { setIdPhoto(e.target.files?.[0] ?? null); markTouched('idPhoto'); setError(null); }}
+              />
+            </label>
+            {visibleError('idPhoto') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.idPhoto}</p>}
+          </div>
 
           {/* Role-specific */}
           {isGk ? (
@@ -529,6 +567,31 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 <p className="text-[10px] text-red-400 font-bold">{fieldErrors.bio}</p>
               ) : <span />}
               <p className="text-[10px] text-gray-600 text-right">{bio.length}/280</p>
+            </div>
+          </div>
+
+          {/* Niyet Mektubu */}
+          <div className="group">
+            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">Niyet Mektubu</label>
+            <div className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('intentLetter') ? 'border-red-500/50' : 'border-gray-800'}`}>
+              <Mail size={20} className="text-gray-500 shrink-0 mt-0.5" />
+              <textarea
+                value={intentLetter}
+                onChange={(e) => { setIntentLetter(e.target.value); setError(null); }}
+                onBlur={() => markTouched('intentLetter')}
+                rows={3}
+                maxLength={500}
+                className="bg-transparent w-full outline-none text-white font-medium placeholder:text-gray-700 text-sm resize-none"
+                placeholder={isGk
+                  ? 'Neden kaleci olmak istiyorsun? Kısaca anlat...'
+                  : 'Neden hakem olmak istiyorsun? Kısaca anlat...'}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1 ml-1">
+              {visibleError('intentLetter') ? (
+                <p className="text-[10px] text-red-400 font-bold">{fieldErrors.intentLetter}</p>
+              ) : <span />}
+              <p className="text-[10px] text-gray-600 text-right">{intentLetter.length}/500</p>
             </div>
           </div>
 

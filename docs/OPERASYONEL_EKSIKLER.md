@@ -13,7 +13,7 @@
 | 1 | Gerçek iyzico pre-auth entegrasyonu | 2.1 | 🔴 Yüksek | iyzico merchant hesabı | ⏳ Bekliyor |
 | 2 | Edge function'ların canlıya deploy'u | 2.1 | 🔴 Yüksek | #1 secret'lar | ⏳ Bekliyor |
 | 3 | Para birimi & komisyon konfig doğrulama | 2.1 | 🟡 Orta | #1 | ⏳ Bekliyor |
-| 4 | Kaleci/Hakem anlık (instant) payout akışı | 5 | 🟡 Orta | FAZ 5 | 🧱 İskelet hazır |
+| 4 | Kaleci/Hakem anlık (instant) payout akışı | 5 | 🟡 Orta | FAZ 5 | ✅ Bağlandı (iyzico capture #1/#2'ye bağlı) |
 | 5 | Model B (saha %95 + markup) iş kuralı teyidi | 2.2 | 🟢 Düşük | İş kararı | 🧱 Hesap hazır |
 | 6 | 2 haftalık owner payout → otomatik IBAN gönderimi | 2.3 | 🟡 Orta | #1 | 🧱 Serbest bırakma hazır |
 | 7 | Kademeli iade tetikleyici (cron + maç saati) | 2.3 | 🟡 Orta | FAZ 3.2 | 🧱 RPC hazır |
@@ -113,7 +113,7 @@ Webhook callback URL'ini iyzico panelinde `https://<project>.functions.supabase.
 
 **📦 Hazır olan:** `payout_requests.payout_type='PROVIDER_INSTANT'`, `commission_config` SERVICE_GK/REF %10 seed'leri, `payment_intents.service_provider_amount` kolonu, `related_entity_type` GK_SERVICE/REF_SERVICE değerleri.
 
-**⏳ Durum:** İskelet hazır — FAZ 5'te bağlanacak.
+**⏳ Durum:** ✅ **FAZ 5'te bağlandı** (`20260706000001_faz5_service_engine.sql`): `create_service_request` → `GK_SERVICE`/`REF_SERVICE` intent + %10 komisyon → maç onayında `capture_service_request` (trigger) → `SERVICE_EARNING` PENDING → maç sonu 1-10 değerlendirme `_release_service_payout` ile **anında** çekilebilir (owner 2 hafta ≠) + `request_payout` TC kimlik kapısı. **Kalan:** gerçek iyzico blokaj/capture çağrısı edge function'da (#1/#2 ile birlikte canlıya bağlanacak).
 
 ---
 
