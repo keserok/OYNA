@@ -205,8 +205,11 @@ ALTER TABLE public.settings
   ADD COLUMN IF NOT EXISTS "service_request_expiry_hours" numeric DEFAULT 24;
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 7. get_wallet_summary — SERVICE_EARNING'i de EARNINGS bakiyesine dahil et
---    (FAZ 2 sürümü yalnız DEPOSIT/MATCH_EARNING/REFERRAL_BONUS sayıyordu)
+-- 7. get_wallet_summary — BİRLEŞİK sürüm (FAZ 4 + FAZ 5)
+--    FAZ 4 (faz44_unify_owner_earnings): BOOKING_EARNING + reserved_balance
+--    FAZ 5: SERVICE_EARNING'i de EARNINGS bakiyesine dahil et
+--    NOT: Bu migration Faz 4 migration'larından SONRA çalışır (dosya sırası 0006),
+--    bu yüzden iki değişikliğin BİRLEŞİMİ tanımlanır (regresyon önlenir).
 -- ────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.get_wallet_summary()
 RETURNS jsonb
@@ -216,15 +219,23 @@ AS $$
 DECLARE
   v_uid      uuid := auth.uid();
   v_earnings numeric;
+  v_reserved numeric;
   v_refund   numeric;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
 
-  SELECT COALESCE(SUM(CASE WHEN type IN ('DEPOSIT','MATCH_EARNING','SERVICE_EARNING','REFERRAL_BONUS')
+  SELECT COALESCE(SUM(CASE WHEN type IN ('DEPOSIT','MATCH_EARNING','BOOKING_EARNING','SERVICE_EARNING','REFERRAL_BONUS')
                            THEN amount ELSE -amount END), 0)
   INTO v_earnings
   FROM public.wallet_transactions
   WHERE user_id = v_uid AND balance_type = 'EARNINGS' AND status = 'COMPLETED';
+
+  -- Bekleyen çekim talepleri (PENDING WITHDRAWAL) çekilebilir bakiyeden ayrılır
+  SELECT COALESCE(SUM(amount), 0)
+  INTO v_reserved
+  FROM public.wallet_transactions
+  WHERE user_id = v_uid AND balance_type = 'EARNINGS'
+    AND type = 'WITHDRAWAL' AND status = 'PENDING';
 
   SELECT COALESCE(SUM(CASE WHEN type = 'DEPOSIT' THEN amount ELSE -amount END), 0)
   INTO v_refund
@@ -232,7 +243,8 @@ BEGIN
   WHERE user_id = v_uid AND balance_type = 'REFUND_CREDIT' AND status = 'COMPLETED';
 
   RETURN jsonb_build_object(
-    'earnings_balance',      GREATEST(v_earnings, 0),
+    'earnings_balance',      GREATEST(v_earnings - v_reserved, 0),
+    'reserved_balance',      GREATEST(v_reserved, 0),
     'refund_credit_balance', GREATEST(v_refund, 0)
   );
 END;
