@@ -539,10 +539,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUserProfile = (adminUsers || []).find(u => u?.id === currentUserUid)
     || (adminUsers && adminUsers[0])
-    || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1', role: UserRole.CAPTAIN, rating: 4.9 };
+    || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1', role: UserRole.PLAYER, rating: 4.9 };
 
-  const isCaptain = currentUserProfile?.role === UserRole.CAPTAIN
-    || match.creatorId === currentUserProfile?.id;
+  // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
+  const isCaptain = match.creatorId === currentUserProfile?.id;
 
   const isHomeCaptain = match.creatorId === currentUserProfile.id || homeTeam?.captain === currentUserProfile.id || homeTeam?.captains?.includes(currentUserProfile.id);
   const isAwayCaptain = !!awayTeam && (awayTeam.captain === currentUserProfile.id || awayTeam.captains?.includes(currentUserProfile.id));

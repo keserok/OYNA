@@ -28,11 +28,11 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const role = useAppStore(s => s.role);
 
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
-    const isCaptain = activeTeam 
-        ? (auth.currentUser 
-            ? activeTeam.captain === auth.currentUser.uid 
-            : role === UserRole.CAPTAIN) 
-        : false;
+    // Kaptanlık = takım-içi yöneticilik (global rol değil): kurucu veya çoklu yönetici.
+    const isCaptain = !!activeTeam && !!auth.currentUser && (
+        activeTeam.captain === auth.currentUser.uid
+        || activeTeam.captains?.includes(auth.currentUser.uid)
+    );
 
     const activeApprovedTactics = teamTactics.filter((t: any) => t.status === 'APPROVED');
     const [selectedTacticId, setSelectedTacticId] = useState<string | null>(null);

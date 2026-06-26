@@ -29,12 +29,7 @@ const ListingDetails = lazy(() => import('./views/ListingDetails'));
 const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
 const Notifications = lazy(() => import('./views/Notifications'));
 const SettingsScreen = lazy(() => import('./views/SettingsScreen'));
-const VotingScreen = lazy(() => import('./views/VotingScreen'));
-const MotmReveal = lazy(() => import('./views/MotmReveal'));
-const OynaTv = lazy(() => import('./views/OynaTv'));
-const ChatScreen = lazy(() => import('./views/ChatScreen'));
 const MatchTicket = lazy(() => import('./views/MatchTicket'));
-const ScoutDashboard = lazy(() => import('./views/ScoutDashboard'));
 const PostMatchReport = lazy(() => import('./views/PostMatchReport'));
 const MatchDiaryDetail = lazy(() => import('./views/MatchDiaryDetail'));
 const Studio = lazy(() => import('./views/Studio'));
@@ -46,11 +41,7 @@ const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
 const SocialView = lazy(() => import('./views/SocialView'));
 const TeamCreator = lazy(() => import('./views/TeamCreator'));
-const TransferCenter = lazy(() => import('./views/TransferCenter'));
-const Leaderboards = lazy(() => import('./views/Leaderboards'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
-const TournamentBracket = lazy(() => import('./views/TournamentBracket'));
-const CommunityAdminDashboard = lazy(() => import('./views/CommunityAdminDashboard'));
 const MatchCreate = lazy(() => import('./views/MatchCreate'));
 const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
 const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
@@ -71,16 +62,6 @@ const ViewLoader = () => (
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 🛠️  GELİŞTİRME MODU
-// VITE_DEV_MODE=true  → direkt Dashboard
-// .env boşsa          → otomatik dev mod (Supabase yokken takılmayı önler)
-// import.meta.env.PROD === true ise dev mod hiçbir zaman aktif olmaz
-// ─────────────────────────────────────────────────────────────────────────────
-const DEV_MODE =
-  import.meta.env.PROD !== true &&
-  (import.meta.env.VITE_DEV_MODE === 'true' || !import.meta.env.VITE_SUPABASE_URL);
-
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
@@ -98,7 +79,6 @@ const App: React.FC = () => {
     resetNavigation,
     setRole,
     setIsAuthReady,
-    setHasMotmCoupon,
     setSelectedMatch,
     setSelectedDiaryId,
     setSelectedGk,
@@ -107,7 +87,6 @@ const App: React.FC = () => {
     setImpersonatedUser,
     originalRole,
     setOriginalRole,
-    chatTarget,
     isNotificationsOpen,
     setIsNotificationsOpen,
     addUserNotification,
@@ -116,15 +95,8 @@ const App: React.FC = () => {
   } = useAppStore();
 
   useEffect(() => {
-    if (DEV_MODE) {
-      // 🛠️ Geliştirme: direkt Dashboard — login yok
-      setRole(UserRole.CAPTAIN);
-      setIsAuthReady(true);
-      resetNavigation('DASHBOARD');
-    } else {
-      // 🚀 Prodüksiyon: normal akış
-      resetNavigation('SPLASH');
-    }
+    // Normal akış: her zaman SPLASH'ten başla, auth state'e göre yönlendir.
+    resetNavigation('SPLASH');
   }, []);
 
   const initApp = useAppStore(s => s.initApp);
@@ -167,7 +139,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (DEV_MODE) { setIsAuthReady(true); return; }
       try {
         if (user) {
           const { data: profile } = await supabase
@@ -511,18 +482,6 @@ const App: React.FC = () => {
 
       case 'SETTINGS':
         return <SettingsScreen onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
-      case 'VOTING':
-        return <VotingScreen onBack={() => goBack('DASHBOARD')} onComplete={() => navigateTo('MOTM_REVEAL')} />;
-      case 'MOTM_REVEAL':
-        return <MotmReveal
-          onClaim={() => {
-            setHasMotmCoupon(true);
-            resetNavigation('DASHBOARD');
-          }}
-          onBack={() => goBack('DASHBOARD')}
-        />;
-      case 'OYNA_TV':
-        return <OynaTv onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DISCOVERY':
         return <MatchDiscovery
           onBack={() => goBack('DASHBOARD')}
@@ -537,17 +496,8 @@ const App: React.FC = () => {
           onBack={() => goBack('MATCH_DISCOVERY')}
           onJoin={() => resetNavigation('DASHBOARD')} // Kadro kaydından sonra Dashboard'a dön
         />;
-      case 'CHAT':
-        return <ChatScreen
-          targetName={chatTarget?.name}
-          targetRole={chatTarget?.role}
-          targetAvatar={chatTarget?.avatar}
-          onBack={() => goBack('MATCH_DISCOVERY')}
-        />;
       case 'MATCH_TICKET':
         return <MatchTicket onBack={() => goBack('DASHBOARD')} />;
-      case 'SCOUT_DASHBOARD':
-        return <ScoutDashboard onBack={() => goBack('PROFILE')} />;
       case 'POST_MATCH':
         return <PostMatchReport onBack={() => goBack('PROFILE')} />;
       case 'TEAM_BUILDER':
@@ -568,16 +518,8 @@ const App: React.FC = () => {
           }}
           communities={[{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }]}
         />;
-      case 'TRANSFER_CENTER':
-        return <TransferCenter onBack={() => goBack('COMMUNITY_VIEW')} />;
-      case 'LEADERBOARDS':
-        return <Leaderboards onBack={() => goBack('COMMUNITY_VIEW')} />;
       case 'POST_MATCH_EVAL':
         return <PostMatchEval onBack={() => goBack('COMMUNITY_VIEW')} onComplete={() => goBack('COMMUNITY_VIEW')} />;
-      case 'TOURNAMENT_BRACKET':
-        return <TournamentBracket onBack={() => goBack('COMMUNITY_VIEW')} />;
-      case 'COMMUNITY_ADMIN_DASHBOARD':
-        return <CommunityAdminDashboard onBack={() => goBack('COMMUNITY_VIEW')} />;
       case 'MATCH_CREATE':
         return <MatchCreate onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       default:

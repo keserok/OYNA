@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Shield, Circle,
   Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert,
-  MessageSquare
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PlayerSeekAnnouncement } from '../types';
@@ -39,10 +39,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   const { 
     adminMatches, 
     adminUsers, 
-    playerSeekAds, 
-    toggleJoinPlayerSeekAd, 
-    acceptPlayerSeekAdRequest, 
-    setChatTarget,
+    playerSeekAds,
+    toggleJoinPlayerSeekAd,
+    acceptPlayerSeekAdRequest,
     navigateTo,
     userLocation,
     searchRadius,
@@ -861,21 +860,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                           </span>
 
                           {isAccepted ? (
-                            <motion.button
-                              whileHover={{ scale: 1.03 }}
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                setChatTarget({
-                                  name: ad.creatorName,
-                                  role: 'Takım Kaptanı',
-                                  avatar: ad.creatorAvatar
-                                });
-                                navigateTo('CHAT');
-                              }}
-                              className="px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-gradient-to-r from-emerald-500 to-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.5)] border-2 border-white/30 hover:brightness-110 flex items-center gap-1.5 transition-all cursor-pointer"
+                            <span
+                              className="px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-gradient-to-r from-emerald-500 to-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.5)] border-2 border-white/30 flex items-center gap-1.5"
                             >
-                              <MessageSquare size={12} /> KAPTANLA MESAJLAŞ
-                            </motion.button>
+                              <Check size={12} /> KADROYA KABUL EDİLDİ
+                            </span>
                           ) : (
                             <motion.button
                               whileHover={{ scale: 1.03 }}

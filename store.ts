@@ -1,8 +1,5 @@
 import { create } from 'zustand';
 import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, SavedPaymentCard, WalletTab, Court } from './types';
-import { GOALKEEPERS, REFEREES, PITCHES, MATCH_LISTINGS, OPPONENT_LISTINGS, USER_TEAMS } from './constants';
-import { MOCK_USERS } from './__mocks__/mockUsers';
-import { MOCK_TEAMS } from './__mocks__/mockTeams';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
 import { auth } from './supabaseAuth';
@@ -11,76 +8,6 @@ import { supabase } from './supabaseClient';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
 import type { AdminSession } from './admin-panel/services/adminService';
-
-const MOCK_TACTICS = [
-  {
-    id: 'mock_tactic_1',
-    teamId: 't1',
-    name: 'Ataç / Plan A',
-    formation: '2-3-1',
-    size: '7v7',
-    status: 'APPROVED',
-    priority: 0,
-    slots: JSON.stringify([
-      { id: 's1', x: 50, y: 90, role: 'GK', player: { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', rating: 4.6 } },
-      { id: 's2', x: 30, y: 75, role: 'DEF', player: { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', rating: 4.3 } },
-      { id: 's3', x: 70, y: 75, role: 'DEF', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', rating: 4.1 } },
-      { id: 's4', x: 50, y: 45, role: 'MID' },
-      { id: 's5', x: 25, y: 30, role: 'MID' },
-      { id: 's6', x: 75, y: 30, role: 'MID' },
-      { id: 's7', x: 50, y: 15, role: 'FWD' }
-    ]),
-    subs: '[]',
-    opponents: '[]',
-    drawings: '[]',
-    notes: 'Hücum ağırlıklı pres planı.'
-  },
-  {
-    id: 'mock_tactic_2',
-    teamId: 't1',
-    name: 'Plan B / Defans',
-    formation: '3-2-1',
-    size: '7v7',
-    status: 'APPROVED',
-    priority: 1,
-    slots: JSON.stringify([
-      { id: 's1', x: 50, y: 90, role: 'GK', player: { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', rating: 4.6 } },
-      { id: 's2', x: 20, y: 75, role: 'DEF', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', rating: 4.1 } },
-      { id: 's3', x: 50, y: 80, role: 'DEF', player: { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', rating: 4.3 } },
-      { id: 's4', x: 80, y: 75, role: 'DEF' },
-      { id: 's5', x: 35, y: 50, role: 'MID' },
-      { id: 's6', x: 65, y: 50, role: 'MID' },
-      { id: 's7', x: 50, y: 20, role: 'FWD' }
-    ]),
-    subs: '[]',
-    opponents: '[]',
-    drawings: '[]',
-    notes: 'Skoru korumak için savunma hattı.'
-  },
-  {
-    id: 'mock_tactic_3',
-    teamId: 't1',
-    name: 'Ahmetin Önerisi',
-    formation: '2-3-1',
-    size: '7v7',
-    status: 'PENDING_APPROVAL',
-    proposedBy: 'u2',
-    teamName: 'Ahmet K.',
-    slots: JSON.stringify([
-      { id: 's1', x: 50, y: 90, role: 'GK', player: { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', rating: 4.6 } },
-      { id: 's2', x: 30, y: 75, role: 'DEF', player: { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', rating: 4.3 } },
-      { id: 's3', x: 70, y: 75, role: 'DEF', player: { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', rating: 4.1 } },
-      { id: 's4', x: 50, y: 35, role: 'MID' },
-      { id: 's5', x: 20, y: 40, role: 'MID' },
-      { id: 's6', x: 80, y: 40, role: 'MID' },
-      { id: 's7', x: 50, y: 15, role: 'FWD' }
-    ]),
-    subs: '[]',
-    opponents: '[]',
-    drawings: '[]',
-    notes: 'Orta sahada pas trafiği kurarak rakibi çözme planı.'
-  }
-];
 
 export interface Friend {
   id: string;
@@ -107,7 +34,7 @@ export interface AdminNotification {
   title: string;
   body: string;
   type: 'INFO' | 'WARNING' | 'PROMO' | 'SYSTEM';
-  targetAudience: 'ALL' | 'PRO' | 'CAPTAIN' | 'GK' | 'REFEREE';
+  targetAudience: 'ALL' | 'PRO' | 'GK' | 'REFEREE';
   sentAt: string;
   isActive: boolean;
 }
@@ -167,15 +94,9 @@ function persistSavedCards(cards: SavedPaymentCard[]) {
   localStorage.setItem(SAVED_CARDS_KEY, JSON.stringify(cards));
 }
 
-// INITIAL_USERS artık __mocks__/mockUsers.ts'de (MOCK_USERS olarak).
-// Prod'da boş dizi, dev'de mock veriler yüklenir.
-export const INITIAL_USERS: AdminUser[] = IS_LOCAL_DEV ? MOCK_USERS : [];
+// Kullanıcılar Supabase'den hydrate edilir; mock veri yok.
+export const INITIAL_USERS: AdminUser[] = [];
 
-const INITIAL_NOTIFICATIONS: AdminNotification[] = [
-  { id: 'n1', title: '🎉 Haftalık İndirim!', body: 'Bu hafta saha kiralarında %15 indirim var. Hemen rezerve et!', type: 'PROMO', targetAudience: 'ALL', sentAt: '2026-03-15 09:00', isActive: true },
-  { id: 'n2', title: '⚡ Yeni Kaleciler Eklendi', body: 'Bölgene 5 yeni profesyonel kaleci katıldı.', type: 'INFO', targetAudience: 'CAPTAIN', sentAt: '2026-03-14 14:30', isActive: true },
-  { id: 'n3', title: '🔧 Bakım Bildirimi', body: 'Bu gece 02:00-04:00 arası planlı bakım yapılacak.', type: 'SYSTEM', targetAudience: 'ALL', sentAt: '2026-03-13 18:00', isActive: false },
-];
 
 const INITIAL_SETTINGS: AppSettings = {
   appName: 'OYNA',
@@ -247,10 +168,6 @@ interface AppState {
   addPlayerSeekAd: (ad: PlayerSeekAnnouncement) => void;
   toggleJoinPlayerSeekAd: (adId: string, userId: string) => void;
   acceptPlayerSeekAdRequest: (adId: string, userId: string) => void;
-
-  // Active Chat Configuration
-  chatTarget: { name: string; role: string; avatar: string } | null;
-  setChatTarget: (target: { name: string; role: string; avatar: string } | null) => void;
 
   // ─── Friend System ─────────────────────────────────────────────────
   friends: Friend[];
@@ -445,13 +362,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ adminPitches: pitchesRes.value as Pitch[] });
       }
       if (matchesRes.status === 'fulfilled' && matchesRes.value) {
-        const dbMatches = matchesRes.value as MatchListing[];
-        if (IS_LOCAL_DEV) {
-          const demoIds = new Set(MATCH_LISTINGS.map(m => m.id));
-          set({ adminMatches: [...MATCH_LISTINGS, ...dbMatches.filter(m => !demoIds.has(m.id))] });
-        } else {
-          set({ adminMatches: dbMatches });
-        }
+        set({ adminMatches: matchesRes.value as MatchListing[] });
       }
       if (teamsRes.status === 'fulfilled' && teamsRes.value) {
         set({ adminTeams: teamsRes.value as Team[] });
@@ -494,9 +405,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .subscribe();
   },
-  view: IS_LOCAL_DEV ? 'DASHBOARD' : 'SPLASH',
+  view: 'SPLASH',
   navigationStack: [],
-  role: IS_LOCAL_DEV ? UserRole.CAPTAIN : UserRole.PLAYER,
+  role: UserRole.PLAYER,
   isAuthReady: true,
   hasMotmCoupon: false,
   selectedMatch: null,
@@ -544,15 +455,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
   searchRadius: 50,
   setSearchRadius: (searchRadius) => set({ searchRadius }),
-  adminPitches: IS_LOCAL_DEV ? PITCHES : [],
-  adminGoalkeepers: IS_LOCAL_DEV ? GOALKEEPERS : [],
-  adminReferees: IS_LOCAL_DEV ? REFEREES : [],
-  adminMatches: IS_LOCAL_DEV ? MATCH_LISTINGS : [],
-  adminUsers: INITIAL_USERS,
-  adminNotifications: IS_LOCAL_DEV ? INITIAL_NOTIFICATIONS : [],
+  adminPitches: [],
+  adminGoalkeepers: [],
+  adminReferees: [],
+  adminMatches: [],
+  adminUsers: [],
+  adminNotifications: [],
   adminLogs: [],
   adminDashboardStats: null,
-  adminTeams: IS_LOCAL_DEV ? USER_TEAMS : [],
+  adminTeams: [],
   appSettings: INITIAL_SETTINGS,
   
   loadOwnerData: async (ownerUserId?: string) => {
@@ -564,44 +475,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
-  playerSeekAds: [
-    {
-      id: "psa1",
-      creatorId: "u2",
-      creatorName: "Burak Demir",
-      creatorAvatar: "https://i.pravatar.cc/150?u=burak2024",
-      pitchName: "Arena Sport Center",
-      date: "Bugün",
-      time: "21:00",
-      positionsNeeded: ["SAVUNMA", "ORTA"],
-      difficulty: "Ciddi",
-      format: "7v7",
-      duration: "90 Dakika",
-      gender: "Erkek",
-      ageGroup: "23-27",
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      joinedPlayers: []
-    },
-    {
-      id: "psa2",
-      creatorId: "u3",
-      creatorName: "Mert Arslan",
-      creatorAvatar: "https://i.pravatar.cc/150?u=mert2024",
-      pitchName: "BJK RAMADA Futbol Sahası",
-      date: "Yarın",
-      time: "22:00",
-      positionsNeeded: ["KALECİ"],
-      difficulty: "Taktiksel",
-      format: "6v6",
-      duration: "60 Dakika",
-      gender: "Karma",
-      ageGroup: "28-35",
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      joinedPlayers: []
-    }
-  ],
+  playerSeekAds: [],
   addPlayerSeekAd: (ad) => set((state) => ({ playerSeekAds: [ad, ...state.playerSeekAds] })),
   toggleJoinPlayerSeekAd: (adId, userId) => set((state) => ({
     playerSeekAds: state.playerSeekAds.map(ad => {
@@ -630,26 +504,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return ad;
     })
   })),
-  chatTarget: null,
-  setChatTarget: (chatTarget) => set({ chatTarget }),
-
-  friends: [
-    { id: '1', name: 'Caner Kaya', avatar: 'https://i.pravatar.cc/150?u=caner', nickname: 'CKaya', style: 'Bitirici', group: 'Lise Tayfası', online: true, isFavorite: true, wins: 24, losses: 5, position: 'FV', pos: 'FV', fp: 91, status: 'FRIEND' },
-    { id: '2', name: 'Emre Demir', avatar: 'https://i.pravatar.cc/150?u=emre', nickname: 'EDemir', style: 'Duvar', group: 'Üniversite', online: false, isFavorite: false, wins: 12, losses: 14, position: 'STP', pos: 'STP', fp: 87, status: 'FRIEND' },
-    { id: '3', name: 'Mert Arslan', avatar: 'https://i.pravatar.cc/150?u=mert', nickname: 'MArslan', style: 'Refleks', group: 'İş Arkadaşları', online: true, isFavorite: false, wins: 8, losses: 2, position: 'KL', pos: 'KL', fp: 80, status: 'FRIEND' },
-    { id: '4', name: 'Ahmet Yılmaz', avatar: 'https://i.pravatar.cc/150?u=ahmet', nickname: 'AYilmaz', style: 'Fuleli', group: 'Lise Tayfası', online: true, isFavorite: true, wins: 30, losses: 10, position: 'SNT', pos: 'SNT', fp: 95, status: 'FRIEND' },
-    { id: '5', name: 'Cem Yıldız', avatar: 'https://i.pravatar.cc/150?u=cem', nickname: 'CYildiz', style: 'Maestro', group: 'Lise Tayfası', online: false, isFavorite: false, wins: 15, losses: 12, position: 'OS', pos: 'OS', fp: 88, status: 'FRIEND' },
-    { id: '6', name: 'Burak Şahin', avatar: 'https://i.pravatar.cc/150?u=burak', nickname: 'BSahin', style: 'Hızlı', group: 'Üniversite', online: true, isFavorite: true, wins: 40, losses: 8, position: 'SĞA', pos: 'SĞA', fp: 98, status: 'FRIEND' },
-    { id: '7', name: 'Kaan Gök', avatar: 'https://i.pravatar.cc/150?u=kaan', nickname: 'KGok', style: 'Dengeli', group: 'Üniversite', online: false, isFavorite: false, wins: 5, losses: 5, position: 'BEK', pos: 'BEK', fp: 85, status: 'FRIEND' },
-    { id: '8', name: 'Ozan Tekin', avatar: 'https://i.pravatar.cc/150?u=ozan', nickname: 'OTekin', style: 'Keser', group: 'İş Arkadaşları', online: true, isFavorite: false, wins: 20, losses: 20, position: 'MDO', pos: 'MDO', fp: 90, status: 'FRIEND' },
-    { id: '9', name: 'Efe Korkmaz', avatar: 'https://i.pravatar.cc/150?u=efe', nickname: 'EKorkmaz', style: 'Çevik', group: 'İş Arkadaşları', online: false, isFavorite: true, wins: 18, losses: 6, position: 'SĞA', pos: 'SĞA', fp: 92, status: 'FRIEND' },
-    { id: '10', name: 'Sinan Gül', avatar: 'https://i.pravatar.cc/150?u=sinan', nickname: 'SGul', style: 'Kaya', group: 'Lise Tayfası', online: true, isFavorite: false, wins: 25, losses: 15, position: 'STP', pos: 'STP', fp: 89, status: 'FRIEND' },
-    { id: '11', name: 'Hakan Çelik', avatar: 'https://i.pravatar.cc/150?u=hakan', nickname: 'HCelik', style: 'Avcı', group: 'Üniversite', online: true, isFavorite: true, wins: 50, losses: 12, position: 'FV', pos: 'FV', fp: 99, status: 'FRIEND' },
-    { id: '12', name: 'Oğuzhan Koç', avatar: 'https://i.pravatar.cc/150?u=oguzhan', nickname: 'OKoc', style: 'Uçan', group: 'Mahalle', online: false, isFavorite: false, wins: 2, losses: 8, position: 'KL', pos: 'KL', fp: 70, status: 'FRIEND' },
-    { id: '13', name: 'Alperen Bal', avatar: 'https://i.pravatar.cc/150?u=alperen', nickname: 'ABal', style: 'Dinamik', group: 'Mahalle', online: true, isFavorite: false, wins: 10, losses: 5, position: 'OS', pos: 'OS', fp: 82, status: 'FRIEND' },
-    { id: '14', name: 'Yusuf Can', avatar: 'https://i.pravatar.cc/150?u=yusuf', nickname: 'YCan', style: 'Motor', group: 'Üniversite', online: false, isFavorite: false, wins: 14, losses: 16, position: 'BEK', pos: 'BEK', fp: 84, status: 'FRIEND' },
-    { id: '15', name: 'Deniz Sarp', avatar: 'https://i.pravatar.cc/150?u=deniz', nickname: 'DSarp', style: 'Yaratıcı', group: 'İş Arkadaşları', online: true, isFavorite: true, wins: 33, losses: 11, position: 'OS', pos: 'OS', fp: 94, status: 'FRIEND' }
-  ] as any[],
+  friends: [] as any[],
   addFriend: (friend) => set((state) => {
     const next = [...state.friends, friend];
     const uid = auth.currentUser?.uid;
@@ -692,10 +547,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
   clearSelectedFriendsForTeam: () => set({ selectedFriendsForTeam: [] }),
 
-  // Mock takımlar yalnızca dev modda; prod'da Supabase'den hydrate edilir (loadMyTeams).
-  userTeams: IS_LOCAL_DEV ? MOCK_TEAMS : [],
+  // Takımlar Supabase'den hydrate edilir (loadMyTeams).
+  userTeams: [],
 
-  myTeams: IS_LOCAL_DEV ? MOCK_TEAMS : [],
+  myTeams: [],
   addMyTeam: async (team) => {
       const prev = get().myTeams;
       set({ myTeams: [team, ...prev] });
@@ -710,9 +565,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const uid = auth.currentUser?.uid;
     if (!uid) return;
     const teams = await TeamService.fetchMyTeams(uid);
-    if (teams.length > 0 || !IS_LOCAL_DEV) {
-      set({ myTeams: teams, userTeams: teams });
-    }
+    set({ myTeams: teams, userTeams: teams });
   },
 
   createTeam: async (input) => {
@@ -729,14 +582,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveStudioTeam: (team) => set({ activeStudioTeam: team }),
   teamTactics: [],
   fetchTeamTactics: async (teamId) => {
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      const mocks = MOCK_TACTICS.filter(t => t.teamId === teamId);
-      const current = get().teamTactics;
-      if (current.length === 0 || !current.some(c => c.teamId === teamId)) {
-        set({ teamTactics: mocks });
-      }
-      return;
-    }
     try {
       const { data, error } = await supabase
         .from('tactics')

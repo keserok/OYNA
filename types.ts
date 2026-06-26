@@ -7,13 +7,14 @@ declare global {
 
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
-  COMMUNITY_ADMIN = 'COMMUNITY_ADMIN',
-  CAPTAIN = 'CAPTAIN',
   PLAYER = 'PLAYER',
   GOALKEEPER = 'GOALKEEPER',
   REFEREE = 'REFEREE',
   OWNER = 'OWNER'
 }
+
+/** @deprecated Kaptanlık global rol değil; takım-içi yöneticilik. Kaldırılacak. */
+export const CAPTAIN_ROLE_DEPRECATED = 'CAPTAIN' as const;
 
 export interface AdminUser {
   id: string;
@@ -77,26 +78,8 @@ export interface ICommunity {
   location?: string;
 }
 
-export interface ITeam {
-  id: string;
-  name: string;
-  color: string; // Tailwind color class
-  communityId?: string; // Optional, if independent
-  captainId: string;
-  formation: '5+1' | '6+1' | '7+1';
-  stats: {
-    wins: number;
-    losses: number;
-    fairPlayScore: number;
-  };
-  roster: {
-    userId: string;
-    position: string;
-    fairPlayScore: number;
-  }[];
-}
-
-export interface Match {
+/** Tamamlanmış bir maçın basit skor kaydı. */
+export interface BasicMatchRecord {
   id: string;
   teamA: string;
   teamB: string;
@@ -107,8 +90,22 @@ export interface Match {
   pitch: string;
 }
 
+/** Geriye dönük uyumluluk alias'ı: eski `Match` = basit maç skor kaydı.
+ *  (Lobi/keşif için MatchListing kullanılır.) */
+export type Match = BasicMatchRecord;
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'LOYALTY_CARD' | 'SETTINGS' | 'VOTING' | 'MOTM_REVEAL' | 'OYNA_TV' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'CHAT' | 'MATCH_TICKET' | 'SCOUT_DASHBOARD' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'MATCH_LOBBY' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'TRANSFER_CENTER' | 'LEADERBOARDS' | 'POST_MATCH_EVAL' | 'TOURNAMENT_BRACKET' | 'COMMUNITY_ADMIN_DASHBOARD' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL';
+/** @deprecated ITeam yerine Team kullanın. */
+export type ITeam = Pick<Team, 'id' | 'name' | 'wins' | 'losses'> & {
+  color: string;
+  communityId?: string;
+  captainId: string;
+  formation: '5+1' | '6+1' | '7+1';
+  stats: { wins: number; losses: number; fairPlayScore: number };
+  roster: { userId: string; position: string; fairPlayScore: number }[];
+};
+
+
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL';
 
 export interface SavedPaymentCard {
   id: string;
@@ -689,7 +686,7 @@ export interface CRMUser {
   userId: string;
   name: string;
   avatar: string;
-  role: 'PLAYER' | 'CAPTAIN' | 'GK' | 'REF';
+  role: 'PLAYER' | 'GK' | 'REF';
   loyaltyScore: number; // Tesis bazlı sadakat skoru
   totalSpent: number; // Tesis bazlı harcama
   isVip: boolean;
