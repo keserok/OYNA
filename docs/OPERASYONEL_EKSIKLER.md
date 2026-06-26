@@ -251,4 +251,34 @@ Webhook callback URL'ini iyzico panelinde `https://<project>.functions.supabase.
 
 ---
 
+---
+
+## FAZ 4 — Saha Sahibi B2B Paneli: Tamamlanma Durumu
+
+> Bu oturumda Faz 4, canlı DB ↔ kod doğrulamasıyla tamamlandı. Denetimde "eksik"
+> görünen birkaç madde, canlı şemaya karşı **yanlış pozitif** çıktı (aşağıda not düşüldü).
+
+**4.1 — Tesis kurulumu + onboarding · ✅ Çalışıyor (uçtan uca)**
+- Onboarding (`PartnerOnboarding`) → tesis `verification_status='pending'` + admin'e bildirim.
+- Admin onay/red (`OwnerModerationTab` + `admin_moderate_pitch`).
+- **Owner'a sonuç bildirimi VAR** (`admin_moderate_pitch` → `notifications` PITCH_APPROVED/REJECTED, red sebebiyle) — denetimdeki "bildirim yok" iddiası yanlış pozitifti.
+- **Audit trail VAR** (`log_admin_action` PITCH_APPROVE/REJECT) — ayrı `pitch_applications` tablosu gereksiz.
+- Kalan (kozmetik): Owner için ayrı tam-ekran "onay bekliyor/red" görünümü (panel zaten aksiyonları onaya kadar kısıtlıyor + bildirim gidiyor).
+
+**4.2 — Takvim + rezervasyon · ✅ Tam.**
+
+**4.3 — Tarife/abonelik/flash/istisna · ✅ Tam**
+- Otomatik haftalık üretim (`materialize_subscriptions` + `materialize_subs_daily` cron'u) **zaten vardı** — denetimin "yok" demesi yanlış pozitifti.
+- Eklenen: abonelik **iptal/duraklat/devam + auto_renew** yönetimi (UI + servis); `auto_renew` artık otomatik üretimi gerçekten etkiliyor (true → kendiliğinden uzar).
+
+**4.4 — Finans/payout/veresiye/personel · ✅ Tamamlandı (bu oturumda birleştirildi)**
+- Veresiye / personel / banka / finans paneli zaten tamdı.
+- **Birleştirme (yeni):** doğrudan (KART) saha kiralama geliri artık sahibin tek cüzdanına `BOOKING_EARNING` olarak yazılır (`credit_owner_booking_earning` trigger; nakit hariç). `get_wallet_summary` + `release_owner_earnings` (2 hafta) bunu kapsar.
+- Owner para çekme artık Faz 2 `request_payout` (OWNER_BIWEEKLY) motoruna gider; admin `payout_requests`'i Finans → Payout Talepleri sekmesinden `admin_process_payout` ile işler.
+- Canlı DB'de doğrulandı (kart 100₺ → 90₺ kredi; nakit kredi yazmaz).
+
+**Faz 4'te kalan TEK gerçek iş — dış bağımlılık:** iyzico canlı pre-auth/capture (merchant hesabı + secrets). Kod hazır; gerçek payout'un bankaya çıkışı buna bağlı (bkz. madde #1, #2, #6).
+
+---
+
 > **Not:** Bu liste yaşayan bir belgedir. Yeni faz başlarken ertelenen her operasyonel iş buraya **sebep + yapım yolu** ile eklenir; tamamlananlar "✅ Tamamlandı" olarak işaretlenip arşivlenir. Hiçbiri mevcut çalışan yapıyı bozmadan eklenebilecek şekilde tasarlanmıştır.
