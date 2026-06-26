@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { useAppStore, IS_LOCAL_DEV } from '../store';
-import { MATCH_LISTINGS } from '../constants';
+import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import type { MatchListing } from '../types';
 
@@ -32,27 +31,7 @@ export function useMyMatches(): MyMatchesResult {
   const currentUserUid = auth.currentUser?.uid || DEMO_UID;
 
   const all = useMemo(() => {
-    // In dev mode: always show demo matches (u1 slots) + real matches for actual user
-    if (IS_LOCAL_DEV) {
-      const demoMatches = MATCH_LISTINGS.filter(m =>
-        m.slots?.some(s => s.player?.id === DEMO_UID) ||
-        m.awaySlots?.some(s => s.player?.id === DEMO_UID)
-      );
-      // Also include real DB matches for the actual user (if different from u1)
-      if (currentUserUid !== DEMO_UID) {
-        const demoIds = new Set(demoMatches.map(m => m.id));
-        const realMatches = adminMatches.filter(m =>
-          !demoIds.has(m.id) && (
-            m.slots?.some(s => s.player?.id === currentUserUid) ||
-            m.awaySlots?.some(s => s.player?.id === currentUserUid)
-          )
-        );
-        return [...demoMatches, ...realMatches];
-      }
-      return demoMatches;
-    }
-
-    // Prod mode: only real DB matches where user is a player
+    // Yalnızca gerçek DB maçları: kullanıcının oyuncu olduğu maçlar + taslak/iptaller.
     return adminMatches.filter(m => {
       if (m.status === 'DRAFT' || m.status === 'CANCELLED') return true;
       return (

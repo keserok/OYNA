@@ -34,12 +34,8 @@ interface UIState {
   setGlobalText: (key: string, value: string) => void;
 }
 
-const IS_LOCAL_DEV =
-  import.meta.env.VITE_DEV_MODE === 'true' ||
-  !import.meta.env.VITE_SUPABASE_URL;
-
 export const useUIStore = create<UIState>((set) => ({
-  view: IS_LOCAL_DEV ? 'DASHBOARD' : 'SPLASH',
+  view: 'SPLASH',
   selectedMatch: null,
   selectedGk: null,
   selectedRef: null,

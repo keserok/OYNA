@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Trophy, Star, TrendingUp, Zap, ChevronRight, Share2, Award, Crown, CheckCircle2, Lock, PenLine, Save, Shield } from 'lucide-react';
-import { MATCH_HISTORY } from '../constants'; // Import just to mock structure
 
 interface PostMatchReportProps {
   onBack: () => void;

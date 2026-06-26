@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Star, Handshake, Check, X, Minus, Plus, Shield, Activity } from 'lucide-react';
-import { MOCK_BIDS } from '../constants';
 import { IncomingBid } from '../types';
+import EmptyState from '../components/ui/EmptyState';
 
 interface ListingDetailsProps {
   onBack: () => void;
 }
 
 const ListingDetails: React.FC<ListingDetailsProps> = ({ onBack }) => {
+  // Gerçek teklifler ilana göre Supabase'den gelecek (kaleci/hakem talep akışı, FAZ 5).
+  const bids: IncomingBid[] = [];
   const [selectedBid, setSelectedBid] = useState<IncomingBid | null>(null);
   const [counterPrice, setCounterPrice] = useState<number>(0);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -44,15 +46,18 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ onBack }) => {
 
       <main className="flex-1 p-6 space-y-6 overflow-y-auto custom-scrollbar pb-24">
         <div className="flex items-center justify-between px-2">
-            <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">GELEN TEKLİFLER (5)</h2>
+            <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">GELEN TEKLİFLER ({bids.length})</h2>
             <div className="flex items-center gap-1">
                 <div className="w-1.5 h-1.5 bg-[#FFFF00] rounded-full animate-pulse"></div>
                 <span className="text-[9px] font-bold text-[#FFFF00] uppercase">Canlı</span>
             </div>
         </div>
 
+        {bids.length === 0 ? (
+          <EmptyState icon="📨" title="Henüz teklif yok" description="İlanına gelen kaleci/hakem teklifleri burada görünecek." />
+        ) : (
         <div className="space-y-4">
-            {MOCK_BIDS.map(bid => (
+            {bids.map(bid => (
                 <div 
                     key={bid.id}
                     className="bg-[#161B22] border border-white/5 rounded-[32px] p-5 flex flex-col gap-4 hover:border-white/10 transition-all"
@@ -102,6 +107,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ onBack }) => {
                 </div>
             ))}
         </div>
+        )}
       </main>
 
       {/* Negotiation Modal */}
