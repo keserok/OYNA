@@ -211,12 +211,19 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   // Değerlendirmeyi kalıcılaştır: oyuncu puanları + maçı sonlandır ("başarılı maç" sinyali)
   const persistEvaluation = async () => {
     if (submitting) return;
-    if (!selectedMatch?.id || selectedMatch.id.startsWith('p') || selectedMatch.id.startsWith('m_')) {
+    // Bug C: demo-maç kapısı UUID kontrolüne bağlandı. Sadece gerçek UUID
+    // olmayan id'lerde (demo maçlar) sunucu çağrılarını atla.
+    const isRealMatch = !!selectedMatch?.id && /^[0-9a-f-]{36}$/i.test(selectedMatch.id);
+    if (!isRealMatch) {
       // Gerçek (UUID) maç değil → yalnız sonuç ekranını göster (demo)
       setShowResult(true);
       return;
     }
     setSubmitting(true);
+
+    // Bug C: Oyuncu-değerlendirmesi başarısız olsa bile servis (kaleci/hakem)
+    // puanlaması ÇALIŞMALI — aksi halde sağlayıcı ödemesi serbest bırakılmaz.
+    // Bu yüzden oyuncu-değerlendirme ile servis-puanlama bağımsız try/catch'lerde.
     try {
       const ratings = Object.entries(playerRatings).map(([ratee_id, stars]) => ({
         ratee_id,
@@ -237,14 +244,15 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         if (finErr) throw finErr;
       }
     } catch (err) {
+      // Oyuncu-değerlendirme/finalize başarısız → kullanıcıyı bilgilendir ama
+      // servis puanlamasını engelleme (return etme).
+      console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
       showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
-      setSubmitting(false);
-      return;
     }
 
     // FAZ 5: Kaleci/Hakem 1-10 puanlaması — sağlayıcı rating'ini günceller + payout serbest.
     // Atlanabilir: yalnız puan girilmiş (score > 0) sağlayıcılar gönderilir.
-    // Hata olursa diğer gönderimleri/akışı bozmadan sessizce loglanır.
+    // Oyuncu-değerlendirme başarısız olsa bile burası bağımsız çalışır.
     for (const p of providers) {
       const score = serviceScores[p.id] ?? 0;
       if (score <= 0) continue;

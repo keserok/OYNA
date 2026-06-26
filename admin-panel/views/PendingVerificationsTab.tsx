@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, X, Clock, RefreshCw } from 'lucide-react';
+import { Check, X, Clock, RefreshCw, FileText, ImageOff } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import {
   approveProviderVerification,
   fetchPendingVerificationsAdmin,
+  fetchProviderApplication,
+  getProviderDocSignedUrl,
+  reviewProviderApplication,
   toTurkishAdminError,
   type PendingVerificationRow,
+  type ProviderApplicationRow,
 } from '../services/adminService';
 import { useDebouncedCallback } from './hooks/useDebouncedCallback';
 import { useAdminToast } from './context/AdminToastContext';
@@ -56,6 +60,69 @@ const RejectModal: React.FC<{
   );
 };
 
+/** Başvuruya bağlı kimlik fotoğrafı (imzalı URL) + niyet mektubu önizlemesi */
+const ApplicationDetails: React.FC<{ userId: string }> = ({ userId }) => {
+  const [app, setApp] = useState<ProviderApplicationRow | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const application = await fetchProviderApplication(userId);
+        if (cancelled) return;
+        setApp(application);
+        if (application?.id_photo_path) {
+          const url = await getProviderDocSignedUrl(application.id_photo_path);
+          if (!cancelled) setPhotoUrl(url);
+        }
+      } catch {
+        /* başvuru yoksa veya RLS — sessizce yoksay */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="mt-3 flex items-center gap-2 text-[10px] text-gray-600">
+        <RefreshCw size={10} className="animate-spin" /> Başvuru belgeleri yükleniyor…
+      </div>
+    );
+  }
+  if (!app) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-white/5 flex gap-3">
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
+        {photoUrl ? (
+          <a href={photoUrl} target="_blank" rel="noreferrer" title="Kimlik fotoğrafını aç">
+            <img src={photoUrl} className="w-16 h-16 object-cover" alt="Kimlik" loading="lazy" />
+          </a>
+        ) : (
+          <ImageOff size={18} className="text-gray-600" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1 mb-1">
+          <FileText size={10} /> Niyet Mektubu
+        </p>
+        {app.intent_letter ? (
+          <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-4">{app.intent_letter}</p>
+        ) : (
+          <p className="text-[11px] text-gray-600 italic">Niyet mektubu girilmemiş</p>
+        )}
+        <p className="text-[10px] text-gray-600 mt-1.5">
+          {app.phone ? `Tel: ${app.phone}` : ''}{app.phone && app.level ? ' · ' : ''}{app.level ? `Seviye: ${app.level}` : ''}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const PendingCard = memo<{
   v: PendingVerification;
   isProcessing: boolean;
@@ -96,6 +163,8 @@ const PendingCard = memo<{
           )}
         </div>
       </div>
+
+      <ApplicationDetails userId={v.id} />
 
       <div className="flex gap-2 mt-3">
         <button
@@ -188,6 +257,14 @@ export const PendingVerificationsTab: React.FC<PendingVerificationsTabProps> = (
     setProcessingId(userId);
     try {
       await approveProviderVerification(userId, true);
+      // Best-effort: bağlı provider_application varsa onu da APPROVED işaretle.
+      // Ana onay verification_status'u zaten set etti; bu adımın hatası onayı bozmaz.
+      try {
+        const app = await fetchProviderApplication(userId);
+        if (app) await reviewProviderApplication(app.id, true);
+      } catch {
+        /* başvuru yok veya RPC hatası — ana onay korunur */
+      }
       success(`${userName} onaylandı`);
       setVerifications((prev) => {
         const next = prev.filter((v) => v.id !== userId);

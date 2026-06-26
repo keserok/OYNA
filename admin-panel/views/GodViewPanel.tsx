@@ -38,12 +38,15 @@ const CampaignsPage = lazy(() => import('./pages/CampaignsPage').then(m => ({ de
 const PromoCodesPage = lazy(() => import('./pages/PromoCodesPage').then(m => ({ default: m.PromoCodesPage })));
 const ACLPage = lazy(() => import('./pages/ACLPage').then(m => ({ default: m.ACLPage })));
 const PendingVerificationsPage = lazy(() => import('./pages/PendingVerificationsPage').then(m => ({ default: m.PendingVerificationsPage })));
+const ProviderIdentitiesPage = lazy(() => import('./pages/ProviderIdentitiesPage').then(m => ({ default: m.ProviderIdentitiesPage })));
+const ServiceDisputesPage = lazy(() => import('./pages/ServiceDisputesPage').then(m => ({ default: m.ServiceDisputesPage })));
 const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
-  | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'MODERATION'
+  | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
+  | 'SERVICE_DISPUTES' | 'MODERATION'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
@@ -77,6 +80,7 @@ const GodViewPanelInner: React.FC<Props> = ({
     });
     const [modal, setModal] = useState<AdminModalState>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
+    const [providerIdentityCount, setProviderIdentityCount] = useState(0);
 
     useEffect(() => {
         if (initialNavParams) setParams(initialNavParams);
@@ -148,6 +152,10 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <UsersPage subRoute={subRoute} mode={mode} onRefresh={onRefreshData} />;
             case 'PENDING_VERIFICATIONS':
                 return <PendingVerificationsPage onBadgeCount={setPendingVerifCount} />;
+            case 'PROVIDER_IDENTITIES':
+                return <ProviderIdentitiesPage onBadgeCount={setProviderIdentityCount} />;
+            case 'SERVICE_DISPUTES':
+                return <ServiceDisputesPage />;
             case 'MATCHES':
                 return <MatchesPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             case 'TOPLULUKLAR':
@@ -185,6 +193,7 @@ const GodViewPanelInner: React.FC<Props> = ({
                 onNavigate={(r) => handleNavigate(r)}
                 onBack={onBack}
                 pendingVerifCount={pendingVerifCount}
+                providerIdentityCount={providerIdentityCount}
                 mode={mode}
                 adminSession={adminSession}
             >
