@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-    ChevronLeft, Users, Save, Plus, Trash2, Minus, 
-    Shield, Target, Info, Brain, Activity, 
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
+import {
+    ChevronLeft, Users, Save, Plus, Trash2, Minus,
+    Shield, Target, Info, Brain, Activity,
     TrendingUp, Send, SaveAll, Star, X, Check,
     PenTool, MousePointer2, Eye, EyeOff, Layout,
     Search, MapPin, UserCheck, Calendar,
     Swords, Type, UserPlus, GripHorizontal, Settings2,
     MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
-    Layers, Gauge, Crosshair, Share2, Play, Square, List, ChevronRight, RotateCw, Hash
+    Layers, Gauge, Crosshair, Share2, List, ChevronRight, RotateCw, Hash, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -15,63 +15,22 @@ import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { FORMATIONS as FORMATIONS_SSOT } from '../utils/formations';
 
+// Paylaşılan tipler ve sabitler (SSOT)
+import type {
+    Player, GameIdentity, Archetype, Slot, SquadSize, FormationType,
+    TacticState, DrawingLine, StudioTool, PlayMode
+} from './studio/types';
+import { ARCHETYPES, INSTRUCTIONS } from './studio/types';
+// Hafif geometri/sekans yardımcıları — çekirdekte kalır
+import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
 
-// --- Types ---
-interface Player {
-    id: string;
-    name: string;
-    role: string;
-    rating: number;
-    code?: string;
-    isOpponent?: boolean;
-    isCustom?: boolean;
-}
-
-type GameIdentity = 'BALANCED' | 'HIGH_PRESS' | 'PARK_BUS' | 'COUNTER_ATTACK';
-type Archetype = 'NONE' | 'FAKE' | 'GOL' | 'GUCLU' | 'TEHLIKELI' | 'SERT' | 'ASIST' | 'HIZLI' | 'KORUYUCU';
-
-interface Slot {
-    id: string;
-    x: number;
-    y: number;
-    role: string;
-    player?: Player;
-    instruction?: string;
-    archetype?: Archetype;
-}
-
-type SquadSize = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '10v10' | '11v11';
-type FormationType = '1-2-1' | '2-1-1' | '2-2-1' | '3-1-1' | '2-3-1' | '3-2-1' | '2-2-2' | '3-3-1' | '4-2-1' | '3-3-2' | '4-3-1' | '4-4-1' | '4-3-2' | '4-4-2' | '4-3-3' | '3-5-2';
-
-interface TacticState {
-    id?: string;
-    teamName?: string;
-    name: string;
-    size: SquadSize;
-    formation: FormationType;
-    slots: Slot[];
-    subs: Player[];
-    captainId: string | null;
-    notes: string;
-    opponents: Slot[];
-    mentality: 'Defensive' | 'Balanced' | 'Attacking';
-    tempo: 'Slow' | 'Normal' | 'Fast';
-    identity: GameIdentity;
-    groupColor?: 'DEFAULT' | 'RED' | 'NAVY' | 'GREEN';
-    drawings?: DrawingLine[];
-    status?: 'APPROVED' | 'PENDING_APPROVAL';
-    proposedBy?: string | null;
-    priority?: number;
-}
-
-interface DrawingLine {
-    id: string;
-    points: { x: number, y: number }[];
-    color: string;
-    type: 'arrow' | 'line';
-    attachedTo?: string; // ID of the slot or opponent this line is attached to
-    seqStep: number;
-}
+// ⚡ GELİŞMİŞ ANİMASYON MODÜLÜ — on-demand (lazy) indirilir.
+// Bu chunk yalnız kullanıcı "Gelişmiş Animasyon" butonuna basınca yüklenir,
+// böylece ilk yük hafif kalır (düşük telefonlar yorulmasın).
+const AdvancedAnimationModule = lazy(() => import('./studio/AdvancedAnimationModule'));
+const AnimationToolbar = lazy(() =>
+    import('./studio/AdvancedAnimationModule').then(m => ({ default: m.AnimationToolbar }))
+);
 
 // --- Constants ---
 const ACADEMYS = [
@@ -87,99 +46,12 @@ const ACADEMYS = [
   { t:"Sahte Karışıklık (Decoy)",d:"Tüm savunmayı kaosa sürükle ve arka planda işi bitiren ol.", a:["Her iki kanat aniden merkeze, içeriye koşu yapıyor.","Stoperler büyük panikle onlarla derine koşuyor.","Yayın çevresi inanılmaz karıştı!"], p:[{i:7,tm:'blue',sx:80,sy:30,ex:60,ey:20},{i:11,tm:'blue',sx:20,sy:30,ex:40,ey:20},{i:4,tm:'red',sx:60,sy:20,ex:60,ey:20},{i:5,tm:'red',sx:30,sy:20,ex:30,ey:20}], b:{sx:50,sy:45,ex:50,ey:45}, u:{i:10,sx:50,sy:45}, q:"Mükemmel bir koşu trafiği var. Bir On Numara (10) olarak burdan nasıl ekmek yersin?", o:[{t:"Direkt kaleye doğru o kalabalığın içine hızla depar atmak",c:false},{t:"Kaostan çok uzağa geri çekilerek (Drop-off) cepte kalmak",c:true},{t:"Kanatların boşalttığı taç çizgisine doğru savrulmak",c:false}], f:"EFSANEVİ ZEKÂ! Herkes ileri koşarken sen geriye çıkarak kendine devasa bir alan yarattın. Oyunu domine ediyorsun!", trg:{x:50,y:60,l:"Cep (Pocket)"}}
 ];
 
-const ARCHETYPES: Record<Archetype, { label: string, icon: string, hint: string }> = {
-    'NONE': { label: 'Yok', icon: '', hint: '' },
-    'FAKE': { label: 'Fake', icon: '👻', hint: 'Rakibini şaşırtır ve sahte koşular yapar.' },
-    'GOL': { label: 'Gol', icon: '⚽', hint: 'Skor üretmeye odaklanır.' },
-    'GUCLU': { label: 'Güçlü', icon: '💪', hint: 'Fiziksel temaslarda ayakta kalır.' },
-    'TEHLIKELI': { label: 'Tehlikeli', icon: '⚡', hint: 'Dar alanda beklenmedik işler yapar.' },
-    'SERT': { label: 'Sert', icon: '🪓', hint: 'Agresif ve tavizsiz oynar.' },
-    'ASIST': { label: 'Asist', icon: '🎯', hint: 'Ölümcül paslarla pozisyon yaratır.' },
-    'HIZLI': { label: 'Hızlı', icon: '🏃‍♂️', hint: 'Patlayıcı hızıyla savunmayı deler.' },
-    'KORUYUCU': { label: 'Koruyucu', icon: '🛡️', hint: 'Takım savunmasını toparlar ve korur.' }
-};
-
 const FORMATIONS = FORMATIONS_SSOT as Record<SquadSize, Record<string, Slot[]>>;
-
-const INSTRUCTIONS = ['Hücuma Çık', 'Geride Kal', 'Serbest', 'Markaj', 'Oyun Kurucu', 'Pres Yap'];
 
 interface StudioProps {
     onBack: () => void;
     onNavigate: (view: any) => void;
 }
-
-const getSmoothPathStr = (points: {x: number, y: number}[], width: number, height: number): string => {
-    if (!points || points.length === 0) return '';
-    const mapped = points.map(p => ({ x: (p.x * width) / 100, y: (p.y * height) / 100 }));
-    if (mapped.length === 1) return `M ${mapped[0].x},${mapped[0].y}`;
-    if (mapped.length === 2) return `M ${mapped[0].x},${mapped[0].y} L ${mapped[1].x},${mapped[1].y}`;
-    
-    let path = `M ${mapped[0].x},${mapped[0].y}`;
-    for (let i = 1; i < mapped.length - 1; i++) {
-        const xc = (mapped[i].x + mapped[i + 1].x) / 2;
-        const yc = (mapped[i].y + mapped[i + 1].y) / 2;
-        path += ` Q ${mapped[i].x},${mapped[i].y} ${xc},${yc}`;
-    }
-    path += ` L ${mapped[mapped.length - 1].x},${mapped[mapped.length - 1].y}`;
-    return path;
-};
-
-const getPathLength = (points: {x: number, y: number}[]): number => {
-    let dist = 0;
-    for (let i = 0; i < points.length - 1; i++) {
-        dist += Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y);
-    }
-    return dist;
-};
-
-const getAnimationProps = (path: DrawingLine, isSimulating: boolean, playMode: 'SYNC' | 'SEQ', seqInfo: {startTime: number, duration: number}, totalSeqDur: number) => {
-    if (!isSimulating || !path) return { animate: {}, transition: {} };
-    const pathDur = seqInfo.duration;
-    const totalCycle = playMode === 'SEQ' ? Math.max(0.1, totalSeqDur) : pathDur;
-    const startTime = playMode === 'SEQ' ? seqInfo.startTime : 0;
-    
-    let times: number[] = [];
-    let lefts: string[] = [];
-    let tops: string[] = [];
-    
-    if (playMode === 'SEQ') {
-        const normalizedStart = startTime / totalCycle;
-        const normalizedEnd = (startTime + pathDur) / totalCycle;
-        
-        if (normalizedStart > 0) {
-            times.push(0);
-            lefts.push(`${path.points[0].x}%`);
-            tops.push(`${path.points[0].y}%`);
-        }
-        
-        path.points.forEach((p, idx) => {
-            const fraction = idx / Math.max(1, path.points.length - 1);
-            times.push(normalizedStart + fraction * (normalizedEnd - normalizedStart));
-            lefts.push(`${p.x}%`);
-            tops.push(`${p.y}%`);
-        });
-        
-        if (normalizedEnd < 1) {
-            times.push(1);
-            lefts.push(`${path.points[path.points.length - 1].x}%`);
-            tops.push(`${path.points[path.points.length - 1].y}%`);
-        }
-    } else {
-        lefts = path.points.map(p => `${p.x}%`);
-        tops = path.points.map(p => `${p.y}%`);
-    }
-    
-    return {
-        animate: { left: lefts, top: tops },
-        transition: {
-            duration: totalCycle,
-            ease: "linear",
-            repeat: Infinity,
-            repeatType: "loop" as const,
-            ...(playMode === 'SEQ' && { times })
-        }
-    };
-};
 
 const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [viewMode, setViewMode] = useState<'SELECTION' | 'STUDIO' | 'EDUCATION' | 'CURRENT'>('STUDIO');
@@ -201,11 +73,35 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [activePlanIndex, setActivePlanIndex] = useState(0);
     
     // Farazi Tools
-    const [tool, setTool] = useState<'move' | 'draw_run' | 'draw_pass' | 'opponent'>('move');
+    const [tool, setTool] = useState<StudioTool>('move');
     const [isDrawing, setIsDrawing] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
-    const [playMode, setPlayMode] = useState<'SYNC' | 'SEQ'>('SYNC');
+    const [playMode, setPlayMode] = useState<PlayMode>('SYNC');
     const [showBall, setShowBall] = useState(false);
+
+    // ⚡ Gelişmiş Animasyon Modülü durumu (lazy-load).
+    // isAdvancedAnimLoaded: kullanıcı modülü indirdi mi?
+    // advancedAnimApiRef: yüklenen modülün getAnimationProps fonksiyonu (saha
+    // slot/rakip markörlerini hareket ettirmek için çekirdekte kullanılır).
+    const [isAdvancedAnimLoaded, setIsAdvancedAnimLoaded] = useState(false);
+    const [isLoadingAdvancedAnim, setIsLoadingAdvancedAnim] = useState(false);
+    const advancedAnimApiRef = useRef<null | ((path: DrawingLine, isSimulating: boolean, playMode: PlayMode, seqInfo: { startTime: number, duration: number }, totalSeqDur: number) => any)>(null);
+
+    // Modülü on-demand indirir; getAnimationProps API'sini ref'e bağlar.
+    const loadAdvancedAnimation = async () => {
+        if (isAdvancedAnimLoaded || isLoadingAdvancedAnim) return;
+        setIsLoadingAdvancedAnim(true);
+        try {
+            const mod = await import('./studio/AdvancedAnimationModule');
+            advancedAnimApiRef.current = mod.getAnimationProps;
+            setIsAdvancedAnimLoaded(true);
+        } catch (e) {
+            console.error('Gelişmiş animasyon modülü yüklenemedi:', e);
+            showToast('Gelişmiş animasyon modülü yüklenemedi.', 'error');
+        } finally {
+            setIsLoadingAdvancedAnim(false);
+        }
+    };
     const [selectedSeqBadge, setSelectedSeqBadge] = useState<string | null>(null);
     const [isCustomSeqInputOpen, setIsCustomSeqInputOpen] = useState(false);
     const [customSeqValue, setCustomSeqValue] = useState<string>('');
@@ -368,22 +264,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setActiveTactic({ ...activeTactic, drawings: derivedDrawings });
     };
 
-    const seqMap = new Map<string, { startTime: number, duration: number }>();
-    let totalSeqDuration = 0;
-    
-    const steps = Array.from(new Set(drawings.map(d => d.seqStep || 1))).sort((a: any, b: any) => a - b);
-    
-    steps.forEach(stepIdx => {
-        const linesInStep = drawings.filter(d => (d.seqStep || 1) === stepIdx);
-        const maxDurInStep = Math.max(...linesInStep.map(d => Math.max(1, getPathLength(d.points) / 30)));
-        
-        linesInStep.forEach(d => {
-            const dDur = Math.max(1, getPathLength(d.points) / 30);
-            seqMap.set(d.id, { startTime: totalSeqDuration, duration: dDur });
-        });
-        
-        totalSeqDuration += maxDurInStep;
-    });
+    // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
+    const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
 
     // --- Common Handlers ---
     const preservePlayersAndSubs = (newSlots: Slot[], currentSubs: Player[]) => {
@@ -1822,31 +1704,37 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <Swords size={14} /> RAKİP EKLE
                     </button>
                     {drawings.length > 0 && (
-                        <>
+                        !isAdvancedAnimLoaded ? (
+                            // ⚡ Modül henüz indirilmedi: on-demand indirme butonu
                             <button
-                                onClick={() => setIsSimulating(!isSimulating)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${isSimulating ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FFFF00] text-black shadow-[#FFFF00]/30 hover:scale-105'}`}
+                                onClick={loadAdvancedAnimation}
+                                disabled={isLoadingAdvancedAnim}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-[#FFFF00] text-black shadow-[#FFFF00]/30 hover:scale-105 disabled:opacity-60"
+                                title="Gelişmiş animasyon motorunu indir ve oynat"
                             >
-                                {isSimulating ? (
-                                    <><Square size={14} className="fill-current" /> SIFIRLA</>
+                                {isLoadingAdvancedAnim ? (
+                                    <><Loader2 size={14} className="animate-spin" /> MODÜL İNDİRİLİYOR...</>
                                 ) : (
-                                    <><Play size={14} className="fill-current" /> OYNAT</>
+                                    <><Zap size={14} className="fill-current" /> GELİŞMİŞ ANİMASYON</>
                                 )}
                             </button>
-                            <button
-                                onClick={() => setShowBall(!showBall)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                ⚽ TOPU {showBall ? 'GİZLE' : 'GÖSTER'}
-                            </button>
-                            <button
-                                onClick={() => setPlayMode(p => p === 'SYNC' ? 'SEQ' : 'SYNC')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                                title="Sıralı veya Eşzamanlı Simülasyon"
-                            >
-                                {playMode === 'SEQ' ? '🔄 SIRALI OYNAT' : '👥 EŞZAMANLI OYNAT'}
-                            </button>
-                        </>
+                        ) : (
+                            // Modül indirildi: lazy toolbar kontrolleri
+                            <Suspense fallback={
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-white/5 text-gray-400 whitespace-nowrap">
+                                    <Loader2 size={14} className="animate-spin" /> Gelişmiş animasyon modülü indiriliyor...
+                                </div>
+                            }>
+                                <AnimationToolbar
+                                    isSimulating={isSimulating}
+                                    setIsSimulating={setIsSimulating}
+                                    showBall={showBall}
+                                    setShowBall={setShowBall}
+                                    playMode={playMode}
+                                    setPlayMode={setPlayMode}
+                                />
+                            </Suspense>
+                        )
                     )}
                     <div className="w-px h-8 bg-white/10 mx-1"></div>
                     <button 
@@ -1944,8 +1832,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {/* Opponents */}
                     {activeTactic.opponents.map(opp => {
                         const path = drawings.find(d => d.attachedTo === opp.id && d.type === 'line');
-                        const isMoving = isSimulating && path;
-                        const anim = path && isMoving ? getAnimationProps(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
+                        const isMoving = isSimulating && path && advancedAnimApiRef.current;
+                        const anim = path && isMoving ? advancedAnimApiRef.current!(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
                         return (
                         <motion.div 
                             key={opp.id}
@@ -1977,8 +1865,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {/* Slots */}
                     {activeTactic.slots.map(slot => {
                         const path = drawings.find(d => d.attachedTo === slot.id && d.type === 'line');
-                        const isMoving = isSimulating && path;
-                        const anim = path && isMoving ? getAnimationProps(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
+                        const isMoving = isSimulating && path && advancedAnimApiRef.current;
+                        const anim = path && isMoving ? advancedAnimApiRef.current!(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
                         return (
                         <motion.div 
                             key={slot.id}
@@ -2041,137 +1929,27 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </motion.div>
                     )})}
 
-                    {/* Balls rendering for passes */}
-                    {isSimulating && showBall && drawings.filter(d => d.type === 'arrow').map(path => {
-                        const anim = getAnimationProps(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration);
-                        return (
-                            <motion.div
-                                key={`ball-${path.id}`}
-                                className="absolute w-4 h-4 z-[60] bg-white rounded-full flex items-center justify-center text-[10px] shadow-[0_0_15px_rgba(255,255,255,0.8)]"
-                                animate={anim.animate}
-                                transition={anim.transition as any}
-                                style={{ x: "-50%", y: "-50%" }}
-                            >
-                                ⚽
-                            </motion.div>
-                        );
-                    })}
-
-                    {/* Sequence Badges */}
-                    {playMode === 'SEQ' && drawings.map((line) => {
-                        const midIdx = Math.floor(line.points.length / 2);
-                        const midPoint = line.points[midIdx];
-                        if (!midPoint) return null;
-                        const isSelected = selectedSeqBadge === line.id;
-                        return (
-                            <div 
-                                key={`badge-${line.id}`}
-                                className="absolute z-[70]"
-                                style={{ left: `${midPoint.x}%`, top: `${midPoint.y}%`, transform: 'translate(-50%, -50%)' }}
-                            >
-                                <div
-                                    onPointerDown={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedSeqBadge(isSelected ? null : line.id);
-                                        setIsCustomSeqInputOpen(false);
-                                    }}
-                                    className={`bg-indigo-500 text-white font-black rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] cursor-pointer pointer-events-auto transition-all ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}
-                                    title="Sırayı Ayarla"
-                                >
-                                    {line.seqStep || 1}
-                                </div>
-
-                                {isSelected && (
-                                    <div 
-                                        className="absolute top-10 left-1/2 -translate-x-1/2 bg-[#161B22] border border-white/10 rounded-xl p-2 shadow-2xl flex gap-1 pointer-events-auto"
-                                        onPointerDown={(e) => e.stopPropagation()}
-                                    >
-                                        {isCustomSeqInputOpen ? (
-                                            <div className="flex items-center gap-1">
-                                                <input 
-                                                    type="number"
-                                                    autoFocus
-                                                    value={customSeqValue}
-                                                    onChange={e => setCustomSeqValue(e.target.value)}
-                                                    onKeyDown={e => {
-                                                        if (e.key === 'Enter' && customSeqValue && !isNaN(Number(customSeqValue))) {
-                                                            setDrawings(prev => prev.map(d => d.id === line.id ? { ...d, seqStep: Number(customSeqValue) } : d));
-                                                            setSelectedSeqBadge(null);
-                                                            setIsCustomSeqInputOpen(false);
-                                                        }
-                                                    }}
-                                                    className="w-12 h-8 bg-black/50 text-white text-xs font-bold text-center rounded-lg border border-white/20 outline-none focus:border-[#39FF14]"
-                                                    placeholder="#"
-                                                />
-                                                <button
-                                                    onPointerDown={(e) => {
-                                                        e.stopPropagation();
-                                                        if (customSeqValue && !isNaN(Number(customSeqValue))) {
-                                                            setDrawings(prev => prev.map(d => d.id === line.id ? { ...d, seqStep: Number(customSeqValue) } : d));
-                                                            setSelectedSeqBadge(null);
-                                                            setIsCustomSeqInputOpen(false);
-                                                        }
-                                                    }}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-[#39FF14]/20 text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all"
-                                                    title="Onayla"
-                                                >
-                                                    <Check size={14} />
-                                                </button>
-                                                <button
-                                                    onPointerDown={(e) => {
-                                                        e.stopPropagation();
-                                                        setIsCustomSeqInputOpen(false);
-                                                    }}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-500 transition-all"
-                                                    title="İptal"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {Array.from(new Set(drawings.map(d => d.seqStep || 1))).sort((a: any, b: any) => a - b).map((step: number) => (
-                                                    <button
-                                                        key={`set-${step}`}
-                                                        onPointerDown={(e) => {
-                                                            e.stopPropagation();
-                                                            setDrawings(prev => prev.map(d => d.id === line.id ? { ...d, seqStep: step } : d));
-                                                            setSelectedSeqBadge(null);
-                                                        }}
-                                                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${(line.seqStep || 1) === step ? 'bg-indigo-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
-                                                    >
-                                                        {step}
-                                                    </button>
-                                                ))}
-                                                <button
-                                                    onPointerDown={(e) => {
-                                                        e.stopPropagation();
-                                                        setDrawings(prev => prev.filter(d => d.id !== line.id));
-                                                        setSelectedSeqBadge(null);
-                                                    }}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-500 transition-all ml-1"
-                                                    title="Koşuyu Sil"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                                <button
-                                                    onPointerDown={(e) => {
-                                                        e.stopPropagation();
-                                                        setIsCustomSeqInputOpen(true);
-                                                        setCustomSeqValue('');
-                                                    }}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 text-gray-400 hover:bg-[#39FF14]/20 hover:text-[#39FF14] transition-all ml-1"
-                                                    title="Özel Sıra Numarası Gir"
-                                                >
-                                                    <Plus size={14} />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    {/* ⚡ GELİŞMİŞ ANİMASYON OVERLAY (lazy) — top animasyonu + sekans/timeline editörü.
+                        Yalnız modül indirildiğinde mount edilir; ağır kısım buradadır. */}
+                    {isAdvancedAnimLoaded && (
+                        <Suspense fallback={null}>
+                            <AdvancedAnimationModule
+                                drawings={drawings}
+                                isSimulating={isSimulating}
+                                showBall={showBall}
+                                playMode={playMode}
+                                seqMap={seqMap}
+                                totalSeqDuration={totalSeqDuration}
+                                selectedSeqBadge={selectedSeqBadge}
+                                setSelectedSeqBadge={setSelectedSeqBadge}
+                                isCustomSeqInputOpen={isCustomSeqInputOpen}
+                                setIsCustomSeqInputOpen={setIsCustomSeqInputOpen}
+                                customSeqValue={customSeqValue}
+                                setCustomSeqValue={setCustomSeqValue}
+                                setDrawings={setDrawings}
+                            />
+                        </Suspense>
+                    )}
                 </div>
             </div>
 

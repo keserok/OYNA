@@ -121,6 +121,8 @@ interface AppState {
   hasMotmCoupon: boolean;
   selectedMatch: MatchListing | null;
   selectedDiaryId: string | null;
+  // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
+  selectedConversationId: string | null;
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
   // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
@@ -219,6 +221,7 @@ interface AppState {
   setHasMotmCoupon: (hasCoupon: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
   setSelectedDiaryId: (id: string | null) => void;
+  setSelectedConversationId: (id: string | null) => void;
   setMatchCreateSeed: (seed: AppState['matchCreateSeed']) => void;
   activeDraftId: string | null;
   setActiveDraftId: (id: string | null) => void;
@@ -415,6 +418,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   hasMotmCoupon: false,
   selectedMatch: null,
   selectedDiaryId: null,
+  selectedConversationId: null,
   matchCreateSeed: null,
   activeDraftId: null,
   selectedGk: null,
@@ -739,6 +743,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
+  setSelectedConversationId: (id) => set({ selectedConversationId: id }),
   setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
