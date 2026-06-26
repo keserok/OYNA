@@ -69,7 +69,6 @@ const App: React.FC = () => {
     view,
     role,
     isAuthReady,
-    hasMotmCoupon,
     selectedMatch,
     selectedDiaryId,
     selectedGk,
@@ -442,7 +441,6 @@ const App: React.FC = () => {
         return <ListingDetails onBack={() => goBack('MY_LISTINGS')} />;
       case 'PAYMENT':
         return <PaymentScreen
-          hasMotmCoupon={hasMotmCoupon}
           onBack={() => goBack('OPPONENT_FINDER')}
           onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;

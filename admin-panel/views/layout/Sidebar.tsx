@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Tesis Onayları': 'MODERATION', 'SaaS Hesapları': 'OWNER_ACCOUNTS',
             'Maçlar': 'MATCHES', 'Kaleciler': 'KALECİLER', 'Hakemler': 'HAKEMLER', 'Topluluklar': 'TOPLULUKLAR',
             'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS',
-            'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES',
+            'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES', 'Komisyon': 'COMMISSION',
             'Denetim Kayıtları': 'AUDIT_LOG', 'Metinler': 'CONTENT', 'Ayarlar': 'SETTINGS', 'Ekipler & Yetkiler': 'ACL',
         };
         return map[label] ?? null;
@@ -94,6 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             items: [
                 { icon: CreditCard, label: 'Finans Merkezi', badge: null, active: activeSubRoute === 'FINANCE', action: () => onNavigate('FINANCE') },
                 { icon: Scale, label: 'İhtilaflar', badge: openDisputes > 0 ? String(openDisputes) : null, active: activeSubRoute === 'DISPUTES', action: () => onNavigate('DISPUTES') },
+                { icon: Zap, label: 'Komisyon', badge: null, active: activeSubRoute === 'COMMISSION', action: () => onNavigate('COMMISSION') },
             ]
         },
         {

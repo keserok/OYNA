@@ -568,6 +568,40 @@ export interface WalletTransaction {
   status: 'CLEARED' | 'PENDING';
 }
 
+// FAZ 2: iyzico pre-auth state machine
+export type PaymentIntentStatus = 'PENDING' | 'BLOCKED' | 'CAPTURED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'VOIDED';
+export type CommissionModel = 'MODEL_A' | 'MODEL_B';
+export type PaymentBalanceType = 'EARNINGS' | 'REFUND_CREDIT';
+export type PayoutType = 'OWNER_BIWEEKLY' | 'PROVIDER_INSTANT' | 'MANUAL';
+export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export interface CommissionConfig {
+  id: string;
+  scope: 'GLOBAL' | 'PITCH' | 'SERVICE_GK' | 'SERVICE_REF' | 'MATCH';
+  scope_id: string | null;
+  model: CommissionModel;
+  rate_pct: number;
+  markup_pct: number;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayoutRequest {
+  id: string;
+  user_id: string;
+  amount: number;
+  iban: string;
+  iban_holder_name: string;
+  status: PayoutStatus;
+  payout_type: PayoutType;
+  scheduled_for: string | null;
+  processed_at: string | null;
+  admin_notes: string | null;
+  created_at: string;
+}
+
 // FINANCIAL TYPES
 export interface PaymentPool {
   totalAmount: number;
