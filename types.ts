@@ -264,7 +264,8 @@ export interface MatchListing {
   gender?: string;
   ageGroup?: string;
   // Hakem ve Skor Otoritesi
-  refereeId?: string; // Appointed referee
+  refereeId?: string; // Appointed referee (FAZ 5: capture sonrası atanır)
+  gkId?: string;      // Appointed goalkeeper (FAZ 5: capture sonrası atanır)
   refereeStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı hakem takibi
   gkStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı kaleci takibi
   ownerCheckIn?: boolean; // Tesisin ekibi onaylama durumu
@@ -525,7 +526,90 @@ export interface BusinessInsight {
   impact: string;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// FAZ 5 — KANONİK HİZMET MODELİ (Kaleci & Hakem)
+// JobListing / DirectOffer / IncomingBid → tek `ServiceRequest` ile birleşti.
+// Eski üç model (aşağıda) @deprecated; yeni akışlar ServiceRequest kullanır.
+// ═══════════════════════════════════════════════════════════════════════════
+export type ProviderType = 'GK' | 'REF';
+export type ServiceRequestStatus =
+  | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CAPTURED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+
+/** Tek talep modeli — kadro/kaptan bir kaleci/hakem talep eder. */
+export interface ServiceRequest {
+  id: string;
+  matchId: string;
+  providerId: string;
+  providerType: ProviderType;
+  requestedBy: string;
+  fee: number;
+  commissionAmount: number;
+  providerAmount: number;           // ücret − %10 komisyon (sağlayıcının eline geçen)
+  requestKind: 'INDIVIDUAL' | 'SQUAD_VOTE';
+  status: ServiceRequestStatus;
+  paymentIntentId?: string;
+  payoutReleased: boolean;
+  acceptedAt?: string;
+  capturedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+}
+
+/** find_providers_for_match çıktısı — sıralı öneri kartı. */
+export interface ProviderSuggestion {
+  id: string;
+  name: string;
+  avatar?: string;
+  rating: number;
+  fee: number;
+  match_count: number;
+  style?: string;
+  level?: string;                   // yalnız hakem
+  preferred_zones?: string[];
+  coordinates?: { lat: number; lng: number };
+  is_elite?: boolean;
+}
+
+/** Maç sonu kaleci/hakem 1-10 puanlaması. */
+export interface ServiceRating {
+  id: string;
+  matchId: string;
+  providerId: string;
+  providerType: ProviderType;
+  raterId: string;
+  score: number;                    // 1-10
+  comment?: string;
+  createdAt: string;
+}
+
+/** Onboarding başvurusu (kimlik foto + telefon + niyet mektubu). */
+export interface ProviderApplication {
+  id: string;
+  userId: string;
+  role: 'GOALKEEPER' | 'REFEREE';
+  idPhotoPath: string;
+  phone: string;
+  intentLetter: string;
+  level?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  adminNotes?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+/** Anlık payout öncesi TC kimlik doğrulama durumu. */
+export interface ProviderIdentity {
+  userId: string;
+  fullName: string;
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  verifiedAt?: string;
+}
+
 // SERVICE PROVIDER TYPES (Updated)
+/** @deprecated FAZ 5: ServiceRequest ile birleşti. Geriye dönük uyumluluk için tutuluyor. */
 export interface JobListing {
   id: string;
   type: 'REF' | 'GK';
