@@ -194,6 +194,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         homeTeamName: homeTeamName.trim() || undefined,
         awayTeamName: awayTeamName.trim() || undefined,
         location: selectedPitch?.district || 'Belirtilmedi',
+        pitchId: selectedPitch?.id,            // FAZ 3: owner kredisi + iade için saha bağı
+        visibility: 'OPEN' as const,           // FAZ 3: açık maç (özel maç ileride kodla)
         time: selectedTimeSlot?.time || '',
         date: selectedTimeSlot?.date || '',
         price: costPerPerson,

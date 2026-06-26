@@ -280,6 +280,13 @@ export interface MatchListing {
   reservePlayers?: Player[];
   cancelReason?: string;
   refundStatus?: string;
+  // FAZ 3: maç çekirdeği
+  visibility?: 'OPEN' | 'PRIVATE';
+  privateCode?: string;       // özel maç katılım kodu
+  pitchId?: string;           // rezerve edilen saha (owner kredisi + iade için)
+  isSuccessful?: boolean;     // "başarılı maç" sinyali (ödendi+oynandı+iptal yok)
+  confirmedAt?: string;       // T-8s quorum onay zamanı
+  startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
 }
 
 export interface PositionSlot {

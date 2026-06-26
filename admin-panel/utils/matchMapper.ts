@@ -23,6 +23,12 @@ export interface AdminMatchRow {
   cancel_reason: string | null;
   refund_status: string | null;
   created_at: string | null;
+  visibility?: string | null;
+  private_code?: string | null;
+  pitch_id?: string | null;
+  is_successful?: boolean | null;
+  confirmed_at?: string | null;
+  starts_at?: string | null;
   total_count?: number;
 }
 
@@ -95,6 +101,12 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     cancelReason: r.cancel_reason || undefined,
     refundStatus: r.refund_status || undefined,
     format: r.format || '7v7',
+    visibility: (r.visibility === 'PRIVATE' ? 'PRIVATE' : 'OPEN'),
+    privateCode: r.private_code || undefined,
+    pitchId: r.pitch_id || undefined,
+    isSuccessful: r.is_successful || undefined,
+    confirmedAt: r.confirmed_at || undefined,
+    startsAt: r.starts_at || undefined,
     ...(r.isDemo ? { isDemo: true } : {}),
   } as MatchListing & { isDemo?: boolean };
 }
@@ -146,6 +158,9 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
     homeScore: match.homeScore,
     awayScore: match.awayScore,
     scoreEnteredAt: match.scoreEnteredAt,
+    // FAZ 3
+    visibility: match.visibility || 'OPEN',
+    pitch_id: match.pitchId || null,
   };
 }
 
