@@ -1552,6 +1552,43 @@ export async function fetchWithdrawalRequests(status = 'PENDING', limit = 100): 
   return (data || []) as WithdrawalRequestRow[];
 }
 
+export interface PayoutRequestRow {
+  id: string;
+  user_id: string;
+  amount: number;
+  iban: string;
+  iban_holder_name: string;
+  payout_type: string;
+  status: string;
+  created_at: string;
+  processed_at: string | null;
+  iyzico_payout_ref: string | null;
+  admin_notes: string | null;
+}
+
+/** Faz 2 payout_requests taleplerini getirir (saha sahibi 2-haftalık + provider anlık). */
+export async function fetchPayouts(status = 'PENDING', limit = 100): Promise<PayoutRequestRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_payouts', { p_status: status, p_limit: limit });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_payouts RPC deploy edilmedi' : error.message);
+  return (data || []) as PayoutRequestRow[];
+}
+
+/** Payout talebini işler: PROCESSING/COMPLETED/FAILED/CANCELLED (admin_process_payout). */
+export async function processPayout(
+  payoutId: string,
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED',
+  ref?: string,
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_process_payout', {
+    p_payout_id: payoutId,
+    p_status: status,
+    p_ref: ref ?? null,
+    p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteGoalkeeperAdmin(id: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_goalkeeper', { p_id: id });
   if (error) throw new Error(isRpcMissing(error) ? 'admin_delete_goalkeeper RPC deploy edilmedi' : error.message);
