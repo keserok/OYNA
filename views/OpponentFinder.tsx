@@ -270,14 +270,12 @@ interface OpponentFinderProps {
   onNavigate: (view: AppView) => void;
 }
 
-// Rakip takımlar Supabase opponentAds üzerinden gelir (mock kaldırıldı).
-const MOCK_TEAMS: Team[] = [];
-
 import { useAppStore } from '../store';
 
 const OpponentFinder: React.FC<OpponentFinderProps> = ({ onBack, onNavigate }) => {
   const { opponentAds } = useAppStore();
-  const displayTeams = [...MOCK_TEAMS, ...opponentAds];
+  // Rakip takımlar Supabase opponentAds üzerinden gelir (mock kaldırıldı).
+  const displayTeams = opponentAds;
   const [viewMode, setViewMode] = useState<'MAP' | 'LIST'>('MAP');
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [lobbyState, setLobbyState] = useState<'NONE' | 'WAITING' | 'READY'>('NONE');

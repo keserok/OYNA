@@ -246,8 +246,8 @@ export const DeepEditPitchModal: React.FC<ModalProps & { pitch: Pitch }> = ({ pi
                                 <FI label="Bölge / İlçe"><I value={edit.district || ''} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <FI label="Enlem (Lat)"><I type="number" step="0.000001" value={edit.coordinates?.lat || 41.0} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 29.0 } })} /></FI>
-                                <FI label="Boylam (Lng)"><I type="number" step="0.000001" value={edit.coordinates?.lng || 29.0} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 41.0, lng: +e.target.value } })} /></FI>
+                                <FI label="Enlem (Lat)"><I type="number" step="0.000001" value={edit.coordinates?.lat || 40.9839} onChange={e => setEdit({ ...edit, coordinates: { lat: +e.target.value, lng: edit.coordinates?.lng || 37.8764 } })} /></FI>
+                                <FI label="Boylam (Lng)"><I type="number" step="0.000001" value={edit.coordinates?.lng || 37.8764} onChange={e => setEdit({ ...edit, coordinates: { lat: edit.coordinates?.lat || 40.9839, lng: +e.target.value } })} /></FI>
                             </div>
                             <Toggle label="Saha Aktif mi? (Approved)" value={!!edit.isApproved} onChange={() => setEdit({ ...edit, isApproved: !edit.isApproved })} />
                         </motion.div>

@@ -94,18 +94,8 @@ export interface BasicMatchRecord {
  *  (Lobi/keşif için MatchListing kullanılır.) */
 export type Match = BasicMatchRecord;
 
-/** @deprecated ITeam yerine Team kullanın. */
-export type ITeam = Pick<Team, 'id' | 'name' | 'wins' | 'losses'> & {
-  color: string;
-  communityId?: string;
-  captainId: string;
-  formation: '5+1' | '6+1' | '7+1';
-  stats: { wins: number; losses: number; fairPlayScore: number };
-  roster: { userId: string; position: string; fairPlayScore: number }[];
-};
 
-
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'COMMUNITY_VIEW' | 'TEAM_CREATOR' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'TEAM_CREATOR' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL';
 
 export interface SavedPaymentCard {
   id: string;

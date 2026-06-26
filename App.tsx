@@ -502,7 +502,7 @@ const App: React.FC = () => {
         return <PostMatchReport onBack={() => goBack('PROFILE')} />;
       case 'TEAM_BUILDER':
         return <TeamBuilder onBack={() => goBack('PROFILE')} />;
-      case 'COMMUNITY_VIEW':
+      case 'SOCIAL':
         return <SocialView onNavigate={(v) => navigateTo(v)} />;
       case 'TEAM_CREATOR':
         return <TeamCreator
@@ -519,7 +519,7 @@ const App: React.FC = () => {
           communities={[{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }]}
         />;
       case 'POST_MATCH_EVAL':
-        return <PostMatchEval onBack={() => goBack('COMMUNITY_VIEW')} onComplete={() => goBack('COMMUNITY_VIEW')} />;
+        return <PostMatchEval onBack={() => goBack('SOCIAL')} onComplete={() => goBack('SOCIAL')} />;
       case 'MATCH_CREATE':
         return <MatchCreate onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       default:
@@ -527,7 +527,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'COMMUNITY_VIEW', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
+  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
 
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
