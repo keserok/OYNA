@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Banknote, Calendar, CreditCard as CardIcon, Coins, Flame, Plus, TrendingUp, Users, X,
 } from 'lucide-react';
+import { LoadingState } from '../../components/common/StatusState';
 import {
   addExpense,
   addDebtor,
@@ -130,11 +131,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const heatmap = dashboard?.hourlyIntensity ?? [];
 
   if (isLoading) {
-    return (
-      <div className="p-6 pb-32 flex items-center justify-center min-h-[40vh] text-gray-500 text-sm">
-        Finans verileri yükleniyor…
-      </div>
-    );
+    return <div className="p-6 pb-32"><LoadingState message="Finans verileri yükleniyor…" /></div>;
   }
 
   if (!pitchId || pitchId.startsWith('mock-')) {

@@ -373,7 +373,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     countRows('communities'),
     countRows('profiles', { column: 'verification_status', op: 'eq', value: 'pending' }),
     countRows('pitches', { column: 'verification_status', op: 'eq', value: 'pending' }),
-    countRows('owner_withdrawal_requests', { column: 'status', op: 'eq', value: 'PENDING' }),
+    countRows('payout_requests', { column: 'status', op: 'eq', value: 'PENDING' }),
     countRows('match_disputes', { column: 'status', op: 'in', value: ['OPEN', 'UNDER_REVIEW'] }),
     countRows('profiles', { column: 'is_banned', op: 'eq', value: true }),
     countRows('goalkeepers'),
@@ -465,15 +465,6 @@ export async function persistAdminLog(
 export async function moderatePitch(pitchId: string, approved: boolean, notes?: string): Promise<void> {
   const { error } = await supabase.rpc('admin_moderate_pitch', {
     p_pitch_id: pitchId,
-    p_approved: approved,
-    p_notes: notes ?? null,
-  });
-  if (error) throw new Error(error.message);
-}
-
-export async function processWithdrawal(requestId: string, approved: boolean, notes?: string): Promise<void> {
-  const { error } = await supabase.rpc('admin_process_withdrawal', {
-    p_request_id: requestId,
     p_approved: approved,
     p_notes: notes ?? null,
   });
@@ -699,7 +690,7 @@ export async function fetchOpsQueue(): Promise<OpsQueue> {
   const [verif, pitches, withdrawals, disputes] = await Promise.allSettled([
     fetchPendingVerificationsAdmin(),
     fetchPitchesAdmin({ status: 'pending', limit: 50 }),
-    fetchWithdrawalRequests('PENDING', 50),
+    fetchPayouts('PENDING', 50),
     fetchMatchDisputes(),
   ]);
 
@@ -722,7 +713,7 @@ export async function fetchOpsQueue(): Promise<OpsQueue> {
     empty.pending_withdrawals = withdrawals.value.map((w) => ({
       id: w.id,
       amount: w.amount,
-      owner_id: w.owner_id,
+      owner_id: w.user_id,
       created_at: w.created_at,
     }));
   }
@@ -1426,19 +1417,6 @@ export interface AdminPitchRow {
   total_count: number;
 }
 
-export interface WithdrawalRequestRow {
-  id: string;
-  pitch_id: string;
-  owner_id: string;
-  amount: number;
-  iban: string;
-  iban_photo_url: string | null;
-  status: string;
-  created_at: string;
-  pitch_name: string | null;
-  owner_name: string | null;
-}
-
 export function buildPitchPayloadFromUi(pitch: Partial<import('../../types').Pitch>): Record<string, unknown> {
   return {
     id: pitch.id,
@@ -1524,32 +1502,41 @@ export async function deletePitchAdmin(pitchId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function fetchWithdrawalRequests(status = 'PENDING', limit = 100): Promise<WithdrawalRequestRow[]> {
-  const { data, error } = await supabase.rpc('admin_fetch_withdrawal_requests', {
+export interface PayoutRequestRow {
+  id: string;
+  user_id: string;
+  amount: number;
+  iban: string;
+  iban_holder_name: string;
+  payout_type: string;
+  status: string;
+  created_at: string;
+  processed_at: string | null;
+  iyzico_payout_ref: string | null;
+  admin_notes: string | null;
+}
+
+/** Faz 2 payout_requests taleplerini getirir (saha sahibi 2-haftalık + provider anlık). */
+export async function fetchPayouts(status = 'PENDING', limit = 100): Promise<PayoutRequestRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_payouts', { p_status: status, p_limit: limit });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_payouts RPC deploy edilmedi' : error.message);
+  return (data || []) as PayoutRequestRow[];
+}
+
+/** Payout talebini işler: PROCESSING/COMPLETED/FAILED/CANCELLED (admin_process_payout). */
+export async function processPayout(
+  payoutId: string,
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED',
+  ref?: string,
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_process_payout', {
+    p_payout_id: payoutId,
     p_status: status,
-    p_limit: limit,
+    p_ref: ref ?? null,
+    p_notes: notes ?? null,
   });
-  if (error) {
-    if (isRpcFallback(error)) {
-      let q = supabase.from('owner_withdrawal_requests').select('*').order('created_at', { ascending: false }).limit(limit);
-      if (status && status !== 'ALL') q = q.eq('status', status);
-      const { data: rows } = await q;
-      return (rows || []).map((w: Record<string, unknown>) => ({
-        id: String(w.id),
-        pitch_id: String(w.pitch_id),
-        owner_id: String(w.owner_id),
-        amount: Number(w.amount),
-        iban: String(w.iban || ''),
-        iban_photo_url: (w.iban_photo_url as string) ?? null,
-        status: String(w.status),
-        created_at: String(w.created_at),
-        pitch_name: null,
-        owner_name: null,
-      }));
-    }
-    throw new Error(error.message);
-  }
-  return (data || []) as WithdrawalRequestRow[];
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteGoalkeeperAdmin(id: string): Promise<void> {

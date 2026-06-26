@@ -86,6 +86,7 @@ export interface SubscriptionInput {
   start_date?: string;
   end_date?: string | null;
   notes?: string;
+  auto_renew?: boolean;
 }
 
 export interface FlashDealInput {
@@ -796,37 +797,23 @@ export async function getPitchAppMatches(pitchId: string): Promise<PitchAppMatch
 // WITHDRAWALS / BALANCE
 // ----------------------------------------------------------------------------
 
-async function uploadIbanPhoto(file: File, ownerId: string): Promise<string> {
-  const ext = file.name.split('.').pop() || 'jpg';
-  const path = `withdrawals/${ownerId}/${Date.now()}_${Math.random()
-    .toString(36)
-    .slice(2)}.${ext}`;
-  const { error } = await supabase.storage
-    .from('images')
-    .upload(path, file, { cacheControl: '3600', upsert: false });
-  if (error) throw error;
-  const { data } = supabase.storage.from('images').getPublicUrl(path);
-  return data.publicUrl;
-}
-
+/**
+ * Saha sahibi para çekme talebi — Faz 2 güvenli ödeme motoruna (request_payout)
+ * OWNER_BIWEEKLY tipiyle gider. Bakiye get_wallet_summary üzerinden doğrulanır,
+ * advisory-lock + çift-talep koruması RPC içindedir; admin admin_process_payout
+ * ile sonuçlandırır.
+ */
 export async function requestWithdrawal(
-  pitchId: string,
   amount: number,
   iban: string,
-  ibanPhotoFile?: File,
+  ibanHolderName: string,
 ): Promise<void> {
   try {
-    const uid = await getCurrentUserId();
-    let photoUrl: string | null = null;
-    if (ibanPhotoFile) {
-      photoUrl = await uploadIbanPhoto(ibanPhotoFile, uid);
-    }
-    const { error } = await supabase.from('owner_withdrawal_requests').insert({
-      pitch_id: pitchId,
-      owner_id: uid,
-      amount,
-      iban,
-      iban_photo_url: photoUrl,
+    const { error } = await supabase.rpc('request_payout', {
+      p_amount: amount,
+      p_iban: iban.replace(/\s/g, ''),
+      p_iban_holder_name: ibanHolderName,
+      p_payout_type: 'OWNER_BIWEEKLY',
     });
     if (error) throw error;
   } catch (error) {
@@ -836,49 +823,30 @@ export async function requestWithdrawal(
 }
 
 /**
- * Tesisin çekilebilir bakiyesini hesaplar:
- *   toplanan (paid_amount toplamı) - platform komisyonu - bekleyen/işlenen çekim talepleri.
+ * Saha sahibinin çekilebilir bakiyesini Faz 2 cüzdanından (get_wallet_summary) okur.
+ * Bakiye KULLANICI bazlıdır (tüm tesislerin kazancı tek cüzdanda toplanır); pitchId
+ * yalnız geriye-uyumluluk için kabul edilir. Maç geliri + (kart ile tahsil edilen)
+ * saha kiralama geliri burada toplanır. 2 hafta beklemedeki (PENDING) tutar henüz
+ * "available" değildir; reserved = bekleyen çekim talebi.
  */
-export async function getOwnerBalance(pitchId: string): Promise<{
+export async function getOwnerBalance(_pitchId?: string): Promise<{
   collected: number;
   pendingWithdrawals: number;
   commissionRate: number;
   available: number;
 }> {
   try {
-    const [{ data: bookings, error: bErr }, { data: pitch, error: pErr }, { data: wds, error: wErr }] =
-      await Promise.all([
-        supabase
-          .from('pitch_bookings')
-          .select('paid_amount')
-          .eq('pitch_id', pitchId)
-          .neq('status', 'CANCELLED'),
-        supabase.from('pitches').select('platform_commission_rate').eq('id', pitchId).single(),
-        supabase
-          .from('owner_withdrawal_requests')
-          .select('amount, status')
-          .eq('pitch_id', pitchId)
-          .in('status', ['PENDING', 'APPROVED', 'PROCESSING', 'COMPLETED']),
-      ]);
-    if (bErr) throw bErr;
-    if (pErr) throw pErr;
-    if (wErr) throw wErr;
-
-    const collected = ((bookings ?? []) as { paid_amount: number | null }[]).reduce(
-      (sum, r) => sum + (r.paid_amount ?? 0),
-      0,
-    );
-    const commissionRate =
-      (pitch as { platform_commission_rate: number | null } | null)?.platform_commission_rate ?? 10;
-    const withdrawn = ((wds ?? []) as { amount: number | null }[]).reduce(
-      (sum, r) => sum + (r.amount ?? 0),
-      0,
-    );
-
-    const netAfterCommission = collected * (1 - commissionRate / 100);
-    const available = Math.max(0, Math.round((netAfterCommission - withdrawn) * 100) / 100);
-
-    return { collected, pendingWithdrawals: withdrawn, commissionRate, available };
+    const { data, error } = await supabase.rpc('get_wallet_summary');
+    if (error) throw error;
+    const w = (data ?? {}) as { earnings_balance?: number; reserved_balance?: number };
+    const available = w.earnings_balance ?? 0;
+    const pendingWithdrawals = w.reserved_balance ?? 0;
+    return {
+      collected: available + pendingWithdrawals,
+      pendingWithdrawals,
+      commissionRate: 0,
+      available,
+    };
   } catch (error) {
     console.error('getOwnerBalance:', error);
     throw new Error(toTurkishError(error));
@@ -895,12 +863,51 @@ export async function getSubscriptions(pitchId: string): Promise<PitchSubscripti
       .from('pitch_subscriptions')
       .select('*')
       .eq('pitch_id', pitchId)
-      .eq('status', 'ACTIVE')
+      .in('status', ['ACTIVE', 'PAUSED'])
+      .order('status', { ascending: true })
       .order('weekday', { ascending: true });
     if (error) throw error;
     return (data ?? []) as unknown as PitchSubscription[];
   } catch (error) {
     console.error('getSubscriptions:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/**
+ * Abonelik durumunu değiştirir (duraklat / devam ettir / iptal).
+ * status='CANCELLED' kalıcı iptal; 'PAUSED' geçici durdurma (otomatik üretim atlanır);
+ * 'ACTIVE' tekrar devreye alma. RLS owner_id = auth.uid() ile korunur.
+ */
+export async function updateSubscriptionStatus(
+  subscriptionId: string,
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED',
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitch_subscriptions')
+      .update({ status })
+      .eq('id', subscriptionId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('updateSubscriptionStatus:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Aboneliğin otomatik yenilenme (auto_renew) bayrağını açar/kapatır. */
+export async function setSubscriptionAutoRenew(
+  subscriptionId: string,
+  autoRenew: boolean,
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('pitch_subscriptions')
+      .update({ auto_renew: autoRenew })
+      .eq('id', subscriptionId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('setSubscriptionAutoRenew:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -922,6 +929,7 @@ export async function addSubscription(
       start_date: sub.start_date ?? todayISO(),
       end_date: sub.end_date ?? null,
       notes: sub.notes ?? null,
+      auto_renew: sub.auto_renew ?? true,
       status: 'ACTIVE',
     });
     if (error) throw error;

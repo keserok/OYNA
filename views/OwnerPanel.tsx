@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
-  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette
+  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette
 } from 'lucide-react';
 
 import { useAppStore } from '../store';
@@ -61,6 +61,8 @@ import {
   createManualBooking,
   recordBookingPayment,
   getSubscriptions,
+  updateSubscriptionStatus,
+  setSubscriptionAutoRenew,
   subscribeToOwnerBookings,
   buildHourlyOccupancyGrid,
   buildEmptyHourlyGrid,
@@ -329,6 +331,8 @@ const FinancialCalendarView: React.FC<{
     const [isAddingSlot, setIsAddingSlot] = useState(false);
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
     const [subscriptions, setSubscriptions] = useState<any[]>([]);
+    const [subMenuId, setSubMenuId] = useState<string | null>(null);
+    const [subActionBusy, setSubActionBusy] = useState(false);
     const [flashDeals, setFlashDeals] = useState<FlashDeal[]>([]);
     const [closedSlots, setClosedSlots] = useState<PitchAvailabilityException[]>([]);
 
@@ -379,6 +383,44 @@ const FinancialCalendarView: React.FC<{
             .then(setSubscriptions)
             .catch(() => setSubscriptions([]));
     }, [isRealPitch, pitchId, isMonthlyView, isSubscriptionModalOpen]);
+
+    const reloadSubscriptions = React.useCallback(() => {
+        if (!isRealPitch || !pitchId) return;
+        getSubscriptions(pitchId).then(setSubscriptions).catch(() => setSubscriptions([]));
+    }, [isRealPitch, pitchId]);
+
+    const handleSubStatus = async (id: string, status: 'ACTIVE' | 'PAUSED' | 'CANCELLED') => {
+        if (status === 'CANCELLED' && !window.confirm('Bu abonelik iptal edilsin mi? Bu işlem geri alınamaz.')) return;
+        setSubActionBusy(true);
+        try {
+            await updateSubscriptionStatus(id, status);
+            notify(
+                status === 'CANCELLED' ? 'Abonelik iptal edildi.'
+                : status === 'PAUSED' ? 'Abonelik duraklatıldı.'
+                : 'Abonelik devam ettirildi.',
+                'success',
+            );
+            setSubMenuId(null);
+            reloadSubscriptions();
+        } catch (err) {
+            notify(toTurkishError(err), 'error');
+        } finally {
+            setSubActionBusy(false);
+        }
+    };
+
+    const handleSubAutoRenew = async (id: string, next: boolean) => {
+        setSubActionBusy(true);
+        try {
+            await setSubscriptionAutoRenew(id, next);
+            notify(next ? 'Otomatik yenileme açıldı.' : 'Otomatik yenileme kapatıldı.', 'success');
+            reloadSubscriptions();
+        } catch (err) {
+            notify(toTurkishError(err), 'error');
+        } finally {
+            setSubActionBusy(false);
+        }
+    };
 
     const loadSlotMeta = React.useCallback(async () => {
         if (!isRealPitch || !pitchId) {
@@ -550,24 +592,68 @@ const FinancialCalendarView: React.FC<{
                         <div className="space-y-4">
                             <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">AKTİF ABONMANLAR</h4>
                             {subscriptions.length === 0 ? (
-                                <p className="text-sm text-gray-500 text-center py-4">Aktif abonman bulunmuyor.</p>
+                                <p className="text-sm text-gray-500 text-center py-4">Abonman bulunmuyor.</p>
                             ) : subscriptions.map(sub => {
                                 const dayNames = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
                                 const courtName = activeCourts.find(c => c.id === sub.court_id)?.name ?? 'Saha';
+                                const isPaused = sub.status === 'PAUSED';
+                                const autoRenew = sub.auto_renew !== false;
                                 return (
-                                <div key={sub.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                <div key={sub.id} className={`bg-[#161B22] p-4 rounded-2xl border flex justify-between items-center group ${isPaused ? 'border-amber-500/20 opacity-70' : 'border-white/5'}`}>
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isPaused ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}`}>
                                             <RefreshCw size={20} />
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-black text-white">{sub.customer_name}</p>
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-black text-white truncate">{sub.customer_name}</p>
+                                                {isPaused && <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Duraklatıldı</span>}
+                                            </div>
                                             <p className="text-[10px] text-gray-500 font-bold uppercase">{dayNames[sub.weekday] ?? ''} • {(sub.start_time ?? '').slice(0,5).replace(':','.')} • {courtName}</p>
+                                            <p className={`text-[9px] font-bold mt-0.5 flex items-center gap-1 ${autoRenew ? 'text-blue-400/80' : 'text-gray-600'}`}>
+                                                <RefreshCw size={10} /> {autoRenew ? 'Otomatik yenileniyor' : 'Otomatik yenileme kapalı'}
+                                            </p>
                                         </div>
                                     </div>
-                                    <button className="p-2 text-gray-600 hover:text-white transition-colors">
-                                        <MoreHorizontal size={20} />
-                                    </button>
+                                    <div className="relative shrink-0">
+                                        <button
+                                            onClick={() => setSubMenuId(subMenuId === sub.id ? null : sub.id)}
+                                            className="p-2 text-gray-600 hover:text-white transition-colors"
+                                        >
+                                            <MoreHorizontal size={20} />
+                                        </button>
+                                        {subMenuId === sub.id && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setSubMenuId(null)} />
+                                                <div className="absolute right-0 top-10 z-20 w-52 bg-[#0A0E14] border border-white/10 rounded-2xl p-1.5 shadow-2xl">
+                                                    <button
+                                                        disabled={subActionBusy}
+                                                        onClick={() => handleSubAutoRenew(sub.id, !autoRenew)}
+                                                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-gray-200 hover:bg-white/5 disabled:opacity-50"
+                                                    >
+                                                        <RefreshCw size={15} className="text-blue-400" />
+                                                        {autoRenew ? 'Otomatik yenilemeyi kapat' : 'Otomatik yenilemeyi aç'}
+                                                    </button>
+                                                    <button
+                                                        disabled={subActionBusy}
+                                                        onClick={() => handleSubStatus(sub.id, isPaused ? 'ACTIVE' : 'PAUSED')}
+                                                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-gray-200 hover:bg-white/5 disabled:opacity-50"
+                                                    >
+                                                        {isPaused ? <Play size={15} className="text-emerald-400" /> : <Pause size={15} className="text-amber-400" />}
+                                                        {isPaused ? 'Devam ettir' : 'Duraklat'}
+                                                    </button>
+                                                    <button
+                                                        disabled={subActionBusy}
+                                                        onClick={() => handleSubStatus(sub.id, 'CANCELLED')}
+                                                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                                                    >
+                                                        <X size={15} />
+                                                        Aboneliği iptal et
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             );})}
                         </div>

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Banknote, Camera, Trash2, Wallet, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, Banknote, Clock, Wallet, X } from 'lucide-react';
 import { getOwnerBalance, requestWithdrawal, toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 
@@ -17,11 +17,10 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
   const notify = useOwnerToast();
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [iban, setIban] = useState('');
-  const [ibanPhoto, setIbanPhoto] = useState<string | null>(null);
-  const [ibanPhotoFile, setIbanPhotoFile] = useState<File | null>(null);
+  const [ibanHolder, setIbanHolder] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [availableBalance, setAvailableBalance] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [reservedBalance, setReservedBalance] = useState(0);
   const isRealPitch = !!facilityId && !facilityId.startsWith('mock-');
 
   useEffect(() => {
@@ -32,7 +31,10 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
     }
     getOwnerBalance(facilityId)
       .then((bal) => {
-        if (active) setAvailableBalance(bal.available);
+        if (active) {
+          setAvailableBalance(bal.available);
+          setReservedBalance(bal.pendingWithdrawals);
+        }
       })
       .catch(() => {
         if (active) setAvailableBalance(0);
@@ -42,15 +44,6 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
     };
   }, [facilityId, isRealPitch]);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIbanPhotoFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setIbanPhoto(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
   const handleWithdraw = async () => {
     if (readOnly) return;
     const amount = Number(withdrawAmount);
@@ -58,8 +51,12 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
       notify('Geçerli bir tutar girin.', 'error');
       return;
     }
-    if (!iban.trim()) {
-      notify('IBAN numarası gerekli.', 'error');
+    if (!iban.trim() || iban.replace(/\s/g, '').length < 10) {
+      notify('Geçerli bir IBAN girin.', 'error');
+      return;
+    }
+    if (!ibanHolder.trim()) {
+      notify('IBAN sahibi adı zorunludur.', 'error');
       return;
     }
     if (amount > availableBalance) {
@@ -69,7 +66,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
     setIsProcessing(true);
     try {
       if (isRealPitch) {
-        await requestWithdrawal(facilityId, amount, iban, ibanPhotoFile ?? undefined);
+        await requestWithdrawal(amount, iban, ibanHolder.trim());
       } else {
         await new Promise((r) => setTimeout(r, 800));
       }
@@ -100,6 +97,19 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           <h3 className="text-4xl font-black text-white">
             ₺{availableBalance.toLocaleString('tr-TR')}
           </h3>
+          {reservedBalance > 0 && (
+            <p className="text-amber-200/80 text-xs font-bold mt-2 flex items-center gap-1.5">
+              <Clock size={13} /> ₺{reservedBalance.toLocaleString('tr-TR')} bekleyen talepte rezerve
+            </p>
+          )}
+        </div>
+
+        <div className="bg-blue-500/5 border border-blue-500/15 p-4 rounded-2xl text-xs text-blue-200/80 flex items-start gap-2.5">
+          <Clock size={16} className="shrink-0 mt-0.5" />
+          <span>
+            Kazancınız (maç + saha kiralama) tahsilattan <b>2 hafta</b> sonra çekilebilir hale gelir.
+            Talebiniz admin onayıyla kayıtlı IBAN'ınıza gönderilir.
+          </span>
         </div>
 
         <div className="space-y-4">
@@ -126,40 +136,14 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
             />
           </div>
           <div className="bg-[#161B22] p-5 rounded-2xl border border-white/5">
-            <label className="text-xs font-bold text-gray-400 uppercase block mb-3">
-              IBAN Fotoğrafı (isteğe bağlı)
-            </label>
-            {ibanPhoto ? (
-              <div className="relative w-full h-40 rounded-xl overflow-hidden border border-white/10">
-                <img src={ibanPhoto} alt="IBAN" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIbanPhoto(null);
-                    setIbanPhotoFile(null);
-                  }}
-                  className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={readOnly}
-                className="w-full h-28 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-white"
-              >
-                <Camera size={28} />
-                <span className="text-sm font-bold">Fotoğraf Yükle</span>
-              </button>
-            )}
+            <label className="text-xs font-bold text-gray-400 uppercase block mb-2">IBAN Sahibi (Ad Soyad / Ünvan)</label>
             <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handlePhotoUpload}
-              accept="image/*"
-              className="hidden"
+              type="text"
+              value={ibanHolder}
+              onChange={(e) => setIbanHolder(e.target.value)}
+              disabled={readOnly}
+              className="w-full bg-transparent text-white font-bold text-lg outline-none"
+              placeholder="Hesap sahibinin adı"
             />
           </div>
         </div>
@@ -178,6 +162,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
             isProcessing ||
             !withdrawAmount ||
             !iban ||
+            !ibanHolder ||
             Number(withdrawAmount) <= 0 ||
             Number(withdrawAmount) > availableBalance
           }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Phone } from 'lucide-react';
+import { X, User, Phone, RefreshCw } from 'lucide-react';
 import { addSubscription, toTurkishError } from '../../services/pitchOwnerService';
 import type { PitchCourt } from '../../types';
 import { addMonthsISO, resolveHourlyPrice, slotKeyToTime } from './ownerCalendarHelpers';
@@ -38,6 +38,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
     return resolveHourlyPrice(hour, pricingPolicy);
   });
   const [notes, setNotes] = useState('');
+  const [autoRenew, setAutoRenew] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +75,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
         start_date: startDate,
         end_date: addMonthsISO(startDate, durationMonths),
         notes: notes.trim() || undefined,
+        auto_renew: autoRenew,
       });
       onCreated();
       onClose();
@@ -207,6 +209,27 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
               ))}
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setAutoRenew((v) => !v)}
+            className={`w-full flex items-center justify-between gap-3 p-4 rounded-2xl border transition-colors ${
+              autoRenew
+                ? 'bg-blue-600/10 border-blue-500/40'
+                : 'bg-[#0A0E14] border-white/5'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <RefreshCw size={18} className={autoRenew ? 'text-blue-400' : 'text-gray-500'} />
+              <div className="text-left">
+                <p className="text-xs font-black text-white">Otomatik Yenileme</p>
+                <p className="text-[10px] text-gray-500 font-bold">Süre dolunca abonelik kendiliğinden uzar</p>
+              </div>
+            </div>
+            <div className={`w-11 h-6 rounded-full p-0.5 transition-colors ${autoRenew ? 'bg-blue-600' : 'bg-white/10'}`}>
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${autoRenew ? 'translate-x-5' : ''}`} />
+            </div>
+          </button>
 
           {error && <p className="text-sm text-red-400 font-bold">{error}</p>}
 

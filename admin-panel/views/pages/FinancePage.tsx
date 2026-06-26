@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '../components/DataTable';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
-  fetchProfileNameMap, toTurkishAdminError,
+  fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
+  type PayoutRequestRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { AdminSearchBar } from '../components/AdminSearchBar';
@@ -19,12 +20,14 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [ledger, setLedger] = useState<WalletLedgerRow[]>([]);
   const [payments, setPayments] = useState<BookingPaymentRow[]>([]);
   const [billing, setBilling] = useState<OwnerBillingEventRow[]>([]);
+  const [payouts, setPayouts] = useState<PayoutRequestRow[]>([]);
+  const [payoutBusy, setPayoutBusy] = useState<string | null>(null);
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'billing'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'billing' | 'payouts'>('ledger');
   const [query, setQuery] = useState('');
-  const { error: toastError } = useAdminToast();
+  const { success, error: toastError } = useAdminToast();
 
   const filterRows = <T,>(rows: T[]): T[] => {
     const q = query.trim().toLowerCase();
@@ -35,23 +38,30 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const filteredLedger = useMemo(() => filterRows(ledger), [ledger, query]);
   const filteredPayments = useMemo(() => filterRows(payments), [payments, query]);
   const filteredBilling = useMemo(() => filterRows(billing), [billing, query]);
+  const filteredPayouts = useMemo(() => filterRows(payouts), [payouts, query]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setBillingUnavailable(false);
     try {
-      const [s, l, p, b] = await Promise.allSettled([
+      const [s, l, p, b, po] = await Promise.allSettled([
         fetchFinanceStats(30),
         fetchWalletLedger(PAGE_SIZE),
         fetchBookingPayments(PAGE_SIZE),
         fetchOwnerBillingEvents(PAGE_SIZE),
+        fetchPayouts('PENDING', PAGE_SIZE),
       ]);
       if (s.status === 'fulfilled') setStats(s.value);
+      const ids = new Set<string>();
       if (l.status === 'fulfilled') {
         setLedger(l.value);
-        const ids = [...new Set(l.value.map((r) => r.user_id))];
-        setNameMap(await fetchProfileNameMap(ids));
+        l.value.forEach((r) => ids.add(r.user_id));
       }
+      if (po.status === 'fulfilled') {
+        setPayouts(po.value);
+        po.value.forEach((r) => ids.add(r.user_id));
+      }
+      if (ids.size) setNameMap(await fetchProfileNameMap([...ids]));
       if (p.status === 'fulfilled') setPayments(p.value);
       if (b.status === 'fulfilled') setBilling(b.value);
       else setBillingUnavailable(true);
@@ -65,6 +75,21 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   }, [toastError]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED') => {
+    if (status === 'FAILED' && !window.confirm('Bu payout talebi reddedilsin mi? Rezerve tutar sahibe iade edilir.')) return;
+    const ref = status === 'COMPLETED' ? (window.prompt('Banka / iyzico referansı (opsiyonel):') ?? undefined) : undefined;
+    setPayoutBusy(id);
+    try {
+      await processPayout(id, status, ref);
+      success(status === 'COMPLETED' ? 'Payout tamamlandı olarak işaretlendi.' : 'Payout reddedildi.');
+      await load();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setPayoutBusy(null);
+    }
+  };
 
   const statCards = stats ? [
     { label: 'Rezervasyon Geliri (30g)', value: `₺${Number(stats.booking_revenue).toLocaleString('tr')}`, color: 'text-[#39FF14]' },
@@ -106,11 +131,12 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const tabs = useMemo(() => ([
     { id: 'ledger' as const, label: 'Cüzdan Ledger' },
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
+    { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
-  ]), []);
+  ]), [payouts.length]);
 
-  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : filteredBilling;
-  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : billing.length;
+  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'billing' ? filteredBilling : filteredPayouts;
+  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'billing' ? billing.length : payouts.length;
 
   return (
     <PageShell
@@ -138,15 +164,15 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         </div>
       ))}
     >
-      {stats && Number(stats.withdrawal_pending) > 0 && onNavigate && (
+      {stats && Number(stats.withdrawal_pending) > 0 && (
         <button
           type="button"
-          onClick={() => onNavigate('MODERATION')}
+          onClick={() => { setTab('payouts'); setQuery(''); }}
           className="mb-4 w-full flex items-center justify-between px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/25 text-left hover:bg-yellow-500/15 transition-colors"
         >
           <div>
             <p className="text-xs font-bold text-yellow-300">Bekleyen çekim: ₺{Number(stats.withdrawal_pending).toLocaleString('tr')}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">Tesis Onayları → Çekim Talepleri sekmesinde işleyin</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Payout Talepleri sekmesinde işleyin</p>
           </div>
           <ArrowRight size={16} className="text-yellow-400 shrink-0" />
         </button>
@@ -223,6 +249,44 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           data={filteredBilling}
           loading={loading}
           emptyMessage="Billing event yok"
+        />
+      )}
+
+      {tab === 'payouts' && (
+        <DataTable
+          columns={[
+            { header: 'Tarih', render: (r: PayoutRequestRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
+            { header: 'Talep Eden', render: (r: PayoutRequestRow) => <span className="text-sm text-white">{nameMap[r.user_id] || r.user_id.slice(0, 8)}</span> },
+            { header: 'Tip', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-blue-300">{r.payout_type === 'OWNER_BIWEEKLY' ? 'Saha Sahibi' : r.payout_type === 'PROVIDER_INSTANT' ? 'Kaleci/Hakem' : r.payout_type}</span> },
+            { header: 'IBAN', render: (r: PayoutRequestRow) => <span className="text-[10px] font-mono text-gray-400">{r.iban_holder_name} · {r.iban}</span> },
+            { header: 'Tutar', render: (r: PayoutRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
+            { header: 'Durum', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
+            { header: 'İşlem', render: (r: PayoutRequestRow) => (
+              r.status === 'PENDING' || r.status === 'PROCESSING' ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={payoutBusy === r.id}
+                    onClick={() => handlePayout(r.id, 'COMPLETED')}
+                    className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25 disabled:opacity-40"
+                  >
+                    Tamamla
+                  </button>
+                  <button
+                    type="button"
+                    disabled={payoutBusy === r.id}
+                    onClick={() => handlePayout(r.id, 'FAILED')}
+                    className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-40"
+                  >
+                    Reddet
+                  </button>
+                </div>
+              ) : <span className="text-[10px] text-gray-600">{r.iyzico_payout_ref || '—'}</span>
+            ) },
+          ]}
+          data={filteredPayouts}
+          loading={loading}
+          emptyMessage="Bekleyen payout talebi yok"
         />
       )}
     </PageShell>
