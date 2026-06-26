@@ -24,7 +24,7 @@
 | 12 | MyBookings: maça çevir / yol tarifi / tekrar rezerve | 3.1 | 🟢 Düşük | UI | ✅ Tamamlandı |
 | 13 | `release_owner_earnings` (2 hafta) entegrasyon testi | 2.3 | 🟡 Orta | Test | 🧪 Test yok |
 | 14 | `admin_process_payout` COMPLETED/FAILED yaşam döngüsü testi | 2.3 | 🟡 Orta | Test | 🧪 Test yok |
-| 15 | GK/Hakem servis tahsilat & payout uçtan uca testi | 5 | 🟢 Düşük | FAZ 5 | 🧪 Test yok |
+| 15 | GK/Hakem servis tahsilat & payout uçtan uca testi | 5 | 🟢 Düşük | FAZ 5 | ✅ Eklendi (17 test) |
 | 16 | Ücretsiz (fiyat=0) maç quorum onayı sınır testi | 3.2 | 🟢 Düşük | Test | 🧪 Test yok |
 
 > **Not (FAZ 3 denetimi):** #11/#12 tamamlandı. #13–#16, çok-ajanlı adversarial

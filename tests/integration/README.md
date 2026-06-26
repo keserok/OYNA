@@ -28,6 +28,14 @@ psql "$DATABASE_URL" -f tests/integration/faz3_match_lifecycle.sql
 | `faz2_payment_engine.sql` | Blokaj→tahsil→owner kazanç, cüzdan, payout | 12 |
 | `faz3_match_lifecycle.sql` | Quorum onay/iptal-iade, finalize, whitelist, özel maç, kademeli iade | 20 |
 | `faz3_money_fixes_round3_4.sql` | Booking iadesi, çift-ödeme, ayrılma iadesi, wallet_ctx güvenliği | 8 |
+| `faz5_service_engine.sql` | Kaleci/hakem talep→tahsil→1-10 puan→anında payout, TC kimlik kapısı, self-rating guard, çakışma, maç iptalinde void/iade | 17 |
+
+> **FAZ 5'te bu testin yakaladığı gerçek hata:** `protect_provider_sensitive_fields`
+> trigger'ı `goalkeepers/referees.rating` değişimini yalnız admin'e izin veriyordu;
+> katılımcı puanı sonrası `_recompute_provider_rating` (SECURITY DEFINER ama
+> `auth.uid()`=katılımcı) bu trigger'a takılıp **tüm `submit_service_rating`'i
+> çökertiyordu**. `app.rating_recompute` transaction-local GUC bayrağıyla yalnız bu
+> yola izin verilerek düzeltildi.
 
 ## Bu testlerin yakaladığı gerçek hatalar (8 üretim hatası)
 

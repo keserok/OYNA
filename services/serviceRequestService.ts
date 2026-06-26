@@ -147,6 +147,7 @@ export const createServiceRequest = async (
     p_provider_type: providerType,
   });
   if (error) throw new Error(parseRpcError(error.message) || 'Hizmet talebi oluşturulamadı.');
+  if (!data) throw new Error('Hizmet talebi oluşturulamadı (beklenmeyen yanıt).');
   return {
     requestId: data.request_id,
     intentId: data.intent_id,
@@ -238,9 +239,22 @@ export const submitServiceRating = async (
 };
 
 // ─── Yardımcı: RPC hata mesajını kullanıcıya gösterilecek hâle getir ─────────
-// Postgres RAISE EXCEPTION 'KOD: açıklama' formatından açıklamayı çıkarır.
+// Postgres RAISE EXCEPTION iki biçimde gelir:
+//   1) 'KOD: açıklama'  → açıklamayı göster
+//   2) çıplak 'KOD'     → Türkçe sözlükten karşılığını göster (yoksa ham mesaj)
+const BARE_ERROR_TR: Record<string, string> = {
+  UNAUTHORIZED: 'Oturumun bulunamadı. Lütfen tekrar giriş yap.',
+  FORBIDDEN: 'Bu işlem için yetkin yok.',
+  NOT_FOUND: 'Kayıt bulunamadı.',
+  INVALID_TYPE: 'Geçersiz hizmet türü.',
+  INVALID_ROLE: 'Geçersiz rol.',
+  NAME_REQUIRED: 'Ad soyad gerekli.',
+};
 function parseRpcError(message?: string): string | null {
   if (!message) return null;
-  const m = message.match(/[A-Z_]+:\s*(.+)$/);
-  return m ? m[1] : message;
+  const withDesc = message.match(/[A-Z_]+:\s*(.+)$/);
+  if (withDesc) return withDesc[1];
+  const bare = message.match(/\b([A-Z][A-Z_]{3,})\b/);
+  if (bare && BARE_ERROR_TR[bare[1]]) return BARE_ERROR_TR[bare[1]];
+  return message;
 }

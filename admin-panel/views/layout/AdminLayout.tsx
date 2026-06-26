@@ -13,12 +13,13 @@ interface AdminLayoutProps {
     onNavigate: (route: GodViewSubRoute) => void;
     onBack: () => void;
     pendingVerifCount?: number;
+    providerIdentityCount?: number;
     mode?: 'embedded' | 'standalone';
     adminSession?: AdminSession | null;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
-    children, activeSubRoute, onNavigate, onBack, pendingVerifCount = 0, mode = 'embedded', adminSession,
+    children, activeSubRoute, onNavigate, onBack, pendingVerifCount = 0, providerIdentityCount = 0, mode = 'embedded', adminSession,
 }) => {
     const [cmdOpen, setCmdOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -58,6 +59,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                         }}
                         onBack={onBack}
                         pendingVerifCount={pendingVerifCount}
+                        providerIdentityCount={providerIdentityCount}
                         mode={mode}
                         adminSession={adminSession}
                     />

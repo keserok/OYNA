@@ -2,7 +2,8 @@ import React from 'react';
 import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
-    ChevronLeft, Radio, Swords, LogOut, Lock, Globe, Trophy, Clock, ScrollText, Building2
+    ChevronLeft, Radio, Swords, LogOut, Lock, Globe, Trophy, Clock, ScrollText, Building2,
+    ShieldCheck, AlertOctagon
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../services/adminService';
@@ -14,6 +15,7 @@ interface SidebarProps {
     onBack: () => void;
     onShowToast?: (msg: string) => void;
     pendingVerifCount?: number;
+    providerIdentityCount?: number;
     mode?: 'embedded' | 'standalone';
     adminSession?: AdminSession | null;
 }
@@ -23,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onNavigate,
     onBack,
     pendingVerifCount = 0,
+    providerIdentityCount = 0,
     mode = 'embedded',
     adminSession,
 }) => {
@@ -44,7 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const routeForLabel = (label: string): GodViewSubRoute | null => {
         const map: Record<string, GodViewSubRoute> = {
             'Genel': 'GENEL', 'Komuta Merkezi': 'CONTROL', 'Sahalar': 'SAHALAR', 'Kullanıcılar': 'KULLANICILAR',
-            'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Tesis Onayları': 'MODERATION', 'SaaS Hesapları': 'OWNER_ACCOUNTS',
+            'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Kimlik Doğr.': 'PROVIDER_IDENTITIES', 'Hizmet İtirazları': 'SERVICE_DISPUTES',
+            'Tesis Onayları': 'MODERATION', 'SaaS Hesapları': 'OWNER_ACCOUNTS',
             'Maçlar': 'MATCHES', 'Kaleciler': 'KALECİLER', 'Hakemler': 'HAKEMLER', 'Topluluklar': 'TOPLULUKLAR',
             'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS',
             'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES', 'Komisyon': 'COMMISSION',
@@ -67,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: MapPin, label: 'Sahalar', badge: totalPitches || null, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
                 { icon: Users, label: 'Kullanıcılar', badge: totalUsers || null, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
                 { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: activeSubRoute === 'PENDING_VERIFICATIONS', action: () => onNavigate('PENDING_VERIFICATIONS') },
+                { icon: ShieldCheck, label: 'Kimlik Doğr.', badge: providerIdentityCount > 0 ? providerIdentityCount : null, active: activeSubRoute === 'PROVIDER_IDENTITIES', action: () => onNavigate('PROVIDER_IDENTITIES') },
                 { icon: Shield, label: 'Tesis Onayları', badge: pendingPitches > 0 ? String(pendingPitches) : null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
                 { icon: Building2, label: 'SaaS Hesapları', badge: null, active: activeSubRoute === 'OWNER_ACCOUNTS', action: () => onNavigate('OWNER_ACCOUNTS') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : (totalMatches || null), active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
@@ -94,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             items: [
                 { icon: CreditCard, label: 'Finans Merkezi', badge: null, active: activeSubRoute === 'FINANCE', action: () => onNavigate('FINANCE') },
                 { icon: Scale, label: 'İhtilaflar', badge: openDisputes > 0 ? String(openDisputes) : null, active: activeSubRoute === 'DISPUTES', action: () => onNavigate('DISPUTES') },
+                { icon: AlertOctagon, label: 'Hizmet İtirazları', badge: null, active: activeSubRoute === 'SERVICE_DISPUTES', action: () => onNavigate('SERVICE_DISPUTES') },
                 { icon: Zap, label: 'Komisyon', badge: null, active: activeSubRoute === 'COMMISSION', action: () => onNavigate('COMMISSION') },
             ]
         },
@@ -165,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border ${
                                             String(badge).includes('⚠')
                                                 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 animate-pulse'
-                                                : label === 'Onay Bekl.' && Number(badge) > 0
+                                                : (label === 'Onay Bekl.' || label === 'Kimlik Doğr.') && Number(badge) > 0
                                                     ? 'bg-red-500/15 text-red-400 border-red-500/20 animate-pulse'
                                                     : 'bg-white/5 text-gray-400 border-white/5'
                                         }`}

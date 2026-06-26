@@ -169,7 +169,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       [incomingRequests]
   );
   const activeRequests = useMemo(
-      () => incomingRequests.filter(r => r.status === 'ACCEPTED' || r.status === 'CAPTURED'),
+      () => incomingRequests.filter(r => r.status === 'ACCEPTED' || (r.status === 'CAPTURED' && !r.payoutReleased)),
+      [incomingRequests]
+  );
+  // Bug D: Ödeme serbest bırakılınca talep COMPLETED'a geçer; sağlayıcı
+  // tamamlanan işini görebilmeli (ayrıca payout serbest bırakılmış CAPTURED da).
+  const completedRequests = useMemo(
+      () => incomingRequests.filter(r => r.status === 'COMPLETED' || (r.status === 'CAPTURED' && r.payoutReleased)),
       [incomingRequests]
   );
 
@@ -179,12 +185,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     const loadProfile = async () => {
         // Fetch from global store for now
         const { adminGoalkeepers, adminReferees } = useAppStore.getState();
-        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
-        
+        // Bug A: Kimlik HER ZAMAN gerçek oturum uid'i olmalı. Gerçek kullanıcı
+        // store'da bulunamazsa demo profili SADECE görsel alanlar için kullan,
+        // fakat id/uid'yi auth.currentUser.uid'e sabitle ki cüzdan/transfer/teklif
+        // işlemleri yanlış (demo) kullanıcıya gitmesin.
+        const authUid = auth.currentUser?.uid;
+        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (authUid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
+
         if (active && me) {
             setUserProfile({
-                id: me.id,
-                uid: me.id,
+                id: authUid || me.id,
+                uid: authUid || me.id,
                 fullName: me.name,
                 role: role,
                 email: auth.currentUser?.email || 'test@example.com',
@@ -234,14 +245,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   }, [role, isRef]);
 
   const fetchOffers = async () => {
-    if (!userProfile?.id) return;
+    // Bug A: cüzdan/teklif işlemlerinde kimlik daima gerçek oturum uid'i olmalı.
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     setOffersLoading(true);
     setOffersError(null);
     try {
       const { data, error } = await supabase
         .from('service_offers')
         .select('*')
-        .eq('provider_id', userProfile.id)
+        .eq('provider_id', uid)
         .eq('status', 'PENDING');
       if (!error && data) {
         const mappedOffers = data.map((o: any) => {
@@ -273,9 +286,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   };
 
   const fetchWallet = async () => {
-      if (!userProfile?.id) return;
+      // Bug A: cüzdan bakiyesi daima gerçek oturum uid'i ile okunmalı.
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
       try {
-          const { data, error } = await supabase.from('profiles').select('wallet_balance').eq('id', userProfile.id).single();
+          const { data, error } = await supabase.from('profiles').select('wallet_balance').eq('id', uid).single();
           if (error) {
               console.error("Error fetching wallet balance", error);
               showActionError('Bakiye bilgisi alınamadı. Lütfen tekrar dene.');
@@ -291,11 +306,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   };
 
   const fetchWalletHistory = async () => {
-    if (!userProfile?.id) return;
+    // Bug A: işlem geçmişi daima gerçek oturum uid'i ile okunmalı.
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     setWalletHistoryLoading(true);
     setWalletHistoryError(null);
     try {
-      const history = await getWalletHistory(userProfile.id);
+      const history = await getWalletHistory(uid);
       setWalletHistory(history);
     } catch (err) {
       console.error('fetchWalletHistory:', err);
@@ -459,36 +476,25 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       setShowOnlineSetupModal(false);
   };
 
-  useEffect(() => {
-    if (activeTab === 'HOME') {
-        const timer = setInterval(() => {
-            // Simple mock countdown logic
-            setTimeLeft(prev => {
-                const parts = prev.split(':').map(Number);
-                let [h, m, s] = parts;
-                if (s > 0) s--;
-                else if (m > 0) { m--; s = 59; }
-                else if (h > 0) { h--; m = 59; s = 59; }
-                return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }
-  }, [activeTab]);
+  // Bug B: Mock geri sayım interval'i kaldırıldı. timeLeft'in tek kaynağı
+  // myUpcomingMatches'e dayalı gerçek hesaplamadır (yukarıdaki useEffect).
 
   const handleTransfer = async () => {
-      if (!userProfile?.id || walletBalance <= 0) return;
+      // Bug A: para çekme daima gerçek oturum uid'i üzerinden yapılmalı,
+      // aksi halde demo sağlayıcının cüzdanı sıfırlanır.
+      const uid = auth.currentUser?.uid;
+      if (!uid || walletBalance <= 0) return;
       setIsTransferring(true);
       try {
           const currentAmount = walletBalance;
           const { error } = await supabase
               .from('profiles')
               .update({ wallet_balance: 0 })
-              .eq('id', userProfile.id);
+              .eq('id', uid);
 
           if (!error) {
               await supabase.from('wallet_transactions').insert({
-                  user_id: userProfile.id,
+                  user_id: uid,
                   amount: currentAmount,
                   type: 'WITHDRAWAL',
                   status: 'COMPLETED',
@@ -947,10 +953,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                   )}
 
-                  {/* Yaklaşan / Tamamlanan (ACCEPTED / CAPTURED) */}
+                  {/* Yaklaşan (ACCEPTED / payout serbest olmayan CAPTURED) */}
                   {activeRequests.length > 0 && (
                       <div className="space-y-3">
-                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yaklaşan / Tamamlanan</p>
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yaklaşan</p>
                           {activeRequests.map(req => (
                               <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
                                   <div className="flex items-start justify-between">
@@ -976,6 +982,29 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           Sorun Bildir
                                       </button>
                                   )}
+                              </div>
+                          ))}
+                      </div>
+                  )}
+
+                  {/* Bug D: Tamamlanan talepler (COMPLETED / payout serbest) — sağlayıcı tamamlanan işini görsün */}
+                  {completedRequests.length > 0 && (
+                      <div className="space-y-3">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Tamamlanan</p>
+                          {completedRequests.map(req => (
+                              <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
+                                  <div className="flex items-start justify-between">
+                                      <div>
+                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
+                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                      </div>
+                                      <div className="text-right">
+                                          <span className="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider bg-green-500/20 text-green-400 inline-flex items-center gap-1">
+                                              <CheckCircle2 size={11} /> Ödendi
+                                          </span>
+                                          <p className="text-sm font-black text-green-400 mt-1">{req.providerAmount}₺</p>
+                                      </div>
+                                  </div>
                               </div>
                           ))}
                       </div>

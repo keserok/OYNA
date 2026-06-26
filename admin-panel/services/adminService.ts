@@ -1714,6 +1714,154 @@ export async function approveProviderVerification(
   if (error) throw new Error(error.message);
 }
 
+// ─── Faz 5: Kaleci & Hakem kimlik doğrulama + hizmet itirazları ─────────────
+
+export interface ProviderIdentityRow {
+  user_id: string;
+  full_name: string | null;
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  birth_year: number | null;
+  created_at: string;
+  email: string | null;
+  avatar_url: string | null;
+}
+
+export interface ProviderApplicationRow {
+  id: string;
+  user_id: string;
+  role: string;
+  id_photo_path: string | null;
+  phone: string | null;
+  intent_letter: string | null;
+  level: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface ServiceDisputeRow {
+  id: string;
+  match_id: string;
+  provider_id: string;
+  provider_type: string | null;
+  fee: number | null;
+  provider_amount: number | null;
+  status: string;
+  reported_at: string;
+  payout_released: boolean;
+  provider_name?: string | null;
+}
+
+/** Kimlik doğrulaması bekleyen sağlayıcılar (provider_identities status='PENDING') */
+export async function fetchPendingProviderIdentities(): Promise<ProviderIdentityRow[]> {
+  const { data, error } = await supabase
+    .from('provider_identities')
+    .select('user_id, full_name, status, birth_year, created_at')
+    .eq('status', 'PENDING')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const rows = (data || []) as Array<Omit<ProviderIdentityRow, 'email' | 'avatar_url'>>;
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((r) => r.user_id);
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, avatar_url')
+    .in('id', ids);
+  const profileMap: Record<string, { full_name: string | null; email: string | null; avatar_url: string | null }> = {};
+  (profiles || []).forEach((p: { id: string; full_name: string | null; email: string | null; avatar_url: string | null }) => {
+    profileMap[p.id] = { full_name: p.full_name, email: p.email, avatar_url: p.avatar_url };
+  });
+
+  return rows.map((r) => ({
+    ...r,
+    full_name: r.full_name ?? profileMap[r.user_id]?.full_name ?? null,
+    email: profileMap[r.user_id]?.email ?? null,
+    avatar_url: profileMap[r.user_id]?.avatar_url ?? null,
+  }));
+}
+
+/** Sağlayıcı kimliğini VERIFIED/REJECTED yap (admin_verify_provider_identity) */
+export async function verifyProviderIdentity(
+  userId: string,
+  approve: boolean,
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_verify_provider_identity', {
+    p_user_id: userId,
+    p_approve: approve,
+    p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Bir kullanıcının son PENDING başvurusu (kimlik fotoğrafı + niyet mektubu için) */
+export async function fetchProviderApplication(userId: string): Promise<ProviderApplicationRow | null> {
+  const { data, error } = await supabase
+    .from('provider_applications')
+    .select('id, user_id, role, id_photo_path, phone, intent_letter, level, status, created_at')
+    .eq('user_id', userId)
+    .eq('status', 'PENDING')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    if ((error.message || '').includes('row-level security')) return null;
+    throw new Error(error.message);
+  }
+  return (data as ProviderApplicationRow | null) ?? null;
+}
+
+/** Private provider-docs bucket için kısa ömürlü imzalı URL */
+export async function getProviderDocSignedUrl(path: string): Promise<string | null> {
+  if (!path) return null;
+  const { data, error } = await supabase.storage
+    .from('provider-docs')
+    .createSignedUrl(path, 120);
+  if (error) return null;
+  return data?.signedUrl ?? null;
+}
+
+/** Başvuruyu APPROVED/REJECTED yap + rol/verification_status set (admin_review_provider_application) */
+export async function reviewProviderApplication(
+  appId: string,
+  approve: boolean,
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_review_provider_application', {
+    p_app_id: appId,
+    p_approve: approve,
+    p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Açık hizmet itirazları: reported_at not null & payout_released=false (+ sağlayıcı adı) */
+export async function fetchServiceDisputes(): Promise<ServiceDisputeRow[]> {
+  const { data, error } = await supabase
+    .from('service_requests')
+    .select('id, match_id, provider_id, provider_type, fee, provider_amount, status, reported_at, payout_released')
+    .not('reported_at', 'is', null)
+    .eq('payout_released', false)
+    .order('reported_at', { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const rows = (data || []) as ServiceDisputeRow[];
+  if (rows.length === 0) return rows;
+
+  const providerIds = [...new Set(rows.map((r) => r.provider_id).filter(Boolean))];
+  const nameMap = providerIds.length > 0 ? await fetchProfileNameMap(providerIds) : {};
+  return rows.map((r) => ({ ...r, provider_name: nameMap[r.provider_id] ?? null }));
+}
+
+/** İtiraz edilen hizmet ödemesini serbest bırak (admin_release_service_payout) */
+export async function releaseServicePayout(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_release_service_payout', {
+    p_request_id: requestId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function fetchGoalkeepersAdmin(limit = 500): Promise<Goalkeeper[]> {
   const { data, error } = await supabase.rpc('admin_fetch_goalkeepers', { p_limit: limit });
   if (error) {
