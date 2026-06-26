@@ -222,3 +222,6 @@ BEGIN
 END; $$;
 REVOKE ALL ON FUNCTION public.set_active_tactic(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.set_active_tactic(uuid) TO authenticated;
+
+-- Trigger fonksiyonu yalnız trigger bağlamında çalışır; doğrudan RPC çağrısına kapat
+REVOKE ALL ON FUNCTION public.protect_tactic_active() FROM PUBLIC, anon, authenticated;

@@ -211,6 +211,8 @@ FAZ 0 Temizlik → FAZ 1 Veri Temeli → FAZ 2 Para Motoru → FAZ 3 Rezervasyon
 
 **📦 Faz Sonu Çıktısı:** Takım kur, taktik çiz/paylaş/oyla, arkadaşınla mesajlaş, takım maçı yap. **Risk:** Stüdyo karmaşıklığı; önce çekirdek (formasyon+çizim), sonra animasyon.
 
+> **✅ Uygulandı** (`20260706000008/09/10_faz6_*.sql` + servis/UI + 19 e2e test): 1-1 realtime mesajlaşma (yalnız arkadaşlar, engelleme) · taktik sosyal motoru (% oylama + yorum + favori + **aktif taktik** + kopyala&öner + "En İyi Taktikler" vitrini) · kaptan **devir** + çoklu yönetici + son yönetici ayrılınca **arşiv** · takım-vs-takım skor **oyuncu-hepsi-onaylar** (iki-taraf + idempotency) → W/L geçmişi · **Studio modülerleştirildi** + animasyon **indirilebilir gelişmiş modül** (lazy-load, çekirdek hafif). Adversarial denetim: 2 KRİTİK (skor istismarı, taktik sızıntısı) + ORTA bulgular giderildi. **Kalan:** medya/grup mesajı (sonraya), saha sahibi skor bildirimi (hızlı takip).
+
 ---
 
 # FAZ 7 — Güvenlik, Bildirim, Altyapı & Store 🔒🚀
