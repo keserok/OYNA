@@ -49,8 +49,8 @@ async function iyzicoCheckout(
   const body = {
     locale: 'tr',
     conversationId: intent.id,
-    price: (intent.amount / 100).toFixed(2),
-    paidPrice: (intent.amount / 100).toFixed(2),
+    price: Number(intent.amount).toFixed(2),
+    paidPrice: Number(intent.amount).toFixed(2),
     currency: intent.currency,
     basketId: intent.id,
     paymentGroup: 'PRODUCT',
@@ -71,7 +71,7 @@ async function iyzicoCheckout(
       name: 'Saha Kapora',
       category1: 'Spor',
       itemType: 'VIRTUAL',
-      price: (intent.amount / 100).toFixed(2),
+      price: Number(intent.amount).toFixed(2),
     }],
   }
 

@@ -14,6 +14,7 @@ interface WalletScreenProps {
 
 interface WalletSummary {
   earnings_balance: number;
+  reserved_balance?: number;
   refund_credit_balance: number;
 }
 
@@ -149,8 +150,13 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         </header>
         <div className="flex-1 p-6 space-y-5">
           <div className="bg-[#161B22] border border-white/8 rounded-[28px] p-5">
-            <p className="text-gray-400 text-[11px] font-black uppercase tracking-widest mb-4">Kazanç Bakiyeniz</p>
+            <p className="text-gray-400 text-[11px] font-black uppercase tracking-widest mb-4">Kullanılabilir Kazanç</p>
             <p className="text-4xl font-black text-white">{earningsBalance.toFixed(2)}₺</p>
+            {(summary?.reserved_balance ?? 0) > 0 && (
+              <p className="text-[11px] text-yellow-400 mt-2 flex items-center gap-1">
+                <Clock size={11} /> {(summary?.reserved_balance ?? 0).toFixed(2)}₺ bekleyen çekimde rezerve
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">

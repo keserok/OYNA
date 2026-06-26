@@ -109,25 +109,28 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
         p_title:       cardHolder || 'Kullanıcı',
       });
       if (bookingErr) throw bookingErr;
+      // create_pitch_booking SKALER uuid döndürür (satır değil) — doğrudan string kullan
+      const bookingId = booking as unknown as string;
 
-      // 2. Create payment intent (pre-auth / blokaj)
+      // 2. Create payment intent (pre-auth / blokaj) — create_payment_intent satır döndürür
       const { data: intent, error: intentErr } = await supabase.rpc('create_payment_intent', {
-        p_booking_id: (booking as { id: string }).id,
+        p_booking_id: bookingId,
         p_provider:   'IYZICO',
       });
       if (intentErr) throw intentErr;
       const intentData = intent as { id: string };
       setIntentId(intentData.id);
 
-      // 3. Record minor consent if applicable
+      // 3. Record minor consent if applicable — yasal kayıt, hata yutulamaz
       if (isMinor) {
-        await supabase.rpc('record_minor_consent', {
+        const { error: consentErr } = await supabase.rpc('record_minor_consent', {
           p_payment_intent_id:   intentData.id,
           p_guardian_name:       guardianName,
           p_guardian_phone:      guardianPhone,
           p_guardian_card_last4: guardianCardLast4 || null,
           p_consent_text:        'Velisi olduğum kişinin OYNA üzerinden ödeme yapmasına açıkça onay veriyorum.',
         });
+        if (consentErr) throw consentErr;
       }
 
       // In production: call edge function with card data → iyzico → apply_preauth_block
@@ -345,15 +348,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
         <Lock size={40} className="text-[#FFFF00]" />
       </div>
       <div className="text-center">
-        <p className="text-[#FFFF00] font-black text-2xl">BLOKAJ BAŞARILI</p>
-        <p className="text-white font-bold text-sm mt-1">{totalCharge}₺ kartınızda rezerve edildi</p>
+        <p className="text-[#FFFF00] font-black text-2xl">REZERVASYON ALINDI</p>
+        <p className="text-white font-bold text-sm mt-1">{totalCharge}₺ kapora blokajı oluşturuldu</p>
       </div>
 
       <div className="w-full bg-[#161B22] border border-white/8 rounded-[28px] p-6 space-y-3">
-        <InfoRow label="Durum" value="Beklemede (Bloke)" accent="yellow" />
-        <InfoRow label="Maç onayı" value="T-8 saatte kontrol edilir" />
+        <InfoRow label="Durum" value="Beklemede (Blokaj)" accent="yellow" />
+        <InfoRow label="Tahsilat" value="T-8 saat onayında" />
         <InfoRow label="Onay koşulu" value="Min. %70 katılım" />
-        <InfoRow label="İptal durumu" value="Otomatik serbest bırakılır" />
+        <InfoRow label="Tutmazsa" value="Otomatik iptal + iade" />
         {intentId && <InfoRow label="İşlem No" value={intentId.slice(0, 8).toUpperCase()} dim />}
       </div>
 

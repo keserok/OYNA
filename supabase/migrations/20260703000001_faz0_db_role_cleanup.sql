@@ -17,29 +17,12 @@ BEGIN
   END LOOP;
 END $$;
 
--- Yalnızca desteklenen roller: PLAYER, GOALKEEPER, REFEREE, SUPER_ADMIN, ADMIN, ORGANIZER, OWNER
-ALTER TABLE public.profiles
-  ADD CONSTRAINT profiles_role_check
-  CHECK (role IS NULL OR role::text = ANY (ARRAY[
-    'PLAYER', 'GOALKEEPER', 'REFEREE', 'SUPER_ADMIN', 'ADMIN', 'ORGANIZER', 'OWNER'
-  ]));
-
-ALTER TABLE public.profiles
-  ADD CONSTRAINT profiles_roles_jsonb_check
-  CHECK (
-    roles IS NULL
-    OR (
-      jsonb_typeof(roles) = 'array'
-      AND roles <@ '["PLAYER","GOALKEEPER","REFEREE","ADMIN","ORGANIZER","SUPER_ADMIN","OWNER"]'::jsonb
-    )
-  );
-
--- 2. CAPTAIN referanslarını PLAYER'a geçir (mevcut kayıtları boz olmadan temizle)
+-- 2. ÖNCE veri temizliği: CAPTAIN/COMMUNITY_ADMIN değerlerini taşı/çıkar
+--    (CHECK kısıtı kirli veriyle ADD edilirse anında patlar — temizlik kısıttan ÖNCE olmalı)
 UPDATE public.profiles
 SET role = 'PLAYER'
 WHERE role IN ('CAPTAIN', 'COMMUNITY_ADMIN');
 
--- roles JSONB dizisindeki CAPTAIN ve COMMUNITY_ADMIN değerlerini çıkar
 UPDATE public.profiles
 SET roles = (
   SELECT jsonb_agg(r)
@@ -48,6 +31,26 @@ SET roles = (
 )
 WHERE roles IS NOT NULL
   AND (roles ? 'CAPTAIN' OR roles ? 'COMMUNITY_ADMIN');
+
+-- 3. SONRA CHECK kısıtlarını ekle (artık tüm satırlar uyumlu)
+-- Yalnızca desteklenen roller: PLAYER, GOALKEEPER, REFEREE, SUPER_ADMIN, ADMIN, ORGANIZER, OWNER
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_role_check,
+  ADD CONSTRAINT profiles_role_check
+  CHECK (role IS NULL OR role::text = ANY (ARRAY[
+    'PLAYER', 'GOALKEEPER', 'REFEREE', 'SUPER_ADMIN', 'ADMIN', 'ORGANIZER', 'OWNER'
+  ]));
+
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_roles_jsonb_check,
+  ADD CONSTRAINT profiles_roles_jsonb_check
+  CHECK (
+    roles IS NULL
+    OR (
+      jsonb_typeof(roles) = 'array'
+      AND roles <@ '["PLAYER","GOALKEEPER","REFEREE","ADMIN","ORGANIZER","SUPER_ADMIN","OWNER"]'::jsonb
+    )
+  );
 
 -- 3. admin_segment_preview fonksiyonundan CAPTAIN case'ini kaldır
 CREATE OR REPLACE FUNCTION public.admin_segment_preview(p_segment text DEFAULT 'ALL'::text)
