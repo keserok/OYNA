@@ -152,10 +152,11 @@ Sık kullanılan bazı veritabanı komutları:
 ## 📚 Ek Dökümantasyonlar
 
 Daha detaylı analiz ve geliştirici rehberleri için `docs/` klasöründeki belgelere göz atabilirsiniz:
-* [Mimari ve Tasarım Belgesi](docs/OYNA_MIMARI_VE_TASARIM_DOKUMANI.md) - Tasarım manifestosu ve master plan.
-* [Tasarım ve Mimari Kılavuzu](docs/OYNA_TASARIM_VE_MIMARI_KILAVUZU.md) - Arayüz ve durum yönetimi standartları.
-* [Backend Sistem Mantığı](docs/OYNA_BACKEND_SISTEM_MANTIGI.md) - Veritabanı şeması ve algoritmik detaylar.
-* [Geliştirme Rehberi](docs/OYNA_GELISTIRME_REHBERI.md) - Katkı ve geliştirme akışı.
+* [Yol Haritası](docs/OYNA_YOL_HARITASI.md) - Faz planı ve geliştirme öncelikleri.
+* [Master Prensipler](docs/OYNA_MASTER_PRENSIPLER.md) - Ürün ve mimari temel prensipler.
+* [Mimari ve Tasarım Belgesi](docs/eski/OYNA_MIMARI_VE_TASARIM_DOKUMANI.md) - Tasarım manifestosu ve master plan (arşiv).
+* [Tasarım ve Mimari Kılavuzu](docs/eski/OYNA_TASARIM_VE_MIMARI_KILAVUZU.md) - Arayüz ve durum yönetimi standartları (arşiv).
+* [Backend Sistem Mantığı](docs/eski/OYNA_BACKEND_SISTEM_MANTIGI.md) - Veritabanı şeması ve algoritmik detaylar (arşiv).
 * [Dosya ve Klasör İşlevleri](DOSYALARIN_ISLEVLERI.md) - Tüm kod dosyalarının işlevsel dökümü.
 
 ---
