@@ -373,7 +373,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     countRows('communities'),
     countRows('profiles', { column: 'verification_status', op: 'eq', value: 'pending' }),
     countRows('pitches', { column: 'verification_status', op: 'eq', value: 'pending' }),
-    countRows('owner_withdrawal_requests', { column: 'status', op: 'eq', value: 'PENDING' }),
+    countRows('payout_requests', { column: 'status', op: 'eq', value: 'PENDING' }),
     countRows('match_disputes', { column: 'status', op: 'in', value: ['OPEN', 'UNDER_REVIEW'] }),
     countRows('profiles', { column: 'is_banned', op: 'eq', value: true }),
     countRows('goalkeepers'),
