@@ -1835,6 +1835,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     matchTitle, setMatchTitle,
     homeTeamName, setHomeTeamName,
     awayTeamName, setAwayTeamName,
+    visibility, setVisibility,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
@@ -2001,6 +2002,42 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        maxLength={40}
                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#FFFF00]/40 transition-colors"
                      />
+                   </div>
+
+                   {/* Maç Görünürlüğü: Açık (vitrin) | Özel (kodla davet) */}
+                   <div className="space-y-2">
+                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Görünürlük</p>
+                     <div className="grid grid-cols-2 gap-2">
+                       <button
+                         type="button"
+                         onClick={() => setVisibility('OPEN')}
+                         className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${
+                           visibility === 'OPEN'
+                             ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_20px_rgba(57,255,20,0.15)]'
+                             : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                         }`}
+                       >
+                         <span className={`text-xs font-black uppercase tracking-wide ${visibility === 'OPEN' ? 'text-[#39FF14]' : 'text-white'}`}>Açık</span>
+                         <span className="text-[9px] text-white/40 font-bold leading-tight">Vitrinde herkes görür</span>
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setVisibility('PRIVATE')}
+                         className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${
+                           visibility === 'PRIVATE'
+                             ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 shadow-[0_0_20px_rgba(255,255,0,0.15)]'
+                             : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                         }`}
+                       >
+                         <span className={`text-xs font-black uppercase tracking-wide ${visibility === 'PRIVATE' ? 'text-[#FFFF00]' : 'text-white'}`}>Özel</span>
+                         <span className="text-[9px] text-white/40 font-bold leading-tight">Sadece kodla katılım</span>
+                       </button>
+                     </div>
+                     {visibility === 'PRIVATE' && (
+                       <p className="text-[9px] text-[#FFFF00]/70 font-bold leading-relaxed pt-1">
+                         Maç oluşturulduktan sonra lobide bir katılım kodu görünecek; bu kodu paylaştığın kişiler maça katılabilir.
+                       </p>
+                     )}
                    </div>
 
                    {/* Takım Formatı */}

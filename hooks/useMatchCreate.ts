@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pitch, AppView, PositionSlot, Player } from '../types';
+import { Pitch, AppView, PositionSlot, Player, MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 
@@ -44,6 +44,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const [matchTitle, setMatchTitle] = useState('');
   const [homeTeamName, setHomeTeamName] = useState('');
   const [awayTeamName, setAwayTeamName] = useState('');
+  const [visibility, setVisibility] = useState<'OPEN' | 'PRIVATE'>('OPEN'); // FAZ 3: özel maç (kodla davet)
 
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
@@ -52,7 +53,26 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
   const [customPositions, setCustomPositions] = useState<Record<string, {x: number, y: number, role: string}>>({});
 
-  const { incrementUnreadNotifications, addUserNotification, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId } = useAppStore();
+  const { incrementUnreadNotifications, addUserNotification, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, matchCreateSeed, setMatchCreateSeed, setSelectedMatch } = useAppStore();
+
+  // FAZ 3: Rezervasyon → Maça Çevir tohumu (MyBookings'ten gelir) — saha + saat ön-doldur
+  useEffect(() => {
+    if (!matchCreateSeed) return;
+    setSelectedPitch({
+      id: matchCreateSeed.pitchId || 'seed-pitch',
+      name: matchCreateSeed.pitchName || 'Saha',
+      district: matchCreateSeed.district || '',
+      location: matchCreateSeed.district || '',
+      image: '',
+      price: matchCreateSeed.price ?? 0,
+      type: 'OPEN', slots: [], features: [],
+    } as any);
+    if (matchCreateSeed.date && matchCreateSeed.time) {
+      setSelectedTimeSlot({ date: matchCreateSeed.date, time: matchCreateSeed.time });
+    }
+    setMatchCreateSeed(null); // tek seferlik; tekrar tetiklenmesin
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchCreateSeed]);
 
   const draftMatch = useMemo(() => adminMatches.find(m => m.id === activeDraftId), [activeDraftId, adminMatches]);
   const isDraftMode = !!draftMatch;
@@ -195,7 +215,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         awayTeamName: awayTeamName.trim() || undefined,
         location: selectedPitch?.district || 'Belirtilmedi',
         pitchId: selectedPitch?.id,            // FAZ 3: owner kredisi + iade için saha bağı
-        visibility: 'OPEN' as const,           // FAZ 3: açık maç (özel maç ileride kodla)
+        visibility,                            // FAZ 3: OPEN (vitrin) | PRIVATE (kodla davet)
         time: selectedTimeSlot?.time || '',
         date: selectedTimeSlot?.date || '',
         price: costPerPerson,
@@ -239,13 +259,17 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
 
     try {
         setIsPublishing(true);
+        const isPrivate = visibility === 'PRIVATE';
+        let targetId: string | undefined;
         if (isDraftMode && draftMatch) {
-            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age });
+            // FAZ 3: taslağı maça çevirirken görünürlüğü de gönder (PRIVATE'a geçişte DB kod üretir)
+            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility });
             setActiveDraftId(null);
+            targetId = draftMatch.id;
         } else {
-            await addMatch(matchData);
+            targetId = await addMatch(matchData);
         }
-        
+
         // Add user notifications for pending players
         pitchSlots.forEach(slot => {
             if (slot.player && slot.player.status === 'PENDING') {
@@ -262,8 +286,15 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
                 incrementUnreadNotifications();
             }
         });
-        
-        onNavigate('MATCH_DISCOVERY');
+
+        // FAZ 3: Özel maçta kullanıcıyı doğrudan lobiye götür ki katılım kodunu görüp paylaşsın.
+        if (isPrivate && targetId) {
+            const baseMatch = (isDraftMode && draftMatch ? draftMatch : matchData) as unknown as MatchListing;
+            setSelectedMatch({ ...baseMatch, id: targetId, visibility: 'PRIVATE' });
+            onNavigate('MATCH_JOIN');
+        } else {
+            onNavigate('MATCH_DISCOVERY');
+        }
     } catch(err) {
         console.error("Maç yayınlanamadı:", err);
         addUserNotification({
@@ -295,6 +326,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     matchTitle, setMatchTitle,
     homeTeamName, setHomeTeamName,
     awayTeamName, setAwayTeamName,
+    visibility, setVisibility,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,

@@ -20,8 +20,18 @@
 | 8 | 18 yaş altı doğum tarihi toplama (onboarding) | 2.4 | 🟡 Orta | UI | 🧱 Kolon hazır |
 | 9 | iyzico webhook imza/secret rotasyonu | 7.1 | 🟢 Düşük | #1 | ⏳ Bekliyor |
 | 10 | Maça katılımı gerçek pre-auth blokajına bağlama | 3.2 | 🟡 Orta | #1 | 🧱 Settle/iade hazır |
-| 11 | Özel maç (private_code) katılım UI'ı | 3.3 | 🟢 Düşük | UI | 🧱 RPC hazır |
-| 12 | MyBookings: maça çevir / yol tarifi / tekrar rezerve | 3.1 | 🟢 Düşük | UI | ⏳ Bekliyor |
+| 11 | Özel maç (private_code) katılım UI'ı | 3.3 | 🟢 Düşük | UI | ✅ Tamamlandı |
+| 12 | MyBookings: maça çevir / yol tarifi / tekrar rezerve | 3.1 | 🟢 Düşük | UI | ✅ Tamamlandı |
+| 13 | `release_owner_earnings` (2 hafta) entegrasyon testi | 2.3 | 🟡 Orta | Test | 🧪 Test yok |
+| 14 | `admin_process_payout` COMPLETED/FAILED yaşam döngüsü testi | 2.3 | 🟡 Orta | Test | 🧪 Test yok |
+| 15 | GK/Hakem servis tahsilat & payout uçtan uca testi | 5 | 🟢 Düşük | FAZ 5 | 🧪 Test yok |
+| 16 | Ücretsiz (fiyat=0) maç quorum onayı sınır testi | 3.2 | 🟢 Düşük | Test | 🧪 Test yok |
+
+> **Not (FAZ 3 denetimi):** #11/#12 tamamlandı. #13–#16, çok-ajanlı adversarial
+> denetimde tespit edilen **test kapsamı boşluklarıdır** — ilgili fonksiyonların
+> davranışı kod incelemesiyle doğru görünüyor ancak izole entegrasyon testi henüz
+> yazılmadı. Denetimde bulunan **8 gerçek üretim hatası** ise düzeltildi
+> (bkz. `tests/integration/README.md`).
 
 ---
 

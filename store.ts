@@ -123,6 +123,8 @@ interface AppState {
   selectedDiaryId: string | null;
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
+  // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
+  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number } | null;
   reliabilityScore: number;
   banExpiresAt: string | null;
   setReliabilityScore: (score: number) => void;
@@ -217,6 +219,7 @@ interface AppState {
   setHasMotmCoupon: (hasCoupon: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
   setSelectedDiaryId: (id: string | null) => void;
+  setMatchCreateSeed: (seed: AppState['matchCreateSeed']) => void;
   activeDraftId: string | null;
   setActiveDraftId: (id: string | null) => void;
   setSelectedGk: (gk: Goalkeeper | null) => void;
@@ -277,7 +280,7 @@ interface AppState {
   initSupabaseRealtime: () => void;
 
   // ─── Match CRUD ────────────────────────────────────────────────
-  addMatch: (match: MatchListing) => Promise<void>;
+  addMatch: (match: MatchListing) => Promise<string | undefined>;
   updateMatch: (match: MatchListing) => Promise<void>;
   deleteMatch: (id: string) => Promise<void>;
 
@@ -412,6 +415,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   hasMotmCoupon: false,
   selectedMatch: null,
   selectedDiaryId: null,
+  matchCreateSeed: null,
   activeDraftId: null,
   selectedGk: null,
   selectedRef: null,
@@ -735,6 +739,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
+  setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
   setSelectedRef: (selectedRef) => set({ selectedRef }),
@@ -910,7 +915,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
       const { data, error } = await supabase.rpc('player_create_match', { p_payload: listingToMatchPayload(match) });
       if (error) throw error;
-      set({ adminMatches: [{ ...match, id: data as string }, ...prev] });
+      const newId = data as string;
+      set({ adminMatches: [{ ...match, id: newId }, ...prev] });
+      return newId;
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
   updateMatch: async (match) => {

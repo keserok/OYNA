@@ -2,13 +2,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Shield, Circle,
   Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert,
-  Check
+  Check, KeyRound, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
-import { subscribeToOpenMatches, fetchNearbyMatches } from '../services/matchService';
+import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
 
 interface MatchDiscoveryProps {
@@ -57,6 +57,35 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     setTimeout(() => setToast(null), 3500);
   };
 
+  // ── Özel maç (kodla katılım) ──
+  const [showPrivateModal, setShowPrivateModal] = useState(false);
+  const [privateCode, setPrivateCode] = useState('');
+  const [privateLoading, setPrivateLoading] = useState(false);
+  const [privateError, setPrivateError] = useState<string | null>(null);
+
+  const handleJoinPrivate = async () => {
+    const code = privateCode.trim().toUpperCase();
+    if (code.length < 4) {
+      setPrivateError('Kod en az 4 karakter olmalı.');
+      return;
+    }
+    setPrivateLoading(true);
+    setPrivateError(null);
+    try {
+      const resolved = await resolvePrivateMatch(code);
+      const match = await getMatchDetails(resolved.matchId);
+      if (!match) throw new Error('NOT_FOUND');
+      setShowPrivateModal(false);
+      setPrivateCode('');
+      onSelect(match);
+    } catch (err) {
+      console.error('Özel maç kodu çözülemedi:', err);
+      setPrivateError(toPrivateMatchErrorMessage(err));
+    } finally {
+      setPrivateLoading(false);
+    }
+  };
+
   const [showWizard, setShowWizard] = useState(false);
   const [activeSection, setActiveSection] = useState<'bireysel' | 'takim'>('bireysel');
   const [dna, setDna] = useState({
@@ -97,9 +126,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
   const enhancedMatches = useMemo(() => {
     const sourceMatches = (userLocation && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
-    // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle
+    // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
+    // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
     const activeMatches = sourceMatches.filter(
-      m => !m.status || m.status === 'ACTIVE' || m.status === 'LIVE'
+      m => (!m.status || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
     );
     return activeMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price
@@ -519,6 +549,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                     Temizle
                   </button>
                 )}
+                <button
+                  onClick={() => { setShowPrivateModal(true); setPrivateError(null); setPrivateCode(''); }}
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-[#FFFF00]/[0.06] backdrop-blur-md border border-[#FFFF00]/25 text-[#FFFF00] hover:bg-[#FFFF00]/10 transition-all"
+                  title="Özel maça kodla katıl"
+                >
+                  <KeyRound size={13} />
+                  <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">Kodla Katıl</span>
+                </button>
                 <button onClick={() => setShowWizard(true)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all">
                   <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">Filtre</span>
                   {isFilterActive && (
@@ -904,6 +942,65 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           </div>
         </motion.div>
       )}
+
+      {/* ── ÖZEL MAÇ: KODLA KATILIM MODALI ── */}
+      <AnimatePresence>
+        {showPrivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={() => { if (!privateLoading) { setShowPrivateModal(false); setPrivateError(null); setPrivateCode(''); } }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-[#FFFF00]/20 p-7 text-center"
+            >
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#FFFF00]/10 border-2 border-[#FFFF00]/40 flex items-center justify-center mb-5">
+                <KeyRound size={28} className="text-[#FFFF00]" />
+              </div>
+              <h2 className="text-xl font-black text-white mb-2 italic uppercase tracking-tight">Özel Maça Katıl</h2>
+              <p className="text-xs text-gray-400 leading-relaxed mb-5">
+                Sana iletilen <span className="text-[#FFFF00] font-bold">özel maç kodunu</span> gir. Sadece davetlilerin görebildiği maçlara böyle katılırsın.
+              </p>
+
+              <input
+                autoFocus
+                value={privateCode}
+                onChange={(e) => { setPrivateCode(e.target.value.toUpperCase().slice(0, 8)); setPrivateError(null); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !privateLoading) handleJoinPrivate(); }}
+                placeholder="ÖRN. A1B2C3"
+                maxLength={8}
+                className="w-full bg-black/40 border border-white/15 rounded-2xl px-4 py-4 text-center text-2xl font-black tracking-[0.4em] text-white placeholder:text-white/20 placeholder:tracking-widest placeholder:text-base focus:border-[#FFFF00]/50 focus:outline-none transition-all uppercase"
+              />
+
+              {privateError && (
+                <p className="text-xs text-red-400 bg-red-950/40 border border-red-500/20 rounded-xl px-3 py-2 mt-4">{privateError}</p>
+              )}
+
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={handleJoinPrivate}
+                  disabled={privateLoading || privateCode.trim().length < 4}
+                  className={`w-full py-3.5 bg-[#FFFF00] text-black font-black rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${privateLoading || privateCode.trim().length < 4 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 hover:bg-yellow-300'}`}
+                >
+                  {privateLoading ? <><Loader2 size={16} className="animate-spin" /> Aranıyor...</> : 'Maça Git'}
+                </button>
+                <button
+                  onClick={() => { if (!privateLoading) { setShowPrivateModal(false); setPrivateError(null); setPrivateCode(''); } }}
+                  className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors"
+                >
+                  Vazgeç
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Premium Toast Overlay */}
       <AnimatePresence>

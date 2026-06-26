@@ -4,14 +4,14 @@ import {
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
   Plus, CheckCircle2, Users, Star, Wifi, WifiOff,
   Send, AlertCircle, Shield, Layers, Droplets, Award,
-  DollarSign, Info
+  DollarSign, Info, KeyRound, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -312,6 +312,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   }, [match, adminPitches]);
 
+  // ── İlk hidrasyon: DB'deki yetkili satırı çek (private_code dahil) ──────
+  useEffect(() => {
+    if (!originalMatch?.id) return;
+    let alive = true;
+    getMatchDetails(originalMatch.id).then((full) => {
+      if (alive && full) updateMatch({ ...originalMatch, ...full } as MatchListing);
+    }).catch(() => { /* sessiz: prop verisiyle devam */ });
+    return () => { alive = false; };
+  }, [originalMatch?.id]);
+
   // ── Supabase Realtime: Lobideki değişiklikleri canlı dinle ──────────────
   useEffect(() => {
     if (!originalMatch?.id) return;
@@ -330,6 +340,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         homeScore: (updatedMatch as any).home_score || (updatedMatch as any).homeScore,
         awayScore: (updatedMatch as any).away_score || (updatedMatch as any).awayScore,
         scoreEnteredAt: (updatedMatch as any).score_entered_at || (updatedMatch as any).scoreEnteredAt,
+        // FAZ 3 çekirdeği — realtime'da da koru
+        visibility: (updatedMatch as any).visibility || (originalMatch as any).visibility || 'OPEN',
+        privateCode: (updatedMatch as any).private_code || (updatedMatch as any).privateCode || (originalMatch as any).privateCode,
+        pitchId: (updatedMatch as any).pitch_id || (updatedMatch as any).pitchId || (originalMatch as any).pitchId,
       };
       updateMatch({ ...originalMatch, ...mapped } as MatchListing);
     });
@@ -1559,6 +1573,39 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
           )}
         </div>
+
+        {/* ── Özel Maç Kodu (yalnız kaptana) ── */}
+        {match.visibility === 'PRIVATE' && match.privateCode && isCaptain && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => {
+                const code = match.privateCode!;
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(code).then(
+                    () => showActionSuccess(`Kod kopyalandı: ${code}`),
+                    () => showActionSuccess(`Kod: ${code}`),
+                  );
+                } else {
+                  showActionSuccess(`Kod: ${code}`);
+                }
+              }}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FFFF00]/[0.06] border border-[#FFFF00]/25 hover:bg-[#FFFF00]/10 active:scale-[0.98] transition-all"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex items-center justify-center shrink-0">
+                  <KeyRound size={14} className="text-[#FFFF00]" />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FFFF00]/70">Özel Maç Kodu</p>
+                  <p className="text-lg font-black tracking-[0.3em] text-white truncate">{match.privateCode}</p>
+                </div>
+              </div>
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FFFF00] shrink-0">
+                <Copy size={12} /> Paylaş
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* ── Minimalist Maç Başlığı ── */}
         <div className="px-4 pb-3">

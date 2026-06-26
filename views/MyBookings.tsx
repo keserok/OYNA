@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle2, XCircle, Hourglass, AlertTriangle, Loader2, CreditCard, Wallet } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle2, XCircle, Hourglass, AlertTriangle, Loader2, CreditCard, Wallet, Navigation, Repeat, Swords } from 'lucide-react';
+import { useAppStore } from '../store';
 import {
   fetchMyBookings,
   cancelMyBooking,
@@ -34,9 +35,36 @@ const formatDate = (iso: string): string => {
 };
 
 const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
+  const { navigateTo, setMatchCreateSeed } = useAppStore();
   const [bookings, setBookings] = useState<MyBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ── İkincil aksiyonlar (FAZ 3) ──
+  // Rezervasyonu maça çevir: saha + saat ön-dolu MatchCreate'e geç.
+  const handleConvertToMatch = (b: MyBooking) => {
+    setMatchCreateSeed({
+      pitchId: b.pitch_id,
+      pitchName: b.pitches?.name || 'Saha',
+      district: b.pitches?.district || '',
+      date: b.booking_date,
+      time: shortTime(b.start_time),
+      price: b.price || 0,
+    });
+    navigateTo('MATCH_CREATE');
+  };
+
+  // Yol tarifi: harita uygulamasında sahayı aç.
+  const handleDirections = (b: MyBooking) => {
+    const q = [b.pitches?.name, b.pitches?.district, 'Ordu'].filter(Boolean).join(' ');
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Tekrar rezerve: saha vitrinine dönerek yeni slot seç.
+  const handleRebook = () => {
+    navigateTo('PITCH_DISCOVERY');
+  };
 
   // İptal onay modalı
   const [cancelTarget, setCancelTarget] = useState<MyBooking | null>(null);
@@ -173,6 +201,38 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                     {b.status === 'CANCELLED' && b.cancellation_reason && (
                       <p className="text-[11px] text-red-400/80 mt-3 italic">{b.cancellation_reason}</p>
                     )}
+                  </div>
+
+                  {/* İkincil aksiyonlar: maça çevir · yol tarifi · tekrar rezerve */}
+                  <div className="border-t border-white/5 px-3 py-2.5 grid grid-cols-3 gap-1.5">
+                    {b.status !== 'CANCELLED' ? (
+                      <button
+                        onClick={() => handleConvertToMatch(b)}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl bg-[#39FF14]/[0.06] border border-[#39FF14]/20 text-[#39FF14] hover:bg-[#39FF14]/12 active:scale-95 transition-all"
+                      >
+                        <Swords size={15} />
+                        <span className="text-[8px] font-black uppercase tracking-wider">Maça Çevir</span>
+                      </button>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-white/20">
+                        <Swords size={15} />
+                        <span className="text-[8px] font-black uppercase tracking-wider">Maça Çevir</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleDirections(b)}
+                      className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-white/80 hover:bg-white/[0.07] active:scale-95 transition-all"
+                    >
+                      <Navigation size={15} />
+                      <span className="text-[8px] font-black uppercase tracking-wider">Yol Tarifi</span>
+                    </button>
+                    <button
+                      onClick={handleRebook}
+                      className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-white/80 hover:bg-white/[0.07] active:scale-95 transition-all"
+                    >
+                      <Repeat size={15} />
+                      <span className="text-[8px] font-black uppercase tracking-wider">Tekrar Rezerve</span>
+                    </button>
                   </div>
 
                   {/* Aksiyonlar: kapora öde + iptal */}
