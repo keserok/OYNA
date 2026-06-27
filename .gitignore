@@ -52,3 +52,7 @@ android/captures/
 .vercel
 supabase/.temp/
 test-results/
+
+# Yerel render önizleme harness'leri (gerçek bileşen render'ı için; commit edilmez)
+preview-*.html
+preview-*.tsx
