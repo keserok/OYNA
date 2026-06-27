@@ -31,6 +31,8 @@ psql "$DATABASE_URL" -f tests/integration/faz3_match_lifecycle.sql
 | `faz5_service_engine.sql` | Kaleci/hakem talep→tahsil→1-10 puan→anında payout, TC kimlik kapısı, self-rating guard, çakışma, maç iptalinde void/iade | 17 |
 | `faz6_social_tactics.sql` | Mesajlaşma (arkadaş/engel kapısı), taktik oylama/yetki/favori/kopya/vitrin, kaptan devri, takım-vs-takım skor onayı (iki-taraf + idempotency) | 19 |
 | `faz7_security_infra.sql` | Çoklu rol geçişi (set_active_role + sahiplik/geçersiz kapısı), yakındaki maçlar (earthdistance), admin skor düzeltme (audit + FORBIDDEN + INVALID_SCORE), maç hatırlatma (katılımcı bildirimi + idempotency) | 10 |
+| `faz7_commission_ssot.sql` | Komisyon TEK-KAYNAK: Model A %15 / Model B %5+%20 / per-saha+per-maç override / create_payment_intent motoru kullanır (15≠10) / aktif-kural tekilliği | 8 |
+| `faz7_refund.sql` | Kademeli iade admin çağrısı: admin_refund_intent → process_tiered_refund (CAPTURED→FULL_REFUND, PENDING→VOID), FORBIDDEN, audit | 4 |
 
 > **FAZ 7'de bu testin yakaladığı gerçek hatalar** (uygulamadan önce giderildi):
 > (1) `protect_profile_sensitive_fields` trigger'ı `NEW.role` değişimini her non-admin
