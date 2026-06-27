@@ -52,20 +52,24 @@ supabase functions deploy send-email             # YENİ — Resend makbuz/payou
 3. **İptal → iade:** `cancel_app_booking` ve maç iptal yolları, ad-hoc iade yerine
    `refund-payment` edge'ini (kademeli + karta iade) çağıracak şekilde bağlanmalı.
 
-## 5. Önce verilmesi gereken ÜRÜN kararları (USER)
-- **Rezervasyon iptal penceresi:** kod şu an **48s / sabit %90 kredi**; prensip §3.5
-  **24s + kademeli (admin ayarlı)** diyor. `cancel_app_booking` buna hizalanmalı.
-- **Kademeli oranlar:** `settings.refund_free_hours` (8) / `refund_credit_hours` (3)
-  ve rezervasyon için 24s eşiği son değerler? (admin ayarlı, varsayılan belirle.)
-- **İade hedefi:** kart mı OYNA kredisi mi (veya tutara göre)? `process_tiered_refund`
-  şu an **yalnız OYNA kredisi**; karta iade refund-payment ile go-live'da.
-- **İadede komisyon:** "alınmış komisyon/markup düşülür" (§4.4) — şu an tam tutar iade
-  ediliyor; düşülecek mi? (process_tiered_refund'a komisyon-düşümü eklenecek.)
-- **Model B net dağıtım:** owner taban %95 + markup oyuncuya EK (payer taban×1.20,
-  owner ×0.95, OYNA = %5+markup). `calculate_commission` Model B net formülü buna
-  göre güncellenecek (bkz. migration 20260707000003 go-live notu).
-- **Model B tetikleyici:** "saha sahibi boş saat açtı → MODEL_B" akışı; owner-maç
-  oluşturma `matches.commission_model='MODEL_B'` set edecek.
+## 5. ÜRÜN kararları — ✅ ALINDI ve WIRING TAMAMLANDI (SIMULATION-test'li)
+Aşağıdaki kararlar USER ile alınıp kodlandı (migration 000006/000007/000008); karta-iade
+ve gerçek pre-auth tahsil kısmı yalnız `PROVIDER=IYZICO` ile aktive olur.
+- ✅ **Rezervasyon iptali KADEMELİ:** ≥24s %100 · 6–24s %50 · <6s yok (admin ayarlı:
+  `settings.booking_refund_full_hours/half_hours/half_pct`). `cancel_app_booking` hizalandı.
+- ✅ **İade karta + PSP düşümü:** ödeme altyapısı kesintisi iade edilen tutara orantılı
+  düşülür (`settings.refund_psp_fee_pct/_fixed` — go-live'da iyzico oranı yazılır).
+- ✅ **Zamanında iptalde komisyon DAHİL tam iade** (FULL = %100 − PSP).
+- ✅ **Model B net:** owner taban %95, markup oyuncuya EK (oyuncu taban×1.20, OYNA %5+markup).
+  `calculate_commission` owner_net/oyna_take/player_total döner.
+- ✅ **Model B tetikleyici:** saha sahibi KENDİ sahasında maç açınca otomatik MODEL_B
+  (`trg_set_match_commission_model` BEFORE INSERT).
+- ✅ **owner çift-ödeme önlemi:** iadede owner'ın bekleyen kazancı per-intent iptal /
+  aggrege telafi negatif ile netlenir.
+
+**Kalan (yalnız iyzico HTTP entegrasyonu):** (a) maç katılımı → gerçek pre-auth blokaj
+(`create-payment` maç dalı); (b) T-8s'te provider capture/void (pg_net → capture/void edge);
+(c) iptal-iadede karta gerçek iade (`refund-payment` edge çağrısı). Mantık + kademeler hazır.
 
 ## 6. Lansman öncesi doğrulama
 - [ ] Sandbox'ta uçtan uca: pre-auth blokaj → T-8s capture → owner payout (14g) → iade
