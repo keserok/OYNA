@@ -1,0 +1,667 @@
+<!-- @dsCard group="Oyuncu Onboarding" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>OYNA · 01 Açılış (Prefetch-Aware Splash)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     OYNA TASARIM TOKEN'LARI
+  ───────────────────────────────────────────────────────────────── */
+  :root {
+    --bg-main: #0A0E14;
+    --splash-bg: #040814;
+    --card: rgba(22, 27, 34, 0.5);
+    --text: #FFFFFF;
+    --muted: #8B949E;
+
+    --player-yellow: #FFFF00;
+    --gold: #FFD700;
+    --logo-amber: #FFC107;
+    --neon-green: #39FF14;
+
+    --success: #00E676;
+    --warning: #FFAA00;
+    --error: #FF4D4D;
+    --info: #00B0FF;
+
+    --radius-card: 28px;
+    --radius-lg: 32px;
+
+    --border-glass: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+  }
+
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 16px;
+    gap: 18px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  button { -webkit-tap-highlight-color: transparent; user-select: none; font-family: inherit; }
+
+  /* ─── Sahne: OYNA mesh-gradient koyu zemin (telefon çevresi) ─── */
+  .stage-mesh {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-color: var(--bg-main);
+    overflow: hidden;
+  }
+  .stage-blob {
+    position: absolute;
+    opacity: 0.55;
+    filter: blur(8px);
+    animation: float 22s infinite ease-in-out alternate;
+    will-change: transform;
+  }
+  .stage-blob.b1 {
+    top: -12%; left: -12%;
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(20,30,60,0.85) 0%, rgba(10,14,20,0) 70%);
+  }
+  .stage-blob.b2 {
+    bottom: -18%; right: -14%;
+    width: 62vw; height: 62vw;
+    background: radial-gradient(circle, rgba(40,10,60,0.6) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: -6s;
+  }
+  .stage-blob.b3 {
+    top: 38%; left: 56%;
+    width: 46vw; height: 46vw;
+    background: radial-gradient(circle, rgba(10,60,40,0.5) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: -11s;
+  }
+  /* Çok hafif grid overlay */
+  .stage-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+  }
+  @keyframes float {
+    0%   { transform: translate(0, 0) scale(1); }
+    33%  { transform: translate(5%, 10%) scale(1.1); }
+    66%  { transform: translate(-5%, 5%) scale(0.9); }
+    100% { transform: translate(0, -5%) scale(1.05); }
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     TELEFON ÇERÇEVESİ — 390 x 844 (iPhone)
+  ───────────────────────────────────────────────────────────────── */
+  .phone {
+    position: relative;
+    z-index: 1;
+    width: 390px;
+    height: 844px;
+    border-radius: 56px;
+    padding: 12px;
+    background: linear-gradient(160deg, #20262f 0%, #0c1016 55%, #05070b 100%);
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.04),
+      0 30px 80px rgba(0,0,0,0.65),
+      0 0 60px rgba(57,255,20,0.05);
+  }
+  .phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 46px;
+    overflow: hidden;
+    background: var(--splash-bg);
+  }
+  /* Dynamic Island */
+  .island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 116px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 60;
+  }
+  /* Status bar */
+  .statusbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 30px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    z-index: 55;
+    pointer-events: none;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
+  .statusbar svg { display: block; }
+
+  /* ─────────────────────────────────────────────────────────────
+     SPLASH İÇERİĞİ
+  ───────────────────────────────────────────────────────────────── */
+  .splash {
+    position: absolute;
+    inset: 0;
+    background: var(--splash-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 10;
+    /* Çıkış: opacity 0 + hafif scale 1.05 (0.4s) -- demoda döngüsel */
+    animation: splashExit 6s cubic-bezier(0.4,0,0.2,1) infinite;
+  }
+  @keyframes splashExit {
+    0%, 78%   { opacity: 1; transform: scale(1); }
+    88%       { opacity: 0; transform: scale(1.05); }
+    89%       { opacity: 0; transform: scale(0.98); }
+    100%      { opacity: 1; transform: scale(1); }
+  }
+
+  /* Yavaş hareket eden neon halkalar */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+  }
+  .ring.r1 {
+    width: 320px; height: 320px;
+    border: 1px solid rgba(57,255,20,0.20);
+    animation: ringPulse 4s ease-in-out infinite;
+  }
+  .ring.r2 {
+    width: 460px; height: 460px;
+    border: 1px solid rgba(57,255,20,0.10);
+    animation: ringPulse 5s ease-in-out 0.5s infinite;
+  }
+  @keyframes ringPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1);   opacity: 0.08; }
+    50%      { transform: translate(-50%, -50%) scale(1.4); opacity: 0.18; }
+  }
+
+  /* Merkez glow */
+  .center-glow {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 240px;
+    height: 240px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(57,255,20,0.15);
+    filter: blur(70px);
+    pointer-events: none;
+    animation: glowBreathe 2.5s ease-in-out infinite;
+  }
+  @keyframes glowBreathe {
+    0%, 100% { opacity: 0.10; }
+    50%      { opacity: 0.30; }
+  }
+
+  /* Logo bloğu (spring scale-in) */
+  .logo-block {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: logoSpringIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes logoSpringIn {
+    0%   { transform: scale(0.5) translateY(20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .logo-ring-wrap {
+    width: 148px;
+    height: 148px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    animation: logoPulseRing 2s ease-out 0.6s infinite;
+  }
+  @keyframes logoPulseRing {
+    0%   { box-shadow: 0 0 0 0 rgba(57,255,20,0); }
+    50%  { box-shadow: 0 0 0 16px rgba(57,255,20,0.06); }
+    100% { box-shadow: 0 0 0 32px rgba(57,255,20,0); }
+  }
+  .logo-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 24px rgba(57,255,20,0.6));
+  }
+
+  /* OYNA harfleri — italic + uppercase + geniş letter-spacing, 0.08s stagger */
+  .letters {
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    padding-left: 0.3em;
+  }
+  .letters span {
+    font-size: 40px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--text);
+    letter-spacing: 0.30em;
+    line-height: 1;
+    text-shadow: 0 0 12px rgba(255,255,255,0.30);
+    opacity: 0;
+    animation: letterIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .letters span:nth-child(1) { animation-delay: 0.50s; }
+  .letters span:nth-child(2) { animation-delay: 0.58s; }
+  .letters span:nth-child(3) { animation-delay: 0.66s; }
+  .letters span:nth-child(4) { animation-delay: 0.74s; }
+  @keyframes letterIn {
+    0%   { opacity: 0; transform: translateY(40px) scale(0.6); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Tagline */
+  .tagline {
+    margin-top: 14px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.40em;
+    text-transform: uppercase;
+    color: rgba(57,255,20,0.72);
+    opacity: 0;
+    animation: fadeUp 0.5s ease-out 1.2s both;
+  }
+  @keyframes fadeUp {
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Gradient yükleme çizgisi */
+  .loadbar {
+    margin-top: 34px;
+    height: 2px;
+    width: 0;
+    background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
+    border-radius: 99px;
+    animation: loadGrow 1.4s ease-out 0.8s forwards;
+  }
+  @keyframes loadGrow {
+    0%   { width: 0; }
+    100% { width: 130px; }
+  }
+
+  /* Yükleme microcopy */
+  .loadnote {
+    margin-top: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: fadeUp 0.5s ease-out 1.35s both;
+  }
+  .loadnote .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--neon-green);
+    box-shadow: 0 0 8px var(--neon-green);
+    animation: dotBlink 1s ease-in-out infinite;
+  }
+  @keyframes dotBlink {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 1; }
+  }
+
+  /* "Atlamak için dokun" ipucu (atlanabilir) */
+  .skip-hint {
+    position: absolute;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(139,148,158,0.6);
+    z-index: 12;
+    opacity: 0;
+    animation: hintFade 1.6s ease-in-out 2s infinite;
+  }
+  @keyframes hintFade {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 0.8; }
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     GÖRÜNMEZ PREFETCH KATMANI (debug rozeti)
+     Üretimde gizli; burada şeffaf cam rozet olarak gösteriliyor.
+  ───────────────────────────────────────────────────────────────── */
+  .prefetch-badge {
+    position: absolute;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 264px;
+    padding: 12px 14px;
+    background: var(--card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px dashed rgba(57,255,20,0.28);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 18px rgba(57,255,20,0.06);
+    opacity: 0;
+    animation: fadeUp 0.5s ease-out 0.9s both;
+  }
+  .prefetch-badge .pf-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(57,255,20,0.85);
+  }
+  .prefetch-badge .pf-head svg { width: 12px; height: 12px; }
+  .pf-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .pf-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .pf-label svg { width: 13px; height: 13px; color: var(--muted); }
+  .pf-status {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--success);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pf-status .tick {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(0,230,118,0.15);
+    border: 1px solid rgba(0,230,118,0.4);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pf-status .tick svg { width: 9px; height: 9px; color: var(--success); }
+  .pf-status.loading { color: var(--info); }
+  .pf-spinner {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,176,255,0.25);
+    border-top-color: var(--info);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pf-rows .pf-row { animation: pfPop 0.4s ease-out both; }
+  .pf-rows .pf-row:nth-child(1) { animation-delay: 1.0s; }
+  .pf-rows .pf-row:nth-child(2) { animation-delay: 1.25s; }
+  @keyframes pfPop {
+    0%   { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Home indicator */
+  .home-indicator {
+    position: absolute;
+    bottom: 9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 134px;
+    height: 5px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.55);
+    z-index: 60;
+  }
+
+  /* ─── Çerçeve altı etiket ─── */
+  .screen-label {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+  }
+  .screen-label .code {
+    font-size: 11px;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--player-yellow);
+    text-shadow: 0 0 14px rgba(255,255,0,0.25);
+  }
+  .screen-label .name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .screen-label .grp {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: rgba(139,148,158,0.6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; }
+    .splash { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- OYNA mesh-gradient sahne zemini -->
+  <div class="stage-mesh" aria-hidden="true">
+    <div class="stage-blob b1"></div>
+    <div class="stage-blob b2"></div>
+    <div class="stage-blob b3"></div>
+  </div>
+  <div class="stage-grid" aria-hidden="true"></div>
+
+  <!-- TELEFON ÇERÇEVESİ -->
+  <div class="phone" role="img" aria-label="OYNA açılış ekranı önizlemesi, iPhone çerçevesi">
+    <div class="phone-screen">
+
+      <!-- Dynamic Island + Status bar -->
+      <div class="island" aria-hidden="true"></div>
+      <div class="statusbar" aria-hidden="true">
+        <span>9:41</span>
+        <span class="icons">
+          <!-- signal -->
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#fff"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#fff" opacity="0.4"/></svg>
+          <!-- wifi -->
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M8 10.2 9.7 8.4A2.4 2.4 0 0 0 6.3 8.4L8 10.2Z" fill="#fff"/><path d="M4.6 6.8A4.9 4.9 0 0 1 11.4 6.8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/><path d="M2.3 4.4A8.2 8.2 0 0 1 13.7 4.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <!-- battery -->
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" stroke-opacity="0.4"/><rect x="2" y="2" width="16" height="8" rx="1.6" fill="#fff"/><rect x="23" y="4" width="1.6" height="4" rx="0.8" fill="#fff" fill-opacity="0.5"/></svg>
+        </span>
+      </div>
+
+      <!-- SPLASH -->
+      <div class="splash" tabindex="0" role="button" aria-label="Atlamak için dokun">
+
+        <!-- Arka plan neon halkalar + merkez glow -->
+        <span class="ring r2" aria-hidden="true"></span>
+        <span class="ring r1" aria-hidden="true"></span>
+        <span class="center-glow" aria-hidden="true"></span>
+
+        <!-- GÖRÜNMEZ PREFETCH KATMANI (debug rozeti) -->
+        <div class="prefetch-badge" aria-hidden="true">
+          <div class="pf-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>Arka Plan Prefetch</span>
+          </div>
+          <div class="pf-rows">
+            <div class="pf-row">
+              <span class="pf-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Yakın maçlar
+              </span>
+              <span class="pf-status">
+                <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                4 hazır
+              </span>
+            </div>
+            <div class="pf-row">
+              <span class="pf-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20Z"/></svg>
+                IP / şehir tahmini
+              </span>
+              <span class="pf-status loading">
+                <span class="pf-spinner"></span>
+                İstanbul
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOGO + harfler + tagline + yükleme -->
+        <div class="logo-block">
+          <div class="logo-ring-wrap">
+            <!-- OYNA LOGO (bire bir, amber stroke + neon yeşil glow) -->
+            <svg class="logo-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"
+                 stroke="#FFC107" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <defs>
+                <clipPath id="circle-clip"><circle cx="100" cy="100" r="84.5"/></clipPath>
+                <clipPath id="triangle-clip"><path d="M 60 55 Q 60 45 70 50 L 155 95 Q 165 100 155 105 L 70 150 Q 60 155 60 145 Z"/></clipPath>
+              </defs>
+
+              <!-- 1. Dış çember -->
+              <circle cx="100" cy="100" r="85" stroke-width="4"/>
+
+              <!-- 2. Top panelleri (çembere clip'li) -->
+              <g clip-path="url(#circle-clip)">
+                <line x1="100" y1="67" x2="100" y2="30"/>
+                <line x1="100" y1="133" x2="100" y2="170"/>
+                <path d="M 100 30 L 70 20 L 40 -5"/>
+                <path d="M 100 30 L 130 20 L 160 -5"/>
+                <path d="M 100 170 L 70 180 L 40 205"/>
+                <path d="M 100 170 L 130 180 L 160 205"/>
+                <path d="M 62 50 L 45 40 L 70 20"/>
+                <path d="M 45 40 L 25 75 L 5 55"/>
+                <path d="M 60 100 L 40 100 L 25 75"/>
+                <path d="M 62 150 L 45 160 L 70 180"/>
+                <path d="M 45 160 L 25 125 L 5 145"/>
+                <path d="M 40 100 L 25 125"/>
+                <path d="M 25 75 L 0 85"/>
+                <path d="M 25 125 L 0 115"/>
+                <path d="M 125 80 L 145 50 L 130 20"/>
+                <path d="M 145 50 L 175 75 L 205 60"/>
+                <path d="M 175 75 L 175 125"/>
+                <path d="M 125 120 L 145 150 L 130 180"/>
+                <path d="M 145 150 L 175 125 L 205 140"/>
+              </g>
+
+              <!-- 3. Merkez oynat üçgeni -->
+              <path d="M 60 55 Q 60 45 70 50 L 155 95 Q 165 100 155 105 L 70 150 Q 60 155 60 145 Z" stroke-width="4" fill="transparent"/>
+
+              <!-- 4. İç saha (üçgene clip'li) -->
+              <g clip-path="url(#triangle-clip)">
+                <line x1="100" y1="0" x2="100" y2="200" stroke-width="3"/>
+                <circle cx="100" cy="100" r="16" stroke-width="2.5"/>
+                <circle cx="100" cy="100" r="1.5" fill="#FFC107"/>
+                <path d="M 60 82 L 75 82 L 75 118 L 60 118" stroke-width="2.5"/>
+                <path d="M 75 91 A 10 10 0 0 1 75 109" stroke-width="2.5"/>
+                <path d="M 140 82 L 125 82 L 125 118 L 140 118" stroke-width="2.5"/>
+                <path d="M 125 91 A 10 10 0 0 0 125 109" stroke-width="2.5"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- OYNA harfleri (stagger) -->
+          <div class="letters" aria-label="OYNA">
+            <span>O</span><span>Y</span><span>N</span><span>A</span>
+          </div>
+
+          <!-- Tagline -->
+          <p class="tagline">Potansiyel zaferler için</p>
+
+          <!-- Gradient yükleme çizgisi -->
+          <div class="loadbar" aria-hidden="true"></div>
+
+          <!-- Yükleme notu -->
+          <div class="loadnote">
+            <span class="dot" aria-hidden="true"></span>
+            Sahalar yükleniyor...
+          </div>
+        </div>
+
+        <!-- Atlanabilir ipucu -->
+        <span class="skip-hint">Geçmek için dokun</span>
+
+        <!-- Home indicator -->
+        <div class="home-indicator" aria-hidden="true"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Çerçeve altı etiket -->
+  <div class="screen-label">
+    <span class="code">01 · Açılış</span>
+    <span class="name">Prefetch-Aware Splash</span>
+    <span class="grp">Oyuncu Onboarding</span>
+  </div>
+
+</body>
+</html>

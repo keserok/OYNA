@@ -1,0 +1,1104 @@
+<!-- @dsCard group="Oyuncu Onboarding" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>OYNA — Yakınında Oynanıyor (Değer-Önce First-Run)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  /* ─── OYNA Tokens ─────────────────────────────────────────────── */
+  :root {
+    --bg-main: #0A0E14;
+    --bg-card: rgba(22, 27, 34, 0.5);
+    --text-main: #FFFFFF;
+    --text-muted: #8B949E;
+    --accent-yellow: #FFFF00;
+    --accent-gold: #FFD700;
+    --accent-green: #39FF14;
+    --success: #00E676;
+    --warning: #FFAA00;
+    --error: #FF4D4D;
+    --info: #00B0FF;
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Page stage: OYNA mesh-gradient dark canvas around the phone frame */
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 48px 16px;
+    position: relative;
+    background: var(--bg-main);
+    overflow: hidden;
+  }
+
+  /* Mesh blobs (lacivert / mor / yeşil — low opacity) */
+  .mesh-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+    will-change: transform;
+    animation: float 20s infinite ease-in-out alternate;
+  }
+  .mesh-blob-1 {
+    top: -10%; left: -10%; width: 50vw; height: 50vw;
+    background: radial-gradient(circle, rgba(20,30,60,0.8) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: 0s;
+  }
+  .mesh-blob-2 {
+    bottom: -20%; right: -10%; width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(40,10,60,0.6) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: -5s;
+  }
+  .mesh-blob-3 {
+    top: 35%; left: 55%; width: 40vw; height: 40vw;
+    background: radial-gradient(circle, rgba(10,60,40,0.5) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: -10s;
+  }
+  @keyframes float {
+    0%   { transform: translate(0,0) scale(1); }
+    33%  { transform: translate(5%,10%) scale(1.1); }
+    66%  { transform: translate(-5%,5%) scale(0.9); }
+    100% { transform: translate(0,-5%) scale(1.05); }
+  }
+
+  /* ─── Phone frame 390x844 ─────────────────────────────────────── */
+  .phone {
+    position: relative;
+    z-index: 1;
+    width: 390px;
+    max-width: 100%;
+    height: 844px;
+    border-radius: 54px;
+    background: #05070B;
+    padding: 12px;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.04),
+      0 0 0 11px #16181d,
+      0 0 0 13px #2a2d34,
+      0 40px 120px -20px rgba(0,0,0,0.9),
+      0 0 80px -20px rgba(57,255,20,0.08);
+  }
+
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 44px;
+    overflow: hidden;
+    background: var(--bg-main);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* In-frame mesh */
+  .screen-mesh {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .screen-mesh .b {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(48px);
+  }
+  .screen-mesh .b1 { top:-12%; left:-18%; width:75%; height:38%; background: radial-gradient(circle, rgba(25,40,80,0.55) 0%, transparent 70%); }
+  .screen-mesh .b2 { bottom:-8%; right:-15%; width:70%; height:36%; background: radial-gradient(circle, rgba(45,12,70,0.5) 0%, transparent 70%); }
+  .screen-mesh .b3 { top:40%; left:35%; width:55%; height:30%; background: radial-gradient(circle, rgba(10,70,45,0.4) 0%, transparent 70%); }
+  /* Faint grid overlay */
+  .screen-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Status bar (notch area) */
+  .statusbar {
+    position: relative;
+    z-index: 5;
+    height: 50px;
+    padding: 0 26px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
+  .notch {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 30px;
+    background: #05070B;
+    border-radius: 18px;
+    z-index: 6;
+  }
+
+  /* Scroll area */
+  .content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 18px 120px;
+    scrollbar-width: none;
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* ─── Top bar: profile + city badge + bell ────────────────────── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0 14px;
+  }
+  .avatar-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    color: #05070B;
+    background: linear-gradient(135deg, #FFFF00, #FFD700);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    box-shadow: 0 0 18px rgba(255,255,0,0.25);
+  }
+
+  /* City badge — premium glass, one-tap editable */
+  .city-badge {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 16px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+  .city-badge:active { transform: scale(0.97); }
+  .city-badge .pin {
+    width: 28px; height: 28px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(57,255,20,0.12);
+    border: 1px solid rgba(57,255,20,0.25);
+    color: var(--accent-green);
+    flex-shrink: 0;
+  }
+  .city-badge .ct { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+  .city-badge .ct .lbl {
+    font-size: 8px; font-weight: 800; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .city-badge .ct .val {
+    font-size: 14px; font-weight: 800; color: #fff;
+    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .city-badge .chev { color: var(--accent-green); flex-shrink: 0; }
+
+  .bell-btn {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    position: relative;
+  }
+  .bell-btn .dot {
+    position: absolute; top: 9px; right: 9px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent-green);
+    border: 2px solid #0A0E14;
+    box-shadow: 0 0 10px rgba(57,255,20,0.8);
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+  /* ─── Section title (italic uppercase) ────────────────────────── */
+  .section-head {
+    display: flex; align-items: baseline; gap: 9px;
+    margin: 6px 2px 12px;
+  }
+  .section-head h2 {
+    font-style: italic;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    font-size: 22px;
+    line-height: 0.95;
+    color: #fff;
+  }
+  .section-head .live-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(57,255,20,0.1);
+    border: 1px solid rgba(57,255,20,0.3);
+    font-size: 8.5px; font-weight: 900; letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    transform: translateY(-2px);
+  }
+  .live-pill .lp-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px rgba(57,255,20,0.9);
+    animation: pulse-dot 1.5s infinite;
+  }
+
+  /* ─── Stagger fade-blur-in ────────────────────────────────────── */
+  @keyframes fade-blur-in {
+    from { opacity: 0; filter: blur(8px); transform: translateY(18px) scale(0.98); }
+    to   { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+  }
+  .stg { opacity: 0; animation: fade-blur-in 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .stg-1 { animation-delay: 0.05s; }
+  .stg-2 { animation-delay: 0.14s; }
+  .stg-3 { animation-delay: 0.23s; }
+  .stg-4 { animation-delay: 0.32s; }
+  .stg-5 { animation-delay: 0.41s; }
+  .stg-6 { animation-delay: 0.50s; }
+  .stg-7 { animation-delay: 0.60s; }
+
+  /* ─── HERO: MatchCountdown neon card ──────────────────────────── */
+  .hero-anchor { position: relative; }
+  .hero {
+    position: relative;
+    width: 100%;
+    border-radius: 32px;
+    overflow: hidden;
+    background: #0A0E14;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 12px 40px -10px rgba(34,197,94,0.22), inset 0 1px 0 rgba(255,255,255,0.1);
+    isolation: isolate;
+  }
+  /* sakin neon glow nabzı */
+  .hero::after {
+    content: '';
+    position: absolute; inset: -2px;
+    border-radius: 32px;
+    pointer-events: none;
+    z-index: -1;
+    box-shadow: 0 0 0 0 rgba(57,255,20,0.0);
+    animation: hero-breathe 4.5s ease-in-out infinite;
+  }
+  @keyframes hero-breathe {
+    0%,100% { box-shadow: 0 14px 44px -12px rgba(57,255,20,0.18); }
+    50%     { box-shadow: 0 18px 58px -10px rgba(57,255,20,0.40); }
+  }
+  .hero-mesh {
+    position: absolute; inset: 0;
+    opacity: 0.42; mix-blend-mode: screen;
+    background-image:
+      radial-gradient(circle at 50% -20%, rgba(57,255,20,0.7) 0%, transparent 62%),
+      radial-gradient(circle at 12% 120%, rgba(57,255,20,0.4) 0%, transparent 55%);
+    background-size: 200% 200%;
+    animation: hero-pan 15s linear infinite;
+  }
+  @keyframes hero-pan {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+  .hero-glass { position: absolute; inset: 0; background: rgba(0,0,0,0.2); backdrop-filter: blur(2px); }
+  .hero-body { position: relative; z-index: 2; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+
+  .hero-row { display: flex; align-items: center; justify-content: space-between; }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(8px);
+  }
+  .hero-tag .t-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 12px rgba(57,255,20,0.9);
+    animation: pulse-dot 1.5s infinite;
+  }
+  .hero-tag span {
+    font-size: 10px; font-weight: 900; letter-spacing: 0.22em;
+    text-transform: uppercase; color: #39FF14;
+  }
+  .hero-time {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .hero-time svg { color: var(--accent-yellow); }
+  .hero-time span { font-size: 12px; font-weight: 900; letter-spacing: 0.06em; color: #fff; }
+
+  /* Timer boxes */
+  .timers { display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 2px; }
+  .tbox {
+    flex: 1;
+    max-width: 78px;
+    aspect-ratio: 1/1;
+    background: rgba(6,8,10,0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 10px rgba(255,255,255,0.03);
+  }
+  .tbox::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    opacity: 0.5;
+  }
+  .tbox .num {
+    font-weight: 900;
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .tbox .num.lead { color: var(--accent-green); text-shadow: 0 0 15px rgba(57,255,20,0.5); }
+  .tbox .lab {
+    font-size: 8.5px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .tsep { color: rgba(255,255,255,0.2); font-weight: 900; font-size: 24px; margin-bottom: 16px; }
+
+  /* Match info footer in hero */
+  .hero-info {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-info .bar {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: linear-gradient(180deg, var(--accent-yellow), transparent);
+    opacity: 0.85;
+  }
+  .hero-info h3 {
+    font-weight: 900; font-size: 16px; letter-spacing: -0.01em;
+    color: #fff; padding-left: 12px; line-height: 1.1;
+  }
+  .hero-info p {
+    font-weight: 700; font-size: 11px; color: var(--text-muted);
+    padding-left: 12px; margin-top: 5px;
+  }
+  .hero-info .need { color: var(--accent-yellow); }
+
+  /* Hero CTA */
+  .hero-cta {
+    margin-top: 2px;
+    width: 100%;
+    min-height: 52px;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #FFFF00 0%, #FFD700 100%);
+    color: #05070B;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    cursor: pointer;
+    box-shadow: 0 0 24px rgba(255,255,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: transform 0.12s ease, box-shadow 0.3s ease;
+    animation: cta-glow 2.8s ease-in-out infinite;
+  }
+  @keyframes cta-glow {
+    0%,100% { box-shadow: 0 0 22px rgba(255,255,0,0.30), inset 0 1px 0 rgba(255,255,255,0.4); }
+    50%     { box-shadow: 0 0 38px rgba(255,255,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5); }
+  }
+  .hero-cta:active { transform: scale(0.97); }
+
+  /* ─── Nearby match cards ──────────────────────────────────────── */
+  .mcard {
+    width: 100%;
+    border-radius: 24px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    overflow: hidden;
+    display: flex;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), border-color 0.25s ease;
+    margin-bottom: 12px;
+  }
+  .mcard:active { transform: scale(0.98); }
+
+  /* Pitch thumbnail (SVG field) */
+  .mthumb {
+    position: relative;
+    width: 104px;
+    flex-shrink: 0;
+    background: linear-gradient(150deg, #0d2818 0%, #061410 70%);
+    overflow: hidden;
+  }
+  .mthumb svg.field { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
+  .mthumb .time-chip {
+    position: absolute; top: 8px; left: 8px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 11px; font-weight: 900; color: #fff;
+    letter-spacing: 0.03em;
+  }
+  .mthumb .sample-badge {
+    position: absolute; bottom: 8px; left: 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 7px;
+    border-radius: 8px;
+    background: rgba(0,176,255,0.16);
+    border: 1px solid rgba(0,176,255,0.45);
+    font-size: 8px; font-weight: 900; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--info);
+  }
+
+  .mbody { flex: 1; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 7px; min-width: 0; }
+  .mbody h4 {
+    font-weight: 900; font-size: 14px; letter-spacing: -0.01em;
+    color: #fff; line-height: 1.05;
+  }
+  .mbody .meta { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .mbody .meta svg { flex-shrink: 0; opacity: 0.8; }
+
+  .mrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .avstack { display: flex; align-items: center; }
+  .avstack .av {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid #11151c;
+    margin-left: -8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 900; color: #05070B;
+  }
+  .avstack .av:first-child { margin-left: 0; }
+  .avstack .more {
+    margin-left: -8px;
+    min-width: 24px; height: 24px; padding: 0 5px;
+    border-radius: 999px;
+    border: 2px solid #11151c;
+    background: rgba(57,255,20,0.14);
+    color: var(--accent-green);
+    font-size: 9px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .need-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(255,255,0,0.12);
+    border: 1px solid rgba(255,255,0,0.35);
+    font-size: 10px; font-weight: 900;
+    color: var(--accent-yellow);
+    white-space: nowrap;
+  }
+  .need-pill.ok {
+    background: rgba(57,255,20,0.1);
+    border-color: rgba(57,255,20,0.35);
+    color: var(--accent-green);
+  }
+
+  /* Sample (example) card honesty note */
+  .sample-note {
+    display: flex; align-items: center; gap: 7px;
+    margin: 2px 4px 14px;
+    font-size: 10.5px; font-weight: 600;
+    color: var(--text-muted);
+  }
+  .sample-note svg { color: var(--info); flex-shrink: 0; }
+  .sample-note b { color: var(--info); font-weight: 800; }
+
+  /* ─── Skeleton (loading) demo card ────────────────────────────── */
+  .skel-wrap { display: none; }
+  .skel {
+    background: rgba(30,36,46,0.55);
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .skel::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  /* ─── Collapsible location strip (footer, dismissible) ────────── */
+  .loc-strip {
+    display: flex; align-items: center; gap: 10px;
+    margin: 6px 0 14px;
+    padding: 11px 14px;
+    border-radius: 16px;
+    background: rgba(0,176,255,0.06);
+    border: 1px solid rgba(0,176,255,0.2);
+  }
+  .loc-strip .lic {
+    width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,176,255,0.12);
+    color: var(--info);
+  }
+  .loc-strip .ltxt { flex: 1; min-width: 0; }
+  .loc-strip .ltxt p { font-size: 11px; font-weight: 700; color: #cdd6e0; line-height: 1.25; }
+  .loc-strip .ltxt p .u { color: var(--info); font-weight: 800; }
+  .loc-strip .lx {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer;
+  }
+
+  /* ─── Invisible "not a player?" footer entry ──────────────────── */
+  .alt-entry {
+    margin: 2px 0 8px;
+    text-align: center;
+    padding: 14px 8px;
+  }
+  .alt-entry button {
+    background: none;
+    border: none;
+    color: rgba(139,148,158,0.55);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: color 0.2s ease;
+    line-height: 1.4;
+  }
+  .alt-entry button:hover { color: var(--text-muted); }
+  .alt-entry button u { color: rgba(139,148,158,0.7); text-underline-offset: 3px; text-decoration-color: rgba(139,148,158,0.55); }
+
+  /* ─── Coachmark #1 ────────────────────────────────────────────── */
+  .coach {
+    position: absolute;
+    top: -6px; left: 12px; right: 12px;
+    z-index: 30;
+    transform: translateY(-100%);
+    opacity: 0;
+    animation: coach-in 0.6s ease-out 1.5s forwards;
+    pointer-events: none;
+  }
+  @keyframes coach-in {
+    from { opacity: 0; transform: translateY(-100%) translateY(10px); }
+    to   { opacity: 1; transform: translateY(-100%); }
+  }
+  .coach-card {
+    position: relative;
+    background: rgba(13,18,26,0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(57,255,20,0.35);
+    border-radius: 18px;
+    padding: 14px 15px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 30px rgba(57,255,20,0.12);
+    pointer-events: auto;
+  }
+  .coach-card .ttl {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 900; color: #fff;
+    text-transform: uppercase; letter-spacing: 0.04em; font-style: italic;
+    margin-bottom: 5px;
+  }
+  .coach-card .ttl svg { color: var(--accent-green); }
+  .coach-card p { font-size: 11.5px; color: #c4cdd6; font-weight: 600; line-height: 1.4; }
+  .coach-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .coach-actions button {
+    flex: 1; min-height: 36px;
+    border-radius: 11px;
+    font-size: 12px; font-weight: 900;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .coach-actions .skip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+  }
+  .coach-actions .got {
+    background: transparent;
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green);
+  }
+  /* pointer arrow to hero */
+  .coach-arrow {
+    position: absolute;
+    bottom: -7px; left: 38px;
+    width: 14px; height: 14px;
+    background: rgba(13,18,26,0.92);
+    border-right: 1px solid rgba(57,255,20,0.35);
+    border-bottom: 1px solid rgba(57,255,20,0.35);
+    transform: rotate(45deg);
+  }
+
+  /* ─── Bottom nav (5 tabs) ─────────────────────────────────────── */
+  .bottomnav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 20;
+    padding: 8px 16px calc(8px + 18px);
+  }
+  .nav-inner {
+    background: rgba(22,27,34,0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    padding: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+  }
+  .nav-item {
+    flex: 1;
+    min-height: 48px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none; cursor: pointer;
+    color: #5b626c;
+    position: relative;
+  }
+  .nav-item.active { color: #fff; }
+  .nav-item.active::before {
+    content: '';
+    position: absolute; inset: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1), transparent);
+    border-radius: 14px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+  }
+  .nav-item span { font-size: 9.5px; font-weight: 800; letter-spacing: 0.02em; position: relative; z-index: 1; }
+  .nav-item svg { position: relative; z-index: 1; }
+  .nav-center {
+    flex: 1;
+    position: relative;
+    top: -22px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; cursor: pointer;
+  }
+  .nav-center .orb {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #0A0E14;
+    border: 2px solid var(--accent-green);
+    color: var(--accent-green);
+    box-shadow: 0 0 20px rgba(57,255,20,0.3);
+  }
+  .nav-center span { font-size: 9.5px; font-weight: 900; color: #5b626c; letter-spacing: 0.02em; }
+
+  /* Home indicator */
+  .home-ind {
+    position: absolute;
+    bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 134px; height: 5px; border-radius: 999px;
+    background: rgba(255,255,255,0.3);
+    z-index: 25;
+  }
+
+  /* ─── Caption under phone ─────────────────────────────────────── */
+  .caption {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    max-width: 380px;
+    line-height: 1.5;
+  }
+  .caption .name {
+    display: block;
+    color: #fff;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .caption .id { color: rgba(139,148,158,0.5); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* Narrow screens (<420px): scale the fixed 390px frame so it stays fully visible on 360px devices */
+  @media (max-width: 420px) {
+    .phone { transform: scale(0.92); transform-origin: top center; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="mesh-blob mesh-blob-1"></div>
+    <div class="mesh-blob mesh-blob-2"></div>
+    <div class="mesh-blob mesh-blob-3"></div>
+
+    <!-- ════════ PHONE FRAME 390×844 ════════ -->
+    <div class="phone">
+      <div class="screen">
+        <!-- In-frame mesh + grid -->
+        <div class="screen-mesh">
+          <div class="b b1"></div>
+          <div class="b b2"></div>
+          <div class="b b3"></div>
+        </div>
+        <div class="screen-grid"></div>
+
+        <!-- Status bar -->
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:41</span>
+          <div class="icons">
+            <!-- signal -->
+            <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="8" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1" fill="#fff"/><rect x="9" y="3" width="3" height="9" rx="1" fill="#fff"/><rect x="13.5" y="0.5" width="3" height="11.5" rx="1" fill="#fff"/></svg>
+            <!-- wifi -->
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 10.5l2-2.4a3 3 0 0 0-4 0l2 2.4z" fill="#fff"/><path d="M3.5 5.2a7 7 0 0 1 9 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M1.2 2.6a10.5 10.5 0 0 1 13.6 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <!-- battery -->
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" stroke-opacity="0.5"/><rect x="2" y="2" width="16" height="8" rx="1.5" fill="#fff"/><rect x="23" y="4" width="1.5" height="4" rx="0.75" fill="#fff" fill-opacity="0.6"/></svg>
+          </div>
+        </div>
+
+        <!-- ════════ SCROLLABLE CONTENT ════════ -->
+        <div class="content">
+
+          <!-- TOP BAR: profile + city badge + bell -->
+          <div class="topbar stg stg-1">
+            <div class="avatar-btn" aria-label="Profil">M</div>
+
+            <!-- City badge — one-tap editable -->
+            <button class="city-badge" aria-label="Şehrini düzenle">
+              <span class="pin">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+              <span class="ct">
+                <span class="lbl">Tahmini Konum</span>
+                <span class="val">Ordu · Altınordu
+                  <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+              </span>
+            </button>
+
+            <button class="bell-btn" aria-label="Bildirimler">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="dot"></span>
+            </button>
+          </div>
+
+          <!-- SECTION TITLE -->
+          <div class="section-head stg stg-2">
+            <h2>Yakınında<br/>Oynanıyor</h2>
+            <span class="live-pill"><span class="lp-dot"></span>Canlı</span>
+          </div>
+
+          <!-- HERO: MatchCountdown + coachmark anchor -->
+          <div class="hero-anchor stg stg-3">
+
+            <!-- Coachmark #1 (anchored above hero) -->
+            <div class="coach" id="coach">
+              <div class="coach-card">
+                <div class="ttl">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3Z"/></svg>
+                  İlk maçın burada
+                </div>
+                <p>Beğendiğin maçı görmek bedava. Katılmak için tek dokunuş yeter — "Yerini Garantile".</p>
+                <div class="coach-actions">
+                  <button class="skip" onclick="dismissCoach()">Atla</button>
+                  <button class="got" onclick="dismissCoach()">Anladım</button>
+                </div>
+                <div class="coach-arrow"></div>
+              </div>
+            </div>
+
+            <div class="hero">
+              <div class="hero-mesh"></div>
+              <div class="hero-glass"></div>
+              <div class="hero-body">
+                <!-- Header row -->
+                <div class="hero-row">
+                  <div class="hero-tag">
+                    <span class="t-dot"></span>
+                    <span>Sıradaki Maç</span>
+                  </div>
+                  <div class="hero-time">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    <span>21:00</span>
+                  </div>
+                </div>
+
+                <!-- Timers -->
+                <div class="timers">
+                  <div class="tbox"><span class="num lead">00</span><span class="lab">Gün</span></div>
+                  <span class="tsep">:</span>
+                  <div class="tbox"><span class="num">04</span><span class="lab">Saat</span></div>
+                  <span class="tsep">:</span>
+                  <div class="tbox"><span class="num">37</span><span class="lab">Dakika</span></div>
+                </div>
+
+                <!-- Match info -->
+                <div class="hero-info">
+                  <div class="bar"></div>
+                  <h3>Bu Akşam · Halı Saha Klasiği</h3>
+                  <p>Capo Arena · Altınordu &nbsp;·&nbsp; <span class="need">3 kişi aranıyor</span></p>
+                </div>
+
+                <!-- Primary CTA -->
+                <button class="hero-cta">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Yerini Garantile
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- DIVIDER -->
+          <div style="height:18px"></div>
+
+          <!-- NEARBY MATCHES list -->
+          <div class="section-head stg stg-4" style="margin-bottom:8px">
+            <h2 style="font-size:16px">Daha Fazla Maç</h2>
+          </div>
+
+          <!-- Card 1 — real nearby -->
+          <div class="mcard stg stg-4">
+            <div class="mthumb">
+              <svg class="field" viewBox="0 0 120 130" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#39FF14" stroke-width="2" fill="none" stroke-linecap="round">
+                  <rect x="6" y="6" width="108" height="118" rx="3"/>
+                  <line x1="6" y1="65" x2="114" y2="65"/>
+                  <circle cx="60" cy="65" r="20"/>
+                  <circle cx="60" cy="65" r="2" fill="#39FF14"/>
+                  <rect x="34" y="6" width="52" height="22"/>
+                  <rect x="34" y="102" width="52" height="22"/>
+                </g>
+              </svg>
+              <span class="time-chip">Yarın 20:30</span>
+            </div>
+            <div class="mbody">
+              <h4>Cumartesi Erken Maç</h4>
+              <div class="meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Yeşilada Spor · 2.1 km
+              </div>
+              <div class="mrow">
+                <div class="avstack">
+                  <span class="av" style="background:#39FF14">AK</span>
+                  <span class="av" style="background:#00B0FF">MT</span>
+                  <span class="av" style="background:#FFD700">SE</span>
+                  <span class="more">+8</span>
+                </div>
+                <span class="need-pill"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>2 kişilik yer</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 — real nearby, almost full -->
+          <div class="mcard stg stg-5">
+            <div class="mthumb">
+              <svg class="field" viewBox="0 0 120 130" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#39FF14" stroke-width="2" fill="none" stroke-linecap="round">
+                  <rect x="6" y="6" width="108" height="118" rx="3"/>
+                  <line x1="6" y1="65" x2="114" y2="65"/>
+                  <circle cx="60" cy="65" r="20"/>
+                  <circle cx="60" cy="65" r="2" fill="#39FF14"/>
+                  <rect x="34" y="6" width="52" height="22"/>
+                  <rect x="34" y="102" width="52" height="22"/>
+                </g>
+              </svg>
+              <span class="time-chip">Pazar 19:00</span>
+            </div>
+            <div class="mbody">
+              <h4>Pazar Akşam Derbi</h4>
+              <div class="meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Sahil Arena · 3.4 km
+              </div>
+              <div class="mrow">
+                <div class="avstack">
+                  <span class="av" style="background:#FF4D4D">BK</span>
+                  <span class="av" style="background:#39FF14">VO</span>
+                  <span class="av" style="background:#00B0FF">RC</span>
+                  <span class="more">+10</span>
+                </div>
+                <span class="need-pill ok"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>Son 1 yer</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty-state honesty note + SAMPLE card -->
+          <div class="sample-note stg stg-6">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span><b>Komşu şehirden örnek:</b> bölgende henüz az maç var.</span>
+          </div>
+
+          <!-- Card 3 — SAMPLE (örnek) neighbour city -->
+          <div class="mcard stg stg-6" style="opacity:0.92">
+            <div class="mthumb" style="background:linear-gradient(150deg,#102030 0%,#06101a 70%)">
+              <svg class="field" viewBox="0 0 120 130" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#00B0FF" stroke-width="2" fill="none" stroke-linecap="round">
+                  <rect x="6" y="6" width="108" height="118" rx="3"/>
+                  <line x1="6" y1="65" x2="114" y2="65"/>
+                  <circle cx="60" cy="65" r="20"/>
+                  <circle cx="60" cy="65" r="2" fill="#00B0FF"/>
+                  <rect x="34" y="6" width="52" height="22"/>
+                  <rect x="34" y="102" width="52" height="22"/>
+                </g>
+              </svg>
+              <span class="sample-badge">Örnek</span>
+            </div>
+            <div class="mbody">
+              <h4>Çarşamba Halı Saha</h4>
+              <div class="meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Giresun · Merkez
+              </div>
+              <div class="mrow">
+                <div class="avstack">
+                  <span class="av" style="background:#00B0FF">EK</span>
+                  <span class="av" style="background:#39FF14">YT</span>
+                  <span class="more">+6</span>
+                </div>
+                <span class="need-pill" style="background:rgba(0,176,255,0.16);border-color:rgba(0,176,255,0.45);color:#7CC8FF">Yakında</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collapsible location strip (dismissible, location not requested yet) -->
+          <div class="loc-strip stg stg-7" id="locStrip">
+            <span class="lic">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7Z"/></svg>
+            </span>
+            <div class="ltxt">
+              <p>Şehrini mi değiştireceksin? <span class="u">Dokun</span> — daha yakın maçları gösterelim.</p>
+            </div>
+            <button class="lx" aria-label="Kapat" onclick="document.getElementById('locStrip').style.display='none'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <!-- Invisible non-player footer entry -->
+          <div class="alt-entry stg stg-7">
+            <button>
+              Oyuncu değil misin? <u>Kaleci, hakem veya tesis girişi</u>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ════════ BOTTOM NAV ════════ -->
+        <div class="bottomnav">
+          <div class="nav-inner">
+            <button class="nav-item active" aria-current="page">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+              <span>Ana Sayfa</span>
+            </button>
+            <button class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span>Top Oyna</span>
+            </button>
+            <button class="nav-center" aria-label="Sosyal">
+              <span class="orb">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span>
+              <span>Sosyal</span>
+            </button>
+            <button class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Sahalar</span>
+            </button>
+            <button class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>Profil</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+      </div>
+    </div>
+
+    <!-- Caption -->
+    <div class="caption">
+      <span class="name">Yakınında Oynanıyor — Değer-Önce First-Run</span>
+      İlk ekran = canlı içerik. Boş dashboard veya rol/giriş kapısı yok; maçları görmek serbest, katılmak için tek-sefer giriş.
+      <span class="id">02 · Oyuncu Onboarding · Keşif</span>
+    </div>
+  </div>
+
+  <script>
+    function dismissCoach() {
+      var c = document.getElementById('coach');
+      if (!c) return;
+      c.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      c.style.opacity = '0';
+      c.style.transform = 'translateY(-100%) translateY(-8px)';
+      setTimeout(function(){ c.style.display = 'none'; }, 320);
+    }
+  </script>
+</body>
+</html>

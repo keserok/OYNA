@@ -1,0 +1,298 @@
+<!-- @dsCard group="Oyuncu Onboarding" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OYNA — Oyuncu Onboarding Akışı (v1 mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-main: #0A0E14;
+    --text: #FFFFFF;
+    --muted: #8B949E;
+    --player-yellow: #FFFF00;
+    --gold: #FFD700;
+    --logo-amber: #FFC107;
+    --neon-green: #39FF14;
+    --border-glass: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-main);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    min-height: 100%;
+  }
+
+  /* OYNA dark mesh-gradient canvas */
+  body {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .mesh {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .mesh .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.9;
+  }
+  .mesh .b1 { top: -10%; left: -8%; width: 55%; height: 55%; background: radial-gradient(circle, rgba(20,30,60,0.85) 0%, rgba(10,14,20,0) 70%); }
+  .mesh .b2 { bottom: -15%; right: -10%; width: 60%; height: 60%; background: radial-gradient(circle, rgba(45,12,70,0.6) 0%, rgba(10,14,20,0) 70%); }
+  .mesh .b3 { top: 30%; left: 40%; width: 50%; height: 55%; background: radial-gradient(circle, rgba(10,70,45,0.45) 0%, rgba(10,14,20,0) 70%); }
+  .mesh .b4 { top: 5%; right: 25%; width: 35%; height: 40%; background: radial-gradient(circle, rgba(255,193,7,0.10) 0%, rgba(10,14,20,0) 70%); }
+
+  /* Header */
+  .page-head {
+    position: relative;
+    z-index: 2;
+    padding: 40px 48px 8px;
+  }
+  .page-head h1 {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .page-head h1 .brand {
+    background: linear-gradient(135deg, var(--player-yellow), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .page-head .sub {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Flow strip (step order) */
+  .flow-strip {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 18px 48px 4px;
+  }
+  .step-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px 8px 8px;
+    border-radius: 999px;
+    background: rgba(22, 27, 34, 0.55);
+    border: var(--border-glass);
+    backdrop-filter: blur(8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .step-chip .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--player-yellow), var(--gold));
+    color: #000;
+    font-weight: 900;
+    font-size: 12px;
+  }
+  .strip-arrow {
+    color: var(--gold);
+    font-size: 18px;
+    font-weight: 800;
+    opacity: 0.8;
+  }
+
+  /* Horizontal flow rail */
+  .rail {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    padding: 28px 48px 56px;
+    width: max-content;
+  }
+
+  .screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    flex: 0 0 auto;
+  }
+  .frame {
+    position: relative;
+    width: 390px;
+    height: 844px;
+    border-radius: 30px;
+    padding: 6px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.4) inset;
+  }
+  .frame iframe {
+    width: 390px;
+    height: 844px;
+    border: 0;
+    border-radius: 24px;
+    background: #05070B;
+    display: block;
+  }
+  .screen .label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    max-width: 390px;
+    text-align: center;
+  }
+  .screen .label .step {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .screen .label .name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .screen .label .desc {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  /* Arrow between screens */
+  .rail-arrow {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-bottom: 64px; /* roughly align with frame center accounting for labels */
+    color: var(--gold);
+    font-size: 40px;
+    font-weight: 800;
+    padding: 0 26px;
+    user-select: none;
+    text-shadow: 0 0 18px rgba(255, 215, 0, 0.35);
+  }
+
+  @media (max-width: 700px) {
+    .page-head { padding: 28px 20px 8px; }
+    .flow-strip { padding: 16px 20px 4px; }
+    .rail { padding: 24px 20px 48px; }
+  }
+</style>
+</head>
+<body>
+  <div class="mesh">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <div class="blob b4"></div>
+  </div>
+
+  <header class="page-head">
+    <h1><span class="brand">OYNA</span> — Oyuncu Onboarding Akışı (v1 mockup)</h1>
+    <p class="sub">Soldan sağa: ilk açılıştan değer-kapısına, profil tamamlama ve bağlamsal konum iznine kadar tam akış.</p>
+  </header>
+
+  <nav class="flow-strip" aria-label="Akış sırası">
+    <span class="step-chip"><span class="num">1</span> Açılış</span>
+    <span class="strip-arrow">→</span>
+    <span class="step-chip"><span class="num">2</span> Yakınında Oynanıyor</span>
+    <span class="strip-arrow">→</span>
+    <span class="step-chip"><span class="num">3</span> Yerini Garantile</span>
+    <span class="strip-arrow">→</span>
+    <span class="step-chip"><span class="num">4</span> Kartını Tamamla</span>
+    <span class="strip-arrow">→</span>
+    <span class="step-chip"><span class="num">5</span> Konumu Aç</span>
+  </nav>
+
+  <main class="rail">
+    <div class="screen">
+      <div class="frame">
+        <iframe src="01-splash.html" width="390" height="844" title="01 Açılış" loading="lazy"></iframe>
+      </div>
+      <div class="label">
+        <span class="step">01 · Açılış</span>
+        <span class="name">Açılış</span>
+        <span class="desc">Prefetch-Aware Splash</span>
+      </div>
+    </div>
+
+    <div class="rail-arrow">→</div>
+
+    <div class="screen">
+      <div class="frame">
+        <iframe src="02-dashboard-kesif.html" width="390" height="844" title="02 Yakınında Oynanıyor" loading="lazy"></iframe>
+      </div>
+      <div class="label">
+        <span class="step">02 · Keşif</span>
+        <span class="name">Yakınında Oynanıyor</span>
+        <span class="desc">Değer-Önce First-Run</span>
+      </div>
+    </div>
+
+    <div class="rail-arrow">→</div>
+
+    <div class="screen">
+      <div class="frame">
+        <iframe src="03-deger-kapisi.html" width="390" height="844" title="03 Yerini Garantile" loading="lazy"></iframe>
+      </div>
+      <div class="label">
+        <span class="step">03 · Değer-Kapısı</span>
+        <span class="name">Yerini Garantile</span>
+        <span class="desc">Değer-Kapısı = Tek-Sefer Giriş</span>
+      </div>
+    </div>
+
+    <div class="rail-arrow">→</div>
+
+    <div class="screen">
+      <div class="frame">
+        <iframe src="04-profil-tamamla.html" width="390" height="844" title="04 Kartını Tamamla" loading="lazy"></iframe>
+      </div>
+      <div class="label">
+        <span class="step">04 · Profil</span>
+        <span class="name">Kartını Tamamla</span>
+        <span class="desc">İlk-Katılım Sonrası</span>
+      </div>
+    </div>
+
+    <div class="rail-arrow">→</div>
+
+    <div class="screen">
+      <div class="frame">
+        <iframe src="05-konum-baglamsal.html" width="390" height="844" title="05 Konumu Aç" loading="lazy"></iframe>
+      </div>
+      <div class="label">
+        <span class="step">05 · Konum</span>
+        <span class="name">Konumu Aç</span>
+        <span class="desc">Bağlamsal &amp; Reddedilebilir</span>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

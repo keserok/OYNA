@@ -1,0 +1,1163 @@
+<!-- @dsCard group="Oyuncu Onboarding" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>OYNA — Konumu Aç (Bağlamsal & Reddedilebilir)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  /* ─── OYNA Tokens ─────────────────────────────────────────────── */
+  :root {
+    --bg-main: #0A0E14;
+    --bg-card: rgba(22, 27, 34, 0.5);
+    --text-main: #FFFFFF;
+    --text-muted: #8B949E;
+    --accent-yellow: #FFFF00;
+    --accent-gold: #FFD700;
+    --accent-green: #39FF14;
+    --success: #00E676;
+    --warning: #FFAA00;
+    --error: #FF4D4D;
+    --info: #00B0FF;
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Page stage: OYNA mesh-gradient dark canvas around the phone frame */
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 48px 16px;
+    position: relative;
+    background: var(--bg-main);
+    overflow: hidden;
+  }
+
+  /* Mesh blobs (lacivert / mor / yeşil — low opacity) */
+  .mesh-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+    will-change: transform;
+    animation: float 20s infinite ease-in-out alternate;
+  }
+  .mesh-blob-1 {
+    top: -10%; left: -10%; width: 50vw; height: 50vw;
+    background: radial-gradient(circle, rgba(20,30,60,0.8) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: 0s;
+  }
+  .mesh-blob-2 {
+    bottom: -20%; right: -10%; width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(40,10,60,0.6) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: -5s;
+  }
+  .mesh-blob-3 {
+    top: 35%; left: 55%; width: 40vw; height: 40vw;
+    background: radial-gradient(circle, rgba(10,60,40,0.5) 0%, rgba(10,14,20,0) 70%);
+    animation-delay: -10s;
+  }
+  @keyframes float {
+    0%   { transform: translate(0,0) scale(1); }
+    33%  { transform: translate(5%,10%) scale(1.1); }
+    66%  { transform: translate(-5%,5%) scale(0.9); }
+    100% { transform: translate(0,-5%) scale(1.05); }
+  }
+
+  /* ─── Phone frame 390x844 ─────────────────────────────────────── */
+  .phone {
+    position: relative;
+    z-index: 1;
+    width: 390px;
+    height: 844px;
+    border-radius: 54px;
+    background: #05070B;
+    padding: 12px;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.04),
+      0 0 0 11px #16181d,
+      0 0 0 13px #2a2d34,
+      0 40px 120px -20px rgba(0,0,0,0.9),
+      0 0 80px -20px rgba(0,176,255,0.08);
+  }
+
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 44px;
+    overflow: hidden;
+    background: var(--bg-main);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* In-frame mesh */
+  .screen-mesh {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .screen-mesh .b {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(48px);
+  }
+  .screen-mesh .b1 { top:-12%; left:-18%; width:75%; height:38%; background: radial-gradient(circle, rgba(25,40,80,0.55) 0%, transparent 70%); }
+  .screen-mesh .b2 { bottom:-8%; right:-15%; width:70%; height:36%; background: radial-gradient(circle, rgba(45,12,70,0.5) 0%, transparent 70%); }
+  .screen-mesh .b3 { top:40%; left:35%; width:55%; height:30%; background: radial-gradient(circle, rgba(10,70,45,0.4) 0%, transparent 70%); }
+  /* Faint grid overlay */
+  .screen-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Status bar (notch area) */
+  .statusbar {
+    position: relative;
+    z-index: 5;
+    height: 50px;
+    padding: 0 26px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
+  .notch {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 30px;
+    background: #05070B;
+    border-radius: 18px;
+    z-index: 6;
+  }
+
+  /* Scroll area */
+  .content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 18px 120px;
+    scrollbar-width: none;
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* ─── Top bar: profile + city badge + bell ────────────────────── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0 14px;
+  }
+  .avatar-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    color: #05070B;
+    background: linear-gradient(135deg, #FFD700, #FFAA00);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    box-shadow: 0 0 18px rgba(255,215,0,0.25);
+  }
+
+  /* City badge — premium glass, one-tap editable (shared design language w/ picker) */
+  .city-badge {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 16px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+  .city-badge:active { transform: scale(0.97); }
+  .city-badge .pin {
+    width: 28px; height: 28px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,176,255,0.12);
+    border: 1px solid rgba(0,176,255,0.25);
+    color: var(--info);
+    flex-shrink: 0;
+  }
+  .city-badge .ct { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+  .city-badge .ct .lbl {
+    font-size: 8px; font-weight: 800; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .city-badge .ct .val {
+    font-size: 14px; font-weight: 800; color: #fff;
+    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .city-badge .chev { color: var(--info); flex-shrink: 0; }
+
+  .bell-btn {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    position: relative;
+  }
+  .bell-btn .dot {
+    position: absolute; top: 9px; right: 9px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent-green);
+    border: 2px solid #0A0E14;
+    box-shadow: 0 0 10px rgba(57,255,20,0.8);
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+  /* ─── Section title (italic uppercase) ────────────────────────── */
+  .section-head {
+    display: flex; align-items: baseline; gap: 9px;
+    margin: 6px 2px 12px;
+  }
+  .section-head h2 {
+    font-style: italic;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    font-size: 22px;
+    line-height: 0.95;
+    color: #fff;
+  }
+  .section-head .live-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(57,255,20,0.1);
+    border: 1px solid rgba(57,255,20,0.3);
+    font-size: 8.5px; font-weight: 900; letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    transform: translateY(-2px);
+  }
+  .live-pill .lp-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px rgba(57,255,20,0.9);
+    animation: pulse-dot 1.5s infinite;
+  }
+
+  /* ─── Stagger fade-blur-in ────────────────────────────────────── */
+  @keyframes fade-blur-in {
+    from { opacity: 0; filter: blur(8px); transform: translateY(18px) scale(0.98); }
+    to   { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+  }
+  .stg { opacity: 0; animation: fade-blur-in 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .stg-1 { animation-delay: 0.05s; }
+  .stg-2 { animation-delay: 0.14s; }
+  .stg-3 { animation-delay: 0.23s; }
+  .stg-4 { animation-delay: 0.32s; }
+  .stg-5 { animation-delay: 0.41s; }
+  .stg-6 { animation-delay: 0.50s; }
+
+  /* ════════════════════════════════════════════════════════════════
+     ★ CONTEXTUAL LOCATION STRIP — the focus of this screen ★
+     Single-line, dismissible, premium-glass-card.
+     Slides down gently from top (slide + fade).
+  ════════════════════════════════════════════════════════════════ */
+  .loc-anchor { position: relative; margin: 2px 0 16px; }
+
+  @keyframes strip-drop {
+    from { opacity: 0; transform: translateY(-26px) scale(0.98); filter: blur(6px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes strip-collapse {
+    from { opacity: 1; transform: translateY(0) scaleY(1); max-height: 90px; margin-bottom: 16px; }
+    to   { opacity: 0; transform: translateY(-18px) scaleY(0.4); max-height: 0; margin-bottom: 0; }
+  }
+  @keyframes cross-fade-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); filter: blur(6px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+
+  .loc-strip {
+    display: flex; align-items: center; gap: 11px;
+    min-height: 56px;
+    padding: 11px 12px 11px 13px;
+    border-radius: 24px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(0,176,255,0.22);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 0 24px rgba(0,176,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    transform-origin: top center;
+    animation: strip-drop 0.6s cubic-bezier(0.22,1,0.36,1) 0.45s both;
+  }
+  .loc-strip.collapsing {
+    animation: strip-collapse 0.42s cubic-bezier(0.4,0,0.2,1) forwards;
+    overflow: hidden;
+  }
+  /* Second appearance is lighter — softer border, no glow, calmer copy */
+  .loc-strip.soft {
+    border-color: rgba(0,176,255,0.14);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+    background: rgba(22,27,34,0.42);
+  }
+  .loc-strip .lic {
+    width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,176,255,0.14);
+    border: 1px solid rgba(0,176,255,0.28);
+    color: var(--info);
+  }
+  .loc-strip.soft .lic {
+    background: rgba(0,176,255,0.08);
+    border-color: rgba(0,176,255,0.18);
+  }
+  .loc-strip .ltxt { flex: 1; min-width: 0; }
+  .loc-strip .ltxt p {
+    font-size: 12px; font-weight: 700; color: #dde4ec; line-height: 1.3;
+  }
+  .loc-strip.soft .ltxt p { color: #b9c2cd; font-weight: 600; }
+  .loc-strip .ltxt p .u { color: var(--info); font-weight: 800; }
+
+  /* "Konumu Aç" contextual button (info-neon ghost — calmer than yellow CTA) */
+  .loc-cta {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 15px;
+    border-radius: 13px;
+    border: 1px solid rgba(0,176,255,0.4);
+    background: rgba(0,176,255,0.12);
+    color: var(--info);
+    font-size: 12.5px; font-weight: 900;
+    letter-spacing: 0.01em;
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 0 16px rgba(0,176,255,0.18), inset 0 1px 0 rgba(255,255,255,0.12);
+    transition: transform 0.12s ease, box-shadow 0.3s ease, background 0.2s ease;
+  }
+  .loc-cta:hover { box-shadow: 0 0 26px rgba(0,176,255,0.32), inset 0 1px 0 rgba(255,255,255,0.2); }
+  .loc-cta:active { transform: scale(0.95); }
+
+  /* Close (x) — ≥44px touch target wrapper (transparent), 30px visible chip inside */
+  .loc-x {
+    flex-shrink: 0;
+    width: 44px; height: 44px;
+    margin: -7px -7px -7px 0;       /* negative margin so 44px hit area doesn't bloat the row */
+    padding: 7px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .loc-x .x-chip {
+    width: 30px; height: 30px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease;
+  }
+  .loc-x:hover .x-chip { background: rgba(255,255,255,0.1); color: #fff; }
+  .loc-x:active .x-chip { transform: scale(0.9); }
+
+  /* ─── Manual city/district picker (cross-fades in after refusal) ── */
+  .manual-pick {
+    display: none;
+    margin: 2px 0 16px;
+    padding: 14px 14px 12px;
+    border-radius: 24px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .manual-pick.show { display: block; animation: cross-fade-in 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .manual-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .manual-head .mpin {
+    width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,170,0,0.12);
+    border: 1px solid rgba(255,170,0,0.28);
+    color: var(--warning);
+  }
+  .manual-head .mtxt { flex: 1; min-width: 0; }
+  .manual-head .mtxt .ml1 {
+    font-size: 12.5px; font-weight: 800; color: #fff; line-height: 1.2;
+  }
+  .manual-head .mtxt .ml1 b { color: var(--warning); font-weight: 900; }
+  .manual-head .mtxt .ml2 {
+    font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-top: 2px;
+  }
+  /* shared city badge dil — "Ordu ▾" current-city chip */
+  .city-chip {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 5px;
+    min-height: 44px; padding: 0 13px;
+    border-radius: 13px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff; font-size: 12px; font-weight: 900;
+    cursor: pointer;
+  }
+  .city-chip .cc-chev { color: var(--warning); }
+
+  .district-label {
+    font-size: 9px; font-weight: 900; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin: 4px 2px 9px;
+  }
+  .districts {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .dist {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #c7cfd9;
+    font-size: 12.5px; font-weight: 700;
+    cursor: pointer;
+    display: inline-flex; align-items: center;
+    transition: all 0.18s ease;
+  }
+  .dist:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .dist:active { transform: scale(0.96); }
+  .dist.sel {
+    background: rgba(0,176,255,0.14);
+    border-color: rgba(0,176,255,0.5);
+    color: var(--info);
+    box-shadow: 0 0 16px rgba(0,176,255,0.2), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  .manual-foot {
+    display: flex; align-items: center; gap: 7px;
+    margin-top: 13px; padding-top: 11px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 10.5px; font-weight: 600; color: var(--text-muted);
+  }
+  .manual-foot svg { color: var(--success); flex-shrink: 0; }
+  .manual-foot b { color: var(--success); font-weight: 800; }
+  /* tiny inline "konumu aç" re-offer in manual — never forced */
+  .reoffer {
+    display: inline-flex; align-items: center;
+    min-height: 44px; padding: 0 6px; margin: -11px -6px;  /* 44px hit area, visual size unchanged */
+    background: none; border: none; cursor: pointer;
+    color: rgba(0,176,255,0.75); font-weight: 800;
+    text-decoration: underline; text-underline-offset: 2px;
+    font-size: 10.5px;
+    vertical-align: middle;
+  }
+  .reoffer:hover { color: var(--info); }
+
+  /* ─── Match-detail context card (the strip lives ON this) ──────── */
+  .ctx-head {
+    display: flex; align-items: center; gap: 7px;
+    margin: 4px 2px 11px;
+  }
+  .ctx-head .ch-icon { color: var(--text-muted); display: flex; }
+  .ctx-head h3 {
+    font-size: 13px; font-weight: 800; color: #cfd6df;
+    letter-spacing: 0.01em;
+  }
+
+  /* Pitch / directions card */
+  .pitch-card {
+    width: 100%;
+    border-radius: 26px;
+    overflow: hidden;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    margin-bottom: 14px;
+  }
+  .pitch-map {
+    position: relative;
+    height: 156px;
+    background: linear-gradient(150deg, #0d2818 0%, #061410 70%);
+    overflow: hidden;
+  }
+  .pitch-map svg.field { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.4; }
+  .pitch-map .map-grad {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 30%, rgba(10,14,20,0.85) 100%);
+  }
+  /* route line + pin (directions context — blurred until location enabled) */
+  .route {
+    position: absolute; inset: 0;
+    transition: filter 0.4s ease, opacity 0.4s ease;
+  }
+  .route.locked { filter: blur(5px); opacity: 0.7; }
+  .route .lock-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 7px;
+    z-index: 3;
+  }
+  .route.unlocked .lock-overlay { display: none; }
+  .route .lock-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: rgba(5,7,11,0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0,176,255,0.3);
+    font-size: 10.5px; font-weight: 800; color: var(--info);
+    letter-spacing: 0.02em;
+  }
+  .pitch-map .time-chip {
+    position: absolute; top: 10px; left: 10px;
+    padding: 4px 9px;
+    border-radius: 9px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 11px; font-weight: 900; color: #fff;
+    z-index: 4;
+  }
+  /* Distance chip: INFO-blue while locked/estimated (~km), flips to neon-green
+     ON GRANT to signal "canlı/aktif konum" (live location) — same green family as
+     the success toast. The blue→green shift is an intentional state change
+     (estimate → live), not an arbitrary recolor. */
+  .pitch-map .dist-chip {
+    position: absolute; top: 10px; right: 10px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 9px;
+    border-radius: 9px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 11px; font-weight: 900; color: var(--info);
+    z-index: 4;
+  }
+  .pitch-meta { padding: 13px 15px 15px; }
+  .pitch-meta h4 { font-size: 16px; font-weight: 900; color: #fff; letter-spacing: -0.01em; }
+  .pitch-meta .pm-sub {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 600; color: var(--text-muted); margin-top: 6px;
+  }
+  .pitch-meta .pm-sub svg { flex-shrink: 0; opacity: 0.8; }
+  .pitch-row { display: flex; gap: 9px; margin-top: 14px; }
+  .pitch-row .pr-btn {
+    flex: 1; min-height: 46px;
+    border-radius: 14px;
+    font-size: 13px; font-weight: 900;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .pitch-row .pr-btn:active { transform: scale(0.97); }
+  .pr-btn.ghost {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  .pr-btn.dir {
+    background: rgba(0,176,255,0.12);
+    border: 1px solid rgba(0,176,255,0.4);
+    color: var(--info);
+    box-shadow: 0 0 16px rgba(0,176,255,0.16), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  /* secondary mini match list teaser */
+  .mini-card {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 13px;
+    border-radius: 22px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    margin-bottom: 11px;
+  }
+  .mini-thumb {
+    width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+    position: relative; overflow: hidden;
+    background: linear-gradient(150deg, #0d2818 0%, #061410 70%);
+  }
+  .mini-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; }
+  .mini-body { flex: 1; min-width: 0; }
+  .mini-body h5 { font-size: 13px; font-weight: 800; color: #fff; }
+  .mini-body p { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+  .mini-need {
+    flex-shrink: 0;
+    padding: 4px 9px; border-radius: 999px;
+    background: rgba(255,170,0,0.12); border: 1px solid rgba(255,170,0,0.35);
+    font-size: 10px; font-weight: 900; color: var(--warning); white-space: nowrap;
+  }
+
+  /* ─── Bottom nav (5 tabs) ─────────────────────────────────────── */
+  .bottomnav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 20;
+    padding: 8px 16px calc(8px + 18px);
+  }
+  .nav-inner {
+    background: rgba(22,27,34,0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    padding: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+  }
+  .nav-item {
+    flex: 1;
+    min-height: 48px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none; cursor: pointer;
+    color: #5b626c;
+    position: relative;
+  }
+  .nav-item.active { color: #fff; }
+  .nav-item.active::before {
+    content: '';
+    position: absolute; inset: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1), transparent);
+    border-radius: 14px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+  }
+  .nav-item span { font-size: 9.5px; font-weight: 800; letter-spacing: 0.02em; position: relative; z-index: 1; }
+  .nav-item svg { position: relative; z-index: 1; }
+  .nav-center {
+    flex: 1;
+    position: relative;
+    top: -22px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; cursor: pointer;
+  }
+  .nav-center .orb {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #0A0E14;
+    border: 2px solid var(--accent-green);
+    color: var(--accent-green);
+    box-shadow: 0 0 20px rgba(57,255,20,0.3);
+  }
+  .nav-center span { font-size: 9.5px; font-weight: 900; color: #5b626c; letter-spacing: 0.02em; }
+
+  /* Home indicator */
+  .home-ind {
+    position: absolute;
+    bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 134px; height: 5px; border-radius: 999px;
+    background: rgba(255,255,255,0.3);
+    z-index: 25;
+  }
+
+  /* ─── Toast (granted feedback) ────────────────────────────────── */
+  .toast {
+    position: absolute;
+    left: 18px; right: 18px; bottom: 110px;
+    z-index: 40;
+    display: none;
+    align-items: center; gap: 10px;
+    padding: 13px 15px;
+    border-radius: 16px;
+    background: rgba(13,18,26,0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(0,230,118,0.4);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 26px rgba(0,230,118,0.14);
+  }
+  .toast.show { display: flex; animation: cross-fade-in 0.4s ease-out forwards; }
+  .toast .ti {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,230,118,0.16); color: var(--success);
+  }
+  .toast p { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .toast p span { color: var(--success); font-weight: 800; }
+
+  /* ─── State controls (mockup demo switch under caption) ───────── */
+  .demo-bar {
+    position: relative; z-index: 1;
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    max-width: 390px;
+  }
+  .demo-bar button {
+    padding: 8px 13px;
+    border-radius: 11px;
+    background: rgba(22,27,34,0.7);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+    font-size: 11px; font-weight: 800; cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .demo-bar button.on {
+    color: var(--info);
+    border-color: rgba(0,176,255,0.4);
+    background: rgba(0,176,255,0.1);
+  }
+
+  /* ─── Caption under phone ─────────────────────────────────────── */
+  .caption {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    max-width: 390px;
+    line-height: 1.5;
+  }
+  .caption .name {
+    display: block;
+    color: #fff;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .caption .id { color: rgba(139,148,158,0.5); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="mesh-blob mesh-blob-1"></div>
+    <div class="mesh-blob mesh-blob-2"></div>
+    <div class="mesh-blob mesh-blob-3"></div>
+
+    <!-- ════════ PHONE FRAME 390×844 ════════ -->
+    <div class="phone">
+      <div class="screen">
+        <!-- In-frame mesh + grid -->
+        <div class="screen-mesh">
+          <div class="b b1"></div>
+          <div class="b b2"></div>
+          <div class="b b3"></div>
+        </div>
+        <div class="screen-grid"></div>
+
+        <!-- Status bar -->
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:41</span>
+          <div class="icons">
+            <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="8" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1" fill="#fff"/><rect x="9" y="3" width="3" height="9" rx="1" fill="#fff"/><rect x="13.5" y="0.5" width="3" height="11.5" rx="1" fill="#fff"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 10.5l2-2.4a3 3 0 0 0-4 0l2 2.4z" fill="#fff"/><path d="M3.5 5.2a7 7 0 0 1 9 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M1.2 2.6a10.5 10.5 0 0 1 13.6 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" stroke-opacity="0.5"/><rect x="2" y="2" width="16" height="8" rx="1.5" fill="#fff"/><rect x="23" y="4" width="1.5" height="4" rx="0.75" fill="#fff" fill-opacity="0.6"/></svg>
+          </div>
+        </div>
+
+        <!-- ════════ SCROLLABLE CONTENT ════════ -->
+        <div class="content">
+
+          <!-- TOP BAR: profile + city badge + bell -->
+          <div class="topbar stg stg-1">
+            <div class="avatar-btn" aria-label="Profil">M</div>
+            <button class="city-badge" aria-label="Şehrini düzenle">
+              <span class="pin">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+              <span class="ct">
+                <span class="lbl" id="badge-lbl">Seçili Şehir</span>
+                <span class="val" id="badge-val">Ordu · Altınordu
+                  <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+              </span>
+            </button>
+            <button class="bell-btn" aria-label="Bildirimler">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="dot"></span>
+            </button>
+          </div>
+
+          <!-- SECTION TITLE -->
+          <div class="section-head stg stg-2">
+            <h2>Maç<br/>Detayı</h2>
+            <span class="live-pill"><span class="lp-dot"></span>Bu Akşam</span>
+          </div>
+
+          <!-- ════════ CONTEXTUAL LOCATION ZONE ════════ -->
+          <div class="loc-anchor stg stg-3" id="locZone">
+
+            <!-- STATE A: dismissible single-line strip -->
+            <div class="loc-strip" id="locStrip" role="region" aria-label="Konum bağlamsal şeridi">
+              <span class="lic">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+              <div class="ltxt">
+                <p id="stripCopy">Yakındaki sahaları ve yol tarifini görmek için konumunu aç</p>
+              </div>
+              <button class="loc-cta" onclick="grantLocation()" aria-label="Konumu Aç">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7Z"/></svg>
+                Konumu Aç
+              </button>
+              <button class="loc-x" onclick="dismissStrip()" aria-label="Şimdi değil, kapat" title="Şimdi değil">
+                <span class="x-chip">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </span>
+              </button>
+            </div>
+
+            <!-- STATE B: manual city/district picker (cross-fades in after refusal) -->
+            <div class="manual-pick" id="manualPick" role="region" aria-label="Manuel şehir ve ilçe seçici">
+              <div class="manual-head">
+                <span class="mpin">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                </span>
+                <div class="mtxt">
+                  <div class="ml1">Konum kapalı — <b>şehrini seç</b></div>
+                  <div class="ml2">Sorun değil, manuel devam edebilirsin.</div>
+                </div>
+                <span class="city-chip">Ordu
+                  <svg class="cc-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+              </div>
+
+              <div class="district-label" id="district-label">Ordu İlçesi</div>
+              <div class="districts" id="districts" role="group" aria-labelledby="district-label">
+                <button class="dist sel" aria-pressed="true" onclick="pickDistrict(this,'Altınordu')">Altınordu</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Ünye')">Ünye</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Fatsa')">Fatsa</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Perşembe')">Perşembe</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Gölköy')">Gölköy</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Korgan')">Korgan</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Kumru')">Kumru</button>
+                <button class="dist" aria-pressed="false" onclick="pickDistrict(this,'Mesudiye')">Mesudiye</button>
+              </div>
+
+              <div class="manual-foot">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span><b>Akış tıkanmaz</b> — istersen sonra
+                  <button class="reoffer" onclick="reoffer()">konumu aç</button>.
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- MATCH-DETAIL CONTEXT: the strip sits above this pitch / directions card -->
+          <div class="ctx-head stg stg-4">
+            <span class="ch-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <h3>Bu Akşam · 21:00 — Halı Saha Klasiği</h3>
+          </div>
+
+          <!-- Pitch / directions card -->
+          <div class="pitch-card stg stg-4">
+            <div class="pitch-map">
+              <svg class="field" viewBox="0 0 390 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#39FF14" stroke-width="2" fill="none" stroke-linecap="round">
+                  <rect x="20" y="14" width="350" height="132" rx="4"/>
+                  <line x1="195" y1="14" x2="195" y2="146"/>
+                  <circle cx="195" cy="80" r="30"/>
+                  <circle cx="195" cy="80" r="3" fill="#39FF14"/>
+                  <rect x="20" y="44" width="44" height="72"/>
+                  <rect x="326" y="44" width="44" height="72"/>
+                </g>
+              </svg>
+              <div class="map-grad"></div>
+
+              <!-- route + destination pin (blurred & locked until location enabled) -->
+              <div class="route locked" id="route">
+                <svg viewBox="0 0 390 160" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+                  <path d="M70 130 C 130 110, 150 70, 230 60 S 320 40, 330 38" stroke="#00B0FF" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-dasharray="2 9" opacity="0.9"/>
+                  <circle cx="70" cy="130" r="7" fill="#00B0FF"/>
+                  <circle cx="70" cy="130" r="13" fill="none" stroke="#00B0FF" stroke-width="2" opacity="0.5"/>
+                </svg>
+                <!-- destination marker -->
+                <div style="position:absolute;top:24px;right:46px;z-index:2;color:#39FF14">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="rgba(57,255,20,0.18)" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="#0A0E14"/></svg>
+                </div>
+                <div class="lock-overlay">
+                  <span class="lock-pill">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Yol tarifi için konum gerekli
+                  </span>
+                </div>
+              </div>
+
+              <span class="time-chip">21:00</span>
+              <span class="dist-chip" id="distChip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7Z"/></svg>
+                ~3 km
+              </span>
+            </div>
+            <div class="pitch-meta">
+              <h4>Capo Arena</h4>
+              <div class="pm-sub">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Altınordu, Ordu · Şahincili Mah.
+              </div>
+              <div class="pitch-row">
+                <button class="pr-btn ghost">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                  Saha Detayı
+                </button>
+                <button class="pr-btn dir" onclick="needDirections()" id="dirBtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+                  Yol Tarifi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary teaser: nearby matches (manual-city scoped when location off) -->
+          <div class="ctx-head stg stg-5" style="margin-top:4px">
+            <span class="ch-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <h3 id="nearbyTitle">Altınordu'da yakın sahalar</h3>
+          </div>
+
+          <div class="mini-card stg stg-5">
+            <div class="mini-thumb">
+              <svg viewBox="0 0 60 60" preserveAspectRatio="xMidYMid slice"><g stroke="#39FF14" stroke-width="2" fill="none"><rect x="4" y="4" width="52" height="52" rx="3"/><line x1="4" y1="30" x2="56" y2="30"/><circle cx="30" cy="30" r="9"/></g></svg>
+            </div>
+            <div class="mini-body">
+              <h5>Yeşilada Spor</h5>
+              <p>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                Yarın 20:30 · 7v7
+              </p>
+            </div>
+            <span class="mini-need">2 kişi</span>
+          </div>
+
+          <div class="mini-card stg stg-6">
+            <div class="mini-thumb">
+              <svg viewBox="0 0 60 60" preserveAspectRatio="xMidYMid slice"><g stroke="#39FF14" stroke-width="2" fill="none"><rect x="4" y="4" width="52" height="52" rx="3"/><line x1="4" y1="30" x2="56" y2="30"/><circle cx="30" cy="30" r="9"/></g></svg>
+            </div>
+            <div class="mini-body">
+              <h5>Sahil Arena</h5>
+              <p>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                Pazar 19:00 · 8v8
+              </p>
+            </div>
+            <span class="mini-need" style="background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.35);color:#00E676">Son 1</span>
+          </div>
+
+        </div>
+
+        <!-- Granted toast -->
+        <div class="toast" id="toast" role="status">
+          <span class="ti">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          <p>Konum açıldı — <span>yol tarifi ve mesafeler</span> artık görünüyor.</p>
+        </div>
+
+        <!-- ════════ BOTTOM NAV ════════ -->
+        <div class="bottomnav">
+          <div class="nav-inner">
+            <button class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+              <span>Ana Sayfa</span>
+            </button>
+            <button class="nav-item active" aria-current="page">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span>Top Oyna</span>
+            </button>
+            <button class="nav-center" aria-label="Sosyal">
+              <span class="orb">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span>
+              <span>Sosyal</span>
+            </button>
+            <button class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Sahalar</span>
+            </button>
+            <button class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>Profil</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+      </div>
+    </div>
+
+    <!-- Demo state switch -->
+    <div class="demo-bar">
+      <button id="t-a" class="on" onclick="showState('strip')">① Bağlamsal Şerit</button>
+      <button id="t-b" onclick="showState('manual')">② Reddedildi → Manuel</button>
+      <button id="t-c" onclick="showState('soft')">③ İkinci, daha hafif</button>
+      <button id="t-d" onclick="showState('granted')">④ İzin verildi</button>
+    </div>
+
+    <!-- Caption -->
+    <div class="caption">
+      <span class="name">Konumu Aç — Bağlamsal &amp; Reddedilebilir</span>
+      Konum açılışta değil, yalnızca yol tarifi/yakınlık gerektiğinde bağlamsal istenir. Reddi akışı tıkamaz; manuel Ordu ilçe seçici devreye girer. İkinci görünüm ilkinden hafiftir — ısrar yok.
+      <span class="id">05 · Oyuncu Onboarding · Konum</span>
+    </div>
+  </div>
+
+  <script>
+    var strip   = document.getElementById('locStrip');
+    var manual  = document.getElementById('manualPick');
+    var toast   = document.getElementById('toast');
+    var route   = document.getElementById('route');
+    var distChip= document.getElementById('distChip');
+    var copy    = document.getElementById('stripCopy');
+    var tabs    = { strip:'t-a', manual:'t-b', soft:'t-c', granted:'t-d' };
+
+    function setTab(key){
+      Object.keys(tabs).forEach(function(k){
+        document.getElementById(tabs[k]).classList.toggle('on', k===key);
+      });
+    }
+
+    // STATE A → strip dismissed: collapse up, then cross-fade manual picker in
+    function dismissStrip(){
+      strip.classList.add('collapsing');
+      setTimeout(function(){
+        strip.style.display = 'none';
+        manual.classList.add('show');
+        setTab('manual');
+      }, 420);
+    }
+
+    // Manual district pick — updates shared city badge + nearby title (same dil)
+    function pickDistrict(btn, name){
+      document.querySelectorAll('#districts .dist').forEach(function(d){
+        d.classList.remove('sel');
+        d.setAttribute('aria-pressed', 'false');
+      });
+      btn.classList.add('sel');
+      btn.setAttribute('aria-pressed', 'true');
+      document.getElementById('badge-val').childNodes[0].nodeValue = 'Ordu · ' + name + ' ';
+      document.getElementById('nearbyTitle').textContent = name + "'da yakın sahalar";
+      document.getElementById('badge-lbl').textContent = 'Seçili Şehir';
+    }
+
+    // Grant: unlock route, show distance, toast, collapse strip
+    function grantLocation(){
+      route.classList.remove('locked');
+      route.classList.add('unlocked');
+      // INTENTIONAL: distChip info-blue (estimate) → neon-green (canlı/aktif konum)
+      // on grant — matches the success toast; signals a live state, not a recolor.
+      distChip.style.color = '#39FF14';
+      distChip.style.borderColor = 'rgba(57,255,20,0.4)';
+      distChip.lastChild.nodeValue = ' 3,2 km · 9 dk';
+      strip.classList.add('collapsing');
+      setTimeout(function(){ strip.style.display='none'; }, 420);
+      manual.classList.remove('show');
+      document.getElementById('badge-lbl').textContent = 'Konumun';
+      toast.classList.add('show');
+      setTab('granted');
+      setTimeout(function(){ toast.classList.remove('show'); toast.style.display='none'; }, 3200);
+    }
+
+    // Re-offer location from inside manual picker (never forced)
+    function reoffer(){ grantLocation(); }
+
+    // "Yol Tarifi" tapped while location off → strip returns, lighter (2nd appearance)
+    function needDirections(){
+      if (!route.classList.contains('unlocked')) { showState('soft'); }
+    }
+
+    // Demo state controller
+    function showState(key){
+      // reset
+      strip.style.display='flex';
+      strip.classList.remove('collapsing','soft');
+      strip.style.animation='none';
+      manual.classList.remove('show');
+      toast.classList.remove('show'); toast.style.display='';
+      route.classList.add('locked'); route.classList.remove('unlocked');
+      distChip.style.color=''; distChip.style.borderColor='';
+      distChip.lastChild.nodeValue=' ~3 km';
+      copy.textContent='Yakındaki sahaları ve yol tarifini görmek için konumunu aç';
+      document.getElementById('badge-lbl').textContent='Seçili Şehir';
+
+      if (key==='strip'){
+        // re-trigger entry animation
+        void strip.offsetWidth;
+        strip.style.animation='strip-drop 0.6s cubic-bezier(0.22,1,0.36,1) both';
+      } else if (key==='manual'){
+        strip.style.display='none';
+        manual.classList.add('show');
+      } else if (key==='soft'){
+        // second, lighter appearance: calmer copy + softer styling
+        strip.classList.add('soft');
+        copy.textContent='Yol tarifini açmak istersen konumunu paylaşabilirsin — şart değil.';
+        void strip.offsetWidth;
+        strip.style.animation='strip-drop 0.6s cubic-bezier(0.22,1,0.36,1) both';
+      } else if (key==='granted'){
+        strip.style.display='none';
+        route.classList.remove('locked'); route.classList.add('unlocked');
+        distChip.style.color='#39FF14'; distChip.style.borderColor='rgba(57,255,20,0.4)';
+        distChip.lastChild.nodeValue=' 3,2 km · 9 dk';
+        document.getElementById('badge-lbl').textContent='Konumun';
+        toast.style.display='flex'; toast.classList.add('show');
+      }
+      setTab(key);
+    }
+  </script>
+</body>
+</html>

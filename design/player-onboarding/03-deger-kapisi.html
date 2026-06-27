@@ -1,0 +1,694 @@
+<!-- @dsCard group="Oyuncu Onboarding" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>OYNA · 03 Yerini Garantile (Değer-Kapısı)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     OYNA TASARIM TOKEN'LARI  (bire bir index.css ile)
+  ───────────────────────────────────────────────────────────────── */
+  :root {
+    --bg-main: #0A0E14;
+    --card: rgba(22, 27, 34, 0.5);
+    --text: #FFFFFF;
+    --muted: #8B949E;
+
+    --player-yellow: #FFFF00;
+    --gold: #FFD700;
+    --neon-green: #39FF14;
+
+    --success: #00E676;
+    --warning: #FFAA00;
+    --error: #FF4D4D;
+    --info: #00B0FF;
+
+    --radius-card: 28px;
+    --radius-lg: 32px;
+    --border-glass: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 16px;
+    gap: 18px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  button { -webkit-tap-highlight-color: transparent; user-select: none; font-family: inherit; cursor: pointer; border: none; }
+
+  /* ─── Sahne: OYNA mesh-gradient koyu zemin ─── */
+  .stage-mesh { position: fixed; inset: 0; z-index: 0; background-color: var(--bg-main); overflow: hidden; }
+  .stage-blob { position: absolute; opacity: 0.55; filter: blur(8px); animation: float 22s infinite ease-in-out alternate; will-change: transform; }
+  .stage-blob.b1 { top: -12%; left: -12%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(20,30,60,0.85) 0%, rgba(10,14,20,0) 70%); }
+  .stage-blob.b2 { bottom: -18%; right: -14%; width: 62vw; height: 62vw; background: radial-gradient(circle, rgba(40,10,60,0.6) 0%, rgba(10,14,20,0) 70%); animation-delay: -6s; }
+  .stage-blob.b3 { top: 38%; left: 56%; width: 46vw; height: 46vw; background: radial-gradient(circle, rgba(10,60,40,0.5) 0%, rgba(10,14,20,0) 70%); animation-delay: -11s; }
+  .stage-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+  }
+  @keyframes float {
+    0%   { transform: translate(0, 0) scale(1); }
+    33%  { transform: translate(5%, 10%) scale(1.1); }
+    66%  { transform: translate(-5%, 5%) scale(0.9); }
+    100% { transform: translate(0, -5%) scale(1.05); }
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     TELEFON ÇERÇEVESİ — 390 x 844 (iPhone)
+  ───────────────────────────────────────────────────────────────── */
+  .phone {
+    position: relative; z-index: 1;
+    width: 390px; height: 844px;
+    border-radius: 56px; padding: 12px;
+    background: linear-gradient(160deg, #20262f 0%, #0c1016 55%, #05070b 100%);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.04), 0 30px 80px rgba(0,0,0,0.65), 0 0 60px rgba(255,255,0,0.05);
+  }
+  .phone-screen {
+    position: relative; width: 100%; height: 100%;
+    border-radius: 46px; overflow: hidden; background: var(--bg-main);
+  }
+  .island { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 116px; height: 34px; background: #000; border-radius: 20px; z-index: 60; }
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 54px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 30px 0; font-size: 14px; font-weight: 700; color: var(--text);
+    z-index: 55; pointer-events: none;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
+  .statusbar svg { display: block; }
+
+  /* ─────────────────────────────────────────────────────────────
+     ARKA PLAN — SEÇİLİ MAÇ GÖRÜNÜR KALIR ("bıraktığın yere dön")
+     Sheet yükselince hafif karartılır ama görünür.
+  ───────────────────────────────────────────────────────────────── */
+  .bg-context {
+    position: absolute; inset: 0; z-index: 5;
+    display: flex; flex-direction: column;
+    padding: 64px 18px 0;
+    overflow: hidden;
+    /* sheet açılınca arka karartma */
+    animation: bgDim 0.5s ease-out 0.15s both;
+  }
+  @keyframes bgDim {
+    0%   { filter: brightness(1) blur(0px); }
+    100% { filter: brightness(0.5) blur(1px); }
+  }
+  .bg-context::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,14,20,0.2) 0%, rgba(10,14,20,0.55) 60%, rgba(10,14,20,0.85) 100%);
+    pointer-events: none;
+  }
+
+  .ctx-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .ctx-back {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center; color: var(--text);
+  }
+  .ctx-back svg { width: 18px; height: 18px; }
+  .ctx-title-block .kicker {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--player-yellow); opacity: 0.8;
+  }
+  .ctx-title-block .ttl {
+    font-size: 19px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; margin-top: 3px;
+  }
+
+  /* Arka maç kartı (büyük, blur'lanacak) */
+  .ctx-match {
+    position: relative; border-radius: 24px; overflow: hidden;
+    height: 188px; border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .ctx-pitch-bg { position: absolute; inset: 0; }
+  .ctx-match .ctx-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,14,20,0.1) 0%, rgba(10,14,20,0.75) 100%);
+  }
+  .ctx-match .ctx-body { position: absolute; inset: 0; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+  .ctx-badge-row { display: flex; gap: 8px; }
+  .ctx-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 99px;
+  }
+  .ctx-pill.live { background: rgba(255,77,77,0.16); color: var(--error); border: 1px solid rgba(255,77,77,0.4); }
+  .ctx-pill.spots { background: rgba(255,170,0,0.14); color: var(--warning); border: 1px solid rgba(255,170,0,0.35); }
+  .ctx-pill .ball { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .ctx-match-name { font-size: 22px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: 0.01em; line-height: 1; }
+  .ctx-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  .ctx-meta span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.85); }
+  .ctx-meta svg { width: 13px; height: 13px; color: var(--player-yellow); }
+
+  /* Kalan placeholder maç satırları (arka derinlik) */
+  .ctx-rows { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .ctx-row { height: 64px; border-radius: 18px; background: rgba(22,27,34,0.5); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 12px; padding: 0 14px; }
+  .ctx-row .thumb { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; }
+  .ctx-row .lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .ctx-row .ln { height: 9px; border-radius: 5px; background: rgba(255,255,255,0.08); }
+  .ctx-row .ln.sm { width: 45%; height: 7px; background: rgba(255,255,255,0.05); }
+
+  /* Scrim — sheet ardındaki tıklanabilir karartma */
+  .scrim { position: absolute; inset: 0; z-index: 8; background: rgba(4,6,11,0.45); animation: scrimIn 0.4s ease-out both; }
+  @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ─────────────────────────────────────────────────────────────
+     BOTTOM-SHEET (premium-glass-card) — spring ile yükselir
+  ───────────────────────────────────────────────────────────────── */
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+    max-height: 86%;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(22,27,34,0.85) 0%, rgba(10,14,20,0.97) 60%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: var(--border-glass);
+    border-bottom: none;
+    box-shadow: 0 -18px 60px rgba(0,0,0,0.6), 0 0 50px rgba(255,255,0,0.04), inset 0 1px 0 rgba(255,255,255,0.06);
+    padding: 12px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column;
+    /* spring stiffness 320 / damping 30 hissi */
+    animation: sheetUp 0.62s cubic-bezier(0.22, 1.12, 0.34, 1) both;
+    overflow-y: auto;
+  }
+  .sheet::-webkit-scrollbar { width: 0; }
+  @keyframes sheetUp {
+    0%   { transform: translateY(100%); }
+    100% { transform: translateY(0); }
+  }
+
+  .grabber { width: 40px; height: 5px; border-radius: 99px; background: rgba(255,255,255,0.18); margin: 0 auto 14px; }
+
+  /* "Yerin korunuyor" geri-dönüş bildirimi */
+  .resume-note {
+    display: flex; align-items: center; gap: 9px;
+    background: rgba(0,230,118,0.08);
+    border: 1px solid rgba(0,230,118,0.28);
+    border-radius: 14px; padding: 9px 12px; margin-bottom: 14px;
+    animation: childIn 0.5s ease-out 0.30s both;
+  }
+  .resume-note .ic { width: 26px; height: 26px; border-radius: 8px; background: rgba(0,230,118,0.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .resume-note .ic svg { width: 15px; height: 15px; color: var(--success); }
+  .resume-note p { margin: 0; font-size: 11px; font-weight: 700; color: var(--success); line-height: 1.35; letter-spacing: 0.01em; }
+
+  /* SEÇİLİ MAÇ MINI-ÖZET (state taşıma kanıtı) */
+  .mini-match {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,0,0.05);
+    border: 1px solid rgba(255,255,0,0.18);
+    border-radius: 18px; padding: 11px 13px; margin-bottom: 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    animation: childIn 0.5s ease-out 0.36s both;
+  }
+  .mini-thumb {
+    width: 52px; height: 52px; border-radius: 13px; flex-shrink: 0; position: relative; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .mini-info { flex: 1; min-width: 0; }
+  .mini-info .lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--player-yellow); opacity: 0.9; }
+  .mini-info .nm { font-size: 14px; font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 1.1; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-info .mt { display: flex; gap: 11px; margin-top: 4px; }
+  .mini-info .mt span { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+  .mini-info .mt svg { width: 11px; height: 11px; color: var(--muted); }
+  .mini-lock {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    background: rgba(255,170,0,0.12); border: 1px solid rgba(255,170,0,0.35);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mini-lock svg { width: 16px; height: 16px; color: var(--warning); }
+
+  /* BAŞLIK */
+  .sheet-h { animation: childIn 0.5s ease-out 0.42s both; }
+  .sheet-h .kick { font-size: 9px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--neon-green); }
+  .sheet-h h1 {
+    margin: 6px 0 4px; font-size: 26px; font-weight: 900; font-style: italic; text-transform: uppercase;
+    letter-spacing: 0.01em; line-height: 1.02;
+    text-shadow: 0 0 18px rgba(255,255,0,0.18);
+  }
+  .sheet-h h1 .y { color: var(--player-yellow); }
+  .sheet-h .sub { margin: 0; font-size: 12.5px; font-weight: 500; color: var(--muted); line-height: 1.4; }
+
+  /* DEĞER-VAADİ 3 MADDE */
+  .value-list { margin: 18px 0 4px; display: flex; flex-direction: column; gap: 11px; }
+  .value-item {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(22,27,34,0.5);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 11px 13px;
+  }
+  .value-item:nth-child(1) { animation: childIn 0.5s ease-out 0.50s both; }
+  .value-item:nth-child(2) { animation: childIn 0.5s ease-out 0.56s both; }
+  .value-item:nth-child(3) { animation: childIn 0.5s ease-out 0.62s both; }
+  .value-ic { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .value-ic svg { width: 19px; height: 19px; }
+  .value-ic.c1 { background: rgba(255,255,0,0.1); border: 1px solid rgba(255,255,0,0.25); color: var(--player-yellow); }
+  .value-ic.c2 { background: rgba(57,255,20,0.1); border: 1px solid rgba(57,255,20,0.25); color: var(--neon-green); }
+  .value-ic.c3 { background: rgba(0,176,255,0.1); border: 1px solid rgba(0,176,255,0.25); color: var(--info); }
+  .value-txt { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.92); line-height: 1.35; }
+
+  /* GİRİŞ BUTONLARI */
+  .auth-stack { margin-top: 20px; display: flex; flex-direction: column; gap: 11px; }
+
+  .btn {
+    height: 56px; border-radius: 18px; width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 11px;
+    font-size: 14.5px; font-weight: 800; letter-spacing: 0.01em;
+    transition: transform 0.12s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease, background 0.2s ease;
+    position: relative;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn svg.brand { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* Onay verilene kadar giriş yöntemleri pasif (KVKK açık rıza) */
+  .auth-stack.is-locked .btn[aria-disabled="true"],
+  .auth-stack.is-locked .btn-email[aria-disabled="true"] {
+    opacity: 0.4; filter: saturate(0.4); pointer-events: none;
+  }
+  .auth-stack.is-locked .btn-apple[aria-disabled="true"] { animation: childIn 0.5s ease-out 0.70s both; }
+
+  /* Apple — siyah (iOS'ta BİRİNCİL CTA). Birincil vurgu platforma göre
+     uygulanmalı; sonsuz parıltı kaldırıldı, Google ile görsel ağırlık eşit.
+     Birincil glow yalnızca .is-primary ile (platform algısıyla) eklenir. */
+  .btn-apple {
+    background: #000; color: #fff;
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+    animation: childIn 0.5s ease-out 0.70s both;
+  }
+  /* Platform birincil işareti (örn. iOS'ta Apple, Android'de Google'a taşınır) */
+  .btn.is-primary {
+    box-shadow: 0 0 22px rgba(255,255,0,0.10), inset 0 1px 0 rgba(255,255,255,0.08);
+    animation: childIn 0.5s ease-out 0.70s both, appleGlow 2.6s ease-in-out 1.3s infinite;
+  }
+  @keyframes appleGlow {
+    0%, 100% { box-shadow: 0 0 22px rgba(255,255,0,0.10), inset 0 1px 0 rgba(255,255,255,0.08); }
+    50%      { box-shadow: 0 0 34px rgba(255,255,0,0.20), inset 0 1px 0 rgba(255,255,255,0.12); }
+  }
+  .btn-apple:active { transform: scale(0.97); }
+
+  /* Google — beyaz */
+  .btn-google {
+    background: #fff; color: #111;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    animation: childIn 0.5s ease-out 0.78s both;
+  }
+
+  /* E-posta ikincil/küçük link */
+  .btn-email {
+    margin-top: 2px;
+    background: transparent; height: 44px; color: var(--muted);
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    border-radius: 12px;
+    animation: childIn 0.5s ease-out 0.86s both;
+  }
+  .btn-email svg { width: 15px; height: 15px; }
+  .btn-email span { text-decoration: underline; text-decoration-color: rgba(139,148,158,0.5); text-underline-offset: 3px; }
+
+  /* AYIRICI */
+  .divider { display: flex; align-items: center; gap: 12px; margin: 14px 0 2px; animation: childIn 0.5s ease-out 0.74s both; }
+  .divider .ln { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+  .divider span { font-size: 9.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+  /* KVKK + SÖZLEŞME CHECKBOX (zorunlu, tek-dokunuş) */
+  .legal {
+    position: relative;
+    display: flex; align-items: flex-start; gap: 11px;
+    margin-top: 16px; padding: 12px 13px;
+    background: rgba(22,27,34,0.4); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    animation: childIn 0.5s ease-out 0.92s both;
+  }
+  /* Görünmez gerçek checkbox — erişilebilir toggle motoru.
+     Görünür kutunun (.legal-box) tam üstüne pinlenir; tıklama/dokunma için. */
+  .legal-input { position: absolute; top: 12px; left: 13px; opacity: 0; width: 22px; height: 22px; margin: 0; cursor: pointer; z-index: 2; }
+  .legal-box {
+    margin-top: 1px; width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .legal-box svg { width: 13px; height: 13px; color: #000; opacity: 0; transition: opacity 0.15s ease; }
+  /* İşaretli durum: gerçek input :checked iken */
+  .legal-input:checked + .legal-box {
+    background: var(--player-yellow);
+    border-color: var(--player-yellow);
+    box-shadow: 0 0 10px rgba(255,255,0,0.3);
+  }
+  .legal-input:checked + .legal-box svg { opacity: 1; }
+  /* Klavye odağı görünür */
+  .legal-input:focus-visible + .legal-box { box-shadow: 0 0 0 3px rgba(255,255,0,0.45); }
+  .legal p { margin: 0; font-size: 12px; line-height: 1.5; font-weight: 600; color: var(--muted); letter-spacing: 0.01em; }
+  .legal a { color: var(--player-yellow); text-decoration: underline; text-underline-offset: 2px; font-weight: 700; }
+
+  /* ─────────────────────────────────────────────────────────────
+     COACHMARK #2 — checkbox/buton üstü, "giderek hafif" (azalan müdahale)
+  ───────────────────────────────────────────────────────────────── */
+  .coachmark {
+    position: absolute; z-index: 40;
+    left: 50%; transform: translateX(-50%);
+    bottom: 178px;
+    width: 280px;
+    background: linear-gradient(135deg, rgba(255,255,0,0.14) 0%, rgba(22,27,34,0.92) 60%);
+    border: 1px solid rgba(255,255,0,0.4);
+    border-radius: 16px; padding: 12px 13px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 24px rgba(255,255,0,0.12);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    /* azalan müdahale: yükselir, kısa süre durur, sonra bir kez hafifleyip kalır
+       (sonsuz yanıp sönme yok; 'Anladım' ile kalıcı kapatılabilir) */
+    animation: coachIn 0.5s ease-out 1.15s both, coachFade 4s ease-in-out 1.7s 1 forwards;
+  }
+  @keyframes coachIn {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.94); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  }
+  @keyframes coachFade {
+    0%       { opacity: 1; }
+    70%      { opacity: 1; }
+    100%     { opacity: 0.45; }
+  }
+  .coachmark::after {
+    content: ''; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%) rotate(45deg);
+    width: 14px; height: 14px; background: rgba(22,27,34,0.92);
+    border-right: 1px solid rgba(255,255,0,0.4); border-bottom: 1px solid rgba(255,255,0,0.4);
+  }
+  .coach-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .coach-num {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--player-yellow); color: #000;
+    font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .coach-head .t { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: var(--player-yellow); }
+  .coach-body { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); line-height: 1.4; }
+  .coach-dismiss {
+    margin-top: 9px; width: 100%; height: 30px; border-radius: 9px;
+    background: rgba(255,255,0,0.12); border: 1px solid rgba(255,255,0,0.3);
+    color: var(--player-yellow); font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .coach-dismiss:active { transform: scale(0.96); }
+
+  /* Home indicator */
+  .home-indicator { position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 99px; background: rgba(255,255,255,0.55); z-index: 60; }
+
+  @keyframes childIn {
+    0%   { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Çerçeve altı etiket ─── */
+  .screen-label { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+  .screen-label .code { font-size: 11px; font-weight: 800; font-style: italic; letter-spacing: 0.22em; text-transform: uppercase; color: var(--player-yellow); text-shadow: 0 0 14px rgba(255,255,0,0.25); }
+  .screen-label .name { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .screen-label .grp { margin-top: 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: rgba(139,148,158,0.6); }
+
+  /* ─────────────────────────────────────────────────────────────
+     RESPONSIVE — dar ekranlarda (≤430px) çerçeveyi ölçekle.
+     390px'lik telefon, 360px Android vb. viewport'ta yatay taşmasın.
+  ───────────────────────────────────────────────────────────────── */
+  @media (max-width: 430px) {
+    body { padding: 0; gap: 0; justify-content: flex-start; }
+    .phone {
+      /* viewport genişliğine oranla ölçekle, oranı koru */
+      transform: scale(calc((100vw - 16px) / 390));
+      transform-origin: top center;
+      margin: 8px auto 0;
+    }
+    /* scale sonrası taban çizgisi boşluğunu telafi et:
+       844px yüksekliğin küçülmesiyle oluşan negatif boşluğu kapat */
+    .phone::after {
+      content: ''; display: block;
+    }
+    .screen-label {
+      /* ölçekli çerçevenin altına gelmesi için negatif boşluğu geri al */
+      margin-top: calc((844px + 24px) * ((100vw - 16px) / 390) - (844px + 24px) + 20px);
+      padding: 0 16px 24px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; }
+    .bg-context { filter: brightness(0.5) blur(1px); }
+  }
+</style>
+</head>
+<body>
+
+  <!-- OYNA mesh-gradient sahne zemini -->
+  <div class="stage-mesh" aria-hidden="true">
+    <div class="stage-blob b1"></div>
+    <div class="stage-blob b2"></div>
+    <div class="stage-blob b3"></div>
+  </div>
+  <div class="stage-grid" aria-hidden="true"></div>
+
+  <!-- TELEFON ÇERÇEVESİ -->
+  <div class="phone" role="img" aria-label="OYNA Yerini Garantile değer-kapısı ekranı önizlemesi, iPhone çerçevesi">
+    <div class="phone-screen">
+
+      <!-- Dynamic Island + Status bar -->
+      <div class="island" aria-hidden="true"></div>
+      <div class="statusbar" aria-hidden="true">
+        <span>9:41</span>
+        <span class="icons">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#fff"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#fff"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#fff" opacity="0.4"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M8 10.2 9.7 8.4A2.4 2.4 0 0 0 6.3 8.4L8 10.2Z" fill="#fff"/><path d="M4.6 6.8A4.9 4.9 0 0 1 11.4 6.8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/><path d="M2.3 4.4A8.2 8.2 0 0 1 13.7 4.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" stroke-opacity="0.4"/><rect x="2" y="2" width="16" height="8" rx="1.6" fill="#fff"/><rect x="23" y="4" width="1.6" height="4" rx="0.8" fill="#fff" fill-opacity="0.5"/></svg>
+        </span>
+      </div>
+
+      <!-- ════════ ARKA PLAN: SEÇİLİ MAÇ GÖRÜNÜR KALIR ════════ -->
+      <div class="bg-context" aria-hidden="true">
+        <div class="ctx-head">
+          <div class="ctx-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </div>
+          <div class="ctx-title-block">
+            <div class="kicker">Top Oyna · Keşfet</div>
+            <div class="ttl">Yakın Maçlar</div>
+          </div>
+        </div>
+
+        <!-- Seçili (büyük) maç kartı — gradient saha + SVG saha çizgileri -->
+        <div class="ctx-match">
+          <svg class="ctx-pitch-bg" viewBox="0 0 360 188" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="pitchG" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0e3a22"/>
+                <stop offset="55%" stop-color="#0a2a1a"/>
+                <stop offset="100%" stop-color="#06160e"/>
+              </linearGradient>
+            </defs>
+            <rect width="360" height="188" fill="url(#pitchG)"/>
+            <!-- çim şeritleri -->
+            <g fill="#ffffff" opacity="0.025">
+              <rect x="0" y="0" width="360" height="31"/>
+              <rect x="0" y="62" width="360" height="31"/>
+              <rect x="0" y="124" width="360" height="31"/>
+            </g>
+            <!-- saha çizgileri -->
+            <g stroke="#39FF14" stroke-opacity="0.32" stroke-width="1.6" fill="none">
+              <rect x="14" y="14" width="332" height="160" rx="3"/>
+              <line x1="180" y1="14" x2="180" y2="174"/>
+              <circle cx="180" cy="94" r="30"/>
+              <circle cx="180" cy="94" r="2.2" fill="#39FF14" stroke="none"/>
+              <rect x="14" y="54" width="46" height="80"/>
+              <rect x="300" y="54" width="46" height="80"/>
+              <rect x="14" y="74" width="20" height="40"/>
+              <rect x="326" y="74" width="20" height="40"/>
+            </g>
+          </svg>
+          <div class="ctx-overlay"></div>
+          <div class="ctx-body">
+            <div class="ctx-badge-row">
+              <span class="ctx-pill spots"><span class="ball"></span>2 KİŞİ KALDI</span>
+            </div>
+            <div>
+              <div class="ctx-match-name">Cuma Akşamı Halı Saha</div>
+              <div class="ctx-meta">
+                <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Yeşilköy Arena</span>
+                <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Bugün · 21:30</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Arka derinlik placeholder satırları -->
+        <div class="ctx-rows">
+          <div class="ctx-row">
+            <div class="thumb" style="background:linear-gradient(135deg,#0e3a22,#06160e)"></div>
+            <div class="lines"><div class="ln"></div><div class="ln sm"></div></div>
+          </div>
+          <div class="ctx-row">
+            <div class="thumb" style="background:linear-gradient(135deg,#1a2a4a,#0a1426)"></div>
+            <div class="lines"><div class="ln"></div><div class="ln sm"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tıklanabilir scrim -->
+      <div class="scrim" aria-hidden="true"></div>
+
+      <!-- ════════ COACHMARK #2 (azalan müdahale) — birincil butona işaret ════════ -->
+      <div class="coachmark" role="status" aria-label="Rehber ipucu 2">
+        <div class="coach-head">
+          <span class="coach-num">2</span>
+          <span class="t">Yerin korunuyor</span>
+        </div>
+        <p class="coach-body">Girişten sonra tam da buraya döneceksin — seçtiğin maç kaybolmaz.</p>
+        <button class="coach-dismiss" type="button">Anladım</button>
+      </div>
+
+      <!-- ════════ BOTTOM-SHEET (Değer-Kapısı) ════════ -->
+      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="grabber" aria-hidden="true"></div>
+
+        <!-- Geri-dönüş güvencesi -->
+        <div class="resume-note">
+          <span class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <p>Yerin korunuyor — girişten sonra tam da buraya döneceksin</p>
+        </div>
+
+        <!-- Seçili maç mini-özet (state taşıma kanıtı) -->
+        <div class="mini-match">
+          <div class="mini-thumb">
+            <svg viewBox="0 0 60 60" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+              <rect width="60" height="60" fill="#0a2a1a"/>
+              <g stroke="#39FF14" stroke-opacity="0.4" stroke-width="1.3" fill="none">
+                <rect x="5" y="5" width="50" height="50" rx="2"/>
+                <line x1="30" y1="5" x2="30" y2="55"/>
+                <circle cx="30" cy="30" r="9"/>
+                <circle cx="30" cy="30" r="1.4" fill="#39FF14" stroke="none"/>
+              </g>
+            </svg>
+          </div>
+          <div class="mini-info">
+            <div class="lbl">Seçili Maç</div>
+            <div class="nm">Cuma Akşamı Halı Saha</div>
+            <div class="mt">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Yeşilköy</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>21:30</span>
+            </div>
+          </div>
+          <div class="mini-lock" aria-label="Yer tutuluyor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+        </div>
+
+        <!-- Başlık -->
+        <div class="sheet-h">
+          <div class="kick">Tek Adım Kaldı</div>
+          <h1 id="sheet-title">Yerini <span class="y">Garantile</span></h1>
+          <p class="sub">Bu maçtaki yerin sana ait olsun.</p>
+        </div>
+
+        <!-- Değer-vaadi 3 madde -->
+        <div class="value-list">
+          <div class="value-item">
+            <span class="value-ic c1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.5"/><path d="M5 18a4 4 0 0 1 8 0"/><line x1="15" y1="9" x2="19" y2="9"/><line x1="15" y1="13" x2="19" y2="13"/></svg>
+            </span>
+            <span class="value-txt">Kartın, istatistiğin ve maç geçmişin kalıcı kalsın</span>
+          </div>
+          <div class="value-item">
+            <span class="value-ic c2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+            </span>
+            <span class="value-txt">Performans grafiğin maçtan maça birikerek büyüsün</span>
+          </div>
+          <div class="value-item">
+            <span class="value-ic c3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <span class="value-txt">Bir sonraki maçta tek dokunuşla katıl</span>
+          </div>
+        </div>
+
+        <!-- Giriş butonları — onay verilene kadar pasif (is-locked).
+             Platforma duyarlılık: iOS'ta Apple, Android/web'de Google birincil olmalı.
+             Statik mockup; bu varyant Apple-birincil (iOS), Google görsel ağırlıkça eşitlendi. -->
+        <div class="auth-stack is-locked">
+          <!-- BİRİNCİL CTA (iOS): Apple ile Yerini Garantile -->
+          <button class="btn btn-apple" type="button" aria-label="Apple ile Yerini Garantile" aria-disabled="true">
+            <svg class="brand" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z"/></svg>
+            <span>Apple ile Yerini Garantile</span>
+          </button>
+
+          <!-- Google — Android/web'de birincil olur (platform algısıyla glow/coachmark taşınır) -->
+          <button class="btn btn-google" type="button" aria-label="Google ile Yerini Garantile" aria-disabled="true">
+            <svg class="brand" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+            </svg>
+            <span>Google ile Yerini Garantile</span>
+          </button>
+
+          <!-- Ayırıcı -->
+          <div class="divider"><span class="ln"></span><span>veya</span><span class="ln"></span></div>
+
+          <!-- E-posta ikincil/küçük buton (gerçek gezinme linki değil; düz buton) -->
+          <button class="btn-email" type="button" aria-label="E-posta ile devam et" aria-disabled="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            <span>E-posta ile devam et</span>
+          </button>
+        </div>
+
+        <!-- KVKK + Sözleşme onay kutusu — VARSAYILAN BOŞ (açık rıza kullanıcı tarafından
+             aktif verilir). Gerçek <input type="checkbox"> + <label>: klavye (space/enter)
+             ve dokunmayla togglelanır; giriş butonları onaylanana dek pasiftir. -->
+        <div class="legal">
+          <input type="checkbox" id="legal-consent" class="legal-input" aria-label="KVKK ve Kullanıcı Sözleşmesi'ni okudum, onaylıyorum" />
+          <label class="legal-box" for="legal-consent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          </label>
+          <p id="legal-text"><a href="#">KVKK Aydınlatma Metni</a>'ni ve <a href="#">Kullanıcı Sözleşmesi</a>'ni okudum, onaylıyorum</p>
+        </div>
+      </section>
+
+      <!-- Home indicator -->
+      <div class="home-indicator" aria-hidden="true"></div>
+
+    </div>
+  </div>
+
+  <!-- Çerçeve altı etiket -->
+  <div class="screen-label">
+    <span class="code">03 · Değer-Kapısı</span>
+    <span class="name">Yerini Garantile · Tek-Sefer Giriş</span>
+    <span class="grp">Oyuncu Onboarding</span>
+  </div>
+
+</body>
+</html>
