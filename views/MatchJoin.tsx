@@ -646,24 +646,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       });
       if (error) throw error;
 
-      const buyer = currentUserProfile.id;
-      const me: Player = {
-        id: buyer,
-        name: currentUserProfile.name,
-        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${buyer}`,
-        rating: currentUserProfile.rating || 4.5,
-        position: 'OYUNCU',
-        x: 50,
-        y: 50,
-        paymentStatus: 'PAID',
-      };
-      const updatedSlots = (match.slots || []).map((s) =>
-        s && selectedSlotIds.includes(s.id)
-          ? { ...s, status: 'TAKEN' as const, player: { ...me, position: s.role || 'OYUNCU', x: s.x, y: s.y }, purchasedBy: buyer, occupant: buyer, assignmentStatus: 'SELF' as const }
-          : s
-      );
-      const nextStatus = checkAndGetStatus(updatedSlots, match.awaySlots || []);
-      await updateMatch({ ...match, slots: updatedSlots, status: nextStatus });
+      // Sunucudan TAZE durumu çek (eşzamanlı değişiklikleri ezmemek için — lost-update'i önler).
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) await updateMatch({ ...match, ...(fresh as any) });
 
       setSelectedSlotIds([]);
       setSelectedSlotId(null);
@@ -786,10 +771,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           p_match_id: match.id, p_slot_id: slotId, p_friend_id: friend.id,
         });
         if (error) throw error;
-        const updatedSlots = (match.slots || []).map(s =>
-          s?.id === slotId ? { ...s, assignmentStatus: 'INVITED' as const, inviteeId: friend.id } : s
-        );
-        await updateMatch({ ...match, slots: updatedSlots });
+        const fresh = await getMatchDetails(match.id);
+        if (fresh) await updateMatch({ ...match, ...(fresh as any) });
         showActionSuccess(`${friend.name || 'Arkadaşın'} bu slota davet edildi.`);
       } catch (e: any) {
         console.error('assign slot error', e);
@@ -825,10 +808,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     try {
       const { data, error } = await supabase.rpc('player_make_slot_code', { p_match_id: match.id, p_slot_id: slotId });
       if (error) throw error;
-      const updatedSlots = (match.slots || []).map(s =>
-        s?.id === slotId ? { ...s, assignmentStatus: 'LINK_PENDING' as const, claimCode: data as string } : s
-      );
-      await updateMatch({ ...match, slots: updatedSlots });
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) await updateMatch({ ...match, ...(fresh as any) });
       showActionSuccess(`Devralma kodu: ${data} — arkadaşına gönder.`);
     } catch (e: any) {
       console.error('make slot code error', e);
@@ -843,17 +824,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     try {
       const { error } = await supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId });
       if (error) throw error;
-      const me: Player = {
-        id: currentUserProfile.id, name: currentUserProfile.name,
-        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-        rating: currentUserProfile.rating || 4.5, position: 'OYUNCU', x: 50, y: 50, paymentStatus: 'PAID',
-      };
-      const updatedSlots = (match.slots || []).map(s =>
-        s?.id === slotId
-          ? { ...s, status: 'TAKEN' as const, player: { ...me, position: s.role || 'OYUNCU', x: s.x, y: s.y }, occupant: currentUserProfile.id, assignmentStatus: 'ACCEPTED' as const, inviteeId: undefined }
-          : s
-      );
-      await updateMatch({ ...match, slots: updatedSlots });
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) await updateMatch({ ...match, ...(fresh as any) });
       setActivePlayerSlotId(null);
       showActionSuccess('Slotu kabul ettin — kadrodasın! ⚽');
     } catch (e: any) {
