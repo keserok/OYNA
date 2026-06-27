@@ -1,0 +1,170 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// OYNA — Gözlemlenebilirlik Cephesi (FAZ 7.4 · Altyapı)
+// Sentry (hata izleme) + PostHog (ürün analitiği) için sağlayıcı-bağımsız bir
+// cephe (façade). Tüm uygulama yalnızca bu modülü çağırır; sağlayıcı değişse
+// bile çağrı noktaları değişmez.
+//
+// AKTİVASYON: tamamen env-var ile. Anahtar yoksa her fonksiyon SESSİZ no-op'tur
+// (dev'de console.debug). Böylece build her zaman yeşil kalır ve canlıya
+// geçişte yalnızca aşağıdaki ortam değişkenlerini doldurmak yeterlidir:
+//
+//   VITE_SENTRY_DSN      = https://<key>@o<org>.ingest.sentry.io/<project>
+//   VITE_POSTHOG_KEY     = phc_xxx
+//   VITE_POSTHOG_HOST    = https://eu.i.posthog.com   (varsayılan: us)
+//   VITE_APP_VERSION     = oyna@1.0.0                 (release etiketi)
+//   VITE_SENTRY_SAMPLE   = 0.1                         (trace örnekleme oranı)
+//
+// SDK'lar npm yerine CDN'den (Sentry Loader Script / PostHog snippet) dinamik
+// yüklenir → ek paket bağımlılığı yok, ilk yük hafif kalır.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SENTRY_DSN    = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+const POSTHOG_KEY   = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
+const POSTHOG_HOST  = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://us.i.posthog.com';
+const RELEASE       = (import.meta.env.VITE_APP_VERSION as string | undefined) ?? 'oyna@dev';
+const ENVIRONMENT   = (import.meta.env.MODE as string | undefined) ?? 'production';
+const TRACE_SAMPLE  = Number(import.meta.env.VITE_SENTRY_SAMPLE ?? '0.1');
+const IS_DEV        = !!import.meta.env.DEV;
+
+declare global {
+  interface Window {
+    Sentry?: any;
+    posthog?: any;
+  }
+}
+
+let initialized = false;
+const hasWindow = typeof window !== 'undefined';
+
+function debug(...args: unknown[]) {
+  if (IS_DEV) console.debug('[obs]', ...args);
+}
+
+function injectScript(src: string, attrs: Record<string, string> = {}): void {
+  if (!hasWindow) return;
+  const s = document.createElement('script');
+  s.src = src;
+  s.async = true;
+  s.crossOrigin = 'anonymous';
+  for (const [k, v] of Object.entries(attrs)) s.setAttribute(k, v);
+  document.head.appendChild(s);
+}
+
+// ── Sentry (Loader Script) ─────────────────────────────────────────────────
+// DSN'in public key kısmı loader script URL'sini belirler. Loader, window.Sentry
+// stub'unu hemen kurar; onLoad ile gerçek SDK gelince init ederiz.
+function initSentry(): void {
+  if (!SENTRY_DSN || !hasWindow) return;
+  try {
+    const publicKey = SENTRY_DSN.split('//')[1]?.split('@')[0];
+    if (!publicKey) { debug('Sentry DSN biçimi tanınmadı'); return; }
+    injectScript(`https://js.sentry-cdn.com/${publicKey}.min.js`, { 'data-lazy': 'no' });
+    // Loader, window.Sentry.onLoad kuyruğunu sağlar (SDK gelmeden önce de güvenli).
+    const boot = () => window.Sentry?.init?.({
+      dsn: SENTRY_DSN,
+      environment: ENVIRONMENT,
+      release: RELEASE,
+      tracesSampleRate: Number.isFinite(TRACE_SAMPLE) ? TRACE_SAMPLE : 0.1,
+      sendDefaultPii: false,
+    });
+    const tryBoot = () => {
+      if (window.Sentry?.onLoad) { window.Sentry.onLoad(boot); }
+      else if (window.Sentry?.init) { boot(); }
+      else { setTimeout(tryBoot, 300); }
+    };
+    tryBoot();
+    debug('Sentry başlatılıyor');
+  } catch (e) {
+    debug('Sentry init hatası', e);
+  }
+}
+
+// ── PostHog (resmi snippet stub'u) ─────────────────────────────────────────
+function initPostHog(): void {
+  if (!POSTHOG_KEY || !hasWindow) return;
+  try {
+    // Resmi PostHog stub: array.js gelene kadar çağrıları kuyruğa alır.
+    const w = window as any;
+    if (!w.posthog) {
+      const ph: any = (w.posthog = []);
+      ph._i = [];
+      ph.init = function (key: string, cfg: any, name?: string) {
+        function stub(target: any, method: string) {
+          target[method] = function () {
+            target.push([method].concat(Array.prototype.slice.call(arguments, 0)));
+          };
+        }
+        const inst = name ? (ph[name] = []) : ph;
+        const methods = (
+          'init capture identify alias people set set_once reset register register_once ' +
+          'unregister opt_in_capturing opt_out_capturing has_opted_in_capturing ' +
+          'has_opted_out_capturing get_distinct_id group startSessionRecording ' +
+          'stopSessionRecording isFeatureEnabled onFeatureFlags getFeatureFlag reloadFeatureFlags'
+        ).split(' ');
+        for (const m of methods) stub(inst, m);
+        ph._i.push([key, cfg, name]);
+      };
+      ph.__SV = 1;
+      injectScript(`${POSTHOG_HOST.replace(/\/$/, '')}/static/array.js`);
+    }
+    w.posthog.init(POSTHOG_KEY, {
+      api_host: POSTHOG_HOST,
+      capture_pageview: true,
+      autocapture: true,
+      persistence: 'localStorage+cookie',
+    });
+    debug('PostHog başlatılıyor');
+  } catch (e) {
+    debug('PostHog init hatası', e);
+  }
+}
+
+// ── Genel API ──────────────────────────────────────────────────────────────
+
+/** Uygulama açılışında bir kez çağrılır (index.tsx). Anahtar yoksa no-op. */
+export function initObservability(): void {
+  if (initialized || !hasWindow) return;
+  initialized = true;
+  if (!SENTRY_DSN && !POSTHOG_KEY) { debug('gözlemlenebilirlik kapalı (env yok)'); return; }
+  initSentry();
+  initPostHog();
+}
+
+/** Yakalanan/yakalanmamış hatayı Sentry'ye bildirir; yoksa konsola yazar. */
+export function captureException(error: unknown, context?: Record<string, unknown>): void {
+  try {
+    if (hasWindow && window.Sentry?.captureException) {
+      window.Sentry.captureException(error, context ? { extra: context } : undefined);
+    } else {
+      debug('captureException', error, context);
+    }
+  } catch { /* yut */ }
+}
+
+/** Ürün analitiği olayı (PostHog). Anahtar yoksa no-op. */
+export function trackEvent(event: string, properties?: Record<string, unknown>): void {
+  try {
+    if (hasWindow && window.posthog?.capture) {
+      window.posthog.capture(event, properties);
+    } else {
+      debug('track', event, properties);
+    }
+  } catch { /* yut */ }
+}
+
+/** Oturum açan kullanıcıyı analitik + hata bağlamına bağlar. */
+export function identifyUser(userId: string, traits?: Record<string, unknown>): void {
+  try {
+    if (hasWindow && window.posthog?.identify) window.posthog.identify(userId, traits);
+    if (hasWindow && window.Sentry?.setUser) window.Sentry.setUser({ id: userId });
+    debug('identify', userId);
+  } catch { /* yut */ }
+}
+
+/** Çıkışta kullanıcı bağlamını temizler. */
+export function resetUser(): void {
+  try {
+    if (hasWindow && window.posthog?.reset) window.posthog.reset();
+    if (hasWindow && window.Sentry?.setUser) window.Sentry.setUser(null);
+  } catch { /* yut */ }
+}
