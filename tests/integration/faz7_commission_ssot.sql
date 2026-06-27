@@ -57,6 +57,14 @@ BEGIN
   pi := public.create_match_preauth(m,1000,'SIMULATION');
   INSERT INTO _r VALUES ('FAZ7C_matchB_uses_modelB', pi.commission_model='MODEL_B' AND pi.commission_amount=250, 'model='||pi.commission_model||' comm='||pi.commission_amount);
 
+  -- ── Maç-kapsamı önceliği (4. seviye): MAÇ kuralı SAHA/GLOBAL'ı geçer ──
+  PERFORM set_config('request.jwt.claims', '', true);
+  INSERT INTO public.commission_config(scope,scope_id,model,rate_pct,markup_pct,is_active,notes) VALUES ('MATCH',m,'MODEL_B',3.0,0,true,'mac ozel');
+  DELETE FROM public.payment_intents WHERE match_id=m;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub',u,'role','authenticated')::text, true);
+  pi := public.create_match_preauth(m,1000,'SIMULATION');
+  INSERT INTO _r VALUES ('FAZ7C_match_scope_overrides', pi.commission_amount=30, 'comm='||pi.commission_amount||' (MAÇ %3 kuralı)');
+
   -- ── Bütünlük: aynı kapsam+model'de ikinci aktif kural engellenir ──
   BEGIN
     INSERT INTO public.commission_config(scope,scope_id,model,rate_pct,markup_pct,is_active) VALUES ('GLOBAL',NULL,'MODEL_A',99,0,true);
