@@ -249,6 +249,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // ── State ────────────────────────────────────────────────────────────────
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  // Oyuncu çoklu-slot satın alma seçimi (kontenjana kadar). Ödeme = adet × ücret.
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -548,15 +550,21 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
 
     if (slot.status === 'OPEN') {
-      if (isAlreadyJoined) {
-        // Zaten kadrodayım: + tıklandı → arkadaş daveti
-        setInviteModalSlotId(slot.id);
-        setFriendSearch('');
+      if (isCaptain) {
+        // Kaptan akışı korunur (tekli seçim + mevcut davet/modal).
+        if (isAlreadyJoined) {
+          setInviteModalSlotId(slot.id);
+          setFriendSearch('');
+          return;
+        }
+        setSelectedSlotId(slot.id);
+        setOpenSlotActionSlot(slot);
         return;
       }
-      
-      // Henüz kadroda değilim: Karar modalını göster (Kendim Katıl / Arkadaş Davet Et)
-      setOpenSlotActionSlot(slot);
+      // Oyuncu: çoklu slot seçimi (kontenjana kadar). Ödeme butonunda toplam görünür.
+      setSelectedSlotIds((prev) =>
+        prev.includes(slot.id) ? prev.filter((id) => id !== slot.id) : [...prev, slot.id]
+      );
     }
   };
 
@@ -623,6 +631,47 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     } catch (e: any) {
       console.error('Join error:', e);
       showActionError('Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBuySlots = async () => {
+    if (selectedSlotIds.length === 0 || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.rpc('player_buy_slots', {
+        p_match_id: match.id,
+        p_slot_ids: selectedSlotIds,
+      });
+      if (error) throw error;
+
+      const buyer = currentUserProfile.id;
+      const me: Player = {
+        id: buyer,
+        name: currentUserProfile.name,
+        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${buyer}`,
+        rating: currentUserProfile.rating || 4.5,
+        position: 'OYUNCU',
+        x: 50,
+        y: 50,
+        paymentStatus: 'PAID',
+      };
+      const updatedSlots = (match.slots || []).map((s) =>
+        s && selectedSlotIds.includes(s.id)
+          ? { ...s, status: 'TAKEN' as const, player: { ...me, position: s.role || 'OYUNCU', x: s.x, y: s.y }, purchasedBy: buyer, occupant: buyer, assignmentStatus: 'SELF' as const }
+          : s
+      );
+      const nextStatus = checkAndGetStatus(updatedSlots, match.awaySlots || []);
+      await updateMatch({ ...match, slots: updatedSlots, status: nextStatus });
+
+      setSelectedSlotIds([]);
+      setSelectedSlotId(null);
+      setNewMatchBadge(true);
+      setLobbyTab('chat');
+    } catch (e: any) {
+      console.error('Buy slots error:', e);
+      showActionError((e?.message || '').includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -2203,7 +2252,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             {/* SLOTLAR — Kanonik Koordinatlarla */}
             {(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).map((slot) => {
               if (!slot) return null;
-              const isSelected = selectedSlotId === slot.id;
+              const isSelected = selectedSlotIds.includes(slot.id) || selectedSlotId === slot.id;
               const isTaken = slot.status === 'TAKEN';
               const isOpen = slot.status === 'OPEN';
               const player = slot.player;
@@ -2632,6 +2681,26 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         <Clock size={18} />
                         <span>KADRO DOLU - YEDEK OLARAK KATIL</span>
                       </>
+                    )}
+                  </motion.button>
+                );
+              }
+
+              if (!isCaptain && selectedSlotIds.length > 0) {
+                const unitPrice = Number((match as any).price) || 0;
+                const total = selectedSlotIds.length * unitPrice;
+                return (
+                  <motion.button
+                    disabled={isProcessing}
+                    onClick={handleBuySlots}
+                    whileTap={{ scale: 0.96 }}
+                    className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-black"
+                    style={{ background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                  >
+                    {isProcessing ? (
+                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
+                    ) : (
+                      <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
                     )}
                   </motion.button>
                 );

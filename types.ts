@@ -297,6 +297,12 @@ export interface PositionSlot {
   y: number;
   status: 'OPEN' | 'TAKEN' | 'LOCKED';
   player?: Player; // If taken
+  // Çoklu-slot satın alma + arkadaşa/koda atama (FAZ8)
+  purchasedBy?: string;            // slotu satın alan (ödeyen) kullanıcı id
+  occupant?: string;               // slotta görünen kullanıcı id (başta satın alan)
+  assignmentStatus?: 'SELF' | 'INVITED' | 'LINK_PENDING' | 'ACCEPTED';
+  inviteeId?: string;              // davet edilen arkadaş id
+  claimCode?: string;              // paylaşılabilir devralma kodu
 }
 
 export interface Court {
