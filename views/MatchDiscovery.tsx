@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
 
@@ -72,14 +73,28 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     setPrivateLoading(true);
     setPrivateError(null);
     try {
-      const resolved = await resolvePrivateMatch(code);
-      const match = await getMatchDetails(resolved.matchId);
-      if (!match) throw new Error('NOT_FOUND');
-      setShowPrivateModal(false);
-      setPrivateCode('');
-      onSelect(match);
+      // 1) Önce özel MAÇ kodu dene
+      try {
+        const resolved = await resolvePrivateMatch(code);
+        const match = await getMatchDetails(resolved.matchId);
+        if (!match) throw new Error('NOT_FOUND');
+        setShowPrivateModal(false);
+        setPrivateCode('');
+        onSelect(match);
+        return;
+      } catch (matchErr) {
+        // 2) Özel maç değilse: SLOT devralma kodu dene (player_claim_slot_code)
+        const { data, error } = await supabase.rpc('player_claim_slot_code', { p_code: code });
+        if (error) throw matchErr; // ikisi de değilse özgün maç hatasını göster
+        const matchId = (data as any)?.match_id;
+        const claimed = matchId ? await getMatchDetails(matchId) : null;
+        if (!claimed) throw new Error('NOT_FOUND');
+        setShowPrivateModal(false);
+        setPrivateCode('');
+        onSelect(claimed);
+      }
     } catch (err) {
-      console.error('Özel maç kodu çözülemedi:', err);
+      console.error('Kod çözülemedi:', err);
       setPrivateError(toPrivateMatchErrorMessage(err));
     } finally {
       setPrivateLoading(false);
