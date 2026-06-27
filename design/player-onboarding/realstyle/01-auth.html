@@ -1,0 +1,66 @@
+<!-- @dsCard group="Oyuncu Onboarding (gerçek stil)" -->
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700;0,800;0,900;1,900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05070d;font-family:'Inter',system-ui,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:34px;overflow:hidden}
+.stage{position:relative}
+.phone{position:relative;z-index:1;width:390px;height:844px;background:#0A0E14;border-radius:54px;border:11px solid #0c0f16;box-shadow:0 0 0 2px #1c2128,0 40px 90px rgba(0,0,0,.7);overflow:hidden}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:118px;height:32px;background:#000;border-radius:20px;z-index:30}
+.sb{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:14px 26px 0 30px;z-index:20;font-size:15px;font-weight:800;color:#fff}
+.sb .r{display:flex;gap:7px;align-items:center}
+.screen{position:absolute;inset:0;padding-top:54px;color:#fff;overflow:hidden}
+.label{position:absolute;bottom:-28px;left:0;right:0;text-align:center;color:#8B949E;font-size:13px;font-weight:700;letter-spacing:.06em}
+/* bg */
+.orb{position:absolute;border-radius:50%;pointer-events:none}
+.grid{position:absolute;inset:0;opacity:.03;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:40px 40px}
+.back{position:absolute;top:62px;left:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#fff;z-index:10}
+.wrap{position:relative;z-index:5;padding:64px 16px 0;height:100%;display:flex;flex-direction:column}
+.badge{align-self:flex-start;padding:5px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,0,.2);border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.18em;color:#FFFF00;margin-bottom:14px}
+.tagline{font-weight:900;font-style:italic;text-transform:uppercase;font-size:38px;line-height:.95;letter-spacing:-.02em;color:#FFFF00;text-shadow:0 0 20px rgba(255,255,0,.5);margin-bottom:18px}
+.card{flex:1;border-radius:32px;border:1px solid rgba(255,255,255,.05);padding:22px;background:rgba(22,27,34,.85);backdrop-filter:blur(20px);box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.brand{text-align:center;margin-bottom:16px}
+.brand h2{font-size:18px;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:.08em}
+.brand p{font-size:12px;color:#9ca3af;margin-top:5px}
+.btn{height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:900;letter-spacing:.04em;width:100%;margin-bottom:11px;border:none}
+.btn svg{width:20px;height:20px}
+.b-google{background:#fff;color:#000}
+.b-apple{background:#000;color:#fff;border:1px solid rgba(255,255,255,.12)}
+.divider{display:flex;align-items:center;gap:12px;margin:6px 0 14px}
+.divider .ln{flex:1;height:1px;background:rgba(255,255,255,.06)}
+.divider span{font-size:10px;color:#5b636e;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+.input{background:#0A0E14;border:1px solid #1f2937;padding:15px;border-radius:16px;display:flex;align-items:center;gap:11px;margin-bottom:11px}
+.input svg{width:20px;height:20px;color:#6b7280}
+.input span{color:#4b5563;font-size:14px;font-weight:700}
+.b-primary{background:#FFFF00;color:#000;box-shadow:0 0 20px rgba(255,255,0,.25)}
+.kvkk{display:flex;gap:10px;align-items:flex-start;margin-top:14px}
+.chk{width:20px;height:20px;border-radius:6px;background:#FFFF00;box-shadow:0 0 10px rgba(255,255,0,.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.kvkk p{font-size:10px;color:#9ca3af;line-height:1.5;font-weight:700;letter-spacing:.01em}
+.kvkk a{color:#FFFF00;text-decoration:underline}
+.note{font-size:10px;color:#5b636e;text-align:center;margin-top:auto;padding-top:12px}
+</style></head>
+<body><div class="stage"><div class="phone">
+  <div class="notch"></div>
+  <div class="sb"><span>9:41</span><span class="r"><svg width="17" height="12" viewBox="0 0 17 12" fill="#fff"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1"/><rect x="9" y="2" width="3" height="10" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="#fff"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l-1.4 1.4A6.6 6.6 0 0 0 8 5.2c-1.7 0-3.3.6-4.6 1.8L2 5.6A8.6 8.6 0 0 1 8 2.2zM8 7c1 0 1.9.4 2.6 1L8 10.6 5.4 8C6.1 7.4 7 7 8 7z"/></svg><svg width="26" height="13" viewBox="0 0 26 13"><rect x="1" y="1.5" width="21" height="10" rx="2.5" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="3" y="3.5" width="16" height="6" rx="1" fill="#fff"/><rect x="23" y="4.5" width="2" height="4" rx="1" fill="#fff" fill-opacity=".5"/></svg></span></div>
+  <div class="screen">
+    <div class="orb" style="width:400px;height:400px;top:-18%;left:-16%;background:rgba(255,255,0,.18);filter:blur(120px)"></div>
+    <div class="orb" style="width:300px;height:300px;bottom:2%;right:-12%;background:rgba(255,255,0,.10);filter:blur(90px)"></div>
+    <div class="grid"></div>
+    <div class="back">‹</div>
+    <div class="wrap">
+      <span class="badge">OYUNCU GİRİŞİ</span>
+      <div class="tagline">SAHAYA ÇIKMA<br>VAKTİ.</div>
+      <div class="card">
+        <div class="brand"><h2>OYNA</h2><p>Saniyeler içinde sahadasın — hesabını oluştur</p></div>
+        <button class="btn b-google"><svg viewBox="0 0 24 24"><path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3s2.822-6.3 6.3-6.3c1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z"/></svg>GOOGLE İLE DEVAM ET</button>
+        <button class="btn b-apple"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z"/></svg>APPLE İLE DEVAM ET</button>
+        <div class="divider"><div class="ln"></div><span>veya</span><div class="ln"></div></div>
+        <div class="input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg><span>ornek@oyna.app</span></div>
+        <button class="btn b-primary" style="margin-bottom:0">DOĞRULAMA KODU GÖNDER →</button>
+        <div class="kvkk"><span class="chk"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><p><a>KVKK Aydınlatma Metni</a>'ni ve <a>Kullanıcı Sözleşmesi</a>'ni okudum, onaylıyorum.</p></div>
+        <p class="note">Telefon numarası girişte istenmez — yalnız profil/iletişim alanıdır.</p>
+      </div>
+    </div>
+  </div>
+</div><div class="label">1 · Giriş / Kayıt (değer-kapısı) — Google + Apple birincil, e-posta ikincil</div></div></body></html>
