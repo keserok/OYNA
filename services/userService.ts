@@ -17,6 +17,14 @@ export interface OynaUser {
     rating: number;
   };
   playerCard?: PlayerCardData | null;
+  /** Premium kart admin tarafından aktifleştirildi mi? (false → sade profil) */
+  cardActive?: boolean;
+  /** Admin'in atadığı tier (yalnız kart aktifken). */
+  cardTier?: 'bronze' | 'silver' | 'gold' | null;
+  /** Sahadaki mevki (ör. Kaleci, Stoper, Orta Saha) — sade profilde gösterilir. */
+  position?: string | null;
+  /** Kısa tanıtım — sade profilde gösterilir. */
+  bio?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -207,9 +215,22 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     walletBalance: data.wallet_balance ?? 0,
     stats: data.stats || { matchesPlayed: 0, rating: 5.0 },
     playerCard: (data.player_card as PlayerCardData) || null,
+    cardActive: data.card_active ?? false,
+    cardTier: (data.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
+    position: data.position ?? null,
+    bio: data.bio ?? null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
+};
+
+/** Sade profil "Profili Düzenle": mevki/bio/avatar günceller (kullanıcının kendi satırı). */
+export const updateProfileBasics = async (
+  userId: string,
+  fields: { position?: string; bio?: string; avatar_url?: string },
+): Promise<void> => {
+  const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
+  if (error) throw error;
 };
 
 export interface WalletHistoryItem {

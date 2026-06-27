@@ -5,7 +5,7 @@ import { PlayerCard } from '../components/PlayerCard';
 import { useAppStore } from '../store';
 import { motion } from 'framer-motion';
 import { auth } from '../supabaseAuth';
-import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser } from '../services/userService';
+import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 
 const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
@@ -143,6 +143,11 @@ const MatchBanner: React.FC<{ item: MatchHistorySummary; isMvp?: boolean; onClic
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const [activeFilter, setActiveFilter] = useState<'ALL' | 'WIN' | 'PERFORMANCE' | 'MVP'>('ALL');
+    // Profili Düzenle (mevki + bio) modalı
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editPos, setEditPos] = useState('');
+    const [editBio, setEditBio] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
     const { globalTexts, setMyRoles, setIsRoleSwitcherOpen, setServiceAppRole } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -181,6 +186,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         loadProfile();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
+
+    const openEdit = () => {
+        setEditPos(profile?.position || '');
+        setEditBio(profile?.bio || '');
+        setShowEditModal(true);
+    };
+    const saveEdit = async () => {
+        if (!uid) return;
+        setSavingEdit(true);
+        try {
+            await updateProfileBasics(uid, { position: editPos.trim(), bio: editBio.trim() });
+            setShowEditModal(false);
+            await loadProfile();
+        } catch (e) {
+            console.error('Profil güncelleme hatası:', e);
+        } finally {
+            setSavingEdit(false);
+        }
+    };
 
     const hasMultipleRoles = (profile?.roles?.length ?? 0) > 1;
 
@@ -229,7 +253,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     <ErrorState message={error} onRetry={loadProfile} />
                 ) : (
                 <>
-                {/* Flitable Player Card */}
+                {/* Kimlik — kart admin tarafından aktifse premium FIFA kartı, değilse sade profil */}
+                {profile?.cardActive ? (
                 <div className="flex flex-col items-center gap-6">
                     <div className="w-full max-w-[240px] cursor-pointer" style={{ perspective: '1200px' }} onClick={() => setIsFlipped(!isFlipped)}>
                         <motion.div
@@ -282,6 +307,49 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         </div>
                     </div>
                 </div>
+                ) : (
+                <div className="flex flex-col items-center gap-4 pt-2">
+                    <img
+                        src={profile?.avatar_url || '/player_card_photo.png'}
+                        alt={profile?.full_name || 'Oyuncu'}
+                        referrerPolicy="no-referrer"
+                        className="w-28 h-28 rounded-3xl object-cover border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+                    />
+                    <div className="text-center">
+                        <h2 className="text-xl font-black text-white italic uppercase tracking-tight">{profile?.full_name || 'Oyuncu'}</h2>
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/30">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[#39FF14]">{profile?.position || 'Mevki belirtilmedi'}</span>
+                        </div>
+                    </div>
+                    <p className={`text-[12px] text-center leading-relaxed max-w-xs ${profile?.bio ? 'text-gray-400' : 'text-gray-600 italic'}`}>
+                        {profile?.bio || 'Henüz bir tanıtım eklemedin.'}
+                    </p>
+                    <button onClick={openEdit} className="mt-1 px-5 py-2.5 rounded-full bg-white/5 border border-white/15 text-white text-[11px] font-black uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2">
+                        <Pencil size={13} /> Profili Düzenle
+                    </button>
+                </div>
+                )}
+
+                {/* Profili Düzenle modalı (mevki + bio) */}
+                {showEditModal && (
+                    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowEditModal(false)}>
+                        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-[#0A0E14] border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
+                            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
+                            <h3 className="text-base font-black text-white uppercase tracking-wider">Profili Düzenle</h3>
+                            <div>
+                                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Mevki</label>
+                                <input value={editPos} onChange={(e) => setEditPos(e.target.value)} placeholder="Örn: Orta Saha" className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-[#39FF14]/40" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Kısa Tanıtım</label>
+                                <textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat..." className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-[#39FF14]/40 resize-none" />
+                            </div>
+                            <button onClick={saveEdit} disabled={savingEdit} className="w-full h-12 rounded-2xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
+                                {savingEdit ? 'Kaydediliyor...' : 'Kaydet'}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* ═══ WALLET CARD ═══ */}
                 <button 
@@ -401,7 +469,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     </div>
                 </div>
 
-                {/* ═══ BENTO STATISTICS & FILTERS ═══ */}
+                {/* ═══ BENTO STATISTICS & FILTERS (yalnız kart aktifken) ═══ */}
+                {profile?.cardActive && (
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         {/* Wins filter button */}
@@ -468,6 +537,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         </button>
                     </div>
                 </div>
+
+                )}
 
                 {/* ═══ MATCH LIST SECTION ═══ */}
                 <div className="space-y-5">
