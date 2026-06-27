@@ -103,6 +103,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
   const [showWizard, setShowWizard] = useState(false);
   const [activeSection, setActiveSection] = useState<'bireysel' | 'takim'>('bireysel');
+  // Hızlı filtre çipleri (Q14): nearby (mesafeye göre sırala) / today / open / cheap
+  const [quick, setQuick] = useState<string[]>([]);
   const [dna, setDna] = useState({
     format: '',
     budget: '',
@@ -255,13 +257,28 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   };
 
   const { matchingMatches, otherMatches } = useMemo(() => {
+    // Hızlı filtre çipleri (Q14) — listeye son aşamada uygulanır.
+    const aq = (list: any[]) => {
+      let r = list;
+      if (quick.includes('open')) r = r.filter((m: any) => [...(m.slots || []), ...(m.awaySlots || [])].some((s: any) => s?.status === 'OPEN'));
+      if (quick.includes('today')) {
+        const n = new Date();
+        r = r.filter((m: any) => {
+          const d = getMatchTargetDate(m.date, m.time);
+          return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+        });
+      }
+      if (quick.includes('cheap')) r = r.filter((m: any) => (Number(m.price) || 0) <= 200);
+      if (quick.includes('nearby')) r = [...r].sort((a: any, b: any) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+      return r;
+    };
     if (!isFilterActive) {
-      return { matchingMatches: [], otherMatches: enhancedMatches };
+      return { matchingMatches: [], otherMatches: aq(enhancedMatches) };
     }
-    const matching = enhancedMatches.filter(checkMatchFilters);
-    const other = enhancedMatches.filter(m => !checkMatchFilters(m));
+    const matching = aq(enhancedMatches.filter(checkMatchFilters));
+    const other = aq(enhancedMatches.filter(m => !checkMatchFilters(m)));
     return { matchingMatches: matching, otherMatches: other };
-  }, [enhancedMatches, isFilterActive, dna]);
+  }, [enhancedMatches, isFilterActive, dna, quick]);
 
   const handleClearFilters = () => {
     setDna({
@@ -728,6 +745,31 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 relative z-10 custom-scrollbar">
             {activeSection === 'bireysel' && (
               <>
+                {/* Hızlı filtre çipleri (Q14) */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {[
+                    { k: 'nearby', label: 'Yakınımda' },
+                    { k: 'today', label: 'Bugün' },
+                    { k: 'open', label: 'Boş Kontenjan' },
+                    { k: 'cheap', label: 'Uygun Fiyat' },
+                  ].map((c) => {
+                    const active = quick.includes(c.k);
+                    return (
+                      <button
+                        key={c.k}
+                        onClick={() => setQuick((prev) => prev.includes(c.k) ? prev.filter((x) => x !== c.k) : [...prev, c.k])}
+                        className="shrink-0 px-3.5 py-2 rounded-full text-[11px] font-black tracking-wide whitespace-nowrap transition-all border"
+                        style={{
+                          background: active ? '#39FF14' : 'rgba(255,255,255,0.04)',
+                          color: active ? '#000' : 'rgba(255,255,255,0.6)',
+                          borderColor: active ? '#39FF14' : 'rgba(255,255,255,0.08)',
+                        }}
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 {isFilterActive && (
                   <>
                     {/* Filtreye Uygun Maçlar Section */}
