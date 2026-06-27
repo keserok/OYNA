@@ -361,12 +361,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
               {/* Stat rows */}
               <div className="grid grid-cols-2 grid-rows-3 grid-flow-col gap-x-3 gap-y-[6px]">
                 {stats.slice(0, 3).map(({ key: sKey, label, stat }) => (
-                  <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={!!stat.videoUrl}
-                    onPlay={stat.videoUrl ? () => setActiveVideo(sKey) : undefined} />
+                  <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={false} />
                 ))}
                 {stats.slice(3).map(({ key: sKey, label, stat }) => (
-                  <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={!!stat.videoUrl}
-                    onPlay={stat.videoUrl ? () => setActiveVideo(sKey) : undefined} />
+                  <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={false} />
                 ))}
               </div>
 
@@ -393,12 +391,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
         )}
       </div>
 
-      {activeVideo && (
-        <VideoModal
-          statLabel={stats.find(s => s.key === activeVideo)?.label ?? ''}
-          onClose={() => setActiveVideo(null)}
-        />
-      )}
+      {/* AI Vision video özelliği kaldırıldı (Q28). */}
     </>
   );
 };

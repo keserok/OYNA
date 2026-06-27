@@ -212,7 +212,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const wins = matchHistory.filter(m => m.result === 'WIN').length;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
-    const cardData = buildCardData(profile, wins, total);
+    // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
+    const cardData = (() => {
+        const c = buildCardData(profile, wins, total);
+        return profile?.cardTier ? { ...c, tier: profile.cardTier } : c;
+    })();
 
     // Filter match history
     const filteredMatches = matchHistory.filter(item => {
