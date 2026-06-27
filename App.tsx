@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
+import { identifyUser, resetUser, trackEvent } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
 
@@ -55,6 +56,7 @@ const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav } from './components/BottomNav';
 import { RookieShowcase } from './views/RookieShowcase';
+const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -91,6 +93,9 @@ const App: React.FC = () => {
     setOriginalRole,
     isNotificationsOpen,
     setIsNotificationsOpen,
+    isRoleSwitcherOpen,
+    setIsRoleSwitcherOpen,
+    myRoles,
     addUserNotification,
     setNotificationPreferences,
     updateSingleNotificationPref,
@@ -170,6 +175,9 @@ const App: React.FC = () => {
               console.error('[App] Error creating user profile:', insertError);
             }
             setRole(currentRole);
+            useAppStore.getState().setMyRoles([currentRole]);
+            identifyUser(user.uid, { role: currentRole, is_admin: false });
+            trackEvent('user_registered', { role: currentRole });
             // Kaleci/Hakem → detaylı başvuru formu; Tesis → owner panel; diğer → konum
             if (currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
               resetNavigation('SERVICE_APPLICATION');
@@ -182,6 +190,12 @@ const App: React.FC = () => {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
             setRole(primaryRole);
+            // FAZ 7.4: analitik + hata bağlamına kullanıcıyı bağla (env yoksa no-op)
+            identifyUser(user.uid, { role: primaryRole, is_admin: !!profile.is_admin });
+            // FAZ 7.5: çoklu rol geçişi için kullanıcının rollerini sakla
+            useAppStore.getState().setMyRoles(
+              Array.isArray(profile.roles) ? (profile.roles as string[]) : [primaryRole]
+            );
 
             // last_active_at background güncelleme
             supabase
@@ -226,6 +240,7 @@ const App: React.FC = () => {
         } else {
           setRole(UserRole.PLAYER);
           resetNavigation('SPLASH');
+          resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
         }
       } catch (error: any) {
         console.error('[App] Auth state error:', error);
@@ -567,10 +582,27 @@ const App: React.FC = () => {
 
       <AnimatePresence>
         {isNotificationsOpen && (
-          <Notifications 
+          <Notifications
             role={role}
             onBack={() => setIsNotificationsOpen(false)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* FAZ 7.5: Çoklu rol geçişi — rol değiştirici sheet (yalnızca >1 rol varsa açılabilir) */}
+      <AnimatePresence>
+        {isRoleSwitcherOpen && new Set(myRoles).size > 1 && (
+          <Suspense fallback={null}>
+            <RoleSwitcher
+              roles={myRoles}
+              onClose={() => setIsRoleSwitcherOpen(false)}
+              onSwitched={(_newRole, landingView) => {
+                setIsRoleSwitcherOpen(false);
+                // Mevcut merkezi yönlendirmeyi yeniden kullan: ilgili açılış ekranına git
+                resetNavigation(landingView);
+              }}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 

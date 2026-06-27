@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Globe, Bell, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, Moon, Database, MapPin, Lock, CheckCircle2, XCircle, Smartphone,
-  AlertCircle, Download, Trash2, X
+  AlertCircle, Download, Trash2, X, Repeat
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
@@ -153,7 +153,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref } = useAppStore();
+  const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref, myRoles, setIsRoleSwitcherOpen } = useAppStore();
+  const hasMultipleRoles = myRoles.length > 1;
 
   // Şablonları yükle
   useEffect(() => {
@@ -354,6 +355,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Hesap</h3>
           <div className="flex flex-col">
             <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" />
+            {hasMultipleRoles && (
+              <SettingItem
+                icon={<Repeat size={20} />}
+                title="Rol Değiştir"
+                value="Geçiş yap"
+                color="text-[#3b82f6]"
+                onClick={() => setIsRoleSwitcherOpen(true)}
+              />
+            )}
             <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
           </div>
         </section>

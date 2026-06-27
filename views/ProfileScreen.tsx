@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, AppView, PlayerCardData } from '../types';
-import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy, Users } from 'lucide-react';
+import { ArrowLeft, Settings, Shield, ChevronRight, Share2, Pencil, TrendingUp, Target, Activity, Trophy, Users, Repeat } from 'lucide-react';
 import { PlayerCard } from '../components/PlayerCard';
 import { useAppStore } from '../store';
 import { motion } from 'framer-motion';
@@ -143,7 +143,7 @@ const MatchBanner: React.FC<{ item: MatchHistorySummary; isMvp?: boolean; onClic
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const [activeFilter, setActiveFilter] = useState<'ALL' | 'WIN' | 'PERFORMANCE' | 'MVP'>('ALL');
-    const { globalTexts } = useAppStore();
+    const { globalTexts, setMyRoles, setIsRoleSwitcherOpen } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
     const [matchHistory, setMatchHistory] = useState<MatchHistorySummary[]>([]);
@@ -167,6 +167,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             ]);
             setProfile(profileData);
             setMatchHistory(history);
+            // FAZ 7.5: rol değiştirici için güncel rolleri store'a yansıt
+            if (profileData?.roles?.length) setMyRoles(profileData.roles);
         } catch (err) {
             console.error('ProfileScreen fetch:', err);
             setError('Profil yüklenemedi. Lütfen tekrar dene.');
@@ -179,6 +181,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         loadProfile();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
+
+    const hasMultipleRoles = (profile?.roles?.length ?? 0) > 1;
 
     const total = matchHistory.length;
     const wins = matchHistory.filter(m => m.result === 'WIN').length;
@@ -321,6 +325,29 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     </div>
                     <ChevronRight size={20} className="text-[#FFFF00] relative z-10 group-hover:translate-x-1 transition-transform" />
                 </button>
+
+                {/* ═══ ROL DEĞİŞTİR CARD (yalnızca >1 rol varsa) ═══ */}
+                {hasMultipleRoles && (
+                    <button
+                        onClick={() => {
+                            if (profile?.roles?.length) setMyRoles(profile.roles);
+                            setIsRoleSwitcherOpen(true);
+                        }}
+                        className="w-full bg-[#161B22]/60 backdrop-blur-md border border-[#3b82f6]/30 rounded-3xl p-5 flex items-center justify-between group hover:bg-[#3b82f6]/5 hover:border-[#3b82f6]/50 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden"
+                    >
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#3b82f6]/10 blur-[40px] rounded-full group-hover:bg-[#3b82f6]/20 transition-all" />
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 bg-[#3b82f6]/20 rounded-2xl flex items-center justify-center border border-[#3b82f6]/30 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                                <Repeat size={22} className="text-[#3b82f6]" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">ROL DEĞİŞTİR</p>
+                                <p className="text-sm font-black italic text-white leading-none tracking-tight">Birden çok rolün var — geçiş yap</p>
+                            </div>
+                        </div>
+                        <ChevronRight size={20} className="text-[#3b82f6] relative z-10 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                )}
 
                 {/* ═══ BENTO STATISTICS & FILTERS ═══ */}
                 <div className="space-y-4">

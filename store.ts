@@ -330,6 +330,11 @@ interface AppState {
   removeUserNotification: (id: string) => void;
   isNotificationsOpen: boolean;
   setIsNotificationsOpen: (open: boolean) => void;
+  // FAZ 7.5: Çoklu rol geçişi (rol değiştirici sheet)
+  isRoleSwitcherOpen: boolean;
+  setIsRoleSwitcherOpen: (open: boolean) => void;
+  myRoles: string[];
+  setMyRoles: (roles: string[]) => void;
   markAllNotificationsAsRead: () => void;
   acceptMatchInvite: (notificationId: string) => void;
   rejectMatchInvite: (notificationId: string) => void;
@@ -1149,6 +1154,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   userNotifications: [],
   isNotificationsOpen: false,
   setIsNotificationsOpen: (open) => set({ isNotificationsOpen: open }),
+  isRoleSwitcherOpen: false,
+  setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
+  myRoles: [],
+  setMyRoles: (roles) => set({ myRoles: roles }),
   addUserNotification: (notif) => set((state) => {
     const updatedList = [
       { id: Date.now().toString(), read: false, ...notif } as any,

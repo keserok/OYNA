@@ -152,6 +152,35 @@ export const updateUserRoles = async (
 };
 
 /**
+ * FAZ 7.5 — Tek hesabın çoklu rolü arasında geçiş.
+ * Kullanıcının AKTİF rolünü (profiles.role) yalnızca zaten roles dizisinde
+ * bulunan bir role çevirir. protect_profile_columns trigger'ını set_active_role
+ * RPC'si (SECURITY DEFINER + bypass bayrağı) ile aşar; doğrudan UPDATE çalışmaz.
+ * Başarılıysa yeni aktif rolü döndürür, aksi halde null.
+ */
+export const setActiveRole = async (role: string): Promise<string | null> => {
+  const { data, error } = await supabase.rpc('set_active_role', { p_role: role });
+  if (error) {
+    console.error('[UserService] Aktif rol değiştirme hatası:', error);
+    return null;
+  }
+  return (data as string) ?? role;
+};
+
+/**
+ * Kullanıcının sahip olduğu rolleri (profiles.roles) döndürür.
+ */
+export const getUserRoles = async (userId: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('roles')
+    .eq('id', userId)
+    .single();
+  if (error || !data) return [];
+  return Array.isArray(data.roles) ? (data.roles as string[]) : [];
+};
+
+/**
  * Kullanıcının tam profilini roles, verification_status ve is_admin dahil döndürür.
  */
 export const getFullUserProfile = async (userId: string): Promise<OynaUser | null> => {
