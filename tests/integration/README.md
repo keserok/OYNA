@@ -30,6 +30,16 @@ psql "$DATABASE_URL" -f tests/integration/faz3_match_lifecycle.sql
 | `faz3_money_fixes_round3_4.sql` | Booking iadesi, çift-ödeme, ayrılma iadesi, wallet_ctx güvenliği | 8 |
 | `faz5_service_engine.sql` | Kaleci/hakem talep→tahsil→1-10 puan→anında payout, TC kimlik kapısı, self-rating guard, çakışma, maç iptalinde void/iade | 17 |
 | `faz6_social_tactics.sql` | Mesajlaşma (arkadaş/engel kapısı), taktik oylama/yetki/favori/kopya/vitrin, kaptan devri, takım-vs-takım skor onayı (iki-taraf + idempotency) | 19 |
+| `faz7_security_infra.sql` | Çoklu rol geçişi (set_active_role + sahiplik/geçersiz kapısı), yakındaki maçlar (earthdistance), admin skor düzeltme (audit + FORBIDDEN + INVALID_SCORE), maç hatırlatma (katılımcı bildirimi + idempotency) | 10 |
+
+> **FAZ 7'de bu testin yakaladığı gerçek hatalar** (uygulamadan önce giderildi):
+> (1) `protect_profile_sensitive_fields` trigger'ı `NEW.role` değişimini her non-admin
+> için RAISE ediyor ve `app.bypass_role_protection` bayrağını ONURLANDIRMIYORDU →
+> `set_active_role` (rol değiştirici) **her normal kullanıcıda çöküyordu** (Faz 5
+> `rating_recompute` ile aynı sınıf); yalnız `role` alanı için bypass tanınarak
+> düzeltildi (roles/is_admin/wallet/ban korumaları aynen sürer). (2) `admin_override_match_score`,
+> `log_admin_action`'a 3. argümanı `p_match_id::text` (uuid beklenen yere text) geçiriyordu
+> → çalışma anında tip uyuşmazlığıyla çöküyordu; `p_target_id=uuid` + old/new jsonb ile düzeltildi.
 
 > **FAZ 6'da adversarial denetimin yakaladığı gerçek bulgular** (e2e değil, ikinci-ajan
 > denetimi; `20260706000010_faz6_corrections.sql` ile giderildi): (1) skor finalize
