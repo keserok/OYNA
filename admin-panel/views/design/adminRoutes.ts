@@ -38,6 +38,18 @@ export const ADMIN_ROUTE_META: Record<GodViewSubRoute, AdminRouteMeta> = {
   OWNER_ACCOUNTS: { title: 'SaaS Hesapları', description: 'Tesis sahibi SaaS abonelik yönetimi.', group: 'Operasyon', accent: 'green' },
 };
 
+/**
+ * Lansman kapsamı DIŞI modüller → feature_flags anahtarı.
+ * Bayrak açıkça true değilse bu route'lar menüden/erişimden gizlenir
+ * (master prensipler: Topluluk/Turnuva/İndirim Kodları lansmanda yok).
+ * Kod silinmez; yalnız gizlenir → istenirse Parametreler ekranından geri açılır.
+ */
+export const SCOPE_GATED_ROUTES: Partial<Record<GodViewSubRoute, string>> = {
+  TOPLULUKLAR: 'module_community',
+  TURNUVALAR: 'module_tournaments',
+  PROMO_CODES: 'module_promo_codes',
+};
+
 export const ACCENT_STYLES: Record<AdminAccent, { icon: string; ring: string; badge: string }> = {
   red: { icon: 'text-red-400', ring: 'ring-red-500/20', badge: 'bg-red-500/10 text-red-400 border-red-500/20' },
   green: { icon: 'text-green-400', ring: 'ring-green-500/20', badge: 'bg-green-500/10 text-green-400 border-green-500/20' },

@@ -19,6 +19,7 @@ import {
   type AdminNavParams,
 } from './context/AdminNavigationContext';
 import { AdminPermissionsProvider, useAdminPermissions } from './context/AdminPermissionsContext';
+import { AdminFeatureFlagsProvider, useAdminFeatureFlags } from './context/AdminFeatureFlagsContext';
 import { useAdminToast } from './context/AdminToastContext';
 
 const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
@@ -75,6 +76,7 @@ const GodViewPanelInner: React.FC<Props> = ({
     const deletePitch = useAppStore((s) => s.deletePitch);
     const { setParams, params, consumeParam } = useAdminNavigation();
     const { canAccess, defaultRoute } = useAdminPermissions();
+    const { moduleEnabled } = useAdminFeatureFlags();
     const { info } = useAdminToast();
     const [subRoute, setSubRoute] = useState<GodViewSubRoute>(() => {
         const r = initialSubRoute ?? 'GENEL';
@@ -99,6 +101,10 @@ const GodViewPanelInner: React.FC<Props> = ({
             info('Bu sayfaya erişim yetkiniz yok');
             return;
         }
+        if (!moduleEnabled(effectiveRoute)) {
+            info('Bu modül lansman kapsamı dışı (kapalı). Parametreler ekranından açabilirsiniz.');
+            return;
+        }
         setSubRoute(effectiveRoute);
         if (params) setParams(params);
         if (onNavigate) onNavigate(effectiveRoute);
@@ -112,7 +118,7 @@ const GodViewPanelInner: React.FC<Props> = ({
             const next = `${window.location.pathname}?${sp.toString()}`;
             window.history.replaceState(null, '', next);
         }
-    }, [onNavigate, setParams, canAccess, info, mode]);
+    }, [onNavigate, setParams, canAccess, moduleEnabled, info, mode]);
 
     const closeModal = () => setModal({ type: 'none' });
 
@@ -121,6 +127,14 @@ const GodViewPanelInner: React.FC<Props> = ({
             return (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
                     <p className="text-sm font-bold">Bu sayfaya erişim yetkiniz yok.</p>
+                    <button onClick={() => setSubRoute(defaultRoute)} className="text-xs text-red-400 hover:text-red-300">Ana sayfaya dön</button>
+                </div>
+            );
+        }
+        if (!moduleEnabled(subRoute)) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
+                    <p className="text-sm font-bold">Bu modül lansman kapsamı dışı (kapalı).</p>
                     <button onClick={() => setSubRoute(defaultRoute)} className="text-xs text-red-400 hover:text-red-300">Ana sayfaya dön</button>
                 </div>
             );
@@ -227,7 +241,9 @@ const GodViewPanelInner: React.FC<Props> = ({
 export const GodViewPanel: React.FC<Props> = (props) => (
     <AdminNavigationProvider>
         <AdminPermissionsProvider session={props.adminSession}>
-            <GodViewPanelInner {...props} />
+            <AdminFeatureFlagsProvider>
+                <GodViewPanelInner {...props} />
+            </AdminFeatureFlagsProvider>
         </AdminPermissionsProvider>
     </AdminNavigationProvider>
 );

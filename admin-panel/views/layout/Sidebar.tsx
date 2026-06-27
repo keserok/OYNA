@@ -8,6 +8,7 @@ import {
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../services/adminService';
 import { useAdminPermissions } from '../context/AdminPermissionsContext';
+import { useAdminFeatureFlags } from '../context/AdminFeatureFlagsContext';
 
 interface SidebarProps {
     activeSubRoute: string;
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     adminSession,
 }) => {
     const { canAccess, roleLabel } = useAdminPermissions();
+    const { moduleEnabled } = useAdminFeatureFlags();
     const stats = useAppStore((s) => s.adminDashboardStats);
     const missingAlerts = useAppStore((s) =>
         s.adminMatches.reduce((n, m) => n + (m.missingPositions?.some((p) => p.count > 0) ? 1 : 0), 0),
@@ -146,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {group.items
                             .filter(({ label }) => {
                                 const route = routeForLabel(label);
-                                return !route || canAccess(route);
+                                return !route || (canAccess(route) && moduleEnabled(route));
                             })
                             .map(({ icon: Icon, label, badge, active, action }) => (
                             <button

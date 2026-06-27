@@ -1173,6 +1173,17 @@ export async function setFeatureFlag(key: string, enabled: boolean): Promise<voi
   if (error) throw new Error(error.message);
 }
 
+/** Hafif bayrak haritası (key→enabled) — modül gizleme için (public read). */
+export async function fetchFeatureFlagMap(): Promise<Record<string, boolean>> {
+  const { data, error } = await supabase.from('feature_flags').select('key, enabled');
+  if (error) throw new Error(error.message);
+  const map: Record<string, boolean> = {};
+  (data || []).forEach((r: { key: string; enabled: boolean }) => {
+    map[r.key] = !!r.enabled;
+  });
+  return map;
+}
+
 export async function fetchPromoCodes(): Promise<PromoCodeRow[]> {
   const { data, error } = await supabase
     .from('promo_codes')
