@@ -52,6 +52,7 @@ const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
 const MyBookings = lazy(() => import('./views/MyBookings'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
+const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav } from './components/BottomNav';
 import { RookieShowcase } from './views/RookieShowcase';
 
@@ -71,6 +72,7 @@ const App: React.FC = () => {
     isAuthReady,
     selectedMatch,
     selectedDiaryId,
+    selectedConversationId,
     selectedGk,
     selectedRef,
     navigateTo,
@@ -80,6 +82,7 @@ const App: React.FC = () => {
     setIsAuthReady,
     setSelectedMatch,
     setSelectedDiaryId,
+    setSelectedConversationId,
     setSelectedGk,
     setSelectedRef,
     impersonatedUser,
@@ -502,6 +505,14 @@ const App: React.FC = () => {
         return <TeamBuilder onBack={() => goBack('PROFILE')} />;
       case 'SOCIAL':
         return <SocialView onNavigate={(v) => navigateTo(v)} />;
+      case 'MESSAGES':
+        return <MessagesView
+          initialConversationId={selectedConversationId}
+          onBack={() => {
+            setSelectedConversationId(null);
+            goBack('SOCIAL');
+          }}
+        />;
       case 'TEAM_CREATOR':
         return <TeamCreator
           onBack={() => goBack('PROFILE')}

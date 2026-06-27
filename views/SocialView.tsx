@@ -14,6 +14,8 @@ import {
   FriendshipRow, FriendRequest,
 } from '../services/friendService';
 import { createTeam } from '../services/teamService';
+import { getOrCreateConversation } from '../services/messageService';
+import { useAppStore } from '../store';
 import { TeamCreatorWizard } from '../components/TeamCreatorWizard';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -297,7 +299,9 @@ const FriendsTab: React.FC<{
   onToggleFav: (f: FriendshipRow) => void;
   onGroupChange: (f: FriendshipRow, group: string) => void;
   onNavigate: (v: AppView) => void;
-}> = ({ userId, friends, requests, loading, onAccept, onDecline, onToggleFav, onGroupChange, onNavigate }) => {
+  onMessage: (f: FriendshipRow) => void;
+  messagingId: string | null;
+}> = ({ userId, friends, requests, loading, onAccept, onDecline, onToggleFav, onGroupChange, onNavigate, onMessage, messagingId }) => {
   const [search, setSearch] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('Tümü');
   const [expandedGroupPicker, setExpandedGroupPicker] = useState<string | null>(null);
@@ -482,8 +486,15 @@ const FriendsTab: React.FC<{
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 mt-3">
-                    <button className="w-10 h-10 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors">
-                      <MessageCircle size={16} className="text-gray-400" />
+                    <button
+                      onClick={() => onMessage(f)}
+                      disabled={messagingId === f.id}
+                      title="Mesaj gönder"
+                      className="w-10 h-10 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors disabled:opacity-50"
+                    >
+                      {messagingId === f.id
+                        ? <Loader2 size={16} className="text-gray-400 animate-spin" />
+                        : <MessageCircle size={16} className="text-gray-400" />}
                     </button>
                     <button
                       onClick={() => onToggleFav(f)}
@@ -560,6 +571,8 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [showTeamWizard, setShowTeamWizard] = useState(false);
   const [wizardLoading, setWizardLoading] = useState(false);
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+  const setSelectedConversationId = useAppStore(s => s.setSelectedConversationId);
 
   // Load data
   useEffect(() => {
@@ -643,6 +656,21 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
       setFriends(prev => prev.map(x => x.id === f.id ? { ...x, myGroup: f.myGroup } : x));
     }
   }, [userId]);
+
+  const handleMessage = useCallback(async (f: FriendshipRow) => {
+    if (messagingId) return;
+    const friendId = f.other_user.id;
+    setMessagingId(f.id);
+    try {
+      const conversationId = await getOrCreateConversation(friendId);
+      setSelectedConversationId(conversationId);
+      onNavigate('MESSAGES');
+    } catch (e: any) {
+      console.error('[SocialView] konuşma açılamadı', e?.message || e);
+    } finally {
+      setMessagingId(null);
+    }
+  }, [messagingId, onNavigate, setSelectedConversationId]);
 
   const handleTeamWizardComplete = useCallback(async (wizardData: any) => {
     setWizardLoading(true);
@@ -787,6 +815,8 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
                 onToggleFav={handleToggleFav}
                 onGroupChange={handleGroupChange}
                 onNavigate={onNavigate}
+                onMessage={handleMessage}
+                messagingId={messagingId}
               />
             </motion.div>
           )}

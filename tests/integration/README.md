@@ -29,6 +29,15 @@ psql "$DATABASE_URL" -f tests/integration/faz3_match_lifecycle.sql
 | `faz3_match_lifecycle.sql` | Quorum onay/iptal-iade, finalize, whitelist, özel maç, kademeli iade | 20 |
 | `faz3_money_fixes_round3_4.sql` | Booking iadesi, çift-ödeme, ayrılma iadesi, wallet_ctx güvenliği | 8 |
 | `faz5_service_engine.sql` | Kaleci/hakem talep→tahsil→1-10 puan→anında payout, TC kimlik kapısı, self-rating guard, çakışma, maç iptalinde void/iade | 17 |
+| `faz6_social_tactics.sql` | Mesajlaşma (arkadaş/engel kapısı), taktik oylama/yetki/favori/kopya/vitrin, kaptan devri, takım-vs-takım skor onayı (iki-taraf + idempotency) | 19 |
+
+> **FAZ 6'da adversarial denetimin yakaladığı gerçek bulgular** (e2e değil, ikinci-ajan
+> denetimi; `20260706000010_faz6_corrections.sql` ile giderildi): (1) skor finalize
+> idempotent değildi + tek-katılımcı kısa yolu takım maçında istismar ediliyordu →
+> idempotency + iki-taraf onayı; (2) `copy_tactic` kaynak okuma yetkisi yoktu (gizli
+> taktik sızıntısı) → kaynak üyeliği şartı; (3) `tactics` doğrudan UPDATE ile is_active
+> set edilip "yalnız yönetici" atlatılıyordu → koruma trigger'ı + GUC bypass; ayrılan
+> üye taktik okuyabiliyordu → `tactics_select` is_active filtresi.
 
 > **FAZ 5'te bu testin yakaladığı gerçek hata:** `protect_provider_sensitive_fields`
 > trigger'ı `goalkeepers/referees.rating` değişimini yalnız admin'e izin veriyordu;

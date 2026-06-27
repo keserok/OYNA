@@ -1,17 +1,268 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users, Zap, Layout, GripHorizontal } from 'lucide-react';
+import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users, Zap, Layout, GripHorizontal, Heart, MessageCircle, Crown, Star, Copy, Send, Archive, LogOut, ShieldCheck, Loader2, Trophy } from 'lucide-react';
 import { Player, AppView, UserRole } from '../types';
 import { getTeamRolesAndInstructions, updateTeamRolesAndInstructions, sbRemovePlayerFromTeam, supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
-import { withDefaultPositions } from '../services/teamService';
+import { withDefaultPositions, fetchTeamMatchHistory, TeamMatchRow } from '../services/teamService';
+import {
+    getTeamTacticsShowcase, voteTactic, commentTactic, getTacticComments,
+    toggleTacticFavorite, setActiveTactic, copyTactic,
+    TacticShowcaseItem, TacticComment,
+} from '../services/tacticSocialService';
+import {
+    transferCaptaincy, setTeamAdmin, leaveTeam, archiveTeam,
+} from '../services/teamAdminService';
 import { auth } from '../supabaseAuth';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
+
+type MyTeamTab = 'GENEL' | 'KADRO' | 'TAKTIKLER' | 'GECMIS';
+const RESULT_STYLE: Record<string, string> = {
+    G: 'bg-emerald-500 text-white',
+    B: 'bg-amber-500 text-white',
+    M: 'bg-red-500 text-white',
+};
 interface MyTeamProps {
     onBack: () => void;
     onNavigate: (view: AppView) => void;
 }
 
+// ─── FAZ 6: Taktik vitrini kartı ────────────────────────────────────────────
+const TacticShowcaseCard: React.FC<{
+    item: TacticShowcaseItem;
+    canManage: boolean;
+    onVote: (id: string, percent: number) => void;
+    onFavorite: (id: string) => void;
+    onSetActive: (id: string) => void;
+    onCopy: (id: string) => void;
+    onOpen: (id: string) => void;
+}> = ({ item, canManage, onVote, onFavorite, onSetActive, onCopy, onOpen }) => {
+    const [voteVal, setVoteVal] = useState<number>(item.my_vote ?? 50);
+    useEffect(() => { setVoteVal(item.my_vote ?? 50); }, [item.my_vote]);
+
+    return (
+        <div
+            className={`bg-[#161B22] rounded-[24px] p-4 border transition-colors ${
+                item.is_active
+                    ? 'border-[#39FF14]/50 shadow-[0_0_18px_rgba(57,255,20,0.1)]'
+                    : 'border-white/5 hover:border-white/15'
+            }`}
+        >
+            {/* Üst: mini formasyon önizleme + isim + aktif rozeti */}
+            <button onClick={() => onOpen(item.id)} className="w-full flex items-start gap-3 text-left">
+                {/* Mini formasyon önizleme */}
+                <div className="shrink-0 w-14 h-20 rounded-xl bg-[#1B4332] border border-white/10 flex flex-col items-center justify-center gap-1 overflow-hidden relative">
+                    <div className="absolute inset-x-2 top-1/2 h-px bg-white/15" />
+                    <span className="relative text-[9px] font-black text-white leading-none text-center px-1">
+                        {item.formation || '—'}
+                    </span>
+                    {item.size && (
+                        <span className="relative text-[7px] font-bold text-[#39FF14] uppercase tracking-wider mt-0.5">
+                            {item.size}
+                        </span>
+                    )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h4 className="font-black text-white text-sm truncate">{item.name || 'İsimsiz Taktik'}</h4>
+                        {item.is_active && (
+                            <span className="px-2 py-0.5 rounded bg-[#39FF14]/20 text-[#39FF14] text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                                <Star size={8} className="fill-current" /> Aktif
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Oy % barı (avg_vote) */}
+                    <div className="mb-2">
+                        <div className="flex justify-between items-center mb-0.5">
+                            <span className="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Takım Oyu</span>
+                            <span className="text-[10px] font-black text-[#39FF14]">%{Math.round(item.avg_vote)}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-[#39FF14] to-emerald-500 rounded-full transition-all"
+                                style={{ width: `${Math.max(0, Math.min(100, item.avg_vote))}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* İstatistik satırı: oy / favori / yorum */}
+                    <div className="flex items-center gap-3 text-[10px] text-gray-400 font-bold">
+                        <span className="flex items-center gap-1">
+                            <Activity size={11} className="text-gray-500" /> {item.vote_count}
+                        </span>
+                        <span className={`flex items-center gap-1 ${item.i_favorited ? 'text-red-400' : ''}`}>
+                            <Heart size={11} className={item.i_favorited ? 'fill-current' : ''} /> {item.fav_count}
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <MessageCircle size={11} className="text-gray-500" /> {item.comment_count}
+                        </span>
+                    </div>
+                </div>
+            </button>
+
+            {/* % oylama slider */}
+            <div className="mt-3 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-3">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-wider shrink-0">Oyum</span>
+                    <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={voteVal}
+                        onChange={(e) => setVoteVal(Number(e.target.value))}
+                        onPointerUp={() => onVote(item.id, voteVal)}
+                        onKeyUp={() => onVote(item.id, voteVal)}
+                        className="flex-1 accent-[#39FF14] cursor-pointer"
+                    />
+                    <span className="text-[11px] font-black text-white w-9 text-right shrink-0">%{voteVal}</span>
+                </div>
+            </div>
+
+            {/* Eylemler: favori / aktif yap / kopyala & öner */}
+            <div className="mt-3 flex items-center gap-2">
+                <button
+                    onClick={() => onFavorite(item.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                        item.i_favorited
+                            ? 'bg-red-500/15 border-red-500/30 text-red-400'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                    }`}
+                >
+                    <Heart size={12} className={item.i_favorited ? 'fill-current' : ''} />
+                    {item.i_favorited ? 'Favoride' : 'Favori'}
+                </button>
+
+                {canManage && (
+                    <button
+                        onClick={() => onSetActive(item.id)}
+                        disabled={item.is_active}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                            item.is_active
+                                ? 'bg-[#39FF14]/10 border-[#39FF14]/20 text-[#39FF14]/50 cursor-default'
+                                : 'bg-white/5 border-white/10 text-gray-300 hover:text-white hover:border-[#39FF14]/40'
+                        }`}
+                    >
+                        <Star size={12} /> Aktif yap
+                    </button>
+                )}
+
+                <button
+                    onClick={() => onCopy(item.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors ml-auto"
+                >
+                    <Copy size={12} /> Kopyala & öner
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ─── FAZ 6: Taktik detay + yorum thread modalı ─────────────────────────────
+const TacticDetailModal: React.FC<{
+    item: TacticShowcaseItem;
+    onClose: () => void;
+    onToast: (msg: string, type?: 'success' | 'error') => void;
+    onCommentAdded: (id: string) => void;
+}> = ({ item, onClose, onToast, onCommentAdded }) => {
+    const [comments, setComments] = useState<TacticComment[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [body, setBody] = useState('');
+    const [sending, setSending] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoading(true);
+            const list = await getTacticComments(item.id);
+            if (!cancelled) { setComments(list); setLoading(false); }
+        })();
+        return () => { cancelled = true; };
+    }, [item.id]);
+
+    const submit = async () => {
+        const text = body.trim();
+        if (!text || sending) return;
+        setSending(true);
+        try {
+            const c = await commentTactic(item.id, text);
+            setComments(prev => [...prev, c]);
+            setBody('');
+            onCommentAdded(item.id);
+        } catch (e: any) {
+            onToast(e?.message || 'Yorum gönderilemedi.', 'error');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200">
+            <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border border-white/10 shadow-2xl flex flex-col max-h-[85vh]">
+                {/* Başlık */}
+                <div className="flex items-center justify-between p-5 border-b border-white/5">
+                    <div className="min-w-0">
+                        <h3 className="text-lg font-black text-white truncate">{item.name || 'İsimsiz Taktik'}</h3>
+                        <p className="text-[10px] text-gray-400 font-medium">
+                            Formasyon: <span className="text-[#39FF14] font-bold">{item.formation || '—'}</span>
+                            {item.size && <> • <span className="text-white font-bold">{item.size}</span></>}
+                            {' • '}<span className="text-[#39FF14] font-bold">%{Math.round(item.avg_vote)} oy</span>
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-gray-500 hover:text-white shrink-0">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Yorum thread */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-3">
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <MessageCircle size={12} /> Yorumlar ({comments.length})
+                    </span>
+                    {loading ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 className="animate-spin text-[#39FF14]" size={22} />
+                        </div>
+                    ) : comments.length === 0 ? (
+                        <div className="text-center py-8">
+                            <MessageCircle size={28} className="mx-auto mb-2 text-gray-700" />
+                            <p className="text-xs text-gray-500">Henüz yorum yok. İlk yorumu sen yap!</p>
+                        </div>
+                    ) : (
+                        comments.map((c) => (
+                            <div key={c.id} className="bg-black/30 border border-white/5 rounded-2xl p-3">
+                                <p className="text-sm text-white">{c.body}</p>
+                                <p className="text-[9px] text-gray-600 mt-1">
+                                    {new Date(c.createdAt).toLocaleString('tr-TR')}
+                                </p>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Yorum ekleme */}
+                <div className="p-4 border-t border-white/5 flex items-center gap-2">
+                    <input
+                        type="text"
+                        value={body}
+                        onChange={(e) => setBody(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+                        placeholder="Yorum yaz..."
+                        className="flex-1 bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#39FF14]"
+                    />
+                    <button
+                        onClick={submit}
+                        disabled={sending || !body.trim()}
+                        className="p-2.5 bg-[#39FF14] text-black rounded-xl disabled:opacity-40 hover:bg-green-400 transition-colors"
+                    >
+                        {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const myTeams = useAppStore(s => s.myTeams);
@@ -42,6 +293,27 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const pitchRef = useRef<HTMLDivElement>(null);
 
+    const loadMyTeams = useAppStore(s => s.loadMyTeams);
+
+    // ── FAZ 6: Sekme yapısı (Genel · Kadro · Taktikler · Geçmiş) ──
+    const [activeTab, setActiveTab] = useState<MyTeamTab>('GENEL');
+
+    // ── FAZ 6: Taktik vitrini (oylama/yorum/favori) ──
+    const [showcase, setShowcase] = useState<TacticShowcaseItem[]>([]);
+    const [showcaseLoading, setShowcaseLoading] = useState(false);
+    const [showcaseError, setShowcaseError] = useState<string | null>(null);
+    const [openTacticId, setOpenTacticId] = useState<string | null>(null);
+
+    // ── FAZ 6: Maç geçmişi (W/L) ──
+    const [history, setHistory] = useState<TeamMatchRow[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+
+    const isArchived = !!activeTeam && (
+        (activeTeam as any).archived === true ||
+        (activeTeam as any).is_archived === true ||
+        (activeTeam as any).status === 'ARCHIVED'
+    );
+
     // Aktif takım değişince taktikleri yükle
     useEffect(() => {
         if (activeTeam) {
@@ -49,6 +321,45 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
             setSelectedTacticId(null);
         }
     }, [activeTeam?.id]);
+
+    // ── FAZ 6: Vitrini yükle ──
+    const loadShowcase = async (teamId: string) => {
+        setShowcaseLoading(true);
+        setShowcaseError(null);
+        try {
+            const items = await getTeamTacticsShowcase(teamId);
+            setShowcase(items);
+        } catch (e: any) {
+            setShowcaseError(e?.message || 'Taktik vitrini yüklenemedi.');
+        } finally {
+            setShowcaseLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTeam && activeTab === 'TAKTIKLER') {
+            loadShowcase(activeTeam.id);
+        }
+    }, [activeTeam?.id, activeTab]);
+
+    // ── FAZ 6: Maç geçmişini yükle ──
+    useEffect(() => {
+        if (!activeTeam || activeTab !== 'GECMIS') return;
+        let cancelled = false;
+        const load = async () => {
+            setHistoryLoading(true);
+            try {
+                const rows = await fetchTeamMatchHistory(activeTeam.id);
+                if (!cancelled) setHistory(rows);
+            } catch (e) {
+                if (!cancelled) setHistory([]);
+            } finally {
+                if (!cancelled) setHistoryLoading(false);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [activeTeam?.id, activeTab]);
 
     const currentTactic = activeApprovedTactics.find((t: any) => t.id === selectedTacticId) || activeApprovedTactics[0] || null;
 
@@ -126,6 +437,110 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
+
+    // ─── FAZ 6: Taktik vitrini eylemleri ──────────────────────────────────
+    const handleVote = async (tacticId: string, percent: number) => {
+        // İyimser güncelleme
+        setShowcase(prev => prev.map(t => t.id === tacticId ? { ...t, my_vote: percent } : t));
+        try {
+            await voteTactic(tacticId, percent);
+            if (activeTeam) loadShowcase(activeTeam.id);
+        } catch (e: any) {
+            showToast(e?.message || 'Oy kaydedilemedi.', 'error');
+            if (activeTeam) loadShowcase(activeTeam.id);
+        }
+    };
+
+    const handleToggleFavorite = async (tacticId: string) => {
+        try {
+            const fav = await toggleTacticFavorite(tacticId);
+            setShowcase(prev => prev.map(t => t.id === tacticId
+                ? { ...t, i_favorited: fav, fav_count: Math.max(0, t.fav_count + (fav ? 1 : -1)) }
+                : t));
+        } catch (e: any) {
+            showToast(e?.message || 'Favori güncellenemedi.', 'error');
+        }
+    };
+
+    const handleSetActive = async (tacticId: string) => {
+        try {
+            await setActiveTactic(tacticId);
+            setShowcase(prev => prev.map(t => ({ ...t, is_active: t.id === tacticId })));
+            showToast('Aktif taktik güncellendi!');
+            if (activeTeam) loadShowcase(activeTeam.id);
+        } catch (e: any) {
+            showToast(e?.message || 'Aktif taktik ayarlanamadı.', 'error');
+        }
+    };
+
+    const handleCopyTactic = async (tacticId: string) => {
+        try {
+            await copyTactic(tacticId, activeTeam?.id);
+            showToast('Taktik kopyalandı ve önerin gönderildi!');
+            if (activeTeam) loadShowcase(activeTeam.id);
+        } catch (e: any) {
+            showToast(e?.message || 'Taktik kopyalanamadı.', 'error');
+        }
+    };
+
+    // ─── FAZ 6: Takım yönetimi eylemleri ──────────────────────────────────
+    const handleTransferCaptaincy = async (userId: string, userName: string) => {
+        if (!activeTeam) return;
+        if (!confirm(`Kaptanlığı ${userName} oyuncusuna devretmek istediğine emin misin?`)) return;
+        try {
+            await transferCaptaincy(activeTeam.id, userId);
+            showToast(`Kaptanlık ${userName} oyuncusuna devredildi.`);
+            await loadMyTeams();
+        } catch (e: any) {
+            showToast(e?.message || 'Kaptanlık devredilemedi.', 'error');
+        }
+    };
+
+    const handleSetAdmin = async (userId: string, userName: string, grant: boolean) => {
+        if (!activeTeam) return;
+        try {
+            await setTeamAdmin(activeTeam.id, userId, grant);
+            showToast(grant ? `${userName} yönetici yapıldı.` : `${userName} yöneticilikten alındı.`);
+            await loadMyTeams();
+        } catch (e: any) {
+            showToast(e?.message || 'Yönetici durumu güncellenemedi.', 'error');
+        }
+    };
+
+    const handleLeaveTeam = async () => {
+        if (!activeTeam) return;
+        if (!confirm('Bu takımdan ayrılmak istediğine emin misin?')) return;
+        try {
+            const { archived } = await leaveTeam(activeTeam.id);
+            if (archived) {
+                showToast('Takımdan ayrıldın. Son yönetici olduğun için takım arşivlendi.');
+            } else {
+                showToast('Takımdan ayrıldın.');
+            }
+            setActiveTeamId(null);
+            await loadMyTeams();
+        } catch (e: any) {
+            showToast(e?.message || 'Takımdan ayrılınamadı.', 'error');
+        }
+    };
+
+    const handleArchiveTeam = async () => {
+        if (!activeTeam) return;
+        const nextArchive = !isArchived;
+        if (nextArchive && !confirm('Takımı arşivlemek istediğine emin misin? (Geçmiş korunur)')) return;
+        try {
+            await archiveTeam(activeTeam.id, nextArchive);
+            showToast(nextArchive ? 'Takım arşivlendi.' : 'Takım arşivden çıkarıldı.');
+            await loadMyTeams();
+        } catch (e: any) {
+            showToast(e?.message || 'Arşivleme başarısız.', 'error');
+        }
+    };
+
+    // Bir kullanıcı takım yöneticisi mi? (kaptan veya çoklu-yönetici listesi)
+    const isUserAdmin = (uid: string): boolean => !!activeTeam && (
+        activeTeam.captain === uid || !!activeTeam.captains?.includes(uid)
+    );
 
     // Formation Presets
     const applyFormation = async (type: '2-3-1' | '3-2-1') => {
@@ -313,6 +728,46 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     </button>
                 </div>
 
+                {/* Arşivli takım rozeti */}
+                {isArchived && (
+                    <div className="flex items-center gap-2 bg-gray-500/10 border border-gray-500/20 rounded-2xl px-4 py-3 text-gray-400">
+                        <Archive size={16} />
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wider text-gray-300">Bu takım arşivlendi</p>
+                            <p className="text-[10px] text-gray-500">Geçmiş korunuyor. Düzenlemek için arşivden çıkar.</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── FAZ 6: Sekme Çubuğu (Genel · Kadro · Taktikler · Geçmiş) ── */}
+                <div className="flex gap-1 border-b border-white/8 -mt-1">
+                    {([
+                        { id: 'GENEL', label: 'Genel' },
+                        { id: 'KADRO', label: 'Kadro' },
+                        { id: 'TAKTIKLER', label: 'Taktikler' },
+                        { id: 'GECMIS', label: 'Geçmiş' },
+                    ] as { id: MyTeamTab; label: string }[]).map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setActiveTab(t.id)}
+                            className={`relative flex-1 pb-2.5 text-xs font-black uppercase tracking-wider transition-colors ${
+                                activeTab === t.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                        >
+                            {t.label}
+                            {activeTab === t.id && (
+                                <motion.div
+                                    layoutId="myTeamTabLine"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#39FF14]"
+                                />
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* ════════════ GENEL: Pitch + istatistik ════════════ */}
+                {activeTab === 'GENEL' && (<>
+
                 {/* Playbook Taktik Sekmeleri */}
                 {activeApprovedTactics.length > 0 && (
                     <section className="space-y-2">
@@ -499,6 +954,66 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     </div>
                 </section>
 
+                </>)}
+
+                {/* ════════════ TAKTIKLER: En İyi Taktikler vitrini ════════════ */}
+                {activeTab === 'TAKTIKLER' && (<>
+
+                {/* + Yeni Taktik (büyük CTA) */}
+                <button
+                    onClick={() => {
+                        setActiveStudioTeam(activeTeam);
+                        onNavigate('STUDIO');
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-[24px] py-4 text-sm font-black text-black uppercase tracking-wider hover:scale-[1.01] active:scale-95 transition-all shadow-[0_0_25px_rgba(57,255,20,0.2)]"
+                >
+                    <Plus size={18} /> Yeni Taktik
+                </button>
+
+                {/* "En İyi Taktikler" vitrini */}
+                <section className="space-y-3">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 px-1">
+                        <Trophy size={12} className="text-[#39FF14]" /> En İyi Taktikler
+                    </span>
+
+                    {showcaseLoading ? (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="animate-spin text-[#39FF14]" size={26} />
+                        </div>
+                    ) : showcaseError ? (
+                        <div className="text-center py-10 bg-red-500/5 border border-red-500/15 rounded-[24px]">
+                            <p className="text-xs text-red-400 mb-3">{showcaseError}</p>
+                            <button
+                                onClick={() => activeTeam && loadShowcase(activeTeam.id)}
+                                className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-white uppercase hover:bg-white/10 transition-colors"
+                            >
+                                Tekrar Dene
+                            </button>
+                        </div>
+                    ) : showcase.length === 0 ? (
+                        <div className="text-center py-12 bg-[#161B22] border border-white/5 rounded-[24px]">
+                            <Layout size={32} className="mx-auto mb-3 text-gray-700" />
+                            <p className="text-sm text-gray-500">Henüz taktik yok</p>
+                            <p className="text-[11px] text-gray-600 mt-1">Yukarıdan yeni bir taktik oluştur.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {showcase.map((item) => (
+                                <TacticShowcaseCard
+                                    key={item.id}
+                                    item={item}
+                                    canManage={isCaptain}
+                                    onVote={handleVote}
+                                    onFavorite={handleToggleFavorite}
+                                    onSetActive={handleSetActive}
+                                    onCopy={handleCopyTactic}
+                                    onOpen={setOpenTacticId}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
+
                 {/* Önerilen Taktikler (Sadece Kaptana Görünür) */}
                 {isCaptain && teamTactics.some(t => t.status === 'PENDING_APPROVAL') && (
                     <section className="bg-gradient-to-r from-yellow-500/10 to-amber-600/10 border border-yellow-500/20 rounded-[32px] p-5 space-y-3 shadow-[0_0_20px_rgba(245,158,11,0.05)]">
@@ -577,6 +1092,8 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     </section>
                 )}
 
+                </>)}
+
                 {/* Local Toast Notification */}
                 <AnimatePresence>
                     {toast && (
@@ -596,6 +1113,9 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     )}
                 </AnimatePresence>
 
+                {/* ════════════ KADRO: Kadro yönetimi + takım yönetimi ════════════ */}
+                {activeTab === 'KADRO' && (<>
+
                 {/* Roster List & Management */}
                 <section className="bg-[#161B22] border border-white/5 rounded-[32px] p-5">
                     <div className="flex justify-between items-center mb-4">
@@ -608,43 +1128,154 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                         </button>
                     </div>
                     <div className="space-y-3">
-                        {roster.map((player) => (
-                            <div key={player.id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <img src={player.avatar} className="w-10 h-10 rounded-full bg-gray-700 object-cover" alt={player.name} />
-                                    <div>
-                                        <p className="font-bold text-white text-sm">{player.name}</p>
-                                        <p className="text-[9px] text-[#39FF14] uppercase tracking-wider font-bold">{player.position || 'OYUNCU'}</p>
+                        {roster.map((player) => {
+                            const playerIsAdmin = isUserAdmin(player.id);
+                            const isCaptainSelf = activeTeam.captain === player.id;
+                            const isMe = auth.currentUser?.uid === player.id;
+                            return (
+                            <div key={player.id} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <img src={player.avatar} className="w-10 h-10 rounded-full bg-gray-700 object-cover" alt={player.name} />
+                                        <div>
+                                            <p className="font-bold text-white text-sm flex items-center gap-1.5">
+                                                {player.name}
+                                                {isCaptainSelf && <Crown size={11} className="text-amber-400" />}
+                                                {playerIsAdmin && !isCaptainSelf && <ShieldCheck size={11} className="text-blue-400" />}
+                                            </p>
+                                            <p className="text-[9px] text-[#39FF14] uppercase tracking-wider font-bold">{player.position || 'OYUNCU'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={player.instruction || ''}
+                                            onChange={(e) => handleSetInstruction(player.id, e.target.value)}
+                                            className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
+                                        >
+                                            <option value="" className="text-gray-500">Talimat Yok</option>
+                                            <option value="Hücuma Çık">Hücuma Çık</option>
+                                            <option value="Geride Kal">Geride Kal</option>
+                                            <option value="Serbest">Serbest</option>
+                                            <option value="Markaj">Markaj</option>
+                                            <option value="Oyun Kurucu">Oyun Kurucu</option>
+                                            <option value="Pres Yap">Pres Yap</option>
+                                        </select>
+                                        <button
+                                            onClick={() => removePlayer(player.id)}
+                                            className="p-2 shrink-0 text-gray-600 hover:text-red-500 transition-colors"
+                                            title="Kadrodan Çıkar"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        value={player.instruction || ''}
-                                        onChange={(e) => handleSetInstruction(player.id, e.target.value)}
-                                        className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
-                                    >
-                                        <option value="" className="text-gray-500">Talimat Yok</option>
-                                        <option value="Hücuma Çık">Hücuma Çık</option>
-                                        <option value="Geride Kal">Geride Kal</option>
-                                        <option value="Serbest">Serbest</option>
-                                        <option value="Markaj">Markaj</option>
-                                        <option value="Oyun Kurucu">Oyun Kurucu</option>
-                                        <option value="Pres Yap">Pres Yap</option>
-                                    </select>
-                                    <button
-                                        onClick={() => removePlayer(player.id)}
-                                        className="p-2 shrink-0 text-gray-600 hover:text-red-500 transition-colors"
-                                        title="Kadrodan Çıkar"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
+
+                                {/* Yönetici eylemleri (yalnız kaptan/yönetici görür) */}
+                                {isCaptain && !isCaptainSelf && !isMe && !isArchived && (
+                                    <div className="flex flex-wrap gap-2 mt-2 pl-1">
+                                        <button
+                                            onClick={() => handleTransferCaptaincy(player.id, player.name)}
+                                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                                        >
+                                            <Crown size={10} /> Kaptanlığı devret
+                                        </button>
+                                        <button
+                                            onClick={() => handleSetAdmin(player.id, player.name, !playerIsAdmin)}
+                                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors ${
+                                                playerIsAdmin
+                                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20'
+                                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <ShieldCheck size={10} /> {playerIsAdmin ? 'Yöneticiliği al' : 'Yönetici yap'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
 
+                {/* Takım Ayarları (ayrıl / arşivle) */}
+                <section className="bg-[#161B22] border border-white/5 rounded-[32px] p-5 space-y-3">
+                    <h3 className="font-black text-white text-sm uppercase tracking-wider">Takım Ayarları</h3>
+
+                    {isCaptain && (
+                        <button
+                            onClick={handleArchiveTeam}
+                            className="w-full flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"
+                        >
+                            <span className="flex items-center gap-2 text-sm font-bold text-gray-200">
+                                <Archive size={16} className="text-gray-400" />
+                                {isArchived ? 'Takımı Arşivden Çıkar' : 'Takımı Arşivle'}
+                            </span>
+                        </button>
+                    )}
+
+                    <button
+                        onClick={handleLeaveTeam}
+                        className="w-full flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 rounded-2xl hover:bg-red-500/10 transition-colors"
+                    >
+                        <span className="flex items-center gap-2 text-sm font-bold text-red-400">
+                            <LogOut size={16} /> Takımdan Ayrıl
+                        </span>
+                    </button>
+                </section>
+
+                </>)}
+
+                {/* ════════════ GEÇMİS: Maç geçmişi (W/L) ════════════ */}
+                {activeTab === 'GECMIS' && (
+                    <section className="space-y-3">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 px-1">
+                            <Swords size={12} className="text-[#39FF14]" /> Son Sonuçlar
+                        </span>
+                        {historyLoading ? (
+                            <div className="flex justify-center py-12">
+                                <Loader2 className="animate-spin text-[#39FF14]" size={26} />
+                            </div>
+                        ) : history.length === 0 ? (
+                            <div className="text-center py-12 bg-[#161B22] border border-white/5 rounded-[24px]">
+                                <Swords size={32} className="mx-auto mb-3 text-gray-700" />
+                                <p className="text-sm text-gray-500">Henüz tamamlanan maç yok</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {history.map((m) => (
+                                    <div key={m.id} className="bg-[#161B22] border border-white/5 rounded-2xl px-4 py-3 flex items-center gap-3">
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${RESULT_STYLE[m.result]}`}>
+                                            {m.result}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-white truncate">{m.opponentName}</p>
+                                            <p className="text-[11px] text-gray-500">{m.date || ''}</p>
+                                        </div>
+                                        <span className="text-base font-black text-white shrink-0">{m.myScore}-{m.theirScore}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
+
             </div>
+
+            {/* ── FAZ 6: Taktik detay + yorum thread modalı ── */}
+            <AnimatePresence>
+                {openTacticId && (() => {
+                    const item = showcase.find(t => t.id === openTacticId);
+                    if (!item) return null;
+                    return (
+                        <TacticDetailModal
+                            item={item}
+                            onClose={() => setOpenTacticId(null)}
+                            onToast={showToast}
+                            onCommentAdded={(id) => setShowcase(prev => prev.map(t => t.id === id ? { ...t, comment_count: t.comment_count + 1 } : t))}
+                        />
+                    );
+                })()}
+            </AnimatePresence>
 
             {/* Invite Modal Overlay */}
             {showInviteModal && (
