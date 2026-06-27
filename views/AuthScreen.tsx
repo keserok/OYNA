@@ -355,7 +355,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
             <h2 className="text-lg font-black text-white uppercase tracking-wider italic">OYNA</h2>
             <p className="text-xs text-gray-400 mt-1 leading-relaxed">
               {stage === 'input'
-                ? 'E-posta veya telefonunla doğrulama kodu al'
+                ? 'Google, Apple veya e-posta ile saniyeler içinde başla'
                 : `${contactLabel} adresine gönderilen kodu gir`}
             </p>
           </div>
@@ -370,89 +370,57 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                 transition={{ duration: 0.2 }}
                 className="flex-1 flex flex-col"
               >
-                {/* Yöntem seçimi */}
-                <div className="flex p-1 rounded-2xl bg-black/40 border border-white/10 mb-5">
-                  {([['email', 'E-POSTA', Mail], ['phone', 'TELEFON', Smartphone]] as const).map(([m, label, Icon]) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => { setMethod(m); setError(null); }}
-                      className="flex-1 h-11 rounded-xl text-[11px] font-black tracking-wider flex items-center justify-center gap-2 transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-                      style={{
-                        background: method === m ? color : 'transparent',
-                        color: method === m ? '#000' : 'rgba(255,255,255,0.5)',
-                      }}
-                    >
-                      <Icon size={15} /> {label}
-                    </button>
-                  ))}
+                {/* Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) */}
+                <div className="space-y-3 mb-1">
+                  <AnimatedButton
+                    onClick={handleGoogleLogin}
+                    disabled={!agreed || isLoading !== null}
+                    isLoading={isLoading === 'google'}
+                    variant="secondary"
+                    size="lg"
+                    className="w-full h-14 !bg-white !text-black hover:!bg-gray-100 !border-none"
+                  >
+                    <svg className="w-5 h-5 shrink-0 mr-2" viewBox="0 0 24 24">
+                      <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3 0-3.478 2.822-6.3 6.3-6.3 1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z" />
+                    </svg>
+                    <span>GOOGLE İLE DEVAM ET</span>
+                  </AnimatedButton>
+                  <AnimatedButton
+                    onClick={handleAppleLogin}
+                    disabled={!agreed || isLoading !== null}
+                    isLoading={isLoading === 'apple'}
+                    variant="secondary"
+                    size="lg"
+                    className="w-full h-14 !bg-black !text-white hover:!bg-black/90 border border-white/10"
+                  >
+                    <svg className="w-5 h-5 shrink-0 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z" />
+                    </svg>
+                    <span>APPLE İLE DEVAM ET</span>
+                  </AnimatedButton>
                 </div>
 
-                {/* Giriş alanı */}
-                {method === 'email' ? (
-                  <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
-                    <Mail size={20} className="text-gray-500 shrink-0" />
-                    <input
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setError(null); }}
-                      className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
-                      placeholder="ornek@oyna.app"
-                      aria-label="E-posta adresi"
-                    />
-                  </div>
-                ) : (
-                  <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
-                    <Smartphone size={20} className="text-gray-500 shrink-0" />
-                    {/* Ülke kodu seçici */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setShowCodes(!showCodes)}
-                        className="flex items-center gap-1 text-white font-bold shrink-0 border-r border-white/10 pr-2 mr-1 text-sm outline-none"
-                      >
-                        {COUNTRY_CODES.find(c => c.code === countryCode)?.flag} {countryCode}
-                        <ChevronDown size={10} />
-                      </button>
-                      <AnimatePresence>
-                        {showCodes && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            className="absolute bottom-full mb-2 left-0 z-50 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
-                            style={{ background: '#161B22', minWidth: 160 }}
-                          >
-                            {COUNTRY_CODES.map(c => (
-                              <button
-                                key={c.code}
-                                type="button"
-                                onClick={() => { setCountryCode(c.code); setShowCodes(false); }}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-white hover:bg-white/10 transition-colors outline-none"
-                              >
-                                <span>{c.flag}</span>
-                                <span className="font-bold">{c.code}</span>
-                                <span className="text-gray-400 text-[10px]">{c.name}</span>
-                              </button>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      autoComplete="tel-national"
-                      value={formatPhoneDisplay(phoneDigits)}
-                      onChange={(e) => { setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null); }}
-                      className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 tracking-wide text-sm"
-                      placeholder="5XX XXX XX XX"
-                      aria-label="Telefon numarası"
-                    />
-                  </div>
-                )}
+                {/* Divider */}
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-white/5" />
+                  <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">veya e-posta ile</span>
+                  <div className="flex-1 h-px bg-white/5" />
+                </div>
+
+                {/* E-posta girişi — İKİNCİL. §3.1: telefonla giriş yok; telefon yalnız profil/iletişim alanı. */}
+                <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
+                  <Mail size={20} className="text-gray-500 shrink-0" />
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                    className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                    placeholder="ornek@oyna.app"
+                    aria-label="E-posta adresi"
+                  />
+                </div>
 
                 {/* Beni Hatırla */}
                 <button
@@ -507,7 +475,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     isLoading={isLoading === 'send'}
                     size="lg"
                     className="w-full h-14"
-                    style={{ 
+                    style={{
                       background: sendDisabled ? 'rgba(255,255,255,0.05)' : color,
                       color: sendDisabled ? 'rgba(255,255,255,0.2)' : '#000',
                       boxShadow: sendDisabled ? 'none' : `0 0 20px ${color}33`
@@ -516,44 +484,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     DOĞRULAMA KODU GÖNDER <ArrowRight size={16} className="ml-1" />
                   </AnimatedButton>
 
-                  {/* Divider */}
-                  <div className="flex items-center gap-3 my-2">
-                    <div className="flex-1 h-px bg-white/5" />
-                    <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">veya</span>
-                    <div className="flex-1 h-px bg-white/5" />
-                  </div>
-
-                  {/* Google Sign In */}
-                  <AnimatedButton
-                    onClick={handleGoogleLogin}
-                    disabled={!agreed || isLoading !== null}
-                    isLoading={isLoading === 'google'}
-                    variant="secondary"
-                    size="lg"
-                    className="w-full h-14 bg-white text-black hover:bg-gray-100 border-none"
-                  >
-                    <svg className="w-5 h-5 shrink-0 mr-2" viewBox="0 0 24 24">
-                      <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3 0-3.478 2.822-6.3 6.3-6.3 1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z" />
-                    </svg>
-                    <span>GOOGLE İLE GİRİŞ YAP</span>
-                  </AnimatedButton>
-
-                  {/* Apple Sign In */}
-                  <AnimatedButton
-                    onClick={handleAppleLogin}
-                    disabled={!agreed || isLoading !== null}
-                    isLoading={isLoading === 'apple'}
-                    variant="secondary"
-                    size="lg"
-                    className="w-full h-14 bg-black text-white hover:bg-black/90 border border-white/10"
-                  >
-                    <svg className="w-5 h-5 shrink-0 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z" />
-                    </svg>
-                    <span>APPLE İLE GİRİŞ YAP</span>
-                  </AnimatedButton>
-
-                  {/* Misafir girişi */}
+                  {/* Önce göz at — kayıt olmadan keşfet (değer-kapısı modeli) */}
                   <AnimatedButton
                     id="guest-login-button"
                     onClick={handleGuestLogin}
@@ -563,7 +494,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     size="sm"
                     className="w-full h-12 text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white"
                   >
-                    MİSAFİR OLARAK GİR
+                    ÖNCE MAÇLARA GÖZ AT
                   </AnimatedButton>
                 </div>
               </motion.div>
