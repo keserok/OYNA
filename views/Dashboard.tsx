@@ -426,7 +426,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <motion.div
             onClick={() => {
               setNewMatchBadge(false);
-              onNavigate('UPCOMING_MATCHES');
+              // İlk-açılış: henüz maçın yoksa doğrudan "maç bul"a yönlen.
+              onNavigate(userMatches.length > 0 ? 'UPCOMING_MATCHES' : 'MATCH_DISCOVERY');
             }}
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{

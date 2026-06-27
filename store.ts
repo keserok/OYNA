@@ -217,6 +217,9 @@ interface AppState {
   /** Geçmiş yığınını temizleyip verilen ekranı yeni kök olarak ayarlar. */
   resetNavigation: (view: AppView) => void;
   setRole: (role: UserRole | null) => void;
+  /** Profil'den sağlayıcı başvurusu için hedef rol (SERVICE_APPLICATION'a taşınır). */
+  serviceAppRole: UserRole | null;
+  setServiceAppRole: (r: UserRole | null) => void;
   setIsAuthReady: (isReady: boolean) => void;
   setHasMotmCoupon: (hasCoupon: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
@@ -394,6 +397,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // Maç listesini canlı tut: admin panelden veya başka bir oyuncudan gelen
     // ekleme/güncelleme/silme işlemleri sayfa yenilenmeden burada görünsün.
+    // initApp birden çok kez çağrılabilir (StrictMode / auth değişimi). Aynı isimli
+    // kanal yeniden .on()+.subscribe() edilirse "after subscribe()" hatası oluşur;
+    // önce varsa eski aboneliği temizle (sağlamlık).
+    supabase.getChannels()
+      .filter((c) => c.topic === 'realtime:matches-list-sync')
+      .forEach((c) => { supabase.removeChannel(c); });
     supabase
       .channel('matches-list-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
@@ -419,6 +428,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   view: 'SPLASH',
   navigationStack: [],
   role: UserRole.PLAYER,
+  serviceAppRole: null,
   isAuthReady: true,
   hasMotmCoupon: false,
   selectedMatch: null,
@@ -744,6 +754,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   }),
   resetNavigation: (newView) => set({ navigationStack: [], view: newView }),
   setRole: (role) => set({ role }),
+  setServiceAppRole: (serviceAppRole) => set({ serviceAppRole }),
   setIsAuthReady: (isAuthReady) => set({ isAuthReady }),
   setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),

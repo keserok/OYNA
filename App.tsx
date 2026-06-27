@@ -81,6 +81,7 @@ const App: React.FC = () => {
     goBack,
     resetNavigation,
     setRole,
+    serviceAppRole,
     setIsAuthReady,
     setSelectedMatch,
     setSelectedDiaryId,
@@ -379,7 +380,7 @@ const App: React.FC = () => {
         />;
       case 'SERVICE_APPLICATION':
         return <ServiceApplication
-          role={(role === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}
+          role={(serviceAppRole === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}
           rejectionNote={verificationNote}
           onSubmitted={() => { setVerificationNote(null); resetNavigation('PENDING_VERIFICATION'); }}
           onBack={() => { setVerificationNote(null); goBack('ROLE_SELECTION'); }}
