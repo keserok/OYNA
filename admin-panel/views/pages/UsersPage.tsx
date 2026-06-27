@@ -5,8 +5,8 @@ import { ActionConfirmModal, ActionConfirmOptions } from '../components/ActionCo
 import { AddUserModal } from '../components/AddUserModal';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
-import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, Star, BadgeCheck } from 'lucide-react';
-import { logImpersonation, fetchAdminProfiles, toTurkishAdminError } from '../../services/adminService';
+import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, Star, BadgeCheck, CreditCard } from 'lucide-react';
+import { logImpersonation, fetchAdminProfiles, toTurkishAdminError, setPlayerCardAdmin } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
@@ -365,6 +365,30 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                                 <BadgeCheck size={11} /> DOĞRULA
                             </button>
                         )}
+                        <div
+                            title="Premium kart durumu / tier"
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black ${u.cardActive ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
+                        >
+                            <CreditCard size={11} />
+                            <select
+                                value={u.cardActive ? (u.cardTier || 'bronze') : ''}
+                                onChange={async (e) => {
+                                    const v = e.target.value;
+                                    const active = v !== '';
+                                    try {
+                                        await setPlayerCardAdmin(u.id, active, active ? (v as 'bronze' | 'silver' | 'gold') : null);
+                                        success(active ? `Kart aktif · ${v.toUpperCase()}` : 'Kart kapatıldı');
+                                        if (subRoute === 'KULLANICILAR') await loadServerUsers();
+                                    } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); }
+                                }}
+                                className="bg-transparent outline-none cursor-pointer text-[9px] font-black uppercase [&>option]:bg-gray-900 [&>option]:text-white"
+                            >
+                                <option value="">KART KAPALI</option>
+                                <option value="bronze">BRONZE</option>
+                                <option value="silver">SILVER</option>
+                                <option value="gold">GOLD</option>
+                            </select>
+                        </div>
                         </>
                     )}
                     <button 

@@ -108,6 +108,8 @@ const mapProfileRow = (row: Record<string, unknown>): AdminUser => {
     matchCount: Number(row.match_count ?? 0),
     wallet: Number(row.wallet_balance ?? 0),
     banExpiresAt: (row.ban_expires_at as string) || null,
+    cardActive: Boolean(row.card_active),
+    cardTier: (row.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
   };
 };
 
@@ -418,7 +420,7 @@ export async function fetchAdminProfiles(options?: {
 
   let q = supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (search) {
@@ -433,7 +435,7 @@ export async function fetchAdminProfiles(options?: {
   if (fbErr) {
     let retryQ = supabase
       .from('profiles')
-      .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
+      .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
       .order('join_date', { ascending: false });
     if (search) {
       retryQ = retryQ.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -618,6 +620,24 @@ export async function banUserAdmin(
 
 export async function updateSettingsAdmin(settings: Record<string, unknown>): Promise<void> {
   const { error } = await supabase.rpc('admin_update_settings', { p_settings: settings });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Oyuncunun premium kartını aktive/pasive eder ve tier atar.
+ * active=false → sade profil (foto + mevki + bio + oynanan maçlar).
+ * active=true  → premium FIFA kartı; tier verilmezse mevcut tier ya da 'bronze'.
+ */
+export async function setPlayerCardAdmin(
+  userId: string,
+  active: boolean,
+  tier?: 'bronze' | 'silver' | 'gold' | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_player_card', {
+    p_user_id: userId,
+    p_active: active,
+    p_tier: tier ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 
@@ -1286,7 +1306,7 @@ export async function createUserAdmin(input: {
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at')
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, card_active, card_tier')
     .eq('id', userId)
     .maybeSingle();
   if (error || !data) return null;
