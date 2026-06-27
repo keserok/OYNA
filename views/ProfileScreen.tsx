@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
 
@@ -147,7 +148,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const [showEditModal, setShowEditModal] = useState(false);
     const [editPos, setEditPos] = useState('');
     const [editBio, setEditBio] = useState('');
+    const [editAvatar, setEditAvatar] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const { uploadImage, uploading } = useImageUpload('avatars');
     const { globalTexts, setMyRoles, setIsRoleSwitcherOpen, setServiceAppRole } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -190,13 +194,30 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const openEdit = () => {
         setEditPos(profile?.position || '');
         setEditBio(profile?.bio || '');
+        setEditAvatar(profile?.avatar_url || '');
         setShowEditModal(true);
+    };
+    const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const url = await uploadImage(file);
+            setEditAvatar(url);
+        } catch (err) {
+            console.error('Fotoğraf yükleme hatası:', err);
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
     const saveEdit = async () => {
         if (!uid) return;
         setSavingEdit(true);
         try {
-            await updateProfileBasics(uid, { position: editPos.trim(), bio: editBio.trim() });
+            await updateProfileBasics(uid, {
+                position: editPos.trim(),
+                bio: editBio.trim(),
+                ...(editAvatar && editAvatar !== profile?.avatar_url ? { avatar_url: editAvatar } : {}),
+            });
             setShowEditModal(false);
             await loadProfile();
         } catch (e) {
@@ -340,6 +361,34 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-[#0A0E14] border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
                             <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
                             <h3 className="text-base font-black text-white uppercase tracking-wider">Profili Düzenle</h3>
+                            {/* Profil fotoğrafı */}
+                            <div className="flex flex-col items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="relative group active:scale-95 transition-all disabled:opacity-60"
+                                >
+                                    <img
+                                        src={editAvatar || '/player_card_photo.png'}
+                                        alt="Profil"
+                                        referrerPolicy="no-referrer"
+                                        className="w-24 h-24 rounded-3xl object-cover border border-white/10"
+                                    />
+                                    <div className="absolute inset-0 rounded-3xl bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Pencil size={20} className="text-white" />
+                                    </div>
+                                    {uploading && (
+                                        <div className="absolute inset-0 rounded-3xl bg-black/70 flex items-center justify-center">
+                                            <span className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest">Yükleniyor…</span>
+                                        </div>
+                                    )}
+                                </button>
+                                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest disabled:opacity-60">
+                                    Fotoğrafı Değiştir
+                                </button>
+                                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
+                            </div>
                             <div>
                                 <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Mevki</label>
                                 <input value={editPos} onChange={(e) => setEditPos(e.target.value)} placeholder="Örn: Orta Saha" className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-[#39FF14]/40" />
@@ -348,7 +397,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                                 <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Kısa Tanıtım</label>
                                 <textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat..." className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-[#39FF14]/40 resize-none" />
                             </div>
-                            <button onClick={saveEdit} disabled={savingEdit} className="w-full h-12 rounded-2xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
+                            <button onClick={saveEdit} disabled={savingEdit || uploading} className="w-full h-12 rounded-2xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
                                 {savingEdit ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>
                         </div>
