@@ -168,9 +168,43 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
   }
 };
 
+/** Maç Raporu — oyuncunun bu maça özel kişisel notunu döndürür (yoksa boş string). */
+export const getMatchNote = async (matchId: string): Promise<string> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData?.user?.id;
+    if (!uid || !matchId) return '';
+    const { data, error } = await supabase
+      .from('match_notes')
+      .select('note')
+      .eq('match_id', matchId)
+      .eq('user_id', uid)
+      .maybeSingle();
+    if (error) throw error;
+    return (data?.note as string) ?? '';
+  } catch (error) {
+    console.error('Maç notu çekilirken hata:', error);
+    return '';
+  }
+};
+
+/** Maç Raporu — oyuncunun bu maça özel kişisel notunu kaydeder (upsert). */
+export const saveMatchNote = async (matchId: string, note: string): Promise<void> => {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData?.user?.id;
+  if (!uid) throw new Error('Oturum bulunamadı.');
+  const { error } = await supabase
+    .from('match_notes')
+    .upsert(
+      { match_id: matchId, user_id: uid, note, updated_at: new Date().toISOString() },
+      { onConflict: 'match_id,user_id' },
+    );
+  if (error) throw error;
+};
+
 export const joinMatchSlot = async (
-  matchId: string, 
-  updatedSlots: PositionSlot[], 
+  matchId: string,
+  updatedSlots: PositionSlot[],
   isAway: boolean
 ): Promise<void> => {
   try {

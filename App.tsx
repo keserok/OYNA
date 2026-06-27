@@ -31,7 +31,6 @@ const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
 const Notifications = lazy(() => import('./views/Notifications'));
 const SettingsScreen = lazy(() => import('./views/SettingsScreen'));
 const MatchTicket = lazy(() => import('./views/MatchTicket'));
-const PostMatchReport = lazy(() => import('./views/PostMatchReport'));
 const MatchDiaryDetail = lazy(() => import('./views/MatchDiaryDetail'));
 const Studio = lazy(() => import('./views/Studio'));
 const WalletScreen = lazy(() => import('./views/WalletScreen'));
@@ -491,8 +490,6 @@ const App: React.FC = () => {
         />;
       case 'MATCH_TICKET':
         return <MatchTicket onBack={() => goBack('DASHBOARD')} />;
-      case 'POST_MATCH':
-        return <PostMatchReport onBack={() => goBack('PROFILE')} />;
       case 'TEAM_BUILDER':
         return <TeamBuilder onBack={() => goBack('PROFILE')} />;
       case 'SOCIAL':

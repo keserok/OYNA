@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Share2, Users, Layout } from 'lucide-react';
+import { ArrowLeft, Share2, Users, Layout, PenLine, Save, Shield, Check } from 'lucide-react';
 import { MatchListing } from '../types';
 import { auth } from '../supabaseAuth';
-import { getMatchDetails } from '../services/matchService';
+import { getMatchDetails, getMatchNote, saveMatchNote } from '../services/matchService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 
 interface MatchDiaryDetailProps {
@@ -17,7 +17,6 @@ interface DiaryMatchView {
     formation: string;
     result: 'WIN' | 'LOSS' | 'DRAW';
     rosterSnapshot: { name: string; avatar: string; x: number; y: number; isMe: boolean }[];
-    personalNote?: string;
 }
 
 const buildDiaryView = (listing: MatchListing, uid?: string): DiaryMatchView => {
@@ -45,7 +44,6 @@ const buildDiaryView = (listing: MatchListing, uid?: string): DiaryMatchView => 
                 y: s.y,
                 isMe: s.player!.id === uid,
             })),
-        personalNote: undefined,
     };
 };
 
@@ -53,6 +51,13 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
     const [match, setMatch] = useState<DiaryMatchView | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Kişisel not (Maç Raporu) — gerçek, kalıcı (match_notes).
+    const [note, setNote] = useState('');
+    const [draftNote, setDraftNote] = useState('');
+    const [isEditingNote, setIsEditingNote] = useState(false);
+    const [savingNote, setSavingNote] = useState(false);
+    const [justSaved, setJustSaved] = useState(false);
 
     const loadMatch = async () => {
         if (!diaryId) {
@@ -63,13 +68,18 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
         setLoading(true);
         setError(null);
         try {
-            const listing = await getMatchDetails(diaryId);
+            const [listing, savedNote] = await Promise.all([
+                getMatchDetails(diaryId),
+                getMatchNote(diaryId),
+            ]);
             if (!listing) {
                 setError('Maç bulunamadı.');
                 setMatch(null);
                 return;
             }
             setMatch(buildDiaryView(listing, auth.currentUser?.uid));
+            setNote(savedNote);
+            setDraftNote(savedNote);
         } catch (err) {
             console.error('MatchDiaryDetail fetch:', err);
             setError('Maç detayları yüklenemedi. Lütfen tekrar dene.');
@@ -83,6 +93,23 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [diaryId]);
 
+    const handleSaveNote = async () => {
+        if (!diaryId) return;
+        setSavingNote(true);
+        try {
+            await saveMatchNote(diaryId, draftNote.trim());
+            setNote(draftNote.trim());
+            setIsEditingNote(false);
+            setJustSaved(true);
+            if (navigator.vibrate) navigator.vibrate(40);
+            setTimeout(() => setJustSaved(false), 2000);
+        } catch (err) {
+            console.error('Maç notu kaydedilemedi:', err);
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
     const header = (
         <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
             <button
@@ -92,7 +119,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                 <ArrowLeft size={20} />
             </button>
             <div className="text-center">
-                <h1 className="text-sm font-black text-white tracking-widest uppercase">MAÇ DETAYI</h1>
+                <h1 className="text-sm font-black text-white tracking-widest uppercase">MAÇ RAPORU</h1>
             </div>
             <button className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
                 <Share2 size={20} />
@@ -241,21 +268,75 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                     </div>
                 </section>
 
-                {/* 4. Personal Note (Symmetric Box) */}
-                {match.personalNote && (
-                    <section className="w-full max-w-sm animate-in slide-in-from-bottom-10 duration-500 pb-10">
-                        <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-8 text-center relative overflow-hidden flex flex-col items-center">
-                            {/* Symmetric quotes accent */}
-                            <div className="absolute top-4 left-6 text-6xl text-[#FFFF00]/5 font-serif pointer-events-none">"</div>
-                            <div className="absolute bottom-[-10px] right-6 text-6xl text-[#FFFF00]/5 font-serif pointer-events-none">"</div>
-                            
-                            <p className="text-[10px] font-black text-[#FFFF00] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
-                            <p className="text-gray-300 font-serif text-sm italic leading-relaxed px-4">
-                                "{match.personalNote}"
-                            </p>
+                {/* 4. Personal Note — Maç Günlüğü (gerçek, kalıcı) */}
+                <section className="w-full max-w-sm animate-in slide-in-from-bottom-10 duration-500 pb-10">
+                    <div className="flex items-center justify-center gap-2 mb-6">
+                        <div className="h-px w-12 bg-white/10"></div>
+                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <PenLine size={14} /> MAÇ GÜNLÜĞÜ
+                        </h3>
+                        <div className="h-px w-12 bg-white/10"></div>
+                    </div>
+
+                    {!isEditingNote ? (
+                        <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-8 relative overflow-hidden flex flex-col items-center text-center">
+                            {note ? (
+                                <>
+                                    <div className="absolute top-4 left-6 text-6xl text-[#FFFF00]/5 font-serif pointer-events-none">"</div>
+                                    <div className="absolute bottom-[-10px] right-6 text-6xl text-[#FFFF00]/5 font-serif pointer-events-none">"</div>
+                                    <p className="text-[10px] font-black text-[#FFFF00] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
+                                    <p className="text-gray-300 font-serif text-sm italic leading-relaxed px-4 whitespace-pre-wrap">
+                                        "{note}"
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-12 h-12 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/20 flex items-center justify-center text-[#FFFF00] mb-4">
+                                        <PenLine size={22} />
+                                    </div>
+                                    <p className="text-sm font-bold text-white mb-1">Bu maç için not almadın</p>
+                                    <p className="text-xs text-gray-500">Taktik, performans ya da unutmak istemediğin anları yaz.</p>
+                                </>
+                            )}
+                            <button
+                                onClick={() => { setDraftNote(note); setIsEditingNote(true); }}
+                                className="mt-6 px-5 py-2.5 rounded-full bg-white/5 border border-white/15 text-white text-[11px] font-black uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                                {justSaved ? <><Check size={13} className="text-[#39FF14]" /> Kaydedildi</> : <><PenLine size={13} /> {note ? 'Notu Düzenle' : 'Not Ekle'}</>}
+                            </button>
                         </div>
-                    </section>
-                )}
+                    ) : (
+                        <div className="bg-[#161B22] border border-white/10 rounded-[32px] p-6 flex flex-col">
+                            <div className="flex justify-between items-center mb-4">
+                                <p className="text-[10px] font-black text-[#FFFF00] uppercase tracking-widest">KİŞİSEL NOTUN</p>
+                                <span className="flex items-center gap-1 text-[10px] text-gray-600"><Shield size={12} /> Sadece sen görürsün</span>
+                            </div>
+                            <textarea
+                                className="min-h-[140px] bg-transparent text-base text-white placeholder:text-gray-600 outline-none resize-none font-serif leading-relaxed"
+                                placeholder="Bugünkü maç nasıldı? Taktik işe yaradı mı? Kimi tutmakta zorlandın? Kendine notlar al..."
+                                value={draftNote}
+                                onChange={(e) => setDraftNote(e.target.value)}
+                                maxLength={1000}
+                                autoFocus
+                            />
+                            <div className="flex gap-3 mt-4">
+                                <button
+                                    onClick={() => { setDraftNote(note); setIsEditingNote(false); }}
+                                    className="flex-1 h-12 rounded-2xl bg-white/5 border border-white/10 text-gray-300 font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+                                >
+                                    Vazgeç
+                                </button>
+                                <button
+                                    onClick={handleSaveNote}
+                                    disabled={savingNote}
+                                    className="flex-[1.5] h-12 rounded-2xl bg-[#FFFF00] text-black font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    <Save size={16} /> {savingNote ? 'Kaydediliyor...' : 'Kaydet'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </section>
 
             </main>
         </div>
