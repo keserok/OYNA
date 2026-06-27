@@ -455,12 +455,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           >
             {/* Full button background pulsing red glow (acts like counter, increases with match closeness) */}
             <motion.div
-              animate={{
+              animate={userMatches.length > 0 ? {
                 opacity: [0.03, 0.15 + (1.8 - closestMatchPulse) * 0.12, 0.03]
-              }}
+              } : { opacity: 0.02 }}
               transition={{
                 duration: closestMatchPulse,
-                repeat: Infinity,
+                repeat: userMatches.length > 0 ? Infinity : 0,
                 ease: 'easeInOut'
               }}
               className="absolute inset-0 bg-[#ef4444] pointer-events-none z-0"
@@ -468,23 +468,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
 
             {/* Glowing pulsing border effect */}
             <motion.div
-              animate={{
+              animate={userMatches.length > 0 ? {
                 opacity: [0.15, 0.45, 0.15],
                 boxShadow: [
                   'inset 0 0 15px rgba(239, 68, 68, 0.1)',
                   'inset 0 0 25px rgba(239, 68, 68, 0.25)',
                   'inset 0 0 15px rgba(239, 68, 68, 0.1)'
                 ]
-              }}
+              } : { opacity: 0.08, boxShadow: 'inset 0 0 15px rgba(255,255,255,0.04)' }}
               transition={{
                 duration: closestMatchPulse,
-                repeat: Infinity,
+                repeat: userMatches.length > 0 ? Infinity : 0,
                 ease: 'easeInOut'
               }}
               className="absolute inset-0 rounded-[28px] pointer-events-none z-0"
             />
 
-            {/* Red Laser Scan Line (sweeps full button height smoothly up and down) */}
+            {/* Red Laser Scan Line — yalnız yaklaşan maç varken (Soru 8). */}
+            {userMatches.length > 0 && (
             <motion.div
               animate={{ top: ['-40px', '100%', '-40px'] }}
               transition={{
@@ -498,6 +499,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 boxShadow: '0 8px 35px 4px rgba(239, 68, 68, 0.75)'
               }}
             />
+            )}
 
             <div className="relative z-10 py-6 px-7 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
