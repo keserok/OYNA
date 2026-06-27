@@ -194,10 +194,21 @@ export const CommissionPage: React.FC = () => {
 
             {editRow._isNew && (
               <Field label="Kapsam">
-                <select value={editRow.scope ?? 'GLOBAL'} onChange={e => setEditRow(r => ({ ...r!, scope: e.target.value as CommissionConfigRow['scope'] }))}
+                <select value={editRow.scope ?? 'GLOBAL'} onChange={e => setEditRow(r => ({ ...r!, scope: e.target.value as CommissionConfigRow['scope'], scope_id: e.target.value === 'GLOBAL' ? null : r!.scope_id }))}
                   className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                   {Object.entries(SCOPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
+              </Field>
+            )}
+
+            {/* Kapsam ID: belirli saha/maç/sağlayıcı override'ı (boş = kapsam geneli varsayılan) */}
+            {editRow._isNew && editRow.scope && editRow.scope !== 'GLOBAL' && (
+              <Field label={`Kapsam ID (opsiyonel — ${SCOPE_LABELS[editRow.scope] ?? editRow.scope})`}>
+                <input type="text"
+                  value={editRow.scope_id ?? ''}
+                  onChange={e => setEditRow(r => ({ ...r!, scope_id: e.target.value.trim() || null }))}
+                  placeholder="Saha/Maç/Sağlayıcı UUID — boş bırakılırsa kapsam geneli geçerli"
+                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-mono" />
               </Field>
             )}
 
