@@ -772,29 +772,96 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  const handleInviteFriend = (friend: any) => {
+  const handleInviteFriend = async (friend: any) => {
     if (!inviteModalSlotId || !friend) return;
-    setInvitesSent(prev => ({ ...prev, [inviteModalSlotId]: 'INVITED' }));
-    setInvitedFriendNames(prev => ({ ...prev, [inviteModalSlotId]: friend.name || 'Arkadaş' }));
-    
-    const isAway = (match.awaySlots || []).some(s => s?.id === inviteModalSlotId);
-    
+    const slotId = inviteModalSlotId;
+    setInvitesSent(prev => ({ ...prev, [slotId]: 'INVITED' }));
+    setInvitedFriendNames(prev => ({ ...prev, [slotId]: friend.name || 'Arkadaş' }));
+
+    // Satın aldığım slotu arkadaşa atıyorsam → gerçek RPC (davet + slot INVITED).
+    const ownedSlot = (match.slots || []).find(s => s?.id === slotId && (s as any).purchasedBy === currentUserProfile.id);
+    if (ownedSlot) {
+      try {
+        const { error } = await supabase.rpc('player_assign_slot', {
+          p_match_id: match.id, p_slot_id: slotId, p_friend_id: friend.id,
+        });
+        if (error) throw error;
+        const updatedSlots = (match.slots || []).map(s =>
+          s?.id === slotId ? { ...s, assignmentStatus: 'INVITED' as const, inviteeId: friend.id } : s
+        );
+        await updateMatch({ ...match, slots: updatedSlots });
+        showActionSuccess(`${friend.name || 'Arkadaşın'} bu slota davet edildi.`);
+      } catch (e: any) {
+        console.error('assign slot error', e);
+        showActionError('Atama yapılamadı. Lütfen tekrar dene.');
+      }
+      setInviteModalSlotId(null);
+      setFriendSearch('');
+      return;
+    }
+
+    // (Kaptan/diğer akış) yerel davet bildirimi
+    const isAway = (match.awaySlots || []).some(s => s?.id === slotId);
     addUserNotification({
-      id: `inv_${inviteModalSlotId}_${Date.now()}`,
+      id: `inv_${slotId}_${Date.now()}`,
       type: 'invite',
       title: isAway ? '⚔️ Rakip Daveti' : '⚽ Maç Daveti',
-      desc: isAway 
+      desc: isAway
         ? `${currentUserProfile.name} sizi "${match.title || 'bir maça'}" karşı takımda oynamaya (rakip olarak) davet etti!`
         : `${currentUserProfile.name} sizi "${match.title || 'bir maça'}" davet etti!`,
       time: 'Az önce',
       iconName: 'Trophy',
       color: '#FFFF00',
       textColor: '#FFFF00',
-      payload: { matchId: match.id, slotId: inviteModalSlotId },
+      payload: { matchId: match.id, slotId },
       read: false,
     });
     setInviteModalSlotId(null);
     setFriendSearch('');
+  };
+
+  // Satın alınan slot için paylaşılabilir devralma kodu üret
+  const handleMakeSlotCode = async (slotId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('player_make_slot_code', { p_match_id: match.id, p_slot_id: slotId });
+      if (error) throw error;
+      const updatedSlots = (match.slots || []).map(s =>
+        s?.id === slotId ? { ...s, assignmentStatus: 'LINK_PENDING' as const, claimCode: data as string } : s
+      );
+      await updateMatch({ ...match, slots: updatedSlots });
+      showActionSuccess(`Devralma kodu: ${data} — arkadaşına gönder.`);
+    } catch (e: any) {
+      console.error('make slot code error', e);
+      showActionError('Kod oluşturulamadı.');
+    }
+  };
+
+  // Davet edilen arkadaş slotu kabul eder → slotta arkadaş görünür
+  const handleAcceptSlot = async (slotId: string) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId });
+      if (error) throw error;
+      const me: Player = {
+        id: currentUserProfile.id, name: currentUserProfile.name,
+        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
+        rating: currentUserProfile.rating || 4.5, position: 'OYUNCU', x: 50, y: 50, paymentStatus: 'PAID',
+      };
+      const updatedSlots = (match.slots || []).map(s =>
+        s?.id === slotId
+          ? { ...s, status: 'TAKEN' as const, player: { ...me, position: s.role || 'OYUNCU', x: s.x, y: s.y }, occupant: currentUserProfile.id, assignmentStatus: 'ACCEPTED' as const, inviteeId: undefined }
+          : s
+      );
+      await updateMatch({ ...match, slots: updatedSlots });
+      setActivePlayerSlotId(null);
+      showActionSuccess('Slotu kabul ettin — kadrodasın! ⚽');
+    } catch (e: any) {
+      console.error('accept slot error', e);
+      showActionError('Kabul edilemedi. Lütfen tekrar dene.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
 
@@ -1174,6 +1241,34 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           </motion.button>
                         )}
                       </div>
+
+                      {/* Slot sahiplik/atama aksiyonları (FAZ8) — satın aldığın slotu arkadaşa/koda ata */}
+                      {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
+                        <div className="mt-4 space-y-2">
+                          {(activePlayerSlot as any).assignmentStatus === 'INVITED' && (
+                            <p className="text-[10px] text-[#FFAA00] font-bold text-center">Arkadaş daveti gönderildi — kabul bekleniyor.</p>
+                          )}
+                          {(activePlayerSlot as any).assignmentStatus === 'LINK_PENDING' && (activePlayerSlot as any).claimCode && (
+                            <p className="text-[10px] text-[#00B0FF] font-bold text-center">Devralma kodu: <span className="text-white font-black tracking-widest">{(activePlayerSlot as any).claimCode}</span></p>
+                          )}
+                          <div className="flex gap-2">
+                            <button onClick={() => { setInviteModalSlotId(activePlayerSlot.id); setFriendSearch(''); setActivePlayerSlotId(null); }}
+                              className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-wider text-black bg-[#39FF14] active:scale-95 transition-all flex items-center justify-center gap-1.5">
+                              <UserPlus size={13} /> Arkadaşa Ata
+                            </button>
+                            <button onClick={() => handleMakeSlotCode(activePlayerSlot.id)}
+                              className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-wider text-white bg-white/5 border border-white/15 active:scale-95 transition-all flex items-center justify-center gap-1.5">
+                              <KeyRound size={13} /> Kod Oluştur
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
+                        <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
+                          className="mt-4 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.4)] flex items-center justify-center gap-2">
+                          <CheckCircle2 size={15} /> Slotu Kabul Et
+                        </button>
+                      )}
 
                       {/* Kaptan Çıkarma */}
                       {isCaptain && !isMySlot && (
