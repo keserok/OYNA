@@ -1128,6 +1128,51 @@ export async function updateCmsTexts(texts: Record<string, string>): Promise<num
   return Number(data);
 }
 
+// ─── Sistem Parametreleri (app_config) & Modül Anahtarları (feature_flags) ────
+export interface AppConfigRow {
+  key: string;
+  value: unknown; // jsonb scalar — number | boolean | string
+  value_type: 'number' | 'boolean' | 'text' | 'json';
+  category: string;
+  label: string;
+  description: string | null;
+  is_public: boolean;
+  min_value: number | null;
+  max_value: number | null;
+  updated_at: string;
+}
+
+export interface FeatureFlagRow {
+  key: string;
+  enabled: boolean;
+  label: string;
+  description: string | null;
+  category: string;
+  updated_at: string;
+}
+
+export async function fetchAppConfig(): Promise<AppConfigRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_config');
+  if (error) throw new Error(error.message);
+  return (data || []) as AppConfigRow[];
+}
+
+export async function setAppConfig(key: string, value: unknown): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_config', { p_key: key, p_value: value });
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchFeatureFlags(): Promise<FeatureFlagRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_feature_flags');
+  if (error) throw new Error(error.message);
+  return (data || []) as FeatureFlagRow[];
+}
+
+export async function setFeatureFlag(key: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_feature_flag', { p_key: key, p_enabled: enabled });
+  if (error) throw new Error(error.message);
+}
+
 export async function fetchPromoCodes(): Promise<PromoCodeRow[]> {
   const { data, error } = await supabase
     .from('promo_codes')

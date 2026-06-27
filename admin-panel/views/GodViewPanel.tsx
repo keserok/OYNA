@@ -41,13 +41,15 @@ const PendingVerificationsPage = lazy(() => import('./pages/PendingVerifications
 const ProviderIdentitiesPage = lazy(() => import('./pages/ProviderIdentitiesPage').then(m => ({ default: m.ProviderIdentitiesPage })));
 const ServiceDisputesPage = lazy(() => import('./pages/ServiceDisputesPage').then(m => ({ default: m.ServiceDisputesPage })));
 const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
+const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m => ({ default: m.SystemParamsPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
   | 'SERVICE_DISPUTES' | 'MODERATION'
-  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
+  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION'
+  | 'SYSTEM_PARAMS';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -172,6 +174,8 @@ const GodViewPanelInner: React.FC<Props> = ({
             case 'SETTINGS':
             case 'CONTENT':
                 return <SettingsPage subRoute={subRoute} onRefresh={onRefreshData} />;
+            case 'SYSTEM_PARAMS':
+                return <SystemParamsPage />;
             case 'NOTIFICATIONS':
             case 'SEGMENTATION':
                 return <CampaignsPage route="NOTIFICATIONS" />;

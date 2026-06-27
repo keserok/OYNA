@@ -3,7 +3,7 @@ import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
     ChevronLeft, Radio, Swords, LogOut, Lock, Globe, Trophy, Clock, ScrollText, Building2,
-    ShieldCheck, AlertOctagon
+    ShieldCheck, AlertOctagon, SlidersHorizontal
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../services/adminService';
@@ -52,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             'Maçlar': 'MATCHES', 'Kaleciler': 'KALECİLER', 'Hakemler': 'HAKEMLER', 'Topluluklar': 'TOPLULUKLAR',
             'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS',
             'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES', 'Komisyon': 'COMMISSION',
-            'Denetim Kayıtları': 'AUDIT_LOG', 'Metinler': 'CONTENT', 'Ayarlar': 'SETTINGS', 'Ekipler & Yetkiler': 'ACL',
+            'Denetim Kayıtları': 'AUDIT_LOG', 'Metinler': 'CONTENT', 'Ayarlar': 'SETTINGS', 'Parametreler': 'SYSTEM_PARAMS', 'Ekipler & Yetkiler': 'ACL',
         };
         return map[label] ?? null;
     };
@@ -109,6 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: ScrollText, label: 'Denetim Kayıtları', badge: null, active: activeSubRoute === 'AUDIT_LOG', action: () => onNavigate('AUDIT_LOG') },
                 { icon: Type, label: 'Metinler', badge: null, active: activeSubRoute === 'CONTENT', action: () => onNavigate('CONTENT') },
                 { icon: Settings, label: 'Ayarlar', badge: null, active: activeSubRoute === 'SETTINGS', action: () => onNavigate('SETTINGS') },
+                { icon: SlidersHorizontal, label: 'Parametreler', badge: null, active: activeSubRoute === 'SYSTEM_PARAMS', action: () => onNavigate('SYSTEM_PARAMS') },
                 { icon: Lock, label: 'Ekipler & Yetkiler', badge: null, active: activeSubRoute === 'ACL', action: () => onNavigate('ACL') },
             ]
         },
