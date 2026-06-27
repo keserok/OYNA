@@ -33,6 +33,8 @@ psql "$DATABASE_URL" -f tests/integration/faz3_match_lifecycle.sql
 | `faz7_security_infra.sql` | Çoklu rol geçişi (set_active_role + sahiplik/geçersiz kapısı), yakındaki maçlar (earthdistance), admin skor düzeltme (audit + FORBIDDEN + INVALID_SCORE), maç hatırlatma (katılımcı bildirimi + idempotency) | 10 |
 | `faz7_commission_ssot.sql` | Komisyon TEK-KAYNAK: Model A %15 / Model B %5+%20 / per-saha+per-maç override / create_payment_intent motoru kullanır (15≠10) / aktif-kural tekilliği | 8 |
 | `faz7_refund.sql` | Kademeli iade admin çağrısı: admin_refund_intent → process_tiered_refund (CAPTURED→FULL_REFUND, PENDING→VOID), FORBIDDEN, audit | 4 |
+| `faz7_money_decisions.sql` | USER para kararları: rezervasyon iptal kademeli (24/6/50), PSP kesintisi düşülür, Model B owner %95 + markup oyuncuya, owner-organize MODEL_B trigger | 9 |
+| `faz7_refund_corrections.sql` | Adversarial bulgular: owner kazanç çift-ödeme önlemi (per-intent iptal + aggrege telafi negatif), PSP kısmi iadede orantılı | 3 |
 
 > **FAZ 7'de bu testin yakaladığı gerçek hatalar** (uygulamadan önce giderildi):
 > (1) `protect_profile_sensitive_fields` trigger'ı `NEW.role` değişimini her non-admin
