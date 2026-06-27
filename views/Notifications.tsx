@@ -71,6 +71,23 @@ const resolveVisual = (typeKey: string | null): { icon: React.ElementType; color
   return { icon: Bell, color: '#f59e0b' };
 };
 
+// ─── type_key → kategori (filtre çipleri için, Soru 11) ──────────────────────
+type NotifCategory = 'MATCH' | 'SQUAD' | 'PAYMENT' | 'SYSTEM';
+const categoryOf = (typeKey: string | null): NotifCategory => {
+  const k = (typeKey || '').toLowerCase();
+  if (k.startsWith('match') || k.startsWith('nearby')) return 'MATCH';
+  if (k.startsWith('team') || k.startsWith('gk') || k.startsWith('ref') || k.startsWith('service')) return 'SQUAD';
+  if (k.startsWith('booking') || k.startsWith('payment') || k.startsWith('payout') || k.startsWith('wallet') || k.startsWith('debtor')) return 'PAYMENT';
+  return 'SYSTEM';
+};
+const CATEGORY_CHIPS: { key: 'ALL' | NotifCategory; label: string }[] = [
+  { key: 'ALL', label: 'Tümü' },
+  { key: 'MATCH', label: 'Maç' },
+  { key: 'SQUAD', label: 'Kadro' },
+  { key: 'PAYMENT', label: 'Ödeme' },
+  { key: 'SYSTEM', label: 'Sistem' },
+];
+
 // ─── created_at → "2 dk", "1 sa", "3 gün" göreli zaman ───────────────────────
 const relativeTime = (iso: string): string => {
   const then = new Date(iso).getTime();
@@ -114,6 +131,8 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   const [selectedInvite, setSelectedInvite] = useState<AppNotification | null>(null);
 
   const unread = notifs.filter((n) => !n.isRead).length;
+  const [activeCat, setActiveCat] = useState<'ALL' | NotifCategory>('ALL');
+  const visibleNotifs = activeCat === 'ALL' ? notifs : notifs.filter((n) => categoryOf(n.typeKey) === activeCat);
 
   // Yükleme
   const load = useCallback(async () => {
@@ -266,6 +285,29 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           )}
         </div>
 
+        {/* Kategori filtre çipleri (Soru 11) */}
+        {!loading && !error && notifs.length > 0 && (
+          <div className="px-4 pt-3 pb-1 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+            {CATEGORY_CHIPS.map((c) => {
+              const active = activeCat === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setActiveCat(c.key)}
+                  className="px-3.5 py-1.5 rounded-full text-[11px] font-black whitespace-nowrap transition-all border"
+                  style={{
+                    background: active ? accentColor : 'rgba(255,255,255,0.04)',
+                    color: active ? '#000' : 'rgba(255,255,255,0.6)',
+                    borderColor: active ? accentColor : 'rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Notification list */}
         <div className="flex-1 px-4 py-4 pb-28 overflow-y-auto">
           {loading ? (
@@ -308,10 +350,15 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               <h3 className="text-lg font-black text-white mb-1">Henüz bildirimin yok</h3>
               <p className="text-sm text-gray-500">Yeni bir şey olduğunda burada göreceksin.</p>
             </motion.div>
+          ) : visibleNotifs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <Bell size={28} className="mb-3" style={{ color: accentColor, opacity: 0.5 }} />
+              <p className="text-sm text-gray-500">Bu kategoride bildirim yok.</p>
+            </div>
           ) : (
             <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
               <AnimatePresence mode="popLayout">
-                {notifs.map((n) => {
+                {visibleNotifs.map((n) => {
                   const { icon: Icon, color } = resolveVisual(n.typeKey);
                   const isUnread = !n.isRead;
                   const isInvite = n.actionRequired && (n.typeKey === 'match_invite' || n.typeKey === 'team_invite');
