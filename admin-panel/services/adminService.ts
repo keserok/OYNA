@@ -148,7 +148,104 @@ export const toTurkishAdminError = (err: unknown): string => {
   return raw;
 };
 
-export async function signInAdmin(email: string, password: string): Promise<AdminSession> {
+// ─── İki Adımlı Doğrulama (MFA / TOTP) ───────────────────────────────────────
+
+/** Supabase Auth Assurance Level — aal1: yalnız şifre, aal2: şifre + TOTP. */
+export type AdminAal = 'aal1' | 'aal2';
+
+export interface AdminMfaState {
+  /** Bu oturumun ulaştığı seviye (genelde aal1). */
+  currentLevel: AdminAal | null;
+  /** Bu hesap için gerekli/ulaşılabilir en yüksek seviye. */
+  nextLevel: AdminAal | null;
+  /** Doğrulanmış (verified) TOTP faktörü var mı? */
+  hasVerifiedFactor: boolean;
+}
+
+/**
+ * signInAdmin sonucu:
+ * - 'authenticated' → tam yetkili (aal2 veya MFA gerekmiyor); panel açılabilir.
+ * - 'mfa_challenge' → kayıtlı TOTP faktörü var, 6 haneli kod istenir.
+ * - 'mfa_enroll'    → henüz faktör yok, kurulum (QR + doğrulama) gerekir.
+ */
+export type AdminSignInResult =
+  | { status: 'authenticated'; session: AdminSession }
+  | { status: 'mfa_challenge'; session: AdminSession; factorId: string }
+  | { status: 'mfa_enroll'; session: AdminSession };
+
+/** Mevcut oturumun MFA seviyesini ve doğrulanmış faktör durumunu okur. */
+export async function getAdminMfaState(): Promise<AdminMfaState> {
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (error) throw new Error(error.message);
+  const currentLevel = (data?.currentLevel ?? null) as AdminAal | null;
+  const nextLevel = (data?.nextLevel ?? null) as AdminAal | null;
+  // nextLevel 'aal2' iken currentLevel 'aal1' ise: ya kurulu faktör var (challenge),
+  // ya da en azından bir faktör mevcut. Doğrulanmış faktör listesini ayrıca çekiyoruz.
+  let hasVerifiedFactor = false;
+  try {
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    hasVerifiedFactor = Boolean(factorsData?.totp?.length);
+  } catch {
+    // listFactors başarısızsa AAL ipucuna düşeriz.
+    hasVerifiedFactor = nextLevel === 'aal2' && currentLevel === 'aal1';
+  }
+  return { currentLevel, nextLevel, hasVerifiedFactor };
+}
+
+/** Yeni bir TOTP faktörü kaydı başlatır → QR (SVG data-URI), secret ve factorId döner. */
+export async function enrollAdminTotp(): Promise<{ factorId: string; qrCode: string; secret: string }> {
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName: `OYNA Admin ${new Date().toISOString().slice(0, 10)}`,
+  });
+  if (error) throw new Error(error.message);
+  return {
+    factorId: data.id,
+    qrCode: data.totp.qr_code,
+    secret: data.totp.secret,
+  };
+}
+
+/**
+ * Verilen factorId için challenge + verify yapar.
+ * Başarılıysa oturum aal2'ye yükselir. Yanlış kodda Türkçe hata fırlatır.
+ */
+export async function verifyAdminTotp(factorId: string, code: string): Promise<void> {
+  const cleaned = code.replace(/\s+/g, '');
+  const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId });
+  if (challengeErr) throw new Error(challengeErr.message);
+
+  const { error: verifyErr } = await supabase.auth.mfa.verify({
+    factorId,
+    challengeId: challenge.id,
+    code: cleaned,
+  });
+  if (verifyErr) {
+    const msg = verifyErr.message || '';
+    if (/invalid|incorrect|code/i.test(msg)) {
+      throw new Error('Kod hatalı, tekrar dene.');
+    }
+    throw new Error(msg || 'Doğrulama başarısız.');
+  }
+}
+
+/** Kayıtlı (örn. yarım kalmış) bir faktörü siler — kurulum iptali için. */
+export async function unenrollAdminTotp(factorId: string): Promise<void> {
+  await supabase.auth.mfa.unenroll({ factorId }).catch(() => undefined);
+}
+
+/**
+ * Mevcut oturum için kayıtlı, doğrulanmış (verified) TOTP faktörünün id'sini döner.
+ * Yoksa null. Challenge ekranında kullanılır.
+ */
+export async function getAdminVerifiedFactorId(): Promise<string | null> {
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  if (error) return null;
+  const verified = (data?.totp ?? []).find((f) => f.status === 'verified') ?? data?.totp?.[0];
+  return verified?.id ?? null;
+}
+
+export async function signInAdmin(email: string, password: string): Promise<AdminSignInResult> {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
   if (!data.user) throw new Error('Oturum açılamadı.');
@@ -164,7 +261,27 @@ export async function signInAdmin(email: string, password: string): Promise<Admi
     await supabase.auth.signOut();
     throw new Error('UNAUTHORIZED: Bu hesap platform admini değil.');
   }
-  return session;
+
+  // Şifre doğru ve admin yetkisi onaylı → şimdi 2FA seviyesini kontrol et.
+  const mfa = await getAdminMfaState();
+
+  // Zaten aal2'ye ulaşılmışsa (örn. süren oturum) → giriş tamam.
+  if (mfa.currentLevel === 'aal2') {
+    return { status: 'authenticated', session };
+  }
+
+  // Kayıtlı, doğrulanmış faktör var → kod doğrulaması (challenge) iste.
+  // (Supabase'de bu durumda nextLevel='aal2', currentLevel='aal1' olur.)
+  if (mfa.hasVerifiedFactor) {
+    const factorId = await getAdminVerifiedFactorId();
+    if (factorId) {
+      return { status: 'mfa_challenge', session, factorId };
+    }
+  }
+
+  // Hiç faktör yok → admin güvenliği için 2FA kurulumu ZORUNLU.
+  // (Supabase varsayılanı nextLevel='aal1' olsa da paneli kurulumsuz açmıyoruz.)
+  return { status: 'mfa_enroll', session };
 }
 
 export async function fetchAdminRole(userId: string): Promise<AdminSession['adminRole']> {
@@ -224,6 +341,19 @@ export async function checkPlatformAdmin(): Promise<AdminSession | null> {
     if (!adminSession.isAdmin) {
       void signOutAdmin();
       return null;
+    }
+    // 2FA güvenlik kapısı (sayfa yenileme / süren oturum):
+    //  a) aal2 gerekli ama oturum yalnız aal1 ise → paneli açma (challenge gerek).
+    //  b) Hiç doğrulanmış faktör yoksa → kurulum zorunlu, paneli açma.
+    // Oturumu KAPATMA — kullanıcı login ekranına döner, signInAdmin onu doğru
+    // MFA adımına (challenge/enroll) yönlendirir.
+    const mfa = await getAdminMfaState().catch(() => null);
+    if (mfa) {
+      const needsChallenge = mfa.nextLevel === 'aal2' && mfa.currentLevel !== 'aal2';
+      const needsEnrollment = !mfa.hasVerifiedFactor && mfa.currentLevel !== 'aal2';
+      if (needsChallenge || needsEnrollment) {
+        return null;
+      }
     }
     return adminSession;
   } catch (err) {
