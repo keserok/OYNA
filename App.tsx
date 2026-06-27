@@ -156,7 +156,9 @@ const App: React.FC = () => {
 
           if (!profile) {
             // ─── YENİ KULLANICI (kayıt) ───────────────────────────────────────
-            const currentRole = useAppStore.getState().role ?? UserRole.PLAYER;
+            // Yeni model: KAYIT OLAN HERKES OYUNCU. Kaleci/Hakem/Tesis rolleri
+            // sonradan Profil'den opt-in başvuru + admin onayı ile eklenir; kayıt
+            // öncesinde rol seçimi yoktur.
             const fallbackName = user.displayName
               || (user.email ? user.email.split('@')[0] : '')
               || (user.phone ? user.phone : '');
@@ -166,26 +168,21 @@ const App: React.FC = () => {
                 email: user.email ?? null,
                 phone: user.phone ?? null,
                 full_name: fallbackName,
-                role: currentRole,
-                roles: [currentRole],
-                verification_status: (currentRole === UserRole.OWNER || currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) ? 'pending' : 'approved',
+                role: UserRole.PLAYER,
+                roles: [UserRole.PLAYER],
+                verification_status: 'approved',
                 last_active_at: new Date().toISOString(),
               });
             } catch (insertError) {
               console.error('[App] Error creating user profile:', insertError);
             }
-            setRole(currentRole);
-            useAppStore.getState().setMyRoles([currentRole]);
-            identifyUser(user.uid, { role: currentRole, is_admin: false });
-            trackEvent('user_registered', { role: currentRole });
-            // Kaleci/Hakem → detaylı başvuru formu; Tesis → owner panel; diğer → konum
-            if (currentRole === UserRole.GOALKEEPER || currentRole === UserRole.REFEREE) {
-              resetNavigation('SERVICE_APPLICATION');
-            } else if (currentRole === UserRole.OWNER) {
-              resetNavigation('OWNER_PANEL');
-            } else {
-              resetNavigation('LOCATION_PROMPT');
-            }
+            setRole(UserRole.PLAYER);
+            useAppStore.getState().setMyRoles([UserRole.PLAYER]);
+            identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
+            trackEvent('user_registered', { role: UserRole.PLAYER });
+            // Herkes doğrudan oyuncu ana sayfasına. Konum bağlamsal istenir;
+            // profil tamamlama ilk maç sonrası (onaylanan ertelenmiş model).
+            resetNavigation('DASHBOARD');
           } else {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
@@ -203,38 +200,14 @@ const App: React.FC = () => {
               .update({ last_active_at: new Date().toISOString() })
               .eq('id', user.uid);
 
+            // Yeni model: AÇILIŞ YÖNLENDİRMESİ tek kaynağa (aktif rol) dayanır.
+            // Oturum kalıcı → tekrar giriş YOK. Aktif rol oyuncu → Dashboard;
+            // onaylı kaleci/hakem → ServiceDashboard; onaylı tesis → OwnerPanel.
+            // Aktif rol yalnızca admin onayından sonra sağlayıcı role çevrilir
+            // (set_active_role), bu yüzden bekleyen başvuru oyuncuyu KİLİTLEMEZ.
             const currentView = useAppStore.getState().view;
-            if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'LOCATION_PROMPT'].includes(currentView)) {
-              const isProvider = primaryRole === UserRole.GOALKEEPER || primaryRole === UserRole.REFEREE;
-
-              if (isProvider) {
-                // Kaleci/Hakem: başvuru tamamlandı mı + onay durumu birlikte değerlendirilir
-                const providerTable = primaryRole === UserRole.GOALKEEPER ? 'goalkeepers' : 'referees';
-                const { data: providerRow } = await supabase
-                  .from(providerTable)
-                  .select('id')
-                  .eq('id', user.uid)
-                  .maybeSingle();
-                const hasApplication = !!providerRow;
-
-                if (profile.verification_status === 'rejected') {
-                  setVerificationNote(profile.verification_notes ?? null);
-                  resetNavigation('SERVICE_APPLICATION');
-                } else if (!hasApplication) {
-                  setVerificationNote(null);
-                  resetNavigation('SERVICE_APPLICATION');
-                } else if (profile.verification_status === 'pending') {
-                  resetNavigation('PENDING_VERIFICATION');
-                } else {
-                  resetNavigation('SERVICE_DASHBOARD');
-                }
-              } else if (profile.verification_status === 'pending' && primaryRole !== UserRole.OWNER) {
-                resetNavigation('PENDING_VERIFICATION');
-              } else if (primaryRole === UserRole.OWNER) {
-                resetNavigation('OWNER_PANEL');
-              } else {
-                resetNavigation('LOCATION_PROMPT');
-              }
+            if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'LOCATION_PROMPT', 'PENDING_VERIFICATION'].includes(currentView)) {
+              resetNavigation(navigateBasedOnRole(primaryRole));
             }
           }
         } else {
@@ -331,11 +304,12 @@ const App: React.FC = () => {
       if (unsubscribeRealtime) unsubscribeRealtime();
     };
   }, []);
+  // Aktif role göre açılış ekranı. Oyuncu (ve varsayılan) → Dashboard.
+  // Sağlayıcı/tesis rolleri yalnız admin onayından sonra aktif role atanır.
   const navigateBasedOnRole = (currentRole: UserRole | null): AppView => {
     if (currentRole === UserRole.OWNER) return 'OWNER_PANEL';
     if (currentRole === UserRole.REFEREE || currentRole === UserRole.GOALKEEPER) return 'SERVICE_DASHBOARD';
-    if (currentRole) return 'DASHBOARD';
-    return 'ROLE_SELECTION';
+    return 'DASHBOARD';
   };
 
   const handleRoleSelect = async (selectedRole: UserRole, data?: any) => {
@@ -359,8 +333,10 @@ const App: React.FC = () => {
     switch (view) {
       case 'SPLASH':
         return <SplashScreen onStart={() => {
+          // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş; oturum
+          // varsa aktif role göre panel (tekrar giriş yok).
           if (!auth.currentUser) {
-            resetNavigation('ROLE_SELECTION');
+            resetNavigation('AUTH');
             return;
           }
           resetNavigation(navigateBasedOnRole(role));
