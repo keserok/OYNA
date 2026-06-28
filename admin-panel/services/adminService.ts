@@ -196,6 +196,24 @@ export async function getAdminMfaState(): Promise<AdminMfaState> {
   return { currentLevel, nextLevel, hasVerifiedFactor };
 }
 
+/**
+ * Panel 2FA'sı ZORUNLU mu? app_config.admin_mfa_required'dan okunur.
+ * Varsayılan FALSE; hata/erişilemezlik durumunda da FALSE → config okunamazsa
+ * giriş 2FA yüzünden KİLİTLENMEZ. Panelden (Sistem Parametreleri → Güvenlik) yönetilir.
+ */
+export async function isAdminMfaRequired(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('get_config_bool', {
+      p_key: 'admin_mfa_required',
+      p_default: false,
+    });
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Yeni bir TOTP faktörü kaydı başlatır → QR (SVG data-URI), secret ve factorId döner. */
 export async function enrollAdminTotp(): Promise<{ factorId: string; qrCode: string; secret: string }> {
   const { data, error } = await supabase.auth.mfa.enroll({
@@ -264,6 +282,11 @@ export async function signInAdmin(email: string, password: string): Promise<Admi
   if (!session.isAdmin) {
     await supabase.auth.signOut();
     throw new Error('UNAUTHORIZED: Bu hesap platform admini değil.');
+  }
+
+  // 2FA panelden kapatılabilir (admin_mfa_required). Kapalıysa şifre yeterli → giriş tamam.
+  if (!(await isAdminMfaRequired())) {
+    return { status: 'authenticated', session };
   }
 
   // Şifre doğru ve admin yetkisi onaylı → şimdi 2FA seviyesini kontrol et.
@@ -351,12 +374,15 @@ export async function checkPlatformAdmin(): Promise<AdminSession | null> {
     //  b) Hiç doğrulanmış faktör yoksa → kurulum zorunlu, paneli açma.
     // Oturumu KAPATMA — kullanıcı login ekranına döner, signInAdmin onu doğru
     // MFA adımına (challenge/enroll) yönlendirir.
-    const mfa = await getAdminMfaState().catch(() => null);
-    if (mfa) {
-      const needsChallenge = mfa.nextLevel === 'aal2' && mfa.currentLevel !== 'aal2';
-      const needsEnrollment = !mfa.hasVerifiedFactor && mfa.currentLevel !== 'aal2';
-      if (needsChallenge || needsEnrollment) {
-        return null;
+    // 2FA kapısı yalnız admin_mfa_required AÇIK iken zorlanır (panelden yönetilir).
+    if (await isAdminMfaRequired()) {
+      const mfa = await getAdminMfaState().catch(() => null);
+      if (mfa) {
+        const needsChallenge = mfa.nextLevel === 'aal2' && mfa.currentLevel !== 'aal2';
+        const needsEnrollment = !mfa.hasVerifiedFactor && mfa.currentLevel !== 'aal2';
+        if (needsChallenge || needsEnrollment) {
+          return null;
+        }
       }
     }
     return adminSession;
