@@ -4,6 +4,7 @@ import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText } from '
 import { useAppStore } from '../../../store';
 import {
   assignMatchRefereeAdmin,
+  assignMatchGoalkeeperAdmin,
   assignToSlotAdmin,
   cancelMatchAdmin,
   kickFromSlotAdmin,
@@ -14,10 +15,10 @@ import {
   forceCaptureIntentAdmin,
   forceVoidIntentAdmin,
   forceRefundIntentAdmin,
-  fetchMatchAuditAdmin,
+  fetchMatchTimelineAdmin,
   toTurkishAdminError,
   type MatchIntentRow,
-  type MatchAuditRow,
+  type MatchTimelineRow,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -50,8 +51,21 @@ const intentBadge = (status: string): string => {
   return 'bg-white/5 text-gray-400 border-white/10';
 };
 
+const sourceBadge = (source: string): string => {
+  switch (source) {
+    case 'ADMIN': return 'bg-red-500/15 text-red-300 border-red-500/30';
+    case 'WALLET':
+    case 'PAYMENT': return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+    case 'NOTIFY': return 'bg-pink-500/15 text-pink-300 border-pink-500/30';
+    case 'SERVICE': return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+    case 'DISPUTE': return 'bg-orange-500/15 text-orange-300 border-orange-500/30';
+    case 'SCORE': return 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30';
+    default: return 'bg-white/5 text-gray-300 border-white/15'; // EVENT (katılım/ayrılma/durum/skor)
+  }
+};
+
 export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, onViewDisputes }) => {
-  const { adminUsers, adminReferees, updateMatch } = useAppStore();
+  const { adminUsers, adminReferees, adminGoalkeepers, updateMatch } = useAppStore();
   const { success, error: toastError } = useAdminToast();
   const [local, setLocal] = useState<MatchListing | null>(match);
   const [tab, setTab] = useState<TabKey>('kadro');
@@ -61,8 +75,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
 
   const [intents, setIntents] = useState<MatchIntentRow[]>([]);
   const [intentsLoading, setIntentsLoading] = useState(false);
-  const [audit, setAudit] = useState<MatchAuditRow[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
+  const [timeline, setTimeline] = useState<MatchTimelineRow[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
   const [notifyTitle, setNotifyTitle] = useState('');
@@ -81,18 +95,18 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     finally { setIntentsLoading(false); }
   }, [matchId, toastError]);
 
-  const loadAudit = useCallback(async () => {
+  const loadTimeline = useCallback(async () => {
     if (!matchId) return;
-    setAuditLoading(true);
-    try { setAudit(await fetchMatchAuditAdmin(matchId)); }
+    setTimelineLoading(true);
+    try { setTimeline(await fetchMatchTimelineAdmin(matchId)); }
     catch (err) { toastError(toTurkishAdminError(err)); }
-    finally { setAuditLoading(false); }
+    finally { setTimelineLoading(false); }
   }, [matchId, toastError]);
 
   useEffect(() => {
     if (tab === 'odeme') void loadIntents();
-    if (tab === 'audit') void loadAudit();
-  }, [tab, loadIntents, loadAudit]);
+    if (tab === 'audit') void loadTimeline();
+  }, [tab, loadIntents, loadTimeline]);
 
   const refreshLocalSlots = useCallback((slots: MatchListing['slots'], isAway: boolean) => {
     if (!local) return;
@@ -166,6 +180,21 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       await assignMatchRefereeAdmin(local.id, refId || null);
       setLocal({ ...local, refereeId: refId || undefined });
       success('Hakem ataması güncellendi');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleGoalkeeper = async (gkId: string) => {
+    if (!local) return;
+    setBusy(true);
+    try {
+      await assignMatchGoalkeeperAdmin(local.id, gkId || null);
+      setLocal({ ...local, gkId: gkId || undefined });
+      success('Kaleci ataması güncellendi');
       onUpdated();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -433,17 +462,31 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
             {/* ── SONUÇ & HAKEM ── */}
             {tab === 'sonuc' && (
               <>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Hakem</label>
-                  <select
-                    value={local.refereeId || ''}
-                    disabled={busy}
-                    onChange={(e) => void handleReferee(e.target.value)}
-                    className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white"
-                  >
-                    <option value="">Atanmadı</option>
-                    {adminReferees.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Hakem</label>
+                    <select
+                      value={local.refereeId || ''}
+                      disabled={busy}
+                      onChange={(e) => void handleReferee(e.target.value)}
+                      className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white"
+                    >
+                      <option value="">Atanmadı</option>
+                      {adminReferees.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Kaleci</label>
+                    <select
+                      value={local.gkId || ''}
+                      disabled={busy}
+                      onChange={(e) => void handleGoalkeeper(e.target.value)}
+                      className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white"
+                    >
+                      <option value="">Atanmadı</option>
+                      {adminGoalkeepers.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
@@ -516,24 +559,27 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
               </div>
             )}
 
-            {/* ── AUDIT ── */}
+            {/* ── KAYIT (TAM ZAMAN ÇİZELGESİ) ── */}
             {tab === 'audit' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Bu Maça Ait Denetim Kayıtları</p>
-                  <button type="button" onClick={() => void loadAudit()} className="text-[10px] text-gray-500 hover:text-white">Yenile</button>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Maç Zaman Çizelgesi</p>
+                  <button type="button" onClick={() => void loadTimeline()} className="text-[10px] text-gray-500 hover:text-white">Yenile</button>
                 </div>
-                {auditLoading ? (
+                <p className="text-[10px] text-gray-600 leading-relaxed">Katılım/ayrılma, ödeme, bildirim, hizmet, skor, itiraz ve admin müdahaleleri — hepsi tek akışta.</p>
+                {timelineLoading ? (
                   <p className="text-[11px] text-gray-600 py-6 text-center">Yükleniyor…</p>
-                ) : audit.length === 0 ? (
-                  <p className="text-[11px] text-gray-600 py-6 text-center">Bu maç için henüz admin müdahalesi yok.</p>
-                ) : audit.map((a) => (
-                  <div key={a.id} className="bg-black/30 border border-white/[0.06] rounded-lg p-3">
+                ) : timeline.length === 0 ? (
+                  <p className="text-[11px] text-gray-600 py-6 text-center">Bu maç için henüz kayıtlı olay yok.</p>
+                ) : timeline.map((ev, i) => (
+                  <div key={i} className="bg-black/30 border border-white/[0.06] rounded-lg p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-black text-[#39FF14] uppercase">{a.action}</span>
-                      <span className="text-[9px] text-gray-600 font-mono">{new Date(a.created_at).toLocaleString('tr-TR')}</span>
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wide ${sourceBadge(ev.source)}`}>{ev.source}</span>
+                      <span className="text-[9px] text-gray-600 font-mono">{new Date(ev.created_at).toLocaleString('tr-TR')}</span>
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1">{a.admin_name || '—'}</p>
+                    <p className="text-xs font-bold text-white mt-1.5">{ev.title}</p>
+                    {ev.detail && <p className="text-[10px] text-gray-500 mt-0.5 break-words">{ev.detail}</p>}
+                    {ev.actor && <p className="text-[9px] text-gray-600 mt-0.5">— {ev.actor}</p>}
                   </div>
                 ))}
               </div>

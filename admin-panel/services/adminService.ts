@@ -1580,6 +1580,26 @@ export async function assignMatchRefereeAdmin(matchId: string, refereeId: string
 }
 
 // ─── Maç Kontrol Kokpiti (Wave 9) ────────────────────────────────────────────
+export async function assignMatchGoalkeeperAdmin(matchId: string, goalkeeperId: string | null): Promise<void> {
+  const { error } = await supabase.rpc('admin_assign_match_goalkeeper', { p_match_id: matchId, p_goalkeeper_id: goalkeeperId });
+  if (error) throw new Error(error.message);
+}
+
+export interface MatchTimelineRow {
+  source: string;
+  event_type: string;
+  title: string;
+  detail: string | null;
+  actor: string | null;
+  created_at: string;
+}
+
+export async function fetchMatchTimelineAdmin(matchId: string): Promise<MatchTimelineRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_match_timeline', { p_match_id: matchId });
+  if (error) throw new Error(error.message);
+  return (data || []) as MatchTimelineRow[];
+}
+
 export async function overrideMatchScoreAdmin(matchId: string, home: number, away: number, notes?: string): Promise<void> {
   const { error } = await supabase.rpc('admin_override_match_score', {
     p_match_id: matchId, p_home: home, p_away: away, p_notes: notes ?? null,
