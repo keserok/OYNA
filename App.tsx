@@ -54,7 +54,6 @@ const MyBookings = lazy(() => import('./views/MyBookings'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav } from './components/BottomNav';
-import { RookieShowcase } from './views/RookieShowcase';
 const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 
 // Loading fallback component

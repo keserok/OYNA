@@ -17,6 +17,7 @@ import { createTeam } from '../services/teamService';
 import { getOrCreateConversation } from '../services/messageService';
 import { useAppStore } from '../store';
 import { TeamCreatorWizard } from '../components/TeamCreatorWizard';
+import { isUserOnline, formatLastSeen } from '../utils/lastSeen';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface SocialViewProps {
@@ -116,7 +117,6 @@ const TeamsTab: React.FC<{
         const losses = team.losses ?? 0;
         const draws = Math.max(0, (team.matches ?? 0) - wins - losses);
         const form = buildForm(wins, losses);
-        const fp = team.karatScore ?? Math.min(99, Math.round(50 + wins * 2.5));
         const rosterCount = Array.isArray(team.roster) ? team.roster.length : 0;
         const isMain = i === 0;
 
@@ -147,11 +147,6 @@ const TeamsTab: React.FC<{
                     <span className="text-sm text-gray-400 font-medium">
                       {wins}G · {draws}B · {losses}M
                     </span>
-                    <span className="text-gray-600">·</span>
-                    <div className="flex items-center gap-1">
-                      <Shield size={12} className="text-emerald-400" />
-                      <span className="text-xs font-black text-emerald-400">FP {fp}</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -425,8 +420,8 @@ const FriendsTab: React.FC<{
             const wins = f.other_user.win_count ?? 0;
             const total = f.other_user.total_matches ?? 0;
             const winRate = getWinRate(wins, total);
-            const isOnline = !!f.other_user.last_active_at &&
-              Date.now() - new Date(f.other_user.last_active_at).getTime() < 5 * 60 * 1000;
+            const isOnline = isUserOnline(f.other_user.last_active_at);
+            const lastSeenLabel = formatLastSeen(f.other_user.last_active_at);
             const showPicker = expandedGroupPicker === f.id;
 
             return (
@@ -458,9 +453,11 @@ const FriendsTab: React.FC<{
                         {f.myGroup && f.myGroup !== 'Tümü' && (
                           <span className="text-[10px] text-gray-500">{f.myGroup}</span>
                         )}
-                        {isOnline && (
-                          <span className="text-[10px] text-emerald-400 font-bold">· Çevrimiçi</span>
-                        )}
+                        {isOnline ? (
+                          <span className="text-[10px] text-emerald-400 font-bold">· Şimdi aktif</span>
+                        ) : lastSeenLabel ? (
+                          <span className="text-[10px] text-gray-500">· Son görülme: {lastSeenLabel}</span>
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
                         <span>{f.matches_together ?? 0} birlikte</span>

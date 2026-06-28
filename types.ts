@@ -212,7 +212,6 @@ export interface Team {
   captain?: string; // Singular Captain ID
   teamValue?: string;
   rating?: number;
-  karatScore?: number; // Macro Team Karat değeri
   teamWins?: number;
   teamTotalMatches?: number;
 }

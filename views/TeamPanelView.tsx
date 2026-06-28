@@ -460,16 +460,6 @@ const IstatistikTab: React.FC<{ stats: TeamStats; team: Team; loading: boolean }
         </div>
       )}
 
-      {/* FP Score */}
-      <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
-        <div>
-          <div className="text-[10px] font-black text-emerald-500/70 uppercase tracking-widest mb-0.5">Fair Play Puanı</div>
-          <div className="text-3xl font-black text-emerald-400">
-            {(team as any).karatScore ?? Math.min(99, 50 + wins * 2)}
-          </div>
-        </div>
-        <Shield size={36} className="text-emerald-400/30" />
-      </div>
     </div>
   );
 };
@@ -547,7 +537,6 @@ const TeamPanelView: React.FC<TeamPanelViewProps> = ({ onBack, onNavigate }) => 
   const draws = stats.total > 0 ? stats.draws : Math.max(0, (team.matches ?? 0) - wins - losses);
   const total = wins + draws + losses;
   const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
-  const fp = (team as any).karatScore ?? Math.min(99, 50 + wins * 2);
   const formBadges = buildFormBadges(matchHistory, wins, losses, draws);
   const isCaptain = team.captain === userId || (team as any).captain_id === userId;
   const rosterCount = (team.roster || []).length;
@@ -609,11 +598,10 @@ const TeamPanelView: React.FC<TeamPanelViewProps> = ({ onBack, onNavigate }) => 
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-4">
           {[
             { value: `${wins}-${draws}-${losses}`, label: 'G-B-M' },
             { value: `%${winRate}`, label: 'Galibiyet', accent: true },
-            { value: String(fp), label: 'FP Puanı' },
           ].map((s, i) => (
             <div key={i} className="bg-white/5 border border-white/8 rounded-xl p-3 text-center">
               <div className={`text-lg font-black ${s.accent ? 'text-emerald-400' : 'text-white'}`}>{s.value}</div>
