@@ -5,7 +5,7 @@
  *   SUPABASE_ACCESS_TOKEN — Dashboard → Account → Access Tokens
  *   SUPABASE_DB_PASSWORD — proje DB şifresi (supabase db push için)
  */
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
@@ -13,17 +13,14 @@ import { spawnSync } from 'child_process';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '../..');
 const PROJECT_REF = 'iikvzgyccvgcybzdfwlv';
-const MIGRATIONS = [
-  resolve(root, 'supabase/migrations/20260623000001_admin_panel_complete.sql'),
-  resolve(root, 'supabase/migrations/20260624000001_admin_match_control.sql'),
-  resolve(root, 'supabase/migrations/20260625000001_admin_pitch_control.sql'),
-  resolve(root, 'supabase/migrations/20260626000001_admin_full_authority.sql'),
-  resolve(root, 'supabase/migrations/20260628000001_admin_panel_ready.sql'),
-  resolve(root, 'supabase/migrations/20260629000001_admin_bootstrap_fix.sql'),
-  resolve(root, 'supabase/migrations/20260630000001_admin_community_control.sql'),
-  resolve(root, 'supabase/migrations/20260630000002_admin_ops_foundation.sql'),
-  resolve(root, 'supabase/migrations/20260630000003_admin_profiles_search.sql'),
-];
+// Tüm migration dosyalarını TARİH SIRASIYLA (dosya adı YYYYMMDD... ile başlar)
+// otomatik topla — elle liste tutmak "sessiz eksik migration" riskine yol açıyordu.
+// Migrasyonlar idempotent yazıldığı için "already exists" durumları aşağıda atlanır.
+const MIGRATIONS_DIR = resolve(root, 'supabase/migrations');
+const MIGRATIONS = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
+  .map((f) => resolve(MIGRATIONS_DIR, f));
 
 function loadEnv() {
   const env = { ...process.env };
