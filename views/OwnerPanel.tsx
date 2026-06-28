@@ -1449,7 +1449,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
   const handlePlanUpgrade = () => {
     notify(
-      'Plan yükseltmesi için destek@oyna.app adresine yazın veya admin panelinden SaaS Hesapları bölümünden planınız güncellenebilir.',
+      'Plan yükseltmesi için destek@oyna.app adresine yazın; ekibimiz planınızı güncelleyecektir.',
       'info',
     );
   };
