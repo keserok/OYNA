@@ -22,6 +22,16 @@
 -- (cron'lar skoru DEĞİŞTİRMEZ: auto_finalize_matches finalize_match'i skorsuz çağırır →
 -- COALESCE ile skor sabit kalır; QUORUM_NOT_MET iptalleri yalnız status yazar) →
 -- bu yüzden hiçbir sistem/cron yolu kırılmaz.
+--
+-- ÜRÜN KARARI (master prensip §3.4 — onaylandı):
+--   * Takım skoru ORTAK/consensus girilir → kendi takım arayüzlerine işlenir
+--     (_finalize_team_match_score teams.wins/losses/matchHistory'yi yazar); herkese
+--     görünen oyuncu reytinglerine yansımaz. Bu yol bayrağı zaten set ediyor.
+--   * HAKEM ve SAHA SAHİBİ skoru → takımların arayüzlerine yansır. Bu RPC'ler HENÜZ
+--     YOK; yazıldıklarında skoru _finalize_team_match_score üzerinden işlemeli VEYA
+--     UPDATE'ten önce set_config('oyna.authorized_score_write', <match_id>, true)
+--     çağırmalı; aksi halde bu trigger onları bloklar.
+--   * Admin (admin_override_match_score / admin_update_match) → is_platform_admin() ile geçer.
 -- ============================================================
 
 -- ────────────────────────────────────────────────────────────

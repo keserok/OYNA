@@ -15,6 +15,13 @@
 - 🟡 **STAGING** — hazır ama önce staging'de test edilmeli (akış-bağımlı).
 - 🔵 **PANEL** — Supabase Dashboard / Vercel ayarı (kod değil).
 
+## ✅ Onaylanan Ürün Kararları (Faz 8 — master prensiplerle hizalı)
+1. **Skor (§3.4):** Takım skoru **ortak/consensus** girilir → kendi takım arayüzlerine işlenir, **herkese görünen oyuncu reytinglerine yansımaz**. **Hakem & saha sahibi** skoru → takım arayüzlerine yansır (bu RPC'ler yazılınca skor-bütünlüğü bayrağını set etmeli). Admin override geçerli. → Skor trigger'ı **onaylandı**.
+2. **Eşikler admin-ayarlı:** Booking/hold/spam tavanları artık **`app_config` → admin panel "GÜVENLİK" kategorisi**'nden ayarlanır (sabit değil).
+3. **Promo (§4.6 lansmanda YOK):** `redeem_promo` migration'ı **kapsam dışı → silindi**. Promo özelliği açılırsa yeniden eklenir.
+4. **Auth (§3.1):** **Tek onboarding akışı korunur** (giriş/kayıt bölünmez); enumeration/bombing koruması **captcha + rate-limit** ile sağlanır. **Telefon/SMS girişi kaldırılır** (prensip gereği).
+5. **Oyuncu reytingi:** Maç slot'undaki `rating` (yetenek puanı; gizli `reliability_score`'dan ayrı) **görünür kalır**; yalnız gerçekten özel alanların sızmadığı doğrulanır. → `matches` PII daraltması **uygulanmaz**.
+
 ---
 
 ## 🔴 EN KRİTİK 3 RİSK (OYNA'ya özel)
@@ -121,18 +128,13 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE EXECUTE ON FU
 > `supabase.rpc('_...')` ile çağrılmıyor (grep ile teyit). Yalnız diğer DEFINER
 > fonksiyonların içinden owner bağlamında çağrıldıkları için çalışmaya devam ederler.
 
-### 1.4 🟡 `matches` SELECT politikası public + slots PII sızıntısı (DB-03)
-`matches_select_public` = `SELECT ... USING(true) TO {public}`; `slots` JSON'unda
-oyuncu adı/avatar/rating var → anon herkesi okuyabiliyor.
-```sql
--- ESKİ: CREATE POLICY matches_select_public ON public.matches FOR SELECT USING (true);  -- {public}
--- OLMASI GEREKEN: en az anon'u çıkar (uygulama girişli kullanır). Anon keşif gerekiyorsa
--- PII'siz bir VIEW/RPC üzerinden verin (slots'tan name/avatar maskelenmiş).
-DROP POLICY matches_select_public ON public.matches;
-CREATE POLICY matches_select_auth ON public.matches FOR SELECT TO authenticated USING (true);
-```
-> **Test:** Giriş yapmamış kullanıcının maç listesi görmesi gerekiyorsa bu kırar — önce
-> anon akışını doğrulayın; gerekiyorsa maskeli view sağlayın.
+### 1.4 ✅ `matches` slots `rating` görünürlüğü — KARAR: görünür kalır (DB-03)
+**Ürün kararı (5):** Slot'taki `rating` bir **yetenek puanı**dır ve §7.1'in gizli tuttuğu
+`reliability_score`'dan **ayrı** bir kolondur (canlı şemada teyit edildi). Oyuncu reytingi
+**görünür kalsın** istendiği için `matches` SELECT **daraltılmaz** ve `rating` slot'tan
+**çıkarılmaz**. Yalnızca gerçekten özel alanların (reliability_score, telefon, e-posta)
+slot/`matches` üzerinden **sızmadığı** doğrulandı — sızmıyor (slot yalnız ad/avatar/rating/
+pozisyon/koordinat içerir). → Bu maddede kod değişikliği **yok**.
 
 ### 1.5 🟢 Bedava-slot/hold DoS — kullanıcı-başı kota + hız + anon hold kapatma (DB-06, BL-01)
 **Dosya:** `supabase/migrations/20260708000000_faz8_anti_abuse_guards.sql` *(EKLEMELİ, kırıcı değil)*
@@ -236,18 +238,19 @@ Supabase Dashboard → Auth (veya Management API `PATCH /v1/projects/{ref}/confi
 }
 ```
 
-### 3.2 🟡 Captcha + OTP/SMS bombing koruması (AUTH-03, AUTH-07)
-- Dashboard → Auth → **Bot & Abuse Protection: hCaptcha/Turnstile** + Rate Limits düşür
-  (SMS/Email OTP 3/saat/IP, OTP expiry ≤ 600 sn, OTP length 8).
-- `supabaseAuth.ts`: tüm OTP çağrılarına `captchaToken` geçir; **sign-in/sign-up'ı ayır**:
+### 3.2 🔵 Captcha + OTP bombing koruması (AUTH-03, AUTH-07) — KARAR: tek akış + captcha
+**Ürün kararı (4):** §3.1 "tek onboarding akışı" korunur → giriş/kayıt **bölünmez**
+(`shouldCreateUser` ayrımı YAPILMAZ). Enumeration/bombing koruması **captcha + rate-limit**
+ile sağlanır (UX değişmez). **Telefon/SMS girişi kaldırılır** (§3.1) → telefon OTP fonksiyonları
+(`loginWithPhone`/`sendPhoneOtp`/`verifyPhoneOtp`) temizlenmeli.
+- Dashboard → Auth → **Bot & Abuse Protection: hCaptcha/Turnstile** aç + Rate Limits düşür
+  (Email OTP ~3/saat/IP, OTP expiry ≤ 600 sn, OTP length 8).
+- `supabaseAuth.ts`: mevcut tek-akış çağrısına yalnız `captchaToken` eklenir (akış aynı kalır):
 ```ts
-// ESKİ: signInWithOtp({ email, options: { shouldCreateUser: true } })  // captcha yok, enumeration
-// OLMASI GEREKEN:
-export const sendEmailOtpSignIn = (email, captchaToken) =>
-  supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, captchaToken } }); // giriş
-export const sendEmailOtpSignUp = (email, captchaToken) =>
-  supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, captchaToken } });  // kayıt
-// hata mesajlarını eşitle (hesap var/yok sızmasın)
+// OLMASI GEREKEN (tek akış korunur, sadece captcha eklenir):
+export const sendEmailOtp = (email, captchaToken) =>
+  supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, captchaToken } });
+// captchaToken provider (hCaptcha/Turnstile) site-key'i ile UI'dan üretilir.
 ```
 
 ### 3.3 🟢/🔵 localStorage token hırsızlığı + CSP (AUTH-02)
@@ -293,31 +296,13 @@ IF (SELECT count(*) FROM public.matches WHERE "creatorId"=v_uid AND created_at>n
 CREATE INDEX IF NOT EXISTS idx_matches_creator_created ON public.matches("creatorId", created_at);
 ```
 
-### 4.3 🟡 Promo indiriminin sunucu tarafında uygulanmaması (BL-07)
-Şu an indirim **istemci fiyatına** güveniliyor; sunucuda atomik tüketen RPC yok.
-```sql
--- OLMASI GEREKEN: redeem_promo — kodu doğrula, indirimi hesapla, redemption'ı atomik tüket
-CREATE OR REPLACE FUNCTION public.redeem_promo(p_code text, p_base_amount numeric)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public','pg_temp' AS $$
-DECLARE v_uid uuid := auth.uid(); c public.promo_codes; v_used int; v_disc numeric; v_final numeric;
-BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
-  SELECT * INTO c FROM public.promo_codes WHERE code=upper(trim(p_code)) AND is_active
-    AND (valid_until IS NULL OR valid_until>now()) FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'INVALID_PROMO'; END IF;
-  IF c.max_redemptions IS NOT NULL THEN
-    SELECT count(*) INTO v_used FROM public.promo_redemptions WHERE promo_id=c.id;
-    IF v_used >= c.max_redemptions THEN RAISE EXCEPTION 'PROMO_EXHAUSTED'; END IF;
-  END IF;
-  INSERT INTO public.promo_redemptions (promo_id, user_id) VALUES (c.id, v_uid);  -- UNIQUE(promo_id,user_id) tek-kullanım
-  v_disc := CASE WHEN c.discount_type='PERCENT' THEN round(p_base_amount*c.discount_value/100,2)
-                 ELSE least(c.discount_value, p_base_amount) END;
-  v_final := greatest(0, p_base_amount - v_disc);
-  RETURN jsonb_build_object('discount', v_disc, 'final_amount', v_final);
-END; $$;
--- NOT: kolon adlarını (discount_type/discount_value/max_redemptions/valid_until) kendi şemanızla doğrulayın.
-```
-> Ödeme tutarı **her zaman** sunucudaki `final_amount`'tan alınmalı, istemciden gelen fiyata güvenilmemeli.
+### 4.3 ⛔ Promo indirimi (BL-07) — KARAR: KAPSAM DIŞI (silindi)
+**Ürün kararı (3):** §4.6 "kupon/promosyon kodu **lansmanda YOK** (sonraya)". Bu nedenle
+`redeem_promo` migration'ı **kaldırıldı** (`git rm`). Bugün kullanıcıya açık bir promo
+kullanım yolu olmadığından aktif bir açık yok; özellik açılırsa **sunucu-taraflı atomik
+`redeem_promo`** (kod doğrula → indirimi sunucuda hesapla → redemption'ı `UNIQUE(promo_id,
+user_id)` ile atomik tüket; ödeme tutarı **her zaman** sunucudaki `final_amount`'tan) o
+zaman eklenecek. İstemci fiyatına asla güvenilmez.
 
 ### 4.4 🟡 QR token skoru / claimCode (BL-04, BL-06)
 - `submit_match_score`: tek token ile `COMPLETED` yerine **onay-bekleyen öneri** üretsin
@@ -343,17 +328,16 @@ saha personeli QR'ı veya sunucu-taraflı mesafe kontrolü tetiklesin.
 | 5 | 1.1 skor bütünlüğü trigger | 🟡 STAGING | Orta (akış testi) |
 | 6 | 2.1 rate-limit altyapısı + 2.3 edge fail-closed | 🟡 STAGING | Orta |
 | 7 | 2.2 + 1.4 scraping/PII daraltma | 🟡 STAGING | Orta (anon akışı) |
-| 8 | 4.2/4.3/4.4/4.5 spam/promo/QR/GPS | 🟡 STAGING | Orta |
+| 8 | 4.2/4.4/4.5 spam/QR/GPS (promo kapsam dışı) | 🟡 STAGING | Orta |
 
 ### Repoya eklenen HAZIR dosyalar (apply-ready)
 | Dosya | Madde | Tür |
 |---|---|---|
-| `supabase/migrations/20260708000000_faz8_anti_abuse_guards.sql` | 1.5 booking/hold kota+hız, anon hold kapat | 🟢 |
+| `supabase/migrations/20260708000000_faz8_anti_abuse_guards.sql` | 1.5 booking/hold kota+hız (app_config ayarlı), anon hold kapat | 🟢 |
 | `supabase/migrations/20260708000100_faz8_match_score_integrity.sql` | 1.1 skor bütünlüğü trigger + bayrak | 🟡 |
 | `supabase/migrations/20260708000200_faz8_revoke_internal_helper_execute.sql` | 1.3 iç helper EXECUTE revoke | 🟢 |
 | `supabase/migrations/20260708000300_faz8_rate_limit_infra.sql` | 2.1 token-bucket (rl_consume) | 🟢 |
-| `supabase/migrations/20260708000400_faz8_match_spam_guard.sql` | 4.2 maç spam trigger | 🟢 |
-| `supabase/migrations/20260708000500_faz8_promo_redeem.sql` | 4.3 redeem_promo RPC | 🟢 |
+| `supabase/migrations/20260708000400_faz8_match_spam_guard.sql` | 4.2 maç spam trigger (app_config ayarlı) | 🟢 |
 | `supabase/migrations/20260708000600_faz8_scraping_hardening.sql` | 2.2 tarife SELECT → authenticated | 🟡 |
 | `supabase/functions/admin-broadcast/index.ts` | 2.3 fail-closed admin auth + CORS | 🟡 |
 | `supabase/functions/create-payment/index.ts` | 2.3 CORS env'e bağlama | 🟢 |
@@ -379,8 +363,8 @@ supabase db diff      # bekleyen migration'ları gör
 
 ### Adım 1 — 🟢 Düşük riskli migration'lar (önce bunlar)
 ```bash
-# Sadece eklemeli/kanıtlı olanlar: anti-abuse, helper-revoke, rate-limit, spam, promo
-supabase db push      # 000000, 000200, 000300, 000400, 000500 dahil tümünü sırayla uygular
+# Sadece eklemeli/kanıtlı olanlar: anti-abuse, helper-revoke, rate-limit, spam
+supabase db push      # 000000, 000200, 000300, 000400 dahil bekleyenleri sırayla uygular
 ```
 **Doğrulama (SQL):**
 ```sql
@@ -434,7 +418,7 @@ supabase functions deploy send-email
 
 ### Adım 6 — Frontend (sonraki PR'da)
 - `supabaseAuth.ts`: OTP çağrılarına `captchaToken`; sign-in/sign-up ayrımı (md 3.2).
-- Ödeme akışında promo: `redeem_promo` RPC'sinin döndürdüğü `final_amount` kullanılmalı.
+- Eşik ayarları: admin panel "GÜVENLİK" kategorisi (`app_config`) ile booking/hold/spam tavanları.
 - Rate-limit: hassas edge çağrılarına `rl_consume(...)` ekle (md 2.1/2.3 örnekleri).
 
 ### Geri Alma (rollback)
