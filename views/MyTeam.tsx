@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users, Zap, Layout, GripHorizontal, Heart, MessageCircle, Crown, Star, Copy, Send, Archive, LogOut, ShieldCheck, Loader2, Trophy } from 'lucide-react';
+import { ArrowLeft, Share2, X, UserPlus, Trash2, Shield, Swords, Activity, CheckCircle2, Plus, Users, Zap, Layout, GripHorizontal, Heart, MessageCircle, Crown, Star, Copy, Send, Archive, LogOut, ShieldCheck, Loader2, Trophy, Palette, MapPin, Image as ImageIcon, Check } from 'lucide-react';
 import { Player, AppView, UserRole } from '../types';
 import { getTeamRolesAndInstructions, updateTeamRolesAndInstructions, sbRemovePlayerFromTeam, supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
@@ -12,7 +12,12 @@ import {
 } from '../services/tacticSocialService';
 import {
     transferCaptaincy, setTeamAdmin, leaveTeam, archiveTeam,
+    updateTeamSettings, getApprovedPitchesLite, PitchLite,
 } from '../services/teamAdminService';
+import { useImageUpload } from '../hooks/useImageUpload';
+
+// Takım Ayarları renk paleti (TeamCreator ile uyumlu, hex).
+const TEAM_COLORS = ['#10B981', '#3B82F6', '#EF4444', '#F59E0B', '#A855F7', '#EC4899', '#6366F1', '#14B8A6'];
 import { auth } from '../supabaseAuth';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 
@@ -295,6 +300,19 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     // Q32: sürüklenen oyuncunun başlangıç konumu (hayalet/ghost göstergesi için)
     const dragOriginRef = useRef<{ x: number; y: number } | null>(null);
 
+    // S34: Takım Ayarları (kaptan) — ad/kısa ad/renkler/arma/ev sahası
+    const [showSettings, setShowSettings] = useState(false);
+    const [setName, setSetName] = useState('');
+    const [setShort, setSetShort] = useState('');
+    const [setColor1, setSetColor1] = useState('');
+    const [setColor2, setSetColor2] = useState('');
+    const [setCrest, setSetCrest] = useState('');
+    const [setHomePitchId, setSetHomePitchId] = useState('');
+    const [pitchOptions, setPitchOptions] = useState<PitchLite[]>([]);
+    const [savingSettings, setSavingSettings] = useState(false);
+    const crestInputRef = useRef<HTMLInputElement>(null);
+    const { uploadImage: uploadCrest, uploading: crestUploading } = useImageUpload('team-crests');
+
     const loadMyTeams = useAppStore(s => s.loadMyTeams);
 
     // ── FAZ 6: Sekme yapısı (Genel · Kadro · Taktikler · Geçmiş) ──
@@ -543,6 +561,61 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const isUserAdmin = (uid: string): boolean => !!activeTeam && (
         activeTeam.captain === uid || !!activeTeam.captains?.includes(uid)
     );
+
+    // S34: Takım Ayarları aç/kaydet
+    const openSettings = async () => {
+        if (!activeTeam) return;
+        setSetName(activeTeam.name || '');
+        setSetShort((activeTeam as any).shortName || '');
+        setSetColor1((activeTeam as any).color1 || TEAM_COLORS[0]);
+        setSetColor2((activeTeam as any).color2 || '');
+        setSetCrest((activeTeam as any).crest || (activeTeam as any).logo || '');
+        setSetHomePitchId((activeTeam as any).home_pitch_id || '');
+        setShowSettings(true);
+        try {
+            if (pitchOptions.length === 0) setPitchOptions(await getApprovedPitchesLite());
+        } catch (e) {
+            console.error('Saha listesi yüklenemedi:', e);
+        }
+    };
+    const pickCrest = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            setSetCrest(await uploadCrest(file));
+        } catch (err) {
+            console.error('Arma yükleme hatası:', err);
+            showToast('Arma yüklenemedi.', 'error');
+        } finally {
+            if (crestInputRef.current) crestInputRef.current.value = '';
+        }
+    };
+    const saveSettings = async () => {
+        if (!activeTeam) return;
+        if (!setName.trim()) { showToast('Takım adı boş olamaz.', 'error'); return; }
+        setSavingSettings(true);
+        try {
+            const chosen = pitchOptions.find(p => p.id === setHomePitchId);
+            await updateTeamSettings(activeTeam.id, {
+                name: setName.trim(),
+                shortName: setShort.trim() || undefined,
+                color1: setColor1 || undefined,
+                color2: setColor2 || undefined,
+                crest: setCrest || undefined,
+                homePitchId: setHomePitchId || null,
+                pitch: chosen ? chosen.name : null,
+                coordinates: chosen && chosen.lat != null && chosen.lng != null
+                    ? { lat: chosen.lat, lng: chosen.lng } : null,
+            });
+            setShowSettings(false);
+            showToast('Takım ayarları güncellendi.');
+            await loadMyTeams();
+        } catch (e: any) {
+            showToast(e?.message || 'Ayarlar kaydedilemedi.', 'error');
+        } finally {
+            setSavingSettings(false);
+        }
+    };
 
     // Formation Presets
     const applyFormation = async (type: '2-3-1' | '3-2-1') => {
@@ -1272,6 +1345,19 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
 
                     {isCaptain && (
                         <button
+                            onClick={openSettings}
+                            className="w-full flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"
+                        >
+                            <span className="flex items-center gap-2 text-sm font-bold text-gray-200">
+                                <Palette size={16} className="text-[#39FF14]" />
+                                Takım Kimliği — ad, renk, arma, ev sahası
+                            </span>
+                            <span className="text-gray-500 text-lg leading-none">›</span>
+                        </button>
+                    )}
+
+                    {isCaptain && (
+                        <button
                             onClick={handleArchiveTeam}
                             className="w-full flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"
                         >
@@ -1345,6 +1431,85 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     );
                 })()}
             </AnimatePresence>
+
+            {/* S34: Takım Ayarları Modalı (kaptan) */}
+            {showSettings && (
+                <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/75 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-[#0A0E14] border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-5 max-h-[88vh] overflow-y-auto custom-scrollbar">
+                        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
+                        <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2"><Palette size={16} className="text-[#39FF14]" /> Takım Kimliği</h3>
+
+                        {/* Arma + isim önizleme */}
+                        <div className="flex items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={() => crestInputRef.current?.click()}
+                                disabled={crestUploading}
+                                className="relative w-20 h-20 rounded-2xl border border-white/10 flex items-center justify-center overflow-hidden shrink-0 active:scale-95 transition-all disabled:opacity-60"
+                                style={{ background: `linear-gradient(135deg, ${setColor1 || '#10B981'}AA, ${(setColor2 || setColor1) || '#10B981'}55)` }}
+                            >
+                                {setCrest ? (
+                                    <img src={setCrest} alt="Arma" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-white font-black text-xl italic">{(setShort || setName || '?').slice(0, 3).toUpperCase()}</span>
+                                )}
+                                <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center">
+                                    <ImageIcon size={11} className="text-white/80" />
+                                </div>
+                                {crestUploading && <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-[9px] font-black text-[#39FF14] uppercase">Yükleniyor</div>}
+                            </button>
+                            <input ref={crestInputRef} type="file" accept="image/*" className="hidden" onChange={pickCrest} />
+                            <div className="flex-1 space-y-2">
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Takım Adı</label>
+                                    <input value={setName} onChange={(e) => setSetName(e.target.value)} className="mt-1 w-full bg-[#161B22] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-[#39FF14]/40" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Kısa Ad (3-4 harf)</label>
+                                    <input value={setShort} onChange={(e) => setSetShort(e.target.value.slice(0, 4).toUpperCase())} maxLength={4} placeholder="ÖRN: OYN" className="mt-1 w-full bg-[#161B22] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-[#39FF14]/40 uppercase tracking-widest" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Renkler */}
+                        <div>
+                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Birincil Renk</label>
+                            <div className="mt-2 flex flex-wrap gap-2.5">
+                                {TEAM_COLORS.map((c) => (
+                                    <button key={c} onClick={() => setSetColor1(c)} className="w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all active:scale-90" style={{ backgroundColor: c, borderColor: setColor1 === c ? '#fff' : 'transparent' }}>
+                                        {setColor1 === c && <Check size={16} className="text-white drop-shadow" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">İkincil Renk (forma deseni)</label>
+                            <div className="mt-2 flex flex-wrap gap-2.5">
+                                {TEAM_COLORS.map((c) => (
+                                    <button key={c} onClick={() => setSetColor2(c)} className="w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all active:scale-90" style={{ backgroundColor: c, borderColor: setColor2 === c ? '#fff' : 'transparent' }}>
+                                        {setColor2 === c && <Check size={16} className="text-white drop-shadow" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Ev sahası */}
+                        <div>
+                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1 flex items-center gap-1"><MapPin size={11} className="text-[#39FF14]" /> Ev Sahası</label>
+                            <select value={setHomePitchId} onChange={(e) => setSetHomePitchId(e.target.value)} className="mt-1 w-full bg-[#161B22] border border-white/10 rounded-xl px-3 py-3 text-white text-sm outline-none focus:border-[#39FF14]/40 [&>option]:bg-[#161B22]">
+                                <option value="">Seçilmedi</option>
+                                {pitchOptions.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name}{p.district ? ` · ${p.district}` : ''}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <button onClick={saveSettings} disabled={savingSettings || crestUploading} className="w-full h-12 rounded-2xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
+                            {savingSettings ? 'Kaydediliyor...' : 'Kaydet'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Invite Modal Overlay */}
             {showInviteModal && (

@@ -40,3 +40,57 @@ export const archiveTeam = async (teamId: string, archive = true): Promise<void>
   const { error } = await supabase.rpc('archive_team', { p_team_id: teamId, p_archive: archive });
   if (error) throw new Error(parseRpcError(error.message) || 'Arşivleme başarısız.');
 };
+
+export interface TeamSettingsInput {
+  name?: string;
+  shortName?: string;
+  color1?: string;
+  color2?: string;
+  crest?: string;
+  homePitchId?: string | null;
+  pitch?: string | null;
+  coordinates?: { lat: number; lng: number } | null;
+}
+
+/** Takım kimliğini güncelle (ad/kısa ad/renkler/arma/ev sahası) — yalnız kaptan. */
+export const updateTeamSettings = async (teamId: string, fields: TeamSettingsInput): Promise<void> => {
+  const { error } = await supabase.rpc('update_team_settings', {
+    p_team_id: teamId,
+    p_name: fields.name ?? null,
+    p_short_name: fields.shortName ?? null,
+    p_color1: fields.color1 ?? null,
+    p_color2: fields.color2 ?? null,
+    p_crest: fields.crest ?? null,
+    p_home_pitch_id: fields.homePitchId ?? null,
+    p_pitch: fields.pitch ?? null,
+    p_coordinates: fields.coordinates ?? null,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Takım ayarları güncellenemedi.');
+};
+
+export interface PitchLite {
+  id: string;
+  name: string;
+  district: string | null;
+  city: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+/** Ev sahası seçici için onaylı sahaların hafif listesi. */
+export const getApprovedPitchesLite = async (): Promise<PitchLite[]> => {
+  const { data, error } = await supabase
+    .from('pitches')
+    .select('id, name, district, city, latitude, longitude')
+    .eq('verification_status', 'approved')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    district: r.district ?? null,
+    city: r.city ?? null,
+    lat: r.latitude ?? null,
+    lng: r.longitude ?? null,
+  }));
+};
