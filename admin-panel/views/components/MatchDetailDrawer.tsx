@@ -23,6 +23,7 @@ import {
 import { useAdminToast } from '../context/AdminToastContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ActionConfirmModal, type ActionConfirmOptions } from './ActionConfirmModal';
+import { MatchLobbyPitch } from './MatchLobbyPitch';
 import type { MatchListing } from '../../../types';
 
 interface Props {
@@ -69,7 +70,6 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const { success, error: toastError } = useAdminToast();
   const [local, setLocal] = useState<MatchListing | null>(match);
   const [tab, setTab] = useState<TabKey>('kadro');
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -145,7 +145,6 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     try {
       const updated = await assignToSlotAdmin(local.id, slotId, userId, isAway);
       refreshLocalSlots(updated, isAway);
-      setSelectedSlot(null);
       success('Oyuncu slota atandı');
       onUpdated();
     } catch (err) {
@@ -162,7 +161,6 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
         const patched = isAway ? { ...local, awaySlots: next } : { ...local, slots: next };
         await updateMatch(patched);
         setLocal(patched);
-        setSelectedSlot(null);
         success('Oyuncu atandı (yerel)');
         onUpdated();
       } else {
@@ -323,46 +321,6 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
 
   if (!local) return null;
 
-  const mid = Math.ceil(local.slots.length / 2) || local.slots.length;
-  const teamA = local.slots.slice(0, mid);
-  const teamB = local.slots.slice(mid);
-
-  const renderSlots = (slots: typeof teamA, isAway: boolean, label: string, color: string) => (
-    <div className={`p-3 rounded-xl border ${color} space-y-2`}>
-      <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{label}</p>
-      {slots.length === 0 ? (
-        <p className="text-[11px] text-gray-600">Slot yok</p>
-      ) : slots.map((slot) => (
-        <div key={slot.id} className="flex items-center justify-between gap-2 p-2 bg-black/30 rounded-lg text-xs">
-          <div className="min-w-0 flex items-center gap-2">
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5">{slot.role}</span>
-            {slot.status === 'TAKEN' && slot.player ? (
-              <span className="font-bold text-white truncate">{slot.player.name}</span>
-            ) : (
-              <span className="text-gray-600 italic">Boş</span>
-            )}
-          </div>
-          <div className="shrink-0 flex gap-1">
-            {slot.status === 'TAKEN' ? (
-              <button type="button" disabled={busy} onClick={() => void handleKick(slot.id, isAway)} className="text-[9px] font-bold text-red-400 border border-red-500/30 px-2 py-1 rounded">Kick</button>
-            ) : selectedSlot === slot.id ? (
-              <select
-                className="h-7 text-[10px] bg-black border border-white/15 rounded px-1 text-white max-w-[100px]"
-                defaultValue=""
-                onChange={(e) => void handleAssign(slot.id, e.target.value, isAway)}
-              >
-                <option value="">Seç</option>
-                {adminUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            ) : (
-              <button type="button" disabled={busy} onClick={() => setSelectedSlot(slot.id)} className="text-[9px] font-bold text-green-400 border border-green-500/30 px-2 py-1 rounded">Ata</button>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[180] flex justify-end">
@@ -372,7 +330,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="relative w-full max-w-xl h-full bg-[#0D1117] border-l border-white/10 flex flex-col shadow-2xl"
+          className="relative w-full max-w-2xl h-full bg-[#0D1117] border-l border-white/10 flex flex-col shadow-2xl"
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
             <div className="min-w-0">
@@ -453,9 +411,18 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                   ))}
                 </div>
 
-                {renderSlots(teamA, false, 'A Takımı', 'border-red-500/20 bg-red-500/5')}
-                {teamB.length > 0 && renderSlots(teamB, false, 'B Takımı', 'border-blue-500/20 bg-blue-500/5')}
-                {local.awaySlots && local.awaySlots.length > 0 && renderSlots(local.awaySlots, true, 'Deplasman Slotları', 'border-cyan-500/20 bg-cyan-500/5')}
+                {local.slots.length === 0 ? (
+                  <p className="text-[11px] text-gray-600 py-6 text-center">Bu maçın kadro/slot tanımı yok.</p>
+                ) : (
+                  <MatchLobbyPitch
+                    slots={local.slots}
+                    awaySlots={local.awaySlots}
+                    users={adminUsers}
+                    busy={busy}
+                    onAssign={(slotId, userId, isAway) => handleAssign(slotId, userId, isAway)}
+                    onKick={(slotId, isAway) => handleKick(slotId, isAway)}
+                  />
+                )}
               </>
             )}
 
@@ -507,7 +474,36 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
             {/* ── ÖDEME ── */}
             {tab === 'odeme' && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                {/* Finans özeti */}
+                {(() => {
+                  const up = (s: string) => s.toUpperCase();
+                  const sum = (pred: (s: string) => boolean) => intents.filter((i) => pred(up(i.status))).reduce((t, i) => t + Number(i.amount || 0), 0);
+                  const collected = sum((s) => s === 'CAPTURED' || s === 'PAID');
+                  const blocked = sum((s) => s === 'BLOCKED' || s === 'PENDING');
+                  const refunded = sum((s) => s === 'REFUNDED');
+                  const commission = intents.filter((i) => ['CAPTURED', 'PAID'].includes(up(i.status))).reduce((t, i) => t + Number(i.commission_amount || 0), 0);
+                  return (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5">
+                        <p className="text-[9px] text-emerald-300/70 uppercase font-bold">Tahsil Edilen</p>
+                        <p className="text-sm font-black text-emerald-300 font-mono">{fmtMoney(collected)}</p>
+                      </div>
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
+                        <p className="text-[9px] text-amber-300/70 uppercase font-bold">Bloke / Bekleyen</p>
+                        <p className="text-sm font-black text-amber-300 font-mono">{fmtMoney(blocked)}</p>
+                      </div>
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5">
+                        <p className="text-[9px] text-blue-300/70 uppercase font-bold">İade Edilen</p>
+                        <p className="text-sm font-black text-blue-300 font-mono">{fmtMoney(refunded)}</p>
+                      </div>
+                      <div className="bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-xl p-2.5">
+                        <p className="text-[9px] text-[#39FF14]/70 uppercase font-bold">Platform Komisyonu</p>
+                        <p className="text-sm font-black text-[#39FF14] font-mono">{fmtMoney(commission)}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center justify-between pt-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Bu Maçın Ödemeleri</p>
                   <button type="button" onClick={() => void loadIntents()} className="text-[10px] text-gray-500 hover:text-white">Yenile</button>
                 </div>
