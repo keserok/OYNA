@@ -345,12 +345,109 @@ saha personeli QR'ı veya sunucu-taraflı mesafe kontrolü tetiklesin.
 | 7 | 2.2 + 1.4 scraping/PII daraltma | 🟡 STAGING | Orta (anon akışı) |
 | 8 | 4.2/4.3/4.4/4.5 spam/promo/QR/GPS | 🟡 STAGING | Orta |
 
-### Bu commit'le repoya eklenen HAZIR dosyalar
-- `supabase/migrations/20260708000000_faz8_anti_abuse_guards.sql`
-- `supabase/migrations/20260708000100_faz8_match_score_integrity.sql`
-- `supabase/migrations/20260708000200_faz8_revoke_internal_helper_execute.sql`
-- `vercel.json` (HSTS + CSP-Report-Only)
+### Repoya eklenen HAZIR dosyalar (apply-ready)
+| Dosya | Madde | Tür |
+|---|---|---|
+| `supabase/migrations/20260708000000_faz8_anti_abuse_guards.sql` | 1.5 booking/hold kota+hız, anon hold kapat | 🟢 |
+| `supabase/migrations/20260708000100_faz8_match_score_integrity.sql` | 1.1 skor bütünlüğü trigger + bayrak | 🟡 |
+| `supabase/migrations/20260708000200_faz8_revoke_internal_helper_execute.sql` | 1.3 iç helper EXECUTE revoke | 🟢 |
+| `supabase/migrations/20260708000300_faz8_rate_limit_infra.sql` | 2.1 token-bucket (rl_consume) | 🟢 |
+| `supabase/migrations/20260708000400_faz8_match_spam_guard.sql` | 4.2 maç spam trigger | 🟢 |
+| `supabase/migrations/20260708000500_faz8_promo_redeem.sql` | 4.3 redeem_promo RPC | 🟢 |
+| `supabase/migrations/20260708000600_faz8_scraping_hardening.sql` | 2.2 tarife SELECT → authenticated | 🟡 |
+| `supabase/functions/admin-broadcast/index.ts` | 2.3 fail-closed admin auth + CORS | 🟡 |
+| `supabase/functions/create-payment/index.ts` | 2.3 CORS env'e bağlama | 🟢 |
+| `vercel.json` | 3.3 HSTS + CSP-Report-Only | 🟢 |
 
 > **Önemli:** Migration'lar bilinçli olarak **canlı prod DB'ye uygulanmadı** (denetim
-> READ-ONLY yürütüldü). Önce staging/branch DB'de `supabase db push` ile test edip,
-> yukarıdaki test notlarını doğrulayıp prod'a alın.
+> READ-ONLY yürütüldü). `send-push` & `send-email` lokal sürümleri zaten fail-closed —
+> yalnız yeniden deploy gerekir.
+
+---
+
+## 🚀 UYGULAMA RUNBOOK (adım adım)
+
+> Tüm DB değişikliklerini **önce bir staging/branch DB'de** (`supabase db push` veya
+> dev branch) uygulayıp aşağıdaki doğrulamaları geçtikten sonra prod'a alın.
+
+### Adım 0 — Hazırlık
+```bash
+supabase link --project-ref iikvzgyccvgcybzdfwlv     # veya staging ref
+git checkout claude/oyna-security-hardening-gkw0x9
+supabase db diff      # bekleyen migration'ları gör
+```
+
+### Adım 1 — 🟢 Düşük riskli migration'lar (önce bunlar)
+```bash
+# Sadece eklemeli/kanıtlı olanlar: anti-abuse, helper-revoke, rate-limit, spam, promo
+supabase db push      # 000000, 000200, 000300, 000400, 000500 dahil tümünü sırayla uygular
+```
+**Doğrulama (SQL):**
+```sql
+-- trigger'lar yerinde mi?
+SELECT tgname FROM pg_trigger WHERE tgname IN
+  ('trg_enforce_booking_abuse','trg_enforce_hold_abuse','trg_enforce_match_spam','trg_guard_match_score');
+-- helper'lardan authenticated EXECUTE kalktı mı? (false beklenir)
+SELECT has_function_privilege('authenticated','public._are_friends(uuid,uuid)','EXECUTE');
+-- rate-limit fonksiyonu çalışıyor mu? (true sonra koşulla false)
+SELECT public.rl_consume('test', 1, 0, 1);
+```
+
+### Adım 2 — 🟡 Skor bütünlüğü (akış testi şart)
+`...000100_faz8_match_score_integrity.sql` uygulandıktan sonra staging'de:
+- ✅ Consensus: `propose_match_score` + tüm katılımcı `approve_match_score` → skor yazılmalı.
+- ✅ QR: `submit_match_score(token,…)` → skor yazılmalı.
+- ✅ Kaptan: `finalize_match(id, h, a)` → skor yazılmalı.
+- ✅ Admin panel skor düzenleme → çalışmalı.
+- ❌ Normal oyuncu `player_update_match` ile skor değiştirme → `SCORE_FORBIDDEN`.
+- ✅ Oyuncunun kadro/sohbet düzenlemesi (skor sabit) → çalışmalı (trigger tetiklenmez).
+
+### Adım 3 — 🟡 Scraping (anon akışı testi şart)
+`...000600_faz8_scraping_hardening.sql`: **giriş yapmamış** kullanıcının fiyat görmesi
+gerekip gerekmediğini doğrula. Gerekiyorsa uygulamadan önce maskeli RPC sağla.
+
+### Adım 4 — 🔵 Supabase Dashboard ayarları (kod değil)
+- **Auth → Sessions:** `sessions_timebox=720h`, `sessions_inactivity_timeout=24h`,
+  `refresh_token_rotation` açık, `reuse_interval=10`, JWT expiry `1800` sn (md 3.1).
+- **Auth → Bot & Abuse:** hCaptcha/Turnstile aç; SMS/Email OTP rate-limit düşür;
+  OTP length 8, expiry ≤ 600 sn (md 3.2).
+- **Auth → Password:** Leaked password protection (HaveIBeenPwned) **aç** (DB-09/AUTH-04).
+- **Settings → API:** `Max rows = 100` (md 2.2).
+
+### Adım 5 — 🔵 Edge secrets + redeploy
+```bash
+# Fail-closed/CORS için gerekli secret'ler:
+supabase secrets set ADMIN_EDGE_SECRET=<uzun-rastgele>
+supabase secrets set ADMIN_ALLOWED_ORIGIN=https://admin.oyna.app
+supabase secrets set ALLOWED_ORIGIN=https://app.oyna.app
+supabase secrets set WEBHOOK_SECRET=<uzun-rastgele>       # send-push DB Webhook header'ına aynısı
+supabase secrets set EMAIL_EDGE_SECRET=<uzun-rastgele>
+supabase secrets set PAYMENT_PROVIDER=IYZICO              # SIMULATION'ı prod'da KULLANMA
+
+# Hardened sürümleri deploy et (send-push/send-email zaten fail-closed):
+supabase functions deploy admin-broadcast
+supabase functions deploy create-payment
+supabase functions deploy send-push
+supabase functions deploy send-email
+```
+> Database Webhook (`notifications` INSERT → send-push) header'ı `Authorization: Bearer <WEBHOOK_SECRET>` olmalı.
+
+### Adım 6 — Frontend (sonraki PR'da)
+- `supabaseAuth.ts`: OTP çağrılarına `captchaToken`; sign-in/sign-up ayrımı (md 3.2).
+- Ödeme akışında promo: `redeem_promo` RPC'sinin döndürdüğü `final_amount` kullanılmalı.
+- Rate-limit: hassas edge çağrılarına `rl_consume(...)` ekle (md 2.1/2.3 örnekleri).
+
+### Geri Alma (rollback)
+- Trigger'lar: `DROP TRIGGER trg_<ad> ON public.<tablo>;`
+- Skor trigger'ı: `DROP TRIGGER trg_guard_match_score ON public.matches;` (consensus/QR
+  fonksiyonları `set_config` satırıyla çalışmaya devam eder, zararsızdır).
+- Helper revoke: `GRANT EXECUTE ON FUNCTION public._<ad>(...) TO authenticated;`
+- Tarife policy: eski `"Tariffs are publicly viewable" FOR SELECT USING(true)` geri eklenebilir.
+- Edge: önceki sürümü `supabase functions deploy` ile geri al.
+
+### Henüz kod yazılmamış (sonraki PR — product kararı gerektirir)
+- 1.2 `finalize_match` skor parametrelerini kaldırma (frontend koordinasyonu).
+- 1.4 `matches` SELECT anon daraltma / maskeli view.
+- 4.4 `submit_match_score` dual-confirm + `claimCode` `gen_random_uuid()`.
+- 4.5 Sunucu-taraflı GPS/check-in doğrulama.
+- 3.5 `trusted_devices` cihaz bağlama + admin MFA zorunluluğu.
