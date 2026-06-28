@@ -202,6 +202,45 @@ export const onAuthStateChanged = (
   return () => subscription.unsubscribe();
 };
 
+// ─── Demo / dev-mode e-posta girişi ──────────────────────────────────────────
+// SADECE VITE_DEV_MODE='true' iken aktif. Manuel UI testi için: e-posta alanına
+// demo hesabın e-postasını (veya "mirackerem" kısayolunu) yazınca OTP olmadan,
+// sabit demo şifresiyle anında giriş yapar. Yalnız @oyna.app demo hesapları —
+// gerçek kullanıcı hesaplarını ASLA etkilemez. Prod'da kapalıdır.
+export const isDemoLoginEnabled = (): boolean =>
+  import.meta.env.VITE_DEV_MODE === 'true';
+
+const DEMO_DOMAIN = '@oyna.app';
+const DEMO_PASSWORD = 'password123';
+
+/** Girilen değer demo giriş için uygun mu? (tam e-posta ya da bare kullanıcı adı) */
+export const isDemoLoginInput = (raw: string): boolean => {
+  if (!isDemoLoginEnabled()) return false;
+  const key = raw.trim().toLowerCase();
+  if (!key) return false;
+  if (key === 'mirackerem' || key === 'olimpiyat') return true;
+  if (key.endsWith(DEMO_DOMAIN)) return true;
+  // "mehmet.yilmaz" gibi @ içermeyen kısa ad
+  if (!key.includes('@') && /^[a-z0-9._-]+$/.test(key)) return true;
+  return false;
+};
+
+export const demoLogin = async (raw: string) => {
+  if (!isDemoLoginEnabled()) throw new Error('Demo giriş kapalı.');
+  let key = raw.trim().toLowerCase();
+  if (key === 'mirackerem' || key === 'olimpiyat') key = 'mirackerem' + DEMO_DOMAIN;
+  if (!key.includes('@')) key = key + DEMO_DOMAIN; // "mehmet.yilmaz" → tam e-posta
+  if (!key.endsWith(DEMO_DOMAIN)) {
+    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna-test.com) geçerlidir.');
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: key,
+    password: DEMO_PASSWORD,
+  });
+  if (error) throw error;
+  return data;
+};
+
 // ─── E-posta OTP ─────────────────────────────────────────────────────────────
 // shouldCreateUser: true → hesap yoksa otomatik oluşturur (kayıt + giriş tek akış)
 export const sendEmailOtp = async (email: string) => {

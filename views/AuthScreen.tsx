@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Mail, ArrowRight, KeyRound } from 'lucide-react';
 import { UserRole } from '../types';
-import { loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp } from '../supabaseAuth';
+import { loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, demoLogin, isDemoLoginEnabled, isDemoLoginInput } from '../supabaseAuth';
 import { setRememberMe } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
@@ -169,7 +169,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [resendIn, setResendIn] = useState(0);
   const [openModal, setOpenModal] = useState<'kvkk' | 'sozlesme' | null>(null);
 
-  const contactValid = isValidEmail(email);
+  // Dev/demo modunda "mirackerem" gibi @ içermeyen kısayollar da geçerli sayılır
+  const demoMode = isDemoLoginEnabled();
+  const contactValid = isValidEmail(email) || isDemoLoginInput(email);
   const contactLabel = email.trim();
 
   useEffect(() => {
@@ -189,6 +191,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const handleSendOtp = async () => {
     if (!agreed || !contactValid || isLoading) return;
     setError(null);
+    // Dev/demo modu: demo hesabı (veya "mirackerem") → OTP'siz anında giriş
+    if (demoMode && isDemoLoginInput(email)) {
+      setIsLoading('send');
+      try {
+        setRememberMe(remember);
+        await demoLogin(email.trim());
+        onSuccess();
+      } catch (err: any) {
+        console.error('Demo giriş hatası:', err);
+        setError(err?.message || 'Demo giriş başarısız.');
+      } finally {
+        setIsLoading(null);
+      }
+      return;
+    }
     setIsLoading('send');
     try {
       setRememberMe(remember);
@@ -400,10 +417,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setError(null); }}
                     className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
-                    placeholder="ornek@oyna.app"
+                    placeholder={demoMode ? 'demo e-postası veya "mirackerem"' : 'ornek@oyna.app'}
                     aria-label="E-posta adresi"
                   />
                 </div>
+                {demoMode && (
+                  <p className="text-[10px] text-[#39FF14] font-bold mt-2 px-1">
+                    🧪 DEMO MODU: e-postayı yazıp devam et — kod gerekmez. Sahip için "mirackerem".
+                  </p>
+                )}
 
                 {/* Beni Hatırla */}
                 <button
