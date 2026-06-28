@@ -95,6 +95,15 @@ Deno.serve(async (req: Request) => {
       return new Response('No push token', { status: 200 })
     }
 
+    // 2.5 Bildirim kapısı (app_config) — tek master simülasyon anahtarı
+    //     push_live_enabled=false iken uygulama-içi bildirim zaten oluştu;
+    //     telefona GERÇEK push GİTMEZ. (Lansmanda panelden tek anahtarla açılır.)
+    const gate = await loadGate()
+    if (!gate.pushLive) {
+      await logPushStatus(notification, typedProfile, 'simulated')
+      return new Response('Simulation mode (push_live_enabled=false)', { status: 200 })
+    }
+
     // 3. Kullanıcı bu bildirim türünü kapatmış mı? (Zorunlu olanlar geçemez)
     const prefs = typedProfile.notification_preferences || {}
     const prefForType = prefs[notification.type_key]
@@ -110,6 +119,27 @@ Deno.serve(async (req: Request) => {
           status: 'opted_out',
         })
       return new Response('User opted out', { status: 200 })
+    }
+
+    // 3.5 Zorunlu OLMAYAN bildirimler için sessiz saat + saatlik hız limiti.
+    //     Zorunlu türler (maç iptali, davet, gk/hakem kararı vb.) bu kapılardan MUAF.
+    const isMandatory = await isTypeMandatory(notification.type_key, prefForType)
+    if (!isMandatory && inSilentHours(gate)) {
+      await logPushStatus(notification, typedProfile, 'deferred')
+      return new Response('Silent hours', { status: 200 })
+    }
+    if (!isMandatory) {
+      const since = new Date(Date.now() - 3600_000).toISOString()
+      const { count } = await supabaseAdmin
+        .from('push_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', notification.user_id)
+        .eq('status', 'sent')
+        .gte('created_at', since)
+      if ((count ?? 0) >= gate.ratePerHour) {
+        await logPushStatus(notification, typedProfile, 'rate_limited')
+        return new Response('Rate limited', { status: 200 })
+      }
     }
 
     // 4. Push gönder
@@ -354,6 +384,62 @@ async function getGoogleAccessToken(serviceAccountJson: string): Promise<string>
 
   const tokenData = await tokenResponse.json()
   return tokenData.access_token
+}
+
+// ─── Bildirim Kapısı (app_config) ────────────────────────────────
+interface NotificationGate { pushLive: boolean; silentStart: number; silentEnd: number; ratePerHour: number }
+
+async function loadGate(): Promise<NotificationGate> {
+  const { data } = await supabaseAdmin
+    .from('app_config')
+    .select('key, value')
+    .in('key', ['push_live_enabled', 'silent_hours_start', 'silent_hours_end', 'rate_limit_per_user_per_hour'])
+  const m: Record<string, unknown> = {}
+  for (const row of data ?? []) m[(row as { key: string }).key] = (row as { value: unknown }).value
+  const num = (v: unknown, d: number) => { const n = Number(v); return Number.isFinite(n) ? n : d }
+  return {
+    pushLive: m['push_live_enabled'] === true || m['push_live_enabled'] === 'true',
+    silentStart: num(m['silent_hours_start'], 23),
+    silentEnd: num(m['silent_hours_end'], 9),
+    ratePerHour: num(m['rate_limit_per_user_per_hour'], 6),
+  }
+}
+
+function istanbulHour(): number {
+  return Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Istanbul', hour: '2-digit', hourCycle: 'h23' }).format(new Date()),
+  )
+}
+
+function inSilentHours(g: NotificationGate): boolean {
+  if (g.silentStart === g.silentEnd) return false
+  const h = istanbulHour()
+  return g.silentStart < g.silentEnd
+    ? (h >= g.silentStart && h < g.silentEnd)
+    : (h >= g.silentStart || h < g.silentEnd)
+}
+
+async function isTypeMandatory(
+  typeKey: string,
+  prefForType?: { enabled: boolean; mandatory: boolean },
+): Promise<boolean> {
+  if (prefForType?.mandatory === true) return true
+  const { data } = await supabaseAdmin
+    .from('notification_templates')
+    .select('is_mandatory')
+    .eq('type_key', typeKey)
+    .maybeSingle()
+  return (data as { is_mandatory?: boolean } | null)?.is_mandatory === true
+}
+
+async function logPushStatus(n: NotificationRecord, p: UserProfile, status: string) {
+  await supabaseAdmin.from('push_log').insert({
+    notification_id: n.id,
+    user_id: n.user_id,
+    push_token: p.push_token,
+    platform: p.push_token_platform || 'unknown',
+    status,
+  })
 }
 
 // ─── Yardımcı: Push Başarısız İşaretle ───────────────────────────
