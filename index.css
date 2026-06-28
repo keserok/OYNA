@@ -363,4 +363,18 @@ input:-webkit-autofill:focus {
   transform: translateY(-2px);
 }
 
+/* S50 – prefers-reduced-motion: hareket hassasiyeti olan kullanıcılar için
+   tüm transition/animasyonları kapat; Framer Motion @media sorgusu buna bakıyor */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-ping, .animate-pulse, .animate-spin, .animate-bounce {
+    animation: none !important;
+  }
+}
+
 
