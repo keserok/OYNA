@@ -292,6 +292,8 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const pitchRef = useRef<HTMLDivElement>(null);
+    // Q32: sürüklenen oyuncunun başlangıç konumu (hayalet/ghost göstergesi için)
+    const dragOriginRef = useRef<{ x: number; y: number } | null>(null);
 
     const loadMyTeams = useAppStore(s => s.loadMyTeams);
 
@@ -600,7 +602,10 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
 
     const handlePointerUp = async () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        const wasDragging = !!draggedPlayer;
         setDraggedPlayer(null);
+        dragOriginRef.current = null;
+        if (wasDragging && navigator.vibrate) navigator.vibrate(18); // bırakma dokunuşu
         if (currentTactic) {
             const slots = typeof currentTactic.slots === 'string' ? JSON.parse(currentTactic.slots) : currentTactic.slots;
             const updatedSlots = slots.map((s: any) => {
@@ -693,7 +698,14 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     </button>
                     <div>
                         <h1 className="font-black text-white text-lg tracking-tight uppercase">{activeTeam.name}</h1>
-                        <p className="text-[10px] text-gray-400 font-medium">Taktik Tahtası • Kaptan Modu</p>
+                        <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
+                            Taktik Tahtası
+                            {isCaptain ? (
+                                <span className="inline-flex items-center gap-1 text-amber-400 font-bold"><Crown size={9} /> Kaptan</span>
+                            ) : (
+                                <span className="text-gray-500 font-bold">• Üye</span>
+                            )}
+                        </p>
                     </div>
                 </div>
                 <button className="p-2 bg-white/5 rounded-full text-white">
@@ -797,14 +809,18 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                             value={tactic}
                                             dragConstraints={{ top: 0, bottom: 0 }}
                                             dragElastic={0.1}
+                                            onDragStart={() => { if (navigator.vibrate) navigator.vibrate(20); }}
+                                            whileDrag={{ scale: 1.06, boxShadow: '0 12px 28px rgba(0,0,0,0.55)', cursor: 'grabbing' }}
                                             onClick={() => setSelectedTacticId(tactic.id)}
-                                            className={`shrink-0 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all cursor-grab active:cursor-grabbing flex items-center gap-1.5 ${
+                                            className={`shrink-0 pl-2 pr-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-colors cursor-grab active:cursor-grabbing flex items-center gap-2 ${
                                                 isActive
                                                     ? 'bg-gradient-to-r from-[#39FF14]/20 to-[#39FF14]/5 border-[#39FF14] text-white shadow-[0_0_15px_rgba(57,255,20,0.15)]'
                                                     : 'bg-[#161B22] text-gray-400 border-white/5 hover:border-white/20'
                                             }`}
                                         >
-                                            <GripHorizontal size={10} className="text-gray-600" />
+                                            <span className="flex items-center justify-center w-5 h-5 rounded-md bg-white/5 border border-white/10">
+                                                <GripHorizontal size={11} className={isActive ? 'text-[#39FF14]' : 'text-gray-400'} />
+                                            </span>
                                             {tactic.name}
                                         </Reorder.Item>
                                     );
@@ -837,15 +853,19 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                 <section>
                     {/* Controls */}
                     <div className="w-full flex justify-between items-center mb-4">
-                        <div className="flex gap-2">
-                            <button onClick={() => applyFormation('2-3-1')} className="px-3 py-1.5 bg-[#161B22] border border-white/10 rounded-lg text-xs font-bold text-gray-300 hover:text-white hover:border-white/30 transition-colors">
-                                2-3-1
-                            </button>
-                            <button onClick={() => applyFormation('3-2-1')} className="px-3 py-1.5 bg-[#161B22] border border-white/10 rounded-lg text-xs font-bold text-gray-300 hover:text-white hover:border-white/30 transition-colors">
-                                3-2-1
-                            </button>
-                        </div>
-                        
+                        {isCaptain ? (
+                            <div className="flex gap-2">
+                                <button onClick={() => applyFormation('2-3-1')} className="px-3 py-1.5 bg-[#161B22] border border-white/10 rounded-lg text-xs font-bold text-gray-300 hover:text-white hover:border-white/30 transition-colors">
+                                    2-3-1
+                                </button>
+                                <button onClick={() => applyFormation('3-2-1')} className="px-3 py-1.5 bg-[#161B22] border border-white/10 rounded-lg text-xs font-bold text-gray-300 hover:text-white hover:border-white/30 transition-colors">
+                                    3-2-1
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Diziliş — kaptan belirler</span>
+                        )}
+
                         <button
                             onClick={() => {
                                 setActiveStudioTeam(activeTeam);
@@ -861,9 +881,9 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                     <div
                         ref={pitchRef}
                         className="relative w-full aspect-[2/3] max-h-[60vh] bg-[#1B4332] rounded-[24px] border-4 border-[#161B22] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden touch-none"
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerLeave={handlePointerUp}
+                        onPointerMove={isCaptain ? handlePointerMove : undefined}
+                        onPointerUp={isCaptain ? handlePointerUp : undefined}
+                        onPointerLeave={isCaptain ? handlePointerUp : undefined}
                     >
                         {/* Grass Stripes */}
                         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.2) 10%, rgba(0,0,0,0.2) 20%)' }}></div>
@@ -908,30 +928,63 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                             </svg>
                         </div>
 
+                        {/* Q32: sürüklenen oyuncunun başlangıç konumunda hayalet (ghost) */}
+                        {isCaptain && draggedPlayer && dragOriginRef.current && (
+                            <div
+                                className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[5]"
+                                style={{ left: `${dragOriginRef.current.x}%`, top: `${dragOriginRef.current.y}%` }}
+                            >
+                                <div className="w-10 h-10 rounded-full border-2 border-dashed border-white/40 bg-white/5" />
+                            </div>
+                        )}
+
                         {/* Draggable Players */}
-                        {roster.filter(player => player.x !== -999).map((player) => (
+                        {roster.filter(player => player.x !== -999).map((player) => {
+                            const isDragging = draggedPlayer === player.id;
+                            return (
                             <div
                                 key={player.id}
-                                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing active:scale-110 transition-transform"
-                                style={{ left: `${player.x}%`, top: `${player.y}%`, zIndex: (draggedPlayer === player.id) ? 50 : 10 }}
-                                onPointerDown={(e) => {
-                                    e.currentTarget.releasePointerCapture(e.pointerId);
-                                    setDraggedPlayer(player.id);
+                                className={`absolute -translate-x-1/2 -translate-y-1/2 ${isCaptain ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${isDragging ? '' : 'transition-all duration-150'}`}
+                                style={{
+                                    left: `${player.x}%`,
+                                    top: `${player.y}%`,
+                                    zIndex: isDragging ? 50 : 10,
+                                    transform: `translate(-50%, -50%) scale(${isDragging ? 1.18 : 1})`,
                                 }}
+                                onPointerDown={isCaptain ? (e) => {
+                                    e.currentTarget.releasePointerCapture(e.pointerId);
+                                    dragOriginRef.current = { x: player.x, y: player.y };
+                                    setDraggedPlayer(player.id);
+                                    if (navigator.vibrate) navigator.vibrate(28); // tutma dokunuşu
+                                } : undefined}
                             >
                                 <div className="flex flex-col items-center gap-1 relative">
-                                    <div className={`relative w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden ${draggedPlayer === player.id ? 'ring-4 ring-[#FFFF00]' : ''}`}>
+                                    <div
+                                        className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-shadow ${
+                                            isDragging
+                                                ? 'border-[#FFFF00] ring-4 ring-[#FFFF00]/60 shadow-[0_10px_25px_rgba(0,0,0,0.6)]'
+                                                : 'border-white shadow-lg'
+                                        }`}
+                                    >
                                         <img src={player.avatar} alt={player.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold text-white whitespace-nowrap flex flex-col items-center gap-0.5">
+                                    <div className={`backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap flex flex-col items-center gap-0.5 ${isDragging ? 'bg-[#FFFF00] text-black' : 'bg-black/60 text-white'}`}>
                                         <span>{player.name}</span>
                                         {player.instruction && (
-                                            <span className="text-[#FFFF00] text-[7px] tracking-widest uppercase font-black">{player.instruction}</span>
+                                            <span className={`text-[7px] tracking-widest uppercase font-black ${isDragging ? 'text-black/70' : 'text-[#FFFF00]'}`}>{player.instruction}</span>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
+
+                        {/* Düzenleme ipucu */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 pointer-events-none">
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-white/70">
+                                {isCaptain ? 'Oyuncuları sürükleyerek diz' : 'Dizilişi kaptan düzenler'}
+                            </span>
+                        </div>
                     </div>
                 </section>
 
@@ -1119,13 +1172,15 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                 {/* Roster List & Management */}
                 <section className="bg-[#161B22] border border-white/5 rounded-[32px] p-5">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-black text-white">Kadro Yönetimi</h3>
-                        <button
-                            onClick={() => setShowInviteModal(true)}
-                            className="flex items-center gap-2 bg-[#FFFF00] text-black px-3 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-300 transition-colors"
-                        >
-                            <UserPlus size={14} /> Ekle
-                        </button>
+                        <h3 className="font-black text-white">{isCaptain ? 'Kadro Yönetimi' : 'Kadro'}</h3>
+                        {isCaptain && (
+                            <button
+                                onClick={() => setShowInviteModal(true)}
+                                className="flex items-center gap-2 bg-[#FFFF00] text-black px-3 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-300 transition-colors"
+                            >
+                                <UserPlus size={14} /> Ekle
+                            </button>
+                        )}
                     </div>
                     <div className="space-y-3">
                         {roster.map((player) => {
@@ -1147,26 +1202,40 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <select
-                                            value={player.instruction || ''}
-                                            onChange={(e) => handleSetInstruction(player.id, e.target.value)}
-                                            className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
-                                        >
-                                            <option value="" className="text-gray-500">Talimat Yok</option>
-                                            <option value="Hücuma Çık">Hücuma Çık</option>
-                                            <option value="Geride Kal">Geride Kal</option>
-                                            <option value="Serbest">Serbest</option>
-                                            <option value="Markaj">Markaj</option>
-                                            <option value="Oyun Kurucu">Oyun Kurucu</option>
-                                            <option value="Pres Yap">Pres Yap</option>
-                                        </select>
-                                        <button
-                                            onClick={() => removePlayer(player.id)}
-                                            className="p-2 shrink-0 text-gray-600 hover:text-red-500 transition-colors"
-                                            title="Kadrodan Çıkar"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {isCaptain ? (
+                                            <>
+                                                <select
+                                                    value={player.instruction || ''}
+                                                    onChange={(e) => handleSetInstruction(player.id, e.target.value)}
+                                                    className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
+                                                >
+                                                    <option value="" className="text-gray-500">Talimat Yok</option>
+                                                    <option value="Hücuma Çık">Hücuma Çık</option>
+                                                    <option value="Geride Kal">Geride Kal</option>
+                                                    <option value="Serbest">Serbest</option>
+                                                    <option value="Markaj">Markaj</option>
+                                                    <option value="Oyun Kurucu">Oyun Kurucu</option>
+                                                    <option value="Pres Yap">Pres Yap</option>
+                                                </select>
+                                                {!isCaptainSelf && (
+                                                    <button
+                                                        onClick={() => removePlayer(player.id)}
+                                                        className="p-2 shrink-0 text-gray-600 hover:text-red-500 transition-colors"
+                                                        title="Kadrodan Çıkar"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </>
+                                        ) : (
+                                            player.instruction ? (
+                                                <span className="shrink-0 text-[10px] font-bold text-[#FFFF00]/80 border border-[#FFFF00]/20 rounded-xl px-2.5 py-1.5 uppercase tracking-wider">
+                                                    {player.instruction}
+                                                </span>
+                                            ) : (
+                                                <span className="shrink-0 text-[10px] font-bold text-gray-600 uppercase tracking-wider">—</span>
+                                            )
+                                        )}
                                     </div>
                                 </div>
 
