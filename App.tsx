@@ -35,7 +35,7 @@ const MatchDiaryDetail = lazy(() => import('./views/MatchDiaryDetail'));
 const Studio = lazy(() => import('./views/Studio'));
 const WalletScreen = lazy(() => import('./views/WalletScreen'));
 // MatchLobby kaldırıldı — MatchJoin artık tek ekran
-const OpponentFinder = lazy(() => import('./views/OpponentFinder'));
+// OpponentFinder (Rakip Bul haritası) kaldırıldı — rakip yalnız maç oluştur'dan davet edilir
 const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
@@ -434,7 +434,7 @@ const App: React.FC = () => {
         return <ListingDetails onBack={() => goBack('MY_LISTINGS')} />;
       case 'PAYMENT':
         return <PaymentScreen
-          onBack={() => goBack('OPPONENT_FINDER')}
+          onBack={() => goBack('DASHBOARD')}
           onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
@@ -461,8 +461,7 @@ const App: React.FC = () => {
           }}
         />;
       // MATCH_LOBBY kaldırıldı — tüm işlemler MatchJoin'de yapılıyor
-      case 'OPPONENT_FINDER':
-        return <OpponentFinder onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+      // OPPONENT_FINDER kaldırıldı — rakip yalnız maç oluştur'dan davet edilir
       case 'MATCH_CALENDAR':
         return <MatchCalendar onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DIARY_DETAIL':

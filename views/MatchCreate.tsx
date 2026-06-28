@@ -5,14 +5,13 @@ import {
   ArrowLeft, ChevronRight, Users, UserPlus, Share2, Search,
   Shield, Scale, Star, Check, Plus, Copy, X, Zap, MapPin,
   Trophy, Layers, Droplets, CreditCard, SkipForward,
-  CalendarCheck, Activity, Swords, Clock, ChevronLeft, Globe, Lock,
+  CalendarCheck, Activity, Swords, Clock, ChevronLeft, Lock,
   Filter, Map as MapIcon, LayoutGrid, Heart, Thermometer, Wind, Sun, Moon, Radio,
   Target, Feather, CheckCircle2, ArrowRight
 } from 'lucide-react';
 import { Pitch, Goalkeeper, Referee, AppView, PlayerSeekAnnouncement } from '../types';
 import { useAppStore } from '../store';
 import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
-import OpponentFinder from './OpponentFinder';
 import Marketplace from './Marketplace';
 import SharedPitch from '../components/SharedPitch';
 import PitchDiscovery from './PitchDiscovery';
@@ -1003,7 +1002,7 @@ const ServicesStep: React.FC<{
   setWantsOpponentAd?: (v: boolean) => void;
 }> = ({ selectedPitch, selectedTimeSlot, selectedGk, selectedRef, onSelectGk, onSelectRef, onNext, onNavigate, setPlayerAdCount, wantsOpponentAd, setWantsOpponentAd }) => {
   const [activeService, setActiveService] = useState<string | null>(null);
-  const [opponentSubView, setOpponentSubView] = useState<'options' | 'finder' | 'private'>('options');
+  const [opponentSubView, setOpponentSubView] = useState<'options' | 'private'>('options');
   const fieldRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -1266,30 +1265,7 @@ const ServicesStep: React.FC<{
                 <p className="text-[10px] text-orange-300 font-bold uppercase tracking-widest opacity-80">Genel İlan Ver</p>
               </motion.button>
 
-              {/* Option 3: Rakip Seç */}
-              <motion.button 
-                whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
-                onClick={() => setOpponentSubView('finder')}
-                className="flex-1 bg-gradient-to-br from-red-900/40 via-[#161B22] to-[#0A0E14] border border-white/10 rounded-[24px] p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-lg"
-              >
-                <div className="absolute inset-0 bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl pointer-events-none" />
-                <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-                  <Globe size={28} className="text-red-400" />
-                </div>
-                <h3 className="text-xl font-black text-white italic tracking-tighter uppercase mb-1">Rakip Seç</h3>
-                <p className="text-[10px] text-red-300 font-bold uppercase tracking-widest opacity-80">Hazır Takımlara Meydan Oku</p>
-              </motion.button>
             </div>
-          </motion.div>
-        )}
-
-        {/* OPPONENT FINDER FULL SCREEN INSIDE MODAL */}
-        {activeService === 'opponent' && opponentSubView === 'finder' && (
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }}
-            className="absolute inset-0 z-40 bg-[#0A0E14]"
-          >
-            <OpponentFinder onBack={() => setOpponentSubView('options')} onNavigate={onNavigate} />
           </motion.div>
         )}
 
