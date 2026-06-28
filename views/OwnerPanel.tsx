@@ -22,6 +22,7 @@ import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerTo
 import { OwnerKpiGrid, OwnerCommandStrip, kpiIcons, type OwnerKpiItem } from './owner/components/OwnerKpiGrid';
 import { OwnerStatusBar, type OwnerStatusBanner } from './owner/components/OwnerStatusBar';
 import { OwnerBottomNav } from './owner/components/OwnerBottomNav';
+import { OwnerSidebar } from './owner/components/OwnerSidebar';
 import { OwnerUpgradeGate } from './owner/components/OwnerUpgradeGate';
 import { OwnerHomeSkeleton } from './owner/components/OwnerHomeSkeleton';
 import {
@@ -542,7 +543,7 @@ const FinancialCalendarView: React.FC<{
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-32">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-32 lg:pb-6">
                 {isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
@@ -1249,7 +1250,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 lg:pb-6">
                 {subTab === 'REQUESTS' && realPitchId && onToggleAutoApprove && (
                     <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
                         <div className="min-w-0">
@@ -1897,7 +1898,19 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    <div className="min-h-screen flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative lg:pl-60">
+      <OwnerSidebar
+        activeTab={activeTab}
+        pendingCount={pendingCount}
+        financeLocked={!can.finance}
+        teamLocked={!can.team}
+        facilityName={facilityData?.name}
+        onSelect={(tab) => {
+          if (tab === 'MORE') setActiveTab('MORE');
+          else handleTabSelect(tab);
+        }}
+        onExit={() => setShowLogoutConfirm(true)}
+      />
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}
@@ -1961,7 +1974,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       {activeTab === 'HOME' && isLoading && <OwnerHomeSkeleton />}
 
       {activeTab === 'HOME' && !isLoading && (
-          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
+          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32 lg:pb-6">
               <OwnerCommandStrip
                 planLabel={ownerAccount ? planTierLabel(ownerAccount.plan_tier) : 'Starter'}
                 trialDaysLeft={trialDaysLeft}
@@ -2302,16 +2315,18 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       )}
 
 
-      <OwnerBottomNav
-        activeTab={activeTab}
-        pendingCount={pendingCount}
-        financeLocked={!can.finance}
-        teamLocked={!can.team}
-        onSelect={(tab) => {
-          if (tab === 'MORE') setActiveTab('MORE');
-          else handleTabSelect(tab);
-        }}
-      />
+      <div className="lg:hidden">
+        <OwnerBottomNav
+          activeTab={activeTab}
+          pendingCount={pendingCount}
+          financeLocked={!can.finance}
+          teamLocked={!can.team}
+          onSelect={(tab) => {
+            if (tab === 'MORE') setActiveTab('MORE');
+            else handleTabSelect(tab);
+          }}
+        />
+      </div>
     </div>
   );
 };

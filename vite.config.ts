@@ -6,6 +6,31 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 const ADMIN_DEV = process.env.ADMIN_DEV === '1';
+const OWNER_DEV = process.env.OWNER_DEV === '1';
+
+function ownerDevRedirect(): Plugin {
+  return {
+    name: 'owner-dev-root-redirect',
+    configureServer(server) {
+      if (!OWNER_DEV) return;
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0] ?? '';
+        const qs = req.url?.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+        if (url === '/owner.html' || url === '/tesis') {
+          req.url = `/owner-panel/owner.html${qs}`;
+          next();
+          return;
+        }
+        if (url === '/' || url === '/index.html') {
+          res.writeHead(302, { Location: `/owner.html${qs}` });
+          res.end();
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 function adminDevRedirect(): Plugin {
   return {
@@ -33,8 +58,8 @@ function adminDevRedirect(): Plugin {
 
 export default defineConfig({
   server: {
-    port: Number(process.env.PORT) || (ADMIN_DEV ? 4005 : 4000),
-    strictPort: ADMIN_DEV,
+    port: Number(process.env.PORT) || (ADMIN_DEV ? 4005 : OWNER_DEV ? 4006 : 4000),
+    strictPort: ADMIN_DEV || OWNER_DEV,
     host: '0.0.0.0',
     watch: {
       ignored: [
@@ -52,14 +77,15 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    entries: ['index.html', 'admin-panel/admin.html']
+    entries: ['index.html', 'admin-panel/admin.html', 'owner-panel/owner.html']
   },
-  plugins: [adminDevRedirect(), react(), tailwindcss()],
+  plugins: [ownerDevRedirect(), adminDevRedirect(), react(), tailwindcss()],
   build: {
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
         admin: path.resolve(__dirname, 'admin-panel/admin.html'),
+        owner: path.resolve(__dirname, 'owner-panel/owner.html'),
       },
       output: {
         manualChunks: {

@@ -9,8 +9,10 @@ import { AnimatedButton } from '../components/AnimatedButton';
 
 interface AuthScreenProps {
   onSuccess: () => void;
-  onBack: () => void;
+  onBack?: () => void;
   role?: UserRole | null;
+  /** Misafir ("önce göz at") butonu gösterilsin mi — tesis/standalone girişte false. */
+  allowGuest?: boolean;
 }
 
 const THEMES: Record<string, {
@@ -154,7 +156,7 @@ const LegalModal: React.FC<LegalModalsProps> = ({ openModal, setOpenModal }) => 
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
+const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role, allowGuest = true }) => {
   const theme = getTheme(role);
   const { color, orb1, orb2, tagline, badge } = theme;
 
@@ -276,7 +278,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
       setOtp('');
       setError(null);
     } else {
-      onBack();
+      onBack?.();
     }
   };
 
@@ -286,7 +288,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   return (
     <PageLayout
       showSafeBottom={false}
-      onBack={handleHeaderBack}
+      onBack={stage === 'otp' || onBack ? handleHeaderBack : undefined}
       className="relative z-10"
     >
       {/* ─── ANIMATED BACKGROUND ─── */}
@@ -468,6 +470,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   </AnimatedButton>
 
                   {/* Önce göz at — kayıt olmadan keşfet (değer-kapısı modeli) */}
+                  {allowGuest && (
                   <AnimatedButton
                     id="guest-login-button"
                     onClick={handleGuestLogin}
@@ -479,6 +482,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   >
                     ÖNCE MAÇLARA GÖZ AT
                   </AnimatedButton>
+                  )}
                 </div>
               </motion.div>
             ) : (

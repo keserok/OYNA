@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:admin": "node admin-panel/scripts/start-admin-local.mjs",
+    "dev:owner": "OWNER_DEV=1 vite",
     "test:unit": "vitest run tests/unit",
     "test:admin": "playwright test tests/admin.spec.ts",
     "admin:verify": "node admin-panel/scripts/admin-panel-verify.mjs",

@@ -13,6 +13,10 @@
       "destination": "/admin-panel/admin.html"
     },
     {
+      "source": "/tesis",
+      "destination": "/owner-panel/owner.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
