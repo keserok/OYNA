@@ -36,6 +36,15 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(self), camera=(self)"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "comment": "FAZ 8 — once REPORT-ONLY ile ihlalleri gozlemleyin; temizse Content-Security-Policy'ye cevirip enforce edin. host'lari kendi Supabase/harita/avatar/observability origin'lerinize gore daraltin.",
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://i.pravatar.cc https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.posthog.com https://*.i.posthog.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
         }
       ]
     }
