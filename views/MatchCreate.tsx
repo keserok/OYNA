@@ -1812,6 +1812,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     homeTeamName, setHomeTeamName,
     awayTeamName, setAwayTeamName,
     visibility, setVisibility,
+    isTeamMatch, setIsTeamMatch,
+    homeTeamId, setHomeTeamId,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
@@ -2015,6 +2017,48 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        </p>
                      )}
                    </div>
+
+                   {/* S38: Rakip Takım Davet Et — takım maçı (ev sahibi + deplasman), kodla davet */}
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const next = !isTeamMatch;
+                       setIsTeamMatch(next);
+                       if (next) setVisibility('PRIVATE');
+                     }}
+                     className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border text-left transition-all ${
+                       isTeamMatch
+                         ? 'bg-red-500/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
+                         : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                     }`}
+                   >
+                     <div className="flex items-center gap-3 min-w-0">
+                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${isTeamMatch ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-gray-400'}`}>
+                         <Swords size={20} />
+                       </div>
+                       <div className="min-w-0">
+                         <p className={`text-sm font-black italic uppercase tracking-tight ${isTeamMatch ? 'text-white' : 'text-gray-300'}`}>Rakip Takım Davet Et</p>
+                         <p className="text-[10px] text-gray-500 font-bold leading-tight truncate">
+                           {homeTeamId ? `${homeTeamName} vs rakip — kodla davet` : 'Takım maçı: kodu rakibe gönder, ödeyip katılır'}
+                         </p>
+                       </div>
+                     </div>
+                     <div className={`w-[52px] h-7 rounded-full p-1 flex items-center shrink-0 transition-colors ${isTeamMatch ? 'bg-red-500' : 'bg-[#0A0E14] border border-white/10'}`}>
+                       <motion.div animate={{ x: isTeamMatch ? 24 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} className={`w-5 h-5 rounded-full ${isTeamMatch ? 'bg-white' : 'bg-gray-500'}`} />
+                     </div>
+                   </button>
+                   {isTeamMatch && (
+                     <div className="rounded-2xl bg-red-500/5 border border-red-500/20 px-4 py-3 space-y-1.5">
+                       {!homeTeamId && (
+                         <p className="text-[10px] text-red-300/90 font-bold leading-relaxed">
+                           İpucu: "Takımlarım"dan kadronu sahaya dizersen ev sahibi takımın belirlenir.
+                         </p>
+                       )}
+                       <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
+                         Maç oluşturulunca rakip için boş bir <span className="text-white font-bold">deplasman tarafı</span> ve paylaşılabilir <span className="text-[#FFFF00] font-bold">davet kodu</span> oluşur. Rakip takım kodu girip slotlarını ödeyerek katılır. Ödemeyi tek kişi de yapabilir, herkes ayrı ayrı da.
+                       </p>
+                     </div>
+                   )}
 
                    {/* Takım Formatı */}
                    <div className="space-y-2">
@@ -2305,7 +2349,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{t.players?.length || 0} Oyuncu</p>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 const newPlayers: typeof myPlayers = { ...myPlayers };
                                                 const emptySlots = pitchSlots.filter(s => !newPlayers[s.id]);
@@ -2319,6 +2363,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                                     }
                                                 });
                                                 setMyPlayers(newPlayers);
+                                                // S38: ev sahibi gerçek takım — rakip daveti için takımı kaydet
+                                                setHomeTeamId(t.id);
+                                                setHomeTeamName(t.name);
                                                 setActiveSheet('NONE');
                                             }}
                                             className="w-full py-3 bg-[#FFFF00]/10 text-[#FFFF00] border border-[#FFFF00]/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FFFF00] hover:text-black hover:shadow-[0_0_15px_rgba(255,255,0,0.3)] transition-all"

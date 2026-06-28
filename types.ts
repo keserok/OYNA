@@ -304,6 +304,7 @@ export interface PositionSlot {
   assignmentStatus?: 'SELF' | 'INVITED' | 'LINK_PENDING' | 'ACCEPTED';
   inviteeId?: string;              // davet edilen arkadaş id
   claimCode?: string;              // paylaşılabilir devralma kodu
+  side?: 'HOME' | 'AWAY';          // Takım maçında ev sahibi / deplasman tarafı (FAZ8 S38)
 }
 
 export interface Court {

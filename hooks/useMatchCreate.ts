@@ -45,6 +45,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const [homeTeamName, setHomeTeamName] = useState('');
   const [awayTeamName, setAwayTeamName] = useState('');
   const [visibility, setVisibility] = useState<'OPEN' | 'PRIVATE'>('OPEN'); // FAZ 3: özel maç (kodla davet)
+  // S38: Takım Maçı — kendi takımını seç, rakip tarafı (away) kodla davet edilir
+  const [isTeamMatch, setIsTeamMatch] = useState(false);
+  const [homeTeamId, setHomeTeamId] = useState<string | null>(null);
 
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
@@ -53,7 +56,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
   const [customPositions, setCustomPositions] = useState<Record<string, {x: number, y: number, role: string}>>({});
 
-  const { incrementUnreadNotifications, addUserNotification, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, matchCreateSeed, setMatchCreateSeed, setSelectedMatch } = useAppStore();
+  const { incrementUnreadNotifications, addUserNotification, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, matchCreateSeed, setMatchCreateSeed, setSelectedMatch, myTeams } = useAppStore();
 
   // FAZ 3: Rezervasyon → Maça Çevir tohumu (MyBookings'ten gelir) — saha + saat ön-doldur
   useEffect(() => {
@@ -207,15 +210,57 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       return;
     }
 
+    // S38: Takım Maçı — kendi takımın (ev sahibi) + rakip tarafı (away) kodla davet.
+    const teamObj = isTeamMatch && homeTeamId ? myTeams.find(t => t.id === homeTeamId) : null;
+    // İki sütun modeli (MatchJoin ile uyumlu): ev sahibi → slots, rakip → awaySlots.
+    const homeSlots: PositionSlot[] = pitchSlots.map((slot): PositionSlot => {
+      const baseSlot: PositionSlot = {
+        id: slot.id,
+        role: slot.role,
+        x: slot.x,
+        y: slot.y,
+        status: slot.player ? 'TAKEN' : 'OPEN',
+        ...(isTeamMatch ? { side: 'HOME' as const } : {}),
+      };
+      if (slot.player) {
+        baseSlot.player = {
+          id: slot.player.id,
+          name: slot.player.name,
+          avatar: slot.player.avatar,
+          style: 'Bitirici',
+          rating: 4.8,
+          position: slot.role,
+          x: slot.x,
+          y: slot.y,
+          paymentStatus: slot.player.status === 'CONFIRMED' ? 'PAID' : 'PENDING',
+        };
+      }
+      return baseSlot;
+    });
+    // Rakip tarafı (awaySlots): perTeam adet açık slot — rakip takım kodla katılıp öder.
+    const awaySlots: PositionSlot[] = isTeamMatch
+      ? pitchSlots.map((slot, i): PositionSlot => ({
+          id: `away_${i}`,
+          role: slot.role,
+          x: slot.x,
+          y: slot.y,
+          status: 'OPEN',
+          side: 'AWAY',
+        }))
+      : [];
+    // Takım maçı kodla davet edildiği için PRIVATE (paylaşılabilir kod üretilir).
+    const effectiveVisibility = isTeamMatch ? 'PRIVATE' : visibility;
+
     const matchData = {
         id: 'm_' + Math.random().toString(36).substr(2, 9),
         creatorId: auth.currentUser?.uid,
-        title: matchTitle.trim() || `${selectedPitch?.name || 'Saha'} Maçı`,
-        homeTeamName: homeTeamName.trim() || undefined,
+        title: matchTitle.trim() || (teamObj ? `${teamObj.name} Takım Maçı` : `${selectedPitch?.name || 'Saha'} Maçı`),
+        homeTeamName: teamObj ? teamObj.name : (homeTeamName.trim() || undefined),
+        homeTeamId: teamObj ? teamObj.id : undefined,   // S38: ev sahibi gerçek takım
         awayTeamName: awayTeamName.trim() || undefined,
         location: selectedPitch?.district || 'Belirtilmedi',
         pitchId: selectedPitch?.id,            // FAZ 3: owner kredisi + iade için saha bağı
-        visibility,                            // FAZ 3: OPEN (vitrin) | PRIVATE (kodla davet)
+        visibility: effectiveVisibility,       // FAZ 3: OPEN (vitrin) | PRIVATE (kodla davet)
         time: selectedTimeSlot?.time || '',
         date: selectedTimeSlot?.date || '',
         price: costPerPerson,
@@ -232,38 +277,17 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             { role: 'STP', count: 1 },
             { role: 'ORT', count: 1 }
         ],
-        slots: pitchSlots.map((slot): PositionSlot => {
-            const baseSlot: PositionSlot = {
-                id: slot.id,
-                role: slot.role,
-                x: slot.x,
-                y: slot.y,
-                status: slot.player ? 'TAKEN' : 'OPEN',
-            };
-            if (slot.player) {
-                baseSlot.player = {
-                    id: slot.player.id,
-                    name: slot.player.name,
-                    avatar: slot.player.avatar,
-                    style: 'Bitirici',
-                    rating: 4.8,
-                    position: slot.role,
-                    x: slot.x,
-                    y: slot.y,
-                    paymentStatus: slot.player.status === 'CONFIRMED' ? 'PAID' : 'PENDING'
-                };
-            }
-            return baseSlot;
-        })
+        slots: homeSlots,
+        ...(isTeamMatch ? { awaySlots } : {}),
     };
 
     try {
         setIsPublishing(true);
-        const isPrivate = visibility === 'PRIVATE';
+        const isPrivate = effectiveVisibility === 'PRIVATE';
         let targetId: string | undefined;
         if (isDraftMode && draftMatch) {
             // FAZ 3: taslağı maça çevirirken görünürlüğü de gönder (PRIVATE'a geçişte DB kod üretir)
-            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility });
+            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, ...(isTeamMatch ? { awaySlots } : {}), format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility: effectiveVisibility, ...(teamObj ? { homeTeamName: teamObj.name, homeTeamId: teamObj.id } : {}) });
             setActiveDraftId(null);
             targetId = draftMatch.id;
         } else {
@@ -327,6 +351,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     homeTeamName, setHomeTeamName,
     awayTeamName, setAwayTeamName,
     visibility, setVisibility,
+    isTeamMatch, setIsTeamMatch,
+    homeTeamId, setHomeTeamId,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
