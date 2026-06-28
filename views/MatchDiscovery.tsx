@@ -122,20 +122,17 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     if (userLocation) {
         fetchNearbyMatches(userLocation.lat, userLocation.lng, searchRadius).then((results) => {
             if (results && results.length > 0) {
+                // get_nearby_matches HAM matches satırı döndürür (SETOF matches);
+                // satırı olduğu gibi yay ki kart tüm alanları (location/date/time/
+                // slots/price...) bulsun. Eksik alanlar için güvenli varsayılanlar.
                 const mapped = results.map((m: any) => ({
-                    id: m.match_id,
-                    title: `${m.pitch_name} Maçı`,
-                    pitchName: m.pitch_name,
-                    date: new Date(m.start_time).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }),
-                    time: new Date(m.start_time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-                    format: m.format || '7v7',
-                    price: 200,
-                    difficulty: m.difficulty || 'Ciddi',
-                    distance: m.distance_meters,
-                    creatorName: m.captain_name || 'Kaptan',
-                    creatorAvatar: 'https://i.pravatar.cc/150'
+                    ...m,
+                    title: m.title || `${m.location || 'Maç'}`,
+                    distance: m.distance_meters ?? m.distance,
                 }));
                 setNearbyMatches(mapped);
+            } else {
+                setNearbyMatches([]);
             }
         });
     }
@@ -146,7 +143,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
     const activeMatches = sourceMatches.filter(
-      m => (!m.status || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
+      m => (!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
     );
     return activeMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price

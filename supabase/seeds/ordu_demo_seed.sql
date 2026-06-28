@@ -109,7 +109,19 @@ UPDATE public.profiles SET
   reliability_score = v.reliability,
   role           = 'PLAYER',
   roles          = '["PLAYER"]'::jsonb,
-  player_card    = jsonb_build_object('tier',v.card_tier,'active',true,'position',v.position,'oyna_id',v.oyna_id)
+  player_card    = jsonb_build_object(
+    'overall', LEAST(99, GREATEST(40, round(v.rating*10)::int)),
+    'tier', v.card_tier, 'isStatsVerified', true,
+    'diamondValue', GREATEST(0, round((v.rating-5)*4)::int),
+    'winCount', v.win_count, 'totalMatches', v.match_count, 'cardImage', null,
+    'stats', jsonb_build_object(
+      'pace',      jsonb_build_object('value', LEAST(99,GREATEST(40, round(v.rating*10)::int + CASE WHEN v.position IN ('SAG_KANAT','SOL_KANAT') THEN 6 ELSE 3 END)), 'videoUrl', null),
+      'shooting',  jsonb_build_object('value', LEAST(99,GREATEST(40, round(v.rating*10)::int + CASE WHEN v.position='STOPER' THEN -6 ELSE 2 END)), 'videoUrl', null),
+      'passing',   jsonb_build_object('value', LEAST(99,GREATEST(40, round(v.rating*10)::int + CASE WHEN v.position='ORTA_SAHA' THEN 4 ELSE 0 END)), 'videoUrl', null),
+      'dribbling', jsonb_build_object('value', LEAST(99,GREATEST(40, round(v.rating*10)::int + CASE WHEN v.position IN ('SAG_KANAT','SOL_KANAT','ORTA_SAHA') THEN 3 ELSE -2 END)), 'videoUrl', null),
+      'defense',   jsonb_build_object('value', LEAST(99,GREATEST(40, round(v.rating*10)::int + CASE WHEN v.position='STOPER' THEN 6 ELSE -7 END)), 'videoUrl', null),
+      'physical',  jsonb_build_object('value', LEAST(99,GREATEST(40, round(v.rating*10)::int + CASE WHEN v.position='STOPER' THEN 3 ELSE -1 END)), 'videoUrl', null)
+    ))
 FROM (VALUES
   ('bb000001-0000-4000-8000-000000000001'::uuid,'SAG_KANAT','gold',9.2::numeric,112,78,'Ordu''nun en hızlı kanat oyuncularından. Çapraz vuruş uzmanlığı.','ORDU1001',450.0::numeric,5,95),
   ('bb000002-0000-4000-8000-000000000002'::uuid,'ORTA_SAHA','gold',8.8::numeric,98,63,'Top dağıtımında çok başarılı, maça hakimiyet kurmayı sever.','ORDU1002',320.0::numeric,12,92),
@@ -176,25 +188,30 @@ INSERT INTO public.matches (
   status, "creatorId", "captain_id", pitch_id, visibility, "isDemo", "is_successful",
   "starts_at", created_at, "chatMessages", "reservePlayers", badges
 ) VALUES
-('cc000001-0000-4000-8000-000000000001','Altınordu Akşam 5v5 — Capo Arena','Capo Arena, Altınordu / Ordu','29.06.2026','19:00',200,'Orta',7.0,'5v5','60dk','Karma','18+',
+('cc000001-0000-4000-8000-000000000001','Altınordu Akşam 5v5 — Capo Arena','Capo Arena, Altınordu / Ordu','29.06.2026','19:00',200,'Orta',3.0,'5v5','60dk','Karma','18+',
  '[{"id":"h1","status":"TAKEN","userId":"bb000001-0000-4000-8000-000000000001"},{"id":"h2","status":"TAKEN","userId":"bb000002-0000-4000-8000-000000000002"},{"id":"h3","status":"TAKEN","userId":"bb000003-0000-4000-8000-000000000003"},{"id":"h4","status":"OPEN"},{"id":"h5","status":"OPEN"}]',
  '[{"id":"a1","status":"TAKEN","userId":"bb000006-0000-4000-8000-000000000006"},{"id":"a2","status":"TAKEN","userId":"bb000007-0000-4000-8000-000000000007"},{"id":"a3","status":"OPEN"},{"id":"a4","status":"OPEN"},{"id":"a5","status":"OPEN"}]',
  '[{"role":"PLAYER","count":5},{"role":"GK","count":1}]','OPEN',
  'bb000001-0000-4000-8000-000000000001','bb000001-0000-4000-8000-000000000001','a0000001-0001-4001-8001-000000000001','OPEN',false,false,
  '2026-06-29 16:00:00+00',now(),'[]','[]','["Aktif Maç","Seviye Uyumlu"]'),
-('cc000002-0000-4000-8000-000000000002','Olimpiyat Sahası — Tüm Seviyeler','Olimpiyat Sahası, Altınordu / Ordu','29.06.2026','20:00',150,'Kolay',5.0,'5v5','60dk','Erkek','Herkese Açık',
+('cc000002-0000-4000-8000-000000000002','Olimpiyat Sahası — Tüm Seviyeler','Olimpiyat Sahası, Altınordu / Ordu','29.06.2026','20:00',150,'Kolay',0,'5v5','60dk','Erkek','Herkese Açık',
  '[{"id":"h1","status":"TAKEN","userId":"bb000011-0000-4000-8000-000000000011"},{"id":"h2","status":"TAKEN","userId":"bb000013-0000-4000-8000-000000000013"},{"id":"h3","status":"OPEN"},{"id":"h4","status":"OPEN"},{"id":"h5","status":"OPEN"}]',
  '[{"id":"a1","status":"TAKEN","userId":"bb000014-0000-4000-8000-000000000014"},{"id":"a2","status":"OPEN"},{"id":"a3","status":"OPEN"},{"id":"a4","status":"OPEN"},{"id":"a5","status":"OPEN"}]',
  '[{"role":"PLAYER","count":7},{"role":"GK","count":2}]','OPEN',
  'bb000011-0000-4000-8000-000000000011','bb000011-0000-4000-8000-000000000011','a0000002-0002-4002-8002-000000000002','OPEN',false,false,
  '2026-06-29 17:00:00+00',now(),'[]','[]','["Başlangıç Dostu","Eğlenceli"]'),
-('cc000003-0000-4000-8000-000000000003','VIP Arena Premium 5v5','VIP Arena, Altınordu / Ordu','30.06.2026','18:00',300,'Zor',8.0,'5v5','90dk','Erkek','18+',
+('cc000003-0000-4000-8000-000000000003','VIP Arena Premium 5v5','VIP Arena, Altınordu / Ordu','30.06.2026','18:00',300,'Zor',4.0,'5v5','90dk','Erkek','18+',
  '[{"id":"h1","status":"TAKEN","userId":"bb000004-0000-4000-8000-000000000004"},{"id":"h2","status":"TAKEN","userId":"bb000005-0000-4000-8000-000000000005"},{"id":"h3","status":"TAKEN","userId":"bb000008-0000-4000-8000-000000000008"},{"id":"h4","status":"TAKEN","userId":"bb000009-0000-4000-8000-000000000009"},{"id":"h5","status":"OPEN"}]',
  '[{"id":"a1","status":"TAKEN","userId":"bb000010-0000-4000-8000-000000000010"},{"id":"a2","status":"TAKEN","userId":"bb000011-0000-4000-8000-000000000011"},{"id":"a3","status":"TAKEN","userId":"bb000012-0000-4000-8000-000000000012"},{"id":"a4","status":"OPEN"},{"id":"a5","status":"OPEN"}]',
  '[{"role":"PLAYER","count":3},{"role":"GK","count":1}]','OPEN',
  'bb000004-0000-4000-8000-000000000004','bb000004-0000-4000-8000-000000000004','a0000003-0003-4003-8003-000000000003','OPEN',false,false,
  '2026-06-30 15:00:00+00',now(),'[]','[]','["Elit","Yüksek Rekabet","Premium Saha"]')
 ON CONFLICT (id) DO NOTHING;
+
+-- Demo maçları daima OPEN kalsın (yaşam-döngüsü/iptal tetikleyicileri değiştirmiş olabilir).
+-- get_nearby_matches keşfi OPEN+gelecek+koordinatlı saha ister.
+UPDATE public.matches SET status='OPEN', cancel_reason=NULL, refund_status=NULL
+WHERE id::text LIKE 'cc0000%' AND status <> 'OPEN';
 
 -- ─── 7) MAÇ KATILIMCILARI ───────────────────────────────────────────────────
 DELETE FROM public.match_participants WHERE match_id::text LIKE 'cc0000%';

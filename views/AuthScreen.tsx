@@ -191,17 +191,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const handleSendOtp = async () => {
     if (!agreed || !contactValid || isLoading) return;
     setError(null);
-    // Dev/demo modu: demo hesabı (veya "mirackerem") → OTP'siz anında giriş
+    // Dev/demo modu: demo hesabı (veya "mirackerem") → OTP'siz anında giriş.
+    // onSuccess() ÇAĞIRMA: o anda yerel `role` hâlâ eski (PLAYER) olduğundan owner'ı
+    // yanlışlıkla DASHBOARD'a yönlendirir. Bunun yerine App'teki onAuthStateChanged
+    // dinleyicisi profildeki GERÇEK rolü (OWNER/PLAYER) okuyup doğru panele yönlendirir.
     if (demoMode && isDemoLoginInput(email)) {
       setIsLoading('send');
       try {
         setRememberMe(remember);
         await demoLogin(email.trim());
-        onSuccess();
+        // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
         console.error('Demo giriş hatası:', err);
         setError(err?.message || 'Demo giriş başarısız.');
-      } finally {
         setIsLoading(null);
       }
       return;

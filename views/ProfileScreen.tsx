@@ -12,10 +12,13 @@ import { useImageUpload } from '../hooks/useImageUpload';
 const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
 
 const buildCardData = (profile: OynaUser | null, wins: number, total: number): PlayerCardData => {
-    if (profile?.playerCard && Object.keys(profile.playerCard).length > 0) {
-        return profile.playerCard;
+    // playerCard'ı YALNIZCA tam (stats + overall içeriyorsa) kullan; eksik/kısmi
+    // kart (ör. yalnız tier/position) PlayerCard'ı çökertirdi (stats.shooting undefined).
+    const pc = profile?.playerCard as Partial<PlayerCardData> | undefined;
+    if (pc && pc.stats && typeof pc.overall === 'number') {
+        return pc as PlayerCardData;
     }
-    const overall = Math.round((profile?.stats.rating ?? 5) * 20);
+    const overall = Math.round((profile?.stats?.rating ?? 5) * 20);
     return {
         overall,
         tier: overall >= 80 ? 'gold' : overall >= 65 ? 'silver' : 'bronze',
