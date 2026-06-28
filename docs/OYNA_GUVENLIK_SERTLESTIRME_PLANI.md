@@ -317,6 +317,48 @@ saha personeli QR'ı veya sunucu-taraflı mesafe kontrolü tetiklesin.
 
 ---
 
+## VEKTÖR 5 — Admin Paneli (Ultra-Güvenlik)
+
+> **Sağlam temel (doğrulandı):** Client'ta **service-role/secret YOK** (yalnız anon key +
+> admin JWT); **tüm `admin_*` RPC'leri sunucu-taraflı** `is_platform_admin()`/`is_super_admin()`
+> ile korunuyor ve anon'a kapalı; `admin_audit_log` + `log_admin_action()` mevcut;
+> `admin-create-user` fail-closed. `/admin` statik bundle herkese açık olsa da yetkilendirme
+> sunucuda olduğu için kabul edilebilir. **Canlı roster: 1 admin = 1 SUPER_ADMIN, 0 alt-rol,
+> 0 MFA** → aşağıdaki düzeltmeler meşru admin için sıfır etki.
+
+### 5.1 🟢 `admin_revoke_platform_role` → super-admin (A6)
+**Dosya:** `supabase/migrations/20260708000700_faz8_admin_hardening.sql`. Grant `is_super_admin`
+isterken revoke herhangi bir admin'e açıktı (asimetri → bir admin başkasının rolünü iptal
+edebilir). Kapı `is_super_admin()`'e daraltıldı (gövde birebir; tek admin super → zero-impact).
+
+### 5.2 🟢/🔵 MFA/2FA sunucu-taraflı zorunluluk (A1 — §8.6 "2FA")
+**Sorun:** `is_platform_admin()` **aal2/MFA istemiyor**; aal1 admin JWT'si paneli baypas edip
+RPC'leri doğrudan çağırabilir. **Şu an 0 MFA kayıtlı** → koda zorla bağlarsak admin kilitlenir.
+- 🟢 `is_admin_aal2()` yardımcısı eklendi (kullanılmıyor → zero-impact).
+- 🔵 **Sıra:** (1) Admin **TOTP kurar**; (2) Dashboard → Auth → **MFA enforcement** açılır;
+  (3) kritik yazma RPC'lerinde `is_platform_admin()` → `is_admin_aal2()` yapılır. (3, admin-flow testi ister.)
+
+### 5.3 🟢/🔵 Sunucu-taraflı alt-rol RBAC (A3 — FİNANS/OPERASYON)
+**Sorun:** Alt-roller yalnız client-side (`adminPermissions.ts`); sunucuda her RPC `is_platform_admin()`
+(boolean) → bir `FİNANS`/`OPERASYON` admini paneli baypas edip `admin_process_withdrawal` vb.
+çağırabilir. **Şu an 0 alt-rol admini** → henüz istismar edilemez.
+- 🟢 `has_admin_role(p_role)` yardımcısı eklendi (zero-impact).
+- 🔵 **Alt-rol admini EKLEMEDEN ÖNCE** finansal/yıkıcı RPC'lere uygula:
+  `IF NOT public.has_admin_role('FINANCE') THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;`
+
+### 5.4 🟢 Ghost/impersonation fail-closed (A4 — §8.6)
+**Dosya:** `App.tsx`. Eski: `?ghost=` parametresi audit hatası **yutuluyordu** (`catch {}`) →
+admin olmayan biri de impersonation görünümü başlatabilirdi. Yeni: `logImpersonation` (sunucuda
+`is_platform_admin` korumalı) **başarısızsa ghost başlatılmaz** + URL temizlenir (fail-closed).
+Meşru admin için zero-impact. (🔵 İleride: impersonation bitişini de logla — time-bound.)
+
+### 5.5 🔵 `admin-broadcast` redeploy + CORS secret (A2, A5)
+`admin-broadcast` edge fn fail-OPEN'di → bu branch'te **fail-closed** yapıldı (admin secret VEYA
+authenticated platform-admin JWT). Panel bu fn'i kullanmıyor (doğrudan RPC) → zero-impact.
+Redeploy + `ADMIN_ALLOWED_ORIGIN` secret'i (CORS `*` yerine) ile tamamlanır.
+
+---
+
 ## Uygulama Sırası (önerilen)
 
 | Sıra | Madde | Tür | Risk |
@@ -339,9 +381,11 @@ saha personeli QR'ı veya sunucu-taraflı mesafe kontrolü tetiklesin.
 | `supabase/migrations/20260708000300_faz8_rate_limit_infra.sql` | 2.1 token-bucket (rl_consume) | 🟢 |
 | `supabase/migrations/20260708000400_faz8_match_spam_guard.sql` | 4.2 maç spam trigger (app_config ayarlı) | 🟢 |
 | `supabase/migrations/20260708000600_faz8_scraping_hardening.sql` | 2.2 tarife SELECT → authenticated | 🟡 |
+| `supabase/migrations/20260708000700_faz8_admin_hardening.sql` | 5.1/5.2/5.3 admin: revoke→super, aal2 & RBAC yardımcıları | 🟢 |
 | `supabase/functions/admin-broadcast/index.ts` | 2.3 fail-closed admin auth + CORS | 🟡 |
 | `supabase/functions/create-payment/index.ts` | 2.3 CORS env'e bağlama | 🟢 |
-| `vercel.json` | 3.3 HSTS + CSP-Report-Only | 🟢 |
+| `App.tsx` | 5.4 ghost/impersonation fail-closed | 🟢 |
+| `vercel.json` | 3.3 HSTS + CSP-Report-Only (+ Google Fonts) | 🟢 |
 
 > **Önemli:** Migration'lar bilinçli olarak **canlı prod DB'ye uygulanmadı** (denetim
 > READ-ONLY yürütüldü). `send-push` & `send-email` lokal sürümleri zaten fail-closed —
@@ -397,6 +441,11 @@ gerekip gerekmediğini doğrula. Gerekiyorsa uygulamadan önce maskeli RPC sağl
   OTP length 8, expiry ≤ 600 sn (md 3.2).
 - **Auth → Password:** Leaked password protection (HaveIBeenPwned) **aç** (DB-09/AUTH-04).
 - **Settings → API:** `Max rows = 100` (md 2.2).
+- **Admin MFA (md 5.2):** (1) Mevcut SUPER_ADMIN **TOTP kurar**; (2) Auth → **MFA enforcement** aç;
+  (3) ardından kritik admin yazma RPC'lerinde `is_platform_admin()` → `is_admin_aal2()` (staging testi).
+  Sıralamaya UY — adım 1 olmadan enforcement açılırsa tek admin kilitlenir.
+- **Admin alt-rol (md 5.3):** FİNANS/OPERASYON admini **eklemeden önce** kritik RPC'lere
+  `has_admin_role('<ROL>')` gate'i ekle.
 
 ### Adım 5 — 🔵 Edge secrets + redeploy
 ```bash

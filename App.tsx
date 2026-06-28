@@ -121,7 +121,15 @@ const App: React.FC = () => {
 
     void (async () => {
       const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
-      try { await logImpersonation(ghostId); } catch { /* audit optional if not admin session */ }
+      // GÜVENLİK (fail-closed): impersonation yalnız platform admin için. logImpersonation,
+      // sunucuda is_platform_admin ile korunan admin_log_impersonation RPC'sini çağırır;
+      // başarısızsa (admin oturumu değil) ghost'u HİÇ başlatma + URL'i temizle.
+      try {
+        await logImpersonation(ghostId);
+      } catch {
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
       const profile = await fetchProfileById(ghostId);
       setOriginalRole(role);
       setImpersonatedUser(profile ?? {
