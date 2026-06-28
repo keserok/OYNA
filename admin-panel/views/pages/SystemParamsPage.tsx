@@ -19,6 +19,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   REZERVASYON: 'Rezervasyon',
   HESAP: 'Hesap',
   SISTEM: 'Sistem',
+  ODEME: 'Ödeme',
+  BILDIRIM: 'Bildirim',
+  GUVENLIK: 'Güvenlik',
   GENEL: 'Genel',
 };
 

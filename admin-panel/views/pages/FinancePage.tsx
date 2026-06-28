@@ -7,6 +7,7 @@ import {
   type PayoutRequestRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
+import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { useAdminToast } from '../context/AdminToastContext';
 import { downloadCsv } from '../../utils/exportCsv';
@@ -25,7 +26,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'billing' | 'payouts'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'billing' | 'payouts' | 'golive'>('ledger');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
 
@@ -133,6 +134,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
     { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
+    { id: 'golive' as const, label: 'Go-Live & Mutabakat' },
   ]), [payouts.length]);
 
   const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'billing' ? filteredBilling : filteredPayouts;
@@ -147,7 +149,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           <button
             type="button"
             onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0)}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -197,15 +199,19 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
             </button>
           ))}
         </div>
-        <AdminSearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder="Tabloda ara..."
-          resultCount={activeData.length}
-          totalCount={totalData}
-          className="sm:max-w-xs"
-        />
+        {tab !== 'golive' && (
+          <AdminSearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder="Tabloda ara..."
+            resultCount={activeData.length}
+            totalCount={totalData}
+            className="sm:max-w-xs"
+          />
+        )}
       </div>
+
+      {tab === 'golive' && <FinanceGoLivePanel />}
 
       {tab === 'ledger' && (
         <DataTable

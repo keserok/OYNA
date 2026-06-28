@@ -36,6 +36,8 @@ export const ADMIN_ROUTE_META: Record<GodViewSubRoute, AdminRouteMeta> = {
   ACL: { title: 'Ekipler & Yetkiler', description: 'Platform admin rolleri ve erişim kontrolü.', group: 'Sistem', accent: 'orange' },
   MODERATION: { title: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', accent: 'yellow' },
   OWNER_ACCOUNTS: { title: 'SaaS Hesapları', description: 'Tesis sahibi SaaS abonelik yönetimi.', group: 'Operasyon', accent: 'green' },
+  VERIFICATION: { title: 'Doğrulama Merkezi', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', accent: 'yellow' },
+  NOTIFICATION_TEMPLATES: { title: 'Bildirim Şablonları', description: 'Uygulama bildirim metinlerini (kelimelerini) panelden düzenle.', group: 'Pazarlama', accent: 'pink' },
 };
 
 /**
@@ -82,6 +84,7 @@ export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRou
   { label: 'Kullanıcılar', route: 'KULLANICILAR', category: 'Operasyon' },
   { label: 'Kaleciler', route: 'KALECİLER', category: 'Operasyon' },
   { label: 'Hakemler', route: 'HAKEMLER', category: 'Operasyon' },
+  { label: 'Doğrulama Merkezi', route: 'VERIFICATION', category: 'Operasyon' },
   { label: 'Onay Bekleyenler', route: 'PENDING_VERIFICATIONS', category: 'Operasyon' },
   { label: 'Kimlik Doğrulama', route: 'PROVIDER_IDENTITIES', category: 'Operasyon' },
   { label: 'Tesis Onayları', route: 'MODERATION', category: 'Operasyon' },
@@ -91,6 +94,7 @@ export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRou
   { label: 'Takımlar', route: 'TAKIMLAR', category: 'Topluluk' },
   { label: 'Turnuvalar', route: 'TURNUVALAR', category: 'Topluluk' },
   { label: 'Kampanyalar', route: 'NOTIFICATIONS', category: 'Pazarlama' },
+  { label: 'Bildirim Şablonları', route: 'NOTIFICATION_TEMPLATES', category: 'Pazarlama' },
   { label: 'İndirim Kodları', route: 'PROMO_CODES', category: 'Pazarlama' },
   { label: 'Denetim Kayıtları', route: 'AUDIT_LOG', category: 'Sistem' },
   { label: 'CMS Metinler', route: 'CONTENT', category: 'Sistem' },

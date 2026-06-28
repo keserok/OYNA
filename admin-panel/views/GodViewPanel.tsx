@@ -43,6 +43,8 @@ const ProviderIdentitiesPage = lazy(() => import('./pages/ProviderIdentitiesPage
 const ServiceDisputesPage = lazy(() => import('./pages/ServiceDisputesPage').then(m => ({ default: m.ServiceDisputesPage })));
 const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
 const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m => ({ default: m.SystemParamsPage })));
+const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage').then(m => ({ default: m.VerificationCenterPage })));
+const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplatesPage').then(m => ({ default: m.NotificationTemplatesPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
@@ -50,7 +52,7 @@ export type GodViewSubRoute =
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
   | 'SERVICE_DISPUTES' | 'MODERATION'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION'
-  | 'SYSTEM_PARAMS';
+  | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -85,6 +87,7 @@ const GodViewPanelInner: React.FC<Props> = ({
     const [modal, setModal] = useState<AdminModalState>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
     const [providerIdentityCount, setProviderIdentityCount] = useState(0);
+    const [verificationCount, setVerificationCount] = useState(0);
 
     useEffect(() => {
         if (initialNavParams) setParams(initialNavParams);
@@ -190,6 +193,10 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <SettingsPage subRoute={subRoute} onRefresh={onRefreshData} />;
             case 'SYSTEM_PARAMS':
                 return <SystemParamsPage />;
+            case 'VERIFICATION':
+                return <VerificationCenterPage onBadgeCount={setVerificationCount} />;
+            case 'NOTIFICATION_TEMPLATES':
+                return <NotificationTemplatesPage />;
             case 'NOTIFICATIONS':
             case 'SEGMENTATION':
                 return <CampaignsPage route="NOTIFICATIONS" />;
@@ -212,6 +219,7 @@ const GodViewPanelInner: React.FC<Props> = ({
                 onBack={onBack}
                 pendingVerifCount={pendingVerifCount}
                 providerIdentityCount={providerIdentityCount}
+                verificationCount={verificationCount}
                 mode={mode}
                 adminSession={adminSession}
             >
