@@ -19,6 +19,7 @@ import {
   type AdminNavParams,
 } from './context/AdminNavigationContext';
 import { AdminPermissionsProvider, useAdminPermissions } from './context/AdminPermissionsContext';
+import { AdminFeatureFlagsProvider, useAdminFeatureFlags } from './context/AdminFeatureFlagsContext';
 import { useAdminToast } from './context/AdminToastContext';
 
 const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
@@ -41,13 +42,17 @@ const PendingVerificationsPage = lazy(() => import('./pages/PendingVerifications
 const ProviderIdentitiesPage = lazy(() => import('./pages/ProviderIdentitiesPage').then(m => ({ default: m.ProviderIdentitiesPage })));
 const ServiceDisputesPage = lazy(() => import('./pages/ServiceDisputesPage').then(m => ({ default: m.ServiceDisputesPage })));
 const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
+const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m => ({ default: m.SystemParamsPage })));
+const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage').then(m => ({ default: m.VerificationCenterPage })));
+const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplatesPage').then(m => ({ default: m.NotificationTemplatesPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
   | 'SERVICE_DISPUTES' | 'MODERATION'
-  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION';
+  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION'
+  | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -73,6 +78,7 @@ const GodViewPanelInner: React.FC<Props> = ({
     const deletePitch = useAppStore((s) => s.deletePitch);
     const { setParams, params, consumeParam } = useAdminNavigation();
     const { canAccess, defaultRoute } = useAdminPermissions();
+    const { moduleEnabled } = useAdminFeatureFlags();
     const { info } = useAdminToast();
     const [subRoute, setSubRoute] = useState<GodViewSubRoute>(() => {
         const r = initialSubRoute ?? 'GENEL';
@@ -81,6 +87,7 @@ const GodViewPanelInner: React.FC<Props> = ({
     const [modal, setModal] = useState<AdminModalState>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
     const [providerIdentityCount, setProviderIdentityCount] = useState(0);
+    const [verificationCount, setVerificationCount] = useState(0);
 
     useEffect(() => {
         if (initialNavParams) setParams(initialNavParams);
@@ -97,6 +104,10 @@ const GodViewPanelInner: React.FC<Props> = ({
             info('Bu sayfaya erişim yetkiniz yok');
             return;
         }
+        if (!moduleEnabled(effectiveRoute)) {
+            info('Bu modül lansman kapsamı dışı (kapalı). Parametreler ekranından açabilirsiniz.');
+            return;
+        }
         setSubRoute(effectiveRoute);
         if (params) setParams(params);
         if (onNavigate) onNavigate(effectiveRoute);
@@ -110,7 +121,7 @@ const GodViewPanelInner: React.FC<Props> = ({
             const next = `${window.location.pathname}?${sp.toString()}`;
             window.history.replaceState(null, '', next);
         }
-    }, [onNavigate, setParams, canAccess, info, mode]);
+    }, [onNavigate, setParams, canAccess, moduleEnabled, info, mode]);
 
     const closeModal = () => setModal({ type: 'none' });
 
@@ -119,6 +130,14 @@ const GodViewPanelInner: React.FC<Props> = ({
             return (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
                     <p className="text-sm font-bold">Bu sayfaya erişim yetkiniz yok.</p>
+                    <button onClick={() => setSubRoute(defaultRoute)} className="text-xs text-red-400 hover:text-red-300">Ana sayfaya dön</button>
+                </div>
+            );
+        }
+        if (!moduleEnabled(subRoute)) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
+                    <p className="text-sm font-bold">Bu modül lansman kapsamı dışı (kapalı).</p>
                     <button onClick={() => setSubRoute(defaultRoute)} className="text-xs text-red-400 hover:text-red-300">Ana sayfaya dön</button>
                 </div>
             );
@@ -172,6 +191,12 @@ const GodViewPanelInner: React.FC<Props> = ({
             case 'SETTINGS':
             case 'CONTENT':
                 return <SettingsPage subRoute={subRoute} onRefresh={onRefreshData} />;
+            case 'SYSTEM_PARAMS':
+                return <SystemParamsPage />;
+            case 'VERIFICATION':
+                return <VerificationCenterPage onBadgeCount={setVerificationCount} />;
+            case 'NOTIFICATION_TEMPLATES':
+                return <NotificationTemplatesPage />;
             case 'NOTIFICATIONS':
             case 'SEGMENTATION':
                 return <CampaignsPage route="NOTIFICATIONS" />;
@@ -194,6 +219,7 @@ const GodViewPanelInner: React.FC<Props> = ({
                 onBack={onBack}
                 pendingVerifCount={pendingVerifCount}
                 providerIdentityCount={providerIdentityCount}
+                verificationCount={verificationCount}
                 mode={mode}
                 adminSession={adminSession}
             >
@@ -223,7 +249,9 @@ const GodViewPanelInner: React.FC<Props> = ({
 export const GodViewPanel: React.FC<Props> = (props) => (
     <AdminNavigationProvider>
         <AdminPermissionsProvider session={props.adminSession}>
-            <GodViewPanelInner {...props} />
+            <AdminFeatureFlagsProvider>
+                <GodViewPanelInner {...props} />
+            </AdminFeatureFlagsProvider>
         </AdminPermissionsProvider>
     </AdminNavigationProvider>
 );

@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   broadcastNotification,
   fetchSegmentPreview,
+  fetchAppConfig,
+  fetchBroadcastCampaigns,
   toTurkishAdminError,
   type BroadcastSegment,
+  type BroadcastCampaignRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { useAdminToast } from '../context/AdminToastContext';
-import { Megaphone, Send, Users } from 'lucide-react';
+import { Megaphone, Send, Users, History, Smartphone, FlaskConical } from 'lucide-react';
 
 const SEGMENTS = [
   { id: 'ALL', label: 'Tüm Kullanıcılar' },
@@ -18,6 +21,8 @@ const SEGMENTS = [
   { id: 'REFEREE', label: 'Hakemler' },
 ] as const;
 
+const SEGMENT_LABEL: Record<string, string> = Object.fromEntries(SEGMENTS.map((s) => [s.id, s.label]));
+
 export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' }> = ({ route = 'NOTIFICATIONS' }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -25,6 +30,8 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' 
   const [count, setCount] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [pushLive, setPushLive] = useState<boolean | null>(null);
+  const [history, setHistory] = useState<BroadcastCampaignRow[]>([]);
   const { success, error: toastError } = useAdminToast();
 
   const loadCount = useCallback(async (seg: BroadcastSegment) => {
@@ -38,7 +45,26 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' 
     }
   }, [toastError]);
 
+  const loadHistory = useCallback(async () => {
+    try {
+      setHistory(await fetchBroadcastCampaigns(20));
+    } catch {
+      /* geçmiş yoksa sessiz geç */
+    }
+  }, []);
+
+  const loadPushStatus = useCallback(async () => {
+    try {
+      const cfg = await fetchAppConfig();
+      const row = cfg.find((c) => c.key === 'push_live_enabled');
+      setPushLive(row ? Boolean(row.value) : false);
+    } catch {
+      setPushLive(null);
+    }
+  }, []);
+
   useEffect(() => { void loadCount(segment); }, [segment, loadCount]);
+  useEffect(() => { void loadHistory(); void loadPushStatus(); }, [loadHistory, loadPushStatus]);
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) {
@@ -48,10 +74,11 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' 
     setSending(true);
     try {
       const sent = await broadcastNotification(title.trim(), body.trim(), segment);
-      success(`${sent} kullanıcıya bildirim gönderildi`);
+      success(`${sent} kullanıcıya bildirim gönderildi${pushLive ? '' : ' (simülasyon: uygulama içi)'}`);
       setTitle('');
       setBody('');
       void loadCount(segment);
+      void loadHistory();
     } catch (err) {
       toastError(toTurkishAdminError(err));
     } finally {
@@ -61,6 +88,25 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' 
 
   return (
     <PageShell route={route} icon={<Megaphone size={20} />}>
+      {pushLive === false && (
+        <div className="mb-4 bg-amber-500/[0.06] border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3">
+          <FlaskConical size={16} className="text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-[11px] text-amber-300/90 leading-relaxed">
+            <b>Simülasyon modu:</b> Gönderdiğin bildirimler kullanıcılara <b>uygulama içinde</b> görünür,
+            ancak telefonlara <b>gerçek push GİTMEZ</b>. Gerçek push için Sistem Parametreleri → Bildirim →
+            “Gerçek Push Bildirimi Aktif” anahtarını aç.
+          </p>
+        </div>
+      )}
+      {pushLive === true && (
+        <div className="mb-4 bg-green-500/[0.06] border border-green-500/20 rounded-2xl p-4 flex items-start gap-3">
+          <Smartphone size={16} className="text-green-400 mt-0.5 shrink-0" />
+          <p className="text-[11px] text-green-300/90 leading-relaxed">
+            <b>Gerçek push AÇIK:</b> Bildirimler kullanıcıların telefonlarına gerçek push olarak gider.
+          </p>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
         <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5 space-y-2">
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Hedef Segment</p>
@@ -107,6 +153,34 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' 
           </button>
         </div>
       </div>
+
+      {history.length > 0 && (
+        <div className="mt-6 max-w-4xl bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <History size={14} className="text-gray-400" />
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Son Gönderimler</p>
+          </div>
+          <div className="space-y-2">
+            {history.map((c) => (
+              <div key={c.id} className="flex items-center justify-between gap-3 bg-black/20 border border-white/[0.06] rounded-xl px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{c.title}</p>
+                  <p className="text-[10px] text-gray-500">
+                    {SEGMENT_LABEL[c.segment] ?? c.segment} · {c.recipient_count} kişi · {new Date(c.created_at).toLocaleString('tr-TR')}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 text-[9px] font-black px-2 py-1 rounded-md ${
+                    c.is_simulation ? 'text-amber-400 bg-amber-500/10' : 'text-green-400 bg-green-500/10'
+                  }`}
+                >
+                  {c.is_simulation ? 'SİMÜLASYON' : 'GERÇEK'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 };

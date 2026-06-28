@@ -2,12 +2,13 @@ import React from 'react';
 import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
-    ChevronLeft, Radio, Swords, LogOut, Lock, Globe, Trophy, Clock, ScrollText, Building2,
-    ShieldCheck, AlertOctagon
+    ChevronLeft, Radio, Swords, LogOut, Lock, Globe, Trophy, ScrollText, Building2,
+    ShieldCheck, AlertOctagon, SlidersHorizontal, MessageSquare
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../services/adminService';
 import { useAdminPermissions } from '../context/AdminPermissionsContext';
+import { useAdminFeatureFlags } from '../context/AdminFeatureFlagsContext';
 
 interface SidebarProps {
     activeSubRoute: string;
@@ -16,6 +17,7 @@ interface SidebarProps {
     onShowToast?: (msg: string) => void;
     pendingVerifCount?: number;
     providerIdentityCount?: number;
+    verificationCount?: number;
     mode?: 'embedded' | 'standalone';
     adminSession?: AdminSession | null;
 }
@@ -26,10 +28,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onBack,
     pendingVerifCount = 0,
     providerIdentityCount = 0,
+    verificationCount = 0,
     mode = 'embedded',
     adminSession,
 }) => {
     const { canAccess, roleLabel } = useAdminPermissions();
+    const { moduleEnabled } = useAdminFeatureFlags();
     const stats = useAppStore((s) => s.adminDashboardStats);
     const missingAlerts = useAppStore((s) =>
         s.adminMatches.reduce((n, m) => n + (m.missingPositions?.some((p) => p.count > 0) ? 1 : 0), 0),
@@ -47,12 +51,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const routeForLabel = (label: string): GodViewSubRoute | null => {
         const map: Record<string, GodViewSubRoute> = {
             'Genel': 'GENEL', 'Komuta Merkezi': 'CONTROL', 'Sahalar': 'SAHALAR', 'Kullanıcılar': 'KULLANICILAR',
-            'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Kimlik Doğr.': 'PROVIDER_IDENTITIES', 'Hizmet İtirazları': 'SERVICE_DISPUTES',
+            'Doğrulama': 'VERIFICATION', 'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Kimlik Doğr.': 'PROVIDER_IDENTITIES', 'Hizmet İtirazları': 'SERVICE_DISPUTES',
             'Tesis Onayları': 'MODERATION', 'SaaS Hesapları': 'OWNER_ACCOUNTS',
             'Maçlar': 'MATCHES', 'Kaleciler': 'KALECİLER', 'Hakemler': 'HAKEMLER', 'Topluluklar': 'TOPLULUKLAR',
-            'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS',
+            'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS', 'Bildirim Şablonları': 'NOTIFICATION_TEMPLATES',
             'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES', 'Komisyon': 'COMMISSION',
-            'Denetim Kayıtları': 'AUDIT_LOG', 'Metinler': 'CONTENT', 'Ayarlar': 'SETTINGS', 'Ekipler & Yetkiler': 'ACL',
+            'Denetim Kayıtları': 'AUDIT_LOG', 'Metinler': 'CONTENT', 'Ayarlar': 'SETTINGS', 'Parametreler': 'SYSTEM_PARAMS', 'Ekipler & Yetkiler': 'ACL',
         };
         return map[label] ?? null;
     };
@@ -70,8 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             items: [
                 { icon: MapPin, label: 'Sahalar', badge: totalPitches || null, active: activeSubRoute === 'SAHALAR', action: () => onNavigate('SAHALAR') },
                 { icon: Users, label: 'Kullanıcılar', badge: totalUsers || null, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
-                { icon: Clock, label: 'Onay Bekl.', badge: pendingVerifCount > 0 ? pendingVerifCount : null, active: activeSubRoute === 'PENDING_VERIFICATIONS', action: () => onNavigate('PENDING_VERIFICATIONS') },
-                { icon: ShieldCheck, label: 'Kimlik Doğr.', badge: providerIdentityCount > 0 ? providerIdentityCount : null, active: activeSubRoute === 'PROVIDER_IDENTITIES', action: () => onNavigate('PROVIDER_IDENTITIES') },
+                { icon: ShieldCheck, label: 'Doğrulama', badge: (verificationCount || (pendingVerifCount + providerIdentityCount)) > 0 ? (verificationCount || (pendingVerifCount + providerIdentityCount)) : null, active: activeSubRoute === 'VERIFICATION' || activeSubRoute === 'PENDING_VERIFICATIONS' || activeSubRoute === 'PROVIDER_IDENTITIES', action: () => onNavigate('VERIFICATION') },
                 { icon: Shield, label: 'Tesis Onayları', badge: pendingPitches > 0 ? String(pendingPitches) : null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
                 { icon: Building2, label: 'SaaS Hesapları', badge: null, active: activeSubRoute === 'OWNER_ACCOUNTS', action: () => onNavigate('OWNER_ACCOUNTS') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : (totalMatches || null), active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
@@ -91,6 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label: 'PAZARLAMA',
             items: [
                 { icon: Megaphone, label: 'Kampanyalar', badge: null, active: activeSubRoute === 'NOTIFICATIONS' || activeSubRoute === 'SEGMENTATION', action: () => onNavigate('NOTIFICATIONS') },
+                { icon: MessageSquare, label: 'Bildirim Şablonları', badge: null, active: activeSubRoute === 'NOTIFICATION_TEMPLATES', action: () => onNavigate('NOTIFICATION_TEMPLATES') },
                 { icon: Zap, label: 'İndirim Kodları', badge: Number(stats?.active_promo_codes ?? 0) || null, active: activeSubRoute === 'PROMO_CODES', action: () => onNavigate('PROMO_CODES') },
             ]
         },
@@ -109,6 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: ScrollText, label: 'Denetim Kayıtları', badge: null, active: activeSubRoute === 'AUDIT_LOG', action: () => onNavigate('AUDIT_LOG') },
                 { icon: Type, label: 'Metinler', badge: null, active: activeSubRoute === 'CONTENT', action: () => onNavigate('CONTENT') },
                 { icon: Settings, label: 'Ayarlar', badge: null, active: activeSubRoute === 'SETTINGS', action: () => onNavigate('SETTINGS') },
+                { icon: SlidersHorizontal, label: 'Parametreler', badge: null, active: activeSubRoute === 'SYSTEM_PARAMS', action: () => onNavigate('SYSTEM_PARAMS') },
                 { icon: Lock, label: 'Ekipler & Yetkiler', badge: null, active: activeSubRoute === 'ACL', action: () => onNavigate('ACL') },
             ]
         },
@@ -145,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {group.items
                             .filter(({ label }) => {
                                 const route = routeForLabel(label);
-                                return !route || canAccess(route);
+                                return !route || (canAccess(route) && moduleEnabled(route));
                             })
                             .map(({ icon: Icon, label, badge, active, action }) => (
                             <button
@@ -171,7 +176,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border ${
                                             String(badge).includes('⚠')
                                                 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 animate-pulse'
-                                                : (label === 'Onay Bekl.' || label === 'Kimlik Doğr.') && Number(badge) > 0
+                                                : (label === 'Onay Bekl.' || label === 'Kimlik Doğr.' || label === 'Doğrulama') && Number(badge) > 0
                                                     ? 'bg-red-500/15 text-red-400 border-red-500/20 animate-pulse'
                                                     : 'bg-white/5 text-gray-400 border-white/5'
                                         }`}
