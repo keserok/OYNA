@@ -158,6 +158,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(1);
   const [showHandshake, setShowHandshake] = useState(true);
+  const [playerCardIdx, setPlayerCardIdx] = useState(0);
   const [fairPlay, setFairPlay] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [playerRatings, setPlayerRatings] = useState<Record<string, number>>({});
@@ -314,39 +315,8 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   if (showResult) {
     return (
       <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
-        {/* Background glow flares */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-[#FFFF00]/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-[300px] h-[300px] bg-[#39FF14]/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
-
-        {/* Confetti simulation sparkles (Auto floating) */}
-        {Array.from({ length: 12 }).map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ 
-              x: Math.random() * window.innerWidth - window.innerWidth / 2, 
-              y: window.innerHeight / 2 + 100, 
-              scale: Math.random() * 0.5 + 0.5,
-              opacity: 1
-            }}
-            animate={{ 
-              y: -window.innerHeight / 2 - 100, 
-              rotate: [0, 360],
-              x: Math.random() * window.innerWidth - window.innerWidth / 2 
-            }}
-            transition={{ 
-              duration: Math.random() * 4 + 3, 
-              repeat: Infinity, 
-              delay: i * 0.4, 
-              ease: "linear" 
-            }}
-            className="absolute pointer-events-none text-[#FFFF00]/60 z-0"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
-            </svg>
-          </motion.div>
-        ))}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-[#FFFF00]/4 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-[300px] h-[300px] bg-[#39FF14]/4 rounded-full blur-3xl pointer-events-none" />
 
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }} 
@@ -611,125 +581,95 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             </motion.div>
           )}
 
-          {/* ─ STEP 2: PLAYER RATINGS & MOTM ─ */}
-          {step === 2 && (
-            <motion.div 
-              key="s2" 
-              initial={{ opacity: 0, x: 25 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -25 }} 
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="space-y-6"
-            >
-              <div className="text-center py-4 bg-[#121620]/40 rounded-[32px] border border-white/5 p-5 relative overflow-hidden">
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-[inset_0_2px_8px_rgba(245,158,11,0.15)]">
-                  <Users size={26} className="text-amber-400" />
+          {/* ─ STEP 2: PLAYER RATINGS — kart kart hızlı puanla ─ */}
+          {step === 2 && (() => {
+            const p = PLAYERS[playerCardIdx];
+            if (!p) return null;
+            const isMotm = motm === p.id;
+            const currentRating = playerRatings[p.id] ?? 0;
+            const isLast = playerCardIdx === PLAYERS.length - 1;
+            const advanceCard = () => {
+              if (isLast) setStep(3);
+              else { setPlayerCardIdx(i => i + 1); if (navigator.vibrate) navigator.vibrate(12); }
+            };
+            return (
+              <motion.div
+                key={`s2-${playerCardIdx}`}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                className="space-y-5"
+              >
+                {/* Progress */}
+                <div className="flex items-center gap-3">
+                  <button onClick={() => { if (playerCardIdx === 0) setStep(1); else setPlayerCardIdx(i => i - 1); }}
+                    className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 active:scale-95 transition-all">
+                    ←
+                  </button>
+                  <div className="flex-1 flex gap-1">
+                    {PLAYERS.map((_, i) => (
+                      <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i < playerCardIdx ? 'bg-[#39FF14]' : i === playerCardIdx ? 'bg-[#FFFF00]' : 'bg-white/10'}`} />
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-black text-gray-500">{playerCardIdx + 1}/{PLAYERS.length}</span>
                 </div>
-                <h2 className="text-base font-black uppercase tracking-tight italic">Öne Çıkan Oyuncular</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Rakip oyuncuların performansını puanlayın ve maçın adamını seçin</p>
-              </div>
 
-              {/* Player list */}
-              <div className="space-y-3.5 relative">
-                {PLAYERS.map(p => {
-                  const isMotm = motm === p.id;
-                  const currentRating = playerRatings[p.id] ?? 0;
-                  return (
-                    <div 
-                      key={p.id} 
-                      className={`rounded-[24px] border p-4 transition-all relative overflow-hidden flex flex-col gap-3 ${
-                        isMotm 
-                          ? 'border-[#FFFF00] bg-gradient-to-br from-[#2c1d00]/30 to-[#121620]/60 shadow-[0_0_20px_rgba(255,255,0,0.15)]' 
-                          : 'bg-[#121620]/50 border-white/5'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {/* FUT initials circle badge */}
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs border ${getTierBadgeClass(p.tier)}`}>
-                            {p.initials}
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-white uppercase tracking-tight leading-none mb-1">{p.name}</p>
-                            <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[7px] font-black text-gray-400 tracking-wider uppercase">{p.pos}</span>
-                          </div>
-                        </div>
-
-                        {/* MOTM Button */}
-                        <motion.button 
-                          whileTap={{ scale: 0.92 }}
-                          onClick={() => {
-                            if (navigator.vibrate) navigator.vibrate(25);
-                            setMotm(isMotm ? null : p.id);
-                          }}
-                          className={`h-9 px-3 rounded-xl border text-[9px] font-black tracking-widest uppercase flex items-center gap-1.5 transition-all ${
-                            isMotm 
-                              ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_12px_rgba(255,255,0,0.3)]' 
-                              : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          <Crown size={11} fill={isMotm ? 'black' : 'none'} className={isMotm ? 'text-black' : 'text-gray-500'} /> 
-                          {isMotm ? 'MOTM SEÇİLDİ' : 'MOTM SEÇ'}
-                        </motion.button>
-                      </div>
-
-                      {/* Small Star rating bar */}
-                      <div className="flex gap-1.5 items-center relative overflow-visible">
-                        {[1,2,3,4,5].map(s => (
-                          <motion.button 
-                            key={s} 
-                            whileHover={{ scale: 1.22 }} 
-                            whileTap={{ scale: 0.85 }}
-                            onClick={(e) => setPlayerRating(p.id, s, e)}
-                            className="p-0.5 relative overflow-visible"
-                          >
-                            <Star 
-                              size={22} 
-                              className={`transition-all duration-200 ${
-                                s <= currentRating 
-                                  ? 'text-[#FFFF00] fill-[#FFFF00] drop-shadow-[0_0_6px_rgba(255,255,0,0.4)]' 
-                                  : 'text-gray-800 hover:text-white/40'
-                              }`} 
-                            />
-                          </motion.button>
-                        ))}
-                        {currentRating > 0 && (
-                          <span className="text-[8px] font-black uppercase tracking-widest text-[#FFFF00]/70 ml-2">
-                            Puan: {currentRating}.0
-                          </span>
-                        )}
-                      </div>
+                {/* Player card */}
+                <div className={`rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all ${isMotm ? 'border-[#FFFF00] bg-gradient-to-br from-[#2c1d00]/40 to-[#121620]/80 shadow-[0_0_30px_rgba(255,255,0,0.12)]' : 'bg-[#121620]/70 border-white/8'}`}>
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/6 rounded-full blur-2xl pointer-events-none" />
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-base border ${getTierBadgeClass(p.tier)}`}>
+                      {p.initials}
                     </div>
-                  );
-                })}
-                {/* Star rating Sparkle burst layer */}
-                <div className="absolute inset-0 pointer-events-none overflow-visible">
-                  {sparkles.map(s => (
-                    <Sparkle key={s.id} x={s.x} y={s.y} delay={s.delay} />
-                  ))}
-                </div>
-              </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-black text-white uppercase tracking-tight italic">{p.name}</p>
+                      <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black text-gray-400 tracking-wider uppercase">{p.pos}</span>
+                    </div>
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => { if (navigator.vibrate) navigator.vibrate(22); setMotm(isMotm ? null : p.id); }}
+                      className={`h-10 px-3.5 rounded-xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${isMotm ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                    >
+                      <Crown size={11} fill={isMotm ? 'black' : 'none'} className={isMotm ? 'text-black' : ''} />
+                      {isMotm ? 'MOTM' : 'MOTM'}
+                    </motion.button>
+                  </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <motion.button 
-                  whileTap={{ scale: 0.98 }} 
-                  onClick={() => setStep(1)}
-                  className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center hover:bg-white/10"
-                >
-                  ← GERİ
-                </motion.button>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }} 
-                  onClick={() => setStep(3)}
-                  className="flex-[2] h-14 bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center shadow-lg hover:shadow-xl"
-                >
-                  DEVAM ET →
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
+                  {/* Stars */}
+                  <div className="flex gap-3 justify-center relative overflow-visible">
+                    {[1,2,3,4,5].map(s => (
+                      <motion.button key={s} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.85 }}
+                        onClick={(e) => setPlayerRating(p.id, s, e)} className="p-1 relative overflow-visible">
+                        <Star size={34} className={`transition-all duration-200 ${s <= currentRating ? 'text-[#FFFF00] fill-[#FFFF00] drop-shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 'text-gray-800 hover:text-white/30'}`} />
+                      </motion.button>
+                    ))}
+                    <div className="absolute inset-0 pointer-events-none overflow-visible">
+                      {sparkles.map(s => <Sparkle key={s.id} x={s.x} y={s.y} delay={s.delay} />)}
+                    </div>
+                  </div>
+                  {currentRating > 0 && (
+                    <p className="text-center text-[9px] font-black uppercase tracking-widest text-[#FFFF00]/70 -mt-3">
+                      {currentRating === 5 ? 'Mükemmel' : currentRating >= 4 ? 'Çok İyi' : currentRating >= 3 ? 'İyi' : currentRating >= 2 ? 'Orta' : 'Zayıf'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <motion.button whileTap={{ scale: 0.97 }} onClick={advanceCard}
+                    className="w-14 h-14 bg-white/5 border border-white/10 text-gray-400 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center hover:bg-white/8 transition-all">
+                    Atla
+                  </motion.button>
+                  <motion.button whileTap={{ scale: 0.98 }} onClick={advanceCard}
+                    disabled={currentRating === 0}
+                    className={`flex-1 h-14 font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${currentRating > 0 ? 'bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black shadow-[0_0_20px_rgba(57,255,20,0.2)]' : 'bg-white/5 border border-white/10 text-gray-500'}`}>
+                    {isLast ? 'TAMAMLA →' : 'SONRAKI →'}
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          })()}
 
           {/* ─ STEP 3: REFEREE & COURT ─ */}
           {step === 3 && (

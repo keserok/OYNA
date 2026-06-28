@@ -37,15 +37,25 @@ interface PayoutRequest {
   created_at: string;
 }
 
-type Tab = 'EARNINGS' | 'REFUND' | 'PAYOUT';
+type Tab = 'TXN' | 'PAYOUT';
 type CardView = 'MAIN' | 'PAYOUT_FORM' | 'ADD_CARD';
+
+const formatIBAN = (raw: string): string => {
+  const clean = raw.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 26);
+  return clean.replace(/(.{4})/g, '$1 ').trim();
+};
+
+const validateIBAN = (raw: string): boolean => {
+  const clean = raw.replace(/\s/g, '');
+  return clean.length === 26 && clean.startsWith('TR');
+};
 
 const INCOME_TYPES = new Set(['DEPOSIT', 'MATCH_EARNING', 'REFERRAL_BONUS']);
 
 const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const { savedCards, addSavedCard, removeSavedCard, walletInitialTab } = useAppStore();
 
-  const [tab, setTab]               = useState<Tab>('EARNINGS');
+  const [tab, setTab]               = useState<Tab>('TXN');
   const [cardView, setCardView]     = useState<CardView>('MAIN');
   const [summary, setSummary]       = useState<WalletSummary | null>(null);
   const [txList, setTxList]         = useState<WalletTx[]>([]);
@@ -133,6 +143,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const earningsBalance = summary?.earnings_balance ?? 0;
   const refundBalance   = summary?.refund_credit_balance ?? 0;
 
+  const allTx = txList;
   const earningsTx  = txList.filter(t => t.balance_type === 'EARNINGS');
   const refundTx    = txList.filter(t => t.balance_type === 'REFUND_CREDIT');
 
@@ -165,10 +176,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 type="number" placeholder="0.00"
                 className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600" />
             </InputField>
-            <InputField label="IBAN" required>
-              <input value={payoutIban} onChange={e => setPayoutIban(e.target.value.toUpperCase())}
+            <InputField label="IBAN" required hint={validateIBAN(payoutIban) ? '✓ Geçerli IBAN' : payoutIban.replace(/\s/g,'').length > 0 ? `${payoutIban.replace(/\s/g,'').length}/26 karakter` : 'TR ile başlamalı, 26 karakter'} hintColor={validateIBAN(payoutIban) ? 'text-[#39FF14]' : 'text-gray-600'}>
+              <input
+                value={payoutIban}
+                onChange={e => setPayoutIban(formatIBAN(e.target.value))}
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
-                className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600 font-mono text-sm" />
+                inputMode="text"
+                autoCapitalize="characters"
+                className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600 font-mono text-sm tracking-wider" />
             </InputField>
             <InputField label="IBAN Sahibi Adı" required>
               <input value={payoutHolder} onChange={e => setPayoutHolder(e.target.value.toUpperCase())}
@@ -191,7 +206,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             </div>
           )}
 
-          <button disabled={payoutLoading}
+          <button disabled={payoutLoading || !validateIBAN(payoutIban)}
             onClick={handleRequestPayout}
             className="w-full py-4 bg-[#39FF14] text-black font-black text-base rounded-2xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
             {payoutLoading ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
@@ -296,7 +311,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         {/* Tabs */}
         <div className="px-6 mb-4">
           <div className="flex bg-[#161B22] p-1 rounded-2xl border border-white/5 gap-1">
-            {([['EARNINGS','Kazanç'],['REFUND','İade Kredisi'],['PAYOUT','Ödemeler']] as [Tab, string][]).map(([t, label]) => (
+            {([['TXN','İşlemler'],['PAYOUT','Ödemeler']] as [Tab, string][]).map(([t, label]) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all ${
                   tab === t ? 'bg-[#0A0E14] text-white border border-white/10 shadow-lg' : 'text-gray-500'
@@ -311,15 +326,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="px-6 space-y-2">
-            {tab === 'EARNINGS' && (
-              earningsTx.length === 0
-                ? <EmptyTx label="Henüz kazanç işleminiz yok." />
-                : earningsTx.map(tx => <TxRow key={tx.id} tx={tx} />)
-            )}
-            {tab === 'REFUND' && (
-              refundTx.length === 0
-                ? <EmptyTx label="İade krediniz bulunmuyor." />
-                : refundTx.map(tx => <TxRow key={tx.id} tx={tx} />)
+            {tab === 'TXN' && (
+              allTx.length === 0
+                ? <EmptyTx label="Henüz işlem geçmişiniz yok." />
+                : allTx.map(tx => <TxRow key={tx.id} tx={tx} />)
             )}
             {tab === 'PAYOUT' && (
               payouts.length === 0
@@ -444,11 +454,14 @@ const EmptyTx = ({ label }: { label: string }) => (
   </div>
 );
 
-const InputField = ({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+const InputField = ({ label, required, hint, hintColor, children }: { label: string; required?: boolean; hint?: string; hintColor?: string; children: React.ReactNode }) => (
   <div>
-    <label className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-2 flex gap-1">
-      {label} {required && <span className="text-red-400">*</span>}
-    </label>
+    <div className="flex items-center justify-between mb-2">
+      <label className="text-[11px] text-gray-500 font-bold uppercase tracking-wider flex gap-1">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      {hint && <span className={`text-[10px] font-bold ${hintColor ?? 'text-gray-600'}`}>{hint}</span>}
+    </div>
     <div className="bg-[#0A0E14] border border-white/8 rounded-xl px-4 py-3 focus-within:border-[#39FF14]/40 transition-colors">
       {children}
     </div>

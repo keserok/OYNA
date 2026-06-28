@@ -573,7 +573,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const [expandedCourtId, setExpandedCourtId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(0); // 0 = Today
-  const [timeFilter, setTimeFilter] = useState<'DAY' | 'NIGHT'>('NIGHT');
+  const [timeFilter, setTimeFilter] = useState<'ALL' | 'SABAH' | 'OGLEN' | 'AKSAM'>('ALL');
   const [bookings, setBookings] = useState<PitchBookingRow[]>([]);
   const [depositCheckoutOpen, setDepositCheckoutOpen] = useState(false);
 
@@ -614,7 +614,17 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     type: 'Tümü',
     availability: 'Tümü'
   });
-  const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC'>('DEFAULT');
+  const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC' | 'RATING_DESC' | 'DISTANCE_ASC'>('DEFAULT');
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+    if (navigator.vibrate) navigator.vibrate(18);
+  };
 
   // User Proximity Center Coordinates (kullanıcı konumu yoksa Ordu merkez)
   const [mapCenter, setMapCenter] = useState<[number, number]>(userLocation ? [userLocation.lat, userLocation.lng] : [ORDU_CENTER.lat, ORDU_CENTER.lng]);
@@ -806,6 +816,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
     if (sortOrder === 'PRICE_ASC') {
       result.sort((a, b) => a.totalPrice - b.totalPrice);
+    } else if (sortOrder === 'RATING_DESC') {
+      result.sort((a, b) => b.rating - a.rating);
+    } else if (sortOrder === 'DISTANCE_ASC') {
+      result.sort((a, b) => {
+        const da = parseFloat(a.distance) || 999;
+        const db = parseFloat(b.distance) || 999;
+        return da - db;
+      });
     }
 
     return result;
@@ -868,21 +886,39 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             onClick={() => setFilters({ ...filters, type: filters.type === 'Kapalı' ? 'Tümü' : 'Kapalı' })}
             className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${filters.type === 'Kapalı' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
           >
-            Kapalı Saha
+            Kapalı
           </button>
           <button
             onClick={() => setFilters({ ...filters, type: filters.type === 'Açık' ? 'Tümü' : 'Açık' })}
             className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${filters.type === 'Açık' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
           >
-            Açık Saha
+            Açık
           </button>
-
-          <button
-            onClick={() => setSortOrder(sortOrder === 'PRICE_ASC' ? 'DEFAULT' : 'PRICE_ASC')}
-            className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${sortOrder === 'PRICE_ASC' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
-          >
-            Ucuzdan Pahalıya
-          </button>
+          <div className="h-6 w-px bg-white/5 self-center shrink-0" />
+          {([
+            ['RATING_DESC', '★ Puana Göre'],
+            ['DISTANCE_ASC', '📍 Yakına Göre'],
+            ['PRICE_ASC', '₺ Ucuza Göre'],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setSortOrder(sortOrder === key ? 'DEFAULT' : key)}
+              className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${sortOrder === key ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
+            >
+              {label}
+            </button>
+          ))}
+          {favorites.size > 0 && (
+            <>
+              <div className="h-6 w-px bg-white/5 self-center shrink-0" />
+              <button
+                onClick={() => setSortOrder('DEFAULT')}
+                className="shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border bg-red-500/10 text-red-400 border-red-500/20"
+              >
+                ♥ Favorilerim ({favorites.size})
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -890,6 +926,33 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       <main className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
         {viewMode === 'LIST' ? (
           <div className="space-y-2">
+            {/* Favoriler yatay şeridi */}
+            {favorites.size > 0 && (() => {
+              const favPitches = sourcePitches.filter(p => favorites.has(p.id));
+              if (favPitches.length === 0) return null;
+              return (
+                <div className="mb-6 -mx-6 px-6">
+                  <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Heart size={10} className="fill-red-400" /> FAVORİLERİM
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-2 -mx-6 px-6">
+                    {favPitches.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleOpenDetail(p)}
+                        className="shrink-0 flex flex-col items-start bg-[#161B22] border border-red-500/20 rounded-2xl overflow-hidden w-40 active:scale-95 transition-all"
+                      >
+                        <img src={p.image} alt={p.name} className="w-full h-24 object-cover" />
+                        <div className="p-2.5">
+                          <p className="text-[10px] font-black text-white truncate uppercase">{p.name}</p>
+                          <p className="text-[9px] text-gray-500 mt-0.5">{p.district} · ~{p.totalPrice}₺</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div className="flex justify-between items-center mb-6 px-2">
               <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">
                 {filteredPitches.length} TESİS BULUNDU
@@ -1052,10 +1115,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 <ChevronRight className="rotate-90" size={20} />
               </button>
               <div className="flex gap-2">
-                <button 
-                  className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 hover:bg-black/50 transition-colors"
+                <button
+                  onClick={() => selectedPitch && toggleFavorite(selectedPitch.id)}
+                  className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center border transition-colors ${selectedPitch && favorites.has(selectedPitch.id) ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-black/30 border-white/10 text-white hover:bg-black/50'}`}
                 >
-                  <Heart size={18} />
+                  <Heart size={18} className={selectedPitch && favorites.has(selectedPitch.id) ? 'fill-red-400' : ''} />
                 </button>
               </div>
             </div>
@@ -1275,31 +1339,29 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
                                           <div className="flex items-center justify-between mt-6 mb-4">
                                             <h4 className="text-[12px] font-black text-white uppercase tracking-widest">Saat Seç</h4>
-                                            <div className="flex gap-2">
-                                              <button 
-                                                onClick={() => setTimeFilter('DAY')}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase transition-all ${
-                                                  timeFilter === 'DAY'
-                                                    ? 'bg-white/10 border-white/40 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]'
-                                                    : 'bg-transparent border-white/10 text-gray-500 hover:text-gray-300'
-                                                }`}
-                                              >
-                                                <Sun size={12} className={timeFilter === 'DAY' ? 'text-[#FFFF00]' : ''} /> Gündüz
-                                              </button>
-                                              <button 
-                                                onClick={() => setTimeFilter('NIGHT')}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase transition-all ${
-                                                  timeFilter === 'NIGHT'
-                                                    ? 'bg-blue-500/10 border-blue-500/40 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
-                                                    : 'bg-transparent border-white/10 text-gray-500 hover:text-gray-300'
-                                                }`}
-                                              >
-                                                <Moon size={12} className={timeFilter === 'NIGHT' ? 'text-blue-400' : ''} /> Gece
-                                              </button>
+                                            <div className="flex gap-1.5">
+                                              {([
+                                                ['ALL', 'Tümü'],
+                                                ['SABAH', '☀ Sabah'],
+                                                ['OGLEN', '🌤 Öğlen'],
+                                                ['AKSAM', '🌙 Gece'],
+                                              ] as const).map(([key, label]) => (
+                                                <button
+                                                  key={key}
+                                                  onClick={() => setTimeFilter(key)}
+                                                  className={`px-2.5 py-1.5 rounded-full border text-[9px] font-bold uppercase transition-all ${
+                                                    timeFilter === key
+                                                      ? 'bg-white/10 border-white/40 text-white'
+                                                      : 'bg-transparent border-white/10 text-gray-500'
+                                                  }`}
+                                                >
+                                                  {label}
+                                                </button>
+                                              ))}
                                             </div>
                                           </div>
-                                          
-                                          <div className="grid grid-cols-3 gap-2">
+
+                                          <div className="grid grid-cols-3 gap-2.5">
                                             {(() => {
                                               const dateObj = new Date();
                                               dateObj.setDate(dateObj.getDate() + selectedDate);
@@ -1307,8 +1369,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                               const computedSlots = computeAvailability(selectedPitch, dateStrISO, bookings, court.id);
                                               const filteredComputedSlots = computedSlots.filter(s => {
                                                 const hour = parseInt(s.startTime.split(':')[0], 10);
-                                                if (timeFilter === 'DAY') return hour >= 6 && hour < 18;
-                                                return hour >= 18 || hour < 6;
+                                                if (timeFilter === 'SABAH') return hour >= 6 && hour < 12;
+                                                if (timeFilter === 'OGLEN') return hour >= 12 && hour < 18;
+                                                if (timeFilter === 'AKSAM') return hour >= 18 || hour < 6;
+                                                return true;
                                               });
 
                                               return filteredComputedSlots.map(slot => {
@@ -1321,8 +1385,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                                     onClick={() => {
                                                       setSelectedSlot(slot.label);
                                                       setSelectedCourtId(court.id);
+                                                      if (navigator.vibrate) navigator.vibrate(12);
                                                     }}
-                                                    className={`py-3 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center justify-center gap-0.5 ${
+                                                    className={`py-4 rounded-2xl border text-[10px] font-black transition-all flex flex-col items-center justify-center gap-1 ${
                                                       isBooked
                                                         ? 'bg-red-500/10 border-red-500/20 text-red-400/60 cursor-not-allowed line-through'
                                                         : isSelected
@@ -1362,20 +1427,26 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             {/* Footer Showcase Actions */}
             <div className="absolute bottom-0 left-0 w-full bg-[#0A0E14] border-t border-white/5 z-20">
               {selectedSlotQuote && (
-                <div className="px-6 pt-3 flex items-center justify-between text-sm border-b border-white/5 pb-3">
-                  <div>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Seçilen Saat Ücreti</p>
-                    <p className="text-lg font-black text-white">{selectedSlotQuote.price}₺</p>
+                <div className="px-6 pt-3 border-b border-white/5 pb-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <div>
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Saat Ücreti</p>
+                      <p className="text-lg font-black text-white">{selectedSlotQuote.price}₺</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Şimdi Ödenecek (Kapora)</p>
+                      <p className="text-lg font-black text-[#FFFF00]">{selectedSlotQuote.deposit}₺</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kapora</p>
-                    <p className="text-lg font-black text-[#FFFF00]">{selectedSlotQuote.deposit}₺</p>
-                  </div>
+                  <p className="text-[9px] text-gray-600 mt-1.5 leading-relaxed">
+                    Kapora, saha rezervasyon güvencesidir. Kalan {selectedSlotQuote.price - selectedSlotQuote.deposit}₺ maç günü ödenir. İptal politikasına göre iade yapılır.
+                  </p>
                 </div>
               )}
               <div className="p-6 flex gap-4 items-center">
                <button
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                  onClick={() => selectedPitch && toggleFavorite(selectedPitch.id)}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all border ${selectedPitch && favorites.has(selectedPitch.id) ? 'bg-red-500/15 border-red-500/40 text-red-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
                 >
                   <Heart size={20} />
                 </button>
