@@ -37,6 +37,7 @@ export interface AdminUser {
   banExpiresAt?: string | null; 
   communities?: string[];    
   playerCard?: PlayerCardData;
+  cardActive?: boolean; // Oyuncu kartı uygulamada görünsün mü (card_active)
   oynaId?: string; // Benzersiz OYNA Kimliği Örn: #ARD932
   friends?: string[]; // Onaylanmış arkadaşların User ID'leri
   isLookingForTeam?: boolean; // Transfer Merkezi Görünürlüğü

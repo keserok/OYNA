@@ -33,6 +33,7 @@ export function fromProfileRow(row: Record<string, any>): AdminUser {
     banExpiresAt: row.ban_expires_at ?? null,
     communities: Array.isArray(row.communities) ? row.communities : [],
     playerCard: row.player_card ?? {},
+    cardActive: row.card_active === undefined ? undefined : Boolean(row.card_active),
     oynaId: row.oyna_id ?? undefined,
     friends: Array.isArray(row.friends) ? row.friends : [],
     isLookingForTeam: Boolean(row.is_looking_for_team),
@@ -64,6 +65,7 @@ export function toProfileRow(user: Partial<AdminUser>): Record<string, any> {
   if (user.banExpiresAt !== undefined)     row.ban_expires_at = user.banExpiresAt;
   if (user.communities !== undefined)      row.communities = user.communities;
   if (user.playerCard !== undefined)       row.player_card = user.playerCard;
+  if (user.cardActive !== undefined)       row.card_active = user.cardActive;
   if (user.oynaId !== undefined)           row.oyna_id = user.oynaId;
   if (user.friends !== undefined)          row.friends = user.friends;
   if (user.isLookingForTeam !== undefined) row.is_looking_for_team = user.isLookingForTeam;

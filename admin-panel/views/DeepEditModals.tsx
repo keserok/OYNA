@@ -109,7 +109,7 @@ const Shell: React.FC<{ title: string; onClose: () => void; children: React.Reac
                 <h2 className="text-sm font-black text-white tracking-widest uppercase">{title}</h2>
                 <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-all"><X size={15} /></button>
             </div>
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-5">{children}</div>
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 space-y-5">{children}</div>
             <div className="p-4 border-t border-white/10 bg-[#121820] rounded-b-3xl shrink-0">{footer}</div>
         </motion.div>
     </motion.div>
@@ -676,6 +676,30 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                                     </span>
                                 </div>
                             ))}
+
+                            {/* Kart seviyesi (tier) seçici */}
+                            <div className="pt-3 mt-1 border-t border-white/5">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">KART SEVİYESİ</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {([
+                                        { key: 'gold', label: 'ALTIN', cls: 'from-yellow-500/20 to-amber-600/20 text-yellow-300 border-yellow-500/40' },
+                                        { key: 'silver', label: 'GÜMÜŞ', cls: 'from-gray-300/15 to-gray-400/15 text-gray-200 border-gray-300/40' },
+                                        { key: 'bronze', label: 'BRONZ', cls: 'from-orange-700/25 to-amber-800/25 text-orange-300 border-orange-600/40' },
+                                    ] as const).map(t => {
+                                        const active = (edit.playerCard?.tier || 'gold') === t.key;
+                                        return (
+                                            <button key={t.key} type="button"
+                                                onClick={() => setEdit(prev => ({
+                                                    ...prev,
+                                                    playerCard: { ...(prev.playerCard || {} as any), tier: t.key },
+                                                }))}
+                                                className={`h-9 rounded-xl text-[10px] font-black border transition-all bg-gradient-to-br ${t.cls} ${active ? 'ring-2 ring-white/30 opacity-100' : 'opacity-50 hover:opacity-80'}`}>
+                                                {t.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Wallet */}
@@ -696,6 +720,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                         {/* Status toggles */}
                         <div className="space-y-2">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
+                            <Toggle label="Oyuncu Kartı Aktif" desc="Kart uygulamada (Top Oyna) görünsün — kapatılırsa gizlenir" value={edit.cardActive ?? true} onChange={() => setEdit(prev => ({ ...prev, cardActive: !(prev.cardActive ?? true) }))} />
                             <Toggle label="PRO Üyelik" desc="Özel maçlar ve indirimler" value={edit.isPro} onChange={() => setEdit(prev => ({ ...prev, isPro: !prev.isPro }))} />
                             <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
                             <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
