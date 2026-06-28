@@ -1579,6 +1579,70 @@ export async function assignMatchRefereeAdmin(matchId: string, refereeId: string
   if (error) throw new Error(error.message);
 }
 
+// ─── Maç Kontrol Kokpiti (Wave 9) ────────────────────────────────────────────
+export async function overrideMatchScoreAdmin(matchId: string, home: number, away: number, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_override_match_score', {
+    p_match_id: matchId, p_home: home, p_away: away, p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function notifyMatchRosterAdmin(matchId: string, title: string, body: string): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_notify_match_roster', {
+    p_match_id: matchId, p_title: title, p_body: body,
+  });
+  if (error) throw new Error(error.message);
+  return Number(data) || 0;
+}
+
+export interface MatchIntentRow {
+  id: string;
+  user_id: string | null;
+  user_name: string;
+  amount: number;
+  status: string;
+  commission_amount: number | null;
+  owner_amount: number | null;
+  created_at: string;
+}
+
+export async function fetchMatchIntentsAdmin(matchId: string): Promise<MatchIntentRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_match_intents', { p_match_id: matchId });
+  if (error) throw new Error(error.message);
+  return (data || []) as MatchIntentRow[];
+}
+
+export async function forceCaptureIntentAdmin(intentId: string, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_force_capture_intent', { p_intent_id: intentId, p_notes: notes ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export async function forceVoidIntentAdmin(intentId: string, reason?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_force_void_intent', { p_intent_id: intentId, p_reason: reason ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export async function forceRefundIntentAdmin(intentId: string, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_refund_intent', { p_intent_id: intentId, p_notes: notes ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export interface MatchAuditRow {
+  id: string;
+  action: string;
+  admin_name: string | null;
+  target_identifier: string | null;
+  old_value: unknown;
+  new_value: unknown;
+  created_at: string;
+}
+
+export async function fetchMatchAuditAdmin(matchId: string): Promise<MatchAuditRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_match_audit', { p_match_id: matchId });
+  if (error) throw new Error(error.message);
+  return (data || []) as MatchAuditRow[];
+}
+
 export function buildMatchPayloadFromListing(match: Partial<MatchListing> & { rawDate?: string }): Record<string, unknown> {
   return listingToMatchPayload(match);
 }
