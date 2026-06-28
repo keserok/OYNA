@@ -32,9 +32,24 @@ export const ADMIN_ROUTE_META: Record<GodViewSubRoute, AdminRouteMeta> = {
   AUDIT_LOG: { title: 'Denetim Kayıtları', description: 'Admin aksiyon geçmişi ve iz sürme.', group: 'Sistem', accent: 'purple' },
   CONTENT: { title: 'CMS Metinler', description: 'Uygulama genelinde görünen metinler.', group: 'Sistem', accent: 'pink' },
   SETTINGS: { title: 'Sistem Ayarları', description: 'Komisyon, ödeme modu ve bakım modu.', group: 'Sistem', accent: 'red' },
+  SYSTEM_PARAMS: { title: 'Sistem Parametreleri', description: 'Maç, fair-play ve rezervasyon kurallarını ve modülleri panelden yönet.', group: 'Sistem', accent: 'cyan' },
   ACL: { title: 'Ekipler & Yetkiler', description: 'Platform admin rolleri ve erişim kontrolü.', group: 'Sistem', accent: 'orange' },
   MODERATION: { title: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', accent: 'yellow' },
   OWNER_ACCOUNTS: { title: 'SaaS Hesapları', description: 'Tesis sahibi SaaS abonelik yönetimi.', group: 'Operasyon', accent: 'green' },
+  VERIFICATION: { title: 'Doğrulama Merkezi', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', accent: 'yellow' },
+  NOTIFICATION_TEMPLATES: { title: 'Bildirim Şablonları', description: 'Uygulama bildirim metinlerini (kelimelerini) panelden düzenle.', group: 'Pazarlama', accent: 'pink' },
+};
+
+/**
+ * Lansman kapsamı DIŞI modüller → feature_flags anahtarı.
+ * Bayrak açıkça true değilse bu route'lar menüden/erişimden gizlenir
+ * (master prensipler: Topluluk/Turnuva/İndirim Kodları lansmanda yok).
+ * Kod silinmez; yalnız gizlenir → istenirse Parametreler ekranından geri açılır.
+ */
+export const SCOPE_GATED_ROUTES: Partial<Record<GodViewSubRoute, string>> = {
+  TOPLULUKLAR: 'module_community',
+  TURNUVALAR: 'module_tournaments',
+  PROMO_CODES: 'module_promo_codes',
 };
 
 export const ACCENT_STYLES: Record<AdminAccent, { icon: string; ring: string; badge: string }> = {
@@ -69,6 +84,7 @@ export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRou
   { label: 'Kullanıcılar', route: 'KULLANICILAR', category: 'Operasyon' },
   { label: 'Kaleciler', route: 'KALECİLER', category: 'Operasyon' },
   { label: 'Hakemler', route: 'HAKEMLER', category: 'Operasyon' },
+  { label: 'Doğrulama Merkezi', route: 'VERIFICATION', category: 'Operasyon' },
   { label: 'Onay Bekleyenler', route: 'PENDING_VERIFICATIONS', category: 'Operasyon' },
   { label: 'Kimlik Doğrulama', route: 'PROVIDER_IDENTITIES', category: 'Operasyon' },
   { label: 'Tesis Onayları', route: 'MODERATION', category: 'Operasyon' },
@@ -78,9 +94,11 @@ export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRou
   { label: 'Takımlar', route: 'TAKIMLAR', category: 'Topluluk' },
   { label: 'Turnuvalar', route: 'TURNUVALAR', category: 'Topluluk' },
   { label: 'Kampanyalar', route: 'NOTIFICATIONS', category: 'Pazarlama' },
+  { label: 'Bildirim Şablonları', route: 'NOTIFICATION_TEMPLATES', category: 'Pazarlama' },
   { label: 'İndirim Kodları', route: 'PROMO_CODES', category: 'Pazarlama' },
   { label: 'Denetim Kayıtları', route: 'AUDIT_LOG', category: 'Sistem' },
   { label: 'CMS Metinler', route: 'CONTENT', category: 'Sistem' },
   { label: 'Sistem Ayarları', route: 'SETTINGS', category: 'Sistem' },
+  { label: 'Sistem Parametreleri', route: 'SYSTEM_PARAMS', category: 'Sistem' },
   { label: 'Ekipler & Yetkiler', route: 'ACL', category: 'Sistem' },
 ];

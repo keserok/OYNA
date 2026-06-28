@@ -16,8 +16,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'SIMULATION'
+// CORS: sistem-içi çağrı (secret header). ALLOWED_ORIGIN env'i ile kısıtlanabilir; varsayılan '*'.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-payment-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }

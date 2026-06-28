@@ -94,17 +94,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                             <p className="text-[11px] text-gray-500 mt-2">Tüm sahalar için geçerli tahsilat modu.</p>
                         </div>
 
-                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Sistem Komisyon Oranı (%)</label>
-                            <input 
-                                type="number" 
-                                defaultValue={appSettings.commissionRate || 10} 
-                                onBlur={(e) => {
-                                    void updateAppSettings({ commissionRate: Number(e.target.value) }).then(() => success('Komisyon oranı güncellendi'));
-                                }}
-                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
-                            />
-                            <p className="text-[11px] text-gray-500 mt-2">Platform hizmet bedeli yüzdesi.</p>
+                        <div className="bg-black/30 border border-amber-500/20 rounded-xl p-5">
+                            <label className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-2 block">Komisyon Oranları</label>
+                            <p className="text-[12px] text-gray-300 leading-relaxed">
+                                Komisyon oranları artık <b>tek kaynaktan</b> — sol menüdeki <b>Komisyon</b> sayfasından —
+                                yönetilir (global/saha/hizmet/maç bazında). Buradaki eski alan kaldırıldı; böylece
+                                "değiştirdim ama değişmedi" karışıklığı önlenir.
+                            </p>
                         </div>
                         
                         <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">

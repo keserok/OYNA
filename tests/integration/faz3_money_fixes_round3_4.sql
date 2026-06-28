@@ -41,14 +41,14 @@ BEGIN
     INSERT INTO _r VALUES ('SEC_direct_wallet_update_blocked', position('wallet_balance' in SQLERRM)>0, 'bloklandı');
   END;
 
-  -- GAP-3
+  -- GAP-3 (FAZ 7 kademeli iade: current_date+5 = ~120s ≥ 24s → %100, PSP varsayılan 0)
   INSERT INTO public.pitch_bookings(id,pitch_id,court_id,user_id,booking_date,start_time,end_time,source,status,price,deposit_amount,paid_amount,payment_status)
     VALUES (bk,pitch,court,u,(current_date+5),'20:00','21:00','APP_BOOKING','CONFIRMED',200,100,100,'PAID');
   j := public.cancel_app_booking(bk, 'test');
-  INSERT INTO _r VALUES ('GAP3_cancel_returns_90pct', (j->>'refund_amount')::numeric=90, 'refund='||(j->>'refund_amount'));
+  INSERT INTO _r VALUES ('GAP3_cancel_returns_full', (j->>'refund_amount')::numeric=100, 'refund='||(j->>'refund_amount'));
   SELECT COALESCE(SUM(amount),0) INTO n FROM public.wallet_transactions
    WHERE user_id=u AND balance_type='REFUND_CREDIT' AND reference_id=bk;
-  INSERT INTO _r VALUES ('GAP3_refund_credit_written_90', n=90, 'refund_credit='||n);
+  INSERT INTO _r VALUES ('GAP3_refund_credit_written_full', n=100, 'refund_credit='||n);
 
   -- GAP-4
   INSERT INTO public.matches(id,title,status,pitch_id,price,slots,"awaySlots","creatorId",captain_id,starts_at)

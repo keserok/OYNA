@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Mail, Smartphone, ArrowRight, KeyRound, ChevronDown } from 'lucide-react';
+import { Check, Mail, ArrowRight, KeyRound } from 'lucide-react';
 import { UserRole } from '../types';
-import { loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, sendPhoneOtp, verifyPhoneOtp } from '../supabaseAuth';
+import { loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp } from '../supabaseAuth';
 import { setRememberMe } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
@@ -154,19 +154,13 @@ const LegalModal: React.FC<LegalModalsProps> = ({ openModal, setOpenModal }) => 
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-const formatPhoneDisplay = (digits: string) => {
-  const d = digits.slice(0, 10);
-  return [d.slice(0, 3), d.slice(3, 6), d.slice(6, 8), d.slice(8, 10)].filter(Boolean).join(' ');
-};
-
 const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const theme = getTheme(role);
   const { color, orb1, orb2, tagline, badge } = theme;
 
-  const [method, setMethod] = useState<'email' | 'phone'>('email');
+  // §3.1: giriş yalnızca Google/Apple (birincil) + e-posta (ikincil); telefonla giriş YOK.
   const [stage, setStage] = useState<'input' | 'otp'>('input');
   const [email, setEmail] = useState('');
-  const [phoneDigits, setPhoneDigits] = useState('');
   const [otp, setOtp] = useState('');
   const [agreed, setAgreed] = useState(true);
   const [remember, setRemember] = useState(true);
@@ -174,12 +168,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [openModal, setOpenModal] = useState<'kvkk' | 'sozlesme' | null>(null);
-  const [countryCode, setCountryCode] = useState('+90');
-  const [showCodes, setShowCodes] = useState(false);
 
-  const phoneE164 = `${countryCode}${phoneDigits}`;
-  const contactValid = method === 'email' ? isValidEmail(email) : phoneDigits.length === 10;
-  const contactLabel = method === 'email' ? email.trim() : `${countryCode} ${formatPhoneDisplay(phoneDigits)}`;
+  const contactValid = isValidEmail(email);
+  const contactLabel = email.trim();
 
   useEffect(() => {
     setRememberMe(remember);
@@ -192,11 +183,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   }, [resendIn]);
 
   const requestOtp = async () => {
-    if (method === 'email') {
-      await sendEmailOtp(email.trim());
-    } else {
-      await sendPhoneOtp(phoneE164);
-    }
+    await sendEmailOtp(email.trim());
   };
 
   const handleSendOtp = async () => {
@@ -236,11 +223,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     setError(null);
     setIsLoading('verify');
     try {
-      if (method === 'email') {
-        await verifyEmailOtp(email.trim(), otp);
-      } else {
-        await verifyPhoneOtp(phoneE164, otp);
-      }
+      await verifyEmailOtp(email.trim(), otp);
       onSuccess();
     } catch (err: any) {
       console.error('OTP doğrulama hatası:', err);
@@ -574,7 +557,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     size="sm"
                     className="w-full h-12 text-gray-400 border border-white/10"
                   >
-                    {method === 'email' ? 'E-POSTAYI DEĞİŞTİR' : 'NUMARAYI DEĞİŞTİR'}
+                    E-POSTAYI DEĞİŞTİR
                   </AnimatedButton>
                 </div>
               </motion.div>

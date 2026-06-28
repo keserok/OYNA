@@ -262,11 +262,11 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                           onClick={() => { setCancelTarget(b); setCancelError(null); }}
                           className="w-full py-3 text-red-400 hover:text-red-300 text-xs font-black uppercase tracking-widest transition-colors"
                         >
-                          İptal Et (%90 İade)
+                          İptal Et
                         </button>
                       ) : (
                         <p className="text-center text-[10px] text-gray-600 font-bold uppercase tracking-wide py-1">
-                          Maça 48 saatten az kaldı · uygulamadan iptal kapalı
+                          Rezervasyon başladı · iptal kapalı
                         </p>
                       )}
                     </div>
@@ -304,8 +304,17 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                 {cancelTarget.pitches?.name} — {formatDate(cancelTarget.booking_date)} {shortTime(cancelTarget.start_time)}
               </p>
               <p className="text-xs text-gray-500 mb-6">
-                Ödediğin tutarın <span className="text-[#39FF14] font-bold">%90'ı</span> iade edilecek
-                {cancelTarget.paid_amount > 0 && <> (≈ ₺{Math.round(cancelTarget.paid_amount * 0.9)})</>}.
+                {(() => {
+                  const start = new Date(`${cancelTarget.booking_date}T${cancelTarget.start_time}`);
+                  const hrs = (start.getTime() - Date.now()) / 3_600_000;
+                  const pct = hrs >= 24 ? 100 : hrs >= 6 ? 50 : 0;
+                  return pct > 0 ? (
+                    <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{pct}</span> iadesi yapılacak
+                    {cancelTarget.paid_amount > 0 && <> (≈ ₺{Math.round(cancelTarget.paid_amount * pct / 100)})</>}.</>
+                  ) : (
+                    <>Rezervasyon saatine 6 saatten az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
+                  );
+                })()}
                 {' '}Bu işlem geri alınamaz.
               </p>
 
@@ -350,7 +359,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="text-[#39FF14] font-bold">₺{cancelResult.refund_amount}</span> (%90) iade işlemine alındı.</>
+                  ? <> <span className="text-[#39FF14] font-bold">₺{cancelResult.refund_amount}</span> (%{cancelResult.refund_percent}) iade işlemine alındı.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
               <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FFFF00] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">

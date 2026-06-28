@@ -51,6 +51,8 @@ export interface AdminDashboardStats {
   total_users: number;
   total_pitches: number;
   total_matches: number;
+  successful_matches?: number;
+  completed_matches?: number;
   pending_verifications: number;
   pending_pitches: number;
   pending_withdrawals: number;
@@ -1148,6 +1150,62 @@ export async function updateCmsTexts(texts: Record<string, string>): Promise<num
   return Number(data);
 }
 
+// ─── Sistem Parametreleri (app_config) & Modül Anahtarları (feature_flags) ────
+export interface AppConfigRow {
+  key: string;
+  value: unknown; // jsonb scalar — number | boolean | string
+  value_type: 'number' | 'boolean' | 'text' | 'json';
+  category: string;
+  label: string;
+  description: string | null;
+  is_public: boolean;
+  min_value: number | null;
+  max_value: number | null;
+  updated_at: string;
+}
+
+export interface FeatureFlagRow {
+  key: string;
+  enabled: boolean;
+  label: string;
+  description: string | null;
+  category: string;
+  updated_at: string;
+}
+
+export async function fetchAppConfig(): Promise<AppConfigRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_config');
+  if (error) throw new Error(error.message);
+  return (data || []) as AppConfigRow[];
+}
+
+export async function setAppConfig(key: string, value: unknown): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_config', { p_key: key, p_value: value });
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchFeatureFlags(): Promise<FeatureFlagRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_feature_flags');
+  if (error) throw new Error(error.message);
+  return (data || []) as FeatureFlagRow[];
+}
+
+export async function setFeatureFlag(key: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_feature_flag', { p_key: key, p_enabled: enabled });
+  if (error) throw new Error(error.message);
+}
+
+/** Hafif bayrak haritası (key→enabled) — modül gizleme için (public read). */
+export async function fetchFeatureFlagMap(): Promise<Record<string, boolean>> {
+  const { data, error } = await supabase.from('feature_flags').select('key, enabled');
+  if (error) throw new Error(error.message);
+  const map: Record<string, boolean> = {};
+  (data || []).forEach((r: { key: string; enabled: boolean }) => {
+    map[r.key] = !!r.enabled;
+  });
+  return map;
+}
+
 export async function fetchPromoCodes(): Promise<PromoCodeRow[]> {
   const { data, error } = await supabase
     .from('promo_codes')
@@ -1543,6 +1601,90 @@ export async function assignMatchRefereeAdmin(matchId: string, refereeId: string
   if (error) throw new Error(error.message);
 }
 
+// ─── Maç Kontrol Kokpiti (Wave 9) ────────────────────────────────────────────
+export async function assignMatchGoalkeeperAdmin(matchId: string, goalkeeperId: string | null): Promise<void> {
+  const { error } = await supabase.rpc('admin_assign_match_goalkeeper', { p_match_id: matchId, p_goalkeeper_id: goalkeeperId });
+  if (error) throw new Error(error.message);
+}
+
+export interface MatchTimelineRow {
+  source: string;
+  event_type: string;
+  title: string;
+  detail: string | null;
+  actor: string | null;
+  created_at: string;
+}
+
+export async function fetchMatchTimelineAdmin(matchId: string): Promise<MatchTimelineRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_match_timeline', { p_match_id: matchId });
+  if (error) throw new Error(error.message);
+  return (data || []) as MatchTimelineRow[];
+}
+
+export async function overrideMatchScoreAdmin(matchId: string, home: number, away: number, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_override_match_score', {
+    p_match_id: matchId, p_home: home, p_away: away, p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function notifyMatchRosterAdmin(matchId: string, title: string, body: string): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_notify_match_roster', {
+    p_match_id: matchId, p_title: title, p_body: body,
+  });
+  if (error) throw new Error(error.message);
+  return Number(data) || 0;
+}
+
+export interface MatchIntentRow {
+  id: string;
+  user_id: string | null;
+  user_name: string;
+  amount: number;
+  status: string;
+  commission_amount: number | null;
+  owner_amount: number | null;
+  created_at: string;
+}
+
+export async function fetchMatchIntentsAdmin(matchId: string): Promise<MatchIntentRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_match_intents', { p_match_id: matchId });
+  if (error) throw new Error(error.message);
+  return (data || []) as MatchIntentRow[];
+}
+
+export async function forceCaptureIntentAdmin(intentId: string, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_force_capture_intent', { p_intent_id: intentId, p_notes: notes ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export async function forceVoidIntentAdmin(intentId: string, reason?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_force_void_intent', { p_intent_id: intentId, p_reason: reason ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export async function forceRefundIntentAdmin(intentId: string, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_refund_intent', { p_intent_id: intentId, p_notes: notes ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export interface MatchAuditRow {
+  id: string;
+  action: string;
+  admin_name: string | null;
+  target_identifier: string | null;
+  old_value: unknown;
+  new_value: unknown;
+  created_at: string;
+}
+
+export async function fetchMatchAuditAdmin(matchId: string): Promise<MatchAuditRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_match_audit', { p_match_id: matchId });
+  if (error) throw new Error(error.message);
+  return (data || []) as MatchAuditRow[];
+}
+
 export function buildMatchPayloadFromListing(match: Partial<MatchListing> & { rawDate?: string }): Record<string, unknown> {
   return listingToMatchPayload(match);
 }
@@ -1685,6 +1827,85 @@ export async function processPayout(
     p_status: status,
     p_ref: ref ?? null,
     p_notes: notes ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Yanlış COMPLETED işaretlenen payout'u geri al → PENDING (admin_reverse_payout). */
+export async function reversePayout(payoutId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_reverse_payout', { p_payout_id: payoutId, p_reason: reason });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Wave 11: Ödeme go-live ön-uçuş + mutabakat ─────────────────────────────
+export interface PaymentGoliveCheck { check_key: string; ok: boolean; detail: string; }
+
+/** Gerçek ödemeye geçmeden önce hazırlık kontrolü (admin_payment_golive_readiness). */
+export async function fetchPaymentGoliveReadiness(): Promise<PaymentGoliveCheck[]> {
+  const { data, error } = await supabase.rpc('admin_payment_golive_readiness');
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_payment_golive_readiness RPC deploy edilmedi' : error.message);
+  return (data || []) as PaymentGoliveCheck[];
+}
+
+export interface ReconciliationSummary {
+  from: string; to: string;
+  captured_count: number; gross_captured: number; total_commission: number; owner_share: number;
+  refunded_count: number; refunded_sum: number; booking_payments: number;
+  wallet_pending: number; wallet_completed: number; payout_requested: number; payout_completed: number;
+}
+
+/** Tahsilat/komisyon/owner/iade/payout mutabakat özeti (admin_reconciliation_summary). */
+export async function fetchReconciliationSummary(from?: string, to?: string): Promise<ReconciliationSummary> {
+  const params: Record<string, string> = {};
+  if (from) params.p_from = from;
+  if (to) params.p_to = to;
+  const { data, error } = await supabase.rpc('admin_reconciliation_summary', params);
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_reconciliation_summary RPC deploy edilmedi' : error.message);
+  return (data || {}) as ReconciliationSummary;
+}
+
+// ─── Wave 12: Toplu bildirim geçmişi + şablon editörü ───────────────────────
+export interface BroadcastCampaignRow {
+  id: string; created_by_name: string; segment: string; type_key: string | null;
+  title: string; body: string; recipient_count: number; status: string;
+  is_simulation: boolean; created_at: string;
+}
+
+/** Gönderilen toplu bildirim kampanyalarının geçmişi (admin_fetch_broadcast_campaigns). */
+export async function fetchBroadcastCampaigns(limit = 50): Promise<BroadcastCampaignRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_broadcast_campaigns', { p_limit: limit });
+  if (error) {
+    if (isRpcFallback(error)) return [];
+    throw new Error(error.message);
+  }
+  return (data || []) as BroadcastCampaignRow[];
+}
+
+export interface NotificationTemplateRow {
+  id: string; type_key: string; label_tr: string; title_tr: string; body_tr: string;
+  title_en: string | null; body_en: string | null; category: string | null;
+  is_mandatory: boolean; can_user_disable: boolean; sound: string | null; sort_order: number;
+}
+
+/** Bildirim şablonlarını getirir (admin_fetch_notification_templates). */
+export async function fetchNotificationTemplates(): Promise<NotificationTemplateRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_notification_templates');
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_notification_templates RPC deploy edilmedi' : error.message);
+  return (data || []) as NotificationTemplateRow[];
+}
+
+/** Bir şablonun METİN alanlarını günceller (admin_update_notification_template). */
+export async function updateNotificationTemplate(
+  id: string,
+  labelTr: string,
+  titleTr: string,
+  bodyTr: string,
+  titleEn?: string | null,
+  bodyEn?: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_notification_template', {
+    p_id: id, p_label_tr: labelTr, p_title_tr: titleTr, p_body_tr: bodyTr,
+    p_title_en: titleEn ?? null, p_body_en: bodyEn ?? null,
   });
   if (error) throw new Error(error.message);
 }

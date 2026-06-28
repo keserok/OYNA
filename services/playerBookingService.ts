@@ -1,6 +1,6 @@
 // ─── Oyuncu Rezervasyon Servisi ──────────────────────────────────────────────
 // Oyuncunun saha müsaitliğini görmesi, rezervasyon oluşturması,
-// kendi rezervasyonlarını listelemesi ve iptal etmesi (48 saat / %90 kuralı).
+// kendi rezervasyonlarını listelemesi ve iptal etmesi (kademeli iade: ≥24s %100, 6–24s %50, <6s yok).
 // Tüm yazma işlemleri SECURITY DEFINER RPC'ler üzerinden gider;
 // doğrudan tablo yazma RLS ile kapalıdır.
 
@@ -186,7 +186,7 @@ export async function fetchMyBookings(): Promise<MyBooking[]> {
   return (data ?? []) as unknown as MyBooking[];
 }
 
-/** 48 saat kuralı dahilinde iptal; %90 iade bilgisi döner. */
+/** Kademeli iade ile iptal; iade yüzdesi/tutarı (refund_percent/refund_amount) döner. */
 export async function cancelMyBooking(bookingId: string, reason?: string): Promise<CancelResult> {
   const { data, error } = await supabase.rpc('cancel_app_booking', {
     p_booking_id: bookingId,
@@ -196,9 +196,12 @@ export async function cancelMyBooking(bookingId: string, reason?: string): Promi
   return data as CancelResult;
 }
 
-/** Rezervasyon saatine 48 saatten fazla var mı? (iptal butonunu göstermek için) */
+/**
+ * Rezervasyon henüz başlamadıysa iptal edilebilir (FAZ 7 kademeli iade: başlamadan
+ * önce her an iptal; iade oranı saate göre — ≥24s %100, 6–24s %50, <6s yok).
+ */
 export function canCancel(booking: Pick<MyBooking, 'booking_date' | 'start_time' | 'status'>): boolean {
   if (booking.status === 'CANCELLED') return false;
   const start = new Date(`${booking.booking_date}T${booking.start_time}`);
-  return start.getTime() - Date.now() >= 48 * 60 * 60 * 1000;
+  return start.getTime() - Date.now() > 0;
 }

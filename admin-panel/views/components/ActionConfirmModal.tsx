@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertTriangle, ShieldCheck, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -6,9 +6,11 @@ export interface ActionConfirmOptions {
     title: string;
     description: string;
     impactText?: string;
-    actionType: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE';
+    actionType: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE' | 'FORCE_REFUND' | 'FORCE_CAPTURE' | 'FORCE_VOID' | 'SCORE_OVERRIDE' | 'PAYOUT';
     targetId: string;
     targetName: string;
+    /** Ayarlanırsa "yaz-onayla": kullanıcı bu ifadeyi yazmadan onay butonu açılmaz. */
+    confirmPhrase?: string;
     onConfirm: () => void;
     onCancel: () => void;
 }
@@ -19,7 +21,13 @@ interface ActionConfirmModalProps {
 }
 
 export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({ isOpen, options }) => {
+    const [typed, setTyped] = useState('');
+    useEffect(() => { setTyped(''); }, [options?.targetId, isOpen]);
+
     if (!isOpen || !options) return null;
+
+    const phrase = options.confirmPhrase?.trim();
+    const phraseOk = !phrase || typed.trim() === phrase;
 
     return (
         <AnimatePresence>
@@ -72,6 +80,21 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({ isOpen, 
                                     Bu işlem sistem loglarına kaydedilecektir (Audit Log).
                                 </p>
                             </div>
+
+                            {phrase && (
+                                <div>
+                                    <label className="text-[11px] text-gray-400 block mb-1.5">
+                                        Onaylamak için <span className="font-bold text-white">{phrase}</span> yazın:
+                                    </label>
+                                    <input
+                                        autoFocus
+                                        value={typed}
+                                        onChange={(e) => setTyped(e.target.value)}
+                                        placeholder={phrase}
+                                        className="w-full h-10 bg-black/40 border border-white/15 rounded-lg px-3 text-sm text-white focus:border-red-500/50 focus:outline-none"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer */}
@@ -84,7 +107,8 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({ isOpen, 
                             </button>
                             <button
                                 onClick={options.onConfirm}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                                disabled={!phraseOk}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 İşlemi Onayla
                             </button>

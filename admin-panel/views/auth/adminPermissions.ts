@@ -28,6 +28,7 @@ const ROUTE_ROLES: Partial<Record<GodViewSubRoute, AdminRole[]>> = {
   AUDIT_LOG: [...FULL_ACCESS, 'MODERATOR', 'FINANCE', 'SUPPORT'],
   CONTENT: [...FULL_ACCESS],
   SETTINGS: [...FULL_ACCESS],
+  SYSTEM_PARAMS: [...FULL_ACCESS],
   ACL: FULL_ACCESS,
 };
 

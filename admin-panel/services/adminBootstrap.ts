@@ -10,8 +10,13 @@ import {
 } from './adminService';
 
 export const ADMIN_FETCH_TIMEOUT_MS = 12_000;
-/** Boot-time session probe — must finish well under AdminApp boot ceiling */
-export const ADMIN_SESSION_CHECK_MS = 4_000;
+/**
+ * Boot-time session probe timeout. Uzak bölgedeki (ör. Singapur) Supabase'e
+ * Türkiye'den birden çok auth roundtrip gerektiği için 4s fazla agresifti ve
+ * GEÇERLİ oturumu yanlışlıkla düşürüp tekrar-giriş (ve 2FA) döngüsüne sokuyordu.
+ * Daha toleranslı: yavaş-ama-geçerli oturum artık kapı dışı kalmaz.
+ */
+export const ADMIN_SESSION_CHECK_MS = 8_000;
 
 export async function withAdminTimeout<T>(
   label: string,

@@ -23,8 +23,8 @@
 - **Lansman rolleri:** `PLAYER`, `GOALKEEPER`, `REFEREE`, `OWNER` + Admin(ler). `CAPTAIN`(global) ve `COMMUNITY_ADMIN` kaldırıldı.
 - **Kaptanlık = takım-içi yöneticilik** (global rol değil): Takımı **kuran** otomatik yönetici olur; yönetici, takımdaki **herkese** yönetim yetkisi verebilir (çoklu yönetici mümkün).
   - **Yönetici yetkileri:** Takım arayüzündeki **taktik stüdyo** ile taktik düzenini ayarlama/onaylama; **oyuncu ekleme/çıkarma**.
-- **Çoklu rol:** Bir kişi birden çok rol taşıyabilir; **ancak güvenlik için her rol arayüzüne geçişte yeniden giriş/çıkış (re-login) gerekir.** Aktif rol girişte seçilir.
-- **Oyuncu → kaleci/hakem:** Aynı hesaba rol başvurusu eklenir; o arayüze re-login ile geçilir.
+- **Çoklu rol (GÜNCELLENDİ — Faz 7):** Bir kişi birden çok rol taşıyabilir. Aktif rol girişte seçilir; sonradan **uygulama-içi "Rol Değiştir"** ile geçilir. Geçiş yalnızca kullanıcının **zaten sahip olduğu** roller arasındadır (`set_active_role` RPC, `roles[]` dışına çıkamaz → ayrıcalık yükseltme yok) ve bir **onay adımı** ister. *(Önceki "tam re-login zorunlu" kararı, kullanıcı onayıyla uygulama-içi geçişe revize edildi: ADMIN'e yükselme mümkün olmadığından sürtünmesiz geçiş tercih edildi; tam re-auth gerekmiyor.)*
+- **Oyuncu → kaleci/hakem:** Aynı hesaba rol başvurusu eklenir; başvuru onaylanınca o role **uygulama-içi geçişle** girilir.
 - **Maç açma:** Hem oyuncu/kaptan hem **saha sahibi** maç açabilir/düzenleyebilir (iki taraflı maç açma & düzenleme sistemi).
 - **Açılış ekranı:** PLAYER→Dashboard, GK/REF→ServiceDashboard, OWNER→OwnerPanel; kaptana ayrı ekran yok ("Takımım" Dashboard içinde).
 - **Admin rolleri (onaylandı):**
@@ -42,7 +42,7 @@
 - **Giriş yöntemleri:** **Google + Apple (birincil)**, **E-posta (ikincil)**. **SMS/telefon ile giriş YOK** (telefon yalnızca profil/iletişim alanı). → Supabase Auth (OAuth) ↔ `profiles` tam entegre kurulacak.
 - **Misafir girişi:** Lansmanda **YOK**; geliştirme sırasında geçici kalabilir, yayından önce kaldırılır.
 - **Kimlik esnekliği:** Telefon/hesap tekilliği zorunlu değil (ödeme yapıldığı sürece). *Not: gevşek kimlik → ban/fair-play kaçışını zayıflatır; sistem bunu göz önünde tutmalı.*
-- **Rol & giriş akışı:** **Varsayılan rol yok**; her arayüzün kendi rolü var. Akış: **Arayüz/rol seç → Auth (Google/Apple/e-posta) → (yeni hesap) Onboarding sihirbazı → ilgili arayüz.** Başka role geçiş = **re-login**.
+- **Rol & giriş akışı:** **Varsayılan rol yok**; her arayüzün kendi rolü var. Akış: **Arayüz/rol seç → Auth (Google/Apple/e-posta) → (yeni hesap) Onboarding sihirbazı → ilgili arayüz.** Sahip olunan roller arası geçiş = **uygulama-içi "Rol Değiştir"** (re-login değil; bkz. §3 Çoklu rol).
 - **Onboarding sihirbazı (yeni kullanıcı; sayfa sayfa; hepsi zorunlu):** Ad-soyad → Telefon → Profil fotoğrafı → Konum izni. (Auth ekranından sonra.)
   - **Profil fotoğrafı:** zorunlu (Supabase Storage).
   - **Konum:** zorunlu; OS'ten reddedilirse fallback = manuel şehir/ilçe (Ordu) seçimi.
@@ -325,7 +325,7 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 | **4** | Saha Sahibi B2B | Panel + B2B ton (+ saha sahibi sınırları #20'ye göre). |
 | **5** | Kaleci/Hakem | Gerçek teklif/kabul + %10 + payout. |
 | **6** | Takım & Taktik | Takım + arkadaşlar + takım-içi taktik (oylama/yorum/favori) + 1-1 mesaj; çoklu yönetici. |
-| **7** | Güvenlik, Altyapı & Store | RLS; edge function deploy + güvenlik; çoklu-rol re-login; iOS/Android; test. |
+| **7** | Güvenlik, Altyapı & Store | RLS; edge function deploy + güvenlik; çoklu-rol uygulama-içi geçiş; iOS/Android; test. |
 
 ## 11.1 Lansman, Store & Operasyon
 - **İşletme:** Şahıs şirketi — **Miraç Kerem Çürüksulu**. Store hesapları (Apple Developer + Google Play) şirket adına.

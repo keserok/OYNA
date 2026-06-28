@@ -25,8 +25,6 @@ const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
 const MyTeam = lazy(() => import('./views/MyTeam'));
 const TeamPanelView = lazy(() => import('./views/TeamPanelView'));
 const Marketplace = lazy(() => import('./views/Marketplace'));
-const MyListings = lazy(() => import('./views/MyListings'));
-const ListingDetails = lazy(() => import('./views/ListingDetails'));
 const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
 const Notifications = lazy(() => import('./views/Notifications'));
 const SettingsScreen = lazy(() => import('./views/SettingsScreen'));
@@ -428,10 +426,6 @@ const App: React.FC = () => {
             goBack('DASHBOARD');
           }}
         />;
-      case 'MY_LISTINGS':
-        return <MyListings onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
-      case 'LISTING_DETAILS':
-        return <ListingDetails onBack={() => goBack('MY_LISTINGS')} />;
       case 'PAYMENT':
         return <PaymentScreen
           onBack={() => goBack('DASHBOARD')}
