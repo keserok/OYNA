@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { Play, X, Share2, Trophy } from 'lucide-react';
+import React, { useRef, useCallback } from 'react';
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import { Share2, Trophy } from 'lucide-react';
 import { PlayerCardData } from '../types';
 
 interface TierTheme {
@@ -77,50 +77,12 @@ const TIERS = {
   },
 } satisfies Record<string, TierTheme>;
 
-// ── Video Modal ───────────────────────────────────────────────────────────
-const VideoModal = ({ statLabel, onClose }: { statLabel: string; onClose: () => void }) => (
-  <AnimatePresence>
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/92 p-6 backdrop-blur-lg"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.88, y: 24 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92 }}
-        className="w-full max-w-xs bg-[#0d1117] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="px-4 py-3 flex justify-between items-center border-b border-white/8">
-          <div className="flex items-center gap-2">
-            <Play size={12} fill="currentColor" className="text-yellow-400" />
-            <span className="text-white font-black text-xs uppercase tracking-widest">{statLabel} Analizi</span>
-          </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white">
-            <X size={14} />
-          </button>
-        </div>
-        <div className="aspect-video relative bg-black flex items-center justify-center">
-          <img src="https://images.unsplash.com/photo-1574629810360-7efbb192453a?auto=format&fit=crop&q=80&w=800" className="absolute inset-0 w-full h-full object-cover opacity-35" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-          <div className="z-10 w-14 h-14 rounded-full bg-yellow-400/15 border border-yellow-400/40 flex items-center justify-center backdrop-blur-sm hover:scale-110 cursor-pointer transition-transform">
-            <Play size={24} fill="currentColor" className="text-yellow-400 ml-0.5" />
-          </div>
-          <p className="absolute bottom-3 left-3 z-10 text-[10px] text-white font-bold bg-black/50 px-2 py-1 rounded border border-white/10">OYNA AI Vision™</p>
-        </div>
-      </motion.div>
-    </motion.div>
-  </AnimatePresence>
-);
-
 // ── Stat Row with bar ─────────────────────────────────────────────────────
-interface StatRowProps { label: string; value: number; hasVideo: boolean; theme: TierTheme; onPlay?: () => void; }
-const StatRow: React.FC<StatRowProps> = ({ label, value, hasVideo, theme, onPlay }) => {
+interface StatRowProps { label: string; value: number; theme: TierTheme; }
+const StatRow: React.FC<StatRowProps> = ({ label, value, theme }) => {
   const color = value >= 80 ? '#52e88a' : value >= 66 ? '#ffc840' : value >= 50 ? '#ff8c30' : '#ff4d4d';
   return (
-    <div
-      className={`flex items-center gap-2 ${hasVideo ? 'cursor-pointer' : ''}`}
-      onClick={onPlay}
-    >
+    <div className="flex items-center gap-2">
       {/* Label */}
       <span className="text-[9px] font-black uppercase tracking-widest w-7 shrink-0" style={{ color: theme.label }}>
         {label}
@@ -138,7 +100,6 @@ const StatRow: React.FC<StatRowProps> = ({ label, value, hasVideo, theme, onPlay
       </div>
       {/* Value */}
       <div className="flex items-center gap-0.5 w-7 justify-end shrink-0">
-        {hasVideo && <Play size={6} fill="currentColor" style={{ color: theme.label, opacity: 0.6 }} />}
         <span className="text-[13px] font-black leading-none" style={{ color }}>{value}</span>
       </div>
     </div>
@@ -147,7 +108,6 @@ const StatRow: React.FC<StatRowProps> = ({ label, value, hasVideo, theme, onPlay
 
 // ── Main Card ─────────────────────────────────────────────────────────────
 export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 'OS', cardData, onShare }) => {
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const tier = (cardData.tier in TIERS ? cardData.tier : 'bronze') as keyof typeof TIERS;
@@ -361,10 +321,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
               {/* Stat rows */}
               <div className="grid grid-cols-2 grid-rows-3 grid-flow-col gap-x-3 gap-y-[6px]">
                 {stats.slice(0, 3).map(({ key: sKey, label, stat }) => (
-                  <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={false} />
+                  <StatRow key={sKey} label={label} value={stat.value} theme={t} />
                 ))}
                 {stats.slice(3).map(({ key: sKey, label, stat }) => (
-                  <StatRow key={sKey} label={label} value={stat.value} theme={t} hasVideo={false} />
+                  <StatRow key={sKey} label={label} value={stat.value} theme={t} />
                 ))}
               </div>
 
