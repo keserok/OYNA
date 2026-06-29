@@ -289,6 +289,7 @@ export interface MatchListing {
   isSuccessful?: boolean;     // "başarılı maç" sinyali (ödendi+oynandı+iptal yok)
   confirmedAt?: string;       // T-8s quorum onay zamanı
   startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
+  isDemo?: boolean;           // demo/seed maçı (panelde rozetle ayrıştırılır)
 }
 
 export interface PositionSlot {
