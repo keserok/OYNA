@@ -18,21 +18,22 @@ export function avatarFor(seed: string, name?: string): string {
 const ROLE_SHORT: Record<'GK' | 'DEF' | 'MID' | 'FWD', string> = { GK: 'KL', DEF: 'SAV', MID: 'ORT', FWD: 'HÜC' };
 export function roleShort(role?: string): string { return ROLE_SHORT[normalizeRole(role)]; }
 
+// Tüketici (MatchJoin) + admin role kısaltmalarının ÜST KÜMESİ — iki taraf da bunu kullanır.
 export function normalizeRole(role?: string): 'GK' | 'DEF' | 'MID' | 'FWD' {
   const r = (role || '').toUpperCase();
-  if (r === 'GK' || r.includes('KALE') || r === 'KL') return 'GK';
-  if (r === 'DEF' || r.startsWith('D') || r.includes('BACK') || r === 'SAV' || r === 'CB' || r === 'LB' || r === 'RB') return 'DEF';
-  if (r === 'FWD' || r === 'FW' || r === 'ST' || r === 'CF' || r.includes('FOR') || r === 'HÜC' || r === 'LW' || r === 'RW') return 'FWD';
+  if (r === 'GK' || r === 'KL' || r === 'K' || r.includes('KALE')) return 'GK';
+  if (r === 'DEF' || r === 'SAV' || r === 'STP' || r === 'STOPER' || r === 'S'
+      || r === 'CB' || r === 'LB' || r === 'RB' || r.startsWith('D') || r.includes('BACK')) return 'DEF';
+  if (r === 'FWD' || r === 'FW' || r === 'HÜC' || r === 'HÜCUM' || r === 'SNT' || r === 'F'
+      || r === 'ST' || r === 'CF' || r === 'LW' || r === 'RW' || r.includes('FOR')) return 'FWD';
   return 'MID';
 }
 
-/** Squad size'ı ÖNCE maç.format kolonundan al (tek otorite), yoksa slot sayısından. */
+/** Squad size'ı ÖNCE maç.format kolonundan al (tek otorite), yoksa slot sayısından.
+ *  Sayı yedeği tüketici (MatchJoin) ile birebir: ≤5 → 5v5 (sıfır-regresyon). */
 export function inferSquadSize(slotCount: number, format?: string | null): SquadSize {
   const f = (format || '').toLowerCase().trim() as SquadSize;
   if (f && (SQUAD_SIZES as string[]).includes(f)) return f;
-  if (slotCount <= 2) return '2v2';
-  if (slotCount <= 3) return '3v3';
-  if (slotCount <= 4) return '4v4';
   if (slotCount <= 5) return '5v5';
   if (slotCount <= 6) return '6v6';
   if (slotCount <= 7) return '7v7';

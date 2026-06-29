@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText } from 'lucide-react';
+import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import {
   assignMatchRefereeAdmin,
@@ -39,6 +39,7 @@ const TABS = [
   { key: 'sonuc', label: 'Sonuç & Hakem', icon: Trophy },
   { key: 'odeme', label: 'Ödeme', icon: CreditCard },
   { key: 'bildirim', label: 'Bildirim', icon: Bell },
+  { key: 'sohbet', label: 'Sohbet', icon: MessageSquare },
   { key: 'audit', label: 'Kayıt', icon: ScrollText },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
@@ -587,6 +588,28 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                   ))}
                 </div>
                 <button type="button" disabled={busy} onClick={() => void handleNotify()} className="w-full py-2.5 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-black uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40">Kadroya Gönder</button>
+              </div>
+            )}
+
+            {/* ── SOHBET (read-only moderasyon) ── */}
+            {tab === 'sohbet' && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Maç Sohbeti (salt okunur)</p>
+                {!local.chatMessages || local.chatMessages.length === 0 ? (
+                  <p className="text-[11px] text-gray-600 py-6 text-center">Bu maçta henüz mesaj yok.</p>
+                ) : local.chatMessages.map((msg) => (
+                  <div key={msg.id} className="flex items-start gap-2 bg-black/30 border border-white/[0.06] rounded-xl p-2.5">
+                    <img src={msg.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || 'K')}`} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-white truncate">{msg.senderName}</span>
+                        <span className="text-[9px] text-gray-600 font-mono shrink-0">{msg.timestamp ? new Date(msg.timestamp).toLocaleString('tr-TR') : ''}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-300 break-words">{msg.text}</p>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-[10px] text-gray-600 leading-relaxed pt-1">Moderasyon için görüntülenir. İhtilaf durumunda yazışma delili burada.</p>
               </div>
             )}
 

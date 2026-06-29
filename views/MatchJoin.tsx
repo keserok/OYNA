@@ -14,6 +14,8 @@ import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests } from '../services/serviceRequestService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+// Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
+import { normalizeRole, inferSquadSize, applyCanonicalCoords } from '../shared/lobbyEnrichment';
 import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -50,15 +52,6 @@ const ChangeView = ({ center }: { center: [number, number] | null }) => {
   return null;
 };
 
-const normalizeRole = (role: string): string => {
-  const r = (role || '').toUpperCase();
-  if (r === 'GK' || r === 'KL' || r === 'KALECİ' || r === 'K') return 'GK';
-  if (r === 'DEF' || r === 'SAV' || r === 'STP' || r === 'STOPER' || r === 'S' || r === 'LB' || r === 'RB' || r === 'CB') return 'DEF';
-  if (r === 'MID' || r === 'ORT' || r === 'OS' || r === 'ORTA SAHA' || r === 'M' || r === 'CM' || r === 'CDM' || r === 'CAM') return 'MID';
-  if (r === 'FWD' || r === 'HÜC' || r === 'SNT' || r === 'HÜCUM' || r === 'F' || r === 'ST' || r === 'CF' || r === 'LW' || r === 'RW') return 'FWD';
-  return 'MID';
-};
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MatchJoinProps {
@@ -71,17 +64,6 @@ type SlotInviteStatus = 'NONE' | 'INVITED' | 'ACCEPTED';
 
 // ─── Formasyonlar: tek kanonik kaynak (utils/formations.ts) ────────────────
 const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number; y: number; role: string }[]>>;
-
-// Slot sayısından format tahmini
-const inferSquadSize = (slotCount: number): SquadSize => {
-  if (slotCount <= 5) return '5v5';
-  if (slotCount <= 6) return '6v6';
-  if (slotCount <= 7) return '7v7';
-  if (slotCount <= 8) return '8v8';
-  if (slotCount <= 9) return '9v9';
-  if (slotCount <= 10) return '10v10';
-  return '11v11';
-};
 
 const checkAndGetStatus = (slots: PositionSlot[], awaySlots?: PositionSlot[]): 'ACTIVE' | 'LIVE' => {
   const allHomeFilled = slots.filter(s => s.status === 'TAKEN').length === slots.length;
@@ -96,98 +78,7 @@ const checkAndGetStatus = (slots: PositionSlot[], awaySlots?: PositionSlot[]): '
   return (allHomeFilled && allHomePaid) ? 'LIVE' : 'ACTIVE';
 };
 
-// Studio ile %100 Uyumlu Kanonik Koordinat Atayıcı (Rol ve Yatay Simetri Odaklı Eşleme)
-const applyCanonicalCoords = (slots: PositionSlot[]): PositionSlot[] => {
-  if (!slots || slots.length === 0) return [];
-  const size = inferSquadSize(slots.length);
-  const formationsForSize = FORMATIONS[size];
-  if (!formationsForSize) return slots;
-  // İlk mevcut formasyonu al (en yaygın format)
-  const firstFormation = Object.values(formationsForSize)[0];
-  if (!firstFormation) return slots;
-
-  // Kanonik koordinatları rollerine göre grupla
-  const canonicalByRole: Record<string, { x: number; y: number; role: string }[]> = {
-    GK: [],
-    DEF: [],
-    MID: [],
-    FWD: []
-  };
-  firstFormation.forEach(coord => {
-    const norm = normalizeRole(coord.role);
-    if (canonicalByRole[norm]) {
-      canonicalByRole[norm].push(coord);
-    }
-  });
-
-  // Her rol grubunu kendi içinde X eksenine göre (soldan sağa) sırala
-  Object.keys(canonicalByRole).forEach(key => {
-    canonicalByRole[key].sort((a, b) => a.x - b.x);
-  });
-
-  // Gelen slotları rollerine göre grupla
-  const slotsByRole: Record<string, PositionSlot[]> = {
-    GK: [],
-    DEF: [],
-    MID: [],
-    FWD: []
-  };
-  slots.forEach(slot => {
-    const norm = normalizeRole(slot.role);
-    if (slotsByRole[norm]) {
-      slotsByRole[norm].push(slot);
-    }
-  });
-
-  // Gelen slotları kendi içlerinde X koordinatlarına (varsa) göre sırala ki eşleşme yatayda tutarlı olsun
-  Object.keys(slotsByRole).forEach(key => {
-    slotsByRole[key].sort((a, b) => (a.x || 0) - (b.x || 0));
-  });
-
-  const result: PositionSlot[] = [];
-  const usedCanonicalKeys = new Set<string>();
-
-  // İlk Geçiş: Slotları kendi rol grubundaki kanonik koordinatlarla eşle
-  Object.keys(slotsByRole).forEach(role => {
-    const groupSlots = slotsByRole[role];
-    const groupCoords = canonicalByRole[role];
-
-    groupSlots.forEach((slot, index) => {
-      const coord = groupCoords[index];
-      if (coord) {
-        result.push({
-          ...slot,
-          role: slot.role || coord.role,
-          x: coord.x,
-          y: coord.y
-        });
-        usedCanonicalKeys.add(`${coord.x},${coord.y}`);
-      } else {
-        // Rol grubunda kanonik koordinat kalmadıysa geçici olarak işaretle
-        result.push({ ...slot, x: -1, y: -1 });
-      }
-    });
-  });
-
-  // İkinci Geçiş: Eşleşmeyen slotları (x=-1, y=-1) boşta kalan kanonik koordinatlara dağıt
-  const unusedCoords = firstFormation.filter(c => !usedCanonicalKeys.has(`${c.x},${c.y}`));
-  let unusedIdx = 0;
-
-  const finalResult = result.map(slot => {
-    if (slot.x === -1 && slot.y === -1) {
-      const coord = unusedCoords[unusedIdx++];
-      if (coord) {
-        return { ...slot, role: slot.role || coord.role, x: coord.x, y: coord.y };
-      } else {
-        const original = slots.find(s => s.id === slot.id);
-        return { ...slot, role: slot.role || original?.role || 'MID', x: original?.x || 50, y: original?.y || 50 };
-      }
-    }
-    return slot;
-  });
-
-  return finalResult;
-};
+// Kanonik koordinat atayıcı artık shared/lobbyEnrichment'tan gelir (admin ile tek kaynak).
 
 // ─── Difficulty Badge Renk Sistemi ─────────────────────────────────────────
 
