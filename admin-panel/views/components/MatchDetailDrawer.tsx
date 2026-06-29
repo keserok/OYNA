@@ -419,6 +419,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     awaySlots={local.awaySlots}
                     users={adminUsers}
                     busy={busy}
+                    format={local.format}
+                    captainId={local.creatorId}
                     onAssign={(slotId, userId, isAway) => handleAssign(slotId, userId, isAway)}
                     onKick={(slotId, isAway) => handleKick(slotId, isAway)}
                   />
