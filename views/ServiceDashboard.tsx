@@ -1637,7 +1637,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className={`absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] rounded-full blur-[120px] animate-pulse-slow delay-700 ${isRef ? 'bg-orange-900/10' : 'bg-blue-900/10'}`}></div>
       </div>
 
-      <header className="p-6 flex justify-between items-center bg-[#0A0E14]/80 backdrop-blur-md sticky top-0 z-20 border-b border-white/5">
+      <header className="p-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
          <div className="flex items-center gap-3">
              <button onClick={onBack} className="p-2 bg-[#161B22] rounded-full text-white hover:bg-gray-800 transition-colors border border-white/5">
                  <ArrowLeft size={20} />
