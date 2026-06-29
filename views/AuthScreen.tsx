@@ -307,6 +307,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
       showSafeBottom={false}
       onBack={handleHeaderBack}
       className="relative z-10"
+      transparentHeader
     >
       {/* ─── ANIMATED BACKGROUND ─── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
