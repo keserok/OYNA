@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Search, UserCheck, Shuffle, Star } from 'lucide-react';
+import { X, Search, UserCheck, Shuffle, Star, ArrowLeftRight } from 'lucide-react';
 import type { PositionSlot, AdminUser } from '../../../types';
 import { enrichSlots, collectAssignedIds, normalizeRole, avatarFor } from '../../../shared/lobbyEnrichment';
 import { MatchPitch } from '../../../shared/MatchPitch';
@@ -79,14 +79,16 @@ export interface MatchLobbyPitchProps {
   captainId?: string | null;
   onAssign: (slotId: string, userId: string, isAway: boolean) => void | Promise<void>;
   onKick: (slotId: string, isAway: boolean) => void | Promise<void>;
+  onSwap?: (slotA: string, slotB: string, isAway: boolean) => void | Promise<void>;
 }
 
 /** Admin görsel maç lobisi — paylaşılan saha + slot aksiyon paneli + oyuncu seçici. */
-export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlots, users, busy, format, captainId, onAssign, onKick }) => {
+export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlots, users, busy, format, captainId, onAssign, onKick, onSwap }) => {
   const hasAway = !!(awaySlots && awaySlots.length > 0);
   const [side, setSide] = useState<'home' | 'away'>('home');
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
+  const [swapSource, setSwapSource] = useState<string | null>(null);
 
   const enrichedHome = useMemo(() => enrichSlots(slots, users, format), [slots, users, format]);
   const enrichedAway = useMemo(() => enrichSlots(awaySlots || [], users, format), [awaySlots, users, format]);
@@ -101,6 +103,13 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
   const paidCount = activeSlots.filter((s) => s.status === 'TAKEN' && s.player?.paymentStatus === 'PAID').length;
 
   const handleSlotClick = (slot: PositionSlot) => {
+    // Taşı modu: kaynak seçiliyken hedef slota tıklayınca yer değiştir.
+    if (swapSource) {
+      if (swapSource !== slot.id && onSwap) void onSwap(swapSource, slot.id, isAway);
+      setSwapSource(null);
+      setActiveSlotId(null);
+      return;
+    }
     setReplaceMode(false);
     setActiveSlotId((prev) => (prev === slot.id ? null : slot.id));
   };
@@ -129,7 +138,7 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
               <button
                 key={s}
                 type="button"
-                onClick={() => { setSide(s); setActiveSlotId(null); }}
+                onClick={() => { setSide(s); setActiveSlotId(null); setSwapSource(null); }}
                 className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-colors ${side === s ? 'bg-[#39FF14]/20 text-[#39FF14]' : 'text-gray-500 hover:text-white'}`}
               >
                 {s === 'home' ? 'Ev Sahibi' : 'Deplasman'}
@@ -145,7 +154,14 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
         </div>
       </div>
 
-      <MatchPitch slots={activeSlots} activeSlotId={activeSlotId} onSlotClick={handleSlotClick} showPayment captainId={captainId} />
+      {swapSource && (
+        <div className="flex items-center justify-between gap-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl px-3 py-2">
+          <p className="text-[11px] text-cyan-300 font-bold flex items-center gap-1.5"><ArrowLeftRight size={12} /> Taşınıyor — hedef slota tıkla (yer değiştirir)</p>
+          <button type="button" onClick={() => setSwapSource(null)} className="text-[10px] text-gray-400 hover:text-white">Vazgeç</button>
+        </div>
+      )}
+
+      <MatchPitch slots={activeSlots} activeSlotId={swapSource || activeSlotId} onSlotClick={handleSlotClick} showPayment captainId={captainId} />
 
       {/* Slot aksiyon paneli */}
       {activeSlot && (
@@ -172,12 +188,17 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
           </div>
 
           {activeSlot.status === 'TAKEN' && activeSlot.player && !replaceMode ? (
-            <div className="flex gap-2">
-              <button type="button" disabled={busy} onClick={() => setReplaceMode(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-cyan-500/30 text-cyan-300 text-[11px] font-bold hover:bg-cyan-500/10 disabled:opacity-40">
+            <div className="flex gap-1.5">
+              <button type="button" disabled={busy} onClick={() => setReplaceMode(true)} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border border-cyan-500/30 text-cyan-300 text-[11px] font-bold hover:bg-cyan-500/10 disabled:opacity-40">
                 <Shuffle size={12} /> Değiştir
               </button>
-              <button type="button" disabled={busy} onClick={() => void doKick()} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-red-500/30 text-red-400 text-[11px] font-bold hover:bg-red-500/10 disabled:opacity-40">
-                <X size={12} /> Slottan Çıkar
+              {onSwap && (
+                <button type="button" disabled={busy} onClick={() => { setSwapSource(activeSlot.id); setActiveSlotId(null); }} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border border-purple-500/30 text-purple-300 text-[11px] font-bold hover:bg-purple-500/10 disabled:opacity-40">
+                  <ArrowLeftRight size={12} /> Taşı
+                </button>
+              )}
+              <button type="button" disabled={busy} onClick={() => void doKick()} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border border-red-500/30 text-red-400 text-[11px] font-bold hover:bg-red-500/10 disabled:opacity-40">
+                <X size={12} /> Çıkar
               </button>
             </div>
           ) : (

@@ -6,6 +6,7 @@ import {
   assignMatchRefereeAdmin,
   assignMatchGoalkeeperAdmin,
   assignToSlotAdmin,
+  swapSlotsAdmin,
   cancelMatchAdmin,
   kickFromSlotAdmin,
   setMatchStatusAdmin,
@@ -156,7 +157,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
         const next = slots.map((s) => s.id === slotId ? {
           ...s,
           status: 'TAKEN' as const,
-          player: { id: user.id, name: user.name, avatar: user.avatar, rating: user.rating, position: s.role, x: s.x, y: s.y },
+          userId: user.id,
+          player: { id: user.id, name: user.name, avatar: user.avatar, rating: user.rating, position: s.role, x: s.x, y: s.y, paymentStatus: 'PAID' as const },
         } : s);
         const patched = isAway ? { ...local, awaySlots: next } : { ...local, slots: next };
         await updateMatch(patched);
@@ -166,6 +168,21 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       } else {
         toastError(msg);
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSwap = async (slotA: string, slotB: string, isAway: boolean) => {
+    if (!local) return;
+    setBusy(true);
+    try {
+      const updated = await swapSlotsAdmin(local.id, slotA, slotB, isAway);
+      refreshLocalSlots(updated, isAway);
+      success('Oyuncular yer değiştirdi');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
     } finally {
       setBusy(false);
     }
@@ -423,7 +440,23 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     captainId={local.creatorId}
                     onAssign={(slotId, userId, isAway) => handleAssign(slotId, userId, isAway)}
                     onKick={(slotId, isAway) => handleKick(slotId, isAway)}
+                    onSwap={(a, b, isAway) => handleSwap(a, b, isAway)}
                   />
+                )}
+
+                {/* Yedekler (reservePlayers) — varsa göster */}
+                {local.reservePlayers && local.reservePlayers.length > 0 && (
+                  <div className="p-3 rounded-xl border border-white/10 bg-black/20 space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Yedekler ({local.reservePlayers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {local.reservePlayers.map((p) => (
+                        <div key={p.id} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full pl-1 pr-2.5 py-1">
+                          <img src={p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || 'Oyuncu')}`} alt="" className="w-5 h-5 rounded-full object-cover" />
+                          <span className="text-[10px] font-bold text-white truncate max-w-[90px]">{p.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </>
             )}
