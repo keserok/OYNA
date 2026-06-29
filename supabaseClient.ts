@@ -1,10 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// ─── Üretim yedeği (env enjeksiyonu kaçarsa "Failed to fetch"i kökten önler) ───
+// Sorun: env değişkeni herhangi bir build yolunda (ör. Vercel'de admin derlemesinde)
+// gömülmezse, eski kod sessizce `http://localhost:54321`'e düşüyordu → telefondaki
+// panel localhost'a istek atıp "Failed to fetch" veriyordu (mixed-content + bağlantı
+// reddi). Çözüm: yedek artık localhost değil, GERÇEK üretim backend'i.
+// Bu anon (publishable) anahtar herkese açıktır ve RLS ile korunur → bundle'a gömmek
+// güvenlidir (zaten son kullanıcının tarayıcısına iniyor). SERVICE_ROLE anahtarı ASLA
+// burada olmamalıdır. Env değişkenleri hâlâ önceliklidir (yerel geliştirme/staging için).
+const PROD_SUPABASE_URL = 'https://iikvzgyccvgcybzdfwlv.supabase.co';
+const PROD_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa3Z6Z3ljY3ZnY3liemRmd2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NjM0NDAsImV4cCI6MjA5NTAzOTQ0MH0.T7P_7lYp07zcXrioKkMqZENoYoi-D9aPmjhNAfihMvM';
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('[Supabase] Credentials missing — running in offline/mock mode');
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || PROD_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || PROD_SUPABASE_ANON_KEY;
+
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  // Env eksik ama üretim yedeği devrede — panel yine de gerçek backend'e bağlanır.
+  console.warn('[Supabase] VITE_SUPABASE_* env yok — gömülü üretim yedeği kullanılıyor.');
 }
 
 const REMEMBER_ME_KEY = 'oyna.auth.rememberMe';
@@ -69,8 +82,8 @@ const hybridAuthStorage = {
 };
 
 export const supabase = createClient(
-  SUPABASE_URL ?? 'http://localhost:54321',
-  SUPABASE_ANON_KEY ?? 'offline-placeholder-key',
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
   {
     auth: {
       detectSessionInUrl: true,

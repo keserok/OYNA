@@ -4,9 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/admin", "destination": "/admin-panel/admin.html" },
-    { "source": "/admin.html", "destination": "/admin-panel/admin.html" },
-    { "source": "/admin/(.*)", "destination": "/admin-panel/admin.html" },
+    { "source": "/admin", "destination": "/admin-panel/admin" },
+    { "source": "/admin.html", "destination": "/admin-panel/admin" },
+    { "source": "/admin/(.*)", "destination": "/admin-panel/admin" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "source": "/admin-panel/admin.html",
+      "source": "/admin-panel/admin",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
       ]
