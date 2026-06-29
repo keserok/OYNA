@@ -88,7 +88,6 @@ export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRou
   { label: 'Onay Bekleyenler', route: 'PENDING_VERIFICATIONS', category: 'Operasyon' },
   { label: 'Kimlik Doğrulama', route: 'PROVIDER_IDENTITIES', category: 'Operasyon' },
   { label: 'Tesis Onayları', route: 'MODERATION', category: 'Operasyon' },
-  { label: 'SaaS Hesapları', route: 'OWNER_ACCOUNTS', category: 'Operasyon' },
   { label: 'Maçlar', route: 'MATCHES', category: 'Operasyon' },
   { label: 'Topluluklar', route: 'TOPLULUKLAR', category: 'Topluluk' },
   { label: 'Takımlar', route: 'TAKIMLAR', category: 'Topluluk' },

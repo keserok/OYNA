@@ -1974,7 +1974,11 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     rating: user.rating,
   };
   if (user.phone) payload.phone = user.phone;
-  if (user.playerCard) payload.player_card = user.playerCard;
+  if (user.playerCard) {
+    payload.player_card = user.playerCard;
+    if (user.playerCard.tier) payload.card_tier = user.playerCard.tier;
+  }
+  if (user.cardActive !== undefined) payload.card_active = user.cardActive;
   if (user.matchCount !== undefined || user.rating !== undefined) {
     payload.stats = { matchesPlayed: user.matchCount ?? 0, rating: user.rating ?? 5 };
   }

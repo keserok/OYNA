@@ -41,8 +41,8 @@ export interface AdminUser {
   friends?: string[]; // Onaylanmış arkadaşların User ID'leri
   isLookingForTeam?: boolean; // Transfer Merkezi Görünürlüğü
   newMatchBadge?: boolean; // Yeni maç eklendi bildirim rozeti
-  cardActive?: boolean; // Premium oyuncu kartı admin tarafından aktif mi
-  cardTier?: 'bronze' | 'silver' | 'gold' | null; // Aktif kartın tier'ı
+  cardActive?: boolean; // Premium oyuncu kartı admin tarafından aktif mi (card_active)
+  cardTier?: 'bronze' | 'silver' | 'gold' | null; // Aktif kartın tier'ı (card_tier)
 }
 
 export interface AdminLog {
