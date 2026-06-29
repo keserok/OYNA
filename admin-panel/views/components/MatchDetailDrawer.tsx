@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText } from 'lucide-react';
+import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import {
   assignMatchRefereeAdmin,
   assignMatchGoalkeeperAdmin,
   assignToSlotAdmin,
+  swapSlotsAdmin,
   cancelMatchAdmin,
   kickFromSlotAdmin,
   setMatchStatusAdmin,
@@ -38,6 +39,7 @@ const TABS = [
   { key: 'sonuc', label: 'Sonuç & Hakem', icon: Trophy },
   { key: 'odeme', label: 'Ödeme', icon: CreditCard },
   { key: 'bildirim', label: 'Bildirim', icon: Bell },
+  { key: 'sohbet', label: 'Sohbet', icon: MessageSquare },
   { key: 'audit', label: 'Kayıt', icon: ScrollText },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
@@ -156,7 +158,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
         const next = slots.map((s) => s.id === slotId ? {
           ...s,
           status: 'TAKEN' as const,
-          player: { id: user.id, name: user.name, avatar: user.avatar, rating: user.rating, position: s.role, x: s.x, y: s.y },
+          userId: user.id,
+          player: { id: user.id, name: user.name, avatar: user.avatar, rating: user.rating, position: s.role, x: s.x, y: s.y, paymentStatus: 'PAID' as const },
         } : s);
         const patched = isAway ? { ...local, awaySlots: next } : { ...local, slots: next };
         await updateMatch(patched);
@@ -166,6 +169,21 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       } else {
         toastError(msg);
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSwap = async (slotA: string, slotB: string, isAway: boolean) => {
+    if (!local) return;
+    setBusy(true);
+    try {
+      const updated = await swapSlotsAdmin(local.id, slotA, slotB, isAway);
+      refreshLocalSlots(updated, isAway);
+      success('Oyuncular yer değiştirdi');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
     } finally {
       setBusy(false);
     }
@@ -419,9 +437,27 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     awaySlots={local.awaySlots}
                     users={adminUsers}
                     busy={busy}
+                    format={local.format}
+                    captainId={local.creatorId}
                     onAssign={(slotId, userId, isAway) => handleAssign(slotId, userId, isAway)}
                     onKick={(slotId, isAway) => handleKick(slotId, isAway)}
+                    onSwap={(a, b, isAway) => handleSwap(a, b, isAway)}
                   />
+                )}
+
+                {/* Yedekler (reservePlayers) — varsa göster */}
+                {local.reservePlayers && local.reservePlayers.length > 0 && (
+                  <div className="p-3 rounded-xl border border-white/10 bg-black/20 space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Yedekler ({local.reservePlayers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {local.reservePlayers.map((p) => (
+                        <div key={p.id} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full pl-1 pr-2.5 py-1">
+                          <img src={p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || 'Oyuncu')}`} alt="" className="w-5 h-5 rounded-full object-cover" />
+                          <span className="text-[10px] font-bold text-white truncate max-w-[90px]">{p.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </>
             )}
@@ -552,6 +588,28 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                   ))}
                 </div>
                 <button type="button" disabled={busy} onClick={() => void handleNotify()} className="w-full py-2.5 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-black uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40">Kadroya Gönder</button>
+              </div>
+            )}
+
+            {/* ── SOHBET (read-only moderasyon) ── */}
+            {tab === 'sohbet' && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Maç Sohbeti (salt okunur)</p>
+                {!local.chatMessages || local.chatMessages.length === 0 ? (
+                  <p className="text-[11px] text-gray-600 py-6 text-center">Bu maçta henüz mesaj yok.</p>
+                ) : local.chatMessages.map((msg) => (
+                  <div key={msg.id} className="flex items-start gap-2 bg-black/30 border border-white/[0.06] rounded-xl p-2.5">
+                    <img src={msg.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || 'K')}`} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-white truncate">{msg.senderName}</span>
+                        <span className="text-[9px] text-gray-600 font-mono shrink-0">{msg.timestamp ? new Date(msg.timestamp).toLocaleString('tr-TR') : ''}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-300 break-words">{msg.text}</p>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-[10px] text-gray-600 leading-relaxed pt-1">Moderasyon için görüntülenir. İhtilaf durumunda yazışma delili burada.</p>
               </div>
             )}
 

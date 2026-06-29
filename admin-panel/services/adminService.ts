@@ -1619,6 +1619,17 @@ export async function assignToSlotAdmin(matchId: string, slotId: string, userId:
   return (data || []) as PositionSlot[];
 }
 
+export async function swapSlotsAdmin(matchId: string, slotA: string, slotB: string, isAway = false): Promise<PositionSlot[]> {
+  const { data, error } = await supabase.rpc('admin_swap_slots', {
+    p_match_id: matchId,
+    p_slot_a: slotA,
+    p_slot_b: slotB,
+    p_is_away: isAway,
+  });
+  if (error) throw new Error(error.message);
+  return (data || []) as PositionSlot[];
+}
+
 export async function assignMatchRefereeAdmin(matchId: string, refereeId: string | null): Promise<void> {
   const { error } = await supabase.rpc('admin_assign_match_referee', {
     p_match_id: matchId,
