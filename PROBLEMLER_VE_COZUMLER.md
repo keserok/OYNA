@@ -88,6 +88,20 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
 - **Onay:** ✅ Onaylandı (2026-06-30) — "Diğer Maçlar kalsın" tercihiyle.
 - **Doğrulama:** `tsc --noEmit` temiz.
 
+### [OYUNCU-02] Top Oyna maç kartlarının mobilde iç içe geçmesi
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-06-30
+- **Problem (kullanıcı anlatımı):** Top Oyna'daki maç kartları mobilde iç içe geçiyor; mobil uyumlu olmalı.
+- **İnceleme bulguları:** `MatchCard` sabit yükseklikli (`h-[400px]`, `overflow-hidden`) bir posterdi ve tüm bloklar **mutlak konumlu**du (eksik pozisyonlar `top-1/2` ortada, alt blok `bottom-0`). Mobilde uzun tesis adı/rozetler büyüyünce alt blok yukarı taşıp ortadaki "ARANIYOR" çipleriyle **çakışıyordu**; sabit yükseklik içeriği kırpıyordu.
+- **Uygulanan çözüm (`views/MatchDiscovery.tsx` → `MatchCard`):**
+  1. `h-[400px]` → `min-h-[400px]` + kök `flex flex-col`.
+  2. İçerik mutlak konumdan **esnek dikey akışa** alındı: üst bar → eksik pozisyonlar → `flex-1` esnek boşluk → alt blok, tek kolonda sırayla.
+  3. Responsive tipografi: başlık `text-xl sm:text-2xl` + `break-words` + `leading-tight`; alt blok `min-w-0` ile düzgün sarıyor; üst bar `flex-wrap`.
+  4. Poster görseli, neon gradyanlar, çipler, renkler ve animasyonlar **aynen korundu** (yalnız yerleşim akışı değişti).
+- **Etkilenen katmanlar:** Frontend (tek bileşen). Veritabanı/Admin gerekmedi.
+- **Onay:** ✅ Onaylandı (2026-06-30) — önce/sonra görsel önizleme paylaşıldı.
+- **Doğrulama:** `tsc --noEmit` temiz; 390px genişlikte önce/sonra önizleme ile doğrulandı.
+
 ---
 
 ## 🧤 Kaleci (Goalkeeper) Problemleri

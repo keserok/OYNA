@@ -1195,7 +1195,7 @@ const MatchCard: React.FC<{
         if (isLocked) return; // Kilitliyse tıklanamaz
         onSelect(match);
       }}
-      className="relative w-full h-[400px] rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
+      className="relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
     >
       {/* Arka Plan Posteri */}
       <img src={match.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.location} referrerPolicy="no-referrer" />
@@ -1208,8 +1208,11 @@ const MatchCard: React.FC<{
       {/* Karizma Sınır Çizgisi (İç Glow) */}
       <div className="absolute inset-0 border-[1.5px] rounded-[32px] pointer-events-none transition-all duration-500" style={{ borderColor: `${glowColor}30`, boxShadow: `inset 0 0 30px ${glowColor}15` }} />
  
+      {/* ── İÇERİK (ESNEK DİKEY AKIŞ — mobilde bloklar üst üste binmez) ── */}
+      <div className="relative z-10 flex flex-1 flex-col p-5 sm:p-6 gap-3">
+
       {/* ── ÜST KISIM (SAAT & GERİ SAYIM) ── */}
-      <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-10">
+      <div className="flex justify-between items-start gap-2 flex-wrap">
         {/* Dijital Saat (Sol Üst) */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 shadow-lg">
           <Clock size={12} className="text-[#39FF14]" />
@@ -1227,7 +1230,7 @@ const MatchCard: React.FC<{
 
       {/* ── ACİLİYET ROZETİ ── */}
       {urgencyType && (
-        <div className="absolute top-[56px] left-0 right-0 flex justify-center z-10">
+        <div className="flex justify-center">
           <div className="px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-[9px] font-black tracking-[0.18em] uppercase border"
             style={{
               borderColor: urgencyType === 'son1kisi' ? '#ef4444' : '#FFFF00',
@@ -1239,8 +1242,8 @@ const MatchCard: React.FC<{
         </div>
       )}
 
-      {/* ── ORTA KISIM (EKSİK POZİSYONLAR - Net ve Şık) ── */}
-      <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2.5 z-10">
+      {/* ── EKSİK POZİSYONLAR (akışta — Net ve Şık) ── */}
+      <div className="flex flex-col gap-2.5 items-start">
         {match.missingPositions?.map((pos: any, i: number) => {
           const isUrgent = pos.role === myRole;
           const localizedRole = pos.role;
@@ -1264,10 +1267,13 @@ const MatchCard: React.FC<{
         })}
       </div>
  
+      {/* ── ESNEK BOŞLUK: alt bloğu aşağı iter, çakışmayı önler ── */}
+      <div className="flex-1 min-h-[12px]" />
+
       {/* ── ALT KISIM (TESİS, TARİH, SAAT & FİYAT + KATIL AKSİYONU) ── */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 z-20 flex flex-col justify-end">
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex-1">
+      <div className="flex flex-col justify-end">
+        <div className="flex items-end justify-between gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
             {/* ── KONTENJAN GÖSTERGESİ ── */}
             {totalSlots > 0 && (
               <div className="flex items-center gap-2 mb-2">
@@ -1286,7 +1292,7 @@ const MatchCard: React.FC<{
             )}
 
             {/* Tesis ve Lokasyon İsmi Devasa (Üst Karakter) */}
-            <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2">
+            <h3 className="text-xl sm:text-2xl font-black text-white italic uppercase leading-tight tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2 break-words">
               {match.location.toUpperCase()}
             </h3>
 
@@ -1347,6 +1353,7 @@ const MatchCard: React.FC<{
           </div>
         </div>
       </div>
+      </div>{/* /İÇERİK (esnek dikey akış) */}
 
       {/* ── PREMIUM DİNAMİK KİLİT & BLUR KAPLAMASI ── */}
       {isLocked && (
