@@ -120,7 +120,6 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   const isRef = role === UserRole.REFEREE;
 
   const accentColor = isRef ? '#ef4444' : isGK ? '#22c55e' : '#f59e0b';
-  const badgeLabel = isRef ? 'HAKEM' : isGK ? 'KALECİ' : 'OYUNCU';
 
   const { navigateTo, setSelectedMatch, clearUnreadNotifications, incrementUnreadNotifications } = useAppStore();
 
@@ -263,13 +262,6 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                   {unread}
                 </motion.span>
               )}
-            </div>
-            <div
-              className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest"
-              style={{ background: accentColor + '15', color: accentColor }}
-            >
-              <div className="w-1 h-1 rounded-full animate-pulse" style={{ background: accentColor }} />
-              {badgeLabel} BİLDİRİMLERİ
             </div>
           </div>
 

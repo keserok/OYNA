@@ -163,10 +163,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const [error, setError] = useState<string | null>(null);
 
     const uid = auth.currentUser?.uid;
+    // Misafir ("Önce Maçlara Göz At" ile giren, oturumsuz) kullanıcı.
+    const isGuest = !uid;
 
     const loadProfile = async () => {
         if (!uid) {
-            setError('Oturum bulunamadı.');
+            // Misafir: oturum yok. Hata göstermek yerine profili boş/placeholder
+            // modda aç ki kullanıcı boş halleri görebilsin (üstte kaydolma şeridi).
+            setProfile(null);
+            setMatchHistory([]);
+            setError(null);
             setLoading(false);
             return;
         }
@@ -281,6 +287,36 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     <ErrorState message={error} onRetry={loadProfile} />
                 ) : (
                 <>
+                {/* ═══ MİSAFİR ŞERİDİ — oturumsuz kullanıcıya kaydolma çağrısı ═══ */}
+                {isGuest && (
+                    <div className="bg-[#FFFF00]/[0.06] border border-[#FFFF00]/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FFFF00]/10 blur-[40px] rounded-full pointer-events-none" />
+                        <div className="relative z-10 flex flex-col gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-[#FFFF00] animate-pulse" />
+                                <p className="text-[11px] font-black uppercase tracking-widest text-[#FFFF00]">Misafir Modundasın</p>
+                            </div>
+                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                                Profilini oluşturmak, maçlara katılmak ve istatistiklerini biriktirmek için giriş yap.
+                            </p>
+                            <div className="flex gap-2.5">
+                                <button
+                                    onClick={() => onNavigate && onNavigate('AUTH')}
+                                    className="flex-1 h-11 rounded-2xl bg-[#FFFF00] text-black font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)] hover:bg-yellow-300"
+                                >
+                                    Giriş Yap
+                                </button>
+                                <button
+                                    onClick={() => onNavigate && onNavigate('AUTH')}
+                                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
+                                >
+                                    Kaydol
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Kimlik — kart admin tarafından aktifse premium FIFA kartı, değilse sade profil */}
                 {profile?.cardActive ? (
                 <div className="flex flex-col items-center gap-6">

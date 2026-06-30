@@ -148,38 +148,47 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     return activeMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price
       const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
+      // Difficulty DB'de Türkçe zorluk (Kolay/Orta/Zor) ya da mantalite
+      // (Ciddi/Taktiksel/Rahat) olarak gelebilir. Tek bir mantalite uzayına
+      // normalize et ki hem kartta görünen rozet hem de MANTALİTE filtresi
+      // tutarlı ve doğru çalışsın.
       const diffStr = (m.difficulty || '').toLowerCase().trim();
-      let matchMentality = '';
-      let mentalityColor = '';
-
-      if (diffStr === 'ciddi') {
-        matchMentality = 'CİDDİ';
-        mentalityColor = '#FFFF00';
-      } else if (diffStr === 'taktiksel') {
-        matchMentality = 'TAKTİKSEL';
-        mentalityColor = '#3b82f6';
-      } else if (diffStr === 'rahat') {
-        matchMentality = 'RAHAT';
-        mentalityColor = '#10b981';
+      let normalizedMentality: 'Ciddi' | 'Taktiksel' | 'Rahat';
+      if (diffStr.includes('ciddi') || diffStr.includes('zor') || diffStr === 'hard') {
+        normalizedMentality = 'Ciddi';
+      } else if (diffStr.includes('taktik') || diffStr.includes('orta') || diffStr === 'medium') {
+        normalizedMentality = 'Taktiksel';
+      } else if (diffStr.includes('rahat') || diffStr.includes('kolay') || diffStr === 'easy') {
+        normalizedMentality = 'Rahat';
       } else {
-        const option = MENTALITY_OPTIONS[i % 3];
-        matchMentality = option.title;
-        mentalityColor = option.color;
+        normalizedMentality = 'Taktiksel';
       }
+      const MENTALITY_DISPLAY: Record<'Ciddi' | 'Taktiksel' | 'Rahat', { title: string; color: string }> = {
+        Ciddi: { title: 'CİDDİ', color: '#FFFF00' },
+        Taktiksel: { title: 'TAKTİKSEL', color: '#3b82f6' },
+        Rahat: { title: 'RAHAT', color: '#10b981' },
+      };
+      const matchMentality = MENTALITY_DISPLAY[normalizedMentality].title;
+      const mentalityColor = MENTALITY_DISPLAY[normalizedMentality].color;
 
       const format = m.format || '7v7';
       const duration = m.duration || '90 Dakika';
       const gender = m.gender || 'Karma';
       const ageGroup = m.ageGroup || 'Tümü';
       
-      const mappedMissingPositions = (m.missingPositions || []).map((pos: any) => {
-        let role = pos.role;
-        if (['GK', 'KALECİ'].includes(role)) role = 'KALECİ';
-        else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK'].includes(role)) role = 'SAVUNMA';
-        else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(role)) role = 'ORTA SAHA';
-        else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(role)) role = 'HÜCUM';
-        return { ...pos, role };
-      });
+      const mappedMissingPositions = (m.missingPositions || [])
+        .filter((pos: any) => Number(pos.count) > 0)
+        .map((pos: any) => {
+          const raw = String(pos.role || '').toUpperCase();
+          let role = pos.role;
+          if (['GK', 'KALECİ', 'KL'].includes(raw)) role = 'KALECİ';
+          else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK', 'SAV'].includes(raw)) role = 'SAVUNMA';
+          else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(raw)) role = 'ORTA SAHA';
+          else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(raw)) role = 'HÜCUM';
+          else if (['PLAYER', 'OYUNCU', 'ANY', 'FIELD'].includes(raw)) role = 'OYUNCU';
+          else if (['REF', 'REFEREE', 'HAKEM'].includes(raw)) role = 'HAKEM';
+          return { ...pos, role };
+        });
 
       return {
         ...m,
@@ -187,7 +196,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         time: m.time || '22:00 - 23:00',
         missingPositions: mappedMissingPositions,
         price,
-        difficulty: (m.difficulty || (matchMentality === 'CİDDİ' ? 'Ciddi' : matchMentality === 'TAKTİKSEL' ? 'Taktiksel' : 'Rahat')) as 'Ciddi' | 'Taktiksel' | 'Rahat',
+        difficulty: normalizedMentality,
         matchMentality,
         mentalityColor,
         format,
@@ -237,7 +246,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     if (dna.role) {
       const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
       const targetRole = roleMap[dna.role];
-      const hasMissingSlot = match.missingPositions?.some((p: any) => p.role === targetRole && p.count > 0);
+      const isOutfield = dna.role !== 'KL';
+      const hasMissingSlot = match.missingPositions?.some((p: any) => {
+        if (Number(p.count) <= 0) return false;
+        if (p.role === targetRole) return true;
+        // Generic 'OYUNCU' (PLAYER) slotu herhangi bir saha oyuncusu pozisyonunu karşılar.
+        if (isOutfield && p.role === 'OYUNCU') return true;
+        return false;
+      });
       if (!hasMissingSlot) {
         return false;
       }
@@ -1179,7 +1195,7 @@ const MatchCard: React.FC<{
         if (isLocked) return; // Kilitliyse tıklanamaz
         onSelect(match);
       }}
-      className="relative w-full h-[400px] rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
+      className="relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
     >
       {/* Arka Plan Posteri */}
       <img src={match.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.location} referrerPolicy="no-referrer" />
@@ -1192,8 +1208,11 @@ const MatchCard: React.FC<{
       {/* Karizma Sınır Çizgisi (İç Glow) */}
       <div className="absolute inset-0 border-[1.5px] rounded-[32px] pointer-events-none transition-all duration-500" style={{ borderColor: `${glowColor}30`, boxShadow: `inset 0 0 30px ${glowColor}15` }} />
  
+      {/* ── İÇERİK (ESNEK DİKEY AKIŞ — mobilde bloklar üst üste binmez) ── */}
+      <div className="relative z-10 flex flex-1 flex-col p-5 sm:p-6 gap-3">
+
       {/* ── ÜST KISIM (SAAT & GERİ SAYIM) ── */}
-      <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-10">
+      <div className="flex justify-between items-start gap-2 flex-wrap">
         {/* Dijital Saat (Sol Üst) */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 shadow-lg">
           <Clock size={12} className="text-[#39FF14]" />
@@ -1211,7 +1230,7 @@ const MatchCard: React.FC<{
 
       {/* ── ACİLİYET ROZETİ ── */}
       {urgencyType && (
-        <div className="absolute top-[56px] left-0 right-0 flex justify-center z-10">
+        <div className="flex justify-center">
           <div className="px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-[9px] font-black tracking-[0.18em] uppercase border"
             style={{
               borderColor: urgencyType === 'son1kisi' ? '#ef4444' : '#FFFF00',
@@ -1223,8 +1242,8 @@ const MatchCard: React.FC<{
         </div>
       )}
 
-      {/* ── ORTA KISIM (EKSİK POZİSYONLAR - Net ve Şık) ── */}
-      <div className="absolute top-1/2 left-5 -translate-y-1/2 flex flex-col gap-2.5 z-10">
+      {/* ── EKSİK POZİSYONLAR (akışta — Net ve Şık) ── */}
+      <div className="flex flex-col gap-2.5 items-start">
         {match.missingPositions?.map((pos: any, i: number) => {
           const isUrgent = pos.role === myRole;
           const localizedRole = pos.role;
@@ -1248,10 +1267,13 @@ const MatchCard: React.FC<{
         })}
       </div>
  
+      {/* ── ESNEK BOŞLUK: alt bloğu aşağı iter, çakışmayı önler ── */}
+      <div className="flex-1 min-h-[12px]" />
+
       {/* ── ALT KISIM (TESİS, TARİH, SAAT & FİYAT + KATIL AKSİYONU) ── */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 z-20 flex flex-col justify-end">
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex-1">
+      <div className="flex flex-col justify-end">
+        <div className="flex items-end justify-between gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
             {/* ── KONTENJAN GÖSTERGESİ ── */}
             {totalSlots > 0 && (
               <div className="flex items-center gap-2 mb-2">
@@ -1270,7 +1292,7 @@ const MatchCard: React.FC<{
             )}
 
             {/* Tesis ve Lokasyon İsmi Devasa (Üst Karakter) */}
-            <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2">
+            <h3 className="text-xl sm:text-2xl font-black text-white italic uppercase leading-tight tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2 break-words">
               {match.location.toUpperCase()}
             </h3>
 
@@ -1331,6 +1353,7 @@ const MatchCard: React.FC<{
           </div>
         </div>
       </div>
+      </div>{/* /İÇERİK (esnek dikey akış) */}
 
       {/* ── PREMIUM DİNAMİK KİLİT & BLUR KAPLAMASI ── */}
       {isLocked && (
