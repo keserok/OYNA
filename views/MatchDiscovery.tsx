@@ -148,38 +148,47 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     return activeMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price
       const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
+      // Difficulty DB'de Türkçe zorluk (Kolay/Orta/Zor) ya da mantalite
+      // (Ciddi/Taktiksel/Rahat) olarak gelebilir. Tek bir mantalite uzayına
+      // normalize et ki hem kartta görünen rozet hem de MANTALİTE filtresi
+      // tutarlı ve doğru çalışsın.
       const diffStr = (m.difficulty || '').toLowerCase().trim();
-      let matchMentality = '';
-      let mentalityColor = '';
-
-      if (diffStr === 'ciddi') {
-        matchMentality = 'CİDDİ';
-        mentalityColor = '#FFFF00';
-      } else if (diffStr === 'taktiksel') {
-        matchMentality = 'TAKTİKSEL';
-        mentalityColor = '#3b82f6';
-      } else if (diffStr === 'rahat') {
-        matchMentality = 'RAHAT';
-        mentalityColor = '#10b981';
+      let normalizedMentality: 'Ciddi' | 'Taktiksel' | 'Rahat';
+      if (diffStr.includes('ciddi') || diffStr.includes('zor') || diffStr === 'hard') {
+        normalizedMentality = 'Ciddi';
+      } else if (diffStr.includes('taktik') || diffStr.includes('orta') || diffStr === 'medium') {
+        normalizedMentality = 'Taktiksel';
+      } else if (diffStr.includes('rahat') || diffStr.includes('kolay') || diffStr === 'easy') {
+        normalizedMentality = 'Rahat';
       } else {
-        const option = MENTALITY_OPTIONS[i % 3];
-        matchMentality = option.title;
-        mentalityColor = option.color;
+        normalizedMentality = 'Taktiksel';
       }
+      const MENTALITY_DISPLAY: Record<'Ciddi' | 'Taktiksel' | 'Rahat', { title: string; color: string }> = {
+        Ciddi: { title: 'CİDDİ', color: '#FFFF00' },
+        Taktiksel: { title: 'TAKTİKSEL', color: '#3b82f6' },
+        Rahat: { title: 'RAHAT', color: '#10b981' },
+      };
+      const matchMentality = MENTALITY_DISPLAY[normalizedMentality].title;
+      const mentalityColor = MENTALITY_DISPLAY[normalizedMentality].color;
 
       const format = m.format || '7v7';
       const duration = m.duration || '90 Dakika';
       const gender = m.gender || 'Karma';
       const ageGroup = m.ageGroup || 'Tümü';
       
-      const mappedMissingPositions = (m.missingPositions || []).map((pos: any) => {
-        let role = pos.role;
-        if (['GK', 'KALECİ'].includes(role)) role = 'KALECİ';
-        else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK'].includes(role)) role = 'SAVUNMA';
-        else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(role)) role = 'ORTA SAHA';
-        else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(role)) role = 'HÜCUM';
-        return { ...pos, role };
-      });
+      const mappedMissingPositions = (m.missingPositions || [])
+        .filter((pos: any) => Number(pos.count) > 0)
+        .map((pos: any) => {
+          const raw = String(pos.role || '').toUpperCase();
+          let role = pos.role;
+          if (['GK', 'KALECİ', 'KL'].includes(raw)) role = 'KALECİ';
+          else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK', 'SAV'].includes(raw)) role = 'SAVUNMA';
+          else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(raw)) role = 'ORTA SAHA';
+          else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(raw)) role = 'HÜCUM';
+          else if (['PLAYER', 'OYUNCU', 'ANY', 'FIELD'].includes(raw)) role = 'OYUNCU';
+          else if (['REF', 'REFEREE', 'HAKEM'].includes(raw)) role = 'HAKEM';
+          return { ...pos, role };
+        });
 
       return {
         ...m,
@@ -187,7 +196,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         time: m.time || '22:00 - 23:00',
         missingPositions: mappedMissingPositions,
         price,
-        difficulty: (m.difficulty || (matchMentality === 'CİDDİ' ? 'Ciddi' : matchMentality === 'TAKTİKSEL' ? 'Taktiksel' : 'Rahat')) as 'Ciddi' | 'Taktiksel' | 'Rahat',
+        difficulty: normalizedMentality,
         matchMentality,
         mentalityColor,
         format,
@@ -237,7 +246,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     if (dna.role) {
       const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
       const targetRole = roleMap[dna.role];
-      const hasMissingSlot = match.missingPositions?.some((p: any) => p.role === targetRole && p.count > 0);
+      const isOutfield = dna.role !== 'KL';
+      const hasMissingSlot = match.missingPositions?.some((p: any) => {
+        if (Number(p.count) <= 0) return false;
+        if (p.role === targetRole) return true;
+        // Generic 'OYUNCU' (PLAYER) slotu herhangi bir saha oyuncusu pozisyonunu karşılar.
+        if (isOutfield && p.role === 'OYUNCU') return true;
+        return false;
+      });
       if (!hasMissingSlot) {
         return false;
       }

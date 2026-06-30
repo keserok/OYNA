@@ -69,7 +69,24 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
 > İlgili tablolar: `profiles`, `teams`, `team_members`, `matches`, `match_participants`,
 > `match_registrations`, `player_ratings`, `friendships`, `notifications`, `wallet_transactions`, `tactics`
 
-_Henüz problem eklenmedi._
+### [OYUNCU-01] "Bireysel Maç Bul" filtreleri işlevsiz + "10 player aranıyor" metni
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-06-30
+- **Problem (kullanıcı anlatımı):** Top Oyna → Bireysel Maç Bul listesinde "10 player aranıyor" yazıyor; "player" → "oyuncu" olmalı. Üstteki FORMAT / MANTALİTE / POZİSYON çipleri ve sağ üstteki Filtre butonunun açtığı ekrandaki filtreler işlevsiz.
+- **İnceleme bulguları:**
+  - DB `matches.missingPositions` rolleri ham kod: `PLAYER`, `GK`, `REF`. Kart eşlemesinde `PLAYER`/`REF` çevrilmediği için ekranda "10 PLAYER ARANIYOR" çıkıyordu.
+  - DB `difficulty` = `Kolay/Orta/Zor`, filtre ise `Ciddi/Taktiksel/Rahat` arıyordu → MANTALİTE filtresi hiç eşleşmiyordu. Kart rozeti de gerçek zorluk yerine `i%3` ile atanıyordu.
+  - POZİSYON filtresi yalnızca generic `PLAYER` slotları olduğundan SAV/ORT/HÜC için sonuç döndürmüyordu.
+  - `count: 0` pozisyonlar da render ediliyordu ("0 … ARANIYOR").
+- **Uygulanan çözüm (`views/MatchDiscovery.tsx`):**
+  1. Rol eşlemesine `PLAYER → OYUNCU`, `REF → HAKEM` eklendi (+ büyük/küçük harf güvenli).
+  2. Difficulty tek mantalite uzayına normalize edildi (Zor/Ciddi→Ciddi, Orta/Taktiksel→Taktiksel, Kolay/Rahat→Rahat); kart rozeti bu gerçek değerden türetiliyor → MANTALİTE filtresi çalışıyor.
+  3. POZİSYON filtresinde generic `OYUNCU` slotu saha pozisyonlarını (SAV/ORT/HÜC), `KL` kaleciyi karşılıyor.
+  4. `count ≤ 0` pozisyonlar gizlendi.
+  - Üst çipler ve Filtre modalı aynı `dna` + `checkMatchFilters`'i paylaştığı için ikisi de işlevli hale geldi. "Diğer Maçlar" bölümü (mevcut tasarım) korundu.
+- **Etkilenen katmanlar:** Frontend (tek dosya). Veritabanı/Admin değişikliği gerekmedi.
+- **Onay:** ✅ Onaylandı (2026-06-30) — "Diğer Maçlar kalsın" tercihiyle.
+- **Doğrulama:** `tsc --noEmit` temiz.
 
 ---
 
