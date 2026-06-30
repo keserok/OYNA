@@ -102,6 +102,25 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
 - **Onay:** ✅ Onaylandı (2026-06-30) — önce/sonra görsel önizleme paylaşıldı.
 - **Doğrulama:** `tsc --noEmit` temiz; 390px genişlikte önce/sonra önizleme ile doğrulandı.
 
+### [OYUNCU-03] Bildirimler'deki "OYUNCU BİLDİRİMLERİ" alt rozeti
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-06-30
+- **Problem (kullanıcı anlatımı):** Bildirimler'de "oyuncu bildirimleri" yazmana gerek yok, boş kalabilir.
+- **İnceleme:** `views/Notifications.tsx:272` — başlık altında `{badgeLabel} BİLDİRİMLERİ` rozeti (oyuncuda "OYUNCU BİLDİRİMLERİ").
+- **Uygulanan çözüm:** Rozet bloğu kaldırıldı; kullanılmayan `badgeLabel` değişkeni temizlendi. "Bildirimler" başlığı + okunmamış sayacı kaldı. Ortak ekran olduğundan tüm rollerde tutarlı.
+- **Etkilenen katmanlar:** Frontend. **Doğrulama:** `tsc` temiz.
+
+### [OYUNCU-04] "Önce Maçlara Göz At" (misafir) → Profil aktif + boş haller + işlevli misafir şeridi
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-06-30
+- **Problem (kullanıcı anlatımı):** "Maçlara göz at"a (misafir) girince profil kısmı aktifleşsin ve bilgilerin boş halleri görünsün. Üste "Misafir modundasın — Giriş yap / Kaydol" işlevli şeridi eklensin.
+- **İnceleme:** Misafirde oturum (`uid`) olmadığından `ProfileScreen` "Oturum bulunamadı" hatası verip profili hiç açmıyordu. Sabit demo değerler (yaş/güven/gol) yalnız `cardActive` dalında; misafirde zaten çıkmıyor.
+- **Uygulanan çözüm (`views/ProfileScreen.tsx`):**
+  1. `loadProfile` oturum yokken hata yerine boş profil render ediyor (`profile=null`, `matchHistory=[]`); böylece profil aktifleşip boş placeholder'larıyla görünüyor.
+  2. `isGuest` bayrağı eklendi; üste temaya uyumlu **işlevli misafir şeridi** kondu (Giriş Yap/Kaydol → `onNavigate('AUTH')` ile mevcut giriş ekranına gider).
+- **Kapsam:** Yalnızca **UI/UX + Frontend** (giriş/kayıt eylemi mevcut Supabase Auth ile çalışıyor; yeni backend/DB yok).
+- **Etkilenen katmanlar:** Frontend. **Onay:** ✅ (misafir şeridi dahil). **Doğrulama:** `tsc` temiz + 390px önizleme paylaşıldı.
+
 ---
 
 ## 🧤 Kaleci (Goalkeeper) Problemleri
