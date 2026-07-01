@@ -162,7 +162,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [stage, setStage] = useState<'input' | 'otp'>('input');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [agreed, setAgreed] = useState(true);
+  // KVKK/Sözleşme onayı varsayılan KAPALI olmalı — aydınlatılmış ve özgür irade
+  // ile verilmiş rıza için kullanıcı aktif olarak işaretlemelidir (önceden işaretli
+  // onay kutusu KVKK ilkelerine aykırıdır).
+  const [agreed, setAgreed] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState<'send' | 'verify' | 'guest' | 'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(null);

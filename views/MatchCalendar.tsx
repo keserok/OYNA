@@ -1,74 +1,112 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Plus, Calendar, MapPin, Clock, Users, ArrowRight, Search, Key, LayoutGrid, X } from 'lucide-react';
+import { ChevronLeft, Plus, Calendar, MapPin, Clock, ArrowRight, Search, Key, LayoutGrid, X, Loader2 } from 'lucide-react';
 import { AppView } from '../types';
+import type { MatchListing } from '../types';
+import { useMyMatches } from '../hooks/useMyMatches';
+import { useAppStore } from '../store';
+import { supabase } from '../supabaseClient';
+import { resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 
 interface MatchCalendarProps {
   onBack: () => void;
   onNavigate: (view: AppView) => void;
 }
 
-interface UpcomingMatch {
-  id: string;
-  title: string;
-  pitchName: string;
-  time: string;
-  date: string;
-  timeLeftSeconds: number;
-  playersCount: number;
-  maxPlayers: number;
-}
+// Maç tarih+saatinden başlangıç geri sayımını (saniye) hesapla.
+const secondsUntil = (date: string, time: string): number => {
+  try {
+    let target: Date | null = null;
+    if (date.includes('-')) {
+      target = new Date(`${date}T${time}:00`);
+    } else {
+      const d = new Date();
+      const [h, m] = time.split(':').map(Number);
+      d.setHours(h || 0, m || 0, 0, 0);
+      if (/yarın/i.test(date)) d.setDate(d.getDate() + 1);
+      target = d;
+    }
+    const diff = Math.floor((target.getTime() - Date.now()) / 1000);
+    return Math.max(0, isNaN(diff) ? 0 : diff);
+  } catch {
+    return 0;
+  }
+};
+
+const takenCount = (m: MatchListing): number =>
+  [...(m.slots ?? []), ...(m.awaySlots ?? [])].filter(s => s.status === 'TAKEN').length;
+const totalCount = (m: MatchListing): number =>
+  [...(m.slots ?? []), ...(m.awaySlots ?? [])].length;
 
 const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => {
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [showJoinCodeInput, setShowJoinCodeInput] = useState(false);
   const [joinCode, setJoinCode] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
-  // Mock upcoming matches
-  const [matches, setMatches] = useState<UpcomingMatch[]>([
-    {
-      id: 'm1',
-      title: 'Akşam Kapışması',
-      pitchName: 'Arena Sport Center',
-      time: '21:00',
-      date: 'Bugün • 02.11.2026',
-      timeLeftSeconds: 3600 * 2, // 2 hours
-      playersCount: 12,
-      maxPlayers: 14
-    },
-    {
-      id: 'm2',
-      title: 'Haftalık Rutin',
-      pitchName: 'Vadi Spor Tesisleri',
-      time: '20:00',
-      date: 'Yarın • 03.11.2026',
-      timeLeftSeconds: 3600 * 24 + 3600 * 1, // 25 hours
-      playersCount: 10,
-      maxPlayers: 14
-    },
-    {
-      id: 'm3',
-      title: 'Derbi Maçı',
-      pitchName: 'Yıldız Halı Saha',
-      time: '22:00',
-      date: 'Cuma • 06.11.2026',
-      timeLeftSeconds: 3600 * 48 + 3600 * 3, // ~51 hours
-      playersCount: 14,
-      maxPlayers: 14
-    }
-  ]);
+  // GERÇEK veri: kullanıcının yaklaşan maçları (mock dizi kaldırıldı).
+  const { upcoming } = useMyMatches();
+  const setSelectedMatch = useAppStore(s => s.setSelectedMatch);
 
-  // Update time left every second
+  // Canlı geri sayım için saniyede bir yeniden render tetikle.
+  const [, setTick] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setMatches(prev => prev.map(m => ({
-        ...m,
-        timeLeftSeconds: Math.max(0, m.timeLeftSeconds - 1)
-      })));
-    }, 1000);
+    const timer = setInterval(() => setTick(t => (t + 1) % 60), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Görünüm modeli — gerçek maçlardan türetilir.
+  const matches = useMemo(() => upcoming.map(m => ({
+    raw: m,
+    id: m.id,
+    title: m.title || 'Maç',
+    pitchName: m.location || '—',
+    time: m.time,
+    date: m.date,
+    timeLeftSeconds: secondsUntil(m.date, m.time),
+    playersCount: takenCount(m),
+    maxPlayers: totalCount(m) || takenCount(m),
+  })), [upcoming]);
+
+  // Gerçek maçı seçip lobiye götür.
+  const openMatch = (raw: MatchListing) => {
+    setSelectedMatch(raw);
+    onNavigate('MATCH_JOIN');
+  };
+
+  // Kod ile katıl — MatchDiscovery ile aynı sunucu-taraflı çözüm (istemci uzunluk kontrolü değil).
+  const handleJoinByCode = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (code.length < 4) { setJoinError('Kod en az 4 karakter olmalı.'); return; }
+    setJoinLoading(true);
+    setJoinError(null);
+    try {
+      try {
+        const resolved = await resolvePrivateMatch(code);
+        const match = await getMatchDetails(resolved.matchId);
+        if (!match) throw new Error('NOT_FOUND');
+        setShowJoinCodeInput(false);
+        setJoinCode('');
+        openMatch(match);
+        return;
+      } catch (matchErr) {
+        const { data, error } = await supabase.rpc('player_claim_slot_code', { p_code: code });
+        if (error) throw matchErr;
+        const matchId = (data as any)?.match_id;
+        const claimed = matchId ? await getMatchDetails(matchId) : null;
+        if (!claimed) throw new Error('NOT_FOUND');
+        setShowJoinCodeInput(false);
+        setJoinCode('');
+        openMatch(claimed);
+      }
+    } catch (err) {
+      setJoinError(toPrivateMatchErrorMessage(err));
+    } finally {
+      setJoinLoading(false);
+    }
+  };
 
   // Calculate pulse speed based on time left
   // Closer = faster. 
@@ -114,7 +152,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            onClick={() => onNavigate('MATCH_JOIN')}
+            onClick={() => openMatch(match.raw)}
             className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FFFF00]/30 transition-all duration-500"
           >
             {/* Dynamic Pulse Strip */}
@@ -163,9 +201,11 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                         <img src={`https://i.pravatar.cc/150?u=${match.id}${i}`} alt="player" className="w-full h-full object-cover" />
                       </div>
                     ))}
-                    <div className="w-8 h-8 rounded-full border-2 border-[#161B22] bg-[#FFFF00] flex items-center justify-center text-[10px] font-black text-black">
-                      +{match.playersCount - 3}
-                    </div>
+                    {match.playersCount > 3 && (
+                      <div className="w-8 h-8 rounded-full border-2 border-[#161B22] bg-[#FFFF00] flex items-center justify-center text-[10px] font-black text-black">
+                        +{match.playersCount - 3}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">KADRO</span>
@@ -319,26 +359,26 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
               </div>
 
               <div className="space-y-6">
-                <input 
+                <input
                   type="text"
-                  maxLength={6}
+                  maxLength={8}
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); if (joinError) setJoinError(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !joinLoading) handleJoinByCode(); }}
                   placeholder="ÖRN: XJ92K1"
-                  className="w-full h-16 bg-[#0A0E14] border border-white/10 rounded-2xl text-center text-2xl font-black tracking-[0.5em] text-[#FFFF00] outline-none focus:border-[#FFFF00]/50 transition-all"
+                  className="w-full h-16 bg-[#0A0E14] border border-white/10 rounded-2xl text-center text-2xl font-black tracking-[0.4em] text-[#FFFF00] outline-none focus:border-[#FFFF00]/50 transition-all"
                 />
 
-                <button 
-                  onClick={() => {
-                    if (joinCode.length === 6) {
-                      setShowJoinCodeInput(false);
-                      onNavigate('MATCH_JOIN');
-                    }
-                  }}
-                  disabled={joinCode.length !== 6}
-                  className={`w-full h-16 rounded-2xl font-black text-sm tracking-widest transition-all ${joinCode.length === 6 ? 'bg-[#FFFF00] text-black shadow-[0_10px_30px_rgba(255,255,0,0.2)]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                {joinError && (
+                  <p className="text-center text-xs font-bold text-red-400">{joinError}</p>
+                )}
+
+                <button
+                  onClick={handleJoinByCode}
+                  disabled={joinCode.trim().length < 4 || joinLoading}
+                  className={`w-full h-16 rounded-2xl font-black text-sm tracking-widest transition-all flex items-center justify-center gap-2 ${joinCode.trim().length >= 4 && !joinLoading ? 'bg-[#FFFF00] text-black shadow-[0_10px_30px_rgba(255,255,0,0.2)]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                 >
-                  MAÇA GİT
+                  {joinLoading ? <><Loader2 size={18} className="animate-spin" /> ARANIYOR…</> : 'MAÇA GİT'}
                 </button>
               </div>
             </motion.div>
