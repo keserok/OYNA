@@ -9,6 +9,8 @@ import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { MarketplaceMap } from '../components/Marketplace/MarketplaceMap';
 import { EmptyState } from '../components/common/StatusState';
+import { Toast } from '../components/common/Toast';
+import { createServiceRequest } from '../services/serviceRequestService';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -47,7 +49,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
     const [selectedProfile, setSelectedProfile] = useState<Goalkeeper | Referee | null>(null);
     const [isHiring, setIsHiring] = useState(false);
-    const [showToast, setShowToast] = useState(false);
     const [bidAmount, setBidAmount] = useState<number>(0);
     const [isBidding, setIsBidding] = useState(false);
 
@@ -81,6 +82,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     const [hireMode, setHireMode] = useState<'BID' | 'DIRECT'>('DIRECT');
     const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
     const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+    // Gerçek hata geri bildirimi (sahte "gönderildi" yerine).
+    const [errorToast, setErrorToast] = useState<string | null>(null);
+
+    const showError = (msg: string) => {
+        setErrorToast(msg);
+        setTimeout(() => setErrorToast(null), 3800);
+    };
 
     const handleSelect = (p: Goalkeeper | Referee) => {
         setSelectedProfile(p);
@@ -103,10 +111,25 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
         setShowMatchSelection(true);
     };
 
-    const handleConfirmMatch = (match: any) => {
+    // Başarı ekranını göster + kısa süre sonra kapat (yalnızca gerçek işlem başarılıysa çağrılır).
+    const flashSuccessAndClose = () => {
+        setShowSuccessScreen(true);
+        setTimeout(() => {
+            setShowSuccessScreen(false);
+            setSelectedProfile(null);
+            setShowMatchSelection(false);
+            setShowBidScreen(false);
+            if (onSelect && selectedProfile) {
+                onSelect(selectedProfile);
+            }
+        }, 3000);
+    };
+
+    const handleConfirmMatch = async (match: any) => {
+        if (isHiring) return;
         setSelectedMatchForHire(match);
         setIsHiring(true);
-        
+
         if (hireMode === 'DIRECT') {
             let updatedMatch = { ...match };
             if (activeTab === 'GK') {
@@ -130,27 +153,28 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
             } else {
                 setAdminMatches(adminMatches.map(m => m.id === match.id ? updatedMatch : m));
             }
-        } else {
-            // BID Mode: Don't update the match. Instead, create an offer.
-            // Example: await supabase.from('offers').insert({...})
-            console.log(`Bid created for Match: ${match.id}, Profile: ${selectedProfile?.id}, Amount: ${bidAmount}`);
+            setIsHiring(false);
+            flashSuccessAndClose();
+            return;
         }
 
-        setTimeout(() => {
+        // BID Modu: GERÇEK hizmet talebi oluştur (blokaj + komisyon sunucuda hesaplanır)
+        // → sağlayıcının ServiceDashboard "gelen istekler" kutusuna düşer.
+        if (!selectedProfile?.id) {
             setIsHiring(false);
-            setShowSuccessScreen(true);
-            
-            setTimeout(() => {
-                setShowSuccessScreen(false);
-                setSelectedProfile(null);
-                setShowMatchSelection(false);
-                setShowBidScreen(false);
-                
-                if (onSelect && selectedProfile) {
-                    onSelect(selectedProfile);
-                }
-            }, 3000);
-        }, 1500);
+            showError('Sağlayıcı seçilmedi.');
+            return;
+        }
+        try {
+            const res = await createServiceRequest(match.id, selectedProfile.id, activeTab);
+            // Başarı ekranında gerçek ücreti göster (sunucudan dönen), sahte "bid" değil.
+            setBidAmount(res.fee);
+            setIsHiring(false);
+            flashSuccessAndClose();
+        } catch (err: any) {
+            setIsHiring(false);
+            showError(err?.message || 'Teklif gönderilemedi. Lütfen tekrar dene.');
+        }
     };
 
     return (
@@ -592,23 +616,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                 )}
             </AnimatePresence>
 
-            {/* Toast */}
-            <AnimatePresence>
-                {showToast && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100]"
-                    >
-                        <div className={`px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center ${activeTab === 'GK' ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'}`}>
-                            <Activity size={32} className="mb-2 animate-pulse" />
-                            <h3 className="font-black text-xl italic uppercase">İSTEK GÖNDERİLDİ</h3>
-                            <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Profesyonel ile iletişime geçilecek!</p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Gerçek hata geri bildirimi */}
+            {errorToast && <Toast message={errorToast} variant="error" />}
 
         </div>
     );

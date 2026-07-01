@@ -134,9 +134,17 @@ const ServiceRatingCard: React.FC<{
 const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => {
   const { selectedMatch } = useAppStore();
 
-  // Gerçek katılımcıları maçın kadrosundan türet; yoksa demo kadroya düş
+  // Gerçek (UUID) maç mı? Demo/örnek maçlarda (UUID olmayan id) sunucu çağrıları atlanır.
+  const isRealMatch = useMemo(
+    () => !!selectedMatch?.id && /^[0-9a-f-]{36}$/i.test(selectedMatch.id),
+    [selectedMatch],
+  );
+
+  // Gerçek katılımcıları maçın kadrosundan türet.
+  // ÖNEMLİ: Gerçek maçta kadro verisi yoksa SAHTE isim gösterme (boş bırak) —
+  // MOCK_PLAYERS yalnız demo/örnek maçlar için fallback'tir.
   const PLAYERS = useMemo<EvalPlayer[]>(() => {
-    if (!selectedMatch) return MOCK_PLAYERS;
+    if (!selectedMatch) return isRealMatch ? [] : MOCK_PLAYERS;
     const uid = auth.currentUser?.uid;
     const allSlots: PositionSlot[] = [
       ...(selectedMatch.slots ?? []),
@@ -152,8 +160,10 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         color: '#c5cef5',
         tier: 'silver',
       }));
-    return real.length > 0 ? real : MOCK_PLAYERS;
-  }, [selectedMatch]);
+    if (real.length > 0) return real;
+    // Gerçek maç ama kadro hidre edilmemiş → boş (sahte isim yok). Demo maç → MOCK.
+    return isRealMatch ? [] : MOCK_PLAYERS;
+  }, [selectedMatch, isRealMatch]);
 
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(1);
@@ -167,6 +177,98 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [pitchRating, setPitchRating] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [infoToast, setInfoToast] = useState<string | null>(null);
+  // Ana değerlendirme kaydı başarısız olursa: başarı ekranı YERİNE hata+tekrar göster.
+  const [evalError, setEvalError] = useState<string | null>(null);
+
+  // Skor onayı (SKOR ONAYI ekranı): gerçek skoru ve varsa bekleyen öneriyi tut.
+  // homeScore/awayScore maç kaydından; pendingProposal FAZ6 mutabakat sisteminden gelir.
+  const [pendingProposalId, setPendingProposalId] = useState<string | null>(null);
+  const [proposedScore, setProposedScore] = useState<{ home: number; away: number } | null>(null);
+  const [disputing, setDisputing] = useState(false);
+  const [approvingScore, setApprovingScore] = useState(false);
+
+  // Gösterilecek skor: önce bekleyen öneri, yoksa maça girilmiş skor.
+  const displayScore = proposedScore
+    ?? (typeof selectedMatch?.homeScore === 'number' && typeof selectedMatch?.awayScore === 'number'
+      ? { home: selectedMatch.homeScore, away: selectedMatch.awayScore }
+      : null);
+
+  // Bekleyen skor önerisini yükle (varsa). Gerçek maçta çalışır.
+  useEffect(() => {
+    let cancelled = false;
+    const loadProposal = async () => {
+      if (!isRealMatch || !selectedMatch?.id) { setPendingProposalId(null); setProposedScore(null); return; }
+      try {
+        const { data } = await supabase
+          .from('match_score_proposals')
+          .select('id,home_score,away_score,status')
+          .eq('match_id', selectedMatch.id)
+          .eq('status', 'PENDING')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data) {
+          setPendingProposalId((data as any).id);
+          setProposedScore({ home: (data as any).home_score, away: (data as any).away_score });
+        } else {
+          setPendingProposalId(null);
+          setProposedScore(null);
+        }
+      } catch {
+        if (!cancelled) { setPendingProposalId(null); setProposedScore(null); }
+      }
+    };
+    loadProposal();
+    return () => { cancelled = true; };
+  }, [isRealMatch, selectedMatch?.id]);
+
+  // Skoru onayla: bekleyen öneri varsa gerçekten approve et, sonra değerlendirmeye geç.
+  const handleApproveScore = async () => {
+    if (approvingScore) return;
+    if (isRealMatch && pendingProposalId) {
+      setApprovingScore(true);
+      try {
+        const { error } = await supabase.rpc('approve_match_score', { p_proposal_id: pendingProposalId });
+        if (error) throw error;
+      } catch (err) {
+        console.warn('[PostMatchEval] Skor onayı kaydedilemedi:', err);
+        showInfo('Skor onayı kaydedilemedi, yine de devam edebilirsin.');
+      } finally {
+        setApprovingScore(false);
+      }
+    }
+    setShowHandshake(false);
+  };
+
+  // Skora itiraz: GERÇEK bir match_disputes kaydı oluştur (sahte toast değil).
+  const handleDisputeScore = async () => {
+    if (disputing) return;
+    if (isRealMatch && selectedMatch?.id) {
+      setDisputing(true);
+      const uid = auth.currentUser?.uid;
+      try {
+        const { error } = await supabase.from('match_disputes').insert({
+          match_id: selectedMatch.id,
+          raised_by: uid,
+          home_claimed_score: displayScore ? String(displayScore.home) : null,
+          away_claimed_score: displayScore ? String(displayScore.away) : null,
+          status: 'OPEN',
+        });
+        if (error) throw error;
+        showInfo('İtirazın kaydedildi, ekibimiz inceleyip seninle iletişime geçecek.');
+      } catch (err) {
+        console.warn('[PostMatchEval] Skor itirazı kaydedilemedi:', err);
+        showInfo('İtiraz kaydedilemedi, lütfen tekrar dene.');
+        setDisputing(false);
+        return; // Kayıt başarısızsa ekranı kapatma — kullanıcı tekrar deneyebilsin.
+      }
+      setDisputing(false);
+    } else {
+      showInfo('İtirazın alındı.');
+    }
+    setShowHandshake(false);
+  };
 
   // FAZ 5: Maça atanmış kaleci/hakem değerlendirmesi (1-10 + opsiyonel yorum)
   const [providers, setProviders] = useState<ServiceProviderInfo[]>([]);
@@ -221,10 +323,11 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       return;
     }
     setSubmitting(true);
+    setEvalError(null);
 
-    // Bug C: Oyuncu-değerlendirmesi başarısız olsa bile servis (kaleci/hakem)
-    // puanlaması ÇALIŞMALI — aksi halde sağlayıcı ödemesi serbest bırakılmaz.
-    // Bu yüzden oyuncu-değerlendirme ile servis-puanlama bağımsız try/catch'lerde.
+    // Ana (oyuncu) değerlendirmesi başarısız olursa bunu izle: başarısızsa
+    // SAHTE "başarılı" ekranı gösterme — dürüst hata + tekrar dene sun.
+    let primaryFailed = false;
     try {
       const ratings = Object.entries(playerRatings).map(([ratee_id, stars]) => ({
         ratee_id,
@@ -245,15 +348,13 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         if (finErr) throw finErr;
       }
     } catch (err) {
-      // Oyuncu-değerlendirme/finalize başarısız → kullanıcıyı bilgilendir ama
-      // servis puanlamasını engelleme (return etme).
       console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
-      showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
+      primaryFailed = true;
     }
 
     // FAZ 5: Kaleci/Hakem 1-10 puanlaması — sağlayıcı rating'ini günceller + payout serbest.
     // Atlanabilir: yalnız puan girilmiş (score > 0) sağlayıcılar gönderilir.
-    // Oyuncu-değerlendirme başarısız olsa bile burası bağımsız çalışır.
+    // Ana değerlendirme başarısız olsa bile burası bağımsız çalışır (payout bloke olmasın).
     for (const p of providers) {
       const score = serviceScores[p.id] ?? 0;
       if (score <= 0) continue;
@@ -263,7 +364,13 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         console.warn(`[PostMatchEval] ${p.type} puanlaması kaydedilemedi:`, e);
       }
     }
+
     setSubmitting(false);
+    // Ana değerlendirme başarısızsa: başarı ekranı YOK — hata durumu göster.
+    if (primaryFailed) {
+      setEvalError('Değerlendirmen kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
+      return;
+    }
     setShowResult(true);
   };
 
@@ -311,6 +418,44 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     if (tier === 'silver') return 'bg-gradient-to-br from-[#e0e0e0] to-[#9e9e9e] text-black border border-[#9e9e9e] shadow-[0_0_10px_rgba(200,200,200,0.15)]';
     return 'bg-gradient-to-br from-[#bcaaa4] to-[#8d6e63] text-white border border-[#8d6e63]';
   };
+
+  // Ana değerlendirme kaydı başarısız → dürüst hata ekranı + tekrar dene.
+  if (evalError) {
+    return (
+      <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
+        <motion.div
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 160 }}
+          className="flex flex-col items-center gap-6 w-full max-w-sm text-center"
+        >
+          <div className="w-20 h-20 rounded-full bg-rose-500/15 border border-rose-500/40 flex items-center justify-center">
+            <Scale size={36} className="text-rose-400" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-black uppercase tracking-tighter italic leading-none">KAYDEDİLEMEDİ</h2>
+            <p className="text-gray-400 text-xs font-bold">{evalError}</p>
+          </div>
+          <div className="w-full space-y-3">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={persistEvaluation}
+              disabled={submitting}
+              className="w-full h-14 bg-[#39FF14] text-black font-black rounded-2xl text-xs uppercase tracking-[0.2em] disabled:opacity-60 transition-all"
+            >
+              {submitting ? 'DENENİYOR…' : 'TEKRAR DENE'}
+            </motion.button>
+            <button
+              onClick={onBack}
+              className="w-full h-12 bg-white/5 border border-white/10 text-gray-400 font-black rounded-2xl text-[11px] uppercase tracking-widest hover:text-white transition-all"
+            >
+              Daha Sonra
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (showResult) {
     return (
@@ -387,52 +532,55 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     );
   }
 
-  if (showHandshake) {
+  // SKOR ONAYI ekranı yalnız GERÇEK bir skor varsa gösterilir (sabit/sahte skor yok).
+  // Skor henüz girilmemişse bu ekran atlanır ve doğrudan değerlendirmeye geçilir.
+  if (showHandshake && displayScore) {
     return (
       <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
 
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0, y: 20 }} 
-          animate={{ scale: 1, opacity: 1, y: 0 }} 
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
           className="bg-[#121620]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-sm relative z-10 flex flex-col items-center text-center shadow-2xl"
         >
           <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center mb-4">
             <Trophy size={32} className="text-blue-400" />
           </div>
           <h2 className="text-2xl font-black uppercase italic tracking-tight text-white mb-2">SKOR ONAYI</h2>
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">Hakem Maç Skorunu Girdi</p>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">
+            {pendingProposalId ? 'Girilen Maç Skorunu Onayla' : 'Maç Skoru'}
+          </p>
 
           <div className="flex items-center justify-center gap-6 mb-8 w-full">
             <div className="text-center flex-1">
               <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">SİZİN TAKIM</span>
-              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">5</div>
+              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{displayScore.home}</div>
             </div>
             <div className="text-3xl font-black text-gray-700">-</div>
             <div className="text-center flex-1">
               <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">RAKİP</span>
-              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">3</div>
+              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{displayScore.away}</div>
             </div>
           </div>
 
           <div className="w-full space-y-3">
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => setShowHandshake(false)}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2"
+              onClick={handleApproveScore}
+              disabled={approvingScore || disputing}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <ShieldCheck size={18} /> SKORU ONAYLA
+              <ShieldCheck size={18} /> {approvingScore ? 'ONAYLANIYOR…' : 'SKORU ONAYLA'}
             </motion.button>
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => {
-                showInfo('Skor itirazınız hakeme ve diğer kaptana iletildi.');
-                setShowHandshake(false);
-              }}
-              className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
+              onClick={handleDisputeScore}
+              disabled={disputing || approvingScore}
+              className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all disabled:opacity-60"
             >
-              SKORA İTİRAZ ET
+              {disputing ? 'GÖNDERİLİYOR…' : 'SKORA İTİRAZ ET'}
             </motion.button>
           </div>
         </motion.div>
@@ -582,7 +730,32 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           )}
 
           {/* ─ STEP 2: PLAYER RATINGS — kart kart hızlı puanla ─ */}
-          {step === 2 && (() => {
+          {step === 2 && PLAYERS.length === 0 && (
+            <motion.div
+              key="s2-empty"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center text-center gap-5 py-16"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <Users size={28} className="text-gray-500" />
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-base font-black uppercase tracking-tight italic">Değerlendirilecek Oyuncu Yok</h2>
+                <p className="text-[11px] text-gray-500 font-bold max-w-[240px]">
+                  Bu maçın kadro bilgisi bulunamadı. Hakem ve saha değerlendirmesine geçebilirsin.
+                </p>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setStep(3)}
+                className="h-12 px-6 bg-[#39FF14] text-black font-black rounded-2xl text-[11px] uppercase tracking-widest"
+              >
+                Devam Et →
+              </motion.button>
+            </motion.div>
+          )}
+          {step === 2 && PLAYERS.length > 0 && (() => {
             const p = PLAYERS[playerCardIdx];
             if (!p) return null;
             const isMotm = motm === p.id;

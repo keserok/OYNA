@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Wallet, Zap, CheckCircle2, Settings, CreditCard,
-  Plus, Trash2, AlertCircle, ArrowUpRight, Gift, RefreshCw,
+  Trash2, AlertCircle, ArrowUpRight, Gift, RefreshCw,
   TrendingUp, Clock, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +53,7 @@ const validateIBAN = (raw: string): boolean => {
 const INCOME_TYPES = new Set(['DEPOSIT', 'MATCH_EARNING', 'REFERRAL_BONUS']);
 
 const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
-  const { savedCards, addSavedCard, removeSavedCard, walletInitialTab } = useAppStore();
+  const { savedCards, removeSavedCard, walletInitialTab } = useAppStore();
 
   const [tab, setTab]               = useState<Tab>('TXN');
   const [cardView, setCardView]     = useState<CardView>('MAIN');
@@ -126,18 +126,6 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       fetchData();
       setTimeout(() => { setPayoutSuccess(false); setCardView('MAIN'); }, 2000);
     }
-  };
-
-  const handleAddCard = () => {
-    const brands = ['Visa', 'Mastercard', 'Troy'] as const;
-    const colors = ['from-purple-600 to-blue-600', 'from-emerald-500 to-teal-700', 'from-orange-600 to-red-600'];
-    addSavedCard({
-      last4:  Math.floor(1000 + Math.random() * 9000).toString(),
-      brand:  brands[Math.floor(Math.random() * brands.length)],
-      color:  colors[Math.floor(Math.random() * colors.length)],
-      holder: 'OYNA KULLANICI',
-    });
-    setCardView('MAIN');
   };
 
   const earningsBalance = summary?.earnings_balance ?? 0;
@@ -231,32 +219,42 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           <h1 className="text-lg font-black text-white">KARTLARIM</h1>
         </header>
         <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-          {savedCards.map(card => (
-            <div key={card.id} className="bg-[#161B22] border border-white/8 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-8 rounded bg-gradient-to-br ${card.color} flex items-center justify-center border border-white/20`}>
-                  <span className="text-[8px] font-black text-white">{card.brand}</span>
-                </div>
-                <div>
-                  <p className="text-white font-bold text-sm">•••• {card.last4}</p>
-                  <p className="text-gray-500 text-[10px] uppercase">{card.holder}</p>
-                </div>
-              </div>
-              <button onClick={() => removeSavedCard(card.id)}
-                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
-                <Trash2 size={18} />
-              </button>
+          {/* Dürüst bilgilendirme: kart saklama henüz yok; ödemeler iyzico güvenli ekranından alınır. */}
+          <div className="bg-[#161B22] border border-white/8 rounded-2xl p-5 flex flex-col items-center text-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex items-center justify-center">
+              <CreditCard size={24} className="text-[#FFFF00]" />
             </div>
-          ))}
-          {savedCards.length === 0 && (
-            <p className="text-center text-gray-600 py-10 text-sm">Kayıtlı kartınız yok.</p>
+            <h2 className="text-sm font-black text-white uppercase tracking-tight">Kart Saklama Yakında</h2>
+            <p className="text-[11px] text-gray-400 font-medium leading-relaxed max-w-[260px]">
+              Şu an kart bilgilerini uygulamada saklamıyoruz. Ödemeler, ödeme anında
+              <span className="text-white font-bold"> güvenli iyzico ekranı</span> üzerinden alınır —
+              kart bilgilerin bizde tutulmaz. Kayıtlı kart özelliği yakında eklenecek.
+            </p>
+          </div>
+
+          {/* Daha önce yerelde kaydedilmiş test kartları varsa, temizlenebilsin. */}
+          {savedCards.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Yerel Kayıtlar</p>
+              {savedCards.map(card => (
+                <div key={card.id} className="bg-[#161B22] border border-white/8 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-8 rounded bg-gradient-to-br ${card.color} flex items-center justify-center border border-white/20`}>
+                      <span className="text-[8px] font-black text-white">{card.brand}</span>
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm">•••• {card.last4}</p>
+                      <p className="text-gray-500 text-[10px] uppercase">{card.holder}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => removeSavedCard(card.id)}
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
-        <div className="p-6 border-t border-white/5">
-          <button onClick={handleAddCard}
-            className="w-full h-14 bg-[#FFFF00] text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-            <Plus size={20} /> YENİ KART EKLE
-          </button>
         </div>
       </div>
     );
