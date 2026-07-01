@@ -169,3 +169,35 @@ ve hikaye alani eklemek** (Bilge + Soytari'yi birden rahatlatir) ve
 **OwnerTeamView'a rol bazli yetki gorunurlugu** kazandirmak (Yonetici'nin
 en buyuk sikayeti). Bu iki degisiklik, 5 arketipten 3'unun ana
 surtunmesini dogrudan cozer.
+
+---
+
+## Uygulama Durumu (Bu Sprint)
+
+Bu arketiplerin taleplerinden **DB semasi degistirmeden, frontend-only**
+yapilabilecek olanlar bu sprintte hayata gecirildi:
+
+### ✅ Necati Usta (Bilge) — "Neden bu fiyat?" gerekcesi
+- `ownerCalendarHelpers.ts`'e `resolvePriceReason` ve `resolveSlotPriceBreakdown`
+  eklendi. Her saat fiyati artik insana okunur bir gerekce ile geliyor
+  ("Aksam yogun saat tarifesi", "Gunduz sakin saat", "Kendi tarifeniz (…)").
+- `OwnerPanel` takviminde bos slotun altinda kucuk gerekce satiri + hover
+  ipucu; flash deal'li slotlarda "%X indirim uygulandi" aciklamasi gorunuyor.
+- `resolveHourlyPrice` artik `resolvePriceReason`'i cagiriyor — fiyat mantigi
+  tek kaynakta, drift yok. Birim testleri: `tests/unit/ownerCalendarHelpers.test.ts`.
+
+### ✅ Vedat (Yonetici) — Rol bazli sorumluluk gorunurlugu
+- `OwnerTeamView`'da personel rolu artik serbest metin yerine **standart rol
+  secimi** (Saha Muduru, Resepsiyon, Saha Gorevlisi, Muhasebe, Personel).
+- Her rolun **sorumluluk (yetki) alani** hem personel listesinde hem de ekleme
+  formunda rozet olarak gosteriliyor — "kim neyi yapabiliyor" artik net.
+- NOT: Bu bir gorsel **yetki rehberidir** (oneri). Teknik yetki kisitlamasi
+  (rol bazli erisim kontrolu) backend/RLS gerektirir; bir sonraki adima birakildi.
+
+### ⏳ Backend/sema gerektirenler (bu sprintte yapilmadi)
+- **Deniz (Kahraman) — kiyaslamali trend:** "gecen haftaya gore" doluluk/ciro
+  ve flash deal sonuc raporu icin gecmis donem sorgusu gerekiyor.
+- **Ayse Teyze (Bakici) — borclu esnekligi:** `PitchDebtor`'a "guvenilir /
+  erteleme" bayragi icin sema alani gerekiyor.
+- **Emre (Soytari) — kampanya hikayesi:** `flash_deals` tablosuna baslik/gorsel/
+  aciklama sutunlari gerekiyor.

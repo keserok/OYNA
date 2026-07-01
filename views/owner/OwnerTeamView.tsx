@@ -34,6 +34,28 @@ const PRIORITY_COLOR: Record<PitchStaffTask['priority'], string> = {
   HIGH: 'text-red-400 border-red-500/30',
 };
 
+/**
+ * Standart personel rolleri ve her rolün önerilen sorumluluk (yetki) alanı.
+ *
+ * "Yönetici" tipi saha sahibi (bkz. docs/fikirler/saha_sahibi_arketipleri.md)
+ * "kim neyi yapabiliyor net değil" diyor. Bu tablo, her rolün hangi işten
+ * sorumlu olduğunu görsel olarak nettleştirir. NOT: Bu bir yetki dağılımı
+ * *rehberidir* (öneri); sistemde teknik yetki kısıtlaması değildir.
+ */
+const STAFF_ROLE_GUIDE: { role: string; duties: string[] }[] = [
+  { role: 'Saha Müdürü', duties: ['Tüm rezervasyonlar', 'Fiyat & tarife', 'İptal / iade onayı', 'Personel yönetimi'] },
+  { role: 'Resepsiyon', duties: ['Rezervasyon oluştur/onayla', 'Tahsilat', 'Müşteri iletişimi'] },
+  { role: 'Saha Görevlisi', duties: ['Saha hazırlık', 'Ekipman & malzeme', 'Temizlik görevleri'] },
+  { role: 'Muhasebe', duties: ['Tahsilat takibi', 'Borç / alacak', 'Gider kaydı'] },
+  { role: 'Personel', duties: ['Kendisine atanan genel görevler'] },
+];
+
+const STAFF_ROLE_OPTIONS = STAFF_ROLE_GUIDE.map((g) => g.role);
+
+const dutiesForRole = (roleTitle: string): string[] =>
+  STAFF_ROLE_GUIDE.find((g) => g.role === roleTitle)?.duties
+  ?? STAFF_ROLE_GUIDE[STAFF_ROLE_GUIDE.length - 1].duties;
+
 export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   pitchId,
   isDemoMode,
@@ -336,6 +358,16 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-white">{member.name}</p>
                   <p className="text-[10px] text-gray-500 font-bold uppercase">{member.role_title}</p>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {dutiesForRole(member.role_title).map((duty) => (
+                      <span
+                        key={duty}
+                        className="text-[9px] font-bold text-purple-300/80 bg-purple-500/10 border border-purple-500/20 rounded px-1.5 py-0.5"
+                      >
+                        {duty}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 {canUseDb && (
                   <div className="flex items-center gap-2">
@@ -419,12 +451,30 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
               value={newStaff.name}
               onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
             />
-            <input
+            <select
               className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm"
-              placeholder="Görev (örn. Saha Sorumlusu)"
               value={newStaff.role}
               onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
-            />
+            >
+              {STAFF_ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+            <div className="bg-[#0A0E14] border border-purple-500/20 rounded-xl p-3">
+              <p className="text-[10px] font-black text-purple-300 uppercase tracking-wider mb-2">
+                Bu rol neyden sorumlu?
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {dutiesForRole(newStaff.role).map((duty) => (
+                  <span
+                    key={duty}
+                    className="text-[10px] font-bold text-purple-200 bg-purple-500/10 border border-purple-500/20 rounded px-2 py-1"
+                  >
+                    {duty}
+                  </span>
+                ))}
+              </div>
+            </div>
             <input
               className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm"
               placeholder="Telefon (opsiyonel)"

@@ -44,6 +44,7 @@ import {
   findFlashDealForSlot,
   isSlotClosed,
   resolveHourlyPrice,
+  resolveSlotPriceBreakdown,
 } from './owner/ownerCalendarHelpers';
 import { getOrCreateOwnerAccount, planTierLabel, accountStatusLabel } from '../services/ownerAccountService';
 import type { OwnerAccount } from '../types';
@@ -665,9 +666,13 @@ const FinancialCalendarView: React.FC<{
                         const subStyles = { bg: 'bg-blue-900/30', border: 'border-blue-500/50', text: 'text-blue-400', bar: 'bg-blue-500' };
                         const styles = booking ? (isSub ? subStyles : getStatusStyles(booking.status)) : null;
                         
-                        const currentPrice = getSlotPrice(time);
-                        const standardPrice = resolveHourlyPrice(parseInt(time.split('.')[0], 10), pricingPolicy);
-                        const hasFlashDeal = currentPrice < standardPrice;
+                        const priceInfo = resolveSlotPriceBreakdown(time, selectedCourtId, pricingPolicy, flashDeals);
+                        const currentPrice = priceInfo.price;
+                        const standardPrice = priceInfo.standardPrice;
+                        const hasFlashDeal = priceInfo.hasDeal;
+                        const priceReasonTip = priceInfo.dealReason
+                            ? `${priceInfo.reason} · ${priceInfo.dealReason}`
+                            : `Neden bu fiyat? ${priceInfo.reason}`;
                         const slotClosed = isSlotClosed(time, selectedCourtId, closedSlots);
                         const nextTime = `${(parseInt(time.split('.')[0]) + 1).toString().padStart(2, '0')}.00`;
                         
@@ -722,6 +727,7 @@ const FinancialCalendarView: React.FC<{
                                               handleQuickCreate(time);
                                             }}
                                             disabled={isAddingSlot || !selectedCourtId || isLoadingBookings || readOnly}
+                                            title={priceReasonTip}
                                             className="flex-1 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 relative overflow-hidden border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-gray-600 hover:text-emerald-400 group/add"
                                         >
                                             <div className="relative z-10 flex flex-col items-center">
@@ -730,6 +736,9 @@ const FinancialCalendarView: React.FC<{
                                                     <span className="text-xs font-bold uppercase tracking-wider">BOŞ</span>
                                                 </div>
                                                 <span className="text-[10px] text-gray-500 font-mono mt-0.5">{currentPrice}₺</span>
+                                                <span className="text-[8px] text-gray-600 mt-0.5 max-w-[160px] truncate leading-tight hidden sm:block">
+                                                    {hasFlashDeal ? priceInfo.dealReason : priceInfo.reason}
+                                                </span>
                                             </div>
                                         </button>
 
@@ -747,7 +756,7 @@ const FinancialCalendarView: React.FC<{
                                                 ? 'bg-green-900/20 text-green-500 border-green-500/30 hover:bg-green-900/40' 
                                                 : 'bg-[#161B22] text-gray-500 hover:text-white'
                                             }`}
-                                            title="Flash deal"
+                                            title={hasFlashDeal ? priceInfo.dealReason : 'Flash deal ile bu saati indirimle doldur'}
                                         >
                                             {hasFlashDeal ? <Percent size={14} /> : <Tag size={14} />}
                                             <span className="text-[9px] font-bold">{currentPrice}₺</span>

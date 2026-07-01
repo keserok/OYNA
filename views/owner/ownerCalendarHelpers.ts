@@ -18,7 +18,18 @@ export function normalizeTime(t: string): string {
   return `${h}:${m}`;
 }
 
-export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number {
+/**
+ * Bir saatin standart (kampanyasız) fiyatını, o fiyatın **neden** o olduğunu
+ * açıklayan kısa bir gerekçe ile birlikte döndürür.
+ *
+ * "Bilge" tipi saha sahibi (bkz. docs/fikirler/saha_sahibi_arketipleri.md)
+ * fiyat mantığını kara kutu olarak görüyor; bu yüzden panel her fiyatın
+ * yanında insana okunur bir "neden" cümlesi gösterebilsin diye ayrıştırdık.
+ */
+export function resolvePriceReason(
+  hour: number,
+  pricingPolicy?: TariffLike[],
+): { price: number; reason: string } {
   if (pricingPolicy?.length) {
     const matched = pricingPolicy.find((p) => {
       const startH = parseInt(p.startTime.split(':')[0], 10);
@@ -27,11 +38,63 @@ export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): 
       if (startH <= endH) return hour >= startH && hour < endH;
       return hour >= startH || hour < endH;
     });
-    if (matched) return matched.price ?? matched.price_per_hour ?? 2000;
+    if (matched) {
+      return {
+        price: matched.price ?? matched.price_per_hour ?? 2000,
+        reason: `Kendi tarifeniz (${matched.startTime}–${matched.endTime} arası)`,
+      };
+    }
   }
-  if (hour >= 18 && hour < 23) return 3200;
-  if (hour >= 13 && hour < 16) return 2000;
-  return 2000;
+  if (hour >= 18 && hour < 23) {
+    return { price: 3200, reason: 'Akşam yoğun saat tarifesi (18:00–23:00)' };
+  }
+  if (hour >= 13 && hour < 16) {
+    return { price: 2000, reason: 'Gündüz sakin saat tarifesi (13:00–16:00)' };
+  }
+  return { price: 2000, reason: 'Standart saat tarifesi' };
+}
+
+export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number {
+  return resolvePriceReason(hour, pricingPolicy).price;
+}
+
+export interface SlotPriceBreakdown {
+  /** Müşteriye yansıyan nihai fiyat (flash deal varsa indirimli). */
+  price: number;
+  /** Kampanyasız standart fiyat. */
+  standardPrice: number;
+  /** Standart fiyatın neden bu olduğunu anlatan gerekçe. */
+  reason: string;
+  /** Flash deal uygulandıysa indirim açıklaması. */
+  dealReason?: string;
+  /** Flash deal aktif mi? */
+  hasDeal: boolean;
+}
+
+/**
+ * Bir slotun fiyatını, standart tarife gerekçesi ve (varsa) flash deal
+ * indirimi ile birlikte tam olarak ayrıştırır. Takvimdeki "Neden bu fiyat?"
+ * ipucu bu fonksiyonu kullanır.
+ */
+export function resolveSlotPriceBreakdown(
+  timeKey: string,
+  courtId: string,
+  pricingPolicy: TariffLike[] | undefined,
+  flashDeals: FlashDeal[],
+): SlotPriceBreakdown {
+  const hour = parseInt(timeKey.split('.')[0], 10);
+  const { price: standardPrice, reason } = resolvePriceReason(hour, pricingPolicy);
+  const deal = findFlashDealForSlot(timeKey, courtId, flashDeals);
+  if (deal) {
+    return {
+      price: deal.deal_price,
+      standardPrice: deal.original_price || standardPrice,
+      reason,
+      dealReason: `Flash Deal: %${deal.discount_percent} indirim uygulandı`,
+      hasDeal: true,
+    };
+  }
+  return { price: standardPrice, standardPrice, reason, hasDeal: false };
 }
 
 export function findFlashDealForSlot(
