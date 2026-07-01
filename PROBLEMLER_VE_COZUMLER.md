@@ -121,6 +121,20 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
 - **Kapsam:** Yalnızca **UI/UX + Frontend** (giriş/kayıt eylemi mevcut Supabase Auth ile çalışıyor; yeni backend/DB yok).
 - **Etkilenen katmanlar:** Frontend. **Onay:** ✅ (misafir şeridi dahil). **Doğrulama:** `tsc` temiz + 390px önizleme paylaşıldı.
 
+### [OYUNCU-05] Oyna Cüzdan yeniden düzenleme (Güncel Bakiye, kart akışı, iyzico) 
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-07-01
+- **Problem (kullanıcı anlatımı):** IBAN'a çek ile para yükleme bölümleri yer değişsin; buralara gerçek kart bilgisi girilebilsin; para çekme + kart ekleme sağ alttaki ayarlar (dişli) butonunun işlevleri olsun. "Ya da iyzico mu halleder?" Ayrıca cüzdanın tasarım/akışını geliştir + 2 demo kart göster. Sonradan: **Kazanç kaldırılsın** (kullanıcı kazanmıyor); cüzdan **güncel bakiye** göstersin.
+- **Açıklama / karar (iyzico & PCI):** Uygulamada ham kart numarası/CVV **toplanmaz** (PCI-DSS + iyzico/store kuralları). Mevcut entegrasyon iyzico **Checkout Form v2 (hosted)** kullanıyor (`create-payment` → `paymentPageUrl`); kart girişi iyzico'nun güvenli sayfasında yapılır. Kayıtlı kart = iyzico **Kart Saklama** (cardUserKey/cardToken); uygulama yalnız maskeli son 4 + marka tutar. Para motoru şu an **SIMULATION**; go-live'da `PAYMENT_PROVIDER=IYZICO`.
+- **Uygulanan çözüm (`views/WalletScreen.tsx`, `store.ts`, `types.ts`):**
+  1. **"Kazanç" → "Güncel Bakiye"** (hero kart). Veri aynı: `get_wallet_summary.earnings_balance` (DEPOSIT dahil − harcama − rezerve = kullanılabilir bakiye). İade Kredisi ikincil satır olarak kaldı.
+  2. Alt birincil buton **"PARA YÜKLE"**; dişli (ayarlar) butonu artık **menü** açıyor: **Para Çek** (IBAN payout formu) + **Kart Ekle**.
+  3. **Para Yükle** = iyzico test-modu bilgi ekranı (tutar ön-seçimi + "iyzico ile Öde — Yakında"; sahte bakiye yazılmaz).
+  4. **Kart Ekle** = kredi-kartı görünümlü kayıtlı kartlar + iyzico güvenlik notu; test modunda maskeli demo kart ekler (go-live'da Kart Saklama'ya bağlanır).
+  5. Tasarım/akış geliştirildi; kartlar gerçek kredi-kartı görünümünde (çip, marka, maskeli numara, `exp`). **2 demo kart** (Visa 4242 / Mastercard 5533) tohumlandı.
+- **Kapsam:** UI/UX + Frontend. (Gerçek para/kart hareketi = iyzico backend, go-live'da.)
+- **Etkilenen katmanlar:** Frontend (+ `SavedPaymentCard.exp` alanı). DB/Backend değişmedi. **Doğrulama:** `tsc` temiz + 70/70 birim testi + önizleme paylaşıldı.
+
 ---
 
 ## 🧤 Kaleci (Goalkeeper) Problemleri

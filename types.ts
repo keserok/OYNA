@@ -105,6 +105,8 @@ export interface SavedPaymentCard {
   brand: 'Visa' | 'Mastercard' | 'Troy';
   color: string;
   holder: string;
+  /** Maskeli son kullanma (AA/YY). iyzico Kart Saklama'dan gelir; PAN asla saklanmaz. */
+  exp?: string;
 }
 
 export type WalletTab = 'MAIN' | 'CARD_SETTINGS';

@@ -77,15 +77,23 @@ export const IS_LOCAL_DEV =
 
 const SAVED_CARDS_KEY = 'oyna_saved_cards';
 
+// Demo kartlar — iyzico Kart Saklama canlıya alınana kadar tasarım/önizleme için.
+// Yalnızca maskeli bilgi (son 4 hane + marka); PAN hiçbir zaman tutulmaz.
+// Renk sınıfları burada LİTERAL geçmeli ki Tailwind derlemede bunları toplasın.
+const DEMO_SAVED_CARDS: SavedPaymentCard[] = [
+  { id: 'demo-visa', last4: '4242', brand: 'Visa', color: 'from-purple-600 to-blue-600', holder: 'OYNA KULLANICI', exp: '08/28' },
+  { id: 'demo-mc', last4: '5533', brand: 'Mastercard', color: 'from-emerald-500 to-teal-700', holder: 'OYNA KULLANICI', exp: '11/27' },
+];
+
 function loadSavedCards(): SavedPaymentCard[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return [...DEMO_SAVED_CARDS];
   try {
     const raw = localStorage.getItem(SAVED_CARDS_KEY);
-    if (!raw) return [];
+    if (!raw) return [...DEMO_SAVED_CARDS]; // ilk açılışta demo kartlar görünsün
     const parsed = JSON.parse(raw) as SavedPaymentCard[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed : [...DEMO_SAVED_CARDS];
   } catch {
-    return [];
+    return [...DEMO_SAVED_CARDS];
   }
 }
 
