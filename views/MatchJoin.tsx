@@ -1048,6 +1048,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         </div>
 
                         {activePlayer.id === currentUserProfile.id && activePlayer.paymentStatus !== 'PAID' && (
+                          <p className="text-[10px] text-gray-400 font-medium leading-relaxed flex items-start gap-1.5">
+                            <Clock size={11} className="text-[#39FF14] mt-0.5 shrink-0" />
+                            <span>Kaporan güvence altına alınır. <span className="text-white font-bold">Maç iptal olursa otomatik iade edilir.</span></span>
+                          </p>
+                        )}
+
+                        {activePlayer.id === currentUserProfile.id && activePlayer.paymentStatus !== 'PAID' && (
                           <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}

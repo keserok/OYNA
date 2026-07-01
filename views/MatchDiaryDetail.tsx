@@ -110,6 +110,21 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
         }
     };
 
+    const handleShare = async () => {
+        const text = match
+            ? `OYNA maç raporum — ${match.pitchName} • ${match.score} • ${match.date}`
+            : 'OYNA maç raporum';
+        try {
+            if (typeof navigator !== 'undefined' && (navigator as any).share) {
+                await (navigator as any).share({ title: 'OYNA Maç Raporu', text });
+            } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                await navigator.clipboard.writeText(text);
+            }
+        } catch {
+            /* kullanıcı iptal etti — sessiz geç */
+        }
+    };
+
     const header = (
         <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
             <button
@@ -121,7 +136,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             <div className="text-center">
                 <h1 className="text-sm font-black text-white tracking-widest uppercase">MAÇ RAPORU</h1>
             </div>
-            <button className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
+            <button onClick={handleShare} className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
                 <Share2 size={20} />
             </button>
         </header>

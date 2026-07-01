@@ -10,6 +10,28 @@ interface MatchTicketProps {
 
 const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
   const { bookingPitch, bookingCourt, bookingDate, bookingSlot } = useAppStore();
+  const [ticketMsg, setTicketMsg] = React.useState<string | null>(null);
+
+  const flashMsg = (m: string) => { setTicketMsg(m); setTimeout(() => setTicketMsg(null), 2600); };
+
+  const handleShare = async () => {
+    const text = `OYNA maç kartım — ${bookingPitch?.name ?? 'Halı Saha'}${bookingDate ? ` • ${bookingDate}` : ''}`;
+    try {
+      if (typeof navigator !== 'undefined' && (navigator as any).share) {
+        await (navigator as any).share({ title: 'OYNA Maç Kartı', text });
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        flashMsg('Maç bilgisi panoya kopyalandı.');
+      } else {
+        flashMsg('Paylaşım bu cihazda desteklenmiyor.');
+      }
+    } catch {
+      /* kullanıcı paylaşımı iptal etti — sessiz geç */
+    }
+  };
+
+  // Cüzdan geçişi (Apple/Google Wallet) henüz yok — dürüstçe bilgilendir.
+  const handleAddToWallet = () => flashMsg('Cüzdana ekleme yakında aktif olacak.');
 
   const formatDateString = (dateStr: string | null) => {
     if (!dateStr) return 'Seçilmedi';
@@ -104,13 +126,17 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 
            {/* Actions */}
            <div className="flex gap-4 mt-8">
-               <button className="flex-1 bg-[#161B22] border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors">
+               <button onClick={handleShare} className="flex-1 bg-[#161B22] border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors active:scale-95">
                    <Share2 size={18} /> Paylaş
                </button>
-               <button className="flex-1 bg-[#FFFF00] text-black py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20">
+               <button onClick={handleAddToWallet} className="flex-1 bg-[#FFFF00] text-black py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20 active:scale-95">
                    <Download size={18} /> Cüzdana Ekle
                </button>
            </div>
+
+           {ticketMsg && (
+               <p className="text-center text-xs text-gray-300 font-medium mt-4 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4">{ticketMsg}</p>
+           )}
 
        </div>
     </div>
