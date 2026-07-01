@@ -40,6 +40,7 @@ const ACLPage = lazy(() => import('./pages/ACLPage').then(m => ({ default: m.ACL
 const PendingVerificationsPage = lazy(() => import('./pages/PendingVerificationsPage').then(m => ({ default: m.PendingVerificationsPage })));
 const ProviderIdentitiesPage = lazy(() => import('./pages/ProviderIdentitiesPage').then(m => ({ default: m.ProviderIdentitiesPage })));
 const ServiceDisputesPage = lazy(() => import('./pages/ServiceDisputesPage').then(m => ({ default: m.ServiceDisputesPage })));
+const UserReportsPage = lazy(() => import('./pages/UserReportsPage').then(m => ({ default: m.UserReportsPage })));
 const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
 const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m => ({ default: m.SystemParamsPage })));
 const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage').then(m => ({ default: m.VerificationCenterPage })));
@@ -49,7 +50,7 @@ export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
-  | 'SERVICE_DISPUTES' | 'MODERATION'
+  | 'SERVICE_DISPUTES' | 'MODERATION' | 'USER_REPORTS'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION'
   | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES';
 
@@ -174,6 +175,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <ProviderIdentitiesPage onBadgeCount={setProviderIdentityCount} />;
             case 'SERVICE_DISPUTES':
                 return <ServiceDisputesPage />;
+            case 'USER_REPORTS':
+                return <UserReportsPage onNavigate={handleNavigate} />;
             case 'MATCHES':
                 return <MatchesPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             case 'TOPLULUKLAR':

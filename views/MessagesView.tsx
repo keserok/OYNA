@@ -7,9 +7,18 @@ import {
 import { auth } from '../supabaseAuth';
 import {
   getMyConversations, getMessages, sendMessage, markConversationRead,
-  blockUser, subscribeToConversation,
-  ConversationSummary, Message,
+  blockUser, reportUser, subscribeToConversation,
+  ConversationSummary, Message, ReportReason,
 } from '../services/messageService';
+
+// Şikayet sebepleri (user_reports.reason ile birebir eşleşir).
+const REPORT_REASONS: { id: ReportReason; label: string }[] = [
+  { id: 'HARASSMENT',   label: 'Taciz / Hakaret' },
+  { id: 'SPAM',         label: 'Spam / Reklam' },
+  { id: 'FAKE_PROFILE', label: 'Sahte Profil' },
+  { id: 'CHEATING',     label: 'Hile / Dolandırıcılık' },
+  { id: 'OTHER',        label: 'Diğer' },
+];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface MessagesViewProps {
@@ -126,6 +135,11 @@ const ChatView: React.FC<{
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
+  // Şikayet modalı (sebep seçimi + gerçek kayıt) ve engelleme onayı.
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -209,8 +223,9 @@ const ChatView: React.FC<{
     }
   }, [draft, sending, conversation.id, pushMessage, scrollToBottom]);
 
-  const handleBlock = useCallback(async () => {
-    setMenuOpen(false);
+  // Engelleme artık onay adımıyla (yanlışlıkla engelleme geri alınamazdı).
+  const handleBlockConfirmed = useCallback(async () => {
+    setConfirmBlock(false);
     setError(null);
     try {
       await blockUser(conversation.otherId, true);
@@ -220,11 +235,27 @@ const ChatView: React.FC<{
     }
   }, [conversation.otherId, name]);
 
-  const handleReport = useCallback(() => {
-    setMenuOpen(false);
-    // Şikayet → admin notu (hafif): mevcut altyapı yoksa kullanıcıya bilgi ver.
-    setActionInfo('Şikayetin alındı, ekibimiz inceleyecek.');
-  }, []);
+  // Şikayeti GERÇEK moderasyon kuyruğuna (user_reports) yazar.
+  const handleSubmitReport = useCallback(async () => {
+    if (!reportReason || reportSubmitting) return;
+    setReportSubmitting(true);
+    setError(null);
+    try {
+      await reportUser({
+        reportedId: conversation.otherId,
+        reason: reportReason,
+        contextType: 'CHAT',
+        contextId: conversation.id,
+      });
+      setShowReportModal(false);
+      setReportReason(null);
+      setActionInfo('Şikayetin ekibimize iletildi, inceleyeceğiz.');
+    } catch (e: any) {
+      setError(e?.message || 'Şikayet gönderilemedi.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  }, [reportReason, reportSubmitting, conversation.otherId, conversation.id]);
 
   return (
     <div className="flex flex-col h-full">
@@ -262,7 +293,7 @@ const ChatView: React.FC<{
                 className="absolute right-4 top-14 z-20 w-44 bg-[#0D1117] border border-white/12 rounded-2xl overflow-hidden shadow-xl"
               >
                 <button
-                  onClick={handleBlock}
+                  onClick={() => { setMenuOpen(false); setConfirmBlock(true); }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Ban size={16} />
@@ -270,7 +301,7 @@ const ChatView: React.FC<{
                 </button>
                 <div className="h-px bg-white/8" />
                 <button
-                  onClick={handleReport}
+                  onClick={() => { setMenuOpen(false); setReportReason(null); setShowReportModal(true); }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-amber-400 hover:bg-amber-500/10 transition-colors"
                 >
                   <Flag size={16} />
@@ -372,6 +403,78 @@ const ChatView: React.FC<{
             : <Send size={18} className="text-white" />}
         </button>
       </div>
+
+      {/* ── Engelleme Onayı ── */}
+      <AnimatePresence>
+        {confirmBlock && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmBlock(false)}>
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#0D1117] border border-white/12 rounded-3xl p-6 text-center"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
+                <Ban size={24} className="text-red-400" />
+              </div>
+              <h3 className="text-base font-black text-white uppercase tracking-tight">{name} engellensin mi?</h3>
+              <p className="text-[12px] text-gray-400 mt-2 mb-5">Bu kişi sana mesaj gönderemez. İstediğin zaman ayarlardan engeli kaldırabilirsin.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmBlock(false)} className="flex-1 h-12 rounded-2xl bg-white/6 border border-white/10 text-gray-300 font-bold text-sm">Vazgeç</button>
+                <button onClick={handleBlockConfirmed} className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-black text-sm uppercase tracking-wider">Engelle</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Şikayet (sebep seçimi + gerçek kayıt) ── */}
+      <AnimatePresence>
+        {showReportModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !reportSubmitting && setShowReportModal(false)}>
+            <motion.div
+              initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#0D1117] border border-white/12 rounded-3xl p-6"
+            >
+              <div className="flex items-center gap-2.5 mb-4">
+                <Flag size={18} className="text-amber-400" />
+                <h3 className="text-base font-black text-white uppercase tracking-tight">Şikayet Nedeni</h3>
+              </div>
+              <div className="space-y-2 mb-5">
+                {REPORT_REASONS.map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => setReportReason(r.id)}
+                    className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold border transition-colors ${
+                      reportReason === r.id
+                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                        : 'bg-white/4 border-white/10 text-gray-300 hover:bg-white/8'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  disabled={reportSubmitting}
+                  className="flex-1 h-12 rounded-2xl bg-white/6 border border-white/10 text-gray-300 font-bold text-sm disabled:opacity-50"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  onClick={handleSubmitReport}
+                  disabled={!reportReason || reportSubmitting}
+                  className="flex-1 h-12 rounded-2xl bg-amber-500 text-black font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  {reportSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Gönder'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

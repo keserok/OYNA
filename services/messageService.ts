@@ -119,6 +119,36 @@ export const blockUser = async (otherUserId: string, block: boolean): Promise<vo
   }
 };
 
+export type ReportReason = 'SPAM' | 'HARASSMENT' | 'FAKE_PROFILE' | 'CHEATING' | 'OTHER';
+
+/**
+ * Bir kullanıcıyı şikayet et → moderasyon kuyruğuna (user_reports) GERÇEK kayıt yazar.
+ * (Eskiden yalnız sahte bir "şikayetin alındı" mesajı gösteriliyordu.)
+ */
+export const reportUser = async (params: {
+  reportedId: string;
+  reason: ReportReason;
+  contextType?: 'CHAT' | 'PROFILE' | 'MATCH';
+  contextId?: string;
+  note?: string;
+}): Promise<void> => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Oturumun bulunamadı.');
+  if (uid === params.reportedId) throw new Error('Kendini şikayet edemezsin.');
+  const { error } = await supabase.from('user_reports').insert({
+    reporter_id: uid,
+    reported_id: params.reportedId,
+    context_type: params.contextType ?? 'CHAT',
+    context_id: params.contextId ?? null,
+    reason: params.reason,
+    note: params.note?.trim() || null,
+  });
+  if (error) {
+    console.warn('[messageService] şikayet kaydedilemedi:', error.message);
+    throw new Error('Şikayet gönderilemedi. Lütfen tekrar dene.');
+  }
+};
+
 /**
  * Bir konuşmanın yeni mesajlarına realtime abone ol.
  * @returns aboneliği iptal eden fonksiyon.

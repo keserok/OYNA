@@ -3,7 +3,7 @@ import { useAppStore } from '../../../store';
 import {
     Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
     ChevronLeft, ChevronRight, Radio, Swords, LogOut, Lock, Globe, Trophy, ScrollText,
-    ShieldCheck, AlertOctagon, SlidersHorizontal, MessageSquare
+    ShieldCheck, AlertOctagon, SlidersHorizontal, MessageSquare, Flag
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 import type { AdminSession } from '../../services/adminService';
@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         const map: Record<string, GodViewSubRoute> = {
             'Genel': 'GENEL', 'Komuta Merkezi': 'CONTROL', 'Sahalar': 'SAHALAR', 'Kullanıcılar': 'KULLANICILAR',
             'Doğrulama': 'VERIFICATION', 'Onay Bekl.': 'PENDING_VERIFICATIONS', 'Kimlik Doğr.': 'PROVIDER_IDENTITIES', 'Hizmet İtirazları': 'SERVICE_DISPUTES',
-            'Tesis Onayları': 'MODERATION',
+            'Tesis Onayları': 'MODERATION', 'Şikayetler': 'USER_REPORTS',
             'Maçlar': 'MATCHES', 'Kaleciler': 'KALECİLER', 'Hakemler': 'HAKEMLER', 'Topluluklar': 'TOPLULUKLAR',
             'Takımlar': 'TAKIMLAR', 'Turnuvalar': 'TURNUVALAR', 'Kampanyalar': 'NOTIFICATIONS', 'Bildirim Şablonları': 'NOTIFICATION_TEMPLATES',
             'İndirim Kodları': 'PROMO_CODES', 'Finans Merkezi': 'FINANCE', 'İhtilaflar': 'DISPUTES', 'Komisyon': 'COMMISSION',
@@ -80,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 { icon: Users, label: 'Kullanıcılar', badge: totalUsers || null, active: activeSubRoute === 'KULLANICILAR', action: () => onNavigate('KULLANICILAR') },
                 { icon: ShieldCheck, label: 'Doğrulama', badge: (verificationCount || (pendingVerifCount + providerIdentityCount)) > 0 ? (verificationCount || (pendingVerifCount + providerIdentityCount)) : null, active: activeSubRoute === 'VERIFICATION' || activeSubRoute === 'PENDING_VERIFICATIONS' || activeSubRoute === 'PROVIDER_IDENTITIES', action: () => onNavigate('VERIFICATION') },
                 { icon: Shield, label: 'Tesis Onayları', badge: pendingPitches > 0 ? String(pendingPitches) : null, active: activeSubRoute === 'MODERATION', action: () => onNavigate('MODERATION') },
+                { icon: Flag, label: 'Şikayetler', badge: null, active: activeSubRoute === 'USER_REPORTS', action: () => onNavigate('USER_REPORTS') },
                 { icon: Swords, label: 'Maçlar', badge: missingAlerts ? `${missingAlerts}⚠` : (totalMatches || null), active: activeSubRoute === 'MATCHES', action: () => onNavigate('MATCHES') },
                 { icon: Shield, label: 'Kaleciler', badge: totalGk || null, active: activeSubRoute === 'KALECİLER', action: () => onNavigate('KALECİLER') },
                 { icon: Scale, label: 'Hakemler', badge: totalRef || null, active: activeSubRoute === 'HAKEMLER', action: () => onNavigate('HAKEMLER') },

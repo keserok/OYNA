@@ -960,6 +960,55 @@ export async function resolveDispute(disputeId: string, status: 'RESOLVED' | 'DI
   if (error) throw new Error(error.message);
 }
 
+// ─── Kullanıcı Şikayetleri (user_reports) ────────────────────────────────────
+export interface UserReportRow {
+  id: string;
+  reporter_id: string;
+  reported_id: string;
+  context_type: string;
+  context_id: string | null;
+  reason: string;
+  note: string | null;
+  status: string;
+  resolution_notes: string | null;
+  created_at: string;
+}
+
+const REPORT_REASON_TR: Record<string, string> = {
+  SPAM: 'Spam / Reklam',
+  HARASSMENT: 'Taciz / Hakaret',
+  FAKE_PROFILE: 'Sahte Profil',
+  CHEATING: 'Hile / Dolandırıcılık',
+  OTHER: 'Diğer',
+};
+export const reportReasonLabel = (reason: string): string => REPORT_REASON_TR[reason] ?? reason;
+
+export async function fetchUserReports(): Promise<UserReportRow[]> {
+  const { data, error } = await supabase
+    .from('user_reports')
+    .select('id, reporter_id, reported_id, context_type, context_id, reason, note, status, resolution_notes, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data || []) as UserReportRow[];
+}
+
+export async function resolveUserReport(
+  reportId: string,
+  status: 'REVIEWED' | 'DISMISSED',
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_reports')
+    .update({
+      status,
+      resolution_notes: notes?.trim() || null,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', reportId);
+  if (error) throw new Error(error.message);
+}
+
 export async function processAccountDeletion(userId: string, anonymize = true): Promise<void> {
   const { error } = await supabase.rpc('admin_process_account_deletion', {
     p_user_id: userId,
