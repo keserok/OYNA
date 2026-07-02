@@ -15,9 +15,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Fail-closed: ADMIN_EDGE_SECRET set edilmeden fonksiyon ÇALIŞMAZ.
     const adminSecret = Deno.env.get('ADMIN_EDGE_SECRET');
+    if (!adminSecret) {
+      return new Response(JSON.stringify({ error: 'ADMIN_EDGE_SECRET is not configured' }), {
+        status: 503,
+        headers: corsHeaders,
+      });
+    }
     const headerSecret = req.headers.get('x-admin-secret');
-    if (adminSecret && headerSecret !== adminSecret) {
+    if (headerSecret !== adminSecret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 

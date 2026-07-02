@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Globe, Bell, Shield, HelpCircle, LogOut, ChevronRight,
-  RefreshCw, Moon, Database, MapPin, Lock, CheckCircle2, XCircle, Smartphone,
+  RefreshCw, Moon, MapPin, Lock, CheckCircle2, XCircle, Smartphone,
   AlertCircle, Download, Trash2, X, Repeat
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +36,7 @@ const DeleteAccountModal: React.FC<{
     setLoading(true);
     try {
       await supabase.rpc('request_account_deletion');
-      setToast({ message: 'Silme talebiniz alındı. 30 gün içinde hesabınız silinecek.', variant: 'success' });
+      setToast({ message: 'Silme talebiniz alındı. 7 gün içinde hesabınız silinecek.', variant: 'success' });
       setTimeout(() => {
         onConfirmed();
       }, 2000);
@@ -81,7 +81,7 @@ const DeleteAccountModal: React.FC<{
         {step === 1 ? (
           <>
             <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-              Bu işlem <span className="text-red-400 font-bold">geri alınamaz</span>. Hesabın, tüm verilerinle birlikte 30 gün içinde kalıcı olarak silinecek.
+              Bu işlem <span className="text-red-400 font-bold">geri alınamaz</span>. Hesabın, tüm verilerinle birlikte 7 gün içinde kalıcı olarak silinecek.
               Devam etmek istediğine emin misin?
             </p>
             <div className="space-y-3">
@@ -135,7 +135,6 @@ const DeleteAccountModal: React.FC<{
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) => {
   const [lang, setLang] = useState('TR');
-  const [seeding, setSeeding] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [showNotifSettings, setShowNotifSettings] = useState(false);
   const [templates, setTemplates] = useState<NotificationTemplateInfo[]>([]);
@@ -302,8 +301,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     }
     setSavingKey(null);
   };
-
-  const handleSeed = () => { /* existing seed logic */ };
 
   const SettingItem = ({ icon, title, value, onClick, color = 'text-gray-500' }: any) => (
     <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/5 first:rounded-t-2xl last:rounded-b-2xl border-b-0 last:border-b hover:bg-white/5 transition-colors">
@@ -552,28 +549,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             </button>
           </section>
         )}
-
-        {/* Geliştirici Konsolu */}
-        <section className="bg-[#1a1c22]/50 border border-yellow-500/10 rounded-2xl p-5 space-y-3 relative overflow-hidden">
-          <div className="flex items-center gap-2 text-yellow-500">
-            <Database size={16} />
-            <h3 className="text-xs font-black uppercase tracking-wider">Geliştirici Konsolu</h3>
-          </div>
-          <p className="text-[11px] text-gray-400 leading-relaxed">
-            OYNA uygulamasının veritabanını (sahalar, hakemler, kaleciler) Firebase bulutuna ilk kez yüklemek veya sıfırlamak için aşağıdaki butona basın.
-          </p>
-          <button
-            disabled={seeding}
-            onClick={handleSeed}
-            className="w-full flex items-center justify-center gap-2.5 p-3.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 border border-yellow-500/30 rounded-xl text-yellow-500 font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
-          >
-            {seeding ? (
-              <><RefreshCw size={14} className="animate-spin text-yellow-500" /> Veritabanı Yükleniyor...</>
-            ) : (
-              <><Database size={14} className="text-yellow-500" /> Veritabanını Tohumla (Seed DB)</>
-            )}
-          </button>
-        </section>
 
         {/* Konum */}
         <section>

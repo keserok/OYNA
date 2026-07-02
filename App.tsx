@@ -4,11 +4,13 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './t
 import { auth, onAuthStateChanged, logout } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
-import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
+import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
+import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import { identifyUser, resetUser, trackEvent } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
+import OfflineBanner from './components/OfflineBanner';
 
 // Eagerly loaded for immediate display
 import SplashScreen from './views/SplashScreen';
@@ -301,6 +303,23 @@ const App: React.FC = () => {
       if (unsubscribeRealtime) unsubscribeRealtime();
     };
   }, []);
+
+  // ─── Deep Link (oyna:// URL açılışları) ────────────────────────────────────
+  // Push tıklaması dışındaki gerçek URL açılışları: @capacitor/app appUrlOpen.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let remove: (() => void) | undefined;
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      CapApp.addListener('appUrlOpen', ({ url }) => {
+        handleDeepLink(
+          url,
+          (v) => useAppStore.getState().navigateTo(v as AppView),
+          (m) => useAppStore.getState().setSelectedMatch(m),
+        );
+      }).then((handle) => { remove = () => handle.remove(); });
+    });
+    return () => { if (remove) remove(); };
+  }, []);
   // Aktif role göre açılış ekranı. Oyuncu (ve varsayılan) → Dashboard.
   // Sağlayıcı/tesis rolleri yalnız admin onayından sonra aktif role atanır.
   const navigateBasedOnRole = (currentRole: UserRole | null): AppView => {
@@ -521,6 +540,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
+      <OfflineBanner />
       {/* Mesh Gradient Background */}
       <div className="mesh-bg">
         <div className="mesh-blob mesh-blob-1"></div>

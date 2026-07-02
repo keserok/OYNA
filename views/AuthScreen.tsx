@@ -99,7 +99,7 @@ const AnimatedTagline = ({ text, color }: { text: string; color: string }) => {
   );
 };
 
-const KVKK_TEXT = `OYNA, kullanıcıların e-posta veya telefon numarasını 6379 sayılı KVKK kapsamında yalnızca kimlik doğrulama, hesap güvenliği ve hizmet bilgilendirmesi amacıyla işlemekte; üçüncü taraflarla paylaşmamakta ve kullanıcının talebi üzerine verilerini kalıcı olarak silmektedir. Kişisel verilerinize ilişkin haklarınızı destek@oyna.app adresine yazılı başvuru yoluyla kullanabilirsiniz.`;
+const KVKK_TEXT = `OYNA, kullanıcıların e-posta veya telefon numarasını 6698 sayılı KVKK kapsamında yalnızca kimlik doğrulama, hesap güvenliği ve hizmet bilgilendirmesi amacıyla işlemekte; üçüncü taraflarla paylaşmamakta ve kullanıcının talebi üzerine verilerini kalıcı olarak silmektedir. Kişisel verilerinize ilişkin haklarınızı destek@oyna.app adresine yazılı başvuru yoluyla kullanabilirsiniz.`;
 
 const SOZLESME_TEXT = `OYNA platformunu kullanan her kişi, uygulamanın yalnızca yasal spor organizasyonları amacıyla kullanılacağını, başkalarının haklarını ihlal eden içerik paylaşmayacağını ve hesabının güvenliğinden bizzat sorumlu olduğunu kabul etmektedir. Kullanım koşullarını ihlal eden hesaplar bildirim yapılmaksızın askıya alınabilir.`;
 

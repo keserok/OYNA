@@ -12,8 +12,6 @@ node_modules_old/
 node_modules_local/
 my_vite.log
 tsc_err.log
-android/
-ios/
 reports/
 scripts/*
 !scripts/owner-demo.mjs
@@ -40,7 +38,9 @@ reports/
 /test_*
 /tsconfig.check.json
 
-# Android build artıkları (kaynak dosyalar commit'lenir, build çıktıları edilmez)
+# ─── Native katman: KAYNAK dosyalar commit'lenir, build çıktıları ve ───
+# ─── cap sync'in ürettiği kopyalar edilmez ─────────────────────────────
+# Android build artıkları
 android/.gradle/
 android/build/
 android/app/build/
@@ -48,6 +48,29 @@ android/app/release/
 android/local.properties
 android/.idea/
 android/captures/
+# cap sync'in ürettiği kopyalar (dist + cordova plugin köprüsü)
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins/
+# iOS build artıkları ve cap sync kopyaları
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/capacitor-cordova-ios-plugins/
+**/xcuserdata/
+
+# ─── İmzalama ve platform gizli dosyaları — ASLA COMMIT'LEME ───────────
+*.keystore
+*.jks
+android/key.properties
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+*.p8
+*.p12
+*.mobileprovision
 
 .vercel
 supabase/.temp/

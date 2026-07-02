@@ -3,6 +3,20 @@
 > **Tarih:** 2 Temmuz 2026 · **Kaynak:** Kod tabanının uçtan uca analizi (frontend, Supabase backend, Android/iOS native katman)
 > **Hedef:** OYNA'yı (com.oyna.app) Google Play Store ve Apple App Store'da yayına almak.
 
+> ## ✅ UYGULAMA DURUMU (2 Temmuz 2026 — bu branch'te tamamlandı)
+> Kod tarafında çözülebilir maddelerin tamamı bu branch'te uygulandı:
+> - **Android:** `colors.xml` eklendi (derleme engeli kalktı) · konum/kamera/bildirim izinleri + portre kilidi + `oyna://` intent-filter eklendi · `versionName 3.0.0` · `key.properties` tabanlı koşullu release imzalama · `ic_stat_oyna` bildirim ikonu.
+> - **iOS:** bundle ID `com.oyna.app` yapıldı (pbxproj + Apple Sign-In clientId) · Podfile `node_modules`'a düzeltildi ve 12 pod'un tamamı eklendi · `App.entitlements` (Push + Sign in with Apple) oluşturulup projeye bağlandı · `MARKETING_VERSION 3.0.0` · yalnız iPhone + portre · `armv7→arm64` · `config 2.xml` silindi. (macOS'ta `pod install` + Xcode 26 derlemesi gerektirir.)
+> - **Güvenlik:** `admin-broadcast` fail-closed yapıldı · auth'suz legacy `push-notification` fonksiyonu ve bayat `notifications/edge-function` kopyası silindi (Supabase'den **undeploy KURUCU aksiyonu**) · `IS_LOCAL_DEV` artık yalnızca `VITE_DEV_MODE=true` ile açılıyor.
+> - **Ürün:** Geliştirici Konsolu kaldırıldı · KVKK "6379"→"6698" · hesap silme süresi 7 güne eşitlendi · iletişim `destek@oyna.app`'e birleştirildi · çevrimdışı uyarı şeridi eklendi.
+> - **Deep link:** `@capacitor/app` kuruldu, `appUrlOpen` dinleyicisi bağlandı, iOS `CFBundleURLTypes` + Android intent-filter eklendi.
+> - **Marka:** OYNA markalı ikon/splash üretildi ve tüm Android/iOS boyutlarına uygulandı (Capacitor robotu gitti). `assets/` altındaki master'lar tasarımcı tarafından nihai logoyla değiştirilebilir.
+> - **Yasal:** `/gizlilik` ve `/hesap-silme` statik sayfaları eklendi (Vercel'de otomatik yayınlanır) — şirket ünvanı yer tutucusu ve **avukat onayı hâlâ gerekli**.
+> - **Temizlik:** `arsiv/` silindi · `metadata.json` adı düzeltildi · `.gitignore` yeniden düzenlendi (native kaynaklar takipte; keystore/google-services/p8/p12 asla commit'lenmez).
+> - **Doğrulama:** `tsc` temiz · production build başarılı · 70/70 birim testi geçti · `cap sync android` 10 plugin ile temiz.
+>
+> **Hâlâ açık (kod dışı / KURUCU):** iyzico sözleşme+entegrasyon anahtarları, PaymentScreen gerçek tahsilat bağlantısı (Faz D), APNs/FCM anahtarları + `google-services.json`, edge secret'ları (`ADMIN_EDGE_SECRET`, `WEBHOOK_SECRET`, CORS), mağaza hesapları/formları, avukat onaylı metinler + şirket ünvanı, profiles PII daraltması (mobil sürümle koordineli), gerçek cihaz QA.
+
 ---
 
 ## 0. Yönetici Özeti

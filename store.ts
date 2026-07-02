@@ -71,9 +71,9 @@ export interface AppSettings {
 }
 // ─────────────────────────────────────────────────────────────────────
 
-export const IS_LOCAL_DEV =
-  import.meta.env.VITE_DEV_MODE === 'true' ||
-  !import.meta.env.VITE_SUPABASE_URL;
+// Yalnızca açıkça VITE_DEV_MODE=true ise dev modu; env eksikliği dev moda DÜŞÜRMEZ
+// (supabaseClient prod fallback'i ile gerçek backend'e bağlıyken mock moda geçmek tehlikeli).
+export const IS_LOCAL_DEV = import.meta.env.VITE_DEV_MODE === 'true';
 
 const SAVED_CARDS_KEY = 'oyna_saved_cards';
 
