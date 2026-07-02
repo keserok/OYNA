@@ -22,7 +22,7 @@ const ConfettiPiece: React.FC<{ x: number; color: string; delay: number }> = ({ 
   />
 );
 
-const CONFETTI_COLORS = ['#FFFF00', '#39FF14', '#FF3333', '#3388FF', '#FF69B4', '#FFA500'];
+const CONFETTI_COLORS = ['#FACC15', '#39FF14', '#FF3333', '#3388FF', '#FF69B4', '#FFA500'];
 
 const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApproved, onLogout, onReapply }) => {
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
@@ -87,7 +87,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
           className="absolute top-[-20%] left-[-10%] w-[400px] h-[400px] rounded-full blur-[140px]"
-          style={{ background: 'rgba(255,255,0,0.08)' }}
+          style={{ background: 'rgba(250,204,21,0.08)' }}
           animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -153,12 +153,12 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             className="w-24 h-24 rounded-full flex items-center justify-center"
             style={{
-              background: 'rgba(255,255,0,0.1)',
-              border: '2px solid rgba(255,255,0,0.25)',
-              boxShadow: '0 0 40px rgba(255,255,0,0.15)',
+              background: 'rgba(250,204,21,0.1)',
+              border: '2px solid rgba(250,204,21,0.25)',
+              boxShadow: '0 0 40px rgba(250,204,21,0.15)',
             }}
           >
-            <Clock size={48} className="text-[#FFFF00]" />
+            <Clock size={48} className="text-[#FACC15]" />
           </motion.div>
         </div>
 
@@ -174,7 +174,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           </p>
           <h1
             className="text-3xl font-black text-white italic tracking-tight"
-            style={{ textShadow: '0 0 20px rgba(255,255,0,0.2)' }}
+            style={{ textShadow: '0 0 20px rgba(250,204,21,0.2)' }}
           >
             PROFİLİN İNCELENİYOR
           </h1>
@@ -190,9 +190,9 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           <span
             className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-black uppercase tracking-wider"
             style={{
-              background: 'rgba(255,255,0,0.1)',
-              border: '1px solid rgba(255,255,0,0.3)',
-              color: '#FFFF00',
+              background: 'rgba(250,204,21,0.1)',
+              border: '1px solid rgba(250,204,21,0.3)',
+              color: '#FACC15',
             }}
           >
             <Clock size={14} /> Onay Bekleniyor
@@ -213,7 +213,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
         >
           <p className="text-gray-300 text-sm leading-relaxed text-center">
             Platform güvenliği için profilin ekibimiz tarafından inceleniyor.
-            Bu işlem genellikle <span className="text-[#FFFF00] font-bold">24 saat</span> sürer.
+            Bu işlem genellikle <span className="text-[#FACC15] font-bold">24 saat</span> sürer.
             Onaylandığında sana bildirim göndereceğiz.
           </p>
         </motion.div>
@@ -225,11 +225,11 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           transition={{ delay: 0.4 }}
           className="rounded-[24px] p-5 mb-6"
           style={{
-            background: 'rgba(255,255,0,0.04)',
-            border: '1px solid rgba(255,255,0,0.1)',
+            background: 'rgba(250,204,21,0.04)',
+            border: '1px solid rgba(250,204,21,0.1)',
           }}
         >
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#FFFF00] mb-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#FACC15] mb-4">
             Onayı Hızlandır
           </p>
           <div className="space-y-3">
@@ -239,7 +239,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
               { icon: <MapPin size={16} />, text: 'Tercih ettiğin bölgeleri seç' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-gray-300 text-sm">
-                <span className="text-[#FFFF00] opacity-70">{item.icon}</span>
+                <span className="text-[#FACC15] opacity-70">{item.icon}</span>
                 <span>{item.text}</span>
               </div>
             ))}
@@ -303,7 +303,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
                     setShowRejectedModal(false);
                     if (onReapply) onReapply(rejectionNotes);
                   }}
-                  className="w-full h-12 rounded-2xl font-black text-sm bg-[#FFFF00] text-black"
+                  className="w-full h-12 rounded-2xl font-black text-sm bg-[#FACC15] text-black"
                 >
                   Tekrar Başvur
                 </button>

@@ -174,7 +174,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
                                         <div className="flex items-center gap-2">
                                             <h4 className="text-base font-black text-white">{player.name}</h4>
                                             {isCaptain && (
-                                                <div className="bg-[#FFFF00] text-black text-[9px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-[0_0_15px_rgba(255,255,0,0.4)]">
+                                                <div className="bg-[#FACC15] text-black text-[9px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-[0_0_15px_rgba(250,204,21,0.4)]">
                                                     <Award size={10} /> KAPTAN
                                                 </div>
                                             )}

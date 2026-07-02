@@ -441,7 +441,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
         
         {/* Floating Star Rating */}
         <div className="absolute top-2.5 right-2.5 px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-md">
-          <Star size={9} className="fill-[#FFFF00] text-[#FFFF00]" />
+          <Star size={9} className="fill-[#FACC15] text-[#FACC15]" />
           <span className="text-[9px] font-black text-white">{pitch.rating.toFixed(1)}</span>
         </div>
 
@@ -846,13 +846,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           <div className="flex items-center gap-1 bg-[#161B22] p-1 rounded-2xl border border-white/5 shadow-inner">
             <button
               onClick={() => setViewMode('LIST')}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'LIST' ? 'bg-[#FFFF00] text-black shadow-lg shadow-yellow-900/20' : 'text-gray-500'}`}
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'LIST' ? 'bg-[#FACC15] text-black shadow-lg shadow-yellow-900/20' : 'text-gray-500'}`}
             >
               <LayoutGrid size={14} /> LİSTE
             </button>
             <button
               onClick={() => setViewMode('MAP')}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'MAP' ? 'bg-[#FFFF00] text-black shadow-lg shadow-yellow-900/20' : 'text-gray-500'}`}
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'MAP' ? 'bg-[#FACC15] text-black shadow-lg shadow-yellow-900/20' : 'text-gray-500'}`}
             >
               <MapIcon size={14} /> HARİTA
             </button>
@@ -860,7 +860,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
           <button
             onClick={() => setShowFilters(true)}
-            className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${showFilters ? 'bg-[#FFFF00] text-black' : 'bg-[#161B22] border border-white/5 text-white'}`}
+            className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${showFilters ? 'bg-[#FACC15] text-black' : 'bg-[#161B22] border border-white/5 text-white'}`}
           >
             <Filter size={24} />
           </button>
@@ -868,7 +868,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
         {/* Search Bar */}
         <div className="relative group">
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FFFF00] transition-colors">
+          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FACC15] transition-colors">
             <Search size={20} />
           </div>
           <input
@@ -876,7 +876,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             placeholder="Saha veya bölge ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-16 bg-[#161B22] border border-white/5 rounded-[24px] pl-14 pr-6 text-sm font-bold outline-none focus:border-[#FFFF00]/50 focus:bg-[#1C232B] transition-all shadow-inner"
+            className="w-full h-16 bg-[#161B22] border border-white/5 rounded-[24px] pl-14 pr-6 text-sm font-bold outline-none focus:border-[#FACC15]/50 focus:bg-[#1C232B] transition-all shadow-inner"
           />
         </div>
 
@@ -884,13 +884,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 mt-4 -mx-6 px-6">
           <button
             onClick={() => setFilters({ ...filters, type: filters.type === 'Kapalı' ? 'Tümü' : 'Kapalı' })}
-            className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${filters.type === 'Kapalı' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
+            className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${filters.type === 'Kapalı' ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
           >
             Kapalı
           </button>
           <button
             onClick={() => setFilters({ ...filters, type: filters.type === 'Açık' ? 'Tümü' : 'Açık' })}
-            className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${filters.type === 'Açık' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
+            className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${filters.type === 'Açık' ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
           >
             Açık
           </button>
@@ -903,7 +903,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             <button
               key={key}
               onClick={() => setSortOrder(sortOrder === key ? 'DEFAULT' : key)}
-              className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${sortOrder === key ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
+              className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${sortOrder === key ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] text-gray-400 border-white/5'}`}
             >
               {label}
             </button>
@@ -958,7 +958,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 {filteredPitches.length} TESİS BULUNDU
               </h2>
               {filters.district !== 'Tümü' && (
-                <span className="text-[10px] font-black text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-1 rounded-lg">
+                <span className="text-[10px] font-black text-[#FACC15] bg-[#FACC15]/10 px-2 py-1 rounded-lg">
                   {filters.district}
                 </span>
               )}
@@ -990,7 +990,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     setFilters({ district: 'Tümü', minRating: 0, maxPrice: 4000, hasAmenities: [], type: 'Tümü', availability: 'Tümü' });
                     setSearchQuery('');
                   }}
-                  className="mt-6 text-[#FFFF00] text-[10px] font-black uppercase tracking-widest underline"
+                  className="mt-6 text-[#FACC15] text-[10px] font-black uppercase tracking-widest underline"
                 >
                   FİLTRELERİ SIFIRLA
                 </button>
@@ -1043,7 +1043,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       <button
                         key={d}
                         onClick={() => setFilters({ ...filters, district: d })}
-                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === d ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === d ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                       >
                         {d.toUpperCase()}
                       </button>
@@ -1055,7 +1055,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">MAKSİMUM FİYAT</p>
-                    <span className="text-sm font-black text-[#FFFF00]">{filters.maxPrice}₺</span>
+                    <span className="text-sm font-black text-[#FACC15]">{filters.maxPrice}₺</span>
                   </div>
                   <input
                     type="range"
@@ -1064,7 +1064,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     step="100"
                     value={filters.maxPrice}
                     onChange={(e) => setFilters({ ...filters, maxPrice: parseInt(e.target.value) })}
-                    className="w-full h-2 bg-[#0A0E14] rounded-lg appearance-none cursor-pointer accent-[#FFFF00]"
+                    className="w-full h-2 bg-[#0A0E14] rounded-lg appearance-none cursor-pointer accent-[#FACC15]"
                   />
                 </div>
 
@@ -1076,7 +1076,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       <button
                         key={r}
                         onClick={() => setFilters({ ...filters, minRating: r })}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border flex items-center justify-center gap-1 ${filters.minRating === r ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border flex items-center justify-center gap-1 ${filters.minRating === r ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                       >
                         {r === 0 ? 'HEPSİ' : <><Star size={10} fill="currentColor" /> {r}+</>}
                       </button>
@@ -1086,7 +1086,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="w-full h-16 bg-[#FFFF00] text-black rounded-2xl font-black text-sm tracking-widest uppercase shadow-[0_10px_30px_rgba(255,255,0,0.2)]"
+                  className="w-full h-16 bg-[#FACC15] text-black rounded-2xl font-black text-sm tracking-widest uppercase shadow-[0_10px_30px_rgba(250,204,21,0.2)]"
                 >
                   UYGULA
                 </button>
@@ -1391,7 +1391,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                                       isBooked
                                                         ? 'bg-red-500/10 border-red-500/20 text-red-400/60 cursor-not-allowed line-through'
                                                         : isSelected
-                                                          ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.4)]'
+                                                          ? 'bg-[#FACC15] border-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.4)]'
                                                           : 'bg-black/30 border-white/5 text-gray-400 hover:border-white/20'
                                                     }`}
                                                   >
@@ -1435,7 +1435,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Şimdi Ödenecek (Kapora)</p>
-                      <p className="text-lg font-black text-[#FFFF00]">{selectedSlotQuote.deposit}₺</p>
+                      <p className="text-lg font-black text-[#FACC15]">{selectedSlotQuote.deposit}₺</p>
                     </div>
                   </div>
                   <p className="text-[9px] text-gray-600 mt-1.5 leading-relaxed">
@@ -1460,9 +1460,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                          onSelectTime(selectedPitch, selectedCourt, date.toLocaleDateString('tr-TR'), selectedSlot);
                       }
                     }}
-                    className={`flex-1 h-14 rounded-2xl font-black tracking-widest text-[13px] flex items-center justify-center gap-2 transition-all uppercase bg-[#FFFF00] text-black ${
+                    className={`flex-1 h-14 rounded-2xl font-black tracking-widest text-[13px] flex items-center justify-center gap-2 transition-all uppercase bg-[#FACC15] text-black ${
                       selectedSlot && selectedCourtId
-                        ? 'shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer'
+                        ? 'shadow-[0_0_35px_rgba(250,204,21,0.65)] hover:shadow-[0_0_45px_rgba(250,204,21,0.85)] active:scale-95 cursor-pointer'
                         : 'opacity-60 cursor-not-allowed'
                     }`}
                   >
@@ -1472,9 +1472,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   <button
                     disabled={!selectedSlot || !selectedCourtId}
                     onClick={handlePayDeposit}
-                    className={`flex-1 h-14 rounded-2xl font-black text-[13px] tracking-widest flex items-center justify-center gap-2 transition-all uppercase bg-[#FFFF00] text-black ${
+                    className={`flex-1 h-14 rounded-2xl font-black text-[13px] tracking-widest flex items-center justify-center gap-2 transition-all uppercase bg-[#FACC15] text-black ${
                       selectedSlot && selectedCourtId
-                        ? 'shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer'
+                        ? 'shadow-[0_0_35px_rgba(250,204,21,0.65)] hover:shadow-[0_0_45px_rgba(250,204,21,0.85)] active:scale-95 cursor-pointer'
                         : 'opacity-60 cursor-not-allowed'
                     }`}
                   >

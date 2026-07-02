@@ -36,7 +36,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
       {/* Ambient Glow */}
       <div 
         className="absolute -top-12 -left-12 w-28 h-28 blur-[40px] opacity-10 pointer-events-none transition-opacity duration-300 group-hover:opacity-20"
-        style={{ backgroundColor: isGK ? '#39FF14' : '#FFFF00' }}
+        style={{ backgroundColor: isGK ? '#39FF14' : '#FACC15' }}
       />
 
 
@@ -51,7 +51,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
           style={{
             background: isGK 
               ? 'linear-gradient(135deg, rgba(57,255,20,0.6) 0%, rgba(16,185,129,0.1) 100%)' 
-              : 'linear-gradient(135deg, rgba(255,255,0,0.6) 0%, rgba(245,158,11,0.1) 100%)'
+              : 'linear-gradient(135deg, rgba(250,204,21,0.6) 0%, rgba(245,158,11,0.1) 100%)'
           }}
         >
           <img 
@@ -63,7 +63,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
         </div>
         <div 
           className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black text-black leading-none uppercase shadow-md flex items-center justify-center"
-          style={{ backgroundColor: isGK ? '#39FF14' : '#FFFF00' }}
+          style={{ backgroundColor: isGK ? '#39FF14' : '#FACC15' }}
         >
           {item.rating.toFixed(1)}
         </div>
@@ -161,10 +161,10 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
           whileTap={{ scale: 0.95 }}
           className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg border transition-all"
           style={{
-            backgroundColor: isGK ? 'rgba(57,255,20,0.1)' : 'rgba(255,255,0,0.1)',
-            borderColor: isGK ? 'rgba(57,255,20,0.25)' : 'rgba(255,255,0,0.25)',
-            color: isGK ? '#39FF14' : '#FFFF00',
-            boxShadow: isGK ? '0 0 10px rgba(57,255,20,0.05)' : '0 0 10px rgba(255,255,0,0.05)'
+            backgroundColor: isGK ? 'rgba(57,255,20,0.1)' : 'rgba(250,204,21,0.1)',
+            borderColor: isGK ? 'rgba(57,255,20,0.25)' : 'rgba(250,204,21,0.25)',
+            color: isGK ? '#39FF14' : '#FACC15',
+            boxShadow: isGK ? '0 0 10px rgba(57,255,20,0.05)' : '0 0 10px rgba(250,204,21,0.05)'
           }}
         >
           KİRALA

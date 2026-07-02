@@ -169,7 +169,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                         {activeTab === 'GK' ? 'TRANSFER MARKET: KALECİ' : 'TRANSFER MARKET: HAKEM'}
                     </h1>
                     <div className="flex items-center gap-1">
-                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${activeTab === 'GK' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-brand-primary shadow-[0_0_8px_rgba(255,255,0,0.5)]'}`}></div>
+                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${activeTab === 'GK' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-brand-primary shadow-[0_0_8px_rgba(250,204,21,0.5)]'}`}></div>
                         <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Profesyonel Arama Aktif</span>
                     </div>
                 </div>
@@ -299,7 +299,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                 >
                                     <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center shadow-lg ${
                                         hireMode === 'BID' 
-                                            ? 'bg-[#FFFF00]/10 border-[#FFFF00] text-[#FFFF00] shadow-[0_0_25px_rgba(255,255,0,0.3)]' 
+                                            ? 'bg-[#FACC15]/10 border-[#FACC15] text-[#FACC15] shadow-[0_0_25px_rgba(250,204,21,0.3)]' 
                                             : 'bg-emerald-500/10 border-[#39FF14] text-[#39FF14] shadow-[0_0_25px_rgba(57,255,20,0.3)]'
                                     }`}>
                                         <Sparkles size={38} className="animate-pulse" />
@@ -307,7 +307,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                     
                                     <div className="space-y-3">
                                         <h3 className={`text-2xl font-black italic uppercase tracking-tighter ${
-                                            hireMode === 'BID' ? 'text-[#FFFF00]' : 'text-[#39FF14]'
+                                            hireMode === 'BID' ? 'text-[#FACC15]' : 'text-[#39FF14]'
                                         }`}>
                                             {hireMode === 'BID' ? 'TEKLİFİNİZ GÖNDERİLDİ' : 'KİRALAMA BAŞARILI'}
                                         </h3>
@@ -336,7 +336,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[9px] font-black text-white/40 uppercase">TUTAR</span>
                                                 <span className={`text-sm font-black ${
-                                                    hireMode === 'BID' ? 'text-[#FFFF00]' : 'text-[#39FF14]'
+                                                    hireMode === 'BID' ? 'text-[#FACC15]' : 'text-[#39FF14]'
                                                 }`}>
                                                     {bidAmount} ₺
                                                 </span>
@@ -374,7 +374,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24 relative z-10">
                                     {isHiring ? (
                                         <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                            <Activity className="animate-spin text-[#FFFF00]" size={32} />
+                                            <Activity className="animate-spin text-[#FACC15]" size={32} />
                                             <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
                                                 İşlem gerçekleştiriliyor...
                                             </p>
@@ -478,7 +478,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         <span className={`text-[9px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full border ${
                                             activeTab === 'GK' 
                                                 ? 'bg-emerald-500/10 border-emerald-500/30 text-[#39FF14]' 
-                                                : 'bg-yellow-500/10 border-yellow-500/30 text-[#FFFF00]'
+                                                : 'bg-yellow-500/10 border-yellow-500/30 text-[#FACC15]'
                                         }`}>
                                             PROFESYONEL BEDELİ: {selectedProfile.fee} ₺
                                         </span>
@@ -491,7 +491,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg ${
                                             activeTab === 'GK' 
                                                 ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25' 
-                                                : 'bg-[#FFFF00] hover:bg-[#FFFF00]/90 shadow-yellow-900/25'
+                                                : 'bg-[#FACC15] hover:bg-[#FACC15]/90 shadow-yellow-900/25'
                                         }`}
                                     >
                                         MAÇ SEÇİMİNE GEÇ
@@ -527,7 +527,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
 
                                     <div className="px-6 -mt-16 relative z-10 mb-8">
                                         <h1 className="text-[32px] font-bold text-white leading-tight">{selectedProfile.name}</h1>
-                                        <p className={`text-sm font-medium mt-1 ${activeTab === 'GK' ? 'text-[#39FF14]' : 'text-[#FFFF00]'}`}>
+                                        <p className={`text-sm font-medium mt-1 ${activeTab === 'GK' ? 'text-[#39FF14]' : 'text-[#FACC15]'}`}>
                                             {activeTab === 'GK' ? 'Profesyonel Kaleci' : 'Profesyonel Hakem'}
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-3 text-white">
@@ -554,7 +554,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                                 </>
                                             ) : (
                                                 <>
-                                                    <SkillBar label="Otorite" value={(selectedProfile as Referee).stats.authority} color="bg-[#FFFF00]" />
+                                                    <SkillBar label="Otorite" value={(selectedProfile as Referee).stats.authority} color="bg-[#FACC15]" />
                                                     <SkillBar label="Kondisyon" value={(selectedProfile as Referee).stats.fitness} color="bg-amber-400" />
                                                     <SkillBar label="İletişim" value={(selectedProfile as Referee).stats.communication} color="bg-orange-400" />
                                                     <SkillBar label="Kart Yönetimi" value={85} color="bg-yellow-500" />
@@ -579,7 +579,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-lg ${
                                             activeTab === 'GK' 
                                                 ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25' 
-                                                : 'bg-[#FFFF00] hover:bg-[#FFFF00]/90 shadow-yellow-900/25'
+                                                : 'bg-[#FACC15] hover:bg-[#FACC15]/90 shadow-yellow-900/25'
                                         }`}
                                     >
                                         <Zap size={14} />

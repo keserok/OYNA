@@ -256,10 +256,10 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                         transform: 'translate(-50%, -50%)'
                                     }}
                                 >
-                                    <div className={`relative w-11 h-11 rounded-full border-2 shadow-2xl overflow-hidden ${isMe ? 'border-[#FFFF00] ring-4 ring-[#FFFF00]/30 scale-110 z-10' : 'border-white'}`}>
+                                    <div className={`relative w-11 h-11 rounded-full border-2 shadow-2xl overflow-hidden ${isMe ? 'border-[#FACC15] ring-4 ring-[#FACC15]/30 scale-110 z-10' : 'border-white'}`}>
                                         <img src={player.avatar} alt={player.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className={`px-2.5 py-1 rounded-md text-[9px] font-black text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-[#FFFF00] text-black' : 'bg-[#161B22]/90 backdrop-blur-md text-white border border-white/10'}`}>
+                                    <div className={`px-2.5 py-1 rounded-md text-[9px] font-black text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-[#FACC15] text-black' : 'bg-[#161B22]/90 backdrop-blur-md text-white border border-white/10'}`}>
                                         {player.name}
                                     </div>
                                 </div>
@@ -282,16 +282,16 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                         <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-8 relative overflow-hidden flex flex-col items-center text-center">
                             {note ? (
                                 <>
-                                    <div className="absolute top-4 left-6 text-6xl text-[#FFFF00]/5 font-serif pointer-events-none">"</div>
-                                    <div className="absolute bottom-[-10px] right-6 text-6xl text-[#FFFF00]/5 font-serif pointer-events-none">"</div>
-                                    <p className="text-[10px] font-black text-[#FFFF00] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
+                                    <div className="absolute top-4 left-6 text-6xl text-[#FACC15]/5 font-serif pointer-events-none">"</div>
+                                    <div className="absolute bottom-[-10px] right-6 text-6xl text-[#FACC15]/5 font-serif pointer-events-none">"</div>
+                                    <p className="text-[10px] font-black text-[#FACC15] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
                                     <p className="text-gray-300 font-serif text-sm italic leading-relaxed px-4 whitespace-pre-wrap">
                                         "{note}"
                                     </p>
                                 </>
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/20 flex items-center justify-center text-[#FFFF00] mb-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/20 flex items-center justify-center text-[#FACC15] mb-4">
                                         <PenLine size={22} />
                                     </div>
                                     <p className="text-sm font-bold text-white mb-1">Bu maç için not almadın</p>
@@ -308,7 +308,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                     ) : (
                         <div className="bg-[#161B22] border border-white/10 rounded-[32px] p-6 flex flex-col">
                             <div className="flex justify-between items-center mb-4">
-                                <p className="text-[10px] font-black text-[#FFFF00] uppercase tracking-widest">KİŞİSEL NOTUN</p>
+                                <p className="text-[10px] font-black text-[#FACC15] uppercase tracking-widest">KİŞİSEL NOTUN</p>
                                 <span className="flex items-center gap-1 text-[10px] text-gray-600"><Shield size={12} /> Sadece sen görürsün</span>
                             </div>
                             <textarea
@@ -329,7 +329,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                 <button
                                     onClick={handleSaveNote}
                                     disabled={savingNote}
-                                    className="flex-[1.5] h-12 rounded-2xl bg-[#FFFF00] text-black font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                                    className="flex-[1.5] h-12 rounded-2xl bg-[#FACC15] text-black font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
                                 >
                                     <Save size={16} /> {savingNote ? 'Kaydediliyor...' : 'Kaydet'}
                                 </button>

@@ -5,7 +5,7 @@ import { Gem, AlertTriangle, Camera } from 'lucide-react';
 interface RookiePlayerCardProps {
   playerName: string;
   diamondValue: number;
-  teamColor?: string; // Örn: '#FFFF00' (Neon Sarı) veya '#39FF14' (Neon Yeşil)
+  teamColor?: string; // Örn: '#FACC15' (Neon Sarı) veya '#39FF14' (Neon Yeşil)
   photoUrl?: string; // Kullanıcı fotoğraf yüklerse gösterilecek URL
   onUploadPhoto?: () => void;
   age?: number;
@@ -15,7 +15,7 @@ interface RookiePlayerCardProps {
 export const RookiePlayerCard: React.FC<RookiePlayerCardProps> = ({
   playerName,
   diamondValue,
-  teamColor = '#FFFF00', // Varsayılan vurgu rengimiz Neon Sarı
+  teamColor = '#FACC15', // Varsayılan vurgu rengimiz Neon Sarı
   photoUrl,
   onUploadPhoto,
   age = 21,
@@ -59,7 +59,7 @@ export const RookiePlayerCard: React.FC<RookiePlayerCardProps> = ({
 
         {/* Orta Kısım: Fotoğraf Alanı (Tesis öncesi çaylak slotu) */}
         <div 
-          className="relative w-44 h-52 mt-2 rounded-t-[40px] rounded-b-2xl border border-dashed flex items-center justify-center overflow-hidden transition-all duration-300 z-10 bg-[#161B22]/50 group/photo hover:border-solid hover:shadow-[0_0_20px_rgba(255,255,0,0.2)]"
+          className="relative w-44 h-52 mt-2 rounded-t-[40px] rounded-b-2xl border border-dashed flex items-center justify-center overflow-hidden transition-all duration-300 z-10 bg-[#161B22]/50 group/photo hover:border-solid hover:shadow-[0_0_20px_rgba(250,204,21,0.2)]"
           style={{ borderColor: `${teamColor}40` }}
           onClick={onUploadPhoto}
         >

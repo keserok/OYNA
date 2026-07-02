@@ -70,7 +70,7 @@ const applyCanonicalCoords = (slots: PositionSlot[]): PositionSlot[] => {
 
 const DIFF_CONFIG: Record<string, { color: string; label: string }> = {
   'Ciddi':     { color: '#FF3B3B', label: 'CİDDİ'     },
-  'Taktiksel': { color: '#FFFF00', label: 'TAKTİKSEL' },
+  'Taktiksel': { color: '#FACC15', label: 'TAKTİKSEL' },
   'Rahat':     { color: '#39FF14', label: 'RAHAT'     },
 };
 
@@ -329,7 +329,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
               {match.format || inferSquadSize((match.slots || []).length)}
             </span>
             {match.price ? (
-              <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-[#FFFF00]/8 border border-[#FFFF00]/15 text-[#FFFF00]">
+              <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-[#FACC15]/8 border border-[#FACC15]/15 text-[#FACC15]">
                 ₺{match.price}
               </span>
             ) : null}
@@ -338,7 +338,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
           {/* Countdown */}
           {!isCancelled && countdown && (
             <div className="mt-2.5 pt-2 border-t border-white/5">
-              <p className="text-[7px] font-black text-[#FFFF00] tracking-widest uppercase">KALAN SÜRE</p>
+              <p className="text-[7px] font-black text-[#FACC15] tracking-widest uppercase">KALAN SÜRE</p>
               <p className="text-[12px] font-black text-white tabular-nums mt-0.5 leading-none">{countdown}</p>
             </div>
           )}

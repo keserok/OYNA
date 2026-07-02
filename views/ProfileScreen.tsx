@@ -124,7 +124,7 @@ const MatchBanner: React.FC<{ item: MatchHistorySummary; isMvp?: boolean; onClic
                 <div className="flex items-center gap-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#c8962a]">{item.date}</span>
                     {isMvp && (
-                        <span className="px-2 py-0.5 bg-[#FFFF00] text-black text-[8px] font-black rounded-full uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(255,255,0,0.4)]">
+                        <span className="px-2 py-0.5 bg-[#FACC15] text-black text-[8px] font-black rounded-full uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
                             <Trophy size={8} fill="black" /> MVP
                         </span>
                     )}
@@ -265,7 +265,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     };
 
     return (
-        <div className="fixed inset-0 bg-[#0A0E14] flex flex-col h-screen overflow-hidden selection:bg-[#FFFF00] selection:text-black">
+        <div className="fixed inset-0 bg-[#0A0E14] flex flex-col h-screen overflow-hidden selection:bg-[#FACC15] selection:text-black">
             {/* ═══ FIXED TOP BAR ═══ */}
             <div className="px-6 pb-4 pt-safe flex justify-between items-center shrink-0 border-b border-white/5 z-50 bg-[#0A0E14]/90 backdrop-blur-md">
                 <div className="flex items-center justify-between w-full pt-4">
@@ -289,12 +289,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 <>
                 {/* ═══ MİSAFİR ŞERİDİ — oturumsuz kullanıcıya kaydolma çağrısı ═══ */}
                 {isGuest && (
-                    <div className="bg-[#FFFF00]/[0.06] border border-[#FFFF00]/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
-                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FFFF00]/10 blur-[40px] rounded-full pointer-events-none" />
+                    <div className="bg-[#FACC15]/[0.06] border border-[#FACC15]/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full pointer-events-none" />
                         <div className="relative z-10 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-[#FFFF00] animate-pulse" />
-                                <p className="text-[11px] font-black uppercase tracking-widest text-[#FFFF00]">Misafir Modundasın</p>
+                                <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
+                                <p className="text-[11px] font-black uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
                             </div>
                             <p className="text-[11px] text-gray-400 leading-relaxed">
                                 Profilini oluşturmak, maçlara katılmak ve istatistiklerini biriktirmek için giriş yap.
@@ -302,7 +302,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             <div className="flex gap-2.5">
                                 <button
                                     onClick={() => onNavigate && onNavigate('AUTH')}
-                                    className="flex-1 h-11 rounded-2xl bg-[#FFFF00] text-black font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)] hover:bg-yellow-300"
+                                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
                                 >
                                     Giriş Yap
                                 </button>
@@ -471,19 +471,19 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 {/* ═══ TAKIMLARIM CARD ═══ */}
                 <button
                     onClick={() => onNavigate && onNavigate('MY_TEAM')}
-                    className="w-full bg-[#161B22]/60 backdrop-blur-md border border-[#FFFF00]/30 rounded-3xl p-5 flex items-center justify-between group hover:bg-[#FFFF00]/5 hover:border-[#FFFF00]/50 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden"
+                    className="w-full bg-[#161B22]/60 backdrop-blur-md border border-[#FACC15]/30 rounded-3xl p-5 flex items-center justify-between group hover:bg-[#FACC15]/5 hover:border-[#FACC15]/50 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden"
                 >
-                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FFFF00]/10 blur-[40px] rounded-full group-hover:bg-[#FFFF00]/20 transition-all" />
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full group-hover:bg-[#FACC15]/20 transition-all" />
                     <div className="flex items-center gap-4 relative z-10">
-                        <div className="w-12 h-12 bg-[#FFFF00]/20 rounded-2xl flex items-center justify-center border border-[#FFFF00]/30 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(255,255,0,0.2)]">
-                            <Users size={22} className="text-[#FFFF00]" />
+                        <div className="w-12 h-12 bg-[#FACC15]/20 rounded-2xl flex items-center justify-center border border-[#FACC15]/30 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+                            <Users size={22} className="text-[#FACC15]" />
                         </div>
                         <div className="text-left">
                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">TAKIMLARIM</p>
                             <p className="text-sm font-black italic text-white leading-none tracking-tight">Kadro & Taktik Tahtası</p>
                         </div>
                     </div>
-                    <ChevronRight size={20} className="text-[#FFFF00] relative z-10 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight size={20} className="text-[#FACC15] relative z-10 group-hover:translate-x-1 transition-transform" />
                 </button>
 
                 {/* ═══ ROL DEĞİŞTİR CARD (yalnızca >1 rol varsa) ═══ */}
@@ -589,16 +589,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             onClick={() => setActiveFilter(activeFilter === 'PERFORMANCE' ? 'ALL' : 'PERFORMANCE')}
                             className={`col-span-1 border rounded-[28px] p-5 flex flex-col justify-between h-32 relative overflow-hidden group text-left transition-all ${
                                 activeFilter === 'PERFORMANCE' 
-                                    ? 'bg-[#FFFF00]/10 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.2)]' 
+                                    ? 'bg-[#FACC15]/10 border-[#FACC15] shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
                                     : 'bg-[#161B22]/50 border-white/5 hover:border-white/20'
                             }`}
                         >
-                            <div className="absolute -top-4 -right-4 w-20 h-20 bg-[#FFFF00]/10 blur-3xl rounded-full" />
-                            <TrendingUp size={20} className={activeFilter === 'PERFORMANCE' ? 'text-[#FFFF00]' : 'text-gray-400'} />
+                            <div className="absolute -top-4 -right-4 w-20 h-20 bg-[#FACC15]/10 blur-3xl rounded-full" />
+                            <TrendingUp size={20} className={activeFilter === 'PERFORMANCE' ? 'text-[#FACC15]' : 'text-gray-400'} />
                             <div>
                                 <p className="text-3xl font-black text-white italic leading-none">{winRate}%</p>
                                 <p className={`text-[9px] font-black uppercase tracking-widest mt-1.5 ${
-                                    activeFilter === 'PERFORMANCE' ? 'text-[#FFFF00]' : 'text-[#c8962a]'
+                                    activeFilter === 'PERFORMANCE' ? 'text-[#FACC15]' : 'text-[#c8962a]'
                                 }`}>PERFORMANS</p>
                             </div>
                         </button>
@@ -642,7 +642,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         </div>
                         {/* Active Filter Badge */}
                         <div className="flex justify-center">
-                            <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[9px] font-black tracking-widest text-[#FFFF00] uppercase shadow-sm">
+                            <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[9px] font-black tracking-widest text-[#FACC15] uppercase shadow-sm">
                                 {getActiveFilterLabel()}
                             </span>
                         </div>

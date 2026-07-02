@@ -51,7 +51,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
                 >
                   <Icon size={24} strokeWidth={isActive ? 3 : 2} />
                 </motion.div>
-                <span className={`text-[10px] font-black tracking-wide mt-1 transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
+                <span className={`text-xs font-black tracking-wide mt-1 transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
                   {item.label}
                 </span>
               </button>
@@ -80,7 +80,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
                   className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`text-[10px] font-bold tracking-wide transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <span className={`text-xs font-bold tracking-wide transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
                   {item.label}
                 </span>
               </div>

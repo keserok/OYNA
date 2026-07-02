@@ -91,7 +91,7 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
     <>
         <button
             onClick={() => setIsSimulating(!isSimulating)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${isSimulating ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FFFF00] text-black shadow-[#FFFF00]/30 hover:scale-105'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${isSimulating ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
             {isSimulating ? (
                 <><Square size={14} className="fill-current" /> SIFIRLA</>

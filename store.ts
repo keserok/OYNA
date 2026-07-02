@@ -335,6 +335,11 @@ interface AppState {
   setIsNotificationsOpen: (open: boolean) => void;
   // FAZ 7.5: Çoklu rol geçişi (rol değiştirici sheet)
   isRoleSwitcherOpen: boolean;
+  // Misafir modu: oturum açmadan gezinme. Yazma aksiyonlarında kayıt kapısı açılır.
+  isGuest: boolean;
+  setIsGuest: (v: boolean) => void;
+  isSignupGateOpen: boolean;
+  setIsSignupGateOpen: (open: boolean) => void;
   setIsRoleSwitcherOpen: (open: boolean) => void;
   myRoles: string[];
   setMyRoles: (roles: string[]) => void;
@@ -968,11 +973,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 1. Optimistic Update
     const previousSlots = match.slots ? [...match.slots] : [];
     
-    const currentUserUid = auth.currentUser?.uid || 'u1';
-    const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: 'u1', name: 'Oyuncu', avatar: 'https://i.pravatar.cc/150' };
+    // Misafir/oturumsuz kullanıcı maça KATILAMAZ: kayıt kapısını aç ve çık.
+    if (!auth.currentUser?.uid) {
+      set({ isSignupGateOpen: true });
+      return;
+    }
+    const currentUserUid = auth.currentUser.uid;
+    const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: currentUserUid, name: 'Oyuncu', avatar: 'https://i.pravatar.cc/150' };
 
     const joinedPlayer: Player = {
-      id: currentUserProfile.id || 'u1',
+      id: currentUserProfile.id || currentUserUid,
       name: currentUserProfile.name || 'Oyuncu',
       avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
       rating: (currentUserProfile as any).rating || 4.5,
@@ -1023,7 +1033,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
   setNewMatchBadge: async (val) => {
-    const uid = auth.currentUser?.uid || 'u1';
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     const user = get().adminUsers.find(u => u.id === uid);
     if (user) {
       const prev = get().adminUsers;
@@ -1167,6 +1178,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsNotificationsOpen: (open) => set({ isNotificationsOpen: open }),
   isRoleSwitcherOpen: false,
   setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
+  isGuest: false,
+  setIsGuest: (v) => set({ isGuest: v }),
+  isSignupGateOpen: false,
+  setIsSignupGateOpen: (open) => set({ isSignupGateOpen: open }),
   myRoles: [],
   setMyRoles: (roles) => set({ myRoles: roles }),
   addUserNotification: (notif) => set((state) => {

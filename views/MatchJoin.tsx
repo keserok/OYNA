@@ -84,7 +84,7 @@ const checkAndGetStatus = (slots: PositionSlot[], awaySlots?: PositionSlot[]): '
 
 const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = {
   'Ciddi':     { color: '#FF3B3B', glow: 'rgba(255,59,59,0.4)',   label: 'CİDDİ'      },
-  'Taktiksel': { color: '#FFFF00', glow: 'rgba(255,255,0,0.4)',   label: 'TAKTİKSEL'  },
+  'Taktiksel': { color: '#FACC15', glow: 'rgba(250,204,21,0.4)',   label: 'TAKTİKSEL'  },
   'Rahat':     { color: '#39FF14', glow: 'rgba(57,255,20,0.4)',   label: 'RAHAT'      },
 };
 
@@ -100,7 +100,7 @@ const getQualityGrade = (score: number): string => {
 
 const getGradeColorClass = (grade: string): string => {
   if (grade.startsWith('A')) return 'text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]';
-  if (grade.startsWith('B')) return 'text-[#FFFF00] drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]';
+  if (grade.startsWith('B')) return 'text-[#FACC15] drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]';
   return 'text-orange-400';
 };
 
@@ -301,10 +301,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const awayTeam = match.awayTeamId ? (userTeams || []).find(t => t.id === match.awayTeamId) : null;
 
   // ── Kullanıcı ─────────────────────────────────────────────────────────────
-  const currentUserUid = auth.currentUser?.uid || 'u1';
+  // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır;
+  // katılma aksiyonu store.joinMatch içindeki kayıt kapısına takılır.
+  const currentUserUid = auth.currentUser?.uid ?? 'guest';
   const currentUserProfile = (adminUsers || []).find(u => u?.id === currentUserUid)
-    || (adminUsers && adminUsers[0])
-    || { id: 'u1', name: 'Kerem Y.', avatar: 'https://i.pravatar.cc/150?u=u1', role: UserRole.PLAYER, rating: 4.9 };
+    || { id: currentUserUid, name: auth.currentUser ? 'Oyuncu' : 'Misafir', avatar: '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
 
   // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
   const isCaptain = match.creatorId === currentUserProfile?.id;
@@ -685,8 +686,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         : `${currentUserProfile.name} sizi "${match.title || 'bir maça'}" davet etti!`,
       time: 'Az önce',
       iconName: 'Trophy',
-      color: '#FFFF00',
-      textColor: '#FFFF00',
+      color: '#FACC15',
+      textColor: '#FACC15',
       payload: { matchId: match.id, slotId },
       read: false,
     });
@@ -1357,7 +1358,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       onClick={() => setInviteCategory(cat)}
                       className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                         inviteCategory === cat 
-                          ? (cat === 'Favorilerim' ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
+                          ? (cat === 'Favorilerim' ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
                           : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'
                       }`}
                     >
@@ -1429,7 +1430,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Rakip Meydan Okuma</h3>
-                  <p className="text-[9px] text-[#FFFF00] font-black uppercase tracking-widest mt-0.5">
+                  <p className="text-[9px] text-[#FACC15] font-black uppercase tracking-widest mt-0.5">
                     Aktif kulüplere maç daveti gönder
                   </p>
                 </div>
@@ -1465,7 +1466,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{t.name}</h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[8px] font-black text-[#FFFF00] bg-[#FFFF00]/10 border border-[#FFFF00]/20 px-1.5 py-0.5 rounded uppercase">OVR {t.teamValue ? Math.round(parseInt(t.teamValue)/1000) : 80}</span>
+                            <span className="text-[8px] font-black text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-1.5 py-0.5 rounded uppercase">OVR {t.teamValue ? Math.round(parseInt(t.teamValue)/1000) : 80}</span>
                             <span className="text-[8px] font-black text-white/40 uppercase">% {winRate} WR</span>
                           </div>
                         </div>
@@ -1695,7 +1696,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     style={{ borderColor: accent + '50' }}
                                   />
                                   {p.is_elite && (
-                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-[#FFFF00] border-2 border-[#161B22]">
+                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-[#FACC15] border-2 border-[#161B22]">
                                       <Award size={10} className="text-black" />
                                     </div>
                                   )}
@@ -1788,18 +1789,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   showActionSuccess(`Kod: ${code}`);
                 }
               }}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FFFF00]/[0.06] border border-[#FFFF00]/25 hover:bg-[#FFFF00]/10 active:scale-[0.98] transition-all"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 hover:bg-[#FACC15]/10 active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#FFFF00]/10 border border-[#FFFF00]/30 flex items-center justify-center shrink-0">
-                  <KeyRound size={14} className="text-[#FFFF00]" />
+                <div className="w-8 h-8 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-center shrink-0">
+                  <KeyRound size={14} className="text-[#FACC15]" />
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FFFF00]/70">Özel Maç Kodu</p>
+                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FACC15]/70">Özel Maç Kodu</p>
                   <p className="text-lg font-black tracking-[0.3em] text-white truncate">{match.privateCode}</p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FFFF00] shrink-0">
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FACC15] shrink-0">
                 <Copy size={12} /> Paylaş
               </span>
             </button>
@@ -2343,7 +2344,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 Yedek Kulübesi ({match.reservePlayers?.length || 0})
               </span>
               {isAlreadyJoinedReserve && (
-                <span className="text-[8px] font-black text-[#FFFF00] uppercase tracking-widest animate-pulse">
+                <span className="text-[8px] font-black text-[#FACC15] uppercase tracking-widest animate-pulse">
                   Sıranız: {(match.reservePlayers || []).findIndex(p => p.id === currentUserProfile.id) + 1}
                 </span>
               )}
@@ -2653,7 +2654,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     onClick={handleBuySlots}
                     whileTap={{ scale: 0.96 }}
                     className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-black"
-                    style={{ background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
                   >
                     {isProcessing ? (
                       <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
@@ -2677,8 +2678,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         whileTap={{ scale: 0.95 }}
                         className="w-[60%] h-16 rounded-[22px] font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 transition-all text-black cursor-pointer"
                         style={{
-                          background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)',
-                          boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
+                          background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)',
+                          boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
                         }}>
                         {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <><span>SAHAYA ÇIK</span><ChevronRight size={17} /></>}
                       </motion.button>
@@ -2711,8 +2712,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     whileTap={{ scale: 0.95 }}
                     className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-400 cursor-pointer"
                     style={{
-                      background: 'linear-gradient(135deg, #FFFF00 0%, #39FF14 100%)',
-                      boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(255,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
+                      background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)',
+                      boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
                       color: '#000',
                       border: 'none',
                     }}>
@@ -2737,7 +2738,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     disabled={isProcessing}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-[45%] h-16 rounded-[24px] border border-[#FFFF00]/30 hover:border-[#FFFF00] bg-black/40 text-[#FFFF00] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-[0_0_15px_rgba(255,255,0,0.05)]"
+                    className="w-[45%] h-16 rounded-[24px] border border-[#FACC15]/30 hover:border-[#FACC15] bg-black/40 text-[#FACC15] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-[0_0_15px_rgba(250,204,21,0.05)]"
                   >
                     {isProcessing ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -2852,7 +2853,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">OYUN SERTLİĞİ</span>
                     <span className={`text-sm font-black uppercase italic ${
                       match.difficulty === 'Ciddi' ? 'text-red-400' :
-                      match.difficulty === 'Taktiksel' ? 'text-[#FFFF00]' : 'text-[#39FF14]'
+                      match.difficulty === 'Taktiksel' ? 'text-[#FACC15]' : 'text-[#39FF14]'
                     }`}>{match.difficulty}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">

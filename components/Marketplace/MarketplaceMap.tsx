@@ -36,7 +36,7 @@ export const MarketplaceMap: React.FC<MarketplaceMapProps> = ({ items, type, onS
           repeat: Infinity,
           ease: "linear"
         }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border-2 border-[#FFFF00]/10 rounded-full pointer-events-none"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border-2 border-[#FACC15]/10 rounded-full pointer-events-none"
       />
       
       {/* Map Content (Simulated) */}
@@ -82,7 +82,7 @@ export const MarketplaceMap: React.FC<MarketplaceMapProps> = ({ items, type, onS
                 />
                 
                 {/* Pin Avatar */}
-                <div className={`w-10 h-10 rounded-2xl overflow-hidden border-2 transition-all duration-300 ${isHovered ? 'scale-125 border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.4)]' : 'border-white/20'}`}>
+                <div className={`w-10 h-10 rounded-2xl overflow-hidden border-2 transition-all duration-300 ${isHovered ? 'scale-125 border-[#FACC15] shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'border-white/20'}`}>
                   <img src={item.avatar} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
                 </div>
                 
@@ -104,7 +104,7 @@ export const MarketplaceMap: React.FC<MarketplaceMapProps> = ({ items, type, onS
                         </div>
                         <div className="flex justify-between items-center">
                           <p className="text-[8px] text-gray-500 font-bold uppercase">Ücret</p>
-                          <p className="text-xs font-black text-[#FFFF00]">{item.fee}₺</p>
+                          <p className="text-xs font-black text-[#FACC15]">{item.fee}₺</p>
                         </div>
                         <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-2">
                            <Navigation size={10} className="text-blue-400" />
