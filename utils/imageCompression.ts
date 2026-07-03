@@ -45,7 +45,14 @@ export async function compressImageForUpload(file: File): Promise<File> {
   try {
     bitmap = await loadBitmap(file);
   } catch {
-    return file; // decode edilemedi — orijinali dene, bucket MIME/boyut sınırı devrede
+    // Tarayıcı decode edemedi. HEIC/HEIF ham yüklenirse hiçbir tarayıcı
+    // gösteremez (iPhone tuzağı) — reddet; diğer formatlarda orijinali dene.
+    if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) {
+      throw new ImageValidationError(
+        'Bu HEIC fotoğraf tarayıcıda işlenemedi. Telefonunuzda Ayarlar > Kamera > Formatlar\'dan "En Uyumlu"yu seçin veya fotoğrafı JPEG olarak paylaşıp tekrar deneyin.',
+      );
+    }
+    return file;
   }
 
   const width = bitmap.width;
