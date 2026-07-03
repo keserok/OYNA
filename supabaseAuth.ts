@@ -207,18 +207,30 @@ export const onAuthStateChanged = (
 // demo hesabın e-postasını (veya "mirackerem" kısayolunu) yazınca OTP olmadan,
 // sabit demo şifresiyle anında giriş yapar. Yalnız @oyna.app demo hesapları —
 // gerçek kullanıcı hesaplarını ASLA etkilemez. Prod'da kapalıdır.
+// ?demo=1 anahtarını, App.tsx URL'yi temizlemeden ÖNCE (modül yüklenirken) yakala
+// ve oturum boyunca sakla. Böylece herhangi bir domain'de (Vercel dâhil) env
+// değişkeni gerekmeden demo modu açılır:  <url>/?demo=1
+if (typeof window !== 'undefined') {
+  try {
+    if (new URLSearchParams(window.location.search).get('demo') === '1') {
+      sessionStorage.setItem('oyna_demo', '1');
+    }
+  } catch { /* sessionStorage yoksa yok say */ }
+}
+
 export const isDemoLoginEnabled = (): boolean => {
-  // Açık bayrak (Vercel/preview'de env ile açılabilir)
+  // 1) Açık bayrak (Vercel'de env ile de açılabilir)
   if (import.meta.env.VITE_DEV_MODE === 'true') return true;
-  // Yerel geliştirmede (localhost) OTOMATİK aç → `npm run dev` için sıfır ayar.
-  // Prod domain'lerde (oyna.app vb.) KAPALI kalır; ayrıca demoLogin yalnız
-  // @oyna.app demo hesaplarını kabul eder, gerçek kullanıcıyı etkilemez.
   if (typeof window !== 'undefined') {
+    // 2) URL anahtarı ?demo=1 → bu oturum boyunca (herhangi bir domain'de test)
+    try { if (sessionStorage.getItem('oyna_demo') === '1') return true; } catch { /* yok say */ }
+    // 3) Yerel geliştirme (localhost) → `npm run dev` için sıfır ayar
     const h = window.location.hostname;
     if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local')) {
       return true;
     }
   }
+  // Prod domain'de anahtarsız KAPALI; ayrıca demoLogin yalnız @oyna.app kabul eder.
   return false;
 };
 
