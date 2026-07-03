@@ -1142,17 +1142,6 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
   }
 }
 
-export async function uploadPitchImage(file: File, pitchId: string): Promise<string> {
-  const ext = file.name.split('.').pop() || 'jpg';
-  const path = `pitches/${pitchId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage
-    .from('images')
-    .upload(path, file, { cacheControl: '3600', upsert: false });
-  if (error) throw error;
-  const { data } = supabase.storage.from('images').getPublicUrl(path);
-  return data.publicUrl;
-}
-
 export async function updatePitchProfile(
   pitchId: string,
   profile: {

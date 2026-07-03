@@ -2174,6 +2174,18 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           facilityId={facilityData?.id}
           initialData={facilityData}
           onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
+          onOpenCourts={() => {
+            setShowEditProfile(false);
+            if (guardWrite()) setActiveTab('PITCHES');
+          }}
+          onOpenPricing={() => {
+            setShowEditProfile(false);
+            if (guardWrite()) setShowPricingPolicy(true);
+          }}
+          onOpenHours={() => {
+            setShowEditProfile(false);
+            if (guardWrite()) setShowWorkingHours(true);
+          }}
         />
       )}
       {showWorkingHours && (

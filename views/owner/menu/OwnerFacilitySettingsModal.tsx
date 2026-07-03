@@ -33,6 +33,12 @@ interface Props {
   facilityId: string;
   initialData?: OwnerFacilityFormData;
   onSave: (data: OwnerFacilityFormData) => void;
+  /** Vitrin sekmesinden kort yönetimine köprü (Sahalarım ekranı) */
+  onOpenCourts?: () => void;
+  /** Vitrin sekmesinden tarife & kapora editörüne köprü */
+  onOpenPricing?: () => void;
+  /** Vitrin sekmesinden çalışma saatleri editörüne köprü */
+  onOpenHours?: () => void;
 }
 
 const DESC_MIN = 40;
@@ -71,6 +77,9 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   facilityId,
   initialData,
   onSave,
+  onOpenCourts,
+  onOpenPricing,
+  onOpenHours,
 }) => {
   const notify = useOwnerToast();
   const [activeTab, setActiveTab] = useState<Tab>('general');
@@ -473,6 +482,39 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               <Eye size={15} /> Vitrinde Önizle
             </button>
 
+            {/* Vitrinde görünen kort/fiyat/saat bilgileri tek dokunuşla düzenlenir */}
+            {(onOpenCourts || onOpenPricing || onOpenHours) && (
+              <div className="grid grid-cols-3 gap-2">
+                {onOpenCourts && (
+                  <button
+                    type="button"
+                    onClick={onOpenCourts}
+                    className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
+                  >
+                    Kortlar
+                  </button>
+                )}
+                {onOpenPricing && (
+                  <button
+                    type="button"
+                    onClick={onOpenPricing}
+                    className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
+                  >
+                    Tarife & Kapora
+                  </button>
+                )}
+                {onOpenHours && (
+                  <button
+                    type="button"
+                    onClick={onOpenHours}
+                    className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
+                  >
+                    Çalışma Saatleri
+                  </button>
+                )}
+              </div>
+            )}
+
             <ShowcaseScoreCard
               pitchId={facilityId}
               refreshKey={scoreRefresh}
@@ -480,6 +522,8 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 if (key === 'photos' || key === 'description') setActiveTab('general');
                 else if (key === 'amenities') setActiveTab('amenities');
                 else if (key === 'pin') setActiveTab('location');
+                else if (key === 'court') onOpenCourts?.();
+                else if (key === 'tariff') onOpenPricing?.();
               }}
             />
           </div>
