@@ -70,6 +70,9 @@ android/app/google-services.json
 ios/App/App/GoogleService-Info.plist
 *.p8
 *.p12
+*.pem
+*.key
+*.cer
 *.mobileprovision
 
 .vercel
