@@ -18,6 +18,7 @@ import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
+import { FeeBreakdown } from '../components/common/FeeBreakdown';
 import { Toast } from '../components/common/Toast';
 
 interface ServiceDashboardProps {
@@ -1554,6 +1555,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </button>
               </div>
               <p className="text-gray-400 text-xs mt-4">Kaptanlar seni bu fiyattan kiralamak için teklif gönderecek.</p>
+
+              {/* Gerçek komisyon dökümü — sağlayıcı brüt/kesinti/net'i tek kaynaktan görür. */}
+              <div className="mt-5 bg-black/30 border border-white/5 rounded-2xl p-4 text-left">
+                <FeeBreakdown
+                  amount={baseFee}
+                  scope={isRef ? 'SERVICE_REF' : 'SERVICE_GK'}
+                  mode="earner"
+                />
+              </div>
           </motion.div>
 
           <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-8 text-center">
@@ -1561,7 +1571,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <Sparkles size={32} className="text-blue-400" />
               </div>
               <h3 className="text-xl font-black text-white mb-2">DAHA FAZLA KAZAN</h3>
-              <p className="text-gray-400 text-sm mb-6">%0 komisyon avantajıyla kazancını katla.</p>
+              <p className="text-gray-400 text-sm mb-6">Profilini güçlendir, daha çok teklif al, kazancını katla.</p>
               <button 
                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-900/20"
               >

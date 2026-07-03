@@ -10,6 +10,7 @@ import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { MarketplaceMap } from '../components/Marketplace/MarketplaceMap';
 import { EmptyState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
+import { FeeBreakdown } from '../components/common/FeeBreakdown';
 import { createServiceRequest } from '../services/serviceRequestService';
 
 const getNormalizedDifficulty = (diff?: string): string => {
@@ -509,12 +510,20 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                     </div>
                                 </div>
 
-                                <div className="pb-8 relative z-10">
+                                <div className="pb-8 relative z-10 space-y-4">
+                                    {/* Komisyon şeffaflığı: kaptan ne ödediğini ve OYNA payını görür */}
+                                    <div className="bg-[#161B22]/60 border border-white/5 rounded-2xl p-4">
+                                        <FeeBreakdown
+                                            amount={bidAmount}
+                                            scope={activeTab === 'GK' ? 'SERVICE_GK' : 'SERVICE_REF'}
+                                            mode="payer"
+                                        />
+                                    </div>
                                     <button
                                         onClick={() => { setShowBidScreen(false); setShowMatchSelection(true); }}
                                         className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg ${
-                                            activeTab === 'GK' 
-                                                ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25' 
+                                            activeTab === 'GK'
+                                                ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25'
                                                 : 'bg-[#FFFF00] hover:bg-[#FFFF00]/90 shadow-yellow-900/25'
                                         }`}
                                     >

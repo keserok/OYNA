@@ -841,10 +841,22 @@ export async function getOwnerBalance(_pitchId?: string): Promise<{
     const w = (data ?? {}) as { earnings_balance?: number; reserved_balance?: number };
     const available = w.earnings_balance ?? 0;
     const pendingWithdrawals = w.reserved_balance ?? 0;
+
+    // Gerçek komisyon oranı: commission_config SSOT (sabit 0 yerine).
+    let commissionRate = 0;
+    try {
+      const { data: comm } = await supabase.rpc('calculate_commission', {
+        p_amount: 100, p_scope: 'PITCH', p_scope_id: _pitchId ?? null,
+      });
+      if (comm && typeof (comm as any).commission_pct === 'number') {
+        commissionRate = (comm as any).commission_pct;
+      }
+    } catch { /* oran alınamazsa 0 kalır — tutarları etkilemez */ }
+
     return {
       collected: available + pendingWithdrawals,
       pendingWithdrawals,
-      commissionRate: 0,
+      commissionRate,
       available,
     };
   } catch (error) {
