@@ -365,6 +365,15 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       }
     }
 
+    // Saha puanı: oyuncunun girdiği yıldız artık çöpe gitmiyor — pitch_ratings'e kaydedilir.
+    if (pitchRating > 0) {
+      try {
+        await supabase.rpc('submit_pitch_rating', { p_match_id: selectedMatch.id, p_score: pitchRating });
+      } catch (e) {
+        console.warn('[PostMatchEval] Saha puanı kaydedilemedi:', e);
+      }
+    }
+
     setSubmitting(false);
     // Ana değerlendirme başarısızsa: başarı ekranı YOK — hata durumu göster.
     if (primaryFailed) {
