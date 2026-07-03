@@ -244,12 +244,13 @@ export const fbProcessMatchRefund = async (userId: string, matchId: string, amou
   return { success: true };
 };
 
-export const fbUpdateUserLocation = async (userId: string, lat: number, lng: number) => {
-  const pointStr = `POINT(${lng} ${lat})`;
-
-  const { error } = await supabase.rpc('update_user_location', {
-    p_user_id: userId,
-    p_point_str: pointStr
+export const fbUpdateUserLocation = async (_userId: string, lat: number, lng: number) => {
+  // Faz 0: earthdistance/JSONB tabanlı set_user_location — konumu YALNIZ giriş yapan
+  // kullanıcı için (auth.uid()) yazar. Eski update_user_location (PostGIS ST_GeomFromText)
+  // canlıda kurulu olmadığı için her çağrıda hata veriyordu; artık düzeltildi.
+  const { error } = await supabase.rpc('set_user_location', {
+    p_lat: lat,
+    p_lng: lng,
   });
 
   if (error) {
