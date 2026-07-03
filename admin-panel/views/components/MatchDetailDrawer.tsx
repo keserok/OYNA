@@ -22,7 +22,6 @@ import {
   type MatchTimelineRow,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
-import { ConfirmDialog } from './ConfirmDialog';
 import { ActionConfirmModal, type ActionConfirmOptions } from './ActionConfirmModal';
 import { MatchLobbyPitch } from './MatchLobbyPitch';
 import type { MatchListing } from '../../../types';
@@ -73,6 +72,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const [local, setLocal] = useState<MatchListing | null>(match);
   const [tab, setTab] = useState<TabKey>('kadro');
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelRefund, setCancelRefund] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const [intents, setIntents] = useState<MatchIntentRow[]>([]);
@@ -236,12 +237,18 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
 
   const confirmCancel = async () => {
     if (!local) return;
+    // Karar #73: her iptal zorunlu sebeple audit'e yazılır.
+    if (cancelReason.trim().length < 5) {
+      toastError('İptal sebebi zorunlu (en az 5 karakter).');
+      return;
+    }
     setBusy(true);
     try {
-      await cancelMatchAdmin(local.id, 'Admin iptali', false);
+      await cancelMatchAdmin(local.id, cancelReason.trim(), cancelRefund);
       setLocal({ ...local, status: 'CANCELLED' });
-      success('Maç iptal edildi');
+      success(cancelRefund ? 'Maç iptal edildi; iadeler politikaya göre işlenir' : 'Maç iptal edildi (iadesiz)');
       setCancelOpen(false);
+      setCancelReason('');
       onUpdated();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -652,15 +659,49 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
             </button>
           </div>
 
-          <ConfirmDialog
-            open={cancelOpen}
-            title="Maçı iptal et"
-            description={`"${local.title}" iptal edilecek. Bu işlem denetim kaydına düşer.`}
-            confirmLabel="İptal Et"
-            destructive
-            onConfirm={() => void confirmCancel()}
-            onCancel={() => setCancelOpen(false)}
-          />
+          {cancelOpen && (
+            <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-[#161B22] border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase">Maçı İptal Et</h3>
+                  <p className="text-[11px] text-gray-400 mt-1">"{local.title}" iptal edilecek. Sebep zorunludur ve denetim kaydına yazılır.</p>
+                </div>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="İptal sebebi (kadroya bildirimde ve denetimde görünür)…"
+                  rows={3}
+                  className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-red-500/40 focus:outline-none resize-none"
+                />
+                <label className="flex items-center gap-2.5 text-xs text-gray-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={cancelRefund}
+                    onChange={(e) => setCancelRefund(e.target.checked)}
+                    className="accent-red-500 w-4 h-4"
+                  />
+                  Ödemeleri iade et (kademeli iade politikası uygulanır)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCancelOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-bold"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || cancelReason.trim().length < 5}
+                    onClick={() => void confirmCancel()}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black disabled:opacity-40"
+                  >
+                    İptal Et
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <ActionConfirmModal isOpen={!!confirm} options={confirm} />
         </motion.div>
       </div>
