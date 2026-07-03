@@ -207,8 +207,20 @@ export const onAuthStateChanged = (
 // demo hesabın e-postasını (veya "mirackerem" kısayolunu) yazınca OTP olmadan,
 // sabit demo şifresiyle anında giriş yapar. Yalnız @oyna.app demo hesapları —
 // gerçek kullanıcı hesaplarını ASLA etkilemez. Prod'da kapalıdır.
-export const isDemoLoginEnabled = (): boolean =>
-  import.meta.env.VITE_DEV_MODE === 'true';
+export const isDemoLoginEnabled = (): boolean => {
+  // Açık bayrak (Vercel/preview'de env ile açılabilir)
+  if (import.meta.env.VITE_DEV_MODE === 'true') return true;
+  // Yerel geliştirmede (localhost) OTOMATİK aç → `npm run dev` için sıfır ayar.
+  // Prod domain'lerde (oyna.app vb.) KAPALI kalır; ayrıca demoLogin yalnız
+  // @oyna.app demo hesaplarını kabul eder, gerçek kullanıcıyı etkilemez.
+  if (typeof window !== 'undefined') {
+    const h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local')) {
+      return true;
+    }
+  }
+  return false;
+};
 
 const DEMO_DOMAIN = '@oyna.app';
 const DEMO_PASSWORD = 'password123';
