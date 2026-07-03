@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '../components/DataTable';
 import { ActionConfirmModal, ActionConfirmOptions } from '../components/ActionConfirmModal';
-import { AddPitchModal } from '../components/AddPitchModal';
+import { PitchStudio } from '../components/PitchStudio';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAdminToast } from '../context/AdminToastContext';
-import { MapPin, TrendingUp, Edit2, Trash2, Zap, Star, Eye, EyeOff } from 'lucide-react';
+import { MapPin, Edit2, Trash2, Zap, Star, Eye, EyeOff } from 'lucide-react';
 import { fetchPitchesAdmin, toTurkishAdminError } from '../../services/adminService';
 import { setPitchFeatured, setPitchPublished } from '../../../services/pitchContentService';
 import { supabase } from '../../../supabaseClient';
@@ -18,15 +18,13 @@ import type { Pitch } from '../../../types';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 interface PitchesPageProps {
-    onEditPitch: (pitch: Pitch) => void;
-    onDeletePitch: (id: string) => void;
     onRefresh?: () => Promise<void>;
 }
 
 const PAGE_SIZE = 50;
 
-export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeletePitch, onRefresh }) => {
-    const { addPitch, updatePitch, deletePitch } = useAppStore();
+export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
+    const { deletePitch } = useAppStore();
     const [pitches, setPitches] = useState<Pitch[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -34,11 +32,10 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
     const debouncedQuery = useDebouncedValue(query, 350);
     const [statusFilter, setStatusFilter] = useState<PitchStatusFilter>('ALL');
     const [page, setPage] = useState(0);
-    const [multiplier, setMultiplier] = useState(1.0);
-    const [selectedPitchIdx, setSelectedPitchIdx] = useState(0);
     const { success, error: toastError } = useAdminToast();
     const [confirmModal, setConfirmModal] = useState<ActionConfirmOptions | null>(null);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    // Saha Kurulum Merkezi: null → kapalı; {pitchId:null} → yeni tesis; {pitchId} → düzenle
+    const [studio, setStudio] = useState<{ pitchId: string | null } | null>(null);
     // Vitrin bayrakları (Karar #23, #28): admin RPC bu kolonları dönmediği için ayrı çekilir
     const [showcaseFlags, setShowcaseFlags] = useState<Record<string, { published: boolean; featured: boolean }>>({});
 
@@ -89,7 +86,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
         } finally {
             setLoading(false);
         }
-    }, [debouncedQuery, statusFilter, page, toastError]);
+    }, [debouncedQuery, statusFilter, page, toastError, loadShowcaseFlags]);
 
     useEffect(() => { void load(); }, [load]);
     useEffect(() => { setPage(0); }, [debouncedQuery, statusFilter]);
@@ -112,47 +109,19 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
         }));
     }, [pitches, total]);
 
-    const handleApplyPricingRequest = () => {
-        const pitch = pitches[selectedPitchIdx];
-        if (!pitch) return;
-        setConfirmModal({
-            title: 'Fiyat Çarpanı Güncellemesi',
-            description: `${pitch.name} için fiyatlandırma ${multiplier}x olarak güncellenecek.`,
-            impactText: `Yeni K/B: ₺${Math.round(pitch.pricePerPerson * multiplier)} | Toplam: ₺${Math.round(pitch.totalPrice * multiplier)}`,
-            actionType: 'PRICE_CHANGE',
-            targetId: pitch.id,
-            targetName: pitch.name,
-            onCancel: () => setConfirmModal(null),
-            onConfirm: async () => {
-                try {
-                    await updatePitch({
-                        ...pitch,
-                        pricePerPerson: Math.round(pitch.pricePerPerson * multiplier),
-                        totalPrice: Math.round(pitch.totalPrice * multiplier),
-                    });
-                    success(`${pitch.name} fiyatı güncellendi (${multiplier}x)`);
-                    await load();
-                } catch (err) {
-                    toastError(toTurkishAdminError(err));
-                }
-                setConfirmModal(null);
-            },
-        });
-    };
-
     const handleDeleteRequest = (p: Pitch) => {
         setConfirmModal({
             title: 'Saha Silme İşlemi',
             description: `"${p.name}" kalıcı olarak silinecek.`,
-            impactText: 'admin_delete_pitch RPC ile denetim kaydına yazılır.',
+            impactText: 'Tesis vitrinden kalkar; admin_delete_pitch RPC ile denetim kaydına yazılır.',
             actionType: 'SETTINGS_CHANGE',
             targetId: p.id,
             targetName: p.name,
+            confirmPhrase: 'SİL',
             onCancel: () => setConfirmModal(null),
             onConfirm: async () => {
                 try {
                     await deletePitch(p.id);
-                    onDeletePitch(p.id);
                     success(`${p.name} silindi`);
                     await load();
                 } catch (err) {
@@ -243,7 +212,12 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
             header: 'AKSİYONLAR',
             render: (p: Pitch) => (
                 <div className="flex gap-2">
-                    <button type="button" onClick={() => onEditPitch(p)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border border-blue-500/20">
+                    <button
+                        type="button"
+                        onClick={() => setStudio({ pitchId: p.id })}
+                        title="Kurulum Merkezi'nde düzenle"
+                        className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border border-blue-500/20"
+                    >
                         <Edit2 size={14} />
                     </button>
                     <button type="button" onClick={() => handleDeleteRequest(p)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg border border-red-500/20">
@@ -259,33 +233,17 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
             route="SAHALAR"
             icon={<Zap size={20} />}
             actions={
-                <ModuleCrudBar moduleKey="pitches" addLabel="Yeni Saha" onAdd={() => setIsAddModalOpen(true)} onRefresh={refresh} />
+                <ModuleCrudBar moduleKey="pitches" addLabel="Yeni Tesis Kur" onAdd={() => setStudio({ pitchId: null })} onRefresh={refresh} />
             }
         >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                <div className="bg-[#161B22]/60 border border-white/5 rounded-2xl p-5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                        <TrendingUp size={14} className="text-[#FFFF00]" /> HIZLI FİYAT ÇARPANI
-                    </p>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <select value={selectedPitchIdx} onChange={(e) => setSelectedPitchIdx(+e.target.value)} className="h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white">
-                            {pitches.map((p, i) => <option key={p.id} value={i}>{p.name}</option>)}
-                        </select>
-                        <select value={multiplier} onChange={(e) => setMultiplier(+e.target.value)} className="h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white">
-                            <option value={1}>1.0x</option>
-                            <option value={1.2}>1.2x</option>
-                            <option value={1.5}>1.5x</option>
-                            <option value={2}>2.0x</option>
-                        </select>
-                    </div>
-                    <button type="button" onClick={handleApplyPricingRequest} disabled={!pitches.length} className="h-10 w-full bg-[#FFFF00] text-black font-black text-[10px] uppercase rounded-xl disabled:opacity-40">
-                        ÇARPANI UYGULA
-                    </button>
-                </div>
-                <div className="bg-[#161B22]/60 border border-white/5 rounded-2xl p-5 flex flex-col items-center justify-center text-center">
-                    <MapPin size={32} className="text-[#39FF14] mb-3" />
+            <div className="bg-[#161B22]/60 border border-white/5 rounded-2xl p-4 mb-4 flex items-center gap-4">
+                <MapPin size={24} className="text-[#39FF14] shrink-0" />
+                <div>
                     <p className="text-sm font-bold text-white">{total} Tesis</p>
-                    <p className="text-[10px] text-gray-500 mt-1">admin_fetch_pitches RPC</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                        Kimlik, konum, kort, tarife, fotoğraf ve vitrin — tümü Kurulum Merkezi'nden yönetilir.
+                        Fiyatın tek kaynağı tarifelerdir.
+                    </p>
                 </div>
             </div>
 
@@ -307,20 +265,13 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
             )}
 
             <ActionConfirmModal isOpen={!!confirmModal} options={confirmModal} />
-            <AddPitchModal
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-                onAdd={async (pitch) => {
-                    try {
-                        await addPitch(pitch);
-                        success(`${pitch.name} eklendi`);
-                        await load();
-                    } catch (err) {
-                        toastError(toTurkishAdminError(err));
-                        throw err;
-                    }
-                }}
-            />
+            {studio && (
+                <PitchStudio
+                    pitchId={studio.pitchId}
+                    onClose={() => { setStudio(null); void load(); }}
+                    onSaved={() => void load()}
+                />
+            )}
         </PageShell>
     );
 };

@@ -1,17 +1,7 @@
 import React, { useState, lazy, Suspense, useEffect, useCallback } from 'react';
-import { useAppStore } from '../../store';
 import { AdminLayout } from './layout/AdminLayout';
-import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal } from './DeepEditModals';
-import { AnimatePresence } from 'framer-motion';
 import { PageLoadingSkeleton } from './components/PageLoadingSkeleton';
 import type { AdminSession } from '../services/adminService';
-import type { Pitch, AdminUser, Goalkeeper, Referee } from '../../types';
-
-type AdminModalState =
-  | { type: 'none' }
-  | { type: 'deepEditPitch'; data: Pitch }
-  | { type: 'deepEditUser'; data: AdminUser }
-  | { type: 'deepEditProvider'; data: Goalkeeper | Referee; typeParam: 'GK' | 'REF' };
 import {
   AdminNavigationProvider,
   useAdminNavigation,
@@ -74,13 +64,11 @@ const GodViewPanelInner: React.FC<Props> = ({
     initialSubRoute,
     initialNavParams,
 }) => {
-    const deletePitch = useAppStore((s) => s.deletePitch);
     const { setParams, params, consumeParam } = useAdminNavigation();
     const { canAccess, defaultRoute } = useAdminPermissions();
     const { moduleEnabled } = useAdminFeatureFlags();
     const { info } = useAdminToast();
     const [subRoute, setSubRoute] = useState<GodViewSubRoute>(() => initialSubRoute ?? 'GENEL');
-    const [modal, setModal] = useState<AdminModalState>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
     const [providerIdentityCount, setProviderIdentityCount] = useState(0);
     const [verificationCount, setVerificationCount] = useState(0);
@@ -119,8 +107,6 @@ const GodViewPanelInner: React.FC<Props> = ({
         }
     }, [onNavigate, setParams, canAccess, moduleEnabled, info, mode]);
 
-    const closeModal = () => setModal({ type: 'none' });
-
     const renderPage = () => {
         if (!canAccess(subRoute)) {
             return (
@@ -154,13 +140,7 @@ const GodViewPanelInner: React.FC<Props> = ({
             case 'ACL':
                 return <ACLPage />;
             case 'SAHALAR':
-                return (
-                    <PitchesPage
-                        onEditPitch={(pitch) => setModal({ type: 'deepEditPitch', data: pitch })}
-                        onDeletePitch={(id) => deletePitch(id)}
-                        onRefresh={onRefreshData}
-                    />
-                );
+                return <PitchesPage onRefresh={onRefreshData} />;
             case 'KULLANICILAR':
             case 'KALECİLER':
             case 'HAKEMLER':
@@ -207,34 +187,20 @@ const GodViewPanelInner: React.FC<Props> = ({
     };
 
     return (
-        <>
-            <AdminLayout
-                activeSubRoute={subRoute}
-                onNavigate={(r) => handleNavigate(r)}
-                onBack={onBack}
-                pendingVerifCount={pendingVerifCount}
-                providerIdentityCount={providerIdentityCount}
-                verificationCount={verificationCount}
-                mode={mode}
-                adminSession={adminSession}
-            >
-                <Suspense fallback={<PageLoadingSkeleton />}>
-                    {renderPage()}
-                </Suspense>
-            </AdminLayout>
-
-            <AnimatePresence>
-                {modal.type === 'deepEditPitch' && (
-                    <DeepEditPitchModal pitch={modal.data} onClose={closeModal} />
-                )}
-                {modal.type === 'deepEditUser' && (
-                    <DeepEditUserModal user={modal.data} onClose={closeModal} />
-                )}
-                {modal.type === 'deepEditProvider' && (
-                    <DeepEditProviderModal item={modal.data} typeParam={modal.typeParam} onClose={closeModal} />
-                )}
-            </AnimatePresence>
-        </>
+        <AdminLayout
+            activeSubRoute={subRoute}
+            onNavigate={(r) => handleNavigate(r)}
+            onBack={onBack}
+            pendingVerifCount={pendingVerifCount}
+            providerIdentityCount={providerIdentityCount}
+            verificationCount={verificationCount}
+            mode={mode}
+            adminSession={adminSession}
+        >
+            <Suspense fallback={<PageLoadingSkeleton />}>
+                {renderPage()}
+            </Suspense>
+        </AdminLayout>
     );
 };
 
