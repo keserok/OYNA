@@ -10,6 +10,7 @@ import { logImpersonation, fetchAdminProfiles, toTurkishAdminError, setPlayerCar
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
+import { User360Drawer } from '../components/User360Drawer';
 import { DeepEditProviderModal, DeepEditUserModal } from '../DeepEditModals';
 import { Goalkeeper, Referee, AdminUser } from '../../../types';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
@@ -58,6 +59,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const [detailProvider, setDetailProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
     const [editProvider, setEditProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
     const [editUser, setEditUser] = useState<AdminUser | null>(null);
+    const [user360, setUser360] = useState<AdminUser | null>(null);
     const [page, setPage] = useState(0);
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned'>('all');
     const [query, setQuery] = useState('');
@@ -330,6 +332,13 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     {subRoute === 'KULLANICILAR' && (
                         <>
                         <button
+                            onClick={() => setUser360(u)}
+                            title="Kullanıcı 360 — profil, cüzdan, geçmiş"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/20 text-[9px] font-black uppercase"
+                        >
+                            <Eye size={12} /> 360
+                        </button>
+                        <button
                             onClick={() => setEditUser(u)}
                             title="Düzenle"
                             className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-black uppercase"
@@ -476,6 +485,25 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     onClose={() => { setEditUser(null); void refresh(); }}
                 />
             )}
+            <User360Drawer
+                user={user360}
+                onClose={() => setUser360(null)}
+                onBanToggle={(u) => { setUser360(null); handleBanToggle(u); }}
+                onVerify={(u) => {
+                    setUser360(null);
+                    void (async () => {
+                        try {
+                            await verifyUser(u.id);
+                            success('Hesap doğrulandı');
+                            if (subRoute === 'KULLANICILAR') await loadServerUsers();
+                        } catch (err) {
+                            toastError(err instanceof Error ? err.message : 'İşlem başarısız');
+                        }
+                    })();
+                }}
+                onGhost={(u) => { setUser360(null); handleImpersonateRequest(u.id); }}
+                onEdit={(u) => { setUser360(null); setEditUser(u); }}
+            />
         </PageShell>
     );
 };
