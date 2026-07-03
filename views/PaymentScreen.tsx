@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
+import { auth } from '../supabaseAuth';
 import { parseSlotLabel } from '../services/availabilityService';
 
 interface PaymentScreenProps {
@@ -89,7 +90,39 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
     return clean.length >= 3 ? `${clean.slice(0, 2)}/${clean.slice(2)}` : clean;
   };
 
+  // ─── Kart alanı doğrulama ───────────────────────────────────────────────
+  const luhnValid = (num: string) => {
+    const digits = num.replace(/\D/g, '');
+    if (digits.length < 15) return false;
+    let sum = 0;
+    for (let i = 0; i < digits.length; i++) {
+      let d = Number(digits[digits.length - 1 - i]);
+      if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+      sum += d;
+    }
+    return sum % 10 === 0;
+  };
+  const expiryValid = (v: string) => {
+    const m = /^(\d{2})\/(\d{2})$/.exec(v);
+    if (!m) return false;
+    const month = Number(m[1]);
+    if (month < 1 || month > 12) return false;
+    const year = 2000 + Number(m[2]);
+    const now = new Date();
+    return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1);
+  };
+  const cardNumberOk = luhnValid(cardNumber);
+  const cardExpiryOk = expiryValid(cardExpiry);
+  const cardCvvOk = /^\d{3,4}$/.test(cardCvv);
+  const cardHolderOk = cardHolder.trim().length >= 3;
+  const cardFormValid = cardNumberOk && cardExpiryOk && cardCvvOk && cardHolderOk;
+
   const handlePaySubmit = async () => {
+    // Misafir/oturumsuz kullanıcı ödeme yapamaz: kayıt kapısı
+    if (!auth.currentUser) {
+      useAppStore.getState().setIsSignupGateOpen(true);
+      return;
+    }
     if (!bookingPitch || !bookingCourt || !bookingDate || !bookingSlot) {
       setErrorMsg('Rezervasyon bilgileri eksik. Lütfen geri dönüp tekrar deneyin.');
       setStep('ERROR');
@@ -155,13 +188,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
         <div className="h-px bg-white/8 my-1" />
         <div className="flex justify-between items-center">
           <span className="font-black text-white">TOPLAM ÜCRET</span>
-          <span className="font-black text-[#FFFF00] text-lg">{PITCH_PRICE + extraFee + commissionAmt}₺</span>
+          <span className="font-black text-[#FACC15] text-lg">{PITCH_PRICE + extraFee + commissionAmt}₺</span>
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-[#1a1f00] to-[#161B22] border border-[#FFFF00]/20 rounded-[28px] p-6 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#1a1f00] to-[#161B22] border border-[#FACC15]/20 rounded-[28px] p-6 relative overflow-hidden">
         <div className="absolute top-4 right-4 opacity-10"><Lock size={48} /></div>
-        <p className="text-[#FFFF00] text-[11px] font-black uppercase tracking-widest mb-1">Bugün Alınacak Blokaj</p>
+        <p className="text-[#FACC15] text-[11px] font-black uppercase tracking-widest mb-1">Bugün Alınacak Blokaj</p>
         <p className="text-4xl font-black text-white">{totalCharge}₺</p>
         <p className="text-xs text-gray-400 mt-2">
           Bu tutar kartınızda <span className="text-white font-bold">bloke</span> edilir.
@@ -188,7 +221,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
 
       <button
         onClick={handleContinue}
-        className="w-full py-4 bg-[#FFFF00] text-black font-black text-base rounded-2xl shadow-[0_0_30px_rgba(255,255,0,0.2)] hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-2"
+        className="w-full py-4 bg-[#FACC15] text-black font-black text-base rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.2)] hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-2"
       >
         {isMinor ? 'VELİ ONAYI İLE DEVAM ET' : 'KART BİLGİLERİNİ GİR'} <ChevronRight size={18} />
       </button>
@@ -246,7 +279,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
           type="checkbox"
           checked={consentChecked}
           onChange={e => setConsentChecked(e.target.checked)}
-          className="mt-1 accent-[#FFFF00] w-4 h-4 shrink-0"
+          className="mt-1 accent-[#FACC15] w-4 h-4 shrink-0"
         />
         <p className="text-[11px] text-gray-300 leading-relaxed">
           Velisi / vasisi olduğum kişinin OYNA platformu üzerinden gerçekleştireceği ödemeye
@@ -275,6 +308,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
             value={cardHolder}
             onChange={e => setCardHolder(e.target.value.toUpperCase())}
             placeholder="AD SOYAD"
+            autoComplete="cc-name"
             className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600 tracking-wider"
           />
         </FormField>
@@ -285,9 +319,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
             onChange={e => setCardNumber(formatCardNumber(e.target.value))}
             placeholder="0000 0000 0000 0000"
             inputMode="numeric"
+            autoComplete="cc-number"
             className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600 tracking-widest"
           />
         </FormField>
+        {cardNumber.replace(/\D/g, '').length >= 15 && !cardNumberOk && (
+          <p className="text-xs text-red-400 font-bold -mt-3">Kart numarası geçersiz görünüyor.</p>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <FormField icon={<Clock size={16} />} label="Son Kullanma">
@@ -296,6 +334,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
               onChange={e => setCardExpiry(formatExpiry(e.target.value))}
               placeholder="AA/YY"
               inputMode="numeric"
+              autoComplete="cc-exp"
               className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600"
             />
           </FormField>
@@ -306,26 +345,30 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
               placeholder="•••"
               inputMode="numeric"
               type="password"
+              autoComplete="cc-csc"
               className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600"
             />
           </FormField>
         </div>
+        {cardExpiry.length === 5 && !cardExpiryOk && (
+          <p className="text-xs text-red-400 font-bold -mt-3">Son kullanma tarihi geçersiz veya geçmiş.</p>
+        )}
       </div>
 
       <div className="flex items-center gap-2 px-2">
         <Shield size={14} className="text-green-400" />
-        <p className="text-[11px] text-gray-500">SSL/TLS şifreli bağlantı · iyzico güvencesi · Kart verisi saklanmaz</p>
+        <p className="text-xs text-gray-400">SSL/TLS şifreli bağlantı · iyzico güvencesi · Kart verisi saklanmaz</p>
       </div>
 
-      <div className="bg-[#161B22] border border-[#FFFF00]/20 rounded-2xl p-4 flex justify-between items-center">
+      <div className="bg-[#161B22] border border-[#FACC15]/20 rounded-2xl p-4 flex justify-between items-center">
         <span className="text-gray-400 text-sm">Bloke edilecek tutar</span>
-        <span className="text-[#FFFF00] font-black text-xl">{totalCharge}₺</span>
+        <span className="text-[#FACC15] font-black text-xl">{totalCharge}₺</span>
       </div>
 
       <button
-        disabled={!cardNumber || !cardExpiry || !cardCvv || !cardHolder}
+        disabled={!cardFormValid}
         onClick={handlePaySubmit}
-        className="w-full py-4 bg-[#FFFF00] disabled:bg-gray-800 disabled:text-gray-500 text-black font-black text-base rounded-2xl shadow-[0_0_30px_rgba(255,255,0,0.2)] hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-2"
+        className="w-full py-4 bg-[#FACC15] disabled:bg-gray-800 disabled:text-gray-500 text-black font-black text-base rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.2)] hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-2"
       >
         <Lock size={18} /> {totalCharge}₺ BLOKE ET (ÖN PROVIZYON)
       </button>
@@ -334,7 +377,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
 
   const ProcessingView = () => (
     <div className="flex flex-col items-center justify-center py-20 gap-6">
-      <div className="w-20 h-20 rounded-full border-4 border-white/10 border-t-[#FFFF00] animate-spin" />
+      <div className="w-20 h-20 rounded-full border-4 border-white/10 border-t-[#FACC15] animate-spin" />
       <div className="text-center">
         <p className="text-white font-black text-lg">Blokaj İşleniyor</p>
         <p className="text-gray-400 text-sm mt-1">iyzico ile güvenli bağlantı...</p>
@@ -344,11 +387,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
 
   const BlockedView = () => (
     <div className="flex flex-col items-center justify-center py-12 gap-6 animate-in fade-in zoom-in duration-500">
-      <div className="w-24 h-24 bg-[#FFFF00]/10 border-2 border-[#FFFF00]/40 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,255,0,0.2)]">
-        <Lock size={40} className="text-[#FFFF00]" />
+      <div className="w-24 h-24 bg-[#FACC15]/10 border-2 border-[#FACC15]/40 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.2)]">
+        <Lock size={40} className="text-[#FACC15]" />
       </div>
       <div className="text-center">
-        <p className="text-[#FFFF00] font-black text-2xl">REZERVASYON ALINDI</p>
+        <p className="text-[#FACC15] font-black text-2xl">REZERVASYON ALINDI</p>
         <p className="text-white font-bold text-sm mt-1">{totalCharge}₺ kapora blokajı oluşturuldu</p>
       </div>
 
@@ -362,7 +405,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket, ext
 
       <button
         onClick={onViewTicket}
-        className="w-full py-4 bg-[#FFFF00] text-black font-black text-base rounded-2xl active:scale-95 transition-all"
+        className="w-full py-4 bg-[#FACC15] text-black font-black text-base rounded-2xl active:scale-95 transition-all"
       >
         MAÇ KARTINI GÖRÜNTÜLE
       </button>
@@ -451,7 +494,7 @@ const Row = ({ label, value, dim }: { label: string; value: string; dim?: boolea
 const InfoRow = ({ label, value, accent, dim }: { label: string; value: string; accent?: string; dim?: boolean }) => (
   <div className="flex justify-between items-center text-sm">
     <span className="text-gray-500">{label}</span>
-    <span className={`font-bold ${accent === 'yellow' ? 'text-[#FFFF00]' : dim ? 'text-gray-600 text-[11px] font-mono' : 'text-white'}`}>
+    <span className={`font-bold ${accent === 'yellow' ? 'text-[#FACC15]' : dim ? 'text-gray-600 text-[11px] font-mono' : 'text-white'}`}>
       {value}
     </span>
   </div>
@@ -465,7 +508,7 @@ const FormField = ({ icon, label, required, children }: {
       <span className="text-gray-600">{icon}</span>
       {label} {required && <span className="text-red-400">*</span>}
     </label>
-    <div className="bg-[#0A0E14] border border-white/8 rounded-xl px-4 py-3 focus-within:border-[#FFFF00]/40 transition-colors">
+    <div className="bg-[#0A0E14] border border-white/8 rounded-xl px-4 py-3 focus-within:border-[#FACC15]/40 transition-colors">
       {children}
     </div>
   </div>

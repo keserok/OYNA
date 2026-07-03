@@ -21,7 +21,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
   // Form State
   const [facilityName, setFacilityName] = useState('');
-  const [cityRaw, setCityRaw] = useState(''); // "Beşiktaş, İstanbul"
+  const [cityRaw, setCityRaw] = useState(''); // "Altınordu, Ordu"
   const [price, setPrice] = useState('');
   const [iban, setIban] = useState('');
   const [pricingMode] = useState<'FULL' | 'PER_PERSON'>('FULL');
@@ -208,24 +208,24 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
           <div className="relative z-10 animate-in slide-in-from-bottom-20 duration-1000">
               {/* Logo */}
-              <div className="w-16 h-16 bg-[#FFFF00] rounded-2xl rotate-45 flex items-center justify-center shadow-[0_0_30px_rgba(255,255,0,0.4)] mb-8 ml-4">
+              <div className="w-16 h-16 bg-[#FACC15] rounded-2xl rotate-45 flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.4)] mb-8 ml-4">
                   <div className="-rotate-45 font-black text-black text-2xl">O</div>
               </div>
 
               <h1 className="text-4xl font-black text-white leading-tight mb-4">
                   Hoş Geldiniz,<br/>
-                  <span className="text-[#FFFF00]">Efsane Yönetici.</span>
+                  <span className="text-[#FACC15]">Efsane Yönetici.</span>
               </h1>
               
-              <div className="bg-[#161B22]/80 backdrop-blur-xl border-l-4 border-[#FFFF00] p-4 rounded-r-xl mb-8">
+              <div className="bg-[#161B22]/80 backdrop-blur-xl border-l-4 border-[#FACC15] p-4 rounded-r-xl mb-8">
                   <p className="text-gray-300 text-sm leading-relaxed">
                       "<span className="text-white font-bold">Burak Kaptan</span> sizi şehrin en iyi sahası olarak önerdi. Tesisinizi dijitalin zirvesine taşımaya hazır mısınız?"
                   </p>
               </div>
 
               {/* Advantage Card */}
-              <div className="bg-gradient-to-r from-yellow-900/40 to-[#161B22] border border-[#FFFF00]/30 p-4 rounded-2xl mb-8 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#FFFF00]/10 rounded-full flex items-center justify-center text-[#FFFF00]">
+              <div className="bg-gradient-to-r from-yellow-900/40 to-[#161B22] border border-[#FACC15]/30 p-4 rounded-2xl mb-8 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-[#FACC15]/10 rounded-full flex items-center justify-center text-[#FACC15]">
                       <Crown size={24} />
                   </div>
                   <div>
@@ -236,7 +236,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
               <button 
                 onClick={() => setStep('SETUP_1')}
-                className="w-full h-16 bg-[#FFFF00] text-black font-black text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-[0_0_30px_rgba(255,255,0,0.2)]"
+                className="w-full h-16 bg-[#FACC15] text-black font-black text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-[0_0_30px_rgba(250,204,21,0.2)]"
               >
                   MACERAYA BAŞLA <ArrowRight size={20} />
               </button>
@@ -251,7 +251,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
           <div className="min-h-screen bg-[#0A0E14] flex flex-col px-6 pt-safe pb-safe">
               {/* Progress Bar */}
               <div className="w-full h-1 bg-gray-800 rounded-full mb-8 mt-2">
-                  <div className="h-full bg-[#FFFF00] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
+                  <div className="h-full bg-[#FACC15] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
               </div>
 
               <div className="flex-1">
@@ -268,7 +268,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     value={facilityName}
                                     onChange={(e) => setFacilityName(e.target.value)}
                                     placeholder="Örn: Arena Sport Center" 
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-2xl font-bold text-white focus:border-[#FFFF00] outline-none placeholder:text-gray-700 transition-colors"
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-2xl font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                     autoFocus
                                   />
                               </div>
@@ -278,8 +278,8 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     type="text" 
                                     value={cityRaw}
                                     onChange={(e) => setCityRaw(e.target.value)}
-                                    placeholder="Örn: Beşiktaş, İstanbul" 
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FFFF00] outline-none placeholder:text-gray-700 transition-colors"
+                                    placeholder="Örn: Altınordu, Ordu" 
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                   />
                               </div>
                           </div>
@@ -295,13 +295,13 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                               <div className="space-y-2">
                                   <label className="text-xs font-bold text-gray-500 uppercase">Saatlik Ücret (TL)</label>
                                   <div className="flex items-center gap-2">
-                                      <span className="text-3xl font-black text-[#FFFF00]">₺</span>
+                                      <span className="text-3xl font-black text-[#FACC15]">₺</span>
                                       <input 
                                         type="number" 
                                         value={price}
                                         onChange={(e) => setPrice(e.target.value)}
                                         placeholder="0" 
-                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-4xl font-black text-white focus:border-[#FFFF00] outline-none placeholder:text-gray-700 transition-colors"
+                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-4xl font-black text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                       />
                                   </div>
                               </div>
@@ -322,7 +322,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     value={iban}
                                     onChange={(e) => setIban(e.target.value)}
                                     placeholder="TR00 0000..." 
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FFFF00] outline-none placeholder:text-gray-700 transition-colors"
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                   />
                               </div>
                               <div className="bg-green-900/20 border border-green-500/30 p-4 rounded-2xl flex items-start gap-3">
@@ -357,7 +357,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   </button>
                   <button 
                     onClick={handleNext}
-                    className="flex-1 ml-4 h-16 bg-[#FFFF00] text-black font-black text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-lg shadow-yellow-900/20"
+                    className="flex-1 ml-4 h-16 bg-[#FACC15] text-black font-black text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-lg shadow-yellow-900/20"
                   >
                       {step === 'SETUP_3' ? 'KURULUMU TAMAMLA' : 'DEVAM ET'} <ArrowRight size={20} />
                   </button>
@@ -373,18 +373,18 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
               {!onboardError ? (
                   <div className="relative z-10 text-center w-full max-w-sm">
-                      <div className="w-24 h-24 border-4 border-[#FFFF00] border-t-transparent rounded-full animate-spin mx-auto mb-8 shadow-[0_0_50px_rgba(255,255,0,0.3)]"></div>
+                      <div className="w-24 h-24 border-4 border-[#FACC15] border-t-transparent rounded-full animate-spin mx-auto mb-8 shadow-[0_0_50px_rgba(250,204,21,0.3)]"></div>
                       <h2 className="text-2xl font-black text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
                       <div className="space-y-3 text-left">
                           {LOADING_STEPS.map((label, idx) => {
                               const done = idx < loadingStep;
                               const active = idx === loadingStep;
                               return (
-                                  <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${active ? 'bg-[#161B22] border-[#FFFF00]/40' : done ? 'bg-[#161B22]/50 border-green-500/30' : 'bg-[#161B22]/30 border-white/5'}`}>
+                                  <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${active ? 'bg-[#161B22] border-[#FACC15]/40' : done ? 'bg-[#161B22]/50 border-green-500/30' : 'bg-[#161B22]/30 border-white/5'}`}>
                                       {done ? (
                                           <span className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center"><Check className="text-green-400" size={14} /></span>
                                       ) : active ? (
-                                          <Loader2 className="text-[#FFFF00] animate-spin" size={20} />
+                                          <Loader2 className="text-[#FACC15] animate-spin" size={20} />
                                       ) : (
                                           <span className="w-6 h-6 rounded-full border-2 border-white/10" />
                                       )}
@@ -403,7 +403,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <p className="text-sm text-gray-400 mb-6">{onboardError}</p>
                       <div className="flex gap-3">
                           <button onClick={() => { setOnboardError(null); setStep('SETUP_3'); }} className="flex-1 h-12 rounded-xl bg-[#0A0E14] border border-white/10 text-gray-300 font-bold">Geri Dön</button>
-                          <button onClick={retryOnboard} className="flex-1 h-12 rounded-xl bg-[#FFFF00] text-black font-black">Tekrar Dene</button>
+                          <button onClick={retryOnboard} className="flex-1 h-12 rounded-xl bg-[#FACC15] text-black font-black">Tekrar Dene</button>
                       </div>
                   </div>
               )}
@@ -442,14 +442,14 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               
               {/* Gift Modal/Section */}
               {giftOpen && (
-                  <div className="bg-gradient-to-r from-yellow-900/30 to-[#161B22] border border-[#FFFF00]/30 rounded-[32px] p-6 animate-in zoom-in duration-300 relative overflow-hidden">
+                  <div className="bg-gradient-to-r from-yellow-900/30 to-[#161B22] border border-[#FACC15]/30 rounded-[32px] p-6 animate-in zoom-in duration-300 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-6 opacity-10"><Crown size={100} /></div>
                       <h3 className="text-xl font-black text-white mb-4 flex items-center gap-2">
-                          <Gift className="text-[#FFFF00]" /> HEDİYE PAKETİNİZ
+                          <Gift className="text-[#FACC15]" /> HEDİYE PAKETİNİZ
                       </h3>
                       <div className="space-y-3 relative z-10">
                           <div className="bg-black/40 p-3 rounded-xl flex items-center gap-3 border border-white/5">
-                              <Zap className="text-[#FFFF00]" size={20} />
+                              <Zap className="text-[#FACC15]" size={20} />
                               <div>
                                   <p className="font-bold text-white text-sm">Öncelikli Sıralama</p>
                                   <p className="text-[10px] text-gray-400">7 gün boyunca listenin en tepesindesiniz.</p>
@@ -459,25 +459,12 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                               <Award className="text-blue-400" size={20} />
                               <div>
                                   <p className="font-bold text-white text-sm">Dijital OYNA Afişi</p>
-                                  <p className="text-[10px] text-gray-400">QR kodlu afişiniz hazır. <button className="text-[#FFFF00] hover:underline">İndir (PDF)</button></p>
+                                  <p className="text-[10px] text-gray-400">QR kodlu afişiniz hazır. <button className="text-[#FACC15] hover:underline">İndir (PDF)</button></p>
                               </div>
                           </div>
                       </div>
                   </div>
               )}
-
-              {/* Scout Credit */}
-              <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                  <div className="relative">
-                      <img src="https://i.pravatar.cc/150?u=kaptan" className="w-12 h-12 rounded-full border-2 border-green-500" alt="Scout" />
-                      <div className="absolute -bottom-1 -right-1 bg-green-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full">SCOUT</div>
-                  </div>
-                  <div>
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Referans Olan</p>
-                      <p className="text-sm font-bold text-white">Burak Kaptan</p>
-                      <p className="text-[10px] text-gray-400">Bu tesis OYNA ekosistemine kazandırıldı.</p>
-                  </div>
-              </div>
 
               {/* Onay durumu */}
               <div className="bg-gradient-to-r from-blue-900/30 to-[#161B22] border border-blue-500/30 rounded-2xl p-4 flex items-start gap-3">
@@ -500,7 +487,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <p className="text-xl font-black text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
                   </div>
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5">
-                      <MapPin className="text-[#FFFF00] mb-2" size={20} />
+                      <MapPin className="text-[#FACC15] mb-2" size={20} />
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Bölgenizde OYNA'da</p>
                       <p className="text-xl font-black text-white">{nearbyCount} tesis</p>
                   </div>
@@ -509,14 +496,14 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                           <p className="text-[10px] text-gray-500 uppercase font-bold">İlk rezervasyona tahmini</p>
                           <p className="text-[11px] text-gray-400">Onay sonrası ilk talep beklentisi</p>
                       </div>
-                      <p className="text-2xl font-black text-[#FFFF00] font-mono tabular-nums">{fmtCountdown(firstBookingSeconds)}</p>
+                      <p className="text-2xl font-black text-[#FACC15] font-mono tabular-nums">{fmtCountdown(firstBookingSeconds)}</p>
                   </div>
               </div>
 
               {/* Main Actions */}
               <div className="grid grid-cols-2 gap-4">
-                  <button className="col-span-2 bg-[#FFFF00] h-20 rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,255,0,0.15)] hover:scale-[1.02] transition-transform active:scale-95 group">
-                      <div className="bg-black text-[#FFFF00] p-2 rounded-full group-hover:rotate-90 transition-transform">
+                  <button className="col-span-2 bg-[#FACC15] h-20 rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.15)] hover:scale-[1.02] transition-transform active:scale-95 group">
+                      <div className="bg-black text-[#FACC15] p-2 rounded-full group-hover:rotate-90 transition-transform">
                           <Activity size={24} />
                       </div>
                       <span className="text-black font-black text-lg">HEMEN İLK RANDEVUYU AÇ</span>

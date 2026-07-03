@@ -84,7 +84,6 @@ const mapUserToDb = (user: Partial<AdminUser>) => {
   if (user.role !== undefined) mapped.role = user.role;
   if (user.isVerified !== undefined) mapped.is_verified = user.isVerified;
   if (user.isBanned !== undefined) mapped.is_banned = user.isBanned;
-  if (user.isPro !== undefined) mapped.is_pro = user.isPro;
   if (user.wallet !== undefined) mapped.wallet_balance = user.wallet;
   // NOT: profiles tablosunda 'stats' kolonu yok. Gerçek kolonlara yaz (F4).
   if (user.matchCount !== undefined) mapped.match_count = user.matchCount;
@@ -109,10 +108,6 @@ export const fbBanUser = async (id: string, isBanned: boolean) => {
   if (error) throw new Error(`Ban işlemi başarısız: ${error.message}`);
 };
 
-export const fbToggleUserPro = async (id: string, isPro: boolean) => {
-  const { error } = await supabase.from('profiles').update({ is_pro: isPro }).eq('id', id);
-  if (error) throw new Error(`PRO durumu değiştirilemedi: ${error.message}`);
-};
 
 export const fbVerifyUser = async (id: string) => {
   const { error } = await supabase.from('profiles').update({ is_verified: true }).eq('id', id);
@@ -277,7 +272,7 @@ export const fbGetAppSettings = async () => {
 export const fbGetAdminProfiles = async () => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at')
+    .select('id, full_name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at')
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) throw new Error(`Kullanıcılar yüklenemedi: ${error.message}`);

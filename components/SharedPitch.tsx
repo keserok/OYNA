@@ -165,7 +165,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
             <div className="relative flex flex-col items-center">
               {slot.status === 'PENDING' && (
                 <motion.div 
-                  className="absolute inset-[-6px] rounded-full border border-dashed border-[#FFFF00]/80 opacity-70 pointer-events-none"
+                  className="absolute inset-[-6px] rounded-full border border-dashed border-[#FACC15]/80 opacity-70 pointer-events-none"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
                 />
@@ -174,7 +174,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
                 <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all ${slot.status === 'PENDING' ? 'opacity-80 grayscale-[30%] border-[#FFFF00]/50' : slot.role === 'GK' || slot.role === 'KL' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-[#FFFF00]/50'}`}
+                    className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all ${slot.status === 'PENDING' ? 'opacity-80 grayscale-[30%] border-[#FACC15]/50' : slot.role === 'GK' || slot.role === 'KL' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-[#FACC15]/50'}`}
                 >
                     {slot.player.avatar ? (
                         <img src={slot.player.avatar} className="w-full h-full rounded-full object-cover" alt={slot.player.name}/>
@@ -194,7 +194,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
 
               {slot.player ? (
                  <div className="absolute top-full mt-1 flex flex-col items-center pointer-events-none">
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${slot.status === 'PENDING' ? 'bg-[#FFFF00]/20 text-[#FFFF00] border-[#FFFF00]/50' : 'bg-black/80 text-white border-white/10'} whitespace-nowrap border shadow-sm`}>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${slot.status === 'PENDING' ? 'bg-[#FACC15]/20 text-[#FACC15] border-[#FACC15]/50' : 'bg-black/80 text-white border-white/10'} whitespace-nowrap border shadow-sm`}>
                         {slot.status === 'PENDING' ? '⏳ ' : ''}{slot.player.name.split(' ')[0]}
                     </span>
                  </div>

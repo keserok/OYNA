@@ -25,13 +25,11 @@ export function fromProfileRow(row: Record<string, any>): AdminUser {
     rating: Number(row.rating) || 5.0,
     isVerified: Boolean(row.is_verified),
     isBanned: Boolean(row.is_banned),
-    isPro: Boolean(row.is_pro),
     joinDate: row.join_date ?? row.created_at ?? '',
     matchCount: Number(row.match_count) || 0,
     wallet: Number(row.wallet_balance ?? row.wallet ?? 0),
     reliabilityScore: Number(row.reliability_score) ?? 100,
     banExpiresAt: row.ban_expires_at ?? null,
-    communities: Array.isArray(row.communities) ? row.communities : [],
     playerCard: row.player_card ?? {},
     cardActive: row.card_active === undefined ? undefined : Boolean(row.card_active),
     oynaId: row.oyna_id ?? undefined,
@@ -57,13 +55,11 @@ export function toProfileRow(user: Partial<AdminUser>): Record<string, any> {
   if (user.rating !== undefined)           row.rating = user.rating;
   if (user.isVerified !== undefined)       row.is_verified = user.isVerified;
   if (user.isBanned !== undefined)         row.is_banned = user.isBanned;
-  if (user.isPro !== undefined)            row.is_pro = user.isPro;
   if (user.joinDate !== undefined)         row.join_date = user.joinDate;
   if (user.matchCount !== undefined)       row.match_count = user.matchCount;
   if (user.wallet !== undefined)           row.wallet_balance = user.wallet;
   if (user.reliabilityScore !== undefined) row.reliability_score = user.reliabilityScore;
   if (user.banExpiresAt !== undefined)     row.ban_expires_at = user.banExpiresAt;
-  if (user.communities !== undefined)      row.communities = user.communities;
   if (user.playerCard !== undefined)       row.player_card = user.playerCard;
   if (user.cardActive !== undefined)       row.card_active = user.cardActive;
   if (user.oynaId !== undefined)           row.oyna_id = user.oynaId;
@@ -92,7 +88,6 @@ export function newProfileFromAuth(authUser: {
     wallet_balance: 0,
     is_verified: false,
     is_banned: false,
-    is_pro: false,
     match_count: 0,
     reliability_score: 100,
     created_at: new Date().toISOString(),

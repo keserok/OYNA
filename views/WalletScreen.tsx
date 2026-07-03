@@ -254,7 +254,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         </div>
         <div className="p-6 border-t border-white/5">
           <button onClick={handleAddCard}
-            className="w-full h-14 bg-[#FFFF00] text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+            className="w-full h-14 bg-[#FACC15] text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
             <Plus size={20} /> YENİ KART EKLE
           </button>
         </div>
@@ -268,7 +268,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     <div className="min-h-screen bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-[#39FF14]/8 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-[#FFFF00]/8 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-[#FACC15]/8 blur-[120px] rounded-full" />
       </div>
 
       <header className="px-6 py-5 flex justify-between items-center sticky top-0 z-20 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
@@ -277,7 +277,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-black text-white tracking-widest uppercase flex items-center gap-2">
-          <Wallet size={18} className="text-[#FFFF00]" /> OYNA CÜZDAN
+          <Wallet size={18} className="text-[#FACC15]" /> OYNA CÜZDAN
         </h1>
         <button onClick={() => { setRefreshing(true); fetchData(); }}
           className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">

@@ -89,7 +89,7 @@ export const loginWithApple = async (): Promise<void> => {
       const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
       const nonce = crypto.randomUUID();
       const result = await SignInWithApple.authorize({
-        clientId: 'com.oyna.app.kerem',
+        clientId: 'com.oyna.app',
         redirectURI: window.location.origin,
         scopes: 'email name',
         state: crypto.randomUUID(),
@@ -207,8 +207,32 @@ export const onAuthStateChanged = (
 // demo hesabın e-postasını (veya "mirackerem" kısayolunu) yazınca OTP olmadan,
 // sabit demo şifresiyle anında giriş yapar. Yalnız @oyna.app demo hesapları —
 // gerçek kullanıcı hesaplarını ASLA etkilemez. Prod'da kapalıdır.
-export const isDemoLoginEnabled = (): boolean =>
-  import.meta.env.VITE_DEV_MODE === 'true';
+// ?demo=1 anahtarını, App.tsx URL'yi temizlemeden ÖNCE (modül yüklenirken) yakala
+// ve oturum boyunca sakla. Böylece herhangi bir domain'de (Vercel dâhil) env
+// değişkeni gerekmeden demo modu açılır:  <url>/?demo=1
+if (typeof window !== 'undefined') {
+  try {
+    if (new URLSearchParams(window.location.search).get('demo') === '1') {
+      sessionStorage.setItem('oyna_demo', '1');
+    }
+  } catch { /* sessionStorage yoksa yok say */ }
+}
+
+export const isDemoLoginEnabled = (): boolean => {
+  // 1) Açık bayrak (Vercel'de env ile de açılabilir)
+  if (import.meta.env.VITE_DEV_MODE === 'true') return true;
+  if (typeof window !== 'undefined') {
+    // 2) URL anahtarı ?demo=1 → bu oturum boyunca (herhangi bir domain'de test)
+    try { if (sessionStorage.getItem('oyna_demo') === '1') return true; } catch { /* yok say */ }
+    // 3) Yerel geliştirme (localhost) → `npm run dev` için sıfır ayar
+    const h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local')) {
+      return true;
+    }
+  }
+  // Prod domain'de anahtarsız KAPALI; ayrıca demoLogin yalnız @oyna.app kabul eder.
+  return false;
+};
 
 const DEMO_DOMAIN = '@oyna.app';
 const DEMO_PASSWORD = 'password123';
@@ -231,7 +255,7 @@ export const demoLogin = async (raw: string) => {
   if (key === 'mirackerem' || key === 'olimpiyat') key = 'mirackerem' + DEMO_DOMAIN;
   if (!key.includes('@')) key = key + DEMO_DOMAIN; // "mehmet.yilmaz" → tam e-posta
   if (!key.endsWith(DEMO_DOMAIN)) {
-    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna-test.com) geçerlidir.');
+    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna.app) geçerlidir.');
   }
   const { data, error } = await supabase.auth.signInWithPassword({
     email: key,

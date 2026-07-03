@@ -4,21 +4,26 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './t
 import { auth, onAuthStateChanged, logout } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
-import { initPushNotifications, subscribeToInAppNotifications, clearPushToken } from './notifications/pushService';
+import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
+import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import { identifyUser, resetUser, trackEvent } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
+import OfflineBanner from './components/OfflineBanner';
+import { GlobalToast, showToast } from './components/common/GlobalToast';
+import SignupGate from './components/common/SignupGate';
 
-// Eagerly loaded for immediate display
+// Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
-import Dashboard from './views/Dashboard';
-import MatchDiscovery from './views/MatchDiscovery';
-import MatchJoin from './views/MatchJoin';
-import LocationPrompt from './views/LocationPrompt';
 
 // Lazy loaded views to reduce initial bundle size
+const Dashboard = lazy(() => import('./views/Dashboard'));
+const MatchDiscovery = lazy(() => import('./views/MatchDiscovery'));
+const MatchJoin = lazy(() => import('./views/MatchJoin'));
+const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
+const OnboardingView = lazy(() => import('./views/OnboardingView'));
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
 const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
@@ -132,7 +137,6 @@ const App: React.FC = () => {
         rating: 5,
         isVerified: false,
         isBanned: false,
-        isPro: false,
         joinDate: new Date().toISOString(),
         matchCount: 0,
       });
@@ -145,6 +149,8 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
+          // Gerçek oturum açıldı → misafir modu biter
+          useAppStore.getState().setIsGuest(false);
           const { data: profile } = await supabase
             .from('profiles')
             .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email')
@@ -172,14 +178,15 @@ const App: React.FC = () => {
               });
             } catch (insertError) {
               console.error('[App] Error creating user profile:', insertError);
+              showToast('Profilin oluşturulurken bir sorun oluştu. Lütfen tekrar giriş yapmayı dene.');
             }
             setRole(UserRole.PLAYER);
             useAppStore.getState().setMyRoles([UserRole.PLAYER]);
             identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
             trackEvent('user_registered', { role: UserRole.PLAYER });
-            // Herkes doğrudan oyuncu ana sayfasına. Konum bağlamsal istenir;
-            // profil tamamlama ilk maç sonrası (onaylanan ertelenmiş model).
-            resetNavigation('DASHBOARD');
+            // Yeni kayıtta bir kez bağlamsal konum izni sor ("yakınındaki
+            // sahaları görebilmen için") — atlanabilir, sonra Dashboard.
+            resetNavigation('LOCATION_PROMPT');
           } else {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
@@ -203,7 +210,9 @@ const App: React.FC = () => {
             // Aktif rol yalnızca admin onayından sonra sağlayıcı role çevrilir
             // (set_active_role), bu yüzden bekleyen başvuru oyuncuyu KİLİTLEMEZ.
             const currentView = useAppStore.getState().view;
-            if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'LOCATION_PROMPT', 'PENDING_VERIFICATION'].includes(currentView)) {
+            // LOCATION_PROMPT listede DEĞİL: yeni kayıt konum ekranındayken
+            // token yenilenmesi kullanıcıyı ekrandan koparmasın.
+            if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'PENDING_VERIFICATION'].includes(currentView)) {
               resetNavigation(navigateBasedOnRole(primaryRole));
             }
           }
@@ -216,7 +225,7 @@ const App: React.FC = () => {
         console.error('[App] Auth state error:', error);
         if (error?.message?.includes('JWT') || error?.message?.includes('Auth') || error?.code === 'PGRST301') {
           logout().catch(e => console.error('[App] Sign out error on invalid session:', e));
-          resetNavigation('ROLE_SELECTION');
+          resetNavigation('AUTH');
         }
       } finally {
         setIsAuthReady(true);
@@ -301,6 +310,42 @@ const App: React.FC = () => {
       if (unsubscribeRealtime) unsubscribeRealtime();
     };
   }, []);
+
+  // ─── Deep Link (oyna:// URL açılışları) ────────────────────────────────────
+  // Push tıklaması dışındaki gerçek URL açılışları: @capacitor/app appUrlOpen.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let remove: (() => void) | undefined;
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      CapApp.addListener('appUrlOpen', ({ url }) => {
+        handleDeepLink(
+          url,
+          (v) => useAppStore.getState().navigateTo(v as AppView),
+          (m) => useAppStore.getState().setSelectedMatch(m),
+        );
+      }).then((handle) => { remove = () => handle.remove(); });
+    });
+    return () => { if (remove) remove(); };
+  }, []);
+
+  // ─── Android donanım geri tuşu ─────────────────────────────────────────────
+  // Yığında ekran varsa geri git; kök ekrandaysa uygulamayı arka plana al
+  // (kapatmak yerine) — Play incelemesinin beklediği davranış.
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== 'android') return;
+    let remove: (() => void) | undefined;
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      CapApp.addListener('backButton', () => {
+        const { navigationStack, goBack } = useAppStore.getState();
+        if (navigationStack.length > 0) {
+          goBack();
+        } else {
+          CapApp.minimizeApp();
+        }
+      }).then((handle) => { remove = () => handle.remove(); });
+    });
+    return () => { if (remove) remove(); };
+  }, []);
   // Aktif role göre açılış ekranı. Oyuncu (ve varsayılan) → Dashboard.
   // Sağlayıcı/tesis rolleri yalnız admin onayından sonra aktif role atanır.
   const navigateBasedOnRole = (currentRole: UserRole | null): AppView => {
@@ -319,6 +364,7 @@ const App: React.FC = () => {
         }).eq('id', auth.currentUser.uid);
       } catch (error) {
         console.error('Error saving role:', error);
+        showToast('Rol kaydedilemedi. Lütfen tekrar dene.');
       }
       resetNavigation(navigateBasedOnRole(selectedRole));
     } else {
@@ -330,16 +376,20 @@ const App: React.FC = () => {
     switch (view) {
       case 'SPLASH':
         return <SplashScreen onStart={() => {
-          // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş; oturum
-          // varsa aktif role göre panel (tekrar giriş yok).
+          // Yeni model: rol seçimi yok. Oturum yoksa ilk açılışta bir kez
+          // tanıtım (onboarding), sonra Giriş; oturum varsa role göre panel.
           if (!auth.currentUser) {
-            resetNavigation('AUTH');
+            import('./views/OnboardingView').then(({ isOnboardingDone }) => {
+              resetNavigation(isOnboardingDone() ? 'AUTH' : 'ONBOARDING');
+            });
             return;
           }
           resetNavigation(navigateBasedOnRole(role));
         }} />;
+      case 'ONBOARDING':
+        return <OnboardingView onDone={() => resetNavigation('AUTH')} />;
       case 'AUTH':
-        return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('ROLE_SELECTION')} />;
+        return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
       case 'LOCATION_PROMPT':
         return <LocationPrompt
           onPermissionGranted={() => resetNavigation(navigateBasedOnRole(role))}
@@ -358,28 +408,28 @@ const App: React.FC = () => {
           onReapply={(note) => { setVerificationNote(note); navigateTo('SERVICE_APPLICATION'); }}
         />;
       case 'ADMIN_PANEL':
-        return <AdminPanel onBack={() => goBack('ROLE_SELECTION')} />;
+        return <AdminPanel onBack={() => goBack(navigateBasedOnRole(role))} />;
       case 'OWNER_PANEL':
         return (
           <OwnerPanel
-            onBack={() => goBack('ROLE_SELECTION')}
+            onBack={() => goBack(navigateBasedOnRole(role))}
             onNavigate={(v) => navigateTo(v as AppView)}
             onNeedOnboarding={() => navigateTo('PARTNER_ONBOARDING')}
           />
         );
       case 'SERVICE_DASHBOARD':
-        return <ServiceDashboard role={role!} onBack={() => goBack('ROLE_SELECTION')} onNavigate={(v) => navigateTo(v)} />;
+        return <ServiceDashboard role={role!} onBack={() => goBack(navigateBasedOnRole(role))} onNavigate={(v) => navigateTo(v)} />;
       case 'PARTNER_ONBOARDING':
         return <PartnerOnboarding
           onComplete={() => resetNavigation('OWNER_PANEL')}
-          onClose={() => goBack('ROLE_SELECTION')}
+          onClose={() => goBack(navigateBasedOnRole(role))}
         />;
       case 'SERVICE_APPLICATION':
         return <ServiceApplication
           role={(serviceAppRole === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}
           rejectionNote={verificationNote}
           onSubmitted={() => { setVerificationNote(null); resetNavigation('PENDING_VERIFICATION'); }}
-          onBack={() => { setVerificationNote(null); goBack('ROLE_SELECTION'); }}
+          onBack={() => { setVerificationNote(null); goBack(navigateBasedOnRole(role)); }}
         />;
       case 'QR_SCANNER':
         return <QRScannerView
@@ -395,7 +445,7 @@ const App: React.FC = () => {
       case 'DASHBOARD':
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
-          onBack={() => goBack('ROLE_SELECTION')}
+          onBack={() => goBack(navigateBasedOnRole(role))}
           selectedGk={selectedGk}
           selectedRef={selectedRef}
         />;
@@ -503,10 +553,10 @@ const App: React.FC = () => {
               navigateTo('MY_TEAM');
             } catch (error) {
               console.error('Takım oluşturulamadı:', error);
+              showToast('Takım oluşturulamadı. Lütfen tekrar dene.');
               goBack('PROFILE');
             }
           }}
-          communities={[{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }]}
         />;
       case 'POST_MATCH_EVAL':
         return <PostMatchEval onBack={() => goBack('SOCIAL')} onComplete={() => goBack('SOCIAL')} />;
@@ -521,6 +571,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
+      <OfflineBanner />
+      <GlobalToast />
+      <SignupGate />
       {/* Mesh Gradient Background */}
       <div className="mesh-bg">
         <div className="mesh-blob mesh-blob-1"></div>

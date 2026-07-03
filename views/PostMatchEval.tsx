@@ -52,7 +52,7 @@ const Sparkle: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, dela
       rotate: [0, 180, 360]
     }}
     transition={{ duration: 1.0, delay, ease: "easeOut" }}
-    className="absolute pointer-events-none text-[#FFFF00] z-50"
+    className="absolute pointer-events-none text-[#FACC15] z-50"
   >
     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
@@ -70,8 +70,8 @@ const ServiceRatingCard: React.FC<{
   onComment: (val: string) => void;
 }> = ({ info, score, comment, onScore, onComment }) => {
   const isGk = info.type === 'GK';
-  const accent = isGk ? 'text-[#FFFF00]' : 'text-blue-400';
-  const ring = isGk ? 'border-[#FFFF00]/20 bg-[#FFFF00]/10' : 'border-blue-500/20 bg-blue-500/10';
+  const accent = isGk ? 'text-[#FACC15]' : 'text-blue-400';
+  const ring = isGk ? 'border-[#FACC15]/20 bg-[#FACC15]/10' : 'border-blue-500/20 bg-blue-500/10';
   const Icon = isGk ? Hand : Gavel;
   return (
     <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 flex flex-col gap-4 relative overflow-hidden">
@@ -109,7 +109,7 @@ const ServiceRatingCard: React.FC<{
               className={`h-9 rounded-lg border text-[11px] font-black transition-all ${
                 active
                   ? isGk
-                    ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.3)]'
+                    ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.3)]'
                     : 'bg-blue-500 text-white border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
                   : 'bg-black/30 border-white/5 text-gray-600 hover:text-white hover:border-white/10'
               }`}
@@ -315,7 +315,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   if (showResult) {
     return (
       <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-[#FFFF00]/4 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-[#FACC15]/4 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-[300px] h-[300px] bg-[#39FF14]/4 rounded-full blur-3xl pointer-events-none" />
 
         <motion.div 
@@ -330,7 +330,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
               scale: [1, 1.05, 1] 
             }} 
             transition={{ duration: 0.8, ease: "easeInOut", repeat: 0, delay: 0.2 }}
-            className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FFFF00] to-amber-500 flex items-center justify-center shadow-[0_0_50px_rgba(255,255,0,0.5)] border border-[#FFFF00]/40"
+            className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FACC15] to-amber-500 flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.5)] border border-[#FACC15]/40"
           >
             <Trophy size={42} className="text-black" />
           </motion.div>
@@ -345,11 +345,11 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
               initial={{ opacity: 0, y: 15 }} 
               animate={{ opacity: 1, y: 0 }} 
               transition={{ delay: 0.3 }}
-              className="w-full bg-[#121620]/60 backdrop-blur-xl border border-[#FFFF00]/30 rounded-[28px] p-5 text-center shadow-[0_0_25px_rgba(255,255,0,0.1)] relative overflow-hidden"
+              className="w-full bg-[#121620]/60 backdrop-blur-xl border border-[#FACC15]/30 rounded-[28px] p-5 text-center shadow-[0_0_25px_rgba(250,204,21,0.1)] relative overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-[#FFFF00]/5 to-transparent pointer-events-none" />
-              <Crown size={22} className="text-[#FFFF00] mx-auto mb-2 drop-shadow-[0_0_8px_rgba(255,255,0,0.5)]" />
-              <p className="text-[9px] text-[#FFFF00] font-black uppercase tracking-[0.25em] italic">MAÇIN ADAMI (MOTM)</p>
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/5 to-transparent pointer-events-none" />
+              <Crown size={22} className="text-[#FACC15] mx-auto mb-2 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+              <p className="text-[9px] text-[#FACC15] font-black uppercase tracking-[0.25em] italic">MAÇIN ADAMI (MOTM)</p>
               
               <div className={`w-14 h-14 rounded-2xl mx-auto my-3.5 flex items-center justify-center font-black text-xl border ${getTierBadgeClass(motmPlayer.tier)}`}>
                 {motmPlayer.initials}
@@ -364,7 +364,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-2">Rakip Centilmenliği</p>
               <div className="flex justify-center gap-1">
                 {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={11} className={s <= fairPlay ? 'text-[#FFFF00] fill-[#FFFF00] drop-shadow-[0_0_6px_rgba(255,255,0,0.4)]' : 'text-gray-800'} />
+                  <Star key={s} size={11} className={s <= fairPlay ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]' : 'text-gray-800'} />
                 ))}
               </div>
             </div>
@@ -521,7 +521,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                         size={38} 
                         className={`transition-all duration-300 ${
                           star <= fairPlay 
-                            ? 'text-[#FFFF00] fill-[#FFFF00] drop-shadow-[0_0_12px_rgba(255,255,0,0.5)] scale-105' 
+                            ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_12px_rgba(250,204,21,0.5)] scale-105' 
                             : 'text-gray-800 hover:text-white/40'
                         }`} 
                       />
@@ -535,7 +535,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   ))}
                 </div>
                 {fairPlay > 0 && (
-                  <span className="text-[9px] font-black uppercase tracking-widest mt-2.5 text-[#FFFF00]">
+                  <span className="text-[9px] font-black uppercase tracking-widest mt-2.5 text-[#FACC15]">
                     {fairPlay === 5 ? 'Kusursuz / Mükemmel Centilmenlik' : fairPlay === 4 ? 'Çok İyi Centilmenlik' : fairPlay === 3 ? 'Normal Centilmenlik' : fairPlay === 2 ? 'Kötü Davranışlar' : 'Sert ve Centilmenlik Dışı'}
                   </span>
                 )}
@@ -609,14 +609,14 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   </button>
                   <div className="flex-1 flex gap-1">
                     {PLAYERS.map((_, i) => (
-                      <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i < playerCardIdx ? 'bg-[#39FF14]' : i === playerCardIdx ? 'bg-[#FFFF00]' : 'bg-white/10'}`} />
+                      <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i < playerCardIdx ? 'bg-[#39FF14]' : i === playerCardIdx ? 'bg-[#FACC15]' : 'bg-white/10'}`} />
                     ))}
                   </div>
                   <span className="text-[11px] font-black text-gray-500">{playerCardIdx + 1}/{PLAYERS.length}</span>
                 </div>
 
                 {/* Player card */}
-                <div className={`rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all ${isMotm ? 'border-[#FFFF00] bg-gradient-to-br from-[#2c1d00]/40 to-[#121620]/80 shadow-[0_0_30px_rgba(255,255,0,0.12)]' : 'bg-[#121620]/70 border-white/8'}`}>
+                <div className={`rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all ${isMotm ? 'border-[#FACC15] bg-gradient-to-br from-[#2c1d00]/40 to-[#121620]/80 shadow-[0_0_30px_rgba(250,204,21,0.12)]' : 'bg-[#121620]/70 border-white/8'}`}>
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/6 rounded-full blur-2xl pointer-events-none" />
                   <div className="flex items-center gap-4">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-base border ${getTierBadgeClass(p.tier)}`}>
@@ -629,7 +629,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       onClick={() => { if (navigator.vibrate) navigator.vibrate(22); setMotm(isMotm ? null : p.id); }}
-                      className={`h-10 px-3.5 rounded-xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${isMotm ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-white/5 border-white/10 text-gray-500'}`}
+                      className={`h-10 px-3.5 rounded-xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${isMotm ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-white/5 border-white/10 text-gray-500'}`}
                     >
                       <Crown size={11} fill={isMotm ? 'black' : 'none'} className={isMotm ? 'text-black' : ''} />
                       {isMotm ? 'MOTM' : 'MOTM'}
@@ -641,7 +641,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                     {[1,2,3,4,5].map(s => (
                       <motion.button key={s} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.85 }}
                         onClick={(e) => setPlayerRating(p.id, s, e)} className="p-1 relative overflow-visible">
-                        <Star size={34} className={`transition-all duration-200 ${s <= currentRating ? 'text-[#FFFF00] fill-[#FFFF00] drop-shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 'text-gray-800 hover:text-white/30'}`} />
+                        <Star size={34} className={`transition-all duration-200 ${s <= currentRating ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'text-gray-800 hover:text-white/30'}`} />
                       </motion.button>
                     ))}
                     <div className="absolute inset-0 pointer-events-none overflow-visible">
@@ -649,7 +649,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                     </div>
                   </div>
                   {currentRating > 0 && (
-                    <p className="text-center text-[9px] font-black uppercase tracking-widest text-[#FFFF00]/70 -mt-3">
+                    <p className="text-center text-[9px] font-black uppercase tracking-widest text-[#FACC15]/70 -mt-3">
                       {currentRating === 5 ? 'Mükemmel' : currentRating >= 4 ? 'Çok İyi' : currentRating >= 3 ? 'İyi' : currentRating >= 2 ? 'Orta' : 'Zayıf'}
                     </p>
                   )}

@@ -45,9 +45,9 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
            <div className="bg-white rounded-[32px] overflow-hidden relative shadow-[0_0_50px_rgba(255,255,255,0.1)]">
                
                {/* Top Section (Visual) */}
-               <div className="bg-[#FFFF00] p-6 pb-12 relative">
+               <div className="bg-[#FACC15] p-6 pb-12 relative">
                    <div className="flex justify-between items-start relative z-10">
-                       <div className="bg-black text-[#FFFF00] px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider">
+                       <div className="bg-black text-[#FACC15] px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider">
                            ONAYLANDI
                        </div>
                        <ShieldCheck size={24} className="text-black opacity-50" />
@@ -56,7 +56,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                        <h2 className="text-3xl font-black text-black leading-none uppercase">
                          {pitchNameParts[0]}<br/>{pitchNameParts.slice(1).join(' ')}
                        </h2>
-                       <p className="text-black/60 font-bold text-sm mt-1">{bookingPitch?.district || 'Beşiktaş'}, İstanbul</p>
+                       <p className="text-black/60 font-bold text-sm mt-1">{bookingPitch?.district || 'Altınordu'}, Ordu</p>
                    </div>
                    
                    {/* Decorative Circles */}
@@ -94,9 +94,9 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                    {/* QR Code */}
                    <div className="bg-black p-4 rounded-2xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
                        <QrCode size={120} className="text-white relative z-10" />
-                       <div className="absolute inset-0 bg-gradient-to-tr from-[#FFFF00]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                       <div className="absolute inset-0 bg-gradient-to-tr from-[#FACC15]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                        {/* Scanning Line */}
-                       <div className="absolute top-0 left-0 w-full h-1 bg-[#FFFF00] shadow-[0_0_15px_#FFFF00] animate-[scan_2s_linear_infinite]"></div>
+                       <div className="absolute top-0 left-0 w-full h-1 bg-[#FACC15] shadow-[0_0_15px_#FACC15] animate-[scan_2s_linear_infinite]"></div>
                    </div>
                    <p className="text-center text-[10px] text-gray-400 mt-2 font-mono">ID: OYNA-8293-TX</p>
                </div>
@@ -107,7 +107,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                <button className="flex-1 bg-[#161B22] border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors">
                    <Share2 size={18} /> Paylaş
                </button>
-               <button className="flex-1 bg-[#FFFF00] text-black py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20">
+               <button className="flex-1 bg-[#FACC15] text-black py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20">
                    <Download size={18} /> Cüzdana Ekle
                </button>
            </div>

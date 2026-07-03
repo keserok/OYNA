@@ -39,7 +39,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const deleteUser = useAppStore((s) => s.deleteUser);
     const banUser = useAppStore((s) => s.banUser);
     const unbanUser = useAppStore((s) => s.unbanUser);
-    const toggleUserPro = useAppStore((s) => s.toggleUserPro);
     const verifyUser = useAppStore((s) => s.verifyUser);
     const addGoalkeeper = useAppStore((s) => s.addGoalkeeper);
     const deleteGoalkeeper = useAppStore((s) => s.deleteGoalkeeper);
@@ -60,7 +59,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const [editProvider, setEditProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
     const [editUser, setEditUser] = useState<AdminUser | null>(null);
     const [page, setPage] = useState(0);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned' | 'pro'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned'>('all');
     const [query, setQuery] = useState('');
     const debouncedQuery = useDebouncedValue(query, 300);
     const [serverUsers, setServerUsers] = useState<AdminUser[]>([]);
@@ -245,7 +244,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             { id: 'all', label: 'Tümü' },
             { id: 'active', label: 'Aktif' },
             { id: 'banned', label: 'Banlı' },
-            { id: 'pro', label: 'Pro' },
         ];
     }, [subRoute]);
 
@@ -299,7 +297,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             header: 'STATÜ',
             render: (u: any) => (
                 <div className="flex gap-1.5 flex-wrap">
-                    {u.isPro && <StatusBadge tone="warning">PRO</StatusBadge>}
                     {(u.isVerified || subRoute !== 'KULLANICILAR') && <StatusBadge tone="info">DOĞRULANMIŞ</StatusBadge>}
                     {u.isBanned 
                         ? <StatusBadge tone="danger">BANNED</StatusBadge>
@@ -346,14 +343,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                         >
                             {u.isBanned ? <ShieldCheck size={12} /> : <Ban size={12} />}
                             {u.isBanned ? 'UNBAN' : 'BAN'}
-                        </button>
-                        <button
-                            type="button"
-                            title={u.isPro ? 'PRO kaldır' : 'PRO ver'}
-                            onClick={async () => { try { await toggleUserPro(u.id); success(u.isPro ? 'PRO kaldırıldı' : 'PRO verildi'); if (subRoute === 'KULLANICILAR') await loadServerUsers(); } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); } }}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black ${u.isPro ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
-                        >
-                            <Star size={11} /> PRO
                         </button>
                         {!u.isVerified && (
                             <button

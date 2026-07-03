@@ -33,7 +33,7 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       smallIcon: 'ic_stat_oyna',
-      iconColor: '#F97316',
+      iconColor: '#FACC15',
     },
   },
 
