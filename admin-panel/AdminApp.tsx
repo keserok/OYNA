@@ -6,6 +6,12 @@ import { parseAdminUrlParams } from './views/context/AdminNavigationContext';
 import { useAppStore } from '../store';
 import { signOutAdmin, type AdminSession } from './services/adminService';
 import {
+  useAdminSessionGuard,
+  markAdminSessionStart,
+  clearAdminSessionStart,
+  type AdminSessionExpireReason,
+} from './views/hooks/useAdminSessionGuard';
+import {
   bootstrapAdminPlatform,
   refreshAdminStatsOnly,
   resolveAdminSession,
@@ -31,6 +37,7 @@ const AdminApp: React.FC = () => {
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootWarnings, setBootWarnings] = useState<string[]>([]);
   const [warningsExpanded, setWarningsExpanded] = useState(false);
+  const [securityNotice, setSecurityNotice] = useState<string | null>(null);
 
   const syncPlatformData = useCallback(async () => {
     setDataSyncing(true);
@@ -101,6 +108,8 @@ const AdminApp: React.FC = () => {
     useAppStore.getState().setAdminSession(adminSession);
     setBootError(null);
     setBootWarnings([]);
+    setSecurityNotice(null);
+    markAdminSessionStart();
     setInitialLoadDone(false);
     setBootPhase('inventory');
     await syncPlatformData();
@@ -116,6 +125,7 @@ const AdminApp: React.FC = () => {
 
   const handleLogout = async () => {
     await signOutAdmin();
+    clearAdminSessionStart();
     setSession(null);
     useAppStore.getState().setAdminSession(null);
     setBootError(null);
@@ -125,6 +135,19 @@ const AdminApp: React.FC = () => {
     useAppStore.getState().clearAdminMockState();
   };
 
+  // Karar #24: hareketsizlik + mutlak oturum yaşı → otomatik güvenli çıkış
+  const handleSessionExpire = useCallback((reason: AdminSessionExpireReason) => {
+    setSecurityNotice(
+      reason === 'idle'
+        ? 'Güvenlik: hareketsizlik nedeniyle oturumunuz kapatıldı. Lütfen yeniden giriş yapın.'
+        : 'Güvenlik: maksimum oturum süresi doldu. Lütfen yeniden giriş yapın.',
+    );
+    void handleLogout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useAdminSessionGuard(!!session, handleSessionExpire);
+
   const showBootShell = !initialLoadDone || (bootPhase !== 'ready' && !!session);
 
   if (!session && !initialLoadDone) {
@@ -132,7 +155,16 @@ const AdminApp: React.FC = () => {
   }
 
   if (!session) {
-    return <AdminAuthGate onAuthenticated={handleAuthenticated} bootError={bootError} />;
+    return (
+      <>
+        {securityNotice && (
+          <div className="fixed top-0 inset-x-0 z-[300] bg-amber-500/15 border-b border-amber-500/30 backdrop-blur-sm px-4 py-2.5 text-center text-[12px] text-amber-200">
+            {securityNotice}
+          </div>
+        )}
+        <AdminAuthGate onAuthenticated={handleAuthenticated} bootError={bootError} />
+      </>
+    );
   }
 
   if (bootError) {

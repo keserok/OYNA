@@ -190,6 +190,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             actionType: 'BAN_USER',
             targetId: u.id,
             targetName: u.name,
+            confirmPhrase: 'SİL',
             onCancel: () => setConfirmModal(null),
             onConfirm: async () => {
                 try {
