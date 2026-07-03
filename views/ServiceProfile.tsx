@@ -14,7 +14,7 @@ interface ServiceProfileProps {
 }
 
 import { useAppStore } from '../store';
-import { ORDU_CENTER, ORDU_DISTRICT_NAMES } from '../utils/orduData';
+import { ORDU_CENTER } from '../utils/orduData';
 import { auth } from '../supabaseAuth';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
@@ -46,9 +46,6 @@ const REFEREE_PHOTOS = [
 
 const GK_STYLES = ['Panter', 'Duvar', 'Libero', 'Atak', 'Dengeli'];
 const REF_STYLES = ['Otoriter', 'Diyalogcu', 'Teknisyen', 'Hızlı Karar'];
-const REGIONS = [
-  { city: 'Ordu', districts: ORDU_DISTRICT_NAMES },
-];
 
 const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;

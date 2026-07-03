@@ -1746,7 +1746,7 @@ export function buildPitchPayloadFromUi(pitch: Partial<import('../../types').Pit
     id: pitch.id,
     name: pitch.name,
     district: pitch.district,
-    city: pitch.district,
+    city: pitch.city ?? pitch.district,
     latitude: pitch.coordinates?.lat ?? 40.9839,
     longitude: pitch.coordinates?.lng ?? 37.8764,
     price_per_match: pitch.totalPrice ?? pitch.pricePerPerson ?? 0,
