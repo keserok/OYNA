@@ -154,7 +154,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const [editAvatar, setEditAvatar] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const { uploadImage, uploading } = useImageUpload('avatars');
+    const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
     const { globalTexts, setMyRoles, setIsRoleSwitcherOpen, setServiceAppRole } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);

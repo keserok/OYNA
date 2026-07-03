@@ -311,7 +311,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
     const [pitchOptions, setPitchOptions] = useState<PitchLite[]>([]);
     const [savingSettings, setSavingSettings] = useState(false);
     const crestInputRef = useRef<HTMLInputElement>(null);
-    const { uploadImage: uploadCrest, uploading: crestUploading } = useImageUpload('team-crests');
+    const { uploadImage: uploadCrest, uploading: crestUploading } = useImageUpload('team-crests', { minWidth: 128 });
 
     const loadMyTeams = useAppStore(s => s.loadMyTeams);
 

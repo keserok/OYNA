@@ -28,12 +28,18 @@ const loadBitmap = async (file: File): Promise<ImageBitmap | HTMLImageElement> =
   });
 };
 
+export interface CompressOptions {
+  /** Kabul edilen en küçük kenar (px). Avatar/arma gibi küçük görseller için düşürülebilir. */
+  minWidth?: number;
+}
+
 /**
  * Görseli doğrular ve gerekiyorsa küçültüp JPEG'e çevirir.
  * Tarayıcı formatı decode edemezse (ör. bazı HEIC'ler) orijinal dosya döner;
  * boyut sınırını sunucu tarafındaki bucket limiti güvenceler.
  */
-export async function compressImageForUpload(file: File): Promise<File> {
+export async function compressImageForUpload(file: File, options: CompressOptions = {}): Promise<File> {
+  const minWidth = options.minWidth ?? MIN_IMAGE_WIDTH;
   if (!file.type.startsWith('image/')) {
     throw new ImageValidationError('Yalnızca görsel dosyaları yükleyebilirsiniz.');
   }
@@ -57,8 +63,8 @@ export async function compressImageForUpload(file: File): Promise<File> {
 
   const width = bitmap.width;
   const height = bitmap.height;
-  if (width < MIN_IMAGE_WIDTH && height < MIN_IMAGE_WIDTH) {
-    throw new ImageValidationError(`Fotoğraf çok küçük (en az ${MIN_IMAGE_WIDTH}px kenar önerilir). Daha yüksek çözünürlüklü bir fotoğraf seçin.`);
+  if (width < minWidth && height < minWidth) {
+    throw new ImageValidationError(`Fotoğraf çok küçük (en az ${minWidth}px kenar önerilir). Daha yüksek çözünürlüklü bir fotoğraf seçin.`);
   }
 
   const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));

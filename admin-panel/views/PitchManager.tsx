@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, X, ImagePlus, ChevronLeft, ChevronRight, BadgeCheck, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock } from 'lucide-react';
 import { PitchCourt } from '../../types';
 import { upsertCourt, deleteCourt, toTurkishError } from '../../services/pitchOwnerService';
 import { approveCourtGrades } from '../../services/pitchContentService';
@@ -35,7 +35,6 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const isRealFacility = !!facilityId && !facilityId.startsWith('mock-');
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Kalite notu onayı yalnızca platform admin'e açık (Karar #2)
     const [isAdmin, setIsAdmin] = useState(false);
@@ -152,46 +151,6 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         } catch (err) {
             setSaveError(toTurkishError(err));
         }
-    };
-
-    const handleAddImageClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    // Yalnızca demo/mock tesis yolu: gerçek tesislerde fotoğraflar PhotoManager
-    // üzerinden pitch_media'ya gider (sıkıştırma + path-RLS + kapak/sıralama).
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0 || !editingPitch) return;
-        const files = Array.from(e.target.files);
-        const updatedImages = [...(editingPitch.images || [])];
-
-        for (const file of files) {
-            const reader = new FileReader();
-            const dataUrlPromise = new Promise<string>((resolve) => {
-                reader.onloadend = () => resolve(reader.result as string);
-            });
-            reader.readAsDataURL(file);
-            updatedImages.push(await dataUrlPromise);
-        }
-        setEditingPitch({ ...editingPitch, images: updatedImages });
-    };
-
-    const removeImage = (index: number) => {
-        if (!editingPitch) return;
-        const updatedImages = (editingPitch.images || []).filter((_, i) => i !== index);
-        setEditingPitch({ ...editingPitch, images: updatedImages });
-    };
-
-    const moveImage = (index: number, direction: 'left' | 'right') => {
-        if (!editingPitch || !editingPitch.images) return;
-        const newIndex = direction === 'left' ? index - 1 : index + 1;
-        if (newIndex < 0 || newIndex >= editingPitch.images.length) return;
-        
-        const newArray = [...editingPitch.images];
-        const temp = newArray[index];
-        newArray[index] = newArray[newIndex];
-        newArray[newIndex] = temp;
-        setEditingPitch({ ...editingPitch, images: newArray });
     };
 
     if (editingPitch) {
@@ -396,68 +355,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 Fotoğraf eklemek için önce sahayı kaydedin; ardından düzenleyip fotoğraflarını yükleyin.
                             </p>
                         ) : (
-                        <>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                            accept="image/*"
-                            multiple
-                        />
-
-                        <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
-                            <button
-                                type="button"
-                                onClick={handleAddImageClick}
-                                className="shrink-0 w-32 h-40 bg-[#0A0D14] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-white hover:border-white/30 transition-all snap-start"
-                            >
-                                <ImagePlus size={24} />
-                                <span className="text-[10px] font-bold">FOTOĞRAF EKLE</span>
-                            </button>
-
-                            {(editingPitch.images || []).map((img, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className="shrink-0 w-64 h-40 relative rounded-2xl overflow-hidden group snap-center border border-white/5"
-                                >
-                                    <img src={img} className="w-full h-full object-cover" alt={`Saha Görseli ${idx}`} />
-                                    
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
-                                        <div className="flex justify-between w-full">
-                                            <div className="flex gap-1">
-                                                {idx > 0 && (
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => moveImage(idx, 'left')}
-                                                        className="p-1.5 bg-black/50 hover:bg-black/80 rounded-lg text-white transition-colors"
-                                                    >
-                                                        <ChevronLeft size={16} />
-                                                    </button>
-                                                )}
-                                                {idx < (editingPitch.images?.length || 0) - 1 && (
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => moveImage(idx, 'right')}
-                                                        className="p-1.5 bg-black/50 hover:bg-black/80 rounded-lg text-white transition-colors"
-                                                    >
-                                                        <ChevronRight size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <button 
-                                                type="button"
-                                                onClick={() => removeImage(idx)}
-                                                className="p-1.5 bg-red-500/20 hover:bg-red-500 rounded-lg text-red-400 hover:text-white transition-all"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        </>
+                            /* Demo/mock tesiste yükleme yok: tüm fotoğraflar tek boru
+                               hattından (pitch_media) geçer; base64 yolu kaldırıldı. */
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Fotoğraf yükleme yalnızca kayıtlı (gerçek) tesislerde kullanılabilir.
+                            </p>
                         )}
                     </div>
                 </div>
