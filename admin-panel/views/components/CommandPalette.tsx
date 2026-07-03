@@ -97,7 +97,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         <Search size={18} className="text-gray-400 shrink-0" />
                         <input
                             ref={inputRef}
-                            type="search"
+                            type="text"
+                            inputMode="search"
+                            enterKeyHint="search"
+                            autoComplete="off"
+                            spellCheck={false}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Sayfa, saha veya kullanıcı ara..."

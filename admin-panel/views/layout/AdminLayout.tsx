@@ -70,7 +70,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                         activeSubRoute={activeSubRoute}
                         onOpenCommandPalette={() => setCmdOpen(true)}
                         onToggleMobileMenu={toggleCollapse}
-                        onNavigate={(route) => onNavigate(route as GodViewSubRoute)}
                     />
 
                     {/* Page Content */}

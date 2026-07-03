@@ -10,6 +10,11 @@ interface Props {
   className?: string;
 }
 
+/**
+ * Paylaşılan liste arama kutusu.
+ * type="text" bilinçli: type="search" tarayıcının kendi temizle (✕) düğmesini
+ * çizer ve bizim temizle butonumuz + sayaçla üst üste binerdi.
+ */
 export const AdminSearchBar: React.FC<Props> = ({
   value,
   onChange,
@@ -22,12 +27,17 @@ export const AdminSearchBar: React.FC<Props> = ({
     <div className="relative flex-1 max-w-md">
       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
       <input
-        type="search"
+        type="text"
+        inputMode="search"
+        enterKeyHint="search"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full h-10 pl-9 pr-9 bg-black/40 border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 transition-all"
+        className="w-full h-10 pl-9 pr-9 bg-black/40 border border-white/10 rounded-xl text-sm leading-none text-white placeholder:text-gray-600 truncate focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 transition-all"
       />
       {value && (
         <button
@@ -41,7 +51,7 @@ export const AdminSearchBar: React.FC<Props> = ({
       )}
     </div>
     {resultCount !== undefined && totalCount !== undefined && (
-      <span className="text-[11px] font-mono text-gray-500 shrink-0">
+      <span className="text-[11px] font-mono text-gray-500 shrink-0 whitespace-nowrap tabular-nums">
         {resultCount === totalCount ? `${totalCount} kayıt` : `${resultCount} / ${totalCount}`}
       </span>
     )}

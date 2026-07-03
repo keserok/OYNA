@@ -4,6 +4,7 @@ import { Settings, Type, Database, Save } from 'lucide-react';
 import { updateCmsTexts, toTurkishAdminError } from '../../services/adminService';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
+import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { useAdminToast } from '../context/AdminToastContext';
 
 interface SettingsPageProps {
@@ -15,6 +16,31 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
     const { appSettings, updateAppSettings, globalTexts, setGlobalText } = useAppStore();
     const { success, error: toastError } = useAdminToast();
     const [saving, setSaving] = useState(false);
+    const [confirmOptions, setConfirmOptions] = useState<ActionConfirmOptions | null>(null);
+
+    const requestMaintenanceToggle = () => {
+        const enabling = !appSettings.maintenanceMode;
+        setConfirmOptions({
+            title: enabling ? 'Bakım Moduna Geç' : 'Bakım Modundan Çık',
+            description: enabling
+                ? 'Uygulama TÜM kullanıcılara kapatılacak; oyuncular, saha sahipleri ve hizmet sağlayıcılar giriş yapamaz.'
+                : 'Uygulama tüm kullanıcılara yeniden açılacak.',
+            impactText: enabling
+                ? 'Aktif rezervasyon/maç akışları kesintiye uğrar. Yalnızca planlı bakım için kullanın.'
+                : undefined,
+            actionType: 'SETTINGS_CHANGE',
+            targetId: 'maintenance_mode',
+            targetName: 'Master Bakım Modu',
+            confirmPhrase: enabling ? 'BAKIM' : undefined,
+            onConfirm: () => {
+                setConfirmOptions(null);
+                void updateAppSettings({ maintenanceMode: enabling })
+                    .then(() => success(enabling ? 'Bakım moduna geçildi' : 'Sistem yeniden açıldı'))
+                    .catch((err) => toastError(toTurkishAdminError(err)));
+            },
+            onCancel: () => setConfirmOptions(null),
+        });
+    };
 
     const persistText = async (key: string, value: string) => {
         setGlobalText(key as keyof typeof globalTexts, value);
@@ -185,22 +211,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                             </div>
                         </div>
 
-                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5 md:col-span-2 flex items-center justify-between gap-4">
+                        <div className={`bg-black/30 border rounded-xl p-5 md:col-span-2 flex items-center justify-between gap-4 ${appSettings.maintenanceMode ? 'border-red-500/40' : 'border-white/[0.06]'}`}>
                             <div>
                                 <label className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1 block flex items-center gap-2">
                                     <Database size={12} /> Master Bakım Modu
+                                    {appSettings.maintenanceMode && (
+                                        <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 text-[9px]">AKTİF</span>
+                                    )}
                                 </label>
-                                <p className="text-[11px] text-gray-500">Uygulamayı tüm kullanıcılara kapatır.</p>
+                                <p className="text-[11px] text-gray-500">
+                                    Uygulamayı tüm kullanıcılara kapatır. Açmak için yaz-onayla gerekir; işlem audit&apos;e kaydedilir.
+                                </p>
                             </div>
-                            <button 
-                                onClick={() => {
-                                    void updateAppSettings({ maintenanceMode: !appSettings.maintenanceMode }).then(() =>
-                                      success(appSettings.maintenanceMode ? 'Sistem aktif edildi' : 'Bakım moduna geçildi')
-                                    );
-                                }}
+                            <button
+                                onClick={requestMaintenanceToggle}
                                 className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
-                                    appSettings.maintenanceMode 
-                                        ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
+                                    appSettings.maintenanceMode
+                                        ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                                         : 'bg-white/10 text-gray-400 hover:bg-white/20'
                                 }`}
                             >
@@ -209,6 +236,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                         </div>
                     </div>
                 </div>
+                <ActionConfirmModal isOpen={!!confirmOptions} options={confirmOptions} />
             </PageShell>
         );
     }
