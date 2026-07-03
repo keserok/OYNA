@@ -8,8 +8,10 @@ import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAdminToast } from '../context/AdminToastContext';
-import { MapPin, TrendingUp, Edit2, Trash2, Zap } from 'lucide-react';
+import { MapPin, TrendingUp, Edit2, Trash2, Zap, Star, Eye, EyeOff } from 'lucide-react';
 import { fetchPitchesAdmin, toTurkishAdminError } from '../../services/adminService';
+import { setPitchFeatured, setPitchPublished } from '../../../services/pitchContentService';
+import { supabase } from '../../../supabaseClient';
 import { mapAdminPitchRowToUi, PITCH_STATUS_FILTERS, type PitchStatusFilter } from '../../utils/pitchMapper';
 import { useAppStore } from '../../../store';
 import type { Pitch } from '../../../types';
@@ -37,6 +39,37 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
     const { success, error: toastError } = useAdminToast();
     const [confirmModal, setConfirmModal] = useState<ActionConfirmOptions | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    // Vitrin bayrakları (Karar #23, #28): admin RPC bu kolonları dönmediği için ayrı çekilir
+    const [showcaseFlags, setShowcaseFlags] = useState<Record<string, { published: boolean; featured: boolean }>>({});
+
+    const loadShowcaseFlags = useCallback(async (ids: string[]) => {
+        if (ids.length === 0) { setShowcaseFlags({}); return; }
+        const { data } = await supabase
+            .from('pitches')
+            .select('id, is_published, is_featured')
+            .in('id', ids);
+        const map: Record<string, { published: boolean; featured: boolean }> = {};
+        (data ?? []).forEach((r: { id: string; is_published: boolean | null; is_featured: boolean | null }) => {
+            map[r.id] = { published: r.is_published !== false, featured: r.is_featured === true };
+        });
+        setShowcaseFlags(map);
+    }, []);
+
+    const toggleShowcaseFlag = async (pitchId: string, kind: 'published' | 'featured') => {
+        const cur = showcaseFlags[pitchId] ?? { published: true, featured: false };
+        const next = { ...cur, [kind]: !cur[kind] };
+        setShowcaseFlags((prev) => ({ ...prev, [pitchId]: next }));
+        try {
+            if (kind === 'published') await setPitchPublished(pitchId, next.published);
+            else await setPitchFeatured(pitchId, next.featured);
+            success(kind === 'published'
+                ? (next.published ? 'Tesis vitrinde görünür' : 'Tesis vitrinden gizlendi')
+                : (next.featured ? 'Öne çıkarıldı' : 'Öne çıkarma kaldırıldı'));
+        } catch (err) {
+            setShowcaseFlags((prev) => ({ ...prev, [pitchId]: cur }));
+            toastError(toTurkishAdminError(err));
+        }
+    };
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -50,6 +83,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
             const mapped = res.pitches.map(mapAdminPitchRowToUi);
             setPitches(mapped);
             setTotal(res.total);
+            void loadShowcaseFlags(mapped.map((p) => p.id));
         } catch (err) {
             toastError(toTurkishAdminError(err));
         } finally {
@@ -178,6 +212,32 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onEditPitch, onDeleteP
                     <GradeBadge g={p.grassGrade} />
                 </div>
             ),
+        },
+        {
+            header: 'VİTRİN',
+            render: (p: Pitch) => {
+                const f = showcaseFlags[p.id] ?? { published: true, featured: false };
+                return (
+                    <div className="flex gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => void toggleShowcaseFlag(p.id, 'featured')}
+                            title={f.featured ? 'Öne çıkarmayı kaldır' : 'Öne çıkar'}
+                            className={`p-1.5 rounded-lg border ${f.featured ? 'bg-[#FFFF00]/15 text-[#FFFF00] border-[#FFFF00]/40' : 'bg-white/5 text-gray-500 border-white/10'}`}
+                        >
+                            <Star size={14} className={f.featured ? 'fill-current' : ''} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void toggleShowcaseFlag(p.id, 'published')}
+                            title={f.published ? 'Vitrinden gizle' : 'Vitrinde göster'}
+                            className={`p-1.5 rounded-lg border ${f.published ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}
+                        >
+                            {f.published ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+                    </div>
+                );
+            },
         },
         {
             header: 'AKSİYONLAR',

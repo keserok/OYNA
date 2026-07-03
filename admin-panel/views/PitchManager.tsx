@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, X, ImagePlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, X, ImagePlus, ChevronLeft, ChevronRight, BadgeCheck, Clock } from 'lucide-react';
 import { PitchCourt } from '../../types';
 import { upsertCourt, deleteCourt, toTurkishError } from '../../services/pitchOwnerService';
-import { useImageUpload } from '../../hooks/useImageUpload';
+import { approveCourtGrades } from '../../services/pitchContentService';
+import { supabase } from '../../supabaseClient';
+import PhotoManager from '../../components/pitch-editor/PhotoManager';
+
+const SURFACE_LABELS: Record<string, string> = {
+    TURF: 'Suni Çim',
+    GRASS: 'Doğal Çim',
+    PARQUET: 'Parke',
+    TARTAN: 'Tartan',
+};
 
 interface PitchManagerProps {
     onBack: () => void;
@@ -26,8 +35,32 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const isRealFacility = !!facilityId && !facilityId.startsWith('mock-');
-    const { uploadImage, uploading } = useImageUpload('courts');
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Kalite notu onayı yalnızca platform admin'e açık (Karar #2)
+    const [isAdmin, setIsAdmin] = useState(false);
+    useEffect(() => {
+        supabase.auth.getUser().then(async ({ data }) => {
+            if (!data.user) return;
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_admin, role')
+                .eq('id', data.user.id)
+                .single();
+            setIsAdmin(profile?.is_admin === true || profile?.role === 'SUPER_ADMIN');
+        });
+    }, []);
+
+    const handleApproveGrades = async () => {
+        if (!editingPitch?.id) return;
+        try {
+            await approveCourtGrades(editingPitch.id);
+            setEditingPitch({ ...editingPitch, grades_status: 'approved' });
+            onUpdatePitches(pitches.map((p) => (p.id === editingPitch.id ? { ...p, grades_status: 'approved' } : p)));
+        } catch (err) {
+            setSaveError(toTurkishError(err));
+        }
+    };
 
     const handleEdit = (pitch: PitchCourt) => {
         if (readOnly) return;
@@ -45,7 +78,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             id: '',
             pitch_id: facilityId ?? '',
             name: `Saha ${pitches.length + 1}`,
-            court_type: 'TURF',
+            court_type: 'OPEN',
+            surface: 'TURF',
             size: null,
             is_active: true,
             sort_order: pitches.length,
@@ -71,6 +105,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     id: editingPitch.id || undefined,
                     name: editingPitch.name,
                     court_type: editingPitch.court_type,
+                    surface: editingPitch.surface ?? 'TURF',
                     size: editingPitch.size,
                     is_active: editingPitch.is_active,
                     sort_order: editingPitch.sort_order,
@@ -123,28 +158,20 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         fileInputRef.current?.click();
     };
 
+    // Yalnızca demo/mock tesis yolu: gerçek tesislerde fotoğraflar PhotoManager
+    // üzerinden pitch_media'ya gider (sıkıştırma + path-RLS + kapak/sıralama).
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0 || !editingPitch) return;
         const files = Array.from(e.target.files);
-        let updatedImages = [...(editingPitch.images || [])];
-        
+        const updatedImages = [...(editingPitch.images || [])];
+
         for (const file of files) {
-            if (isRealFacility) {
-                try {
-                    const url = await uploadImage(file);
-                    updatedImages.push(url);
-                } catch (err) {
-                    setSaveError('Yükleme hatası: ' + (err instanceof Error ? err.message : String(err)));
-                }
-            } else {
-                const reader = new FileReader();
-                const dataUrlPromise = new Promise<string>((resolve) => {
-                    reader.onloadend = () => resolve(reader.result as string);
-                });
-                reader.readAsDataURL(file);
-                const dataUrl = await dataUrlPromise;
-                updatedImages.push(dataUrl);
-            }
+            const reader = new FileReader();
+            const dataUrlPromise = new Promise<string>((resolve) => {
+                reader.onloadend = () => resolve(reader.result as string);
+            });
+            reader.readAsDataURL(file);
+            updatedImages.push(await dataUrlPromise);
         }
         setEditingPitch({ ...editingPitch, images: updatedImages });
     };
@@ -179,7 +206,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </div>
                     <button
                         onClick={handleSave}
-                        disabled={isSaving || !editingPitch.name.trim() || uploading}
+                        disabled={isSaving || !editingPitch.name.trim()}
                         className="p-2 px-5 rounded-xl bg-[#FFFF00] text-black font-black text-xs flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)]"
                     >
                         {isSaving ? '...' : <><Save size={16} /> KAYDET</>}
@@ -209,28 +236,40 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Zemin Tipi</label>
+                                <label className="text-xs font-bold text-gray-400 uppercase">Saha Tipi</label>
                                 <select
-                                    value={editingPitch.court_type || 'TURF'}
+                                    value={editingPitch.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN'}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, court_type: e.target.value })}
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                >
+                                    <option value="OPEN">Açık Saha</option>
+                                    <option value="CLOSED">Kapalı Saha</option>
+                                </select>
+                                <p className="text-[10px] text-gray-600">Vitrindeki Kapalı/Açık seçimini belirler.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase">Zemin</label>
+                                <select
+                                    value={editingPitch.surface || 'TURF'}
+                                    onChange={(e) => setEditingPitch({ ...editingPitch, surface: e.target.value })}
                                     className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
                                 >
                                     <option value="TURF">Suni Çim</option>
                                     <option value="GRASS">Doğal Çim</option>
-                                    <option value="INDOOR">Kapalı / Parke</option>
+                                    <option value="PARQUET">Parke</option>
                                     <option value="TARTAN">Tartan</option>
                                 </select>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Boyutlar</label>
-                                <input
-                                    type="text"
-                                    value={editingPitch.size || ''}
-                                    onChange={(e) => setEditingPitch({ ...editingPitch, size: e.target.value })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
-                                    placeholder="Örn: 30x50"
-                                />
-                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Boyutlar</label>
+                            <input
+                                type="text"
+                                value={editingPitch.size || ''}
+                                onChange={(e) => setEditingPitch({ ...editingPitch, size: e.target.value })}
+                                className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
+                                placeholder="Örn: 30x50"
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -268,7 +307,34 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </div>
 
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
-                        <h3 className="text-sm font-black text-white italic uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Kalite Standartları</h3>
+                        <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-4">
+                            <h3 className="text-sm font-black text-white italic uppercase tracking-wider">Kalite Standartları</h3>
+                            {editingPitch.grades_status === 'pending' && (
+                                isAdmin ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleApproveGrades}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[10px] font-black uppercase"
+                                    >
+                                        <BadgeCheck size={13} /> Notları Onayla
+                                    </button>
+                                ) : (
+                                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase">
+                                        <Clock size={12} /> Onay Bekliyor
+                                    </span>
+                                )
+                            )}
+                            {editingPitch.grades_status === 'approved' && (editingPitch.lighting_grade || editingPitch.grass_grade) && (
+                                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-black uppercase">
+                                    <BadgeCheck size={12} /> Onaylı
+                                </span>
+                            )}
+                        </div>
+                        {!isAdmin && (
+                            <p className="text-[10px] text-gray-500 leading-relaxed -mt-2">
+                                Beyan ettiğiniz notlar OYNA ekibi onayından sonra vitrinde rozet olarak görünür.
+                            </p>
+                        )}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-400 uppercase">Işıklandırma</label>
@@ -317,25 +383,37 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
 
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
                         <h3 className="text-sm font-black text-white italic uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Saha Fotoğrafları</h3>
-                        
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange} 
-                            className="hidden" 
+
+                        {isRealFacility && editingPitch.id ? (
+                            /* Kayıtlı kort: pitch_media hattı — sıkıştırma, kapak, etiket, sıralama (Karar #19) */
+                            <PhotoManager
+                                pitchId={facilityId!}
+                                courtId={editingPitch.id}
+                                onError={(m) => setSaveError(m)}
+                            />
+                        ) : isRealFacility ? (
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Fotoğraf eklemek için önce sahayı kaydedin; ardından düzenleyip fotoğraflarını yükleyin.
+                            </p>
+                        ) : (
+                        <>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
                             accept="image/*"
                             multiple
                         />
 
                         <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
-                            <button 
+                            <button
                                 type="button"
                                 onClick={handleAddImageClick}
-                                disabled={uploading}
                                 className="shrink-0 w-32 h-40 bg-[#0A0D14] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-white hover:border-white/30 transition-all snap-start"
                             >
                                 <ImagePlus size={24} />
-                                <span className="text-[10px] font-bold">{uploading ? 'YÜKLENİYOR...' : 'FOTOĞRAF EKLE'}</span>
+                                <span className="text-[10px] font-bold">FOTOĞRAF EKLE</span>
                             </button>
 
                             {(editingPitch.images || []).map((img, idx) => (
@@ -379,6 +457,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 </div>
                             ))}
                         </div>
+                        </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -435,7 +515,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     <div className="absolute bottom-4 left-4 right-4">
                                         <h3 className="text-xl font-black text-white italic drop-shadow-md">{pitch.name}</h3>
                                         <p className="text-xs text-gray-300 font-medium">
-                                            {pitch.size || 'Boyut belirtilmedi'} • {pitch.court_type || 'TURF'}
+                                            {pitch.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[pitch.surface ?? 'TURF'] ?? pitch.surface}
+                                            {pitch.size ? ` • ${pitch.size}` : ''}
                                             {pitch.price ? ` • ₺${pitch.price}/Saat` : ''}
                                         </p>
                                     </div>

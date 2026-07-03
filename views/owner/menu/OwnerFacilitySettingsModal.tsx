@@ -1,9 +1,32 @@
-import React, { useState } from 'react';
-import { AlertCircle, Check, ImagePlus, MapPin, Trash2 } from 'lucide-react';
-import { toTurkishError, updatePitchProfile, uploadPitchImage } from '../../../services/pitchOwnerService';
+/**
+ * Tesis Ayarları (Karar #4, #8, #14, #16-18, #25, #28):
+ *  - Genel: ad + açıklama (40-500 sayaç) + adres alanları + PhotoManager (pitch_media)
+ *  - Olanaklar: ikonlu standart katalog + özel girdi
+ *  - Konum: sürüklenebilir harita pini (lat/lng)
+ *  - Vitrin: yayın anahtarı + Vitrin Skoru + analitik + oyuncu gözüyle önizleme
+ * Onaylı tesiste ad/konum değişikliği doğrudan yazılamaz (DB trigger korumalı);
+ * değişiklik talebi olarak admin onayına gönderilir.
+ */
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Check, Clock, Eye, MapPin } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { toTurkishError, updatePitchProfile } from '../../../services/pitchOwnerService';
+import {
+  fetchPendingChangeRequests,
+  setPitchPublished,
+  submitPitchIdentityChange,
+} from '../../../services/pitchContentService';
+import { supabase } from '../../../supabaseClient';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { OwnerFullscreenModal } from './OwnerModalFrame';
-import { FACILITY_AMENITIES, type OwnerFacilityFormData } from './ownerMenuTypes';
+import type { OwnerFacilityFormData } from './ownerMenuTypes';
+import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
+import PhotoManager from '../../../components/pitch-editor/PhotoManager';
+import ShowcaseScoreCard from '../../../components/pitch-editor/ShowcaseScoreCard';
+import ShowcasePreview from '../../../components/pitch-editor/ShowcasePreview';
+import { ORDU_CENTER } from '../../../utils/orduData';
 
 interface Props {
   onClose: () => void;
@@ -12,6 +35,37 @@ interface Props {
   onSave: (data: OwnerFacilityFormData) => void;
 }
 
+const DESC_MIN = 40;
+const DESC_MAX = 500;
+
+const pinIcon = L.divIcon({
+  className: '',
+  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#39FF14;transform:rotate(-45deg);border:3px solid #0A0E14;box-shadow:0 0 14px rgba(57,255,20,0.8);"></div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 22],
+});
+
+const DraggablePin: React.FC<{ pos: [number, number]; onMove: (lat: number, lng: number) => void }> = ({ pos, onMove }) => {
+  useMapEvents({
+    click: (e) => onMove(e.latlng.lat, e.latlng.lng),
+  });
+  return (
+    <Marker
+      position={pos}
+      icon={pinIcon}
+      draggable
+      eventHandlers={{
+        dragend: (e) => {
+          const p = (e.target as L.Marker).getLatLng();
+          onMove(p.lat, p.lng);
+        },
+      }}
+    />
+  );
+};
+
+type Tab = 'general' | 'amenities' | 'location' | 'showcase';
+
 export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   onClose,
   facilityId,
@@ -19,37 +73,67 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   onSave,
 }) => {
   const notify = useOwnerToast();
-  const [activeTab, setActiveTab] = useState<'general' | 'amenities'>('general');
+  const [activeTab, setActiveTab] = useState<Tab>('general');
   const [name, setName] = useState(initialData?.name ?? '');
   const [description, setDescription] = useState(initialData?.description ?? '');
   const [city, setCity] = useState(initialData?.city ?? '');
   const [district, setDistrict] = useState(initialData?.district ?? '');
   const [address, setAddress] = useState(initialData?.address ?? '');
   const [images, setImages] = useState<string[]>(initialData?.images ?? []);
-  const [amenities, setAmenities] = useState<string[]>(initialData?.amenities ?? []);
+  const [amenities, setAmenities] = useState<string[]>((initialData?.amenities ?? []).map(normalizeAmenity));
   const [customAmenity, setCustomAmenity] = useState('');
-  const [extraAmenities, setExtraAmenities] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [scoreRefresh, setScoreRefresh] = useState(0);
 
-  const allAmenities = [...FACILITY_AMENITIES, ...extraAmenities];
+  // Sunucudan taze durum: koordinat, yayın, doğrulama, bekleyen talep
+  const [latLng, setLatLng] = useState<[number, number] | null>(null);
+  const [origin, setOrigin] = useState<{ name: string; city: string; district: string; address: string; lat: number | null; lng: number | null } | null>(null);
+  const [isPublished, setIsPublished] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>(initialData?.verificationStatus ?? 'pending');
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
+
   const isRealPitch = !!facilityId && !facilityId.startsWith('mock-');
 
-  const handleAddImage = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file || !isRealPitch) return;
-      try {
-        const url = await uploadPitchImage(file, facilityId);
-        setImages((prev) => [...prev, url]);
-      } catch (err) {
-        notify(toTurkishError(err), 'error');
-      }
-    };
-    input.click();
-  };
+  useEffect(() => {
+    if (!isRealPitch) return;
+    supabase
+      .from('pitches')
+      .select('name, city, district, address, latitude, longitude, is_published, verification_status, description, amenities')
+      .eq('id', facilityId)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        setName((v) => v || data.name || '');
+        setCity((v) => v || data.city || '');
+        setDistrict((v) => v || data.district || '');
+        setAddress((v) => v || data.address || '');
+        if (!initialData?.description && data.description) setDescription(data.description);
+        if ((initialData?.amenities ?? []).length === 0 && Array.isArray(data.amenities)) {
+          setAmenities((data.amenities as string[]).map(normalizeAmenity));
+        }
+        setOrigin({
+          name: data.name ?? '',
+          city: data.city ?? '',
+          district: data.district ?? '',
+          address: data.address ?? '',
+          lat: data.latitude,
+          lng: data.longitude,
+        });
+        if (data.latitude != null && data.longitude != null) setLatLng([data.latitude, data.longitude]);
+        setIsPublished(data.is_published !== false);
+        setVerificationStatus((data.verification_status as typeof verificationStatus) ?? 'pending');
+      });
+    fetchPendingChangeRequests(facilityId)
+      .then((reqs) => setHasPendingRequest(reqs.length > 0))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facilityId, isRealPitch]);
+
+  const customAmenities = useMemo(
+    () => amenities.filter((a) => !AMENITY_CATALOG.some((c) => c.value === a)),
+    [amenities],
+  );
 
   const toggleAmenity = (item: string) => {
     setAmenities((prev) =>
@@ -57,32 +141,105 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
     );
   };
 
+  const identityChanged = origin && (
+    name.trim() !== origin.name ||
+    city.trim() !== (origin.city ?? '') ||
+    district.trim() !== (origin.district ?? '') ||
+    address.trim() !== (origin.address ?? '') ||
+    (latLng ? latLng[0] !== origin.lat || latLng[1] !== origin.lng : false)
+  );
+
+  const requiresApproval = verificationStatus === 'approved';
+
+  const handleTogglePublished = async () => {
+    if (!isRealPitch) return;
+    const next = !isPublished;
+    setIsPublished(next);
+    try {
+      await setPitchPublished(facilityId, next);
+      notify(next ? 'Tesis vitrinde görünür.' : 'Tesis vitrinden gizlendi. Mevcut rezervasyonlar etkilenmez.', 'success');
+    } catch (err) {
+      setIsPublished(!next);
+      notify(toTurkishError(err), 'error');
+    }
+  };
+
   const handleSave = async () => {
     if (!facilityId) return;
+    const desc = description.trim();
+    if (desc && desc.length < DESC_MIN) {
+      notify(`Açıklama en az ${DESC_MIN} karakter olmalı (${desc.length}/${DESC_MIN}).`, 'error');
+      setActiveTab('general');
+      return;
+    }
     setIsSaving(true);
     try {
-      const payload = {
+      if (isRealPitch) {
+        // Güvenli alanlar her zaman doğrudan yazılır
+        await updatePitchProfile(facilityId, {
+          description: desc,
+          amenities,
+        });
+
+        if (identityChanged) {
+          if (requiresApproval) {
+            // Onaylı tesis: ad/konum admin onayına gider (Karar #4)
+            await submitPitchIdentityChange(facilityId, {
+              name: name.trim() !== origin!.name ? name.trim() : undefined,
+              city: city.trim() !== (origin!.city ?? '') ? city.trim() : undefined,
+              district: district.trim() !== (origin!.district ?? '') ? district.trim() : undefined,
+              address: address.trim() !== (origin!.address ?? '') ? address.trim() : undefined,
+              latitude: latLng && latLng[0] !== origin!.lat ? latLng[0] : undefined,
+              longitude: latLng && latLng[1] !== origin!.lng ? latLng[1] : undefined,
+            });
+            setHasPendingRequest(true);
+            notify('Ad/konum değişikliği admin onayına gönderildi. Onaylanınca vitrine yansır.', 'success');
+          } else {
+            // Henüz onaylanmamış tesis: serbest düzenleme
+            await updatePitchProfile(facilityId, {
+              name: name.trim(),
+              city: city.trim() || undefined,
+              district: district.trim() || undefined,
+              address: address.trim() || undefined,
+            });
+            if (latLng) {
+              await supabase
+                .from('pitches')
+                .update({ latitude: latLng[0], longitude: latLng[1] })
+                .eq('id', facilityId);
+            }
+          }
+        }
+      }
+      onSave({
         name: name.trim(),
-        description: description.trim(),
+        description: desc,
         city: city.trim() || undefined,
         district: district.trim() || undefined,
         address: address.trim() || undefined,
         amenities,
         images,
-        image: images[0],
-      };
-      if (isRealPitch) {
-        await updatePitchProfile(facilityId, payload);
-      }
-      onSave(payload);
+      });
+      setScoreRefresh((v) => v + 1);
       notify('Tesis ayarları kaydedildi.', 'success');
-      onClose();
+      if (!identityChanged || !requiresApproval) onClose();
     } catch (err) {
       notify(toTurkishError(err), 'error');
     } finally {
       setIsSaving(false);
     }
   };
+
+  const descLen = description.trim().length;
+  const descTone = descLen === 0 ? 'text-gray-600' : descLen < DESC_MIN ? 'text-red-400' : 'text-[#39FF14]';
+  const mapCenter: [number, number] = latLng ?? [ORDU_CENTER.lat, ORDU_CENTER.lng];
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'general', label: 'Genel' },
+    { id: 'amenities', label: 'Olanaklar' },
+    { id: 'location', label: 'Konum' },
+    { id: 'showcase', label: 'Vitrin' },
+  ];
 
   return (
     <OwnerFullscreenModal
@@ -92,25 +249,37 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
       isSaving={isSaving}
     >
       <div className="max-w-xl mx-auto space-y-6">
-        <div className="flex gap-2 p-1 bg-[#0A0E14] rounded-2xl border border-white/5">
-          {(['general', 'amenities'] as const).map((tab) => (
+        <div className="flex gap-1.5 p-1 bg-[#0A0E14] rounded-2xl border border-white/5">
+          {TABS.map((tab) => (
             <button
-              key={tab}
+              key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors ${
-                activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+                activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
-              {tab === 'general' ? 'Genel Bilgiler' : 'Olanaklar'}
+              {tab.label}
             </button>
           ))}
         </div>
 
+        {hasPendingRequest && (
+          <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
+            <Clock size={18} className="text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-200">
+              Onay bekleyen bir ad/konum değişikliği talebiniz var. Admin onaylayınca vitrine yansır.
+            </p>
+          </div>
+        )}
+
         {activeTab === 'general' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">Tesis Adı</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                Tesis Adı
+                {requiresApproval && <span className="text-blue-400 normal-case font-semibold">(değişiklik onay gerektirir)</span>}
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -119,13 +288,16 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">Açıklama</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Açıklama</label>
+                <span className={`text-[10px] font-bold ${descTone}`}>{descLen}/{DESC_MAX} · en az {DESC_MIN}</span>
+              </div>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
                 rows={4}
                 className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 resize-none"
-                placeholder="Tesisinizi tanıtın..."
+                placeholder="Zemin ve aydınlatmanızı, ulaşım kolaylığını ve öne çıkan imkanlarınızı anlatın. Örn: 'Kapalı ve açık iki sahamız, profesyonel zemin ve ışıklandırmamız var; duş ve soyunma odaları tam donanımlıdır.'"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -160,46 +332,23 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               />
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">Fotoğraflar</label>
-              <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                <button
-                  type="button"
-                  onClick={handleAddImage}
-                  className="shrink-0 w-28 h-36 bg-[#161B22] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-white hover:border-white/30"
-                >
-                  <ImagePlus size={22} />
-                  <span className="text-[10px] font-bold">EKLE</span>
-                </button>
-                {images.map((img, idx) => (
-                  <div key={img} className="relative shrink-0 w-28 h-36 rounded-2xl overflow-hidden border border-white/10">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-2 right-2 p-1.5 bg-red-500/90 text-white rounded-lg"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    {idx === 0 && (
-                      <span className="absolute bottom-2 left-2 text-[9px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded">
-                        KAPAK
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+            {isRealPitch ? (
+              <PhotoManager
+                pitchId={facilityId}
+                onError={(m) => notify(m, 'error')}
+                onChanged={(urls) => { setImages(urls); setScoreRefresh((v) => v + 1); }}
+              />
+            ) : (
+              <p className="text-xs text-gray-500">Fotoğraf yüklemek için tesisinizin kaydı tamamlanmalı.</p>
+            )}
 
-            {initialData?.verificationStatus && initialData.verificationStatus !== 'approved' && (
+            {verificationStatus !== 'approved' && (
               <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-start gap-3">
                 <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-200">
                   Tesis doğrulama durumu:{' '}
-                  <strong>
-                    {initialData.verificationStatus === 'pending' ? 'İnceleniyor' : 'Reddedildi'}
-                  </strong>
-                  . Onay sonrası oyuncular tesisinizi görebilir.
+                  <strong>{verificationStatus === 'pending' ? 'İnceleniyor' : 'Reddedildi'}</strong>.
+                  Onay sonrası oyuncular tesisinizi görebilir.
                 </p>
               </div>
             )}
@@ -209,40 +358,57 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
         {activeTab === 'amenities' && (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              {allAmenities.map((item) => {
-                const active = amenities.includes(item);
+              {AMENITY_CATALOG.map(({ value, icon: Icon }) => {
+                const active = amenities.includes(value);
                 return (
                   <button
-                    key={item}
+                    key={value}
                     type="button"
-                    onClick={() => toggleAmenity(item)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                    onClick={() => toggleAmenity(value)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
                       active
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                         : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white'
                     }`}
                   >
-                    {active && <Check size={12} className="inline mr-1" />}
-                    {item}
+                    {active ? <Check size={12} /> : <Icon size={12} />}
+                    {value}
                   </button>
                 );
               })}
             </div>
+
+            {customAmenities.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Diğer</p>
+                <div className="flex flex-wrap gap-2">
+                  {customAmenities.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => toggleAmenity(item)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold border bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                    >
+                      <Check size={12} className="inline mr-1" />
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <input
                 value={customAmenity}
                 onChange={(e) => setCustomAmenity(e.target.value)}
-                placeholder="Özel olanak ekle"
+                placeholder="Özel olanak ekle (vitrinde 'Diğer' altında görünür)"
                 className="flex-1 bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none"
               />
               <button
                 type="button"
                 onClick={() => {
-                  const trimmed = customAmenity.trim();
+                  const trimmed = normalizeAmenity(customAmenity.trim());
                   if (!trimmed) return;
-                  if (!allAmenities.includes(trimmed)) {
-                    setExtraAmenities((prev) => [...prev, trimmed]);
-                  }
                   if (!amenities.includes(trimmed)) {
                     setAmenities((prev) => [...prev, trimmed]);
                   }
@@ -255,7 +421,72 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             </div>
           </div>
         )}
+
+        {activeTab === 'location' && (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Pini tesisinizin tam girişine yerleştirin — vitrindeki <strong className="text-white">"1.2 km"</strong> mesafeleri
+              bu pinden hesaplanır. Haritaya dokunarak veya pini sürükleyerek konumlandırın.
+              {requiresApproval && <span className="text-blue-300"> Onaylı tesiste pin değişikliği admin onayına gider.</span>}
+            </p>
+            <div className="h-72 rounded-2xl overflow-hidden border border-white/10">
+              <MapContainer center={mapCenter} zoom={latLng ? 16 : 12} className="w-full h-full">
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="" />
+                <DraggablePin
+                  pos={mapCenter}
+                  onMove={(lat, lng) => setLatLng([Number(lat.toFixed(6)), Number(lng.toFixed(6))])}
+                />
+              </MapContainer>
+            </div>
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <span className={latLng ? 'text-[#39FF14]' : 'text-red-400'}>
+                {latLng ? `Pin: ${latLng[0].toFixed(5)}, ${latLng[1].toFixed(5)}` : 'Pin henüz yerleştirilmedi — vitrin için zorunlu'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'showcase' && isRealPitch && (
+          <div className="space-y-4">
+            {/* Yayın anahtarı (Karar #28) */}
+            <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-5 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-white">Vitrinde Göster</p>
+                <p className="text-[11px] text-gray-500 mt-1 max-w-[220px] leading-relaxed">
+                  Tadilat veya sezon kapanışında tesisi geçici gizleyin; mevcut rezervasyonlar etkilenmez.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleTogglePublished}
+                className={`relative w-14 h-8 rounded-full transition-colors ${isPublished ? 'bg-[#39FF14]' : 'bg-gray-700'}`}
+              >
+                <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isPublished ? 'left-7' : 'left-1'}`} />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/40 text-[#FFFF00] text-xs font-black uppercase tracking-wider"
+            >
+              <Eye size={15} /> Vitrinde Önizle
+            </button>
+
+            <ShowcaseScoreCard
+              pitchId={facilityId}
+              refreshKey={scoreRefresh}
+              onTaskClick={(key) => {
+                if (key === 'photos' || key === 'description') setActiveTab('general');
+                else if (key === 'amenities') setActiveTab('amenities');
+                else if (key === 'pin') setActiveTab('location');
+              }}
+            />
+          </div>
+        )}
       </div>
+
+      {showPreview && <ShowcasePreview pitchId={facilityId} onClose={() => setShowPreview(false)} />}
     </OwnerFullscreenModal>
   );
 };
