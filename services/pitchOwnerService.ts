@@ -1089,7 +1089,10 @@ export async function getPendingBookings(pitchId: string): Promise<PitchBookingF
 export interface CourtInput {
   id?: string;
   name: string;
+  /** Konum: 'OPEN' | 'CLOSED' — vitrindeki Kapalı/Açık seçicisini besler */
   court_type?: string;
+  /** Zemin: 'TURF' | 'GRASS' | 'PARQUET' | 'TARTAN' */
+  surface?: string;
   size?: string | null;
   is_active?: boolean;
   sort_order?: number;
@@ -1107,7 +1110,8 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
     const payload = {
       pitch_id: pitchId,
       name: court.name.trim(),
-      court_type: court.court_type ?? 'OPEN',
+      court_type: court.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
+      surface: court.surface ?? 'TURF',
       size: court.size ?? null,
       is_active: court.is_active ?? true,
       sort_order: court.sort_order ?? 0,

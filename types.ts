@@ -312,6 +312,8 @@ export interface Court {
   id: string;
   name: string;
   type: 'OPEN' | 'CLOSED';
+  /** Zemin tipi: 'TURF' | 'GRASS' | 'PARQUET' | 'TARTAN' */
+  surface?: string;
   price: number;
   slots: { time: string; status: 'available' | 'booked' | 'selected' }[];
   description?: string;
@@ -320,6 +322,10 @@ export interface Court {
   lighting?: number;
   grassQuality?: number;
   lockerRoomQuality?: number;
+  /** A+/A/B/C harf notları — yalnızca gradesStatus 'approved' iken vitrine çıkar */
+  lightingGrade?: string | null;
+  grassGrade?: string | null;
+  gradesStatus?: 'none' | 'pending' | 'approved';
 }
 
 export interface Pitch {
@@ -369,6 +375,12 @@ export interface Pitch {
   originalPrice?: number;
   /** Owner panel tarifeleri — saat bazlı fiyat/kapora hesabı için */
   tariffs?: PitchTariff[];
+  /** Owner kontrollü vitrin görünürlüğü (false → listede çıkmaz) */
+  isPublished?: boolean;
+  /** Admin kontrollü "Öne Çıkan" rozeti — listede üste taşınır */
+  isFeatured?: boolean;
+  /** Bugün için müsait saat sayısı (liste rozetinde, tek toplu sorgudan) */
+  todayAvailableCount?: number;
 }
 
 export interface Facility {
@@ -829,7 +841,11 @@ export interface PitchCourt {
   id: string;
   pitch_id: string;
   name: string;
-  court_type: string; // 'GRASS' | 'TURF' | 'INDOOR' | 'CLAY' | 'OPEN' | 'CLOSED' ...
+  court_type: string; // Konum: 'OPEN' | 'CLOSED' (migration 20260707000001 ile normalize)
+  /** Zemin tipi: 'TURF' | 'GRASS' | 'PARQUET' | 'TARTAN' */
+  surface?: string | null;
+  /** Kalite notu onay durumu: owner beyanı 'pending', admin onayı 'approved' */
+  grades_status?: 'none' | 'pending' | 'approved';
   size?: string | null;
   price?: number | null;
   capacity?: number | null;
@@ -1105,6 +1121,10 @@ export interface OwnerPitch {
   pricing_mode: 'FULL' | 'PER_PERSON';
   is_open: boolean;
   is_demo?: boolean;
+  /** Owner kontrollü vitrin görünürlüğü (tadilat/sezon kapanışı) */
+  is_published?: boolean;
+  /** Admin kontrollü "Öne Çıkan" bayrağı */
+  is_featured?: boolean;
   auto_approve_minutes: number;
   description?: string | null;
   amenities?: string[] | null;
