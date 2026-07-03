@@ -61,9 +61,19 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
     return () => clearInterval(interval);
   }, [step]);
 
-  const createBooking = async () => {
+  /** RPC hata kodlarını kullanıcı diline çevirir (SLOT_TAKEN yarış durumu dahil). */
+  const humanizeBookingError = (e: unknown): string => {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('SLOT_TAKEN')) return 'Bu saat az önce başka bir oyuncu tarafından alındı. Lütfen farklı bir saat seçin.';
+    if (msg.includes('SLOT_UNAVAILABLE')) return 'Bu saat dilimi tesis tarafından kapatılmış. Lütfen farklı bir saat seçin.';
+    if (msg.includes('NO_TARIFF')) return 'Bu saha için tarife tanımlı değil; şu an online rezervasyon alınamıyor.';
+    if (msg.includes('UNAUTHORIZED')) return 'Rezervasyon için giriş yapmanız gerekiyor.';
+    return 'Rezervasyon tamamlanamadı. Lütfen tekrar deneyin.';
+  };
+
+  const createBooking = async (): Promise<string> => {
     const { startTime, endTime } = parseSlotLabel(slotLabel);
-    const { error: rpcError } = await supabase.rpc('create_pitch_booking', {
+    const { data, error: rpcError } = await supabase.rpc('create_pitch_booking', {
       p_pitch_id: pitch.id,
       p_court_id: court.id,
       p_booking_date: bookingDateISO,
@@ -73,6 +83,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
       p_title: auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : 'Kullanıcı',
     });
     if (rpcError) throw rpcError;
+    return data as string;
   };
 
   const handleConfirm = async () => {
@@ -80,7 +91,16 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
     setStep('PROCESSING');
     try {
       await new Promise((r) => setTimeout(r, 400));
-      await createBooking();
+      const bookingId = await createBooking();
+      // Kapora tahsilatını muhasebeye işle: booking_payments + paid_amount/payment_status.
+      // Kayıt başarısız olsa da rezervasyon geçerli kalır (owner manuel işleyebilir).
+      if (bookingId && deposit > 0) {
+        const { error: payError } = await supabase.rpc('record_app_deposit_payment', {
+          p_booking_id: bookingId,
+          p_amount: deposit,
+        });
+        if (payError) console.error('Kapora kaydı yazılamadı:', payError);
+      }
       setProgress(100);
       await new Promise((r) => setTimeout(r, 700));
       setStep('SUCCESS');
@@ -89,7 +109,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
     } catch (e) {
       console.error('PitchDepositCheckout:', e);
       setStep('CONFIRM');
-      setError(e instanceof Error ? e.message : 'Ödeme alınamadı. Lütfen tekrar deneyin.');
+      setError(humanizeBookingError(e));
     }
   };
 
