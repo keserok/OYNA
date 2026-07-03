@@ -1,3 +1,4 @@
+import { ORDU_DISTRICT_NAMES } from '../utils/orduData';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Shield, Circle,
@@ -372,7 +373,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   <div className="space-y-2 mb-2 p-4 bg-[#161B22] border border-white/5 rounded-2xl">
                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Arama Bölgesi (İlçe)</p>
                     <div className="flex flex-wrap gap-2">
-                      {['Tümü', 'Kadıköy', 'Beşiktaş', 'Şişli', 'Ümraniye', 'Ataşehir', 'Bakırköy'].map(dist => (
+                      {['Tümü', ...ORDU_DISTRICT_NAMES].map(dist => (
                         <button
                           key={dist}
                           type="button"

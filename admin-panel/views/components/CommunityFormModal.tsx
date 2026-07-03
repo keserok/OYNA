@@ -103,7 +103,7 @@ export const CommunityFormModal: React.FC<Props> = ({ open, mode, community, onC
                 <input value={f.domain ?? ''} onChange={(e) => setF({ ...f, domain: e.target.value })} className={inputCls} placeholder="@sirket.com" />
               </Field>
               <Field label="Konum">
-                <input value={f.location ?? ''} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} placeholder="İstanbul" />
+                <input value={f.location ?? ''} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} placeholder="Ordu" />
               </Field>
               <Field label="Açıklama">
                 <textarea value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} className={`${inputCls} min-h-[72px] resize-none`} />

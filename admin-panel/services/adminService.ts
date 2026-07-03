@@ -79,7 +79,6 @@ export interface AppSettingsDb {
   appName: string;
   maintenanceMode: boolean;
   registrationOpen: boolean;
-  proPrice: number;
   commissionRate: number;
   minRatingToPlay: number;
   maxMatchsPerDay: number;
@@ -105,7 +104,6 @@ const mapProfileRow = (row: Record<string, unknown>): AdminUser => {
     rating: Number(row.rating ?? 5),
     isVerified: Boolean(row.is_verified),
     isBanned: Boolean(row.is_banned),
-    isPro: Boolean(row.is_pro),
     joinDate: (row.created_at as string) || (row.join_date as string) || new Date().toISOString(),
     matchCount: Number(row.match_count ?? 0),
     wallet: Number(row.wallet_balance ?? 0),
@@ -119,7 +117,6 @@ const mapSettingsRow = (row: Record<string, unknown>): AppSettingsDb => ({
   appName: (row.app_name as string) || (row.appName as string) || 'OYNA',
   maintenanceMode: Boolean(row.maintenance_mode ?? row.maintenanceMode),
   registrationOpen: (row.registration_open ?? row.registrationOpen) !== false,
-  proPrice: Number(row.pro_price ?? row.proPrice ?? 99.9),
   commissionRate: Number(row.commission_rate ?? row.commissionRate ?? 10),
   minRatingToPlay: Number(row.min_rating_to_play ?? row.minRatingToPlay ?? 3),
   maxMatchsPerDay: Number(row.max_matches_per_day ?? row.maxMatchsPerDay ?? 3),
@@ -412,7 +409,7 @@ export async function signOutAdmin(): Promise<void> {
   }
 }
 
-export type AdminProfileStatusFilter = 'all' | 'active' | 'banned' | 'pro';
+export type AdminProfileStatusFilter = 'all' | 'active' | 'banned';
 
 export async function fetchAdminProfiles(options?: {
   offset?: number;
@@ -448,14 +445,13 @@ export async function fetchAdminProfiles(options?: {
 
   let q = supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (search) {
     q = q.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%,role.ilike.%${search}%`);
   }
   if (status === 'banned') q = q.eq('is_banned', true);
-  else if (status === 'pro') q = q.eq('is_pro', true);
   else if (status === 'active') q = q.eq('is_banned', false);
 
   const { data: fallback, error: fbErr, count } = await q.range(offset, offset + limit - 1);
@@ -463,7 +459,7 @@ export async function fetchAdminProfiles(options?: {
   if (fbErr) {
     let retryQ = supabase
       .from('profiles')
-      .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
+      .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
       .order('join_date', { ascending: false });
     if (search) {
       retryQ = retryQ.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -679,7 +675,6 @@ export function settingsToDbPayload(settings: Partial<AppSettingsDb>): Record<st
   if (settings.appName !== undefined) payload.app_name = settings.appName;
   if (settings.maintenanceMode !== undefined) payload.maintenance_mode = settings.maintenanceMode;
   if (settings.registrationOpen !== undefined) payload.registration_open = settings.registrationOpen;
-  if (settings.proPrice !== undefined) payload.pro_price = settings.proPrice;
   if (settings.commissionRate !== undefined) payload.commission_rate = settings.commissionRate;
   if (settings.minRatingToPlay !== undefined) payload.min_rating_to_play = settings.minRatingToPlay;
   if (settings.maxMatchsPerDay !== undefined) payload.max_matches_per_day = settings.maxMatchsPerDay;
@@ -968,7 +963,7 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
   if (error) throw new Error(error.message);
 }
 
-export type BroadcastSegment = 'ALL' | 'PRO' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
+export type BroadcastSegment = 'ALL' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
 
 export async function broadcastNotification(
   title: string,
@@ -1390,7 +1385,7 @@ export async function createUserAdmin(input: {
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, is_pro, wallet_balance, ban_expires_at, created_at, card_active, card_tier')
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, card_active, card_tier')
     .eq('id', userId)
     .maybeSingle();
   if (error || !data) return null;
@@ -1979,7 +1974,6 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     avatar_url: user.avatar,
     role: user.role,
     is_verified: user.isVerified,
-    is_pro: user.isPro,
     wallet_balance: user.wallet,
     match_count: user.matchCount,
     rating: user.rating,
@@ -2030,17 +2024,6 @@ export async function updateUserProfileAdmin(user: import('../../types').AdminUs
   }
 }
 
-export async function toggleUserProAdmin(userId: string, isPro: boolean): Promise<void> {
-  const { error } = await supabase.rpc('admin_toggle_user_pro', { p_user_id: userId, p_is_pro: isPro });
-  if (error) {
-    if (isRpcMissing(error)) {
-      const { fbToggleUserPro } = await import('../../supabaseMutations');
-      await fbToggleUserPro(userId, isPro);
-      return;
-    }
-    throw new Error(error.message);
-  }
-}
 
 export async function verifyUserAdmin(userId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_verify_user', { p_user_id: userId });

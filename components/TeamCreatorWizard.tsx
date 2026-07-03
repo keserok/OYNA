@@ -300,7 +300,7 @@ export const TeamCreatorWizard: React.FC<TeamCreatorWizardProps> = ({ onClose, o
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Lokasyon</label>
                         <input 
                           type="text" value={teamData.location} onChange={e => updateData('location', e.target.value)}
-                          placeholder="Kadıköy, İstanbul"
+                          placeholder="Altınordu, Ordu"
                           className="w-full bg-[#161B22] border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-[#39FF14]/50 focus:bg-[#0A0E14] transition-all"
                         />
                       </div>

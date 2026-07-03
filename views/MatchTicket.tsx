@@ -56,7 +56,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                        <h2 className="text-3xl font-black text-black leading-none uppercase">
                          {pitchNameParts[0]}<br/>{pitchNameParts.slice(1).join(' ')}
                        </h2>
-                       <p className="text-black/60 font-bold text-sm mt-1">{bookingPitch?.district || 'Beşiktaş'}, İstanbul</p>
+                       <p className="text-black/60 font-bold text-sm mt-1">{bookingPitch?.district || 'Altınordu'}, Ordu</p>
                    </div>
                    
                    {/* Decorative Circles */}

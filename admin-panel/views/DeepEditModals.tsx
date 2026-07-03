@@ -407,7 +407,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
     const { showOk, Toast } = useToast();
     const [edit, setEdit] = useState<Partial<Pitch> & { name: string; location: string; district: string; totalPrice: number; pricePerPerson: number; rating: number; googleRating: number; googleReviews: number; lighting: number; grassQuality: number; lockerRoomQuality: number; goalQuality: number; occupancy: number; image: string }>(
         {
-            name: '', location: '', district: 'Beşiktaş', totalPrice: 3000, pricePerPerson: 215,
+            name: '', location: '', district: 'Altınordu', totalPrice: 3000, pricePerPerson: 215,
             rating: 4.5, googleRating: 4.4, googleReviews: 0,
             lighting: 85, grassQuality: 85, lockerRoomQuality: 80, goalQuality: 82, occupancy: 70,
             image: '', images: [], amenities: [], distance: '1.0 km',
@@ -424,7 +424,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
             id: `pitch_${Date.now()}`,
             name: edit.name,
             location: edit.location,
-            district: edit.district || 'Beşiktaş',
+            district: edit.district || 'Altınordu',
             distance: edit.distance || '1.0 km',
             rating: edit.rating,
             googleRating: edit.googleRating,
@@ -477,10 +477,10 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
 
                 {/* Identity */}
                 <div className="grid grid-cols-2 gap-4">
-                    <FI label="Saha Adı *"><I placeholder="örn. Beşiktaş Arena" value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
-                    <FI label="İlçe"><I placeholder="örn. Beşiktaş" value={edit.district} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
+                    <FI label="Saha Adı *"><I placeholder="örn. Altınordu Arena" value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
+                    <FI label="İlçe"><I placeholder="örn. Altınordu" value={edit.district} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
                 </div>
-                <FI label="Tam Adres *"><I placeholder="örn. Barbaros Bulvarı, Beşiktaş/İstanbul" value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
+                <FI label="Tam Adres *"><I placeholder="örn. Karadeniz Cd., Altınordu/Ordu" value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
                 
                 {/* GPS Coordinates */}
                 <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
@@ -721,7 +721,6 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                         <div className="space-y-2">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
                             <Toggle label="Oyuncu Kartı Aktif" desc="Kart uygulamada (Top Oyna) görünsün — kapatılırsa gizlenir" value={edit.cardActive ?? true} onChange={() => setEdit(prev => ({ ...prev, cardActive: !(prev.cardActive ?? true) }))} />
-                            <Toggle label="PRO Üyelik" desc="Özel maçlar ve indirimler" value={edit.isPro} onChange={() => setEdit(prev => ({ ...prev, isPro: !prev.isPro }))} />
                             <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
                             <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
                         </div>
@@ -735,7 +734,6 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             role={edit.role}
                             name={edit.name}
                             avatar={edit.avatar}
-                            isElite={edit.isPro}
                             stats={{
                                 label1: 'HIZ', val1: stats.pace.value,
                                 label2: 'DRB', val2: stats.dribbling.value,

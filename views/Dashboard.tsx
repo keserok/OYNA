@@ -336,14 +336,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     return 'Kadro ve maç lobileri merkezi';
   }, [closestMatch, userMatches.length]);
 
-  const COMMUNITIES = [
-    { id: 'c1', name: 'Boğaziçi Üni', short: 'BOUN' },
-    { id: 'c2', name: 'İTÜ', short: 'ITU' },
-    { id: 'c3', name: 'ODTÜ', short: 'ODTU' },
-  ];
-  const [activeCommunity, setActiveCommunity] = useState(COMMUNITIES[0]);
-  const [isCommunityDropdownOpen, setIsCommunityDropdownOpen] = useState(false);
-
   useEffect(() => {
     // ⚽ B2B SaaS Game Engine - 90-minute auto-cancel evaluation scan
     const scanAndAutoCancel = async () => {

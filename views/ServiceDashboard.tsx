@@ -652,7 +652,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <span className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
                                   <Shield size={10} fill="black" /> PANTER
                               </span>
-                              <span className="text-xs text-gray-400">Kadıköy</span>
+                              <span className="text-xs text-gray-400">Altınordu</span>
                           </div>
                           
                           {/* Stats Grid */}
@@ -779,7 +779,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
                                   <Scale size={10} /> OTORİTER
                               </span>
-                              <span className="text-xs text-gray-400">İstanbul</span>
+                              <span className="text-xs text-gray-400">Ordu</span>
                           </div>
                           
                           {/* Stats Grid */}

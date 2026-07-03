@@ -103,17 +103,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                             </p>
                         </div>
                         
-                        <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">PRO Üyelik Fiyatı (₺/ay)</label>
-                            <input
-                                type="number"
-                                defaultValue={appSettings.proPrice ?? 99}
-                                onBlur={(e) => {
-                                    void updateAppSettings({ proPrice: Number(e.target.value) }).then(() => success('PRO fiyatı güncellendi'));
-                                }}
-                                className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-blue-500/40 focus:outline-none"
-                            />
-                        </div>
 
                         <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Min. Oyun Puanı</label>

@@ -21,7 +21,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
   // Form State
   const [facilityName, setFacilityName] = useState('');
-  const [cityRaw, setCityRaw] = useState(''); // "Beşiktaş, İstanbul"
+  const [cityRaw, setCityRaw] = useState(''); // "Altınordu, Ordu"
   const [price, setPrice] = useState('');
   const [iban, setIban] = useState('');
   const [pricingMode] = useState<'FULL' | 'PER_PERSON'>('FULL');
@@ -278,7 +278,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     type="text" 
                                     value={cityRaw}
                                     onChange={(e) => setCityRaw(e.target.value)}
-                                    placeholder="Örn: Beşiktaş, İstanbul" 
+                                    placeholder="Örn: Altınordu, Ordu" 
                                     className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                   />
                               </div>
@@ -465,19 +465,6 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       </div>
                   </div>
               )}
-
-              {/* Scout Credit */}
-              <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                  <div className="relative">
-                      <img src="https://i.pravatar.cc/150?u=kaptan" className="w-12 h-12 rounded-full border-2 border-green-500" alt="Scout" />
-                      <div className="absolute -bottom-1 -right-1 bg-green-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full">SCOUT</div>
-                  </div>
-                  <div>
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Referans Olan</p>
-                      <p className="text-sm font-bold text-white">Burak Kaptan</p>
-                      <p className="text-[10px] text-gray-400">Bu tesis OYNA ekosistemine kazandırıldı.</p>
-                  </div>
-              </div>
 
               {/* Onay durumu */}
               <div className="bg-gradient-to-r from-blue-900/30 to-[#161B22] border border-blue-500/30 rounded-2xl p-4 flex items-start gap-3">

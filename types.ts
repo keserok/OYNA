@@ -29,13 +29,11 @@ export interface AdminUser {
   isBanned: boolean;         
   isShadowBanned?: boolean;
   isMuted?: boolean;
-  isPro: boolean;            
   joinDate: string;          
   matchCount: number;        
   wallet?: number;           
   reliabilityScore?: number; 
   banExpiresAt?: string | null; 
-  communities?: string[];    
   playerCard?: PlayerCardData;
   oynaId?: string; // Benzersiz OYNA Kimliği Örn: #ARD932
   friends?: string[]; // Onaylanmış arkadaşların User ID'leri
@@ -62,23 +60,9 @@ export interface IUser {
   email: string;
   avatar?: string;
   roles: UserRole[];
-  communities: string[]; // Community IDs
   fairPlayScore: number;
 }
 
-export interface ICommunity {
-  id: string;
-  name: string;
-  domain: string; // e.g. "@boun.edu.tr"
-  logo?: string;
-  memberCount: number;
-  activeMatches: number;
-  isVerified: boolean;
-  joinMode?: 'OPEN' | 'REQUEST' | 'INVITE_ONLY' | string;
-  isPrivate?: boolean;
-  type?: string;
-  location?: string;
-}
 
 /** Tamamlanmış bir maçın basit skor kaydı. */
 export interface BasicMatchRecord {
@@ -259,7 +243,6 @@ export interface MatchListing {
   slots: PositionSlot[];
   status?: 'DRAFT' | 'ACTIVE' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'LIVE';
   creatorId?: string;
-  communityId?: string;
   format?: string;
   duration?: string;
   gender?: string;

@@ -65,7 +65,7 @@ const CardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHis
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
                         <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${colors.border}66)` }} />
-                        <span className="text-[8px] font-black uppercase tracking-[0.3em]" style={{ color: colors.label }}>Scouting Raporu</span>
+                        <span className="text-[8px] font-black uppercase tracking-[0.3em]" style={{ color: colors.label }}>Performans Raporu</span>
                         <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${colors.border}66)` }} />
                     </div>
                 </div>

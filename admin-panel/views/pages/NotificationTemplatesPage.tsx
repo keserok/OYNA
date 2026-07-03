@@ -33,7 +33,7 @@ const PREVIEW_SAMPLES: Record<string, string> = {
   field_name: 'Yeşilçim Halısaha',
   team_name: 'Şimşekler',
   amount: '120 ₺',
-  city: 'İstanbul',
+  city: 'Ordu',
   opponent_name: 'Mehmet K.',
   rating: '4.8',
 };

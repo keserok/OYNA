@@ -1,4 +1,5 @@
 
+import { ORDU_DISTRICT_NAMES, LAUNCH_CITY } from '../utils/orduData';
 import React, { useState, useMemo } from 'react';
 import {
     ChevronLeft, ChevronRight, X, Map as MapIcon, List, Minus, Plus, Zap, Activity, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
@@ -209,16 +210,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                     className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
                 >
                     <option value="Tümü">Tüm İlçeler</option>
-                    <option value="Kadıköy">Kadıköy</option>
-                    <option value="Beşiktaş">Beşiktaş</option>
-                    <option value="Şişli">Şişli</option>
-                    <option value="Ümraniye">Ümraniye</option>
-                    <option value="Maltepe">Maltepe</option>
-                    <option value="Üsküdar">Üsküdar</option>
-                    <option value="Bağcılar">Bağcılar</option>
-                    <option value="Pendik">Pendik</option>
-                    <option value="Sarıyer">Sarıyer</option>
-                    <option value="Bakırköy">Bakırköy</option>
+                    {ORDU_DISTRICT_NAMES.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
                 <select 
                     value={filterDay} 
@@ -534,7 +526,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             <Star size={14} className="fill-white" />
                                             <span className="text-[15px] font-medium">{selectedProfile.rating}</span>
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
-                                            <span className="text-[15px] text-gray-400">{selectedProfile.preferredZones?.[0] || 'İstanbul'}</span>
+                                            <span className="text-[15px] text-gray-400">{selectedProfile.preferredZones?.[0] || LAUNCH_CITY}</span>
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
                                             <span className="text-[15px] text-gray-400">{selectedProfile.distance || '2.4'} km yakında</span>
                                         </div>

@@ -135,7 +135,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
-                  placeholder="İstanbul"
+                  placeholder="Ordu"
                 />
               </div>
               <div className="space-y-2">
@@ -144,7 +144,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
                   className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
-                  placeholder="Kadıköy"
+                  placeholder="Altınordu"
                 />
               </div>
             </div>

@@ -137,7 +137,6 @@ const App: React.FC = () => {
         rating: 5,
         isVerified: false,
         isBanned: false,
-        isPro: false,
         joinDate: new Date().toISOString(),
         matchCount: 0,
       });
@@ -558,7 +557,6 @@ const App: React.FC = () => {
               goBack('PROFILE');
             }
           }}
-          communities={[{ id: 'c1', name: 'Boğaziçi Üniversitesi', domain: '@boun.edu.tr', memberCount: 1250, activeMatches: 12, isVerified: true }]}
         />;
       case 'POST_MATCH_EVAL':
         return <PostMatchEval onBack={() => goBack('SOCIAL')} onComplete={() => goBack('SOCIAL')} />;

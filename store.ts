@@ -56,7 +56,6 @@ export interface AppSettings {
   appName: string;
   maintenanceMode: boolean;
   registrationOpen: boolean;
-  proPrice: number;
   commissionRate: number;
   minRatingToPlay: number;
   maxMatchsPerDay: number;
@@ -64,10 +63,6 @@ export interface AppSettings {
   announcementBanner: string;
   showAnnouncementBanner: boolean;
   payoutMode?: string;
-  tacticStudio?: boolean;
-  motmReveal?: boolean;
-  aiCoach?: boolean;
-  scoutSystem?: boolean;
 }
 // ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +97,6 @@ const INITIAL_SETTINGS: AppSettings = {
   appName: 'OYNA',
   maintenanceMode: false,
   registrationOpen: true,
-  proPrice: 199,
   commissionRate: 10,
   minRatingToPlay: 2.5,
   maxMatchsPerDay: 3,
@@ -118,7 +112,6 @@ interface AppState {
   navigationStack: AppView[];
   role: UserRole | null;
   isAuthReady: boolean;
-  hasMotmCoupon: boolean;
   selectedMatch: MatchListing | null;
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
@@ -221,7 +214,6 @@ interface AppState {
   serviceAppRole: UserRole | null;
   setServiceAppRole: (r: UserRole | null) => void;
   setIsAuthReady: (isReady: boolean) => void;
-  setHasMotmCoupon: (hasCoupon: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
   setSelectedDiaryId: (id: string | null) => void;
   setSelectedConversationId: (id: string | null) => void;
@@ -295,7 +287,6 @@ interface AppState {
   setNewMatchBadge: (val: boolean) => Promise<void>;
   banUser: (id: string) => Promise<void>;
   unbanUser: (id: string) => Promise<void>;
-  toggleUserPro: (id: string) => Promise<void>;
   verifyUser: (id: string) => Promise<void>;
   addUser: (user: AdminUser) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
@@ -435,7 +426,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   role: UserRole.PLAYER,
   serviceAppRole: null,
   isAuthReady: true,
-  hasMotmCoupon: false,
   selectedMatch: null,
   selectedDiaryId: null,
   selectedConversationId: null,
@@ -761,7 +751,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setRole: (role) => set({ role }),
   setServiceAppRole: (serviceAppRole) => set({ serviceAppRole }),
   setIsAuthReady: (isAuthReady) => set({ isAuthReady }),
-  setHasMotmCoupon: (has) => set({ hasMotmCoupon: has }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
   setSelectedConversationId: (id) => set({ selectedConversationId: id }),
@@ -1058,18 +1047,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { banUserAdmin } = await import('./admin-panel/services/adminService');
       await banUserAdmin(id, false);
     } catch (e) { set({ adminUsers: prev }); throw e; }
-  },
-  toggleUserPro: async (id) => {
-    const user = get().adminUsers.find(u => u.id === id);
-    if (user) {
-      const prev = get().adminUsers;
-      const nextPro = !user.isPro;
-      set({ adminUsers: prev.map(u => u.id === id ? { ...u, isPro: nextPro } : u) });
-      try {
-        const { toggleUserProAdmin } = await import('./admin-panel/services/adminService');
-        await toggleUserProAdmin(id, nextPro);
-      } catch (e) { set({ adminUsers: prev }); throw e; }
-    }
   },
   verifyUser: async (id) => {
     const prev = get().adminUsers;
