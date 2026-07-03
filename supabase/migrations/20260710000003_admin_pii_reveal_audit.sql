@@ -16,4 +16,5 @@ BEGIN
   );
 END;
 $function$;
+REVOKE ALL ON FUNCTION public.admin_log_pii_reveal(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_log_pii_reveal(uuid, text) TO authenticated;

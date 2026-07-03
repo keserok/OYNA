@@ -52,6 +52,7 @@ BEGIN
   RETURN v_id;
 END;
 $function$;
+REVOKE ALL ON FUNCTION public.admin_create_pitch(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_create_pitch(jsonb) TO authenticated;
 
 DROP FUNCTION IF EXISTS public.admin_update_pitch(uuid, jsonb);
@@ -90,4 +91,5 @@ BEGIN
   RETURN TRUE;
 END;
 $function$;
+REVOKE ALL ON FUNCTION public.admin_update_pitch(uuid, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_update_pitch(uuid, jsonb) TO authenticated;
