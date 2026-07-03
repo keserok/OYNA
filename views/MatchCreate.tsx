@@ -62,7 +62,7 @@ const ROLE_OPTIONS = [
 ];
 
 const MENTALITY_OPTIONS = [
-  { id: 'ciddi', title: 'CİDDİ', subtitle: 'Rekabetçi', icon: Zap, color: '#FFFF00' },
+  { id: 'ciddi', title: 'CİDDİ', subtitle: 'Rekabetçi', icon: Zap, color: '#FACC15' },
   { id: 'taktiksel', title: 'TAKTİKSEL', subtitle: 'Sistem', icon: Target, color: '#3b82f6' },
   { id: 'rahat', title: 'RAHAT', subtitle: 'Eğlence', icon: Feather, color: '#10b981' }
 ];
@@ -81,17 +81,17 @@ const ProgressBar: React.FC<{ step: number }> = ({ step }) => (
           <React.Fragment key={label}>
             <div className="flex flex-col items-center gap-1 min-w-0 relative">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 flex-shrink-0 relative z-10 ${
-                isDone ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.6)]' 
-                : isActive ? 'bg-[#FFFF00] text-black shadow-[0_0_25px_rgba(255,255,0,0.8)]' 
+                isDone ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.6)]' 
+                : isActive ? 'bg-[#FACC15] text-black shadow-[0_0_25px_rgba(250,204,21,0.8)]' 
                 : 'bg-[#161B22] text-gray-600 border border-white/10'
               }`}>
                 <span className="relative z-10">{isDone ? <Check size={14} strokeWidth={3} /> : num}</span>
               </div>
-              <span className={`text-[8px] font-black uppercase tracking-[0.15em] truncate max-w-[50px] text-center transition-colors duration-300 mt-1 ${isActive || isDone ? 'text-[#FFFF00] drop-shadow-sm' : 'text-gray-600'}`}>{label}</span>
+              <span className={`text-[8px] font-black uppercase tracking-[0.15em] truncate max-w-[50px] text-center transition-colors duration-300 mt-1 ${isActive || isDone ? 'text-[#FACC15] drop-shadow-sm' : 'text-gray-600'}`}>{label}</span>
             </div>
             {i < STEP_LABELS.length - 1 && (
               <div className="flex-1 h-1 mx-2 rounded-full overflow-hidden bg-[#161B22] min-w-0 border border-white/5 relative">
-                <div className={`absolute top-0 left-0 h-full bg-[#FFFF00] transition-all duration-500 shadow-[0_0_10px_rgba(255,255,0,0.8)] ${isDone ? 'w-full' : 'w-0'}`} />
+                <div className={`absolute top-0 left-0 h-full bg-[#FACC15] transition-all duration-500 shadow-[0_0_10px_rgba(250,204,21,0.8)] ${isDone ? 'w-full' : 'w-0'}`} />
               </div>
             )}
           </React.Fragment>
@@ -108,12 +108,12 @@ const FormatStep: React.FC<{ onSelect: (f: typeof FORMATS[0]) => void }> = ({ on
     <motion.div key="fmt" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
       className="flex-1 px-5 py-6 space-y-6 overflow-y-auto custom-scrollbar relative">
       
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#FFFF00]/10 blur-[100px] pointer-events-none rounded-full" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#FACC15]/10 blur-[100px] pointer-events-none rounded-full" />
       <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none" />
 
       <div className="relative z-10">
         <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter drop-shadow-md">Maç Formatı</h2>
-        <p className="text-[11px] text-[#FFFF00] font-bold uppercase tracking-widest mt-1 drop-shadow-sm">Saha tipini ve oyuncu sayısını seç</p>
+        <p className="text-[11px] text-[#FACC15] font-bold uppercase tracking-widest mt-1 drop-shadow-sm">Saha tipini ve oyuncu sayısını seç</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 relative z-10">
@@ -124,23 +124,23 @@ const FormatStep: React.FC<{ onSelect: (f: typeof FORMATS[0]) => void }> = ({ on
               onClick={() => setSelected(fmt.v)}
               className={`relative rounded-3xl p-5 text-left transition-all duration-300 overflow-hidden group border ${
                 isSelected 
-                ? 'bg-[#FFFF00]/10 border-[#FFFF00]/60 shadow-[0_10px_30px_rgba(255,255,0,0.2)]' 
+                ? 'bg-[#FACC15]/10 border-[#FACC15]/60 shadow-[0_10px_30px_rgba(250,204,21,0.2)]' 
                 : 'bg-[#161B22]/80 backdrop-blur-md border-white/5 hover:border-white/20 hover:bg-[#161B22]'
               }`}>
               
-              {isSelected && <motion.div layoutId="format-bg-glow" className="absolute inset-0 bg-gradient-to-br from-[#FFFF00]/20 to-transparent pointer-events-none" />}
+              {isSelected && <motion.div layoutId="format-bg-glow" className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/20 to-transparent pointer-events-none" />}
               
               {fmt.popular && (
                 <span className="absolute top-0 right-0 px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-black uppercase tracking-widest rounded-bl-xl rounded-tr-3xl shadow-lg z-20">🔥 Popüler</span>
               )}
               
               <div className="relative z-10">
-                 <p className={`text-3xl font-black mb-1 italic tracking-tighter transition-colors duration-300 ${isSelected ? 'text-[#FFFF00] drop-shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 'text-white'}`}>{fmt.label}</p>
-                 <p className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${isSelected ? 'text-[#FFFF00]/80' : 'text-gray-500'}`}>{fmt.players} Oyuncu</p>
+                 <p className={`text-3xl font-black mb-1 italic tracking-tighter transition-colors duration-300 ${isSelected ? 'text-[#FACC15] drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'text-white'}`}>{fmt.label}</p>
+                 <p className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${isSelected ? 'text-[#FACC15]/80' : 'text-gray-500'}`}>{fmt.players} Oyuncu</p>
               </div>
 
               {isSelected && (
-                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-[#FFFF00] flex items-center justify-center text-black shadow-lg z-20">
+                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-[#FACC15] flex items-center justify-center text-black shadow-lg z-20">
                     <Check size={18} strokeWidth={3} />
                  </motion.div>
               )}
@@ -149,8 +149,8 @@ const FormatStep: React.FC<{ onSelect: (f: typeof FORMATS[0]) => void }> = ({ on
         })}
       </div>
 
-      <div className="relative z-10 p-5 bg-[#161B22]/90 backdrop-blur-xl border border-[#FFFF00]/20 rounded-3xl flex items-center gap-4 shadow-2xl">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFFF00] to-yellow-600 p-[2px] shadow-[0_0_20px_rgba(255,255,0,0.3)] flex-shrink-0">
+      <div className="relative z-10 p-5 bg-[#161B22]/90 backdrop-blur-xl border border-[#FACC15]/20 rounded-3xl flex items-center gap-4 shadow-2xl">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FACC15] to-yellow-600 p-[2px] shadow-[0_0_20px_rgba(250,204,21,0.3)] flex-shrink-0">
            <div className="w-full h-full bg-[#0A0E14] rounded-2xl flex items-center justify-center text-3xl">⚽</div>
         </div>
         <div>
@@ -160,7 +160,7 @@ const FormatStep: React.FC<{ onSelect: (f: typeof FORMATS[0]) => void }> = ({ on
       </div>
 
       <motion.button whileTap={{ scale: 0.95 }} onClick={() => onSelect(FORMATS.find(f => f.v === selected)!)}
-        className="relative z-10 w-full h-16 bg-[#FFFF00] hover:bg-[#FFFF00]/90 text-black font-black text-sm uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,255,0,0.4)] transition-all mt-4">
+        className="relative z-10 w-full h-16 bg-[#FACC15] hover:bg-[#FACC15]/90 text-black font-black text-sm uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.4)] transition-all mt-4">
         TAKIMLARI KUR <ChevronRight size={20} strokeWidth={3} />
       </motion.button>
     </motion.div>
@@ -271,12 +271,12 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
       {/* BENİM TAKIM */}
       <div className="relative bg-[#06080A]/80 backdrop-blur-xl rounded-[24px] border border-white/10 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.5)] group">
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FFFF00]/40 to-transparent opacity-50" />
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FACC15]/40 to-transparent opacity-50" />
 
         <div className="px-4 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between relative z-10">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-[#FFFF00] rounded-full shadow-[0_0_8px_rgba(255,255,0,0.8)]" />
-            <span className="text-xs font-black text-[#FFFF00] uppercase tracking-widest drop-shadow-md">BENİM TAKIM</span>
+            <div className="w-2 h-2 bg-[#FACC15] rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+            <span className="text-xs font-black text-[#FACC15] uppercase tracking-widest drop-shadow-md">BENİM TAKIM</span>
           </div>
           <span className="text-[10px] text-gray-400 font-bold">{myPlayers.length}/{perTeam} Oyuncu</span>
         </div>
@@ -300,12 +300,12 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
         
         <div className="px-3 pb-3 grid grid-cols-2 gap-2 relative z-10">
           <button onClick={() => { setShowTeamPicker(!showTeamPicker); setShowFriendPicker(false); setShowQuickInput(false); }}
-            className={`flex items-center justify-center gap-1.5 h-12 bg-[#161B22]/80 backdrop-blur-md text-white border ${showTeamPicker ? 'border-[#FFFF00]/50 shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'border-white/10 hover:bg-white/10 hover:border-white/20'} rounded-2xl text-[11px] font-black uppercase transition-all group`}>
-            <Users size={14} className={`${showTeamPicker ? 'text-[#FFFF00]' : 'text-gray-400 group-hover:text-white'} transition-colors`} /> Takımlarım
+            className={`flex items-center justify-center gap-1.5 h-12 bg-[#161B22]/80 backdrop-blur-md text-white border ${showTeamPicker ? 'border-[#FACC15]/50 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'border-white/10 hover:bg-white/10 hover:border-white/20'} rounded-2xl text-[11px] font-black uppercase transition-all group`}>
+            <Users size={14} className={`${showTeamPicker ? 'text-[#FACC15]' : 'text-gray-400 group-hover:text-white'} transition-colors`} /> Takımlarım
           </button>
           <button onClick={() => { setShowFriendPicker(!showFriendPicker); setShowTeamPicker(false); setShowQuickInput(false); }}
-            className={`flex items-center justify-center gap-1.5 h-12 bg-[#161B22]/80 backdrop-blur-md text-white border ${showFriendPicker ? 'border-[#FFFF00]/50 shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'border-white/10 hover:bg-white/10 hover:border-white/20'} rounded-2xl text-[11px] font-black uppercase transition-all group`}>
-            <UserPlus size={14} className={`${showFriendPicker ? 'text-[#FFFF00]' : 'text-gray-400 group-hover:text-white'} transition-colors`} /> Arkadaşlarım
+            className={`flex items-center justify-center gap-1.5 h-12 bg-[#161B22]/80 backdrop-blur-md text-white border ${showFriendPicker ? 'border-[#FACC15]/50 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'border-white/10 hover:bg-white/10 hover:border-white/20'} rounded-2xl text-[11px] font-black uppercase transition-all group`}>
+            <UserPlus size={14} className={`${showFriendPicker ? 'text-[#FACC15]' : 'text-gray-400 group-hover:text-white'} transition-colors`} /> Arkadaşlarım
           </button>
         </div>
         
@@ -321,9 +321,9 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
                       setMyPlayers(newPlayers);
                       setShowTeamPicker(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 rounded-2xl border border-white/5 bg-[#161B22]/50 hover:border-[#FFFF00]/30 hover:bg-[#FFFF00]/5 transition-all group">
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl border border-white/5 bg-[#161B22]/50 hover:border-[#FACC15]/30 hover:bg-[#FACC15]/5 transition-all group">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 p-1 flex items-center justify-center group-hover:border-[#FFFF00]/30 transition-colors shadow-inner">
+                      <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 p-1 flex items-center justify-center group-hover:border-[#FACC15]/30 transition-colors shadow-inner">
                         <img src={t.logo} className="w-full h-full object-contain drop-shadow-md" alt="" />
                       </div>
                       <div className="text-left">
@@ -331,7 +331,7 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
                         <p className="text-[10px] text-gray-400 font-bold">{t.roster.length} Oyuncu</p>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-gray-500 group-hover:text-[#FFFF00] transition-colors" />
+                    <ChevronRight size={16} className="text-gray-500 group-hover:text-[#FACC15] transition-colors" />
                   </button>
                 ))}
                 {userTeams.length === 0 && <p className="text-xs text-gray-600 text-center py-4 font-bold">Henüz kayıtlı takımın yok.</p>}
@@ -344,7 +344,7 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
               <div className="border-t border-white/5 p-4 bg-black/20">
                 <div className="flex items-center justify-between mb-3 px-1">
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Arkadaş Seç</p>
-                  <span className="text-[10px] font-black text-[#FFFF00]">{myPlayers.length}/{perTeam} Seçildi</span>
+                  <span className="text-[10px] font-black text-[#FACC15]">{myPlayers.length}/{perTeam} Seçildi</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto custom-scrollbar p-1">
                   {confirmedFriends.map(f => {
@@ -352,11 +352,11 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
                     const disabled = !already && myPlayers.length >= perTeam;
                     return (
                       <button key={f.id} onClick={() => togglePlayer(f)} disabled={disabled}
-                        className={`relative flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border transition-all ${already ? 'bg-[#FFFF00]/10 border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)] scale-[1.02]' : disabled ? 'opacity-30 cursor-not-allowed bg-black/40 border-white/5' : 'bg-[#161B22]/80 border-white/10 hover:border-white/30 hover:bg-white/10'}`}>
-                        {already && <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#FFFF00] flex items-center justify-center text-black shadow-sm"><Check size={10} strokeWidth={4} /></div>}
-                        <img src={f.avatar} className={`w-10 h-10 rounded-full border-2 ${already ? 'border-[#FFFF00]' : 'border-white/10'} shadow-md`} alt="" />
-                        <p className={`text-[10px] font-black tracking-tight leading-none text-center ${already ? 'text-[#FFFF00]' : 'text-white'}`}>{f.name.split(' ').join('\n')}</p>
-                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md ${already ? 'bg-[#FFFF00]/20 text-[#FFFF00]' : 'bg-black/50 text-gray-400'}`}>{f.position}</span>
+                        className={`relative flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border transition-all ${already ? 'bg-[#FACC15]/10 border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)] scale-[1.02]' : disabled ? 'opacity-30 cursor-not-allowed bg-black/40 border-white/5' : 'bg-[#161B22]/80 border-white/10 hover:border-white/30 hover:bg-white/10'}`}>
+                        {already && <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#FACC15] flex items-center justify-center text-black shadow-sm"><Check size={10} strokeWidth={4} /></div>}
+                        <img src={f.avatar} className={`w-10 h-10 rounded-full border-2 ${already ? 'border-[#FACC15]' : 'border-white/10'} shadow-md`} alt="" />
+                        <p className={`text-[10px] font-black tracking-tight leading-none text-center ${already ? 'text-[#FACC15]' : 'text-white'}`}>{f.name.split(' ').join('\n')}</p>
+                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md ${already ? 'bg-[#FACC15]/20 text-[#FACC15]' : 'bg-black/50 text-gray-400'}`}>{f.position}</span>
                       </button>
                     );
                   })}
@@ -368,7 +368,7 @@ const TeamsStep: React.FC<{ format: typeof FORMATS[0]; onNext: (c: number) => vo
       </div>
 
       <motion.button whileTap={{ scale: 0.97 }} onClick={() => onNext(myPlayers.length)}
-        className="w-full h-14 bg-[#FFFF00] text-black font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,0,0.25)] hover:bg-yellow-300 transition-all uppercase tracking-widest">
+        className="w-full h-14 bg-[#FACC15] text-black font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.25)] hover:bg-yellow-300 transition-all uppercase tracking-widest">
         SAHAYA GEÇ <ChevronRight size={18} />
       </motion.button>
     </motion.div>
@@ -665,7 +665,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
                 ))}
             </div>
             <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/10 shadow-lg">
-                <Star size={12} className="fill-[#FFFF00] text-[#FFFF00]" />
+                <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
                 <span className="text-[12px] font-black text-white">{pitch.rating}</span>
                 <span className="text-[10px] text-gray-400 font-bold ml-1 tracking-widest">({pitch.googleReviews})</span>
             </div>
@@ -697,7 +697,7 @@ const PitchCard: React.FC<{ pitch: Pitch; onClick: (pitch: Pitch) => void }> = (
                 <Moon size={24} className="text-blue-400/10 absolute -top-1 -left-1" strokeWidth={3} />
                 <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 z-10">Gece Fiyatı</span>
                 <div className="flex items-baseline gap-1 z-10">
-                    <span className="text-lg font-black text-[#FFFF00] tracking-tighter">{nightPrice}₺</span>
+                    <span className="text-lg font-black text-[#FACC15] tracking-tighter">{nightPrice}₺</span>
                     <span className="text-[10px] text-gray-500 font-bold uppercase">/saat</span>
                 </div>
             </div>
@@ -810,24 +810,24 @@ const PitchSelectStep: React.FC<{
     <motion.div key="pitch-sel" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} className="flex-1 flex flex-col relative overflow-hidden bg-[#0A0E14] text-white">
       
       <div className="z-20 bg-[#0A0E14]/95 backdrop-blur-2xl pt-5 pb-4 px-5 border-b border-white/5 shrink-0 shadow-lg relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-[#FFFF00]/20 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-[#FACC15]/20 to-transparent" />
         
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-1 bg-[#161B22]/80 backdrop-blur-md p-1 rounded-[14px] border border-white/10 shadow-inner">
-            <button onClick={() => setViewMode('LIST')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'LIST' ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'text-gray-500 hover:text-white'}`}><LayoutGrid size={14} /> LİSTE</button>
-            <button onClick={() => setViewMode('MAP')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'MAP' ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'text-gray-500 hover:text-white'}`}><MapIcon size={14} /> HARİTA</button>
+            <button onClick={() => setViewMode('LIST')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'LIST' ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'text-gray-500 hover:text-white'}`}><LayoutGrid size={14} /> LİSTE</button>
+            <button onClick={() => setViewMode('MAP')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 ${viewMode === 'MAP' ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'text-gray-500 hover:text-white'}`}><MapIcon size={14} /> HARİTA</button>
           </div>
-          <button onClick={() => setShowFilters(true)} className={`w-12 h-12 flex items-center justify-center rounded-[14px] transition-all shadow-md ${showFilters ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-[#161B22] border border-white/10 text-white hover:border-[#FFFF00]/50'}`}><Filter size={20} /></button>
+          <button onClick={() => setShowFilters(true)} className={`w-12 h-12 flex items-center justify-center rounded-[14px] transition-all shadow-md ${showFilters ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-[#161B22] border border-white/10 text-white hover:border-[#FACC15]/50'}`}><Filter size={20} /></button>
         </div>
 
         <div className="relative group mb-5">
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FFFF00] transition-colors"><Search size={20} /></div>
-          <input type="text" placeholder="Saha veya bölge ara..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-14 bg-[#161B22]/50 backdrop-blur-md border border-white/10 rounded-[20px] pl-14 pr-6 text-sm font-bold outline-none focus:border-[#FFFF00]/60 focus:bg-[#161B22] transition-all shadow-inner text-white placeholder:text-gray-600" />
+          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FACC15] transition-colors"><Search size={20} /></div>
+          <input type="text" placeholder="Saha veya bölge ara..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-14 bg-[#161B22]/50 backdrop-blur-md border border-white/10 rounded-[20px] pl-14 pr-6 text-sm font-bold outline-none focus:border-[#FACC15]/60 focus:bg-[#161B22] transition-all shadow-inner text-white placeholder:text-gray-600" />
         </div>
 
         <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 -mx-5 px-5">
-          <button onClick={() => setFilters({ ...filters, type: filters.type === 'Kapalı' ? 'Tümü' : 'Kapalı' })} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${filters.type === 'Kapalı' ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'bg-[#161B22]/80 backdrop-blur-sm text-gray-400 border-white/5 hover:border-white/20'}`}>Kapalı Saha</button>
-          <button onClick={() => setFilters({ ...filters, type: filters.type === 'Açık' ? 'Tümü' : 'Açık' })} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${filters.type === 'Açık' ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'bg-[#161B22]/80 backdrop-blur-sm text-gray-400 border-white/5 hover:border-white/20'}`}>Açık Saha</button>
+          <button onClick={() => setFilters({ ...filters, type: filters.type === 'Kapalı' ? 'Tümü' : 'Kapalı' })} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${filters.type === 'Kapalı' ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-[#161B22]/80 backdrop-blur-sm text-gray-400 border-white/5 hover:border-white/20'}`}>Kapalı Saha</button>
+          <button onClick={() => setFilters({ ...filters, type: filters.type === 'Açık' ? 'Tümü' : 'Açık' })} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${filters.type === 'Açık' ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-[#161B22]/80 backdrop-blur-sm text-gray-400 border-white/5 hover:border-white/20'}`}>Açık Saha</button>
           <button onClick={() => setFilters({ ...filters, availability: filters.availability === 'Şu an Boş' ? 'Tümü' : 'Şu an Boş' })} className={`shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${filters.availability === 'Şu an Boş' ? 'bg-green-500 text-black border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-[#161B22]/80 backdrop-blur-sm text-gray-400 border-white/5 hover:border-white/20'}`}>Şu an Boş</button>
         </div>
       </div>
@@ -837,7 +837,7 @@ const PitchSelectStep: React.FC<{
           <div className="space-y-4">
             <div className="flex justify-between items-center px-1 mb-2">
               <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">{filteredPitches.length} TESİS BULUNDU</h2>
-              {filters.district !== 'Tümü' && <span className="text-[10px] font-black text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-1 rounded-lg">{filters.district}</span>}
+              {filters.district !== 'Tümü' && <span className="text-[10px] font-black text-[#FACC15] bg-[#FACC15]/10 px-2 py-1 rounded-lg">{filters.district}</span>}
             </div>
             <AnimatePresence mode="popLayout">
               {filteredPitches.map((pitch:any) => <PitchCard key={pitch.id} pitch={pitch} onClick={() => handleOpenDetail(pitch)} />)}
@@ -872,7 +872,7 @@ const PitchSelectStep: React.FC<{
               <div className="px-6 -mt-10 relative z-10">
                 <div className="bg-[#161B22] border border-white/5 rounded-[40px] p-8 shadow-2xl">
                   <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-2">{localSelectedPitch.name}</h1>
-                  <p className="text-gray-400 text-sm flex items-center gap-2 mb-8"><MapPin size={14} className="text-[#FFFF00]" /> {localSelectedPitch.district}</p>
+                  <p className="text-gray-400 text-sm flex items-center gap-2 mb-8"><MapPin size={14} className="text-[#FACC15]" /> {localSelectedPitch.district}</p>
                   
                   <div className="flex flex-wrap gap-2 mb-10">
                     {localSelectedPitch.amenities?.map((a:string) => (
@@ -884,7 +884,7 @@ const PitchSelectStep: React.FC<{
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">TARİH SEÇİMİ</p>
                     <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
                       {DAYS.map((day, i) => (
-                        <button key={i} onClick={() => setSelectedDate(i)} className={`shrink-0 w-20 h-24 rounded-3xl flex flex-col items-center justify-center gap-1 border transition-all ${selectedDate === i ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-lg shadow-yellow-900/20' : 'bg-[#0A0E14] border-white/5 text-gray-500'}`}>
+                        <button key={i} onClick={() => setSelectedDate(i)} className={`shrink-0 w-20 h-24 rounded-3xl flex flex-col items-center justify-center gap-1 border transition-all ${selectedDate === i ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-lg shadow-yellow-900/20' : 'bg-[#0A0E14] border-white/5 text-gray-500'}`}>
                           <span className="text-[10px] font-black uppercase">{day}</span>
                           <span className="text-xl font-black">{new Date().getDate() + i}</span>
                         </button>
@@ -897,7 +897,7 @@ const PitchSelectStep: React.FC<{
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">SAHA SEÇİMİ</p>
                       <div className="space-y-3">
                         {localSelectedPitch.courts.map((court:any) => (
-                          <button key={court.id} onClick={() => { setSelectedCourtId(court.id); setLocalSelectedSlot(null); }} className={`w-full p-5 rounded-3xl border transition-all flex items-center justify-between group ${selectedCourtId === court.id ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-lg shadow-yellow-900/20' : 'bg-[#0A0E14] border-white/5 text-white hover:border-white/20'}`}>
+                          <button key={court.id} onClick={() => { setSelectedCourtId(court.id); setLocalSelectedSlot(null); }} className={`w-full p-5 rounded-3xl border transition-all flex items-center justify-between group ${selectedCourtId === court.id ? 'bg-[#FACC15] border-[#FACC15] text-black shadow-lg shadow-yellow-900/20' : 'bg-[#0A0E14] border-white/5 text-white hover:border-white/20'}`}>
                             <div className="flex items-center gap-4">
                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedCourtId === court.id ? 'bg-black/10' : 'bg-white/5'}`}>
                                 {court.type === 'CLOSED' ? <Thermometer size={20} /> : <Wind size={20} />}
@@ -924,7 +924,7 @@ const PitchSelectStep: React.FC<{
                           const isSelected = localSelectedSlot === slot.time;
                           const isBooked = slot.status === 'booked';
                           return (
-                            <button key={i} disabled={isBooked} onClick={() => setLocalSelectedSlot(slot.time)} className={`h-16 rounded-2xl border font-black text-sm transition-all flex flex-col items-center justify-center relative overflow-hidden ${isBooked ? 'bg-gray-900 border-transparent text-gray-700 cursor-not-allowed' : isSelected ? 'bg-[#FFFF00] border-[#FFFF00] text-black shadow-lg shadow-yellow-900/20' : 'bg-[#0A0E14] border-white/5 text-white hover:border-white/20'}`}>
+                            <button key={i} disabled={isBooked} onClick={() => setLocalSelectedSlot(slot.time)} className={`h-16 rounded-2xl border font-black text-sm transition-all flex flex-col items-center justify-center relative overflow-hidden ${isBooked ? 'bg-gray-900 border-transparent text-gray-700 cursor-not-allowed' : isSelected ? 'bg-[#FACC15] border-[#FACC15] text-black shadow-lg shadow-yellow-900/20' : 'bg-[#0A0E14] border-white/5 text-white hover:border-white/20'}`}>
                               {slot.time}
                               {isBooked && <span className="text-[8px] mt-1 opacity-50">DOLU</span>}
                             </button>
@@ -943,10 +943,10 @@ const PitchSelectStep: React.FC<{
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">TOPLAM TUTAR</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">{calculateTotal()}</span>
-                    <span className="text-lg font-bold text-[#FFFF00]">₺</span>
+                    <span className="text-lg font-bold text-[#FACC15]">₺</span>
                   </div>
                 </div>
-                <button disabled={!localSelectedSlot} onClick={handleConfirmAction} className={`flex-[1.5] h-16 rounded-[20px] font-black text-lg uppercase italic tracking-tighter flex items-center justify-center gap-3 transition-all shadow-2xl ${localSelectedSlot ? 'bg-[#FFFF00] text-black shadow-[0_0_20px_rgba(255,255,0,0.4)] active:scale-95' : 'bg-[#FFFF00]/10 border border-[#FFFF00]/20 text-[#FFFF00]/50 shadow-[0_0_15px_rgba(255,255,0,0.05)] cursor-not-allowed'}`}>
+                <button disabled={!localSelectedSlot} onClick={handleConfirmAction} className={`flex-[1.5] h-16 rounded-[20px] font-black text-lg uppercase italic tracking-tighter flex items-center justify-center gap-3 transition-all shadow-2xl ${localSelectedSlot ? 'bg-[#FACC15] text-black shadow-[0_0_20px_rgba(250,204,21,0.4)] active:scale-95' : 'bg-[#FACC15]/10 border border-[#FACC15]/20 text-[#FACC15]/50 shadow-[0_0_15px_rgba(250,204,21,0.05)] cursor-not-allowed'}`}>
                   SEÇİMİ ONAYLA
                   <ChevronRight size={20} />
                 </button>
@@ -972,11 +972,11 @@ const PitchSelectStep: React.FC<{
                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">BÖLGE SEÇİMİ</p>
                    <div className="flex flex-wrap gap-2">
                      {districts.map(d => (
-                       <button key={String(d)} onClick={() => setFilters({ ...filters, district: String(d) })} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === String(d) ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}>{String(d).toUpperCase()}</button>
+                       <button key={String(d)} onClick={() => setFilters({ ...filters, district: String(d) })} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === String(d) ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}>{String(d).toUpperCase()}</button>
                      ))}
                    </div>
                 </div>
-                <button onClick={() => setShowFilters(false)} className="w-full h-16 bg-[#FFFF00] text-black rounded-2xl font-black text-sm tracking-widest uppercase shadow-[0_10px_30px_rgba(255,255,0,0.2)]">UYGULA</button>
+                <button onClick={() => setShowFilters(false)} className="w-full h-16 bg-[#FACC15] text-black rounded-2xl font-black text-sm tracking-widest uppercase shadow-[0_10px_30px_rgba(250,204,21,0.2)]">UYGULA</button>
               </div>
             </motion.div>
           </div>
@@ -1575,7 +1575,7 @@ const PaymentStep: React.FC<{
     return (
       <motion.div key="success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 px-5 py-8 flex flex-col items-center justify-center relative overscroll-none text-center pb-32">
         {/* Background celebration glow (Initial burst) */}
-        <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 2, 1.5], opacity: [0, 0.4, 0] }} transition={{ duration: 1.5, ease: "easeOut" }} className="absolute z-0 w-64 h-64 bg-[#FFFF00]/40 rounded-full blur-[100px] pointer-events-none" />
+        <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 2, 1.5], opacity: [0, 0.4, 0] }} transition={{ duration: 1.5, ease: "easeOut" }} className="absolute z-0 w-64 h-64 bg-[#FACC15]/40 rounded-full blur-[100px] pointer-events-none" />
         
         {/* Animated Checkmark Container with Continuous Glow */}
         <motion.div 
@@ -1588,10 +1588,10 @@ const PaymentStep: React.FC<{
           <motion.div
             animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.9, 0.4] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 rounded-full bg-[#FFFF00]/50 blur-xl"
+            className="absolute inset-0 rounded-full bg-[#FACC15]/50 blur-xl"
           />
           {/* Main Solid Circle */}
-          <div className="relative z-10 w-full h-full rounded-full bg-gradient-to-br from-[#FFFF00] to-yellow-500 flex items-center justify-center border-[4px] border-[#0E1520] shadow-[0_0_40px_rgba(255,255,0,0.8)] text-black">
+          <div className="relative z-10 w-full h-full rounded-full bg-gradient-to-br from-[#FACC15] to-yellow-500 flex items-center justify-center border-[4px] border-[#0E1520] shadow-[0_0_40px_rgba(250,204,21,0.8)] text-black">
              <Check size={56} strokeWidth={4} className="drop-shadow-md" />
           </div>
         </motion.div>
@@ -1614,7 +1614,7 @@ const PaymentStep: React.FC<{
              <div>
                 <h3 className="text-white font-black uppercase text-sm mb-1 tracking-tight">Takım Ekranına Düşür</h3>
                 <p className="text-xs text-gray-400 leading-relaxed font-medium">
-                  Takım ekranına düşürdüğünüzde ana sayfadaki <strong className="text-white">"Maç Başlıyor"</strong> alanında yer alacak ve maçı oynayacak olan davetli tüm oyuncularınıza anlık olarak <strong className="text-[#FFFF00]">Bildirim</strong> geçilecektir.
+                  Takım ekranına düşürdüğünüzde ana sayfadaki <strong className="text-white">"Maç Başlıyor"</strong> alanında yer alacak ve maçı oynayacak olan davetli tüm oyuncularınıza anlık olarak <strong className="text-[#FACC15]">Bildirim</strong> geçilecektir.
                 </p>
              </div>
            </div>
@@ -1622,7 +1622,7 @@ const PaymentStep: React.FC<{
 
         {/* Action Buttons */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5, duration: 0.4 }} className="w-full space-y-4 z-10">
-           <button onClick={handleShareToTeam} className="w-full h-16 bg-[#FFFF00] text-black font-black text-sm uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,255,0,0.3)] hover:bg-yellow-300 transition-all hover:scale-[1.02] active:scale-95">
+           <button onClick={handleShareToTeam} className="w-full h-16 bg-[#FACC15] text-black font-black text-sm uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:bg-yellow-300 transition-all hover:scale-[1.02] active:scale-95">
               <Share2 size={20} /> TAKIM EKRANINA DÜŞÜR
            </button>
            <button onClick={() => onPay()} className="w-full h-14 bg-transparent border border-white/10 text-gray-500 font-bold text-xs uppercase tracking-widest rounded-2xl hover:text-white hover:bg-white/5 transition-colors">
@@ -1647,21 +1647,21 @@ const PaymentStep: React.FC<{
     <motion.div key="payment" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
       className="flex-1 px-5 py-5 space-y-5 overflow-y-auto custom-scrollbar pb-36 relative">
 
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[300px] bg-[#FFFF00]/5 pointer-events-none opacity-50 blur-[80px] rounded-full" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[300px] bg-[#FACC15]/5 pointer-events-none opacity-50 blur-[80px] rounded-full" />
 
       <div className="relative z-10">
         <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter drop-shadow-md">Tamamla</h2>
-        <p className="text-[11px] text-[#FFFF00] font-bold uppercase tracking-widest mt-1">Rezervasyon özetini inceleyin ve onaylayın</p>
+        <p className="text-[11px] text-[#FACC15] font-bold uppercase tracking-widest mt-1">Rezervasyon özetini inceleyin ve onaylayın</p>
       </div>
 
       <div className="relative bg-[#161B22]/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-10">
-         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FFFF00] to-transparent opacity-80 shadow-[0_0_20px_#FFFF00]" />
+         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FACC15] to-transparent opacity-80 shadow-[0_0_20px_#FACC15]" />
          
          <div className="p-6 space-y-6">
             <div>
-              <p className="text-[9px] text-[#FFFF00] font-black uppercase tracking-[0.2em] mb-4">MAÇ BİLGİLERİ</p>
+              <p className="text-[9px] text-[#FACC15] font-black uppercase tracking-[0.2em] mb-4">MAÇ BİLGİLERİ</p>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#FFFF00]/20 to-transparent rounded-[16px] border border-[#FFFF00]/30 flex items-center justify-center text-2xl shadow-inner">⚽</div>
+                <div className="w-12 h-12 bg-gradient-to-br from-[#FACC15]/20 to-transparent rounded-[16px] border border-[#FACC15]/30 flex items-center justify-center text-2xl shadow-inner">⚽</div>
                 <div>
                   <p className="text-lg font-black text-white italic uppercase tracking-tight">{format.label} Format</p>
                   <p className="text-[11px] text-gray-400 font-bold tracking-widest">Takımımda {myCount} oyuncu hazır</p>
@@ -1675,13 +1675,13 @@ const PaymentStep: React.FC<{
                   <img src={pitch.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={pitch.name} />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/50 to-transparent" />
                   <div className="absolute inset-0 p-5 flex flex-col justify-end">
-                    <p className="text-[9px] font-black text-[#FFFF00] uppercase tracking-[0.2em] mb-1">SAHA</p>
+                    <p className="text-[9px] font-black text-[#FACC15] uppercase tracking-[0.2em] mb-1">SAHA</p>
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="text-xl font-black text-white italic uppercase leading-none drop-shadow-md">{pitch.name}</p>
                         <div className="flex items-center gap-3 mt-2">
-                          <p className="text-[10px] text-gray-300 flex items-center gap-1 font-bold"><MapPin size={10} className="text-[#FFFF00]" />{pitch.district}</p>
-                          {timeSlot && <p className="text-[10px] text-gray-300 flex items-center gap-1 font-bold"><Clock size={10} className="text-[#FFFF00]" />{timeSlot.split(' - ')[0]}</p>}
+                          <p className="text-[10px] text-gray-300 flex items-center gap-1 font-bold"><MapPin size={10} className="text-[#FACC15]" />{pitch.district}</p>
+                          {timeSlot && <p className="text-[10px] text-gray-300 flex items-center gap-1 font-bold"><Clock size={10} className="text-[#FACC15]" />{timeSlot.split(' - ')[0]}</p>}
                         </div>
                       </div>
                     </div>
@@ -1703,11 +1703,11 @@ const PaymentStep: React.FC<{
                   </div>
                 )}
                 {ref && (
-                  <div className="flex items-center gap-4 p-3 bg-[#FFFF00]/5 rounded-[20px] border border-[#FFFF00]/20">
-                    <img src={ref.avatar} className="w-12 h-12 rounded-full border-2 border-[#FFFF00]/50 shadow-[0_0_15px_rgba(255,255,0,0.3)]" alt={ref.name} referrerPolicy="no-referrer" />
+                  <div className="flex items-center gap-4 p-3 bg-[#FACC15]/5 rounded-[20px] border border-[#FACC15]/20">
+                    <img src={ref.avatar} className="w-12 h-12 rounded-full border-2 border-[#FACC15]/50 shadow-[0_0_15px_rgba(250,204,21,0.3)]" alt={ref.name} referrerPolicy="no-referrer" />
                     <div className="flex-1">
                       <p className="text-base font-black text-white uppercase italic">{ref.name}</p>
-                      <p className="text-[10px] text-[#FFFF00] font-bold tracking-widest">HAKEM • {ref.isElite ? 'FIFA Kokartlı' : ref.preferredZones[0]}</p>
+                      <p className="text-[10px] text-[#FACC15] font-bold tracking-widest">HAKEM • {ref.isElite ? 'FIFA Kokartlı' : ref.preferredZones[0]}</p>
                     </div>
                   </div>
                 )}
@@ -1723,7 +1723,7 @@ const PaymentStep: React.FC<{
                    <p className="text-[11px] text-gray-500 font-bold tracking-widest">Toplam Maliyet</p>
                  </div>
                  <div className="text-right">
-                   <p className="text-3xl font-black text-[#FFFF00] drop-shadow-[0_0_10px_rgba(255,255,0,0.3)]">{total}₺</p>
+                   <p className="text-3xl font-black text-[#FACC15] drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">{total}₺</p>
                  </div>
                </div>
             </div>
@@ -1786,7 +1786,7 @@ const PaymentStep: React.FC<{
           <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ÖDEME İŞLEMİ SAHADA YAPILACAKTIR</span>
         </div>
         <motion.button disabled={isPaying} whileTap={{ scale: 0.95 }} onClick={handlePayDeposit}
-          className={`relative w-full h-16 font-black text-lg uppercase tracking-widest rounded-[20px] flex items-center justify-center gap-3 transition-all overflow-hidden ${isPaying ? 'bg-[#161B22] text-gray-500 cursor-not-allowed border border-white/5' : 'bg-[#FFFF00] text-black shadow-[0_0_30px_rgba(255,255,0,0.4)] hover:bg-yellow-300 hover:shadow-[0_0_40px_rgba(255,255,0,0.6)]'}`}>
+          className={`relative w-full h-16 font-black text-lg uppercase tracking-widest rounded-[20px] flex items-center justify-center gap-3 transition-all overflow-hidden ${isPaying ? 'bg-[#161B22] text-gray-500 cursor-not-allowed border border-white/5' : 'bg-[#FACC15] text-black shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:bg-yellow-300 hover:shadow-[0_0_40px_rgba(250,204,21,0.6)]'}`}>
           {isPaying ? <Activity className="animate-spin text-gray-500" size={24} /> : <><Check size={24} strokeWidth={3} /> REZERVASYONU TAMAMLA</>}
         </motion.button>
       </div>
@@ -1911,10 +1911,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                       whileHover={!isDraftMode ? { scale: 1.01 } : {}}
                       whileTap={!isDraftMode ? { scale: 0.99 } : {}}
                       onClick={() => { if (!isDraftMode) setActiveSheet('RULES') }}
-                      className={`flex-1 bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/30 opacity-90 cursor-not-allowed' : 'border-white/10 hover:border-[#FFFF00]/50'} rounded-2xl p-4 flex flex-col justify-center items-start shadow-lg transition-colors group relative overflow-hidden`}
+                      className={`flex-1 bg-white/5 backdrop-blur-2xl border ${isDraftMode ? 'border-amber-500/30 opacity-90 cursor-not-allowed' : 'border-white/10 hover:border-[#FACC15]/50'} rounded-2xl p-4 flex flex-col justify-center items-start shadow-lg transition-colors group relative overflow-hidden`}
                   >
-                      <div className="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20"><Activity size={60} className="text-[#FFFF00]" /></div>
-                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 flex items-center gap-1.5 z-10"><Activity size={12} className="text-[#FFFF00]"/> MAÇ ÖZELLİKLERİ</span>
+                      <div className="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20"><Activity size={60} className="text-[#FACC15]" /></div>
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1 flex items-center gap-1.5 z-10"><Activity size={12} className="text-[#FACC15]"/> MAÇ ÖZELLİKLERİ</span>
                       <span className="text-sm font-black text-white uppercase z-10 drop-shadow-md truncate">{format.label} • {costPerPerson > 0 ? `${costPerPerson}₺` : 'Ücretsiz'}</span>
                   </motion.button>
               </div>
@@ -1978,7 +1978,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        onChange={e => setMatchTitle(e.target.value)}
                        placeholder="Süper Lig Derbisi…"
                        maxLength={40}
-                       className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#FFFF00]/40 transition-colors"
+                       className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#FACC15]/40 transition-colors"
                      />
                    </div>
 
@@ -2003,16 +2003,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                          onClick={() => setVisibility('PRIVATE')}
                          className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${
                            visibility === 'PRIVATE'
-                             ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 shadow-[0_0_20px_rgba(255,255,0,0.15)]'
+                             ? 'bg-[#FACC15]/10 border-[#FACC15]/50 shadow-[0_0_20px_rgba(250,204,21,0.15)]'
                              : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
                          }`}
                        >
-                         <span className={`text-xs font-black uppercase tracking-wide ${visibility === 'PRIVATE' ? 'text-[#FFFF00]' : 'text-white'}`}>Özel</span>
+                         <span className={`text-xs font-black uppercase tracking-wide ${visibility === 'PRIVATE' ? 'text-[#FACC15]' : 'text-white'}`}>Özel</span>
                          <span className="text-[9px] text-white/40 font-bold leading-tight">Sadece kodla katılım</span>
                        </button>
                      </div>
                      {visibility === 'PRIVATE' && (
-                       <p className="text-[9px] text-[#FFFF00]/70 font-bold leading-relaxed pt-1">
+                       <p className="text-[9px] text-[#FACC15]/70 font-bold leading-relaxed pt-1">
                          Maç oluşturulduktan sonra lobide bir katılım kodu görünecek; bu kodu paylaştığın kişiler maça katılabilir.
                        </p>
                      )}
@@ -2055,7 +2055,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                          </p>
                        )}
                        <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
-                         Maç oluşturulunca rakip için boş bir <span className="text-white font-bold">deplasman tarafı</span> ve paylaşılabilir <span className="text-[#FFFF00] font-bold">davet kodu</span> oluşur. Rakip takım kodu girip slotlarını ödeyerek katılır. Ödemeyi tek kişi de yapabilir, herkes ayrı ayrı da.
+                         Maç oluşturulunca rakip için boş bir <span className="text-white font-bold">deplasman tarafı</span> ve paylaşılabilir <span className="text-[#FACC15] font-bold">davet kodu</span> oluşur. Rakip takım kodu girip slotlarını ödeyerek katılır. Ödemeyi tek kişi de yapabilir, herkes ayrı ayrı da.
                        </p>
                      </div>
                    )}
@@ -2106,7 +2106,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                              key={a}
                              onClick={() => setDna(prev => ({ ...prev, age: prev.age.includes(a) ? prev.age.filter(x => x !== a) : [...prev.age, a] }))}
                              className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-black transition-all backdrop-blur-md border ${
-                               dna.age.includes(a) ? 'bg-[#FFFF00]/10 border-[#FFFF00]/50 text-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.2)]' : 'bg-white/[0.02] border-white/10 text-white'
+                               dna.age.includes(a) ? 'bg-[#FACC15]/10 border-[#FACC15]/50 text-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white/[0.02] border-white/10 text-white'
                              }`}
                            >
                              {a}
@@ -2155,7 +2155,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                        type="range" min="0" max="500" step="10"
                        value={costPerPerson}
                        onChange={e => setManualBudget(parseInt(e.target.value))}
-                       className="w-full accent-[#FFFF00]"
+                       className="w-full accent-[#FACC15]"
                      />
                      <div className="flex justify-between text-[9px] text-white/25 font-bold">
                        <span>Ücretsiz</span><span>500 ₺</span>
@@ -2187,7 +2187,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
                    <p className="text-[10px] text-gray-500 text-center">Boş bırakılan alanlar otomatik doldurulur.</p>
 
-                   <button onClick={() => setActiveSheet('NONE')} className="w-full h-[60px] mt-4 bg-[#FFFF00] text-black font-black italic uppercase text-lg rounded-[24px] transition-all shadow-[0_0_35px_rgba(255,255,0,0.65)] hover:shadow-[0_0_45px_rgba(255,255,0,0.85)] active:scale-95 cursor-pointer">
+                   <button onClick={() => setActiveSheet('NONE')} className="w-full h-[60px] mt-4 bg-[#FACC15] text-black font-black italic uppercase text-lg rounded-[24px] transition-all shadow-[0_0_35px_rgba(250,204,21,0.65)] hover:shadow-[0_0_45px_rgba(250,204,21,0.85)] active:scale-95 cursor-pointer">
                        ONAYLA
                    </button>
                 </div>
@@ -2282,7 +2282,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                         onClick={() => setPickerCategory(cat)}
                                         className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                                         pickerCategory === cat 
-                                            ? (cat === 'Favorilerim' ? 'bg-[#FFFF00] text-black shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
+                                            ? (cat === 'Favorilerim' ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
                                             : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'
                                         }`}
                                     >
@@ -2317,7 +2317,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden relative border border-white/10">
                                                     {f.avatar ? <img src={f.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white font-black text-sm">{f.name.charAt(0)}</div>}
-                                                    {(f as any).isFavorite && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FFFF00] rounded-full flex items-center justify-center border-2 border-[#161B22]"><Star size={8} className="text-black" fill="black" /></div>}
+                                                    {(f as any).isFavorite && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FACC15] rounded-full flex items-center justify-center border-2 border-[#161B22]"><Star size={8} className="text-black" fill="black" /></div>}
                                                 </div>
                                                 <div>
                                                     <h3 className="text-sm font-black text-white drop-shadow-md">{f.name}</h3>
@@ -2368,7 +2368,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                                 setHomeTeamName(t.name);
                                                 setActiveSheet('NONE');
                                             }}
-                                            className="w-full py-3 bg-[#FFFF00]/10 text-[#FFFF00] border border-[#FFFF00]/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FFFF00] hover:text-black hover:shadow-[0_0_15px_rgba(255,255,0,0.3)] transition-all"
+                                            className="w-full py-3 bg-[#FACC15]/10 text-[#FACC15] border border-[#FACC15]/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FACC15] hover:text-black hover:shadow-[0_0_15px_rgba(250,204,21,0.3)] transition-all"
                                         >
                                             Kadroyu Sahaya Diz
                                         </button>

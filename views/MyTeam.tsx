@@ -1035,16 +1035,16 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                     <div
                                         className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-shadow ${
                                             isDragging
-                                                ? 'border-[#FFFF00] ring-4 ring-[#FFFF00]/60 shadow-[0_10px_25px_rgba(0,0,0,0.6)]'
+                                                ? 'border-[#FACC15] ring-4 ring-[#FACC15]/60 shadow-[0_10px_25px_rgba(0,0,0,0.6)]'
                                                 : 'border-white shadow-lg'
                                         }`}
                                     >
                                         <img src={player.avatar} alt={player.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className={`backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap flex flex-col items-center gap-0.5 ${isDragging ? 'bg-[#FFFF00] text-black' : 'bg-black/60 text-white'}`}>
+                                    <div className={`backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap flex flex-col items-center gap-0.5 ${isDragging ? 'bg-[#FACC15] text-black' : 'bg-black/60 text-white'}`}>
                                         <span>{player.name}</span>
                                         {player.instruction && (
-                                            <span className={`text-[7px] tracking-widest uppercase font-black ${isDragging ? 'text-black/70' : 'text-[#FFFF00]'}`}>{player.instruction}</span>
+                                            <span className={`text-[7px] tracking-widest uppercase font-black ${isDragging ? 'text-black/70' : 'text-[#FACC15]'}`}>{player.instruction}</span>
                                         )}
                                     </div>
                                 </div>
@@ -1249,7 +1249,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                         {isCaptain && (
                             <button
                                 onClick={() => setShowInviteModal(true)}
-                                className="flex items-center gap-2 bg-[#FFFF00] text-black px-3 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-300 transition-colors"
+                                className="flex items-center gap-2 bg-[#FACC15] text-black px-3 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-300 transition-colors"
                             >
                                 <UserPlus size={14} /> Ekle
                             </button>
@@ -1280,7 +1280,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                                 <select
                                                     value={player.instruction || ''}
                                                     onChange={(e) => handleSetInstruction(player.id, e.target.value)}
-                                                    className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FFFF00] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FFFF00] cursor-pointer uppercase tracking-wider transition-all"
+                                                    className="w-32 shrink-0 bg-[#0A0E14] text-[10px] font-bold text-[#FACC15] border border-white/10 rounded-xl px-2 py-1.5 outline-none focus:border-[#FACC15] cursor-pointer uppercase tracking-wider transition-all"
                                                 >
                                                     <option value="" className="text-gray-500">Talimat Yok</option>
                                                     <option value="Hücuma Çık">Hücuma Çık</option>
@@ -1302,7 +1302,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                             </>
                                         ) : (
                                             player.instruction ? (
-                                                <span className="shrink-0 text-[10px] font-bold text-[#FFFF00]/80 border border-[#FFFF00]/20 rounded-xl px-2.5 py-1.5 uppercase tracking-wider">
+                                                <span className="shrink-0 text-[10px] font-bold text-[#FACC15]/80 border border-[#FACC15]/20 rounded-xl px-2.5 py-1.5 uppercase tracking-wider">
                                                     {player.instruction}
                                                 </span>
                                             ) : (
@@ -1522,7 +1522,7 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                             <X size={20} />
                         </button>
                         <h3 className="text-xl font-black text-white mb-4">Oyuncu Davet Et</h3>
-                        <input type="text" placeholder="Kullanıcı Adı Ara..." className="w-full bg-[#0A0E14] border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#FFFF00] mb-4" />
+                        <input type="text" placeholder="Kullanıcı Adı Ara..." className="w-full bg-[#0A0E14] border border-gray-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#FACC15] mb-4" />
 
                         <p className="text-xs text-gray-500 font-bold uppercase mb-2">Rehberden Önerilenler</p>
                         <div className="space-y-2 mb-6">
@@ -1531,18 +1531,18 @@ const MyTeam: React.FC<MyTeamProps> = ({ onBack, onNavigate }) => {
                                     <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold">A</div>
                                     <span className="text-sm font-bold">Ahmet K.</span>
                                 </div>
-                                <button className="text-[#FFFF00] text-xs font-bold border border-[#FFFF00] px-2 py-1 rounded-lg hover:bg-[#FFFF00] hover:text-black transition-colors">Davet Et</button>
+                                <button className="text-[#FACC15] text-xs font-bold border border-[#FACC15] px-2 py-1 rounded-lg hover:bg-[#FACC15] hover:text-black transition-colors">Davet Et</button>
                             </div>
                             <div className="flex items-center justify-between p-2 bg-[#0A0E14] rounded-xl border border-gray-800">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center font-bold">M</div>
                                     <span className="text-sm font-bold">Mehmet Y.</span>
                                 </div>
-                                <button className="text-[#FFFF00] text-xs font-bold border border-[#FFFF00] px-2 py-1 rounded-lg hover:bg-[#FFFF00] hover:text-black transition-colors">Davet Et</button>
+                                <button className="text-[#FACC15] text-xs font-bold border border-[#FACC15] px-2 py-1 rounded-lg hover:bg-[#FACC15] hover:text-black transition-colors">Davet Et</button>
                             </div>
                         </div>
 
-                        <button className="w-full py-3 bg-[#FFFF00] text-black font-black rounded-xl hover:bg-yellow-300">
+                        <button className="w-full py-3 bg-[#FACC15] text-black font-black rounded-xl hover:bg-yellow-300">
                             Bağlantı Paylaş
                         </button>
                     </div>

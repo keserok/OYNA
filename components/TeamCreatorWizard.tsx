@@ -112,7 +112,7 @@ export const TeamCreatorWizard: React.FC<TeamCreatorWizardProps> = ({ onClose, o
       >
         {/* Close Button */}
         {!isCreating && (
-          <button onClick={onClose} className="absolute top-4 right-4 z-50 w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} aria-label="Kapat" className="absolute top-4 right-4 z-50 w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
             <X size={20} />
           </button>
         )}
@@ -300,7 +300,7 @@ export const TeamCreatorWizard: React.FC<TeamCreatorWizardProps> = ({ onClose, o
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Lokasyon</label>
                         <input 
                           type="text" value={teamData.location} onChange={e => updateData('location', e.target.value)}
-                          placeholder="Kadıköy, İstanbul"
+                          placeholder="Altınordu, Ordu"
                           className="w-full bg-[#161B22] border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-[#39FF14]/50 focus:bg-[#0A0E14] transition-all"
                         />
                       </div>
@@ -442,7 +442,7 @@ export const TeamCreatorWizard: React.FC<TeamCreatorWizardProps> = ({ onClose, o
                             {isSelected && (
                               <button 
                                 onClick={(e) => { e.stopPropagation(); updateData('captain', friend.id); }}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isCaptain ? 'bg-[#FFFF00] text-black shadow-[0_0_10px_rgba(255,255,0,0.5)]' : 'bg-white/10 text-gray-400 hover:text-[#FFFF00]'}`}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isCaptain ? 'bg-[#FACC15] text-black shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-white/10 text-gray-400 hover:text-[#FACC15]'}`}
                                 title="Kaptan Yap"
                               >
                                 <span className="font-black text-xs">C</span>

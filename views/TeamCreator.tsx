@@ -1,31 +1,28 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Users, ShieldCheck, CheckCircle2, ChevronRight, Palette } from 'lucide-react';
-import { ICommunity } from '../types';
+import { ArrowLeft, Users, CheckCircle2, ChevronRight, Palette } from 'lucide-react';
 
 interface TeamCreatorProps {
   onBack: () => void;
   onComplete: (teamData: any) => void;
-  communities: ICommunity[];
 }
 
 const COLORS = [
-  'bg-emerald-500', 'bg-blue-500', 'bg-red-500', 'bg-amber-500', 
+  'bg-emerald-500', 'bg-blue-500', 'bg-red-500', 'bg-amber-500',
   'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
 ];
 
 const FORMATIONS = ['5+1', '6+1', '7+1'];
 
-const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communities }) => {
+const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete }) => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
-  const [communityId, setCommunityId] = useState<string | null>(null);
   const [formation, setFormation] = useState('6+1');
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-    else onComplete({ name, color, communityId, formation });
+    if (step < 2) setStep(step + 1);
+    else onComplete({ name, color, formation });
   };
 
   return (
@@ -40,20 +37,20 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
           İptal
         </button>
         <h1 className="text-2xl font-bold tracking-tight">Yeni Takım Kur</h1>
-        <p className="text-slate-400 text-sm mt-1">Adım {step} / 3</p>
-        
+        <p className="text-slate-400 text-sm mt-1">Adım {step} / 2</p>
+
         {/* Progress Bar */}
         <div className="w-full h-1 bg-slate-800 mt-4 rounded-full overflow-hidden">
-          <motion.div 
+          <motion.div
             className="h-full bg-emerald-500"
-            initial={{ width: '33%' }}
-            animate={{ width: `${(step / 3) * 100}%` }}
+            initial={{ width: '50%' }}
+            animate={{ width: `${(step / 2) * 100}%` }}
             transition={{ duration: 0.3 }}
           />
         </div>
       </div>
 
-      {/* Content — scrollable so long community lists don't push footer out */}
+      {/* Content */}
       <div className="flex-1 p-6 overflow-y-auto">
         <AnimatePresence mode="wait">
           {step === 1 && (
@@ -65,14 +62,14 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
               className="space-y-6"
             >
               <h2 className="text-xl font-bold">Takım Kimliği</h2>
-              
+
               <div className="space-y-2">
                 <label className="text-sm text-slate-400 font-medium">Takım Adı</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Örn: Boğaziçi FC"
+                  placeholder="Örn: Altınordu FC"
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
@@ -104,55 +101,9 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              <h2 className="text-xl font-bold">Topluluk Seçimi</h2>
-              <p className="text-sm text-slate-400">Takımını bir topluluğa bağla veya bağımsız olarak kur.</p>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => setCommunityId(null)}
-                  className={`w-full p-4 rounded-xl border flex items-center justify-between transition-colors ${communityId === null ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-900 border-white/10 text-white hover:border-white/20'}`}
-                >
-                  <div className="flex items-center">
-                    <ShieldCheck size={24} className="mr-3" />
-                    <div className="text-left">
-                      <div className="font-bold">Bağımsız Takım</div>
-                      <div className="text-xs opacity-70">Herhangi bir topluluğa bağlı değil</div>
-                    </div>
-                  </div>
-                  {communityId === null && <CheckCircle2 size={20} />}
-                </button>
-
-                {communities.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => setCommunityId(c.id)}
-                    className={`w-full p-4 rounded-xl border flex items-center justify-between transition-colors ${communityId === c.id ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-900 border-white/10 text-white hover:border-white/20'}`}
-                  >
-                    <div className="flex items-center">
-                      <Users size={24} className="mr-3" />
-                      <div className="text-left">
-                        <div className="font-bold">{c.name}</div>
-                        <div className="text-xs opacity-70">{c.domain}</div>
-                      </div>
-                    </div>
-                    {communityId === c.id && <CheckCircle2 size={20} />}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {step === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
               <h2 className="text-xl font-bold">Kadro Dizilimi</h2>
               <p className="text-sm text-slate-400">Takımının varsayılan maç formatını seç.</p>
-              
+
               <div className="space-y-3">
                 {FORMATIONS.map(f => (
                   <button
@@ -165,7 +116,7 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
                   </button>
                 ))}
               </div>
-              
+
               <div className="mt-8 p-4 bg-slate-900/50 backdrop-blur-sm border border-white/5 rounded-xl">
                 <h3 className="text-sm font-bold text-slate-300 mb-2">Özet</h3>
                 <div className="flex items-center space-x-3 mb-2">
@@ -176,7 +127,6 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
                 </div>
                 <div className="text-xs text-slate-400 flex justify-between">
                   <span>Format: {formation}</span>
-                  <span>{communityId ? communities.find(c => c.id === communityId)?.name : 'Bağımsız'}</span>
                 </div>
               </div>
             </motion.div>
@@ -191,8 +141,8 @@ const TeamCreator: React.FC<TeamCreatorProps> = ({ onBack, onComplete, communiti
           disabled={step === 1 && !name.trim()}
           className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-bold py-4 rounded-xl flex items-center justify-center transition-colors"
         >
-          {step === 3 ? 'Takımı Kur' : 'Devam Et'}
-          {step < 3 && <ChevronRight size={20} className="ml-2" />}
+          {step === 2 ? 'Takımı Kur' : 'Devam Et'}
+          {step < 2 && <ChevronRight size={20} className="ml-2" />}
         </button>
       </div>
     </div>

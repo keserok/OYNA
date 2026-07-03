@@ -248,7 +248,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                           <button
                             onClick={() => handlePayDeposit(b)}
                             disabled={payingId === b.id}
-                            className={`w-full py-3 rounded-xl bg-[#FFFF00] text-black text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-transform ${payingId === b.id ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-yellow-300'}`}
+                            className={`w-full py-3 rounded-xl bg-[#FACC15] text-black text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-transform ${payingId === b.id ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-yellow-300'}`}
                           >
                             {payingId === b.id
                               ? (<><Loader2 size={14} className="animate-spin" /> İşleniyor...</>)
@@ -362,7 +362,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
                   ? <> <span className="text-[#39FF14] font-bold">₺{cancelResult.refund_amount}</span> (%{cancelResult.refund_percent}) iade işlemine alındı.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
-              <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FFFF00] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">
+              <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">
                 Tamam
               </button>
             </motion.div>

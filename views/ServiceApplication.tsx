@@ -101,7 +101,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [intentLetter, setIntentLetter] = useState('');
   const [style, setStyle] = useState('');
   const [zones, setZones] = useState<string[]>([]);
-  const [activeCity, setActiveCity] = useState('İstanbul');
+  const [activeCity, setActiveCity] = useState('Ordu');
   const [citySearch, setCitySearch] = useState('');
   const [showCityList, setShowCityList] = useState(false);
 

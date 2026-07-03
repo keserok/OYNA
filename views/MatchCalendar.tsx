@@ -87,7 +87,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
     <div className="min-h-screen bg-[#0A0E14] text-white relative flex flex-col overflow-hidden">
       {/* Background Decor */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#FFFF00]/5 blur-[120px] rounded-full"></div>
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#FACC15]/5 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-900/10 blur-[120px] rounded-full"></div>
       </div>
 
@@ -100,7 +100,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
           <ChevronLeft size={24} />
         </button>
         <div className="text-center">
-          <h1 className="text-sm font-black tracking-[0.3em] text-[#FFFF00] uppercase">MAÇ TAKVİMİM</h1>
+          <h1 className="text-sm font-black tracking-[0.3em] text-[#FACC15] uppercase">MAÇ TAKVİMİM</h1>
           <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">Yaklaşan Heyecanlar</p>
         </div>
         <div className="w-12"></div> {/* Spacer */}
@@ -115,13 +115,13 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
             onClick={() => onNavigate('MATCH_JOIN')}
-            className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FFFF00]/30 transition-all duration-500"
+            className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FACC15]/30 transition-all duration-500"
           >
             {/* Dynamic Pulse Strip */}
             <motion.div 
               animate={{ 
                 opacity: [0.2, 0.8, 0.2],
-                backgroundColor: ["#FFFF00", "#FFD700", "#FFFF00"]
+                backgroundColor: ["#FACC15", "#FFD700", "#FACC15"]
               }}
               transition={{ 
                 duration: getPulseDuration(match.timeLeftSeconds), 
@@ -134,22 +134,22 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             <div className="p-6 pl-8">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-xl font-black italic tracking-tight text-white group-hover:text-[#FFFF00] transition-colors">
+                  <h3 className="text-xl font-black italic tracking-tight text-white group-hover:text-[#FACC15] transition-colors">
                     {match.title}
                   </h3>
                   <div className="flex items-center gap-2 text-gray-400 mt-1">
-                    <MapPin size={14} className="text-[#FFFF00]" />
+                    <MapPin size={14} className="text-[#FACC15]" />
                     <span className="text-xs font-medium">{match.pitchName}</span>
                   </div>
                 </div>
                 <div className="bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 flex items-center gap-2">
                    <div className="flex items-center gap-1">
-                      <Calendar size={12} className="text-[#FFFF00]" />
+                      <Calendar size={12} className="text-[#FACC15]" />
                       <span className="text-[10px] font-black text-white uppercase">{match.date}</span>
                    </div>
                    <div className="w-1 h-1 rounded-full bg-white/30"></div>
                    <div className="flex items-center gap-1">
-                      <Clock size={12} className="text-[#FFFF00]" />
+                      <Clock size={12} className="text-[#FACC15]" />
                       <span className="text-[10px] font-black text-white">{match.time}</span>
                    </div>
                 </div>
@@ -163,7 +163,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                         <img src={`https://i.pravatar.cc/150?u=${match.id}${i}`} alt="player" className="w-full h-full object-cover" />
                       </div>
                     ))}
-                    <div className="w-8 h-8 rounded-full border-2 border-[#161B22] bg-[#FFFF00] flex items-center justify-center text-[10px] font-black text-black">
+                    <div className="w-8 h-8 rounded-full border-2 border-[#161B22] bg-[#FACC15] flex items-center justify-center text-[10px] font-black text-black">
                       +{match.playersCount - 3}
                     </div>
                   </div>
@@ -174,7 +174,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                 </div>
 
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-black text-[#FFFF00] uppercase tracking-widest">KALAN SÜRE</span>
+                  <span className="text-[10px] font-black text-[#FACC15] uppercase tracking-widest">KALAN SÜRE</span>
                   <span className="text-xs font-mono font-bold text-white tabular-nums">
                     {Math.floor(match.timeLeftSeconds / 3600)}s {Math.floor((match.timeLeftSeconds % 3600) / 60)}dk
                   </span>
@@ -184,7 +184,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
 
             {/* Hover Indicator */}
             <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 translate-x-4 transition-all duration-300">
-               <div className="w-10 h-10 rounded-full bg-[#FFFF00] flex items-center justify-center text-black shadow-[0_0_20px_rgba(255,255,0,0.4)]">
+               <div className="w-10 h-10 rounded-full bg-[#FACC15] flex items-center justify-center text-black shadow-[0_0_20px_rgba(250,204,21,0.4)]">
                   <ArrowRight size={20} />
                </div>
             </div>
@@ -229,7 +229,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                     setShowAddOptions(false);
                     onNavigate('MATCH_DISCOVERY');
                   }}
-                  className="w-full p-4 rounded-2xl bg-white/5 hover:bg-[#FFFF00] hover:text-black transition-all flex items-center gap-3 group"
+                  className="w-full p-4 rounded-2xl bg-white/5 hover:bg-[#FACC15] hover:text-black transition-all flex items-center gap-3 group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-black/10">
                     <Search size={20} />
@@ -245,7 +245,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                     setShowAddOptions(false);
                     setShowJoinCodeInput(true);
                   }}
-                  className="w-full p-4 rounded-2xl bg-white/5 hover:bg-[#FFFF00] hover:text-black transition-all flex items-center gap-3 group"
+                  className="w-full p-4 rounded-2xl bg-white/5 hover:bg-[#FACC15] hover:text-black transition-all flex items-center gap-3 group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-black/10">
                     <Key size={20} />
@@ -261,7 +261,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                     setShowAddOptions(false);
                     onNavigate('PITCH_DISCOVERY');
                   }}
-                  className="w-full p-4 rounded-2xl bg-white/5 hover:bg-[#FFFF00] hover:text-black transition-all flex items-center gap-3 group"
+                  className="w-full p-4 rounded-2xl bg-white/5 hover:bg-[#FACC15] hover:text-black transition-all flex items-center gap-3 group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-black/10">
                     <LayoutGrid size={20} />
@@ -280,7 +280,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowAddOptions(!showAddOptions)}
-          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${showAddOptions ? 'bg-white text-black rotate-45' : 'bg-[#FFFF00] text-black'}`}
+          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${showAddOptions ? 'bg-white text-black rotate-45' : 'bg-[#FACC15] text-black'}`}
         >
           <Plus size={32} />
         </motion.button>
@@ -311,8 +311,8 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
               </button>
 
               <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-[#FFFF00]/10 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-[#FFFF00]/20">
-                  <Key size={32} className="text-[#FFFF00]" />
+                <div className="w-16 h-16 bg-[#FACC15]/10 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-[#FACC15]/20">
+                  <Key size={32} className="text-[#FACC15]" />
                 </div>
                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">KOD İLE KATIL</h2>
                 <p className="text-gray-400 text-xs mt-2 font-medium">Sana iletilen 6 haneli maç kodunu gir.</p>
@@ -325,7 +325,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="ÖRN: XJ92K1"
-                  className="w-full h-16 bg-[#0A0E14] border border-white/10 rounded-2xl text-center text-2xl font-black tracking-[0.5em] text-[#FFFF00] outline-none focus:border-[#FFFF00]/50 transition-all"
+                  className="w-full h-16 bg-[#0A0E14] border border-white/10 rounded-2xl text-center text-2xl font-black tracking-[0.5em] text-[#FACC15] outline-none focus:border-[#FACC15]/50 transition-all"
                 />
 
                 <button 
@@ -336,7 +336,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                     }
                   }}
                   disabled={joinCode.length !== 6}
-                  className={`w-full h-16 rounded-2xl font-black text-sm tracking-widest transition-all ${joinCode.length === 6 ? 'bg-[#FFFF00] text-black shadow-[0_10px_30px_rgba(255,255,0,0.2)]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                  className={`w-full h-16 rounded-2xl font-black text-sm tracking-widest transition-all ${joinCode.length === 6 ? 'bg-[#FACC15] text-black shadow-[0_10px_30px_rgba(250,204,21,0.2)]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                 >
                   MAÇA GİT
                 </button>

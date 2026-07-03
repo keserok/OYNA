@@ -98,7 +98,7 @@ export const AddPitchModal: React.FC<AddPitchModalProps> = ({ isOpen, onClose, o
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-1">İlçe</label>
-                                    <input value={district} onChange={e => setDistrict(e.target.value)} type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 transition-colors" placeholder="Örn: Beşiktaş" />
+                                    <input value={district} onChange={e => setDistrict(e.target.value)} type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 transition-colors" placeholder="Örn: Altınordu" />
                                 </div>
                                 <div>
                                     <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-1">Kişi Başı Fiyat *</label>

@@ -272,7 +272,6 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         minRating: 4.0,
         image: selectedPitch?.image || 'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
         badges: ['Fair Play Vurgulu', `${format.label}`],
-        communityId: 'c1',
         missingPositions: [
             { role: 'STP', count: 1 },
             { role: 'ORT', count: 1 }

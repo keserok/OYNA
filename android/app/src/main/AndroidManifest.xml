@@ -15,11 +15,20 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- oyna:// özel şema deep link (push dışı URL açılışları) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="oyna" />
             </intent-filter>
 
         </activity>
@@ -38,4 +47,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Yakındaki saha/maç keşfi (Geolocation) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- QR bilet tarama ve profil fotoğrafı (Camera) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Android 13+ push bildirim izni -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

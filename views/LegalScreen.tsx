@@ -13,7 +13,7 @@ type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'SALES';
 // doldurulması GEREKİR. Yer tutucular [KÖŞELİ PARANTEZ] ile işaretlendi.
 
 const COMPANY = '[ŞİRKET ÜNVANI]';
-const CONTACT_EMAIL = '[iletisim@oyna.app]';
+const CONTACT_EMAIL = 'destek@oyna.app';
 const UPDATED = '15.06.2026';
 
 const DOCS: Record<LegalDocKey, { title: string; icon: React.ElementType; body: string }> = {

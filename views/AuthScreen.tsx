@@ -5,6 +5,7 @@ import { UserRole } from '../types';
 import { loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, demoLogin, isDemoLoginEnabled, isDemoLoginInput } from '../supabaseAuth';
 import { setRememberMe } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
+import { useAppStore } from '../store';
 import { AnimatedButton } from '../components/AnimatedButton';
 
 interface AuthScreenProps {
@@ -37,9 +38,9 @@ const THEMES: Record<string, {
   },
   default: {
     label: 'Oyuncu', badge: 'OYUNCU',
-    color: '#FFFF00', glow: 'rgba(255,255,0,0.35)',
+    color: '#FACC15', glow: 'rgba(250,204,21,0.35)',
     tagline: 'SAHAYA ÇIKMA VAKTİ.',
-    orb1: 'rgba(255,255,0,0.3)', orb2: 'rgba(255,255,0,0.18)',
+    orb1: 'rgba(250,204,21,0.3)', orb2: 'rgba(250,204,21,0.18)',
   },
 };
 
@@ -99,7 +100,7 @@ const AnimatedTagline = ({ text, color }: { text: string; color: string }) => {
   );
 };
 
-const KVKK_TEXT = `OYNA, kullanıcıların e-posta veya telefon numarasını 6379 sayılı KVKK kapsamında yalnızca kimlik doğrulama, hesap güvenliği ve hizmet bilgilendirmesi amacıyla işlemekte; üçüncü taraflarla paylaşmamakta ve kullanıcının talebi üzerine verilerini kalıcı olarak silmektedir. Kişisel verilerinize ilişkin haklarınızı destek@oyna.app adresine yazılı başvuru yoluyla kullanabilirsiniz.`;
+const KVKK_TEXT = `OYNA, kullanıcıların e-posta veya telefon numarasını 6698 sayılı KVKK kapsamında yalnızca kimlik doğrulama, hesap güvenliği ve hizmet bilgilendirmesi amacıyla işlemekte; üçüncü taraflarla paylaşmamakta ve kullanıcının talebi üzerine verilerini kalıcı olarak silmektedir. Kişisel verilerinize ilişkin haklarınızı destek@oyna.app adresine yazılı başvuru yoluyla kullanabilirsiniz.`;
 
 const SOZLESME_TEXT = `OYNA platformunu kullanan her kişi, uygulamanın yalnızca yasal spor organizasyonları amacıyla kullanılacağını, başkalarının haklarını ihlal eden içerik paylaşmayacağını ve hesabının güvenliğinden bizzat sorumlu olduğunu kabul etmektedir. Kullanım koşullarını ihlal eden hesaplar bildirim yapılmaksızın askıya alınabilir.`;
 
@@ -143,7 +144,7 @@ const LegalModal: React.FC<LegalModalsProps> = ({ openModal, setOpenModal }) => 
         <button
           type="button"
           onClick={() => setOpenModal(null)}
-          className="mt-6 w-full h-12 rounded-2xl font-black text-xs bg-[#FFFF00] text-black active:scale-95 transition-all outline-none"
+          className="mt-6 w-full h-12 rounded-2xl font-black text-xs bg-[#FACC15] text-black active:scale-95 transition-all outline-none"
         >
           ANLADIM, KAPAT
         </button>
@@ -162,7 +163,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [stage, setStage] = useState<'input' | 'otp'>('input');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [agreed, setAgreed] = useState(true);
+  // Yasal onay OPT-IN olmalı: kutu önceden işaretli gelemez (KVKK/mağaza incelemesi)
+  const [agreed, setAgreed] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState<'send' | 'verify' | 'guest' | 'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -274,7 +276,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     try {
       setRememberMe(remember);
       await loginWithApple();
-      onSuccess();
+      // Navigasyonu global auth listener'a bırak (Google ile aynı yol);
+      // onSuccess() burada da çağrılırsa çifte yönlendirme/flaş oluşur.
     } catch (err: any) {
       console.error('[Auth] Apple hatası:', err);
       setError(err?.message || 'Apple ile giriş başarısız.');
@@ -284,9 +287,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   };
 
   const handleGuestLogin = () => {
-    if (!agreed || isLoading) return;
+    if (isLoading) return;
     setIsLoading('guest');
-    onSuccess();
+    // Misafir modu: oturum yok, salt-okur gezinme. Buton vaadiyle tutarlı
+    // şekilde MAÇLARA götür; yazma aksiyonlarında kayıt kapısı açılır.
+    const { setIsGuest, resetNavigation } = useAppStore.getState();
+    setIsGuest(true);
+    resetNavigation('MATCH_DISCOVERY');
   };
 
   const handleHeaderBack = () => {
@@ -452,7 +459,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                 </p>
 
                 {error && (
-                  <p className="text-[11px] text-red-400 font-bold mt-3 px-1">{error}</p>
+                  <p className="text-xs text-red-400 font-bold mt-3 px-1">{error}</p>
                 )}
 
                 {/* KVKK + Sözleşme onayı */}
@@ -538,12 +545,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                 />
 
                 {error && (
-                  <p className="text-[11px] text-red-400 font-bold mt-3 text-center">{error}</p>
+                  <p className="text-xs text-red-400 font-bold mt-3 text-center">{error}</p>
                 )}
 
                 <div className="text-center mt-4">
                   {resendIn > 0 ? (
-                    <span className="text-[11px] text-gray-500 font-bold">
+                    <span className="text-xs text-gray-400 font-bold">
                       Kodu tekrar gönder ({resendIn}s)
                     </span>
                   ) : (

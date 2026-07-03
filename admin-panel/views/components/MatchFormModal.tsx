@@ -112,7 +112,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
               <input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inputCls} placeholder="Akşam Maçı..." />
             </Field>
             <Field label="Konum / Saha">
-              <input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} placeholder="Arena Beşiktaş" />
+              <input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} placeholder="Altınordu Arena" />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Tarih">

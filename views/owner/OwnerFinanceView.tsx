@@ -18,7 +18,7 @@ import { useOwnerToast } from './components/useOwnerToast';
 const EXPENSE_COLORS: Record<string, string> = {
   Fatura: '#00F5FF',
   Personel: '#FF00FF',
-  Bakım: '#FFFF00',
+  Bakım: '#FACC15',
   Diğer: '#00FF00',
 };
 

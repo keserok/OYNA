@@ -36,8 +36,8 @@ const DashboardSkeleton = () => (
     </div>
     <div className="h-24 w-full bg-gray-800 rounded-[32px]"></div>
     <div className="flex justify-center items-center gap-2 mt-10">
-      <div className="w-2 h-2 bg-[#FFFF00] rounded-full animate-bounce"></div>
-      <p className="text-[#FFFF00] text-xs font-bold uppercase tracking-widest">Sistem Sahayı Hazırlıyor...</p>
+      <div className="w-2 h-2 bg-[#FACC15] rounded-full animate-bounce"></div>
+      <p className="text-[#FACC15] text-xs font-bold uppercase tracking-widest">Sistem Sahayı Hazırlıyor...</p>
     </div>
   </div>
 );
@@ -336,14 +336,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     return 'Kadro ve maç lobileri merkezi';
   }, [closestMatch, userMatches.length]);
 
-  const COMMUNITIES = [
-    { id: 'c1', name: 'Boğaziçi Üni', short: 'BOUN' },
-    { id: 'c2', name: 'İTÜ', short: 'ITU' },
-    { id: 'c3', name: 'ODTÜ', short: 'ODTU' },
-  ];
-  const [activeCommunity, setActiveCommunity] = useState(COMMUNITIES[0]);
-  const [isCommunityDropdownOpen, setIsCommunityDropdownOpen] = useState(false);
-
   useEffect(() => {
     // ⚽ B2B SaaS Game Engine - 90-minute auto-cancel evaluation scan
     const scanAndAutoCancel = async () => {
@@ -382,7 +374,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
   if (isLoading) return <DashboardSkeleton />;
 
   return (
-    <div className="flex flex-col min-h-screen pb-6 bg-[#0A0E14] text-white font-sans selection:bg-[#FFFF00] selection:text-black">
+    <div className="flex flex-col min-h-screen pb-6 bg-[#0A0E14] text-white font-sans selection:bg-[#FACC15] selection:text-black">
 
       {/* Header */}
       <header className="px-4 xs:px-6 pt-safe pb-4 flex justify-between items-center bg-transparent z-30">
@@ -527,7 +519,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                   <motion.span
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
-                    className="px-3 py-1.5 text-[10px] font-black tracking-widest text-[#0A0E14] bg-[#FFFF00] rounded-xl shadow-[0_0_15px_rgba(255,255,0,0.6)] uppercase italic shrink-0"
+                    className="px-3 py-1.5 text-[10px] font-black tracking-widest text-[#0A0E14] bg-[#FACC15] rounded-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] uppercase italic shrink-0"
                   >
                     YENİ MAÇ EKLENDİ
                   </motion.span>
@@ -560,10 +552,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('MATCH_DISCOVERY')}
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
-          style={{ boxShadow: '0 0 60px rgba(255,255,0,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
+          style={{ boxShadow: '0 0 60px rgba(250,204,21,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
           {/* Sarı → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FFFF00 0%, #FFD700 25%, #FFC107 45%, #1a1600 75%, #000000 100%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FACC15 0%, #FFD700 25%, #FFC107 45%, #1a1600 75%, #000000 100%)' }} />
           {/* Animated sweep — koyu tarafta neon yeşili vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
@@ -574,7 +566,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           {/* Carbon texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
           {/* Sol taraf sarı parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(255,255,0,0.15) 0%, transparent 50%)' }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(250,204,21,0.15) 0%, transparent 50%)' }} />
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -592,7 +584,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 </motion.div>
                 <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
-              <h2 className="text-4xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,255,0,0.3)' }}>Top<br />Oyna</h2>
+              <h2 className="text-4xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(250,204,21,0.3)' }}>Top<br />Oyna</h2>
               <p className="text-[10px] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
             </div>
 
@@ -605,14 +597,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                 animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(255,255,0,0.6)', boxShadow: '0 0 20px rgba(255,255,0,0.4), inset 0 0 10px rgba(255,255,0,0.1)' }}
+                style={{ borderColor: 'rgba(250,204,21,0.6)', boxShadow: '0 0 20px rgba(250,204,21,0.4), inset 0 0 10px rgba(250,204,21,0.1)' }}
               />
               {/* İkinci parlama halkası */}
               <motion.div
                 animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(255,255,0,0.2)' }}
+                style={{ inset: '-6px', borderColor: 'rgba(250,204,21,0.2)' }}
               />
               {/* Rotate animasyonu ile logo */}
               <motion.div
@@ -624,7 +616,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
                   width={82}
                   height={82}
                   animate={false}
-                  className="drop-shadow-[0_0_16px_rgba(255,255,0,0.9)]"
+                  className="drop-shadow-[0_0_16px_rgba(250,204,21,0.9)]"
                 />
               </motion.div>
             </div>

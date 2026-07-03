@@ -152,9 +152,9 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
                       <p className="text-sm font-bold text-white capitalize">{formatBookingDate(bookingDateISO)}</p>
                     </div>
                   </div>
-                  <div className="bg-[#FFFF00]/10 border border-[#FFFF00]/30 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="bg-[#FACC15]/10 border border-[#FACC15]/30 rounded-2xl p-4 flex items-center justify-between">
                     <div>
-                      <p className="text-[9px] font-black text-[#FFFF00] uppercase tracking-widest flex items-center gap-1">
+                      <p className="text-[9px] font-black text-[#FACC15] uppercase tracking-widest flex items-center gap-1">
                         <Clock size={10} /> Saat
                       </p>
                       <p className="text-lg font-black text-white mt-0.5">{slotLabel}</p>
@@ -182,7 +182,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest">{card.brand}</p>
                   <p className="text-sm font-bold text-white font-mono">•••• {card.last4}</p>
                 </div>
-                <p className="text-lg font-black text-[#FFFF00]">{deposit}₺</p>
+                <p className="text-lg font-black text-[#FACC15]">{deposit}₺</p>
               </div>
 
               {error && (
@@ -194,7 +194,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
             <div className="fixed bottom-0 left-0 right-0 p-6 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14] to-transparent">
               <button
                 onClick={handleConfirm}
-                className="w-full max-w-sm mx-auto block h-16 rounded-[20px] bg-[#FFFF00] text-black font-black text-base tracking-wide shadow-[0_0_40px_rgba(255,255,0,0.35)] hover:brightness-105 active:scale-[0.98] transition-all"
+                className="w-full max-w-sm mx-auto block h-16 rounded-[20px] bg-[#FACC15] text-black font-black text-base tracking-wide shadow-[0_0_40px_rgba(250,204,21,0.35)] hover:brightness-105 active:scale-[0.98] transition-all"
               >
                 {deposit}₺ Kapora Öde & Onayla
               </button>
@@ -217,7 +217,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
                   cy="50"
                   r="44"
                   fill="none"
-                  stroke="#FFFF00"
+                  stroke="#FACC15"
                   strokeWidth="6"
                   strokeLinecap="round"
                   strokeDasharray={`${2 * Math.PI * 44}`}
@@ -250,7 +250,7 @@ const PitchDepositCheckout: React.FC<PitchDepositCheckoutProps> = ({
             animate={{ scale: 1, opacity: 1 }}
             className="flex flex-col items-center justify-center h-full relative"
           >
-            <Particles count={40} colors={['#39FF14', '#FFFF00', '#FFFFFF']} />
+            <Particles count={40} colors={['#39FF14', '#FACC15', '#FFFFFF']} />
             <div className="absolute inset-0 bg-[#39FF14]/10 blur-3xl pointer-events-none" />
             <motion.div
               initial={{ scale: 0 }}
