@@ -11,9 +11,9 @@ import {
 } from './availabilityService';
 import * as FB from '../supabaseMutations';
 
-const IS_LOCAL_DEV =
-  import.meta.env.VITE_DEV_MODE === 'true' ||
-  !import.meta.env.VITE_SUPABASE_URL;
+// Yalnızca açıkça VITE_DEV_MODE=true ise dev modu; env eksikliği dev moda DÜŞÜRMEZ
+// (supabaseClient prod fallback'i ile gerçek backend'e bağlıyken mock moda geçmek tehlikeli).
+const IS_LOCAL_DEV = import.meta.env.VITE_DEV_MODE === 'true';
 
 export async function fetchPitchBookings(
   pitchId: string,

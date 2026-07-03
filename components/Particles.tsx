@@ -16,7 +16,7 @@ interface ParticlesProps {
 
 export const Particles: React.FC<ParticlesProps> = ({ 
   count = 30, 
-  colors = ['#FFFF00', '#39FF14', '#FFFFFF', '#FF00FF'] 
+  colors = ['#FACC15', '#39FF14', '#FFFFFF', '#FF00FF'] 
 }) => {
   const [particles, setParticles] = useState<Particle[]>([]);
 

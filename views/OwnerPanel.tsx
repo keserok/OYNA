@@ -274,7 +274,7 @@ const AnimatedBarChart: React.FC<{ data: HourlyOccupancyCell[]; dataKey: 'revenu
                                 className={`w-full rounded-t-sm relative transition-all duration-300 ease-out origin-bottom ${isZero ? 'bg-white/5 h-1' : ''}`}
                                 style={{ 
                                     height: isZero ? '4px' : `${percentage}%`,
-                                    backgroundColor: isActive ? '#FFFF00' : color, 
+                                    backgroundColor: isActive ? '#FACC15' : color, 
                                     opacity: isActive ? 1 : 0.8,
                                     transform: 'scaleY(1)', 
                                     animation: `growUp 0.6s ease-out ${index * 0.05}s backwards`
@@ -533,7 +533,7 @@ const FinancialCalendarView: React.FC<{
                         </div>
                         <button 
                             onClick={() => setIsMonthlyView(!isMonthlyView)}
-                            className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <CalendarDays size={20} />
                             {isMonthlyView && <span className="text-[10px] font-black uppercase">Aylık</span>}
@@ -801,7 +801,7 @@ const FinancialCalendarView: React.FC<{
                         </div>
 
                         <div className="space-y-4 mb-6">
-                            <div className="bg-[#0A0E14] flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FFFF00] transition-colors gap-3">
+                            <div className="bg-[#0A0E14] flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FACC15] transition-colors gap-3">
                                 <div className="flex items-center w-full">
                                   <User size={18} className="text-gray-500 mr-3" />
                                   <input 
@@ -891,7 +891,7 @@ const FinancialCalendarView: React.FC<{
                                 }
                             }}
                             disabled={isAddingSlot}
-                            className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
+                            className="w-full py-4 bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
                         >
                             {isAddingSlot ? 'KAYDEDİLİYOR...' : 'KAYDET'}
                         </button>
@@ -1114,8 +1114,8 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
         <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                    <Clock size={16} className="text-[#FFFF00]" /> Uygulama Talepleri
-                    {rows.length > 0 && <span className="bg-[#FFFF00] text-black text-[10px] px-2 py-0.5 rounded-full">{rows.length}</span>}
+                    <Clock size={16} className="text-[#FACC15]" /> Uygulama Talepleri
+                    {rows.length > 0 && <span className="bg-[#FACC15] text-black text-[10px] px-2 py-0.5 rounded-full">{rows.length}</span>}
                 </h3>
                 <button onClick={load} className="text-gray-400 hover:text-white" title="Yenile"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>
             </div>
@@ -1230,7 +1230,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                     onClick={() => setSubTab('REQUESTS')}
                     className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                         subTab === 'REQUESTS' 
-                        ? 'bg-[#FFFF00] text-black shadow-lg scale-[1.02]' 
+                        ? 'bg-[#FACC15] text-black shadow-lg scale-[1.02]' 
                         : 'text-gray-500 hover:text-white'
                     }`}
                 >
@@ -1240,7 +1240,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                     onClick={() => setSubTab('PUBLIC_MATCHES')}
                     className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                         subTab === 'PUBLIC_MATCHES' 
-                        ? 'bg-[#FFFF00] text-black shadow-lg scale-[1.02]' 
+                        ? 'bg-[#FACC15] text-black shadow-lg scale-[1.02]' 
                         : 'text-gray-500 hover:text-white'
                     }`}
                 >
@@ -1331,9 +1331,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                             return (
                                 <div 
                                     key={match.id} 
-                                    className="bg-[#161B22] border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden group hover:border-[#FFFF00]/30 transition-all animate-in fade-in duration-300"
+                                    className="bg-[#161B22] border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden group hover:border-[#FACC15]/30 transition-all animate-in fade-in duration-300"
                                 >
-                                    <div className={`absolute top-0 left-0 w-1 h-full ${isFull ? 'bg-emerald-500' : 'bg-[#FFFF00]'}`}></div>
+                                    <div className={`absolute top-0 left-0 w-1 h-full ${isFull ? 'bg-emerald-500' : 'bg-[#FACC15]'}`}></div>
                                     
                                     <div className="flex justify-between items-start mb-4 pl-2">
                                         <div>
@@ -1358,7 +1358,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                                         {match.maxPlayers > 0 && (
                                             <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden">
                                                 <div 
-                                                    className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-[#FFFF00] shadow-[0_0_8px_rgba(255,255,0,0.3)]'}`} 
+                                                    className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.3)]'}`} 
                                                     style={{ width: `${percentage}%` }}
                                                 ></div>
                                             </div>
@@ -1412,7 +1412,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
                         <button
                             onClick={() => setSelectedMatch(null)}
-                            className="w-full py-4 bg-[#FFFF00] text-black font-black text-sm rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all uppercase tracking-wider text-center"
+                            className="w-full py-4 bg-[#FACC15] text-black font-black text-sm rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all uppercase tracking-wider text-center"
                         >
                             KAPAT
                         </button>
@@ -1449,7 +1449,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
   const handlePlanUpgrade = () => {
     notify(
-      'Plan yükseltmesi için destek@oyna.app adresine yazın veya admin panelinden SaaS Hesapları bölümünden planınız güncellenebilir.',
+      'Plan yükseltmesi için destek@oyna.app adresine yazın; ekibimiz planınızı güncelleyecektir.',
       'info',
     );
   };
@@ -1880,14 +1880,14 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   if (needsOnboarding && !isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center">
-        <Building2 size={64} className="text-[#FFFF00] mb-6" />
+        <Building2 size={64} className="text-[#FACC15] mb-6" />
         <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
           Ücretli işletme paneline erişmek için tesis kaydını tamamlayın. Demo verisi kaldırıldıysa gerçek tesisinizi oluşturun.
         </p>
         <button
           onClick={() => onNeedOnboarding?.()}
-          className="px-8 py-4 bg-[#FFFF00] text-black font-black rounded-2xl mb-4"
+          className="px-8 py-4 bg-[#FACC15] text-black font-black rounded-2xl mb-4"
         >
           TESİS KAYDI BAŞLAT
         </button>

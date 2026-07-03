@@ -109,7 +109,7 @@ const Shell: React.FC<{ title: string; onClose: () => void; children: React.Reac
                 <h2 className="text-sm font-black text-white tracking-widest uppercase">{title}</h2>
                 <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-all"><X size={15} /></button>
             </div>
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-5">{children}</div>
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 space-y-5">{children}</div>
             <div className="p-4 border-t border-white/10 bg-[#121820] rounded-b-3xl shrink-0">{footer}</div>
         </motion.div>
     </motion.div>
@@ -407,7 +407,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
     const { showOk, Toast } = useToast();
     const [edit, setEdit] = useState<Partial<Pitch> & { name: string; location: string; district: string; totalPrice: number; pricePerPerson: number; rating: number; googleRating: number; googleReviews: number; lighting: number; grassQuality: number; lockerRoomQuality: number; goalQuality: number; occupancy: number; image: string }>(
         {
-            name: '', location: '', district: 'Beşiktaş', totalPrice: 3000, pricePerPerson: 215,
+            name: '', location: '', district: 'Altınordu', totalPrice: 3000, pricePerPerson: 215,
             rating: 4.5, googleRating: 4.4, googleReviews: 0,
             lighting: 85, grassQuality: 85, lockerRoomQuality: 80, goalQuality: 82, occupancy: 70,
             image: '', images: [], amenities: [], distance: '1.0 km',
@@ -424,7 +424,7 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
             id: `pitch_${Date.now()}`,
             name: edit.name,
             location: edit.location,
-            district: edit.district || 'Beşiktaş',
+            district: edit.district || 'Altınordu',
             distance: edit.distance || '1.0 km',
             rating: edit.rating,
             googleRating: edit.googleRating,
@@ -477,10 +477,10 @@ export const AddPitchModal: React.FC<ModalProps> = ({ onClose }) => {
 
                 {/* Identity */}
                 <div className="grid grid-cols-2 gap-4">
-                    <FI label="Saha Adı *"><I placeholder="örn. Beşiktaş Arena" value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
-                    <FI label="İlçe"><I placeholder="örn. Beşiktaş" value={edit.district} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
+                    <FI label="Saha Adı *"><I placeholder="örn. Altınordu Arena" value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
+                    <FI label="İlçe"><I placeholder="örn. Altınordu" value={edit.district} onChange={e => setEdit({ ...edit, district: e.target.value })} /></FI>
                 </div>
-                <FI label="Tam Adres *"><I placeholder="örn. Barbaros Bulvarı, Beşiktaş/İstanbul" value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
+                <FI label="Tam Adres *"><I placeholder="örn. Karadeniz Cd., Altınordu/Ordu" value={edit.location} onChange={e => setEdit({ ...edit, location: e.target.value })} /></FI>
                 
                 {/* GPS Coordinates */}
                 <div className="p-4 bg-black/30 rounded-2xl border border-white/5">
@@ -676,6 +676,30 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                                     </span>
                                 </div>
                             ))}
+
+                            {/* Kart seviyesi (tier) seçici */}
+                            <div className="pt-3 mt-1 border-t border-white/5">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">KART SEVİYESİ</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {([
+                                        { key: 'gold', label: 'ALTIN', cls: 'from-yellow-500/20 to-amber-600/20 text-yellow-300 border-yellow-500/40' },
+                                        { key: 'silver', label: 'GÜMÜŞ', cls: 'from-gray-300/15 to-gray-400/15 text-gray-200 border-gray-300/40' },
+                                        { key: 'bronze', label: 'BRONZ', cls: 'from-orange-700/25 to-amber-800/25 text-orange-300 border-orange-600/40' },
+                                    ] as const).map(t => {
+                                        const active = (edit.playerCard?.tier || 'gold') === t.key;
+                                        return (
+                                            <button key={t.key} type="button"
+                                                onClick={() => setEdit(prev => ({
+                                                    ...prev,
+                                                    playerCard: { ...(prev.playerCard || {} as any), tier: t.key },
+                                                }))}
+                                                className={`h-9 rounded-xl text-[10px] font-black border transition-all bg-gradient-to-br ${t.cls} ${active ? 'ring-2 ring-white/30 opacity-100' : 'opacity-50 hover:opacity-80'}`}>
+                                                {t.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Wallet */}
@@ -696,7 +720,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                         {/* Status toggles */}
                         <div className="space-y-2">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
-                            <Toggle label="PRO Üyelik" desc="Özel maçlar ve indirimler" value={edit.isPro} onChange={() => setEdit(prev => ({ ...prev, isPro: !prev.isPro }))} />
+                            <Toggle label="Oyuncu Kartı Aktif" desc="Kart uygulamada (Top Oyna) görünsün — kapatılırsa gizlenir" value={edit.cardActive ?? true} onChange={() => setEdit(prev => ({ ...prev, cardActive: !(prev.cardActive ?? true) }))} />
                             <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
                             <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
                         </div>
@@ -710,7 +734,6 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             role={edit.role}
                             name={edit.name}
                             avatar={edit.avatar}
-                            isElite={edit.isPro}
                             stats={{
                                 label1: 'HIZ', val1: stats.pace.value,
                                 label2: 'DRB', val2: stats.dribbling.value,

@@ -23,8 +23,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     children, activeSubRoute, onNavigate, onBack, pendingVerifCount = 0, providerIdentityCount = 0, verificationCount = 0, mode = 'embedded', adminSession,
 }) => {
     const [cmdOpen, setCmdOpen] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+        try { return localStorage.getItem('oyna_admin_sidebar_collapsed') === '1'; } catch { return false; }
+    });
+    const toggleCollapse = () => setSidebarCollapsed((c) => {
+        const next = !c;
+        try { localStorage.setItem('oyna_admin_sidebar_collapsed', next ? '1' : '0'); } catch { /* storage opsiyonel */ }
+        return next;
+    });
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -44,38 +50,26 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             <div className="h-0.5 w-full bg-gradient-to-r from-red-700 via-red-500 to-orange-500 shrink-0" />
 
             <div className="flex flex-1 overflow-hidden relative">
-                {/* Mobile overlay */}
-                {isMobileMenuOpen && (
-                    <div 
-                        className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                    />
-                )}
-                
-                <div className={`fixed inset-y-0 left-0 z-50 md:relative md:flex transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-                    <Sidebar
-                        activeSubRoute={activeSubRoute}
-                        onNavigate={(route) => {
-                            onNavigate(route);
-                            setIsMobileMenuOpen(false);
-                        }}
-                        onBack={onBack}
-                        pendingVerifCount={pendingVerifCount}
-                        providerIdentityCount={providerIdentityCount}
-                        verificationCount={verificationCount}
-                        collapsed={sidebarCollapsed}
-                        onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
-                        mode={mode}
-                        adminSession={adminSession}
-                    />
-                </div>
+                {/* Sidebar — her zaman akışta (içeriği iter), daraltılabilir; içeriği ASLA örtmez */}
+                <Sidebar
+                    activeSubRoute={activeSubRoute}
+                    onNavigate={onNavigate}
+                    onBack={onBack}
+                    pendingVerifCount={pendingVerifCount}
+                    providerIdentityCount={providerIdentityCount}
+                    verificationCount={verificationCount}
+                    collapsed={sidebarCollapsed}
+                    onToggleCollapse={toggleCollapse}
+                    mode={mode}
+                    adminSession={adminSession}
+                />
 
-                <main className="flex-1 flex flex-col overflow-hidden w-full bg-black/20">
+                <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-black/20">
                     <AdminStatusBar />
-                    <TopBar 
+                    <TopBar
                         activeSubRoute={activeSubRoute}
                         onOpenCommandPalette={() => setCmdOpen(true)}
-                        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        onToggleMobileMenu={toggleCollapse}
                         onNavigate={(route) => onNavigate(route as GodViewSubRoute)}
                     />
 

@@ -315,12 +315,15 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               }
               onClick={onPaymentSettings}
             />
-            <MenuRow
-              icon={<Zap size={18} />}
-              iconClass="text-amber-400"
-              label="SaaS & Fatura"
-              onClick={onBilling}
-            />
+            {/* SaaS & Fatura girişi şimdilik gizli (kapsam dışı — abonelik altyapısı korunuyor, geri açılabilir). */}
+            {false && (
+              <MenuRow
+                icon={<Zap size={18} />}
+                iconClass="text-amber-400"
+                label="SaaS & Fatura"
+                onClick={onBilling}
+              />
+            )}
           </div>
         </section>
 

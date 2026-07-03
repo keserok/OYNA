@@ -99,7 +99,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
               <button 
                 onClick={generateBalancedTeams}
                 disabled={selectedPlayers.length < 2}
-                className="bg-[#FFFF00] text-black px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+                className="bg-[#FACC15] text-black px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
               >
                 <RefreshCw size={14} /> Dengele
               </button>
@@ -132,7 +132,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
                       <div className="relative">
                         <img src={player.avatar} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
                         <div className="absolute -bottom-2 -right-2 bg-[#0A0E14] border border-white/20 rounded-full w-6 h-6 flex items-center justify-center">
-                          <span className="text-[10px] font-black text-[#FFFF00]">{player.overall}</span>
+                          <span className="text-[10px] font-black text-[#FACC15]">{player.overall}</span>
                         </div>
                       </div>
                       <div>
@@ -164,7 +164,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
                   <h3 className="text-lg font-black text-white uppercase tracking-tighter">A Takımı</h3>
                   <div className="inline-flex items-center gap-2 mt-2 bg-black/40 px-3 py-1 rounded-full border border-white/10">
                     <span className="text-[10px] text-gray-400 font-bold uppercase">Ortalama Güç</span>
-                    <span className="text-sm font-black text-[#FFFF00]">{getAverage(teamA)}</span>
+                    <span className="text-sm font-black text-[#FACC15]">{getAverage(teamA)}</span>
                   </div>
                 </div>
                 <div className="p-2 space-y-1">
@@ -174,7 +174,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
                         <img src={p.avatar} className="w-8 h-8 rounded-full" />
                         <span className="text-xs font-bold text-white">{p.name}</span>
                       </div>
-                      <span className="text-xs font-black text-[#FFFF00]">{p.overall}</span>
+                      <span className="text-xs font-black text-[#FACC15]">{p.overall}</span>
                     </div>
                   ))}
                 </div>
@@ -186,7 +186,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
                   <h3 className="text-lg font-black text-white uppercase tracking-tighter">B Takımı</h3>
                   <div className="inline-flex items-center gap-2 mt-2 bg-black/40 px-3 py-1 rounded-full border border-white/10">
                     <span className="text-[10px] text-gray-400 font-bold uppercase">Ortalama Güç</span>
-                    <span className="text-sm font-black text-[#FFFF00]">{getAverage(teamB)}</span>
+                    <span className="text-sm font-black text-[#FACC15]">{getAverage(teamB)}</span>
                   </div>
                 </div>
                 <div className="p-2 space-y-1">
@@ -196,7 +196,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({ onBack }) => {
                         <img src={p.avatar} className="w-8 h-8 rounded-full" />
                         <span className="text-xs font-bold text-white">{p.name}</span>
                       </div>
-                      <span className="text-xs font-black text-[#FFFF00]">{p.overall}</span>
+                      <span className="text-xs font-black text-[#FACC15]">{p.overall}</span>
                     </div>
                   ))}
                 </div>

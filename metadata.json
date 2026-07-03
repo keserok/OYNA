@@ -1,5 +1,5 @@
 {
-  "name": "Remix: Remix: Oyna Oyuncu Tasarım 4",
+  "name": "OYNA",
   "description": "Halı saha oyuncuları için maç bulma, takım kurma ve gelişmiş taktik studio (duran top, antrenman, analiz) platformu.",
   "requestFramePermissions": [
     "geolocation"

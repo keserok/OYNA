@@ -89,7 +89,7 @@ export const loginWithApple = async (): Promise<void> => {
       const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
       const nonce = crypto.randomUUID();
       const result = await SignInWithApple.authorize({
-        clientId: 'com.oyna.app.kerem',
+        clientId: 'com.oyna.app',
         redirectURI: window.location.origin,
         scopes: 'email name',
         state: crypto.randomUUID(),
@@ -243,7 +243,7 @@ export const demoLogin = async (raw: string) => {
   if (key === 'mirackerem' || key === 'olimpiyat') key = 'mirackerem' + DEMO_DOMAIN;
   if (!key.includes('@')) key = key + DEMO_DOMAIN; // "mehmet.yilmaz" → tam e-posta
   if (!key.endsWith(DEMO_DOMAIN)) {
-    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna-test.com) geçerlidir.');
+    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna.app) geçerlidir.');
   }
   const { data, error } = await supabase.auth.signInWithPassword({
     email: key,

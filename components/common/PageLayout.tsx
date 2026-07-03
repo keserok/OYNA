@@ -9,6 +9,7 @@ interface PageLayoutProps {
   rightElement?: React.ReactNode;
   showSafeBottom?: boolean;
   scrollable?: boolean;
+  transparentHeader?: boolean;
 }
 
 export const PageLayout: React.FC<PageLayoutProps> = ({
@@ -19,6 +20,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   rightElement,
   showSafeBottom = true,
   scrollable = true,
+  transparentHeader = false,
 }) => {
   return (
     <div
@@ -27,7 +29,11 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       {/* Dynamic top safe area header */}
       {(title || onBack || rightElement) && (
         <header
-          className="sticky top-0 z-40 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 px-4 flex items-center transition-all pt-safe relative"
+          className={`sticky top-0 z-40 px-4 flex items-center transition-all pt-safe relative ${
+            transparentHeader
+              ? 'bg-transparent'
+              : 'bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5'
+          }`}
           style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}
         >
           {/* Left slot — anchors back button, keeps title centered */}

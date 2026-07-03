@@ -366,3 +366,37 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Yasal metinlerin hukukçu onaylı finalizasyonu** + **iyzico sözleşmesi/KYC**.
 - Asgari kayıt yaşı (öneri: 15) — son onay.
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam) — uygulama detayı.
+
+---
+
+## 14. 📝 Revizyon Notları (02.07.2026 — kod↔doküman hizalaması)
+
+Kod tabanı denetiminde doküman ile uygulamanın sessizce ayrıştığı noktalar tespit edildi.
+"Tek kaynak" ilkesi bu doküman için de geçerli olsun diye ayrışmalar burada kayıt altına alındı.
+
+### 14.1 Revize edilen kararlar
+- **Misafir girişi (§3.1 revize ÖNERİSİ):** Eski karar "lansmanda YOK" idi. Uygulamada misafir
+  modu **değer kapılı** hale getirildi: misafir yalnız gezinir (Top Oyna), yazma aksiyonlarında
+  (maça katıl/ödeme) kayıt daveti açılır; sahte kimlikle işlem mümkün değil (`isGuest` +
+  `SignupGate`). Ertelenmiş onboarding modeliyle tutarlı olduğundan **lansmanda kalması
+  önerilir** — ⚠️ kurucu onayı bekliyor; reddedilirse `AuthScreen`'deki buton kaldırılır.
+- **Onboarding (§3.1 revize):** "Sayfa sayfa zorunlu sihirbaz (ad-soyad→telefon→foto→konum)"
+  yerine kodda **onaylanmış ertelenmiş model** geçerli: 3 ekran değer anlatımı → Auth →
+  bağlamsal konum izni; profil tamamlama ilk maç akışına ertelenir. Zorunlu profil fotoğrafı
+  kararı bu modelle birlikte düştü.
+- **Hesap silme (§3.1 uygulandı):** "Aktif rezervasyon varken engellenir" kuralı DB'ye işlendi
+  (`20260709000001_account_deletion_active_booking_guard.sql`): aktif saha rezervasyonu veya
+  bloke/tahsil edilmiş yaklaşan maç katılımı varken silme reddedilir. Bekleme süresi tek
+  kaynaktan (`app_config.account_deletion_wait_days`, varsayılan **7 gün**; UI eşitlendi).
+
+### 14.2 Bu temizlikte kapatılan kalıntılar (§2 kapsam dışı)
+- Oyuncu Premium/Pro kalıntıları (`isPro`, `proPrice`, admin Pro toggle) kaldırıldı.
+- TeamCreator'daki Topluluk prop'u + hardcoded "Boğaziçi Üniversitesi" verisi kaldırıldı.
+- Kapsam dışı feature-flag kalıntıları (aiCoach/scoutSystem) ayıklandı.
+- Kullanıcıya görünen İstanbul kalıntıları Ordu'ya çevrildi/temizlendi (§9).
+
+### 14.3 Hâlâ açık (bilinçli, sıraya alındı)
+- **§7.1 tek skor:** `rating`/`fairPlayScore`/`reliabilityScore` hâlâ ayrı — DB+UI koordineli
+  refactor gerektirir; lansman engeli değil.
+- **§4.5 ücretsiz sahalar & yaş matrisi:** `is_free` kavramı henüz yok — ayrı faz olarak yapılacak.
+- **§8.2 Studio modülerleştirme** ve **§10.1 i18n altyapısı** — lansman sonrası.

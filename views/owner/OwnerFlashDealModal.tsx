@@ -117,7 +117,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
               type="number"
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
-              className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center border-b border-white/20 focus:border-[#FFFF00] transition-colors"
+              className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center border-b border-white/20 focus:border-[#FACC15] transition-colors"
             />
           </div>
           {discountPercent >= 5 && discountPercent <= 80 && (
@@ -170,7 +170,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-[2] py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
+            className="flex-[2] py-4 bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
           >
             {saving ? 'KAYDEDİLİYOR...' : 'FLASH DEAL OLUŞTUR'}
           </button>

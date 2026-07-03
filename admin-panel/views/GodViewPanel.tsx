@@ -22,7 +22,6 @@ import { AdminPermissionsProvider, useAdminPermissions } from './context/AdminPe
 import { AdminFeatureFlagsProvider, useAdminFeatureFlags } from './context/AdminFeatureFlagsContext';
 import { useAdminToast } from './context/AdminToastContext';
 
-const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const CommandCenterPage = lazy(() => import('./pages/CommandCenterPage').then(m => ({ default: m.CommandCenterPage })));
@@ -202,8 +201,6 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <CampaignsPage route="NOTIFICATIONS" />;
             case 'MODERATION':
                 return <ModerationPage />;
-            case 'OWNER_ACCOUNTS':
-                return <OwnerAccountsPage />;
             case 'AUDIT_LOG':
                 return <AuditLogPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             default:

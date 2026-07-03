@@ -19,7 +19,7 @@ const UpcomingMatchesView: React.FC<UpcomingMatchesViewProps> = ({ onBack, onNav
   const displayList = activeTab === 'UPCOMING' ? sortedActiveMatches : cancelledMatches;
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col relative font-sans selection:bg-[#FFFF00] selection:text-black">
+    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col relative font-sans selection:bg-[#FACC15] selection:text-black">
       {/* Background overlay */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 mix-blend-overlay pointer-events-none" />
 
@@ -91,7 +91,7 @@ const UpcomingMatchesView: React.FC<UpcomingMatchesViewProps> = ({ onBack, onNav
               className="flex flex-col items-center justify-center h-64 text-center px-4 relative z-10"
             >
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
-                <Clock size={32} className={`${activeTab === 'UPCOMING' ? 'text-[#FFFF00]/40' : 'text-[#ef4444]/40'}`} />
+                <Clock size={32} className={`${activeTab === 'UPCOMING' ? 'text-[#FACC15]/40' : 'text-[#ef4444]/40'}`} />
               </div>
               <h3 className="text-lg font-black italic uppercase text-white mb-2 drop-shadow-lg">Maç Bulunamadı</h3>
               <p className="text-xs text-white/50 tracking-widest uppercase">

@@ -642,7 +642,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="w-24 h-32 bg-black/40 rounded-2xl overflow-hidden border-2 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
                               <img src={auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1529516222410-a269c812ac8d?auto=format&fit=crop&q=80&w=400"} className="w-full h-full object-cover object-center" alt="Goalkeeper" referrerPolicy="no-referrer" />
                           </div>
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFFF00] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
+                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
                               LVL 8
                           </div>
                       </div>
@@ -652,7 +652,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <span className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
                                   <Shield size={10} fill="black" /> PANTER
                               </span>
-                              <span className="text-xs text-gray-400">Kadıköy</span>
+                              <span className="text-xs text-gray-400">Altınordu</span>
                           </div>
                           
                           {/* Stats Grid */}
@@ -693,7 +693,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                 {/* Glow orbs */}
                 <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full blur-[50px]" style={{ background: 'rgba(34,197,94,0.4)' }} />
-                <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full blur-[40px]" style={{ background: 'rgba(255,255,0,0.15)' }} />
+                <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full blur-[40px]" style={{ background: 'rgba(250,204,21,0.15)' }} />
 
                 <div className="relative z-10 h-full flex flex-col p-4">
                   {/* Header */}
@@ -769,7 +769,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="w-24 h-32 bg-black/40 rounded-2xl overflow-hidden border-2 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
                               <img src={auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=400"} className="w-full h-full object-cover object-top" alt="Referee" referrerPolicy="no-referrer" />
                           </div>
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFFF00] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
+                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
                               FIFA
                           </div>
                       </div>
@@ -779,7 +779,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
                                   <Scale size={10} /> OTORİTER
                               </span>
-                              <span className="text-xs text-gray-400">İstanbul</span>
+                              <span className="text-xs text-gray-400">Ordu</span>
                           </div>
                           
                           {/* Stats Grid */}
@@ -1130,7 +1130,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                       <div className="text-right">
                           <p className="text-[10px] text-gray-500 font-bold uppercase">Sıradaki Maç</p>
-                          <p className="text-lg font-black text-[#FFFF00]">{myUpcomingMatches[0]?.time || '--:--'}</p>
+                          <p className="text-lg font-black text-[#FACC15]">{myUpcomingMatches[0]?.time || '--:--'}</p>
                       </div>
                   </div>
               </div>
@@ -1154,7 +1154,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                           <div className="text-right">
                               <p className="text-[10px] text-gray-500 font-bold uppercase">KALAN SÜRE</p>
-                              <p className="text-xl font-black text-[#FFFF00] font-mono">{timeLeft}</p>
+                              <p className="text-xl font-black text-[#FACC15] font-mono">{timeLeft}</p>
                           </div>
                       </div>
                       <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-3">
@@ -1223,7 +1223,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {/* Direct Offers Section */}
           <div className="px-6">
               <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={16} className="text-[#FFFF00]" />
+                  <Sparkles size={16} className="text-[#FACC15]" />
                   <h3 className="font-black text-white text-sm tracking-wide uppercase">ÖZEL TEKLİFLER</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
@@ -1235,14 +1235,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <motion.div 
                         key={offer.id} 
                         whileHover={{ y: -5 }}
-                        className="snap-center shrink-0 w-72 bg-gradient-to-br from-yellow-900/40 to-[#161B22] border border-[#FFFF00]/30 rounded-[24px] p-4 relative overflow-hidden"
+                        className="snap-center shrink-0 w-72 bg-gradient-to-br from-yellow-900/40 to-[#161B22] border border-[#FACC15]/30 rounded-[24px] p-4 relative overflow-hidden"
                       >
-                          <div className="absolute top-0 right-0 px-2 py-1 bg-[#FFFF00] text-black text-[9px] font-black rounded-bl-xl">
+                          <div className="absolute top-0 right-0 px-2 py-1 bg-[#FACC15] text-black text-[9px] font-black rounded-bl-xl">
                               {offer.expiresIn} KALDI
                           </div>
                           
                           <div className="flex gap-3 mb-3">
-                              <div className="w-10 h-10 bg-[#FFFF00]/10 rounded-full flex items-center justify-center text-[#FFFF00] font-black border border-[#FFFF00]/20">
+                              <div className="w-10 h-10 bg-[#FACC15]/10 rounded-full flex items-center justify-center text-[#FACC15] font-black border border-[#FACC15]/20">
                                   {offer.captainName.charAt(0)}
                               </div>
                               <div>
@@ -1269,11 +1269,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="flex items-center justify-between">
                               <div className="flex flex-col">
                                   <span className="text-[10px] text-gray-500 uppercase font-bold">Teklif</span>
-                                  <span className="text-xl font-black text-[#FFFF00]">{offer.offerAmount}₺</span>
+                                  <span className="text-xl font-black text-[#FACC15]">{offer.offerAmount}₺</span>
                               </div>
                               <button 
                                 onClick={() => handleOpenOffer(offer)}
-                                className="bg-[#FFFF00] text-black px-4 py-2 rounded-xl text-xs font-black hover:scale-105 transition-transform"
+                                className="bg-[#FACC15] text-black px-4 py-2 rounded-xl text-xs font-black hover:scale-105 transition-transform"
                               >
                                   İNCELE
                               </button>
@@ -1528,7 +1528,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       >
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-br from-[#FFFF00]/20 to-transparent p-8 rounded-[32px] border border-[#FFFF00]/20 text-center relative overflow-hidden group"
+            className="bg-gradient-to-br from-[#FACC15]/20 to-transparent p-8 rounded-[32px] border border-[#FACC15]/20 text-center relative overflow-hidden group"
           >
               <motion.div 
                 animate={{ 
@@ -1536,16 +1536,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     scale: [1, 1.1, 1, 1.1, 1]
                 }}
                 transition={{ duration: 5, repeat: Infinity }}
-                className="absolute -top-10 -left-10 w-32 h-32 bg-[#FFFF00]/10 blur-3xl rounded-full"
+                className="absolute -top-10 -left-10 w-32 h-32 bg-[#FACC15]/10 blur-3xl rounded-full"
               />
-              <Tag size={48} className="text-[#FFFF00] mx-auto mb-4 group-hover:scale-110 transition-transform" />
+              <Tag size={48} className="text-[#FACC15] mx-auto mb-4 group-hover:scale-110 transition-transform" />
               <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-wide">STANDART FİYATIN</h2>
               <div className="flex items-center justify-center gap-2">
                   <motion.span 
                     key={baseFee}
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="text-5xl font-black text-[#FFFF00]"
+                    className="text-5xl font-black text-[#FACC15]"
                   >
                     {baseFee}₺
                   </motion.span>
@@ -1577,9 +1577,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         animate={{ opacity: 1 }}
         className="space-y-3 px-6 pt-6 pb-40"
       >
-          <button onClick={() => setActiveTab('PROFILE_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FFFF00]/30 transition-all">
+          <button onClick={() => setActiveTab('PROFILE_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FFFF00] transition-colors"><User size={20} /></div>
+                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><User size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Profilim</span>
                     <span className="text-[10px] text-gray-500">Fotoğraf, açıklama ve tercihler</span>
@@ -1587,9 +1587,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FFFF00]/30 transition-all">
+          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FFFF00] transition-colors"><Settings size={20} /></div>
+                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><Settings size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Ayarlar</span>
                     <span className="text-[10px] text-gray-500">Bildirim, gizlilik ve hesap</span>
@@ -1597,9 +1597,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button onClick={() => alert('Destek ekibine bağlanılıyor...')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FFFF00]/30 transition-all">
+          <button onClick={() => alert('Destek ekibine bağlanılıyor...')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FFFF00] transition-colors"><MessageSquare size={20} /></div>
+                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><MessageSquare size={20} /></div>
                   <span className="font-bold text-white">Destek</span>
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
@@ -1637,7 +1637,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className={`absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] rounded-full blur-[120px] animate-pulse-slow delay-700 ${isRef ? 'bg-orange-900/10' : 'bg-blue-900/10'}`}></div>
       </div>
 
-      <header className="p-6 flex justify-between items-center bg-[#0A0E14]/80 backdrop-blur-md sticky top-0 z-20 border-b border-white/5">
+      <header className="p-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
          <div className="flex items-center gap-3">
              <button onClick={onBack} className="p-2 bg-[#161B22] rounded-full text-white hover:bg-gray-800 transition-colors border border-white/5">
                  <ArrowLeft size={20} />
@@ -1673,9 +1673,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       <nav className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-8 pt-4 px-4 flex justify-between items-center z-30">
          <button 
             onClick={() => setActiveTab('HOME')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FFFF00] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'HOME' ? 'bg-[#FFFF00]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'HOME' ? 'bg-[#FACC15]/10' : ''}`}>
                 <List size={20} />
             </div>
             <span className="text-[9px] font-black uppercase tracking-tighter">Ana Sayfa</span>
@@ -1683,9 +1683,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
          <button 
             onClick={() => setActiveTab('JOBS')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-[#FFFF00] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'JOBS' ? 'bg-[#FFFF00]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'JOBS' ? 'bg-[#FACC15]/10' : ''}`}>
                 <Search size={20} />
             </div>
             <span className="text-[9px] font-black uppercase tracking-tighter">Maç Bul</span>
@@ -1697,9 +1697,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
          <button 
             onClick={() => setActiveTab('MENU')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-[#FFFF00] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'MENU' ? 'bg-[#FFFF00]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'MENU' ? 'bg-[#FACC15]/10' : ''}`}>
                 <PlusCircle size={20} />
             </div>
             <span className="text-[9px] font-black uppercase tracking-tighter">Menü</span>
@@ -1748,7 +1748,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
                                    <label className="text-xs text-gray-500 font-bold uppercase block mb-2">Karşı Teklifin (Opsiyonel)</label>
                                    <div className="flex items-center gap-2">
-                                       <span className="text-2xl font-black text-[#FFFF00]">₺</span>
+                                       <span className="text-2xl font-black text-[#FACC15]">₺</span>
                                        <input 
                                         type="number" 
                                         value={bidAmount} 
@@ -1760,7 +1760,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                                <button 
                                 onClick={submitBid}
-                                className="w-full py-4 bg-[#FFFF00] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20"
+                                className="w-full py-4 bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20"
                                >
                                    {selectedOffer ? 'DAVETİ KABUL ET' : 'TEKLİFİ GÖNDER'}
                                </button>
@@ -1783,12 +1783,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="text-center py-8">
                       <p className="text-gray-400 text-xs font-bold uppercase mb-2">Ortalama Saatlik Ücretin</p>
                       <div className="flex items-center justify-center gap-1">
-                          <span className="text-4xl font-black text-[#FFFF00]">₺</span>
+                          <span className="text-4xl font-black text-[#FACC15]">₺</span>
                           <input 
                             type="number" 
                             value={baseFee}
                             onChange={(e) => setBaseFee(parseInt(e.target.value))}
-                            className="bg-transparent text-6xl font-black text-white w-40 text-center outline-none border-b-2 border-white/10 focus:border-[#FFFF00] transition-colors"
+                            className="bg-transparent text-6xl font-black text-white w-40 text-center outline-none border-b-2 border-white/10 focus:border-[#FACC15] transition-colors"
                           />
                       </div>
                       <p className="text-gray-500 text-xs mt-4 max-w-xs mx-auto">
@@ -1832,7 +1832,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="text-center">
                           <h2 className="text-2xl font-black text-white mb-1">{selectedUpcomingJob.pitchName}</h2>
                           <p className="text-gray-400 text-sm">{selectedUpcomingJob.date} • {selectedUpcomingJob.time}</p>
-                          <p className="text-[#FFFF00] font-bold mt-2">{selectedUpcomingJob.teamName}</p>
+                          <p className="text-[#FACC15] font-bold mt-2">{selectedUpcomingJob.teamName}</p>
                       </div>
 
                       {/* Location & Directions */}
@@ -1854,7 +1854,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       {/* Amenities */}
                       <div>
                           <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                              <Star size={14} className="text-[#FFFF00]" /> Tesis Özellikleri
+                              <Star size={14} className="text-[#FACC15]" /> Tesis Özellikleri
                           </h4>
                           <div className="flex flex-wrap gap-2">
                               {['Ücretsiz Otopark', 'Sıcak Duş', 'Kafeterya', 'Kamera Kaydı', 'Yeni Zemin'].map(amenity => (
@@ -1893,7 +1893,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               </div>
                               {/* GK */}
                               <div className="flex justify-center relative z-10">
-                                  <div className="w-10 h-10 bg-[#FFFF00] rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-black text-black shadow-[0_0_15px_rgba(255,255,0,0.5)]">SEN</div>
+                                  <div className="w-10 h-10 bg-[#FACC15] rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-black text-black shadow-[0_0_15px_rgba(250,204,21,0.5)]">SEN</div>
                               </div>
                           </div>
                       </div>
@@ -2129,11 +2129,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         onClick={() => setPostMatchRating(star)}
                         className="transition-transform hover:scale-110 active:scale-95"
                       >
-                        <Star size={32} className={star <= postMatchRating ? 'text-[#FFFF00] fill-[#FFFF00]' : 'text-gray-700'} />
+                        <Star size={32} className={star <= postMatchRating ? 'text-[#FACC15] fill-[#FACC15]' : 'text-gray-700'} />
                       </button>
                     ))}
                   </div>
-                  <p className="text-center text-[10px] text-[#FFFF00] font-black mt-3 uppercase tracking-widest">
+                  <p className="text-center text-[10px] text-[#FACC15] font-black mt-3 uppercase tracking-widest">
                     {postMatchRating === 5 ? "Mükemmel Takım" : postMatchRating >= 3 ? "İyi Takım" : "Toksik Takım"}
                   </p>
                 </div>

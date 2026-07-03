@@ -4,6 +4,7 @@ import { MapPin, Navigation, CheckCircle2, AlertCircle, Loader2 } from 'lucide-r
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { fbUpdateUserLocation } from '../supabaseMutations';
+import { showToast } from '../components/common/GlobalToast';
 
 interface LocationPromptProps {
   onPermissionGranted: () => void;
@@ -32,6 +33,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                 if (auth.currentUser) {
                     fbUpdateUserLocation(auth.currentUser.uid, position.coords.latitude, position.coords.longitude).catch(err => {
                         console.error('Konum DB kaydı başarısız:', err);
+                        showToast('Konumun kaydedilemedi — yakınındaki sahalar eksik görünebilir.');
                     });
                 }
                 

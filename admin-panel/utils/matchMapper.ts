@@ -53,9 +53,10 @@ function normalizeStatus(raw: string | null | undefined): MatchListing['status']
 
 function normalizeDifficulty(raw: string | null | undefined): MatchListing['difficulty'] {
   const d = (raw || 'Rahat').toLowerCase();
-  if (d.includes('ciddi') || d === 'hard') return 'Ciddi';
+  // DB skalası Türkçe 'Zor'/'Orta'/'Kolay' olabilir; İngilizce karşılıkları da kapsa.
+  if (d.includes('ciddi') || d.includes('zor') || d === 'hard') return 'Ciddi';
   if (d.includes('taktik') || d === 'medium' || d === 'orta') return 'Taktiksel';
-  return 'Rahat';
+  return 'Rahat'; // kolay / easy / rahat / bilinmeyen
 }
 
 function formatDateLabel(dateVal: string | null): string {
@@ -75,8 +76,11 @@ function formatDateLabel(dateVal: string | null): string {
 
 export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, unknown>): MatchListing {
   const r = row as AdminMatchRow;
+  const rRaw = row as Record<string, unknown>;
   const slots = parseJsonArray<PositionSlot>(r.slots);
-  const awaySlots = parseJsonArray<PositionSlot>(r.away_slots);
+  // Liste RPC'si snake 'away_slots', tekil admin_get_match camel 'awaySlots' döndürür →
+  // her iki anahtarı da oku ki tekil çekimde deplasman kadrosu kaybolmasın.
+  const awaySlots = parseJsonArray<PositionSlot>(r.away_slots ?? rRaw.awaySlots);
   const missing = parseJsonArray<{ role: string; count: number }>(r.missingPositions);
   const chatMessages = parseJsonArray<NonNullable<MatchListing['chatMessages']>[number]>(r.chatMessages);
   const difficulty = normalizeDifficulty(r.difficulty);

@@ -1709,7 +1709,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button
                                 onClick={loadAdvancedAnimation}
                                 disabled={isLoadingAdvancedAnim}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-[#FFFF00] text-black shadow-[#FFFF00]/30 hover:scale-105 disabled:opacity-60"
+                                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105 disabled:opacity-60"
                                 title="Gelişmiş animasyon motorunu indir ve oynat"
                             >
                                 {isLoadingAdvancedAnim ? (
@@ -2350,7 +2350,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             <button 
                                                 key={group} 
                                                 onClick={() => setSelectedGroup(group)}
-                                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 ${selectedGroup === group ? (group === 'Favorilerim' ? 'bg-[#FFFF00] text-black border-[#FFFF00] shadow-[0_0_15px_rgba(255,255,0,0.3)]' : 'bg-white text-black border-white shadow-lg') : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30'}`}
+                                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 ${selectedGroup === group ? (group === 'Favorilerim' ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-white text-black border-white shadow-lg') : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30'}`}
                                             >
                                                 {group === 'Favorilerim' && <Star size={12} fill={selectedGroup === group ? "black" : "currentColor"} className={selectedGroup === group ? 'text-black' : 'text-gray-500'} />}
                                                 {group}
@@ -2398,7 +2398,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                         <div>
                                                             <h4 className="text-base font-black text-white tracking-tight flex items-center gap-2 group-hover:text-[#39FF14] transition-colors">
                                                                 {friend.name}
-                                                                {friend.isFavorite && <Star size={12} className="text-[#FFFF00]" fill="#FFFF00" />}
+                                                                {friend.isFavorite && <Star size={12} className="text-[#FACC15]" fill="#FACC15" />}
                                                             </h4>
                                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                                 <Hash size={10} className="text-gray-500" />
@@ -2415,7 +2415,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                                     const matches = (friend.wins || 0) + (friend.losses || 0);
                                                                     const activityLevel = Math.min(5, Math.max(1, Math.ceil(matches / 6)));
                                                                     const isActive = level <= activityLevel;
-                                                                    const colors = ['bg-[#FFFF00]', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500', 'bg-red-600'];
+                                                                    const colors = ['bg-[#FACC15]', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500', 'bg-red-600'];
                                                                     return (
                                                                         <div 
                                                                             key={level} 
