@@ -315,6 +315,7 @@ export interface Pitch {
   id: string;
   name: string;
   district: string; // New: District name
+  city?: string; // İl (ilçeden ayrı — TURKEY_REGIONS ile doğrulanır)
   location: string; // Full address
   distance: string;
   rating: number;
@@ -574,6 +575,22 @@ export interface ProviderSuggestion {
   preferred_zones?: string[];
   coordinates?: { lat: number; lng: number };
   is_elite?: boolean;
+}
+
+/**
+ * OYNA ortak konum tipi — tüm uygulamanın "nerede?" için konuştuğu tek dil.
+ * GPS veya elle seçim bu şekle indirgenir; saha/maç/kaleci/hakem kapsamı buna göre yapılır.
+ */
+export interface OynaLocation {
+  city: string;
+  cityPlate?: number;
+  district: string | null;
+  coordinates: { lat: number; lng: number } | null;
+  source: 'gps' | 'manual' | 'restored';
+  accuracy: 'exact' | 'district' | 'city';
+  label: string;
+  isCovered: boolean;
+  detectedAt?: number;
 }
 
 /** Maç sonu kaleci/hakem 1-10 puanlaması. */

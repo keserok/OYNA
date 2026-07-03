@@ -1,14 +1,15 @@
 
-import { ORDU_DISTRICT_NAMES, LAUNCH_CITY } from '../utils/orduData';
+import { LAUNCH_CITY } from '../utils/orduData';
+import { districtsOfCity } from '../data/turkeyRegions';
+import { getHaversineDistance } from '../utils/geo';
 import React, { useState, useMemo } from 'react';
 import {
-    ChevronLeft, ChevronRight, X, Map as MapIcon, List, Minus, Plus, Zap, Activity, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
+    ChevronLeft, ChevronRight, X, Minus, Plus, Zap, Activity, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
-import { MarketplaceMap } from '../components/Marketplace/MarketplaceMap';
 import { EmptyState } from '../components/common/StatusState';
 
 const getNormalizedDifficulty = (diff?: string): string => {
@@ -45,7 +46,6 @@ const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ l
 
 const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, onSelect }) => {
     const [activeTab, setActiveTab] = useState<'GK' | 'REF'>(initialType);
-    const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
     const [selectedProfile, setSelectedProfile] = useState<Goalkeeper | Referee | null>(null);
     const [isHiring, setIsHiring] = useState(false);
     const [showToast, setShowToast] = useState(false);
@@ -56,22 +56,33 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     // The user said "yalnızca ... çıksın", so I'll hide the tabs if initialType is passed.
     const isLocked = !!initialType;
 
-    const { adminGoalkeepers, adminReferees, adminMatches, setAdminMatches, updateMatch } = useAppStore();
+    const { adminGoalkeepers, adminReferees, adminMatches, setAdminMatches, updateMatch, activeRegion, userLocation } = useAppStore();
     const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
 
     const [filterDistrict, setFilterDistrict] = useState<string>('Tümü');
     const [filterDay, setFilterDay] = useState<string>('Tümü');
     const [filterTime, setFilterTime] = useState<string>('Tümü');
 
+    // İlçe seçenekleri aktif ile göre (sabit değil).
+    const zoneCity = activeRegion?.city ?? LAUNCH_CITY;
+    const cityDistricts = useMemo(() => districtsOfCity(zoneCity), [zoneCity]);
+
     const filteredProfiles = useMemo(() => {
+        const scopeCity = activeRegion?.isCovered ? activeRegion.city : null;
         return profiles.filter(p => {
-            const matchesDistrict = filterDistrict === 'Tümü' || (p.preferredZones && p.preferredZones.includes(filterDistrict));
+            // Aktif bölge kapsamı: sağlayıcının hizmet bölgeleri bu ille ilgili mi? (bölgesizler hariç tutulmaz)
+            const matchesRegion = !scopeCity || !p.preferredZones || p.preferredZones.length === 0 ||
+                p.preferredZones.some(z => {
+                    const parts = z.split('/').map(s => s.trim());
+                    return parts[0] === scopeCity || z === scopeCity || cityDistricts.includes(parts[parts.length - 1]);
+                });
+            // "İl / İlçe" ve düz "İlçe" formatlarının ikisini de yakala.
+            const matchesDistrict = filterDistrict === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z => z === filterDistrict || z.split('/').pop()?.trim() === filterDistrict));
             const matchesDay = filterDay === 'Tümü' || (p.workingHours && p.workingHours.activeDays && p.workingHours.activeDays.includes(filterDay));
-            // Check if activeHours contains the time (it might be a string "18:00 - 23:00" or an array)
             const matchesTime = filterTime === 'Tümü' || (p.workingHours && p.workingHours.activeHours && p.workingHours.activeHours.includes(filterTime));
-            return matchesDistrict && matchesDay && matchesTime;
+            return matchesRegion && matchesDistrict && matchesDay && matchesTime;
         });
-    }, [profiles, filterDistrict, filterDay, filterTime]);
+    }, [profiles, filterDistrict, filterDay, filterTime, activeRegion, cityDistricts]);
 
     const myMatches = useMemo(() => {
         return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);
@@ -174,12 +185,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                         <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Profesyonel Arama Aktif</span>
                     </div>
                 </div>
-                <button
-                    onClick={() => setViewMode(viewMode === 'LIST' ? 'MAP' : 'LIST')}
-                    className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full text-brand-primary border border-brand-primary/20 hover:bg-brand-primary/10 active:scale-95 transition-all"
-                >
-                    {viewMode === 'LIST' ? <MapIcon size={20} /> : <List size={20} />}
-                </button>
             </header>
 
             {/* 2. Tabs (Hidden if locked) */}
@@ -209,8 +214,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                     onChange={e => setFilterDistrict(e.target.value)}
                     className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
                 >
-                    <option value="Tümü">Tüm İlçeler</option>
-                    {ORDU_DISTRICT_NAMES.map(d => <option key={d} value={d}>{d}</option>)}
+                    <option value="Tümü" className="bg-[#161B22] text-white">Tüm İlçeler</option>
+                    {cityDistricts.map(d => <option key={d} value={d} className="bg-[#161B22] text-white">{d}</option>)}
                 </select>
                 <select 
                     value={filterDay} 
@@ -243,30 +248,22 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
 
             {/* 3. Main Content */}
             <div className="flex-1 relative overflow-hidden">
-                {viewMode === 'LIST' ? (
-                    <div className="h-full px-6 pb-24 overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-1 gap-6 pt-2">
-                            {filteredProfiles.length === 0 ? (
-                                <EmptyState title="Profil Bulunamadı" message="Bu kriterlere uygun bir profil bulunamadı." />
-                            ) : (
-                                filteredProfiles.map(p => (
-                                    <MarketplaceCard
-                                        key={p.id}
-                                        item={p}
-                                        type={activeTab}
-                                        onClick={() => handleSelect(p)}
-                                    />
-                                ))
-                            )}
-                        </div>
+                <div className="h-full px-6 pb-24 overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-1 gap-6 pt-2">
+                        {filteredProfiles.length === 0 ? (
+                            <EmptyState title="Profil Bulunamadı" message="Bu kriterlere uygun bir profil bulunamadı." />
+                        ) : (
+                            filteredProfiles.map(p => (
+                                <MarketplaceCard
+                                    key={p.id}
+                                    item={p}
+                                    type={activeTab}
+                                    onClick={() => handleSelect(p)}
+                                />
+                            ))
+                        )}
                     </div>
-                ) : (
-                    <MarketplaceMap
-                        items={filteredProfiles}
-                        type={activeTab}
-                        onSelect={handleSelect}
-                    />
-                )}
+                </div>
             </div>
 
             {/* Detailed View Modal */}
@@ -528,7 +525,11 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
                                             <span className="text-[15px] text-gray-400">{selectedProfile.preferredZones?.[0] || LAUNCH_CITY}</span>
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
-                                            <span className="text-[15px] text-gray-400">{selectedProfile.distance || '2.4'} km yakında</span>
+                                            <span className="text-[15px] text-gray-400">{
+                                                (userLocation && selectedProfile.coordinates)
+                                                    ? `${getHaversineDistance(userLocation.lat, userLocation.lng, selectedProfile.coordinates.lat, selectedProfile.coordinates.lng).toFixed(1)} km yakında`
+                                                    : (selectedProfile.distance ? `${selectedProfile.distance} km yakında` : 'Konumunu aç')
+                                            }</span>
                                         </div>
                                     </div>
 

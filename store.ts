@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, SavedPaymentCard, WalletTab, Court } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, SavedPaymentCard, WalletTab, Court, OynaLocation } from './types';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
 import { auth } from './supabaseAuth';
@@ -89,6 +89,33 @@ function persistSavedCards(cards: SavedPaymentCard[]) {
   localStorage.setItem(SAVED_CARDS_KEY, JSON.stringify(cards));
 }
 
+// ─── Aktif bölge (konum) kalıcılığı ──────────────────────────────
+// Uygulama açılınca son bölgeyi hemen gösterir (kaynak 'restored' = tahmini),
+// taze GPS gelince üstüne yazılır.
+const ACTIVE_REGION_KEY = 'oyna_active_region';
+
+function loadActiveRegion(): OynaLocation | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(ACTIVE_REGION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as OynaLocation;
+    return parsed && parsed.city ? { ...parsed, source: 'restored' } : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistActiveRegion(region: OynaLocation | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (region) localStorage.setItem(ACTIVE_REGION_KEY, JSON.stringify(region));
+    else localStorage.removeItem(ACTIVE_REGION_KEY);
+  } catch {
+    /* yoksay */
+  }
+}
+
 // Kullanıcılar Supabase'den hydrate edilir; mock veri yok.
 export const INITIAL_USERS: AdminUser[] = [];
 
@@ -142,6 +169,10 @@ interface AppState {
   setLocationPermissionStatus: (status: 'GRANTED' | 'DENIED' | 'NOT_REQUESTED') => void;
   searchRadius: number;
   setSearchRadius: (radius: number) => void;
+
+  // Aktif bölge — GPS ya da elle seçilen tek kapsam kaynağı (tüm uygulama buna göre listeler).
+  activeRegion: OynaLocation | null;
+  setActiveRegion: (region: OynaLocation | null) => void;
 
   // Admin CRUD Data (live, reflected across whole app)
   adminPitches: Pitch[];
@@ -473,6 +504,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
   searchRadius: 50,
   setSearchRadius: (searchRadius) => set({ searchRadius }),
+  activeRegion: loadActiveRegion(),
+  setActiveRegion: (activeRegion) => {
+    set({ activeRegion });
+    persistActiveRegion(activeRegion);
+  },
   adminPitches: [],
   adminGoalkeepers: [],
   adminReferees: [],

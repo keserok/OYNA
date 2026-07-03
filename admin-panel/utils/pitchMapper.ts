@@ -6,6 +6,7 @@ export function mapAdminPitchRowToUi(row: AdminPitchRow): Pitch {
     id: row.id,
     name: row.name,
     district: row.district || '',
+    city: row.city || '',
     location: row.district || row.city || '',
     distance: '—',
     rating: Number(row.google_rating ?? 4.5),
