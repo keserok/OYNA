@@ -7,7 +7,7 @@ import type { GodViewSubRoute } from '../../admin-panel/views/GodViewPanel';
 
 describe('canAccessRoute — FULL_ACCESS rolleri', () => {
   const fullAccessRoles: AdminRole[] = ['SUPER_ADMIN', 'ADMIN'];
-  const sensitiveRoutes: GodViewSubRoute[] = ['SETTINGS', 'ACL', 'NOTIFICATIONS', 'SEGMENTATION', 'PROMO_CODES'];
+  const sensitiveRoutes: GodViewSubRoute[] = ['SETTINGS', 'ACL', 'NOTIFICATIONS', 'NOTIFICATION_TEMPLATES', 'PROMO_CODES'];
   const generalRoutes: GodViewSubRoute[] = ['GENEL', 'KULLANICILAR', 'SAHALAR', 'MATCHES', 'FINANCE'];
 
   for (const role of fullAccessRoles) {

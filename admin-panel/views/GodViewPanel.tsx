@@ -1,7 +1,7 @@
 import React, { useState, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store';
 import { AdminLayout } from './layout/AdminLayout';
-import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal, AddPitchModal } from './DeepEditModals';
+import { DeepEditPitchModal, DeepEditUserModal, DeepEditProviderModal } from './DeepEditModals';
 import { AnimatePresence } from 'framer-motion';
 import { PageLoadingSkeleton } from './components/PageLoadingSkeleton';
 import type { AdminSession } from '../services/adminService';
@@ -9,7 +9,6 @@ import type { Pitch, AdminUser, Goalkeeper, Referee } from '../../types';
 
 type AdminModalState =
   | { type: 'none' }
-  | { type: 'addPitch' }
   | { type: 'deepEditPitch'; data: Pitch }
   | { type: 'deepEditUser'; data: AdminUser }
   | { type: 'deepEditProvider'; data: Goalkeeper | Referee; typeParam: 'GK' | 'REF' };
@@ -44,13 +43,14 @@ const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ 
 const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m => ({ default: m.SystemParamsPage })));
 const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage').then(m => ({ default: m.VerificationCenterPage })));
 const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplatesPage').then(m => ({ default: m.NotificationTemplatesPage })));
+const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
   | 'SERVICE_DISPUTES' | 'MODERATION'
-  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL' | 'SEGMENTATION'
+  | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
   | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
@@ -79,10 +79,7 @@ const GodViewPanelInner: React.FC<Props> = ({
     const { canAccess, defaultRoute } = useAdminPermissions();
     const { moduleEnabled } = useAdminFeatureFlags();
     const { info } = useAdminToast();
-    const [subRoute, setSubRoute] = useState<GodViewSubRoute>(() => {
-        const r = initialSubRoute ?? 'GENEL';
-        return r === 'SEGMENTATION' ? 'NOTIFICATIONS' : r;
-    });
+    const [subRoute, setSubRoute] = useState<GodViewSubRoute>(() => initialSubRoute ?? 'GENEL');
     const [modal, setModal] = useState<AdminModalState>({ type: 'none' });
     const [pendingVerifCount, setPendingVerifCount] = useState(0);
     const [providerIdentityCount, setProviderIdentityCount] = useState(0);
@@ -93,12 +90,12 @@ const GodViewPanelInner: React.FC<Props> = ({
     }, [initialNavParams, setParams]);
 
     useEffect(() => {
-        const start = initialSubRoute === 'SEGMENTATION' ? 'NOTIFICATIONS' : (initialSubRoute ?? defaultRoute);
+        const start = initialSubRoute ?? defaultRoute;
         if (!canAccess(start)) setSubRoute(defaultRoute);
     }, [initialSubRoute, defaultRoute, canAccess]);
 
     const handleNavigate: AdminNavigateFn = useCallback((route, params) => {
-        const effectiveRoute = route === 'SEGMENTATION' ? 'NOTIFICATIONS' : route;
+        const effectiveRoute = route;
         if (!canAccess(effectiveRoute)) {
             info('Bu sayfaya erişim yetkiniz yok');
             return;
@@ -197,8 +194,9 @@ const GodViewPanelInner: React.FC<Props> = ({
             case 'NOTIFICATION_TEMPLATES':
                 return <NotificationTemplatesPage />;
             case 'NOTIFICATIONS':
-            case 'SEGMENTATION':
                 return <CampaignsPage route="NOTIFICATIONS" />;
+            case 'OWNER_ACCOUNTS':
+                return <OwnerAccountsPage />;
             case 'MODERATION':
                 return <ModerationPage />;
             case 'AUDIT_LOG':
@@ -234,9 +232,6 @@ const GodViewPanelInner: React.FC<Props> = ({
                 )}
                 {modal.type === 'deepEditProvider' && (
                     <DeepEditProviderModal item={modal.data} typeParam={modal.typeParam} onClose={closeModal} />
-                )}
-                {modal.type === 'addPitch' && (
-                    <AddPitchModal onClose={closeModal} />
                 )}
             </AnimatePresence>
         </>

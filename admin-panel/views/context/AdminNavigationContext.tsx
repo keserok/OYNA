@@ -64,8 +64,9 @@ export function useAdminNavigationOptional() {
 export function parseAdminUrlParams(): { route?: GodViewSubRoute; matchId?: string; communityId?: string } {
   if (typeof window === 'undefined') return {};
   const sp = new URLSearchParams(window.location.search);
-  const raw = sp.get('route') as GodViewSubRoute | null;
-  const route = raw === 'SEGMENTATION' ? 'NOTIFICATIONS' : (raw ?? undefined);
+  const raw = sp.get('route');
+  // Eski yer imleri: kaldırılan SEGMENTATION route'u Kampanyalar'a yönlenir.
+  const route = (raw === 'SEGMENTATION' ? 'NOTIFICATIONS' : raw ?? undefined) as GodViewSubRoute | undefined;
   const matchId = sp.get('matchId') ?? undefined;
   const communityId = sp.get('communityId') ?? undefined;
   return { route, matchId, communityId };

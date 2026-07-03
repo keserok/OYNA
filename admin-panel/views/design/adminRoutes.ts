@@ -1,6 +1,97 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
+  Radio, Swords, Lock, Globe, Trophy, ScrollText, ShieldCheck, AlertOctagon,
+  SlidersHorizontal, MessageSquare, Building2, BadgeCheck,
+} from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 
 export type AdminAccent = 'red' | 'green' | 'yellow' | 'blue' | 'purple' | 'pink' | 'cyan' | 'orange';
+
+/** Sidebar rozetinin hangi canlı sayaçtan besleneceği (hesap Sidebar'da). */
+export type AdminBadgeKey =
+  | 'live' | 'pitches' | 'users' | 'matches' | 'goalkeepers' | 'referees'
+  | 'pendingPitches' | 'openDisputes' | 'verification' | 'activePromos' | 'communities';
+
+export interface AdminRouteDef {
+  route: GodViewSubRoute;
+  /** Sayfa başlığı (PageShell / breadcrumb). */
+  title: string;
+  /** Sidebar & palette'te görünen kısa etiket. */
+  label: string;
+  description: string;
+  /** Breadcrumb grubu. */
+  group: string;
+  /** Sidebar grup başlığı; null → sidebar'da görünmez. */
+  sidebarGroup: string | null;
+  accent: AdminAccent;
+  icon: LucideIcon;
+  inPalette: boolean;
+  /** Kapsam-dışı modül: yalnız bu feature flag açıkken erişilebilir. */
+  featureFlag?: string;
+  badge?: AdminBadgeKey;
+  /** Bu route'lar aktifken de sidebar öğesi vurgulanır (alt sekmeler). */
+  activeAlso?: GodViewSubRoute[];
+}
+
+export const SIDEBAR_GROUP_ORDER = [
+  'BÖLGE KOMUTASI', 'OPERASYON', 'TOPLULUK YÖNETİMİ', 'BİLDİRİM & PAZARLAMA', 'FİNANS', 'SİSTEM',
+] as const;
+
+/**
+ * TEK KAYNAK route registry (Karar #46).
+ * Sidebar, komut paleti ve sayfa meta'sı bu diziden türetilir — üç ayrı listeyi
+ * elle senkron tutma dönemi kapandı. Kapsam-dışı modüller feature flag ile
+ * gizlenir (Karar #43/#47): kod silinmez, yüzeyden tamamen kalkar.
+ */
+export const ADMIN_ROUTES: AdminRouteDef[] = [
+  // ── Komuta ────────────────────────────────────────────────────────────────
+  { route: 'GENEL', title: 'Genel Bakış', label: 'Genel', description: 'Platform KPI, gelir trendi ve operasyon özeti.', group: 'Komuta', sidebarGroup: 'BÖLGE KOMUTASI', accent: 'red', icon: Radio, inPalette: true },
+  { route: 'CONTROL', title: 'Komuta Merkezi', label: 'Komuta Merkezi', description: 'Canlı kuyruklar, ghost arama ve acil operasyonlar.', group: 'Komuta', sidebarGroup: 'BÖLGE KOMUTASI', accent: 'red', icon: Zap, inPalette: true, badge: 'live' },
+
+  // ── Operasyon ────────────────────────────────────────────────────────────
+  { route: 'SAHALAR', title: 'Sahalar', label: 'Sahalar', description: 'Tesis envanteri, vitrin kurulumu ve onay durumları.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: MapPin, inPalette: true, badge: 'pitches' },
+  { route: 'KULLANICILAR', title: 'Kullanıcılar', label: 'Kullanıcılar', description: 'Oyuncu profilleri, ban ve rol yönetimi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true, badge: 'users' },
+  { route: 'VERIFICATION', title: 'Doğrulama Merkezi', label: 'Doğrulama', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: ShieldCheck, inPalette: true, badge: 'verification', activeAlso: ['PENDING_VERIFICATIONS', 'PROVIDER_IDENTITIES'] },
+  { route: 'MODERATION', title: 'Tesis Onayları', label: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Shield, inPalette: true, badge: 'pendingPitches' },
+  { route: 'MATCHES', title: 'Maçlar', label: 'Maçlar', description: 'Maç kokpiti: kadro, skor, ödeme ve müdahale.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: Swords, inPalette: true, badge: 'matches' },
+  { route: 'KALECİLER', title: 'Kaleciler', label: 'Kaleciler', description: 'Kaleci profilleri, yetenekler ve ücretler.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: Shield, inPalette: true, badge: 'goalkeepers' },
+  { route: 'HAKEMLER', title: 'Hakemler', label: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Scale, inPalette: true, badge: 'referees' },
+  { route: 'TAKIMLAR', title: 'Takımlar', label: 'Takımlar', description: 'Platform takım kayıtları ve kaptan bilgileri.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true },
+
+  // Doğrulama Merkezi'nin alt sekmeleri — sidebar'da yok, palette'ten erişilir.
+  { route: 'PENDING_VERIFICATIONS', title: 'Onay Bekleyenler', label: 'Onay Bekleyenler', description: 'Kaleci ve hakem doğrulama talepleri.', group: 'Operasyon', sidebarGroup: null, accent: 'yellow', icon: BadgeCheck, inPalette: true },
+  { route: 'PROVIDER_IDENTITIES', title: 'Kimlik Doğrulama', label: 'Kimlik Doğrulama', description: 'Sağlayıcı kimlik doğrulama kuyruğu (kaleci & hakem).', group: 'Operasyon', sidebarGroup: null, accent: 'blue', icon: BadgeCheck, inPalette: true },
+
+  // ── Topluluk (kapsam-dışı; flag ile) ─────────────────────────────────────
+  { route: 'TOPLULUKLAR', title: 'Topluluklar', label: 'Topluluklar', description: 'Topluluk talepleri ve kayıtlı gruplar.', group: 'Topluluk', sidebarGroup: 'TOPLULUK YÖNETİMİ', accent: 'blue', icon: Globe, inPalette: true, featureFlag: 'module_community', badge: 'communities' },
+  { route: 'TURNUVALAR', title: 'Turnuvalar', label: 'Turnuvalar', description: 'Turnuva planlama ve durum takibi.', group: 'Topluluk', sidebarGroup: 'TOPLULUK YÖNETİMİ', accent: 'yellow', icon: Trophy, inPalette: true, featureFlag: 'module_tournaments' },
+
+  // ── Bildirim & Pazarlama ─────────────────────────────────────────────────
+  { route: 'NOTIFICATIONS', title: 'Kampanyalar', label: 'Kampanyalar', description: 'Toplu bildirim ve duyuru gönderimi.', group: 'Bildirim', sidebarGroup: 'BİLDİRİM & PAZARLAMA', accent: 'pink', icon: Megaphone, inPalette: true },
+  { route: 'NOTIFICATION_TEMPLATES', title: 'Bildirim Şablonları', label: 'Bildirim Şablonları', description: 'Uygulama bildirim metinlerini panelden düzenle.', group: 'Bildirim', sidebarGroup: 'BİLDİRİM & PAZARLAMA', accent: 'pink', icon: MessageSquare, inPalette: true },
+  { route: 'PROMO_CODES', title: 'İndirim Kodları', label: 'İndirim Kodları', description: 'Promo kod oluşturma ve kullanım takibi.', group: 'Bildirim', sidebarGroup: 'BİLDİRİM & PAZARLAMA', accent: 'purple', icon: Zap, inPalette: true, featureFlag: 'module_promo_codes', badge: 'activePromos' },
+
+  // ── Finans ───────────────────────────────────────────────────────────────
+  { route: 'FINANCE', title: 'Finans', label: 'Finans Merkezi', description: 'Ledger, cüzdan hareketleri ve tahsilatlar.', group: 'Finans', sidebarGroup: 'FİNANS', accent: 'yellow', icon: CreditCard, inPalette: true },
+  { route: 'DISPUTES', title: 'İhtilaflar', label: 'İhtilaflar', description: 'Maç anlaşmazlıkları ve çözüm süreci.', group: 'Finans', sidebarGroup: 'FİNANS', accent: 'orange', icon: Scale, inPalette: true, badge: 'openDisputes' },
+  { route: 'SERVICE_DISPUTES', title: 'Hizmet İtirazları', label: 'Hizmet İtirazları', description: 'Sağlayıcı hizmet ödemesi itirazları ve serbest bırakma.', group: 'Finans', sidebarGroup: 'FİNANS', accent: 'orange', icon: AlertOctagon, inPalette: true },
+  { route: 'COMMISSION', title: 'Komisyon', label: 'Komisyon', description: 'Çok seviyeli komisyon oranları ve model yapılandırması.', group: 'Finans', sidebarGroup: 'FİNANS', accent: 'green', icon: Zap, inPalette: true },
+  { route: 'OWNER_ACCOUNTS', title: 'SaaS Hesapları', label: 'SaaS Hesapları', description: 'Tesis sahibi SaaS abonelik yönetimi (kapsam dışı).', group: 'Finans', sidebarGroup: 'FİNANS', accent: 'green', icon: Building2, inPalette: true, featureFlag: 'module_owner_saas' },
+
+  // ── Sistem ───────────────────────────────────────────────────────────────
+  { route: 'AUDIT_LOG', title: 'Denetim Kayıtları', label: 'Denetim Kayıtları', description: 'Admin aksiyon geçmişi ve iz sürme.', group: 'Sistem', sidebarGroup: 'SİSTEM', accent: 'purple', icon: ScrollText, inPalette: true },
+  { route: 'CONTENT', title: 'CMS Metinler', label: 'Metinler', description: 'Uygulama genelinde görünen metinler.', group: 'Sistem', sidebarGroup: 'SİSTEM', accent: 'pink', icon: Type, inPalette: true },
+  { route: 'SETTINGS', title: 'Sistem Ayarları', label: 'Ayarlar', description: 'Ödeme modu, kayıt ve bakım modu.', group: 'Sistem', sidebarGroup: 'SİSTEM', accent: 'red', icon: Settings, inPalette: true },
+  { route: 'SYSTEM_PARAMS', title: 'Sistem Parametreleri', label: 'Parametreler', description: 'Maç, fair-play ve rezervasyon kurallarını ve modülleri panelden yönet.', group: 'Sistem', sidebarGroup: 'SİSTEM', accent: 'cyan', icon: SlidersHorizontal, inPalette: true },
+  { route: 'ACL', title: 'Ekipler & Yetkiler', label: 'Ekipler & Yetkiler', description: 'Platform admin rolleri ve erişim kontrolü.', group: 'Sistem', sidebarGroup: 'SİSTEM', accent: 'orange', icon: Lock, inPalette: true },
+];
+
+const ROUTE_INDEX = new Map(ADMIN_ROUTES.map((r) => [r.route, r]));
+
+export function getRouteDef(route: string): AdminRouteDef | undefined {
+  return ROUTE_INDEX.get(route as GodViewSubRoute);
+}
 
 export interface AdminRouteMeta {
   title: string;
@@ -9,48 +100,25 @@ export interface AdminRouteMeta {
   accent: AdminAccent;
 }
 
-export const ADMIN_ROUTE_META: Record<GodViewSubRoute, AdminRouteMeta> = {
-  GENEL: { title: 'Genel Bakış', description: 'Platform KPI, gelir trendi ve operasyon özeti.', group: 'Komuta', accent: 'red' },
-  CONTROL: { title: 'Komuta Merkezi', description: 'Canlı kuyruklar, ghost arama ve acil operasyonlar.', group: 'Komuta', accent: 'red' },
-  SAHALAR: { title: 'Sahalar', description: 'Tesis envanteri, fiyatlandırma ve onay durumları.', group: 'Operasyon', accent: 'green' },
-  KULLANICILAR: { title: 'Kullanıcılar', description: 'Oyuncu ve kaptan profilleri, ban ve PRO yönetimi.', group: 'Operasyon', accent: 'blue' },
-  KALECİLER: { title: 'Kaleciler', description: 'Marketplace kaleci profilleri, yetenekler ve ücretler.', group: 'Operasyon', accent: 'green' },
-  HAKEMLER: { title: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Operasyon', accent: 'yellow' },
-  PENDING_VERIFICATIONS: { title: 'Onay Bekleyenler', description: 'Kaleci ve hakem doğrulama talepleri.', group: 'Operasyon', accent: 'yellow' },
-  PROVIDER_IDENTITIES: { title: 'Kimlik Doğrulama', description: 'Sağlayıcı kimlik doğrulama kuyruğu (kaleci & hakem).', group: 'Operasyon', accent: 'blue' },
-  MATCHES: { title: 'Maçlar', description: 'Açık maçlar, kadro eksikleri ve bildirimler.', group: 'Operasyon', accent: 'red' },
-  TOPLULUKLAR: { title: 'Topluluklar', description: 'Topluluk talepleri ve kayıtlı gruplar.', group: 'Topluluk', accent: 'blue' },
-  TAKIMLAR: { title: 'Takımlar', description: 'Platform takım kayıtları ve kaptan bilgileri.', group: 'Topluluk', accent: 'blue' },
-  TURNUVALAR: { title: 'Turnuvalar', description: 'Turnuva planlama ve durum takibi.', group: 'Topluluk', accent: 'yellow' },
-  NOTIFICATIONS: { title: 'Kampanyalar', description: 'Toplu bildirim ve duyuru gönderimi.', group: 'Pazarlama', accent: 'pink' },
-  SEGMENTATION: { title: 'Segmentasyon', description: 'Kitle önizleme ve hedefli broadcast.', group: 'Pazarlama', accent: 'cyan' },
-  PROMO_CODES: { title: 'İndirim Kodları', description: 'Promo kod oluşturma ve kullanım takibi.', group: 'Pazarlama', accent: 'purple' },
-  FINANCE: { title: 'Finans', description: 'Ledger, cüzdan hareketleri ve tahsilatlar.', group: 'Finans', accent: 'yellow' },
-  COMMISSION: { title: 'Komisyon', description: 'Çok seviyeli komisyon oranları ve model yapılandırması.', group: 'Finans', accent: 'green' },
-  DISPUTES: { title: 'İhtilaflar', description: 'Maç anlaşmazlıkları ve çözüm süreci.', group: 'Finans', accent: 'orange' },
-  SERVICE_DISPUTES: { title: 'Hizmet İtirazları', description: 'Sağlayıcı hizmet ödemesi itirazları ve serbest bırakma.', group: 'Finans', accent: 'orange' },
-  AUDIT_LOG: { title: 'Denetim Kayıtları', description: 'Admin aksiyon geçmişi ve iz sürme.', group: 'Sistem', accent: 'purple' },
-  CONTENT: { title: 'CMS Metinler', description: 'Uygulama genelinde görünen metinler.', group: 'Sistem', accent: 'pink' },
-  SETTINGS: { title: 'Sistem Ayarları', description: 'Komisyon, ödeme modu ve bakım modu.', group: 'Sistem', accent: 'red' },
-  SYSTEM_PARAMS: { title: 'Sistem Parametreleri', description: 'Maç, fair-play ve rezervasyon kurallarını ve modülleri panelden yönet.', group: 'Sistem', accent: 'cyan' },
-  ACL: { title: 'Ekipler & Yetkiler', description: 'Platform admin rolleri ve erişim kontrolü.', group: 'Sistem', accent: 'orange' },
-  MODERATION: { title: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', accent: 'yellow' },
-  OWNER_ACCOUNTS: { title: 'SaaS Hesapları', description: 'Tesis sahibi SaaS abonelik yönetimi.', group: 'Operasyon', accent: 'green' },
-  VERIFICATION: { title: 'Doğrulama Merkezi', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', accent: 'yellow' },
-  NOTIFICATION_TEMPLATES: { title: 'Bildirim Şablonları', description: 'Uygulama bildirim metinlerini (kelimelerini) panelden düzenle.', group: 'Pazarlama', accent: 'pink' },
-};
+export function getRouteMeta(route: string): AdminRouteMeta {
+  const def = ROUTE_INDEX.get(route as GodViewSubRoute);
+  if (def) return { title: def.title, description: def.description, group: def.group, accent: def.accent };
+  return { title: route, description: 'Platform yönetim modülü', group: 'OYNA OS', accent: 'red' };
+}
 
-/**
- * Lansman kapsamı DIŞI modüller → feature_flags anahtarı.
- * Bayrak açıkça true değilse bu route'lar menüden/erişimden gizlenir
- * (master prensipler: Topluluk/Turnuva/İndirim Kodları lansmanda yok).
- * Kod silinmez; yalnız gizlenir → istenirse Parametreler ekranından geri açılır.
- */
-export const SCOPE_GATED_ROUTES: Partial<Record<GodViewSubRoute, string>> = {
-  TOPLULUKLAR: 'module_community',
-  TURNUVALAR: 'module_tournaments',
-  PROMO_CODES: 'module_promo_codes',
-};
+/** Kapsam-dışı route → feature_flags anahtarı (registry'den türetilir). */
+export const SCOPE_GATED_ROUTES: Partial<Record<GodViewSubRoute, string>> = Object.fromEntries(
+  ADMIN_ROUTES.filter((r) => r.featureFlag).map((r) => [r.route, r.featureFlag as string]),
+);
+
+/** Komut paleti listesi (registry'den türetilir). */
+export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRoute; category: string }> =
+  ADMIN_ROUTES.filter((r) => r.inPalette).map((r) => ({ label: r.label, route: r.route, category: r.group }));
+
+/** Sidebar grupları (registry'den türetilir; sıra SIDEBAR_GROUP_ORDER). */
+export const SIDEBAR_GROUPS: Array<{ label: string; items: AdminRouteDef[] }> = SIDEBAR_GROUP_ORDER
+  .map((label) => ({ label, items: ADMIN_ROUTES.filter((r) => r.sidebarGroup === label) }))
+  .filter((g) => g.items.length > 0);
 
 export const ACCENT_STYLES: Record<AdminAccent, { icon: string; ring: string; badge: string }> = {
   red: { icon: 'text-red-400', ring: 'ring-red-500/20', badge: 'bg-red-500/10 text-red-400 border-red-500/20' },
@@ -62,42 +130,3 @@ export const ACCENT_STYLES: Record<AdminAccent, { icon: string; ring: string; ba
   cyan: { icon: 'text-cyan-400', ring: 'ring-cyan-500/20', badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
   orange: { icon: 'text-orange-400', ring: 'ring-orange-500/20', badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
 };
-
-export function getRouteMeta(route: string): AdminRouteMeta {
-  return ADMIN_ROUTE_META[route as GodViewSubRoute] ?? {
-    title: route,
-    description: 'Platform yönetim modülü',
-    group: 'OYNA OS',
-    accent: 'red',
-  };
-}
-
-/** Command palette navigasyon listesi — sidebar ile senkron tutun */
-export const COMMAND_PALETTE_ROUTES: Array<{ label: string; route: GodViewSubRoute; category: string }> = [
-  { label: 'Genel Bakış', route: 'GENEL', category: 'Komuta' },
-  { label: 'Komuta Merkezi', route: 'CONTROL', category: 'Komuta' },
-  { label: 'Finans Merkezi', route: 'FINANCE', category: 'Finans' },
-  { label: 'Komisyon', route: 'COMMISSION', category: 'Finans' },
-  { label: 'İhtilaflar', route: 'DISPUTES', category: 'Finans' },
-  { label: 'Hizmet İtirazları', route: 'SERVICE_DISPUTES', category: 'Finans' },
-  { label: 'Sahalar', route: 'SAHALAR', category: 'Operasyon' },
-  { label: 'Kullanıcılar', route: 'KULLANICILAR', category: 'Operasyon' },
-  { label: 'Kaleciler', route: 'KALECİLER', category: 'Operasyon' },
-  { label: 'Hakemler', route: 'HAKEMLER', category: 'Operasyon' },
-  { label: 'Doğrulama Merkezi', route: 'VERIFICATION', category: 'Operasyon' },
-  { label: 'Onay Bekleyenler', route: 'PENDING_VERIFICATIONS', category: 'Operasyon' },
-  { label: 'Kimlik Doğrulama', route: 'PROVIDER_IDENTITIES', category: 'Operasyon' },
-  { label: 'Tesis Onayları', route: 'MODERATION', category: 'Operasyon' },
-  { label: 'Maçlar', route: 'MATCHES', category: 'Operasyon' },
-  { label: 'Topluluklar', route: 'TOPLULUKLAR', category: 'Topluluk' },
-  { label: 'Takımlar', route: 'TAKIMLAR', category: 'Topluluk' },
-  { label: 'Turnuvalar', route: 'TURNUVALAR', category: 'Topluluk' },
-  { label: 'Kampanyalar', route: 'NOTIFICATIONS', category: 'Pazarlama' },
-  { label: 'Bildirim Şablonları', route: 'NOTIFICATION_TEMPLATES', category: 'Pazarlama' },
-  { label: 'İndirim Kodları', route: 'PROMO_CODES', category: 'Pazarlama' },
-  { label: 'Denetim Kayıtları', route: 'AUDIT_LOG', category: 'Sistem' },
-  { label: 'CMS Metinler', route: 'CONTENT', category: 'Sistem' },
-  { label: 'Sistem Ayarları', route: 'SETTINGS', category: 'Sistem' },
-  { label: 'Sistem Parametreleri', route: 'SYSTEM_PARAMS', category: 'Sistem' },
-  { label: 'Ekipler & Yetkiler', route: 'ACL', category: 'Sistem' },
-];

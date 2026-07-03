@@ -22,7 +22,7 @@ const SEGMENTS = [
 
 const SEGMENT_LABEL: Record<string, string> = Object.fromEntries(SEGMENTS.map((s) => [s.id, s.label]));
 
-export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' | 'SEGMENTATION' }> = ({ route = 'NOTIFICATIONS' }) => {
+export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = 'NOTIFICATIONS' }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [segment, setSegment] = useState<BroadcastSegment>('ALL');

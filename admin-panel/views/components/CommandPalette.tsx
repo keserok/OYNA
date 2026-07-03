@@ -4,6 +4,7 @@ import { Search, MapPin, Users, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import { COMMAND_PALETTE_ROUTES } from '../design/adminRoutes';
 import { useAdminPermissions } from '../context/AdminPermissionsContext';
+import { useAdminFeatureFlags } from '../context/AdminFeatureFlagsContext';
 import type { GodViewSubRoute } from '../GodViewPanel';
 
 interface CommandPaletteProps {
@@ -25,6 +26,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     const adminPitches = useAppStore((s) => s.adminPitches);
     const adminUsers = useAppStore((s) => s.adminUsers);
     const { canAccess } = useAdminPermissions();
+    const { moduleEnabled } = useAdminFeatureFlags();
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -46,10 +48,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     const filteredRoutes = useMemo(() => {
         const list = COMMAND_PALETTE_ROUTES.filter(
-            (r) => canAccess(r.route) && (!q || r.label.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)),
+            (r) => canAccess(r.route) && moduleEnabled(r.route)
+                && (!q || r.label.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)),
         );
         return list.slice(0, 8);
-    }, [q, canAccess]);
+    }, [q, canAccess, moduleEnabled]);
 
     const filteredPitches = useMemo(
         () => adminPitches.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 3),
