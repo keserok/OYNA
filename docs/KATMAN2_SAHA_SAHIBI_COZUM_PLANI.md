@@ -3,6 +3,7 @@
 > **Tarih:** 4 Temmuz 2026 · **Kaynak:** 6 paralel kod-keşif ajanı + 6 tasarım ajanı (dosya:satır kanıtlı) + sentez.
 > **Hedef:** Gerçek bir halı saha sahibinin **kağıt defter + WhatsApp + nakit çekmecesi** üçlüsünü tamamen bırakıp TÜM operasyonunu OYNA'ya taşıması.
 > **İlke:** Tüm migration'lar eklemeli + idempotent; riskli davranışlar `app_config`/`feature_flags` arkasında; her şey SIMULATION modunda bugün, iyzico ile yarın aynı çalışır.
+> **Gelir modeli (karar, 4 Tem):** OYNA'nın saha sahibinden geliri **yalnızca işlem komisyonu** (Model A/B); **saha sahibi OYNA'ya asla abonelik/sabit ücret ödemez.** Çekirdek operasyon panosu her owner'a **sonsuza dek ücretsiz** ve **hiçbir zaman ödeme/plan yüzünden kilitlenmez.** `owner_accounts` plan/entitlement iskeleti **ileride opsiyonel bir premium katman** ihtimali için dormant tutulur; ama bu katman gelse bile çekirdeği asla kilitlemez, kimseyi ödemeye zorlamaz. Tek meşru dondurma = **admin istismar/dolandırıcılık kilidi** (`ops_locked`) — fatura değil, moderasyon.
 
 ---
 
@@ -11,13 +12,13 @@
 | # | Problem | Çözüm (tek cümle) | Efor | Sprint |
 |---|---|---|---|---|
 | P1 | İnternet kesilince rezervasyon kayboluyor | IndexedDB outbox + idempotent RPC'ler + çakışma çözümü + takvim snapshot'ı | 12-14g | S3 |
-| P2 | SaaS faturası ön büroyu kilitliyor | CORE/PREMIUM/PROTECTED ayrımı — çekirdek ASLA kilitlenmez + self-servis fatura | 10-12g | S1 |
+| P2 | Fatura/plan durumu ön büroyu kilitliyor (abonelik kalıntısı) | Abonelik/kilit kavramı kaldırılır — çekirdek ASLA kilitlenmez + RLS güvenlik açığı kapatılır; iskelet ileride opsiyonel premium için dormant durur | 6-8g | S1 |
 | P3 | Payout vaadi yalan + komisyon görünmez + nakit/kart karışık | Pazartesi otomatik payout + komisyon SSOT + 3-kova mutabakat + dürüst onboarding | 12-15g | S0+S1+S4 |
 | P4 | Takvim 1 kort × 1 gün | TESİS (gün×kort) + HAFTA görünümü, tek RPC, gerçek doluluk % | 8-10g | S2 |
 | P5 | Kantin yok, veresiye sığ, fiş yok | Kantin-lite POS + kalem-bazlı veresiye defteri + WhatsApp fişi | 10-12g | S5 |
 | P6 | Personel girişi yok, manuel rezervasyon katı, go-live opak | Saha-kapsamlı personel hesapları + esnek rezervasyon + şeffaf onay checklist'i | 14-17g | S2+S4+S6 |
 
-**Toplam:** ~66-80 geliştirici-günü (tek kişi, ~12 hafta) · İlk görünür güven kazanımları **Sprint 0'da (2-3 gün)**.
+**Toplam:** ~62-76 geliştirici-günü (tek kişi, ~11-12 hafta) · İlk görünür güven kazanımları **Sprint 0'da (2-3 gün)**.
 
 ---
 
@@ -43,24 +44,30 @@
 
 ---
 
-## P2 — ÖN BÜRO ASLA KİLİTLENMEZ + SELF-SERVİS FATURA 🔓
+## P2 — ÖN BÜRO ASLA KİLİTLENMEZ + ABONELİK KALINTISI TEMİZLİĞİ 🔓
 
-**Problem (kanıt):** `isReadOnly = status ∈ {suspended,cancelled}` tüm paneli kilitler — nakit kapı rezervasyonu dahil (`useOwnerEntitlements.ts`, ~25 guard noktası). Üstelik keşif ajanı **kritik güvenlik açığı** buldu: tüm gating client-only VE `owner_accounts_update` RLS policy'si owner'ın **kendi plan_tier/status/entitlements'ını UPDATE etmesine izin veriyor** (PostgREST ile self-upgrade mümkün!). "SaaS & Fatura" menüsü `false &&` ile ölü kod; plan değişikliği = destek@oyna.app'e mail.
+> **Gelir modeli kararı (4 Tem):** Owner OYNA'ya **abonelik ödemez**; gelir yalnız komisyon. Bu bölüm bu karara göre yeniden yazıldı — eski "self-servis fatura + kademeli askıya alma" tasarımı **iptal**; yerine "abonelik/kilit kavramını sök, iskeleti ileride opsiyonel premium için dormant tut" geldi.
 
-**Çözüm mimarisi — 3 yetki sınıfı:**
-- **CORE_OPS (asla kilitlenmez):** manuel rezervasyon, onay/red, abonman, slot kapatma, özel fiyat, gider+veresiye, tesis aç/kapa, çalışma saatleri, banka hesapları, kort CRUD. Fatura durumu ne olursa olsun yazılabilir.
-- **PREMIUM (kademeli kilitlenir):** flash indirim, ekip modülü, gelişmiş finans analitiği, çoklu tesis, (rezerve) kantin POS.
-- **PROTECTED (faturadan bağımsız):** para çekme — owner'ın kendi rezervasyon geliri SaaS faturasına rehin **tutulamaz**; tek gerçek dondurma = admin'in `ops_locked` istismar kilidi.
+**Problem (kanıt):** `isReadOnly = status ∈ {suspended,cancelled}` tüm paneli kilitler — nakit kapı rezervasyonu dahil (`useOwnerEntitlements.ts`, ~25 guard noktası). Bu, koda sızmış bir **"Saha SaaS" kalıntısı** (owner_accounts.plan_tier/status) — ki bu modül `OYNA_YOL_HARITASI.md` Faz 0.1'de zaten **silinecekler** listesinde. Bugün kimseden para toplamıyor ama admin bir hesabı `suspended` yaparsa ön büro tümden kilitleniyor. Üstelik keşif ajanı **kritik güvenlik açığı** buldu: tüm gating client-only VE `owner_accounts_update` RLS policy'si owner'ın **kendi plan_tier/status/entitlements'ını UPDATE etmesine izin veriyor** (PostgREST ile self-upgrade mümkün!). "SaaS & Fatura" menüsü `false &&` ile ölü kod.
 
-**Uygulama:** `guardWrite()` → `guardWrite(capabilityKey)` + statik CAPABILITY_MAP (25 guard noktasının tam sınıflandırması tasarımda hazır). Server tarafı: (1) **önce RLS deliği kapanır** (kolon-koruma trigger'ı; billing_email yazılabilir kalır), (2) `owner_feature_allowed(uid, feature)` fonksiyonu premium RPC'lerin başına + flash-deal/team INSERT policy'lerine WITH CHECK. **Kademeli merdiven:** ödeme başarısız → `past_due` (7 gün, sarı banner, hiçbir kilit) → `suspended` (premium kilit, çekirdek açık, kırmızı banner) → 30 gün sonra `cancelled` (işlevsel olarak aynı). `owner_billing_status_sweep()` pg_cron — iyzico canlıya kadar `enforcement_enabled=false`. **Self-servis:** `owner_plan_catalog` (tier→entitlement haritası nihayet var olur), `OwnerBillingView` (plan karşılaştırma + geçmiş + yükselt/düşür/iptal talebi → admin tek-tık onay kuyruğu).
+**Çözüm mimarisi — abonelik yok, 3 yetki sınıfı:**
+- **CORE_OPS (her owner'a ücretsiz, ASLA kilitlenmez):** manuel rezervasyon, onay/red, abonman, slot kapatma, özel fiyat, gider+veresiye, tesis aç/kapa, çalışma saatleri, banka hesapları, kort CRUD, takvim, kantin, personel — **tüm günlük operasyon.** Hiçbir plan/fatura durumu bunları kısıtlamaz.
+- **OPSİYONEL-PREMIUM (ileride, opt-in eklenti):** şimdilik hepsi ücretsiz ve yalnız **rollout feature-flag** ile açılır (ör. pilotta kantin). İskelet (`entitlements`) dormant durur ki ileride istersen gelişmiş analitik gibi **isteğe bağlı** bir katmanı ekleyebilesin — ama bu katman **çekirdeği asla kilitlemez** ve kimseyi ödemeye zorlamaz. Bugün hiçbir para toplama yolu inşa **edilmez**.
+- **PROTECTED (plandan tümüyle bağımsız):** para çekme — owner'ın kendi rezervasyon geliri hiçbir "plan/fatura" durumuna rehin **tutulamaz**; tek gerçek dondurma = admin'in **`ops_locked` istismar/dolandırıcılık kilidi** (bir fatura değil, moderasyon aracı; hem client hem server zorlar).
 
-**DB:** `20260710000001_owner_core_premium_capabilities` (katalog + RLS düzeltmesi + `owner_feature_allowed` + request_payout yaması) · `..02_owner_billing_selfservice` (`owner_billing_requests` + event ledger üreticileri).
+**Uygulama (kaldırılanlar → kalanlar):**
+- ❌ **Kaldırılır:** kademeli askıya alma merdiveni (`past_due→suspended` fatura mantığı), `owner_billing_status_sweep()` cron, `owner_plan_catalog` (fiyatlı planlar), self-servis fatura ekranı `OwnerBillingView`, `owner_billing_requests` + fatura event ledger'ı. Yani "owner ödeme yapsın/yapmazsa kilitlensin" ile ilgili **her şey**.
+- ✅ **Kalır/yapılır:** (1) `guardWrite()` → `guardWrite(capabilityKey)` + statik CAPABILITY_MAP; billing-durumu tabanlı `isReadOnly` **tamamen sökülür**, yerine yalnız `opsLocked` (admin istismar kilidi) gelir. (2) **RLS güvenlik deliği kapanır** (kolon-koruma trigger'ı — owner kendi plan/status/entitlements'ını değiştiremez; `billing_email` gibi zararsız alanlar yazılabilir kalır). (3) İleride premium gerekirse diye `owner_feature_allowed(uid, feature)` yardımcı fonksiyonu eklenir ama **bugün hiçbir çekirdek yola bağlanmaz** — sadece opsiyonel eklentilerin ileride takılacağı boş kanca. (4) `OwnerMenuView`'daki ölü "SaaS & Fatura" satırı **canlandırılmaz — silinir** (ödenecek fatura yok).
 
-**Kod:** `useOwnerEntitlements.ts` (capability map) · `OwnerPanel.tsx` tüm guard noktaları yeniden-anahtarlanır · `OwnerFinanceView`/`OwnerTeamView`/`OwnerBankAccountsModal`/`OwnerWithdrawalsModal` readOnly→opsLocked/analyticsLocked ayrımı · `OwnerMenuView` ölü satır canlanır · `OwnerBillingView.tsx` (yeni) · admin `OwnerAccountsTab` (ops_locked checkbox + katalog-uygulayan plan değişimi).
+**DB:** `20260710000001_owner_billing_neutralize` — (a) `owner_accounts_update` RLS deliğini kapatan kolon-koruma trigger'ı (SALT güvenlik); (b) `entitlements` anahtar sözlüğü dormant kalır; (c) opsiyonel `owner_feature_allowed` yardımcı (bağlanmadan). Fiyatlı katalog / fatura tabloları / sweep cron **oluşturulmaz.**
 
-**Rollout Faz 0 (bayraksız, hemen):** RLS self-upgrade deliğini kapatan migration — saf güvenlik, sıfır görünür değişiklik. **Bu, Sprint 0'ın parçası.**
+**Kod:** `useOwnerEntitlements.ts` (capability map; billing-lockout mantığı silinir) · `OwnerPanel.tsx` guard noktaları yeniden-anahtarlanır (tümü CORE = her zaman açık) · `OwnerFinanceView`/`OwnerTeamView`/`OwnerBankAccountsModal`/`OwnerWithdrawalsModal` `readOnly` → yalnız `opsLocked` · `OwnerMenuView` ölü fatura satırı silinir · admin `OwnerAccountsTab` (`ops_locked` istismar checkbox'ı — tek dondurma). `OwnerBillingView.tsx` **oluşturulmaz.**
 
-**Kabul kriteri:** `status='suspended'` bir hesapta nakit kapı rezervasyonu girilir, kaydedilir ve takvimde görünür; flash indirim ekranı kilitli; PostgREST ile `plan_tier` UPDATE denemesi reddedilir.
+**Rollout Faz 0 (bayraksız, hemen):** RLS self-upgrade deliğini kapatan trigger — saf güvenlik, sıfır görünür değişiklik. **Bu, Sprint 0'ın parçası.**
+
+**Kabul kriteri:** Admin bir hesabı `suspended` yapsa bile nakit kapı rezervasyonu girilir, kaydedilir ve takvimde görünür (çünkü artık billing paneli kilitlemiyor); yalnız admin `ops_locked` işaretlerse çekirdek donar; PostgREST ile `plan_tier` UPDATE denemesi trigger tarafından reddedilir; panelde ödenecek fatura/plan-yükselt ekranı **görünmez.**
+
+**Not — efor düştü:** Fiyatlı katalog + self-servis fatura + kademeli merdiven inşası kalktığı için P2 **10-12g → 6-8g**.
 
 ---
 
@@ -115,7 +122,7 @@
 
 **Kod:** `OwnerQuickSaleSheet` + `OwnerCanteenProductsModal` + `OwnerDebtorDetailModal` + `receiptService.ts` (yeni) · `OwnerFinanceView` + `OwnerPanel` FAB + `OwnerBookingDetailModal` ("MAKBUZ PAYLAŞ" + "VERESİYEYE YAZ") · `SettingsScreen` KVKK export'una yeni tablolar.
 
-**Bayraklar:** `owner_canteen_enabled`, `owner_veresiye_v2_ui`. POS tüm planlarda ücretsiz; kantin ANALİTİĞİ Pro'da.
+**Bayraklar:** `owner_canteen_enabled`, `owner_veresiye_v2_ui`. **Tümü her owner'a ücretsiz** — yalnız rollout feature-flag'i ile kademeli açılır (plan/ödeme kapısı yok). Kantin analitiği, ileride opsiyonel-premium yapılmak istenirse P2'deki dormant `owner_feature_allowed` kancasına takılabilecek **tek aday** olarak işaretlenir; ama lansmanda ücretsiz.
 
 **Kabul kriteri:** Backfill sonrası tek SQL assert: her açık borçlu için kayıt-toplamı == amount_owed; cuma akşamı senaryosu: 3 dokunuşta satış + WhatsApp'tan fiş; kısmi tahsilat bakiyeyi doğru düşer.
 
@@ -145,7 +152,7 @@ Bağımlılıklar: P4'ün RPC'si → P1'in snapshot'ı bunu cache'ler · P4'ün 
 | Sprint | Süre | İçerik | Pilot owner'a kanıtlanan |
 |---|---|---|---|
 | **S0 — Sessiz Güvenlik & Para Doğruluğu** | 2-3 gün, HEMEN | P2-Faz0 (owner self-upgrade RLS deliği) + P3-L1 (komisyon SSOT, source kolonu, iade geri-alma, ölü withdrawal RPC) + P4 tarih bug düzeltmesi | (görünmez ama parayı ve güvenliği düzeltir) |
-| **S1 — Güven Temeli** | 2 hafta | P2 tamamı (kilitlenmez + self-servis fatura) + P3-L2/L4 (IBAN SSOT + 3-kova mutabakat + komisyon şeffaflığı) | "Panelim asla kilitlenmez; param kuruşuna kadar net" |
+| **S1 — Güven Temeli** | 2 hafta | P2 tamamı (abonelik/kilit kavramı sökülür + RLS açığı kapanır) + P3-L2/L4 (IBAN SSOT + 3-kova mutabakat + komisyon şeffaflığı) | "Panelim asla kilitlenmez, hiç abonelik ödemem; param kuruşuna kadar net" |
 | **S2 — Tesis Tek Bakışta** | 2 hafta | P4 tamamı (TESİS/HAFTA + RPC + extraction) + P6-B esnek rezervasyonun modal kısmı | "Kağıt haftalık ızgaramdan daha iyi" |
 | **S3 — Asla Kaybolmaz** | 2 hafta | P1 tamamı (outbox + idempotent RPC'ler + snapshot + CONFLICT akışı) | "İnternet kesildi, rezervasyon kaybolmadı" |
 | **S4 — Para Otomatiği** | 2 hafta | P3-L3/L5 (Pazartesi otomatik payout + anomali kuyruğu + teaser + onboarding metinleri) + P6-C go-live checklist | "Pazartesi param elimi sürmeden geldi" |
@@ -161,8 +168,8 @@ Her sprint bağımsız gemiye biner (feature flag); geri dönüş = bayrağı ka
 | # | Karar | Önerim | Gerekçe |
 |---|---|---|---|
 | 1 | Payout bekletme 14→**7 gün**? | ✅ Evet | En güçlü tek güven kolu; mekanizma tek satır ayar; 7g + Pazartesi otomatiği = her kart lirası en geç 14 günde, çoğu ~10 günde hesapta |
-| 2 | Çekirdek (CORE_OPS) **sonsuza dek ücretsiz**? | ✅ Evet | Stratejik varlık, owner'ın operasyonel verisinin OYNA'da yaşaması; ön büroyu kilitleyebilen araca kimse tam geçmez |
-| 3 | SaaS askıdayken **para çekme açık** kalsın? | ✅ Evet | Owner'ın kendi geliri faturaya rehin tutulamaz (güven + TR hukuku gri alanı); istismar için ayrı admin `ops_locked` var |
+| 2 | Gelir modeli | ✅ **KARARLAŞTI: Komisyon + ileride opsiyonel premium.** Owner abonelik ödemez; çekirdek sonsuza dek ücretsiz ve kilitlenmez; iskelet dormant durur (P2 buna göre yeniden yazıldı) |
+| 3 | Para çekme her koşulda **açık** kalsın? | ✅ Evet | Owner'ın kendi geliri hiçbir plan/duruma rehin tutulamaz; istismar için ayrı admin `ops_locked` var (fatura değil) |
 | 4 | Komisyon birleştirme: saha kaporası **%10** mu %15 mi? | **%10** | Cüzdan zaten fiilen %90 kredilendiriyor; %15'e çıkmak mevcut owner'lara zam olur |
 | 5 | %0 ilk-30-gün **gerçekten implemente**? | ✅ Evet | Zaten vaat edilmiş; SSOT üstünde ~1 gün; ilk ay kırılımda "%0 → ₺0 komisyon" satırı güçlü güven anı |
 | 6 | Otomatik onay limiti **10.000₺** / min payout **250₺**? | ✅ Kabul | Yoğun hafta sonu 2 kortlu tesis ~₺6-8k net; üstü zaten anomali incelemesine düşer |
