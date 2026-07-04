@@ -3,7 +3,7 @@
 > **Tarih:** 4 Temmuz 2026
 > **Kaynak:** Kod tabanının uçtan uca canlı analizi + 3 paralel bağımsız denetim (mağaza hazırlığı · saha sahibi operasyon bütünlüğü · oyuncu akışı & ödeme gerçekliği).
 > **Soru:** OYNA'yı Google Play + App Store'a yüklemenin, **saha sahiplerinin TÜM operasyonlarını** uygulamaya taşımasının ve **saha kiralayacak tüm oyuncuların** uygulamayı kullanmasının önündeki engeller nelerdir; nasıl aşarız?
-> **İlişki:** Bu belge, mevcut `docs/STORE_LANSMAN_PLANI.md` (teknik mağaza checklist'i) üzerine biner ve onu **benimsenme (adoption) katmanıyla** tamamlar. Teknik plan "nasıl mağazaya çıkarız"a; bu belge "mağazaya çıktıktan sonra saha sahibi ve oyuncu neden gerçekten kullanır"a odaklanır.
+> **İlişki:** Bu belge, mevcut `docs/master/STORE_LANSMAN_PLANI.md` (teknik mağaza checklist'i) üzerine biner ve onu **benimsenme (adoption) katmanıyla** tamamlar. Teknik plan "nasıl mağazaya çıkarız"a; bu belge "mağazaya çıktıktan sonra saha sahibi ve oyuncu neden gerçekten kullanır"a odaklanır.
 
 ---
 

@@ -263,30 +263,37 @@ Lansman günü kontrolü: `demo_mode_enabled=KAPALI` · demo purge · Go-Live Ö
 
 ## 15. Doküman Haritası & Yetki Sırası
 
+> **Klasör düzeni (04.07 yeniden düzenleme):** Güncel dokümanlar **`docs/master/`**, arşiv **`docs/eski/`**, kök `README.md` + kod-yanı belgeler (`notifications/`, `tests/`) yerinde kalır. Navigasyon için: **`docs/README.md`** (içindekiler).
+
 | Konu | Bağlayıcı kaynak | Not |
 |---|---|---|
-| Ürün kararları (tümü) | `docs/OYNA_MASTER_PRENSIPLER.md` | En üst otorite; §14 revizyonları dahil |
-| Faz planı | `docs/OYNA_YOL_HARITASI.md` | Faz 0–7 uygulama notlarıyla |
-| Operasyonel durum / kalan işler | `docs/OYNA_OPERASYONEL_DURUM.md` | "Tek güncel kaynak" etiketi taşır |
-| iyzico aktivasyonu | `docs/OYNA_GO_LIVE_IYZICO.md` | Para motoru runbook'u |
-| Go-live anahtarları | `docs/GO_LIVE_CHECKLIST.md` | Panel + secret adımları |
-| İşletme/kurtarma | `docs/RUNBOOK.md` | Yazılımcısız yönetim + PITR |
-| Store süreci | `docs/STORE_LANSMAN_PLANI.md` | Faz A–J + engel envanteri |
-| UI/UX borçları | `docs/UI_UX_YAPILACAKLAR.md` | 20 bulgu + durum |
-| UI/UX rol-bazlı cilalar | `docs/UI_SONHAL_SORULARI.md` | 120 soru — **cevap bekliyor** |
-| Admin panel kararları | `docs/ADMIN_PANEL_KARARLAR.md` | 100_SORU'yu **geçersiz kılar** (soru seti referans) |
-| DB deploy stratejisi | `docs/WAVE_DEPLOY_PLANI.md` | 14 wave / 5 parti |
-| Problem kayıt süreci | `PROBLEMLER_VE_COZUMLER.md` | Rol-bazlı yaşayan kayıt |
-| Entegrasyon testleri | `tests/integration/README.md` | 13 SQL paketi |
-| Push kurulum detayı | `notifications/KURULUM_REHBERI.md` + `PUSH_NOTIFICATION_PLAN.md` | Teknik kurulum; ürün kararları için §7 geçerli |
-| Persona/UX araştırması | `docs/fikirler/kullanici_analizi.md` | Girdi; iki kapsam-içi 5/5 içgörü (maç-içi arkadaş/kadro seçimi + akıllı dashboard CTA) §14 GELİŞTİRİCİ #13'e işlendi; kalan çözümler kapsam-dışı |
-| **Arşiv (karar değeri yok)** | `docs/eski/*` (16 dosya) | Keşif soruları Master'a işlendi |
+| Ürün kararları (tümü) | `docs/master/OYNA_MASTER_PRENSIPLER.md` | En üst otorite; §14 revizyonları dahil |
+| Faz planı | `docs/master/OYNA_YOL_HARITASI.md` | Faz 0–7 uygulama notlarıyla |
+| Operasyonel durum / kalan işler | `docs/master/OYNA_OPERASYONEL_DURUM.md` | "Tek güncel kaynak" etiketi taşır |
+| iyzico aktivasyonu | `docs/master/OYNA_GO_LIVE_IYZICO.md` | Para motoru runbook'u |
+| Go-live anahtarları | `docs/master/GO_LIVE_CHECKLIST.md` | Panel + secret adımları |
+| İşletme/kurtarma | `docs/master/RUNBOOK.md` + `docs/master/runbook/` | Yazılımcısız yönetim + PITR; runbook/ altında INCIDENT_RESPONSE · PITR_RESTORE · SECRET_ROTATION |
+| Store süreci | `docs/master/STORE_LANSMAN_PLANI.md` | Faz A–J + engel envanteri |
+| Lansman/benimsenme engelleri | `docs/master/LANSMAN_ENGELLERI_VE_ASMA_PLANI.md` | (04.07) STORE planının adoption katmanı |
+| Saha sahibi çözüm planı | `docs/master/KATMAN2_SAHA_SAHIBI_COZUM_PLANI.md` | (04.07) owner operasyonunu OYNA'ya taşıma |
+| Admin RPC yetki envanteri | `docs/master/RPC_YETKI_ENVANTERI.md` | Wave 8; 46 RPC guard'lı doğrulandı |
+| UI/UX borçları | `docs/master/UI_UX_YAPILACAKLAR.md` | 20 bulgu + durum |
+| UI/UX rol-bazlı cilalar | `docs/master/UI_SONHAL_SORULARI.md` | 120 soru — **cevap bekliyor** |
+| Admin panel kararları | `docs/master/ADMIN_PANEL_KARARLAR.md` | `docs/eski/ADMIN_PANEL_100_SORU.md` soru setini **geçersiz kılar** |
+| DB deploy stratejisi | `docs/master/WAVE_DEPLOY_PLANI.md` | 14 wave / 5 parti |
+| Problem kayıt süreci | `docs/master/PROBLEMLER_VE_COZUMLER.md` | Rol-bazlı yaşayan kayıt |
+| Entegrasyon testleri | `tests/integration/README.md` | 13 SQL paketi (kodla birlikte) |
+| Push kurulum detayı | `notifications/KURULUM_REHBERI.md` + `PUSH_NOTIFICATION_PLAN.md` | Teknik kurulum (kodla birlikte); ürün kararları için §7 geçerli |
+| Persona/UX araştırması | `docs/eski/kullanici_analizi.md` | Girdi; iki kapsam-içi 5/5 içgörü §14 GELİŞTİRİCİ #13'e işlendi; kalan çözümler kapsam-dışı |
+| **Arşiv (karar değeri yok)** | `docs/eski/*` (20 dosya) | Aşılmış soru setleri (ADMIN_PANEL_100_SORU) + Firebase-dönemi planlar + bayat referanslar (DATABASE_README, DOSYALARIN_ISLEVLERI) |
 
-## 16. Tespit Edilen Tutarsızlıklar (bayat dokümanlar — güncellenmeli)
+## 16. Tespit Edilen Tutarsızlıklar (bayat dokümanlar)
 
-1. **`README.md` (26.06):** Oyunlaştırmayı (FUT/gamification) çekirdek olarak anlatıyor — oysa oyunlaştırma **kapsam dışı** (§2), oyuncu kartları yalnız admin kontrolünde. "Ek Dökümantasyonlar" bölümü arşive taşınan `docs/eski/*` dosyalarını gösteriyor; güncel doküman setiyle eşitlenmeli.
-2. **`DATABASE_README.md` (25.06):** "24 tablo" ve 03.06 tarihli güvenlik raporu ("2 tabloda RLS eksik, 36 permissive policy") **bayat** — güncel gerçek: **~73 tablo, RLS 67/67**, hardening migration'ları uygulanmış. Araç/komut kısmı hâlâ geçerli.
-3. **`DOSYALARIN_ISLEVLERI.md` (25.06):** Silinen `arsiv/` klasörünü (STORE_LANSMAN temizliği) mevcutmuş gibi anlatıyor; `docs/` yolları `docs/eski/`'ye taşınan dosyaları gösteriyor; `file:///Users/kerem/...` linkleri kırık; ayrıca repoda **artık bulunmayan** kaynak dosyalarını (`components/CommunityApplicationWizard.tsx` — Topluluk kapsam dışı, bileşen silinmiş; `firebaseSync.ts`, `services/db.ts/geoService.ts/pitchService.ts`, `constants.ts`) hâlâ güncel mimari bileşenmiş gibi belgeliyor.
+> **Not (04.07):** Aşağıdaki bayat dosyalardan `DATABASE_README.md` ve `DOSYALARIN_ISLEVLERI.md` yeniden düzenlemede **`docs/eski/`'ye taşındı** — böylece güncel doküman yüzeyinde çıkmıyorlar; içerik güncellemesi opsiyonel (arşiv değeri).
+
+1. **`README.md` (26.06, kökte):** Oyunlaştırmayı (FUT/gamification) çekirdek olarak anlatıyor — oysa oyunlaştırma **kapsam dışı** (§2), oyuncu kartları yalnız admin kontrolünde. "Ek Dökümantasyonlar" bölümü yeniden düzenlemede güncellendi (`docs/master/` + `docs/README.md` index'e yönlendirir).
+2. **`docs/eski/DATABASE_README.md` (25.06):** "24 tablo" ve 03.06 tarihli güvenlik raporu ("2 tabloda RLS eksik, 36 permissive policy") **bayat** — güncel gerçek: **~73 tablo, RLS 67/67**, hardening migration'ları uygulanmış. Araç/komut kısmı hâlâ geçerli. *(Arşive taşındı.)*
+3. **`docs/eski/DOSYALARIN_ISLEVLERI.md` (25.06):** Silinen `arsiv/` klasörünü mevcutmuş gibi anlatıyor; `file:///Users/kerem/...` linkleri kırık; repoda **artık bulunmayan** kaynak dosyalarını (`components/CommunityApplicationWizard.tsx` — Topluluk kapsam dışı, silinmiş; `firebaseSync.ts`, `services/db.ts/geoService.ts/pitchService.ts`, `constants.ts`) hâlâ güncel mimari bileşenmiş gibi belgeliyor. *(Arşive taşındı.)*
 4. **`notifications/PUSH_NOTIFICATION_PLAN.md` + `KURULUM_REHBERI.md` (25.06):** Kurulum adımları geçerli ama şema/trigger detayları Faz 7 sonrası migration'larla kısmen aşıldı (örn. `notifications.type` → `type_key` düzeltmesi); uygulamadan önce güncel migration'lar esas alınmalı.
 5. **`docs/eski/` içindeki plan dosyaları — iki farklı gerekçeyle arşivde:**
    - **Firebase/Geofirestore dönemine ait:** `OYNA_MAP_GEOFIRESTORE_PLANI` + backend/mimari arşiv dosyaları (Firebase temelli) → güncel backend **%100 Supabase**, sadece tarihçe.
