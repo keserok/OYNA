@@ -11,11 +11,11 @@
 
 | Alan | Durum |
 |---|---|
-| **Ürün çekirdeği (Faz 0–7)** | ✅ Kod tarafı **TAMAM** (main'de). RLS 67/67, admin MFA, bildirim merkezi, komisyon SSOT, kademeli iade. |
+| **Ürün çekirdeği (Faz 0–7)** | ✅ Kod tarafı **TAMAM** (main'de). RLS 67/67, admin MFA, bildirim merkezi, komisyon **motoru** SSOT (`commission_config` engine ✅ CANLI; panel `settings` mükerrer alan temizliği Wave 5 bekliyor — §5.1), kademeli iade. |
 | **Para motoru** | 🟡 **SIMULATION** modunda tam çalışıyor; gerçek tahsilat için iyzico sözleşmesi + 3 HTTP bağlama kaldı (§5.4). |
 | **Push bildirim** | 🟡 Kod üretim kalitesinde; APNs `.p8` + FCM anahtarları bekleniyor (`push_live_enabled` kapalı). |
 | **Native mobil (store)** | ✅ Kodla çözülebilen tüm engeller 02.07 itibarıyla giderildi (Android imzalama, iOS bundle/pod/entitlements, ikon/splash, deep link). macOS'ta `pod install` + Xcode 26 derlemesi ve gerçek cihaz QA bekliyor. |
-| **Testler** | ✅ `tsc` temiz · production build başarılı · 70/70 birim test · 12 SQL entegrasyon paketi yeşil. |
+| **Testler** | ✅ `tsc` temiz · production build başarılı · 70/70 birim test · 13 SQL entegrasyon paketi yeşil. |
 | **Kritik yol (kod dışı)** | 🔴 iyzico sözleşme/KYC · Apple/Google hesapları (kurumsal) · avukat onaylı yasal metinler + şirket ünvanı · APNs/FCM anahtarları · Ordu 4 saha anlaşması. **Uçtan uca 6–10 hafta** öngörülüyor. |
 
 ---
@@ -35,7 +35,7 @@
 **✅ VAR:** Saha keşfi & rezervasyon · Maç oluşturma/katılım (iki taraflı: oyuncu + saha sahibi) · Kaleci/Hakem kiralama · Takımlar + Arkadaşlar + takım-içi Taktik Stüdyo · Oyuncu kartları (yalnız admin kontrolünde) · Fair-play/güvenilirlik · Maç sonu değerlendirme · 1-1 mesajlaşma · Admin paneli (GodView).
 
 **❌ YOK (kapsam dışı):** Turnuvalar · Topluluklar · AI Koç (Gemini) · OYNA TV · Oyunlaştırma (ELMAS/KARAT, lider tabloları, rozetler) · Saha SaaS ücretli planları · Oyuncu Premium/Pro · Maç içi grup sohbeti · Para yükleme · Sadakat/kupon (sonraya).
-> Uygulama kararı: kapsam-dışı modüllerin **kodu silinmez, feature-flag ile menüden gizlenir** (admin paneli tarafı — ADMIN_PANEL_KARARLAR global karar #4). Tüketici tarafındaki Premium/Topluluk **kalıntıları temizlendi** (Master §14.2).
+> Uygulama kararı: kapsam-dışı modüllerin **kodu silinmez, feature-flag ile menüden gizlenir** (admin paneli tarafı — ADMIN_PANEL_KARARLAR global karar #4). Tüketici tarafındaki Premium/Topluluk **kalıntıları temizlendi** (PRENSIPLER §14.2).
 
 ## 3. Roller, Kimlik & Onboarding
 
@@ -92,7 +92,7 @@ Oluştur → hemen yayınla (TOPLANIYOR) → katılım = kart BLOKAJI (pre-auth,
 - **Skor (opsiyonel, çok kaynaklı):** oyuncu (tüm takım onaylarsa takım geçmişine) · hakem (resmi kayıt) · saha sahibi (iki kayıtlı takım talep ederse). Pickup maçta otomatik takım oluşturulmaz.
 - **Değerlendirme:** atlanabilir, 2 sayfalık hızlı akış; fair-play yıldızı + opsiyonel oyuncu puanı + hizmet alındıysa kaleci/hakem 1–10. **MOTM** = kozmetik etiket.
 - **Güvenilirlik (tek skor, 0–100, başlangıç 100):** no-show −20 · geç iptal −10 · kötü değerlendirme −5 · sorunsuz maç +2 (admin ayarlı). Eşikler: <80 uyarı · <60 kısıt · <40 geçici ban. Skoru **yalnız kullanıcı + admin görür**.
-  - ⚠️ Bilinen borç: kodda `rating`/`fairPlayScore`/`reliabilityScore` hâlâ ayrı — tek skora indirgeme DB+UI koordineli refactor; **lansman engeli değil** (Master §14.3).
+  - ⚠️ Bilinen borç: kodda `rating`/`fairPlayScore`/`reliabilityScore` hâlâ ayrı — tek skora indirgeme DB+UI koordineli refactor; **lansman engeli değil** (PRENSIPLER §14.3).
 - **Sorun Bildir:** no-show · sportmenlik dışı · ödeme/saha sorunu · taciz → admin OPERASYON kuyruğu. Skor itirazı yok.
 
 ### 4.6 Ücretsiz Sahalar & Yaş Matrisi (planlı — henüz kodda yok)
@@ -102,7 +102,7 @@ Oluştur → hemen yayınla (TOPLANIYOR) → katılım = kart BLOKAJI (pre-auth,
 | 18 altı — yetişkin kartı + onay var | ✅ | ✅ |
 | 18+ | ❌ | ✅ |
 
-`is_free` kavramı **ayrı faz** olarak yapılacak (Master §14.3). Ücretsiz sahada para mekaniği yok; fair-play kuralları geçerli.
+`is_free` kavramı **ayrı faz** olarak yapılacak (PRENSIPLER §14.3). Ücretsiz sahada para mekaniği yok; fair-play kuralları geçerli.
 
 ## 5. Gelir Modeli & Para Akışı 💰
 
@@ -113,14 +113,14 @@ Oluştur → hemen yayınla (TOPLANIYOR) → katılım = kart BLOKAJI (pre-auth,
 | **B — Owner-organize maç** | Saha sahibi kendi sahasında açar (**otomatik trigger**) | **%5 + markup** (varsayılan %20, admin ayarlı; oyuncuya EK yansır) | Normal fiyatın **%95**'i |
 | **Kaleci/Hakem hizmeti** | Hizmet talebi | **%10** | — (sağlayıcıya anında payout) |
 
-- Komisyon **saha sahibince değiştirilemez**; yalnız admin (global/saha/hizmet/maç bazında override). Eski %10 çift-kaynak bug'ı kapatıldı — `create_payment_intent` motoru kullanıyor.
+- Komisyon **saha sahibince değiştirilemez**; yalnız admin (global/saha/hizmet/maç bazında override). **İki ayrı "çift-kaynak" meselesi:** (1) **Ödeme motoru — ✅ KAPATILDI:** eski %10 hardcode bug'ı giderildi, `create_payment_intent`/`calculate_commission` artık yalnız `commission_config`'ten okuyor (engine SSOT ✅ CANLI). (2) **Panel/`settings` — ⏳ AÇIK:** `settings`'teki mükerrer komisyon alanının kaldırılıp panelin yalnız `commission_config`'ten okuması hâlâ **Parti B · Wave 5** bekliyor (ADMIN_PANEL Soru 3 & 77). §0/§8'deki "komisyon tek kaynak · Wave 5" bu ikinci meseleyi kasteder — motor SSOT'u ile karıştırılmamalı.
 - Fiyatın tek kaynağı **`pitch_tariffs`**; çakışan tarifede en son güncellenen geçerli.
 
 ### 5.2 Ödeme Tekniği
 - **Sağlayıcı:** iyzico (alt-üye işyeri/marketplace + pre-auth). Blokaj = ön-provizyon; T-8s'te capture; tutmazsa void. Başarısız capture → oyuncu düşer, yedek girer.
 - **İade:** OYNA kredisi veya karta; **PSP kesintisi orantılı düşülür** (`refund_psp_fee_pct/_fixed`, go-live'da iyzico oranı yazılır). Owner çift-ödeme önlemi: iadede bekleyen kazanç per-intent iptal/negatif telafi ile netlenir.
 - **Cüzdan (iki tür):** Kazanç bakiyesi (GK/hakem/owner → IBAN payout) · İade kredisi (yalnız OYNA-içi, çekilemez). Para yükleme lansmanda yok.
-- **Payout:** Saha sahibi **2 haftada bir otomatik** (IBAN doğrulamalı) · kaleci/hakem **anında**.
+- **Payout (hedef model):** Saha sahibi **2 haftada bir** (IBAN doğrulamalı) · kaleci/hakem **anında**. ⚠️ **Uygulama durumu:** payout ŞU AN operatör tarafından `FinancePage → processPayout` ile **ELLE** `COMPLETED`/`FAILED` işaretleniyor (`iyzico_payout_ref` manuel giriliyor). Gerçek iyzico submerchant/IBAN transfer API'si + owner 2-haftalık `pg_cron` job'ı + maç-`COMPLETED`'a bağlı anında provider payout tetiği **HENÜZ YOK** (KALAN İŞ — §8 Parti D / §14 GELİŞTİRİCİ #11). §5.4'teki "kalan 3 HTTP bağlama" yalnız tahsilat/iade akışını kapsar, **payout otomasyonunu kapsamaz**.
 
 ### 5.3 Acil Durum
 **Tek anahtar:** Sistem Parametreleri → Güvenlik → `admin_readonly_mode` = AÇIK → tüm god-mode para işlemleri durur (READ_ONLY_MODE). Kapatmak her zaman mümkün (RUNBOOK §2).
@@ -131,15 +131,19 @@ Altyapı hazır (cron canlı, RPC'ler + capture/void/refund/send-email edge'leri
 2. **T-8s provider capture/void:** `process_match_at_deadline` IYZICO modunda pg_net ile intent başına `capture-payment`/`void-payment` tetikler.
 3. **İptal → karta gerçek iade:** iptal yolları `refund-payment` edge'ini çağırır.
 
-Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, `PAYMENT_EDGE_SECRET`) → **Finans → Go-Live Ön-Uçuş tüm satırlar yeşil** → panel `payment_provider=IYZICO` → küçük gerçek kartla test + iade. Geri dönüş: tek anahtarla `SIMULATION`.
+⚠️ **Çözülmemiş go-live blokerleri (sözleşme sonrası, sandbox'ta doğrulanmalı):**
+- **İade referans netliği:** `refund-payment`, iyzico iadesinde `intent.provider_ref`'i `paymentTransactionId` olarak geçiyor. Bunun `capture-payment` dönüşündeki gerçek kalem-bazlı `paymentTransactionId` olduğu **canlı sandbox'ta bir capture→refund turuyla doğrulanmadan `IYZICO`'ya geçiş BLOKE** (aksi halde iade iyzico'da başarısız olurken panel "tamamlandı" gösterebilir). Gerekirse `payment_intents`'a ayrı `payment_transaction_id` kolonu.
+- **Mutabakat (reconciliation):** Canlı para öncesi günlük iyzico raporlama API'sinden çekilen kayıtlar OYNA ledger'ıyla eşleştirilip `reconciliation_report` üretilmeli (delta/eksik-iade/çift-tahsilat işaretleme); Ön-Uçuş'a `reconciliation_clean` kapısı eklenir. *(§14 GELİŞTİRİCİ #12.)*
+
+Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, `PAYMENT_EDGE_SECRET`) → **Finans → Go-Live Ön-Uçuş tüm satırlar yeşil** (`payment_provider`, `no_stuck_intents`, `commission_configured`, `readonly_mode_off` + provider_ref doğrulandı + `reconciliation_clean`) → panel `payment_provider=IYZICO` → küçük gerçek kartla test + iade. Geri dönüş: tek anahtarla `SIMULATION`.
 
 ## 6. Teknoloji & Mimari
 
 - **Frontend:** React 19 + TypeScript + Vite 6 + TailwindCSS v4 + Zustand + Framer Motion + Leaflet + Recharts. Router yok — `App.tsx` içinde `view` state switch'i (~40 lazy ekran). ErrorBoundary + Sentry/PostHog (env boşsa no-op). Ana paket 386KB→**57KB** (lazy'leme sonrası).
-- **Backend:** Supabase — Auth (OTP/Google/Apple) · PostgreSQL 17 (**126+ migration, ~73 tablo, RLS 67/67 aktif**) · Realtime · Storage · **10 Edge Function** (create/capture/void/refund-payment, payment-webhook, send-push, send-email, admin-broadcast, admin-create-user…). Proje ref: `iikvzgyccvgcybzdfwlv`.
+- **Backend:** Supabase — Auth (OTP/Google/Apple) · PostgreSQL 17 (**126+ migration, ~73 tablo, RLS 67/67 aktif**) · Realtime · Storage · **9 Edge Function** (create/capture/void/refund-payment, payment-webhook, send-push, send-email, admin-broadcast, admin-create-user — legacy `push-notification` silindi). Proje ref: `iikvzgyccvgcybzdfwlv`.
 - **Mobil:** Capacitor 8 (10-12 plugin). Android + iOS native katman **02.07'de onarıldı** (bkz. §11).
 - **Admin:** Ayrı SPA (`admin-panel/`, `admin.html`), Supabase Auth + **zorunlu MFA (TOTP, AAL2)**. İki mod: OPanel (operasyon) + GodView (platform).
-- **SSOT ilkesi:** Her varlık için tek kanonik tanım · snake_case standardı · tek `FORMATIONS` kaynağı · komisyon `commission_config` · operasyonel parametreler `app_config` (deploy'suz panel değişikliği) · feature-flag `feature_flags`.
+- **SSOT ilkesi:** Her varlık için tek kanonik tanım · snake_case standardı · tek `FORMATIONS` kaynağı · komisyon `commission_config` (motor SSOT canlı; panel/`settings` tek-kaynağa indirme Wave 5) · operasyonel parametreler `app_config` (deploy'suz panel değişikliği) · feature-flag `feature_flags`.
 - **Ölçek hedefi:** Mimari 100k+ kullanıcıya; lansman gerçekçi hedef ~10–20k kayıtlı, pik ~300–500 eşzamanlı, ~100 maç/gün. Eşzamanlı katılım atomik (ilk gelen alır).
 
 ## 7. Bildirim Sistemi
@@ -153,12 +157,12 @@ Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, 
 
 ## 8. Admin Paneli (GodView) — "Her problem panelden çözülür"
 
-- **İlke:** Tam yetki + tam esneklik; her kritik işlem **append-only audit** (SUPER_ADMIN bile silemez; hash-zincir planlı).
+- **İlke:** Tam yetki + tam esneklik; audit **append-only** — değiştirilemez/silinemez, SUPER_ADMIN bile kendi izini silemez (KARARLAR Soru 12 ✅). ⚠️ Audit **kapsamı henüz %100 değil:** ~18 admin işlemi ortak `log_admin_action(...)` yardımcısına bağlanana kadar audit yazmıyor (Soru 11 🔧 Wave 4); tamper-evidence hash-zinciri de planlı (Soru 37).
 - **Sayfalar:** Dashboard · Users (Kullanıcı 360) · Pitches · Matches (Kokpit) · Finance · Commission · Disputes · Moderation · VerificationCenter · NotificationTemplates/Campaigns · SystemParams · ACL · AuditLog · CommandCenter.
 - **Maç Kokpiti:** kadro/slot müdahalesi · skor override (`admin_override_match_score`) · force capture/void/refund (`admin_refund_intent`) · force-confirm/iptal (iadeli) · payout tetik · kadroya bildirim · maça-özel audit timeline. *(RPC'ler hazır; bir kısım butonun UI bağlantısı kalan iş #12.)*
 - **Ghost mode:** yalnız yetkili admin, sunucu-taraflı oturum + süre sınırı (30 dk) + varsayılan read-only + zorunlu sebep — sertleştirme Wave 10 kapsamında.
 - **100 Soru → Karar süreci:** `ADMIN_PANEL_100_SORU.md`'deki tüm sorular `ADMIN_PANEL_KARARLAR.md`'de karara bağlandı; işler **14 Wave / 5 Parti** halinde uygulanıyor:
-  - **Parti A (Güvenli Temel — Wave 1,2,4):** ✅ CANLIDA (`app_config` 13 kural, `feature_flags`, settings şeması, audit append-only, RBAC yardımcıları).
+  - **Parti A (Güvenli Temel — Wave 1,2,4):** ✅ CANLIDA (`app_config` 13 kural, `feature_flags`, settings şeması, audit **append-only değişmezliği**, RBAC yardımcıları). ⚠️ Wave 4'ün **audit kapsam tamamlaması** (~18 RPC → `log_admin_action`) hâlâ 🔧 kısmi (Soru 11).
   - **Parti B (Kontrolü Bağla — Wave 3,5,6):** kuralları `app_config`'e bağla, komisyon tek kaynak, kapsam-dışı gizle.
   - **Parti C (Güvenlik & İzolasyon — Wave 7,8,10):** demo `is_demo` izolasyonu, sunucu-taraflı alt-rol zorlaması (SUPER_ADMIN her zaman geçer kaçışıyla), ghost/CORS/PII sertleştirme.
   - **Parti D (Para & Operasyon — Wave 9,11,12):** kokpit tamamlama, gerçek payout API, bildirim go-live. **Kurucu onayı + sandbox kanıtı olmadan canlıya alınmaz.**
@@ -176,6 +180,12 @@ Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, 
 4. Canlı `pg_policies` denetimi: 13 dosyadaki `USING (true)` policy'lerinin gerçekten ezildiğini üretimde doğrula.
 5. Demo hesapların (`*@oyna.app` / `password123`) üretimde kapalı olduğunu doğrula; `get_advisors` raporunu kapat.
 6. Secret rotasyon takvimi: service-role 180g · webhook/payment secret 90g · sızıntıda anında iptal (RUNBOOK §6).
+7. **Webhook replay/idempotency (`payment-webhook`):** imza doğrulanıyor ama tekrar-koruması yok → geçerli bir isteğin tekrarı çift cüzdan-kredisi/çift rezervasyona yol açabilir. `processed_webhook_events` tablosuna event_id **UNIQUE** (çakışmada atla) + payload timestamp'ine ±5 dk tolerans (KARARLAR Soru 34, Wave 10).
+8. **Admin-auth sertleştirme (Wave 10 — KARARLAR Soru 24–27):**
+   - **MFA cihaz-kaybı kurtarma (🔴 kritik):** bugün zorunlu TOTP, cihaz kaybında admin'i tamamen kilitler. Enroll'da 8–10 tek-kullanımlık recovery kodu (hash'li) + SUPER_ADMIN'in çağırdığı audit'li `admin_reset_mfa` (self-reset yasak).
+   - **Oturum hijyeni:** 15 dk idle-logout + 8 saat mutlak oturum + kritik işlem öncesi step-up MFA (şu an yalnız AAL2 zorunlu; idle/TTL kodu yok).
+   - **Login rate-limit + alarm:** IP+email başına 5 başarısız/15 dk kilit + başarılı login/kilitlenme alarmı + tüm denemeler audit.
+   - **Ağ kısıtı (🙋 KURUCU):** `admin.html` Cloudflare Access/Zero Trust arkasına + `admin-*` edge'lerde IP/CIDR allowlist.
 
 **Dayanıklılık:** RPO ≤5 dk (**PITR açılmalı — kurucu**, yoksa ~24 saat) · RTO ≤1 saat · Sentry DSN + uptime izleme bağlanmalı.
 
@@ -216,7 +226,7 @@ Lansman günü kontrolü: `demo_mode_enabled=KAPALI` · demo purge · Go-Live Ö
 ## 13. Test & Kalite
 
 - **Birim:** 70/70 Vitest yeşil · `tsc --noEmit` temiz · production build 9.9 sn · `cap sync android` temiz.
-- **SQL entegrasyon (12 paket, BEGIN…ROLLBACK izole):** komisyon motoru · ödeme motoru · maç yaşam döngüsü · para düzeltmeleri · Faz 5 hizmet motoru (17) · Faz 6 sosyal/taktik (19) · Faz 7 güvenlik/SSOT/iade/para kararları. Bu testler **8+ gerçek üretim hatası** yakaladı (quorum onay çökmesi, iade kaybı, çift tahsilat, cüzdan trigger kilidi…) — kanıtlanmış değerli, **her para değişikliğinde koşulmalı**.
+- **SQL entegrasyon (13 paket, BEGIN…ROLLBACK izole):** komisyon motoru · ödeme motoru · maç yaşam döngüsü · para düzeltmeleri · Faz 5 hizmet motoru (17) · Faz 6 sosyal/taktik (19) · Faz 7 güvenlik/SSOT/iade/para kararları · saha vitrini rezervasyon/kapora (8) + içerik güvenliği. Bu testler **8+ gerçek üretim hatası** yakaladı (quorum onay çökmesi, iade kaybı, çift tahsilat, cüzdan trigger kilidi…) — kanıtlanmış değerli, **her para değişikliğinde koşulmalı**.
 - **Eksik:** payout yaşam döngüsü e2e (#15) · Playwright operasyonel E2E + CI required-check gate (Wave 13) · gerçek cihaz matrisi QA (düşük segment Android + çentikli iPhone) · izin-reddi senaryoları.
 
 ## 14. Kalan İşler — Konsolide Tablo
@@ -232,7 +242,7 @@ Lansman günü kontrolü: `demo_mode_enabled=KAPALI` · demo purge · Go-Live Ö
 | 6 | Ordu 4 saha gerçek fiyat/takvim anlaşması |
 | 7 | Supabase PITR aç + uptime izleme + Sentry hesabı |
 | 8 | Tasarımcı: nihai logo master'ları + ekran görüntüleri + feature graphic |
-| 9 | Misafir modu kararı (değer kapılı model onayı — Master §14.1) |
+| 9 | Misafir modu kararı (değer kapılı model onayı — PRENSIPLER §14.1) |
 
 ### 🧱 GELİŞTİRİCİ (kod — çoğu iyzico'yu beklemeden yapılabilir)
 | # | İş | Bağımlılık |
@@ -247,6 +257,9 @@ Lansman günü kontrolü: `demo_mode_enabled=KAPALI` · demo purge · Go-Live Ö
 | 8 | `is_free` ücretsiz saha fazı (§4.6) | — |
 | 9 | targetSdk 36 yükseltmesi (31.08.2026 öncesi ilk güncellemede) | yayın |
 | 10 | Wave partileri B → C → D sırasıyla canlıya (E'nin test/izleme kısmı önce) | Parti A ✅ |
+| 11 | **Gerçek payout otomasyonu:** `iyzico-payout` edge (submerchant/IBAN transfer) + owner 2-haftalık `pg_cron` + maç-`COMPLETED` anında provider payout tetiği (şu an elle işaretleniyor; manuel yalnız fallback olmalı) | KURUCU #1 |
+| 12 | **Mutabakat (reconciliation):** günlük iyzico raporu → `reconciliation_report` + Finans → Mutabakat sekmesi (delta/eksik-iade/çift-tahsilat) + Ön-Uçuş `reconciliation_clean` kapısı; ayrıca `provider_ref==paymentTransactionId` capture→refund doğrulaması | KURUCU #1 |
+| 13 | **Persona-türevli UX (kapsam-içi, 5/5):** (a) maç oluştururken arkadaş listesinden doğrudan kadro seçimi (`MatchCreate` adım 3 → `FriendsSelector`; kod/link davetine EK) — Cem/Deniz; (b) bağlamsal "Akıllı Dashboard CTA" (karar felcine karşı kişiselleştirilmiş yönlendirici) — Hakan/Murat, UI_SONHAL ile koordine | — |
 
 ## 15. Doküman Haritası & Yetki Sırası
 
@@ -264,18 +277,20 @@ Lansman günü kontrolü: `demo_mode_enabled=KAPALI` · demo purge · Go-Live Ö
 | Admin panel kararları | `docs/ADMIN_PANEL_KARARLAR.md` | 100_SORU'yu **geçersiz kılar** (soru seti referans) |
 | DB deploy stratejisi | `docs/WAVE_DEPLOY_PLANI.md` | 14 wave / 5 parti |
 | Problem kayıt süreci | `PROBLEMLER_VE_COZUMLER.md` | Rol-bazlı yaşayan kayıt |
-| Entegrasyon testleri | `tests/integration/README.md` | 12 SQL paketi |
+| Entegrasyon testleri | `tests/integration/README.md` | 13 SQL paketi |
 | Push kurulum detayı | `notifications/KURULUM_REHBERI.md` + `PUSH_NOTIFICATION_PLAN.md` | Teknik kurulum; ürün kararları için §7 geçerli |
-| Persona/UX araştırması | `docs/fikirler/kullanici_analizi.md` | Girdi niteliğinde |
+| Persona/UX araştırması | `docs/fikirler/kullanici_analizi.md` | Girdi; iki kapsam-içi 5/5 içgörü (maç-içi arkadaş/kadro seçimi + akıllı dashboard CTA) §14 GELİŞTİRİCİ #13'e işlendi; kalan çözümler kapsam-dışı |
 | **Arşiv (karar değeri yok)** | `docs/eski/*` (16 dosya) | Keşif soruları Master'a işlendi |
 
 ## 16. Tespit Edilen Tutarsızlıklar (bayat dokümanlar — güncellenmeli)
 
-1. **`README.md` (26.06):** Oyunlaştırmayı (FUT/gamification) çekirdek olarak anlatıyor ve `CommunityApplicationWizard`'a atıf yapıyor — oysa oyunlaştırma **kapsam dışı** (§2), oyuncu kartları yalnız admin kontrolünde, Topluluklar kaldırıldı. "Ek Dökümantasyonlar" bölümü güncel doküman setiyle eşitlenmeli.
+1. **`README.md` (26.06):** Oyunlaştırmayı (FUT/gamification) çekirdek olarak anlatıyor — oysa oyunlaştırma **kapsam dışı** (§2), oyuncu kartları yalnız admin kontrolünde. "Ek Dökümantasyonlar" bölümü arşive taşınan `docs/eski/*` dosyalarını gösteriyor; güncel doküman setiyle eşitlenmeli.
 2. **`DATABASE_README.md` (25.06):** "24 tablo" ve 03.06 tarihli güvenlik raporu ("2 tabloda RLS eksik, 36 permissive policy") **bayat** — güncel gerçek: **~73 tablo, RLS 67/67**, hardening migration'ları uygulanmış. Araç/komut kısmı hâlâ geçerli.
-3. **`DOSYALARIN_ISLEVLERI.md` (25.06):** Silinen `arsiv/` klasörünü (STORE_LANSMAN temizliği) mevcutmuş gibi anlatıyor; `docs/` yolları `docs/eski/`'ye taşınan dosyaları gösteriyor; yerel makineye özgü `file:///Users/kerem/...` linkleri kırık.
+3. **`DOSYALARIN_ISLEVLERI.md` (25.06):** Silinen `arsiv/` klasörünü (STORE_LANSMAN temizliği) mevcutmuş gibi anlatıyor; `docs/` yolları `docs/eski/`'ye taşınan dosyaları gösteriyor; `file:///Users/kerem/...` linkleri kırık; ayrıca repoda **artık bulunmayan** kaynak dosyalarını (`components/CommunityApplicationWizard.tsx` — Topluluk kapsam dışı, bileşen silinmiş; `firebaseSync.ts`, `services/db.ts/geoService.ts/pitchService.ts`, `constants.ts`) hâlâ güncel mimari bileşenmiş gibi belgeliyor.
 4. **`notifications/PUSH_NOTIFICATION_PLAN.md` + `KURULUM_REHBERI.md` (25.06):** Kurulum adımları geçerli ama şema/trigger detayları Faz 7 sonrası migration'larla kısmen aşıldı (örn. `notifications.type` → `type_key` düzeltmesi); uygulamadan önce güncel migration'lar esas alınmalı.
-5. **`docs/eski/` içindeki plan dosyaları** (GODVIEW_PLATFORM_PLAN, ADMIN_PANEL_MASTER_PLAN, OYNA_MAP_GEOFIRESTORE_PLANI vb.): Firebase/Geofirestore dönemine ait — **backend %100 Supabase**; sadece tarihçe.
+5. **`docs/eski/` içindeki plan dosyaları — iki farklı gerekçeyle arşivde:**
+   - **Firebase/Geofirestore dönemine ait:** `OYNA_MAP_GEOFIRESTORE_PLANI` + backend/mimari arşiv dosyaları (Firebase temelli) → güncel backend **%100 Supabase**, sadece tarihçe.
+   - **Tamamlanmış Supabase planları:** `GODVIEW_PLATFORM_PLAN` + `ADMIN_PANEL_MASTER_PLAN` — Firebase içermez, baştan sona Supabase temelli; tüm fazları tamamlanıp kararları `ADMIN_PANEL_KARARLAR.md`'ye işlendiği için arşivde ("Firebase dönemi" değil).
 
 ---
 
