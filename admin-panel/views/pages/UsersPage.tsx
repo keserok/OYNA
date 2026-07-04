@@ -9,6 +9,7 @@ import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck,
 import { logImpersonation, fetchAdminProfiles, toTurkishAdminError, setPlayerCardAdmin } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
+import { maskEmail } from '../../utils/pii';
 import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
 import { User360Drawer } from '../components/User360Drawer';
 import { DeepEditProviderModal, DeepEditUserModal } from '../DeepEditModals';
@@ -288,7 +289,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             header: subRoute === 'KULLANICILAR' ? 'İLETİŞİM' : 'MAÇ / ÜCRET',
             render: (u: any) => (
                 subRoute === 'KULLANICILAR' ? (
-                    <span className="text-gray-400 font-mono text-[10px]">{u.email || 'Bilinmiyor'}</span>
+                    /* PII listede maskeli (Karar #39); tam değer 360 drawer'da audit'li */
+                    <span className="text-gray-400 font-mono text-[10px]">{u.email ? maskEmail(u.email) : 'Bilinmiyor'}</span>
                 ) : (
                     <span className="text-gray-300 font-mono text-[10px]">
                         {u.matchCount || 0} Maç / <span className="text-green-400 font-bold">₺{u.fee || 0}</span>

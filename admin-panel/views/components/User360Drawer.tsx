@@ -14,6 +14,7 @@ import { supabase } from '../../../supabaseClient';
 import { toTurkishAdminError } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { StatusBadge } from './StatusBadge';
+import { maskEmail, maskPhone } from '../../utils/pii';
 import type { AdminUser } from '../../../types';
 
 interface Props {
@@ -41,18 +42,6 @@ interface AuditRow {
   created_at: string;
 }
 
-const maskEmail = (email: string): string => {
-  const [local, domain] = email.split('@');
-  if (!domain) return '•••';
-  return `${local.slice(0, 2)}•••@${domain.slice(0, 1)}•••${domain.includes('.') ? domain.slice(domain.lastIndexOf('.')) : ''}`;
-};
-
-const maskPhone = (phone: string): string => {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length < 6) return '•••';
-  return `${phone.slice(0, 4)} ••• •• ${digits.slice(-2)}`;
-};
-
 const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')}₺`;
 
 export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onEdit }) => {
@@ -61,8 +50,9 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(false);
-  // PII yalnızca audit'li "göster" tıklamasından sonra açılır (Karar #39)
-  const [revealed, setRevealed] = useState<{ email: boolean; phone: boolean }>({ email: false, phone: false });
+  // PII yalnızca audit'li "göster" tıklamasından sonra açılır (Karar #39).
+  // Gerçek değer istemcide tutulmaz; admin_reveal_pii sunucuda okur + loglar.
+  const [revealed, setRevealed] = useState<{ email: string | null; phone: string | null }>({ email: null, phone: null });
 
   const userId = user?.id;
 
@@ -100,7 +90,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
   }, [userId, toastError]);
 
   useEffect(() => {
-    setRevealed({ email: false, phone: false });
+    setRevealed({ email: null, phone: null });
     setWallet([]);
     setAudit([]);
     setWalletBalance(null);
@@ -110,9 +100,10 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
   const revealPii = async (field: 'email' | 'phone') => {
     if (!userId) return;
     try {
-      // Zorunlu audit: kim, kimin hangi alanını gördü (KVKK izi)
-      await supabase.rpc('admin_log_pii_reveal', { p_target_user_id: userId, p_field: field });
-      setRevealed((prev) => ({ ...prev, [field]: true }));
+      // Zorunlu audit: değer sunucudan gelir, log düşmeden dönmez (KVKK izi)
+      const { data, error } = await supabase.rpc('admin_reveal_pii', { p_target_user_id: userId, p_field: field });
+      if (error) throw error;
+      setRevealed((prev) => ({ ...prev, [field]: (data as string | null) ?? '—' }));
     } catch (err) {
       toastError(toTurkishAdminError(err));
     }
@@ -164,9 +155,9 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-xs text-gray-300 font-mono min-w-0">
                   <Mail size={12} className="text-gray-500 shrink-0" />
-                  <span className="truncate">{user.email ? (revealed.email ? user.email : maskEmail(user.email)) : '—'}</span>
+                  <span className="truncate">{revealed.email ?? (user.email ? maskEmail(user.email) : '—')}</span>
                 </span>
-                {user.email && !revealed.email && (
+                {user.email && revealed.email === null && (
                   <button type="button" onClick={() => void revealPii('email')} className="flex items-center gap-1 text-[10px] font-bold text-gray-500 hover:text-white border border-white/10 rounded-lg px-2 py-1 shrink-0">
                     <Eye size={11} /> Göster
                   </button>
@@ -175,9 +166,9 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-xs text-gray-300 font-mono min-w-0">
                   <Phone size={12} className="text-gray-500 shrink-0" />
-                  <span className="truncate">{user.phone ? (revealed.phone ? user.phone : maskPhone(user.phone)) : '—'}</span>
+                  <span className="truncate">{revealed.phone ?? (user.phone ? maskPhone(user.phone) : '—')}</span>
                 </span>
-                {user.phone && !revealed.phone && (
+                {revealed.phone === null && (
                   <button type="button" onClick={() => void revealPii('phone')} className="flex items-center gap-1 text-[10px] font-bold text-gray-500 hover:text-white border border-white/10 rounded-lg px-2 py-1 shrink-0">
                     <Eye size={11} /> Göster
                   </button>

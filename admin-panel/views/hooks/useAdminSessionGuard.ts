@@ -12,16 +12,18 @@ const DEFAULT_IDLE_MS = 15 * 60_000;
 const DEFAULT_MAX_AGE_MS = 8 * 3_600_000;
 const CHECK_INTERVAL_MS = 30_000;
 const ACTIVITY_THROTTLE_MS = 10_000;
+// localStorage bilinçli: Supabase oturumu da localStorage'da yaşar — yeni
+// sekme veya tarayıcı restart'ı mutlak yaş sayacını SIFIRLAMAMALI.
 const SESSION_START_KEY = 'oyna_admin_session_started_at';
 
 export type AdminSessionExpireReason = 'idle' | 'absolute';
 
 export function markAdminSessionStart(): void {
-  try { sessionStorage.setItem(SESSION_START_KEY, String(Date.now())); } catch { /* storage opsiyonel */ }
+  try { localStorage.setItem(SESSION_START_KEY, String(Date.now())); } catch { /* storage opsiyonel */ }
 }
 
 export function clearAdminSessionStart(): void {
-  try { sessionStorage.removeItem(SESSION_START_KEY); } catch { /* storage opsiyonel */ }
+  try { localStorage.removeItem(SESSION_START_KEY); } catch { /* storage opsiyonel */ }
 }
 
 export function useAdminSessionGuard(
@@ -40,12 +42,13 @@ export function useAdminSessionGuard(
     let lastBump = 0;
     let expired = false;
 
-    // Oturum başlangıcı: sekme yenilense de korunur (sessionStorage)
+    // Oturum başlangıcı: sekme/tarayıcı yenilense de korunur (localStorage).
+    // İleri tarihli (kurcalanmış) değer kabul edilmez — şimdiye sabitlenir.
     let startedAt = Date.now();
     try {
-      const stored = sessionStorage.getItem(SESSION_START_KEY);
-      if (stored && Number(stored) > 0) startedAt = Number(stored);
-      else sessionStorage.setItem(SESSION_START_KEY, String(startedAt));
+      const stored = Number(localStorage.getItem(SESSION_START_KEY));
+      if (stored > 0 && stored <= Date.now()) startedAt = stored;
+      else localStorage.setItem(SESSION_START_KEY, String(startedAt));
     } catch { /* storage opsiyonel */ }
 
     // Panelden ayarlanabilir süreler (best-effort; hata → varsayılan)
