@@ -1,12 +1,16 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Download, SlidersHorizontal } from 'lucide-react';
 import { EmptyState } from './EmptyState';
+import { downloadCsv } from '../../utils/exportCsv';
 
 interface Column<T> {
     header: string;
     key?: keyof T | string;
     render?: (item: T) => React.ReactNode;
     className?: string;
+    /** CSV dışa aktarımda kullanılacak düz metin değer (Karar #65).
+     *  Verilmezse key üzerinden düz değer; o da yoksa sütun CSV'de boş kalır. */
+    csvValue?: (item: T) => string | number | null | undefined;
 }
 
 interface DataTableProps<T> {
@@ -21,6 +25,13 @@ interface DataTableProps<T> {
     onPageChange?: (page: number) => void;
     itemsPerPage?: number;
     totalItems?: number;
+    /** CSV dışa aktarım düğmesi göster (Karar #65). */
+    exportable?: boolean;
+    exportFilename?: string;
+    /** Sütun göster/gizle menüsü (Karar #65). */
+    columnToggle?: boolean;
+    /** Sütun görünürlüğünü sekmeler arası hatırlamak için benzersiz anahtar. */
+    storageKey?: string;
 }
 
 function TableSkeleton({ cols }: { cols: number }) {
@@ -51,14 +62,107 @@ export function DataTable<T>({
     onPageChange,
     itemsPerPage = 10,
     totalItems,
+    exportable = false,
+    exportFilename = 'oyna-export.csv',
+    columnToggle = false,
+    storageKey,
 }: DataTableProps<T>) {
+    // Sütun görünürlüğü — başlığa göre; localStorage'da kalıcı (storageKey verilirse)
+    const lsKey = storageKey ? `oyna_admin_cols_${storageKey}` : null;
+    const [hidden, setHidden] = useState<Set<string>>(() => {
+        if (!lsKey) return new Set();
+        try {
+            const raw = localStorage.getItem(lsKey);
+            return raw ? new Set<string>(JSON.parse(raw)) : new Set();
+        } catch { return new Set(); }
+    });
+    const [menuOpen, setMenuOpen] = useState(false);
+
+    const persistHidden = (next: Set<string>) => {
+        setHidden(new Set(next));
+        if (lsKey) { try { localStorage.setItem(lsKey, JSON.stringify([...next])); } catch { /* opsiyonel */ } }
+    };
+
+    const visibleColumns = useMemo(
+        () => columns.filter((c) => !hidden.has(c.header)),
+        [columns, hidden],
+    );
+
+    const cellText = (col: Column<T>, item: T): string => {
+        if (col.csvValue) return String(col.csvValue(item) ?? '');
+        if (col.key) return String((item as Record<string, unknown>)[col.key as string] ?? '');
+        return '';
+    };
+
+    const handleExport = () => {
+        const cols = visibleColumns;
+        downloadCsv(
+            exportFilename,
+            cols.map((c) => c.header),
+            data.map((item) => cols.map((c) => cellText(c, item))),
+        );
+    };
+
+    const hasToolbar = exportable || columnToggle;
+
     return (
         <div className="w-full bg-[#161B22]/40 border border-white/[0.06] rounded-xl overflow-hidden">
+            {hasToolbar && (
+                <div className="flex items-center justify-end gap-2 px-3 py-2 border-b border-white/[0.06] bg-white/[0.02]">
+                    {columnToggle && (
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setMenuOpen((o) => !o)}
+                                className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold text-gray-400 hover:text-white rounded-lg bg-white/5 border border-white/10"
+                            >
+                                <SlidersHorizontal size={12} /> Sütunlar
+                            </button>
+                            {menuOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                                    <div className="absolute right-0 mt-1 z-20 w-48 bg-[#0D1117] border border-white/10 rounded-xl shadow-2xl p-2 space-y-0.5">
+                                        {columns.map((c) => {
+                                            const visible = !hidden.has(c.header);
+                                            return (
+                                                <button
+                                                    key={c.header}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const next = new Set(hidden);
+                                                        if (visible) { if (visibleColumns.length <= 1) return; next.add(c.header); }
+                                                        else next.delete(c.header);
+                                                        persistHidden(next);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-left hover:bg-white/5"
+                                                >
+                                                    <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[8px] ${visible ? 'bg-red-500/30 border-red-500/50 text-white' : 'border-white/20 text-transparent'}`}>✓</span>
+                                                    <span className={visible ? 'text-gray-200' : 'text-gray-500'}>{c.header}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                    {exportable && (
+                        <button
+                            type="button"
+                            onClick={handleExport}
+                            disabled={data.length === 0}
+                            className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold text-gray-400 hover:text-white rounded-lg bg-white/5 border border-white/10 disabled:opacity-40"
+                        >
+                            <Download size={12} /> CSV
+                        </button>
+                    )}
+                </div>
+            )}
             <div className="overflow-x-auto custom-scrollbar -mx-px">
                 <table className="w-full text-left border-collapse min-w-[640px]">
                     <thead className="sticky top-0 z-10">
                         <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                            {columns.map((col, idx) => (
+                            {visibleColumns.map((col, idx) => (
                                 <th
                                     key={idx}
                                     className={`px-5 py-3.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${col.className || ''}`}
@@ -70,10 +174,10 @@ export function DataTable<T>({
                     </thead>
                     <tbody className="divide-y divide-white/[0.04]">
                         {loading ? (
-                            <TableSkeleton cols={columns.length} />
+                            <TableSkeleton cols={visibleColumns.length} />
                         ) : data.length === 0 ? (
                             <tr>
-                                <td colSpan={columns.length}>
+                                <td colSpan={visibleColumns.length}>
                                     <EmptyState
                                         title={emptyMessage}
                                         description={emptyDescription}
@@ -87,7 +191,7 @@ export function DataTable<T>({
                                     key={rowIdx}
                                     className="hover:bg-white/[0.025] transition-colors duration-100 group"
                                 >
-                                    {columns.map((col, colIdx) => (
+                                    {visibleColumns.map((col, colIdx) => (
                                         <td
                                             key={colIdx}
                                             className={`px-5 py-3.5 text-[13px] text-gray-300 align-middle ${col.className || ''}`}

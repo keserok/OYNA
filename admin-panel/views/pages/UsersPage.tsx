@@ -274,12 +274,13 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
         },
         {
             header: 'İSİM & ROL / SEVİYE',
+            csvValue: (u: any) => `${u.name} (${subRoute === 'KULLANICILAR' ? (u.role || 'PLAYER') : subRoute === 'KALECİLER' ? (u.style || 'KALECİ') : (u.level || 'HAKEM')})`,
             render: (u: any) => (
                 <div>
                     <div className="font-bold text-white flex items-center gap-1.5">{u.name} <span className="text-[10px] text-gray-500 font-mono">({u.rating?.toFixed(1) || '5.0'}★)</span></div>
                     <div className={`text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded inline-block mt-1 font-black ${rowIconColor}`}>
-                        {subRoute === 'KULLANICILAR' ? (u.role || 'PLAYER') : 
-                         subRoute === 'KALECİLER' ? (u.style || 'KALECİ') : 
+                        {subRoute === 'KULLANICILAR' ? (u.role || 'PLAYER') :
+                         subRoute === 'KALECİLER' ? (u.style || 'KALECİ') :
                          (u.level || 'HAKEM')}
                     </div>
                 </div>
@@ -287,6 +288,10 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
         },
         {
             header: subRoute === 'KULLANICILAR' ? 'İLETİŞİM' : 'MAÇ / ÜCRET',
+            // CSV'de de PII maskeli kalır (Karar #39): dışa aktarım tam e-posta sızdırmaz
+            csvValue: (u: any) => subRoute === 'KULLANICILAR'
+                ? (u.email ? maskEmail(u.email) : '')
+                : `${u.matchCount || 0} maç / ${u.fee || 0}TL`,
             render: (u: any) => (
                 subRoute === 'KULLANICILAR' ? (
                     /* PII listede maskeli (Karar #39); tam değer 360 drawer'da audit'li */
@@ -300,10 +305,11 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
         },
         {
             header: 'STATÜ',
+            csvValue: (u: any) => u.isBanned ? 'BANLI' : 'AKTİF',
             render: (u: any) => (
                 <div className="flex gap-1.5 flex-wrap">
                     {(u.isVerified || subRoute !== 'KULLANICILAR') && <StatusBadge tone="info">DOĞRULANMIŞ</StatusBadge>}
-                    {u.isBanned 
+                    {u.isBanned
                         ? <StatusBadge tone="danger">BANNED</StatusBadge>
                         : <StatusBadge tone="success">AKTİF</StatusBadge>}
                     {(u as { isDemo?: boolean }).isDemo && <StatusBadge tone="demo">DEMO</StatusBadge>}
@@ -439,6 +445,10 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 data={data}
                 loading={subRoute === 'KULLANICILAR' && usersLoading}
                 emptyDescription={query ? 'Arama kriterlerine uygun kayıt yok.' : 'Yeni kayıt ekleyin veya demo verileri yükleyin.'}
+                exportable
+                exportFilename={`oyna-${subRoute.toLowerCase()}.csv`}
+                columnToggle
+                storageKey={`users_${subRoute}`}
             />
 
             {subRoute === 'KULLANICILAR' && totalUsers > PAGE_SIZE && (

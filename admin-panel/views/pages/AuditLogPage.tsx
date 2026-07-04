@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchAdminAuditLogs, toTurkishAdminError } from '../../services/adminService';
+import { fetchAdminAuditLogs, verifyAuditChain, toTurkishAdminError } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { DataTable } from '../components/DataTable';
 import { PageShell } from '../components/PageShell';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
 import { useAdminFilter } from '../hooks/useAdminFilter';
-import { RefreshCw, ScrollText, X, Search } from 'lucide-react';
+import { RefreshCw, ScrollText, X, Search, ShieldCheck, ShieldAlert } from 'lucide-react';
 import type { AdminLog } from '../../../types';
 
 import type { AdminNavigateFn } from '../GodViewPanel';
@@ -64,7 +64,27 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('all');
   const [diffLog, setDiffLog] = useState<AdminLog | null>(null);
-  const { error: toastError } = useAdminToast();
+  const [chain, setChain] = useState<{ intact: boolean; text: string } | null>(null);
+  const [chainBusy, setChainBusy] = useState(false);
+  const { success, error: toastError } = useAdminToast();
+
+  const runChainCheck = async () => {
+    setChainBusy(true);
+    try {
+      const r = await verifyAuditChain();
+      setChain({
+        intact: r.intact,
+        text: r.intact
+          ? `Zincir sağlam · ${r.checked} kayıt doğrulandı`
+          : `⚠ Kopukluk: ${r.reason}${r.brokenAt ? ` (${new Date(r.brokenAt).toLocaleString('tr-TR')})` : ''}`,
+      });
+      if (r.intact) success('Denetim zinciri sağlam'); else toastError('Denetim zincirinde kopukluk tespit edildi');
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setChainBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -191,16 +211,35 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
       route="AUDIT_LOG"
       icon={<ScrollText size={20} />}
       actions={
-        <button
-          type="button"
-          onClick={() => void handleRefresh()}
-          disabled={refreshing || loading}
-          className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Yenile
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void runChainCheck()}
+            disabled={chainBusy}
+            title="Audit hash-zincirini doğrula (tamper kontrolü)"
+            className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-50"
+          >
+            <ShieldCheck size={14} className={chainBusy ? 'animate-pulse' : ''} /> Zincir Doğrula
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing || loading}
+            className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Yenile
+          </button>
+        </div>
       }
     >
+      {chain && (
+        <div className={`mb-4 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[11px] font-bold ${
+          chain.intact ? 'bg-green-500/10 border-green-500/25 text-green-300' : 'bg-red-500/10 border-red-500/30 text-red-300'
+        }`}>
+          {chain.intact ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
+          {chain.text}
+        </div>
+      )}
       <div className="space-y-4 mb-4">
         <AdminSearchBar
           value={query}

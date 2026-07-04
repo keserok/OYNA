@@ -501,6 +501,30 @@ export async function fetchAdminAuditLogs(limit = 100): Promise<AdminLog[]> {
   return (data || []).map((row) => mapAuditRow(row as DbAuditLogRow));
 }
 
+export interface AuditChainResult {
+  intact: boolean;
+  checked: number;
+  reason: string;
+  brokenId: string | null;
+  brokenAt: string | null;
+}
+
+/** Audit hash-zincirini doğrula (Karar #37) — kopukluk tamper işaretidir. */
+export async function verifyAuditChain(limit = 5000): Promise<AuditChainResult> {
+  const { data, error } = await supabase.rpc('admin_verify_audit_chain', { p_limit: limit });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_verify_audit_chain RPC deploy edilmedi' : error.message);
+  const row = (Array.isArray(data) ? data[0] : data) as {
+    broken_id: string | null; broken_at: string | null; reason: string; checked: number;
+  } | undefined;
+  return {
+    intact: !row?.broken_id,
+    checked: Number(row?.checked ?? 0),
+    reason: row?.reason ?? 'Bilinmiyor',
+    brokenId: row?.broken_id ?? null,
+    brokenAt: row?.broken_at ?? null,
+  };
+}
+
 async function countRows(
   table: string,
   filter?: { column: string; op: 'eq' | 'in'; value: unknown },
