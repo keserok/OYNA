@@ -35,6 +35,8 @@ psql "$DATABASE_URL" -f tests/integration/faz3_match_lifecycle.sql
 | `faz7_refund.sql` | Kademeli iade admin çağrısı: admin_refund_intent → process_tiered_refund (CAPTURED→FULL_REFUND, PENDING→VOID), FORBIDDEN, audit | 4 |
 | `faz7_money_decisions.sql` | USER para kararları: rezervasyon iptal kademeli (24/6/50), PSP kesintisi düşülür, Model B owner %95 + markup oyuncuya, owner-organize MODEL_B trigger | 9 |
 | `faz7_refund_corrections.sql` | Adversarial bulgular: owner kazanç çift-ödeme önlemi (per-intent iptal + aggrege telafi negatif), PSP kısmi iadede orantılı | 3 |
+| `saha_vitrini_booking_payment.sql` | Çifte rezervasyon (SLOT_TAKEN), `record_app_deposit_payment` sahiplik/aşım koruması, owner bildirimleri | 8 |
+| `saha_vitrini_content.sql` | `pitch_media`/`pitch_favorites` RLS, media→images senkron, kalite notu onay trigger'ı, kimlik koruması + change-request akışı, `get_pitch_engagement` yetkisi | — |
 
 > **FAZ 7'de bu testin yakaladığı gerçek hatalar** (uygulamadan önce giderildi):
 > (1) `protect_profile_sensitive_fields` trigger'ı `NEW.role` değişimini her non-admin
