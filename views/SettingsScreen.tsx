@@ -5,13 +5,12 @@ import {
   AlertCircle, Download, Trash2, X, Repeat
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppView, OynaLocation } from '../types';
+import { AppView } from '../types';
 import { logout, auth } from '../supabaseAuth';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 import { detectRegion } from '../services/locationService';
-import LocationPickerSheet from '../components/location/LocationPickerSheet';
 import LocationBadge from '../components/location/LocationBadge';
 import { NOTIFICATION_CATEGORIES, fetchNotificationTemplates, updateNotificationPreference, NotificationTemplateInfo } from '../notifications/notificationPreferences';
 import type { NotificationPreferenceKey } from '../notifications/pushService';
@@ -145,7 +144,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [isNative] = useState(() => Capacitor.isNativePlatform());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDataDownloadModal, setShowDataDownloadModal] = useState(false);
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -271,15 +269,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       showToast('Konum alınamadı. Lütfen cihaz ayarlarından izin verin.');
     } finally {
       setIsUpdatingLocation(false);
-    }
-  };
-
-  const handleRegionSelect = (loc: OynaLocation) => {
-    setActiveRegion(loc);
-    if (loc.coordinates) setUserLocation(loc.coordinates);
-    if (loc.source === 'gps') setLocationPermissionStatus('GRANTED');
-    if (auth.currentUser && loc.source === 'gps' && loc.coordinates) {
-      fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
     }
   };
 
@@ -562,7 +551,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 space-y-4">
             <div>
               <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2 ml-0.5">Aktif Bölge</span>
-              <LocationBadge region={activeRegion} onClick={() => setShowLocationPicker(true)} className="w-full" />
+              <LocationBadge region={activeRegion} interactive={false} className="w-full" />
             </div>
 
             <button
@@ -582,22 +571,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               <ChevronRight size={18} className="text-gray-600" />
             </button>
 
-            <button
-              onClick={() => setShowLocationPicker(true)}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-white/[0.06] transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-300">
-                  <MapPin size={16} />
-                </div>
-                <div className="text-left">
-                  <span className="text-sm font-bold text-white block">Bölgeyi Elle Seç</span>
-                  <span className="text-xs text-gray-400">İl / ilçe · 81 il</span>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-gray-600" />
-            </button>
-
             <div className="pt-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-gray-300">Arama Yarıçapı</span>
@@ -605,13 +578,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               </div>
               <input
                 type="range"
-                min={1}
-                max={100}
+                min={5}
+                max={50}
+                step={5}
                 value={searchRadius}
                 onChange={(e) => setSearchRadius(Number(e.target.value))}
                 className="w-full accent-[#39FF14] cursor-pointer"
               />
-              <p className="text-[10px] text-gray-500 italic mt-1.5">Yakınındaki maçların listeleneceği arama çemberi (KM).</p>
+              <p className="text-[10px] text-gray-500 italic mt-1.5">Yakınındaki maçların listeleneceği arama çemberi — 5 km adımlarla (5–50 KM).</p>
             </div>
           </div>
         </section>
@@ -721,13 +695,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           />
         )}
       </AnimatePresence>
-
-      {/* Konum seçici — GPS + elle 81 il/ilçe */}
-      <LocationPickerSheet
-        open={showLocationPicker}
-        onClose={() => setShowLocationPicker(false)}
-        onSelect={handleRegionSelect}
-      />
     </div>
   );
 };

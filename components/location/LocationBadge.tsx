@@ -5,8 +5,10 @@ import type { OynaLocation } from '../../types';
 
 interface LocationBadgeProps {
   region: OynaLocation | null;
-  onClick: () => void;
+  onClick?: () => void;
   className?: string;
+  /** false ise salt-gösterge: tıklanmaz, ok ikonu gizlenir. */
+  interactive?: boolean;
 }
 
 /**
@@ -26,17 +28,19 @@ const stateStyle = (region: OynaLocation | null) => {
   }
 };
 
-const LocationBadge: React.FC<LocationBadgeProps> = ({ region, onClick, className = '' }) => {
+const LocationBadge: React.FC<LocationBadgeProps> = ({ region, onClick, className = '', interactive = true }) => {
   const s = stateStyle(region);
+  const Wrapper: any = interactive ? motion.button : 'div';
+  const wrapperProps = interactive
+    ? { onClick, whileTap: { scale: 0.97 }, 'aria-label': 'Bölgeni değiştir' as const }
+    : {};
   return (
-    <motion.button
-      onClick={onClick}
-      whileTap={{ scale: 0.97 }}
+    <Wrapper
+      {...wrapperProps}
       className={`flex items-center gap-2.5 min-h-[44px] px-3 py-2 rounded-2xl
                   bg-[#161B22]/80 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.25)]
                   ${className}`}
       style={{ border: `1px solid ${s.border}` }}
-      aria-label="Bölgeni değiştir"
     >
       <span
         className="relative w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -58,8 +62,8 @@ const LocationBadge: React.FC<LocationBadgeProps> = ({ region, onClick, classNam
           {region ? region.label : 'Bölge seç'}
         </span>
       </span>
-      <ChevronDown size={14} style={{ color: s.color }} className="flex-shrink-0" />
-    </motion.button>
+      {interactive && <ChevronDown size={14} style={{ color: s.color }} className="flex-shrink-0" />}
+    </Wrapper>
   );
 };
 

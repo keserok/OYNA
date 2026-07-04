@@ -502,7 +502,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUserLocation: (userLocation) => set({ userLocation }),
   locationPermissionStatus: 'NOT_REQUESTED',
   setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
-  searchRadius: 50,
+  searchRadius: 25,
   setSearchRadius: (searchRadius) => set({ searchRadius }),
   activeRegion: loadActiveRegion(),
   setActiveRegion: (activeRegion) => {
