@@ -112,3 +112,7 @@ END;
 $function$;
 REVOKE ALL ON FUNCTION public.admin_verify_audit_chain(integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_verify_audit_chain(integer) TO authenticated;
+
+-- Trigger fonksiyonu yalnız trigger tarafından çağrılır; doğrudan execute izni gereksiz
+-- (güvenlik danışmanı: anon_security_definer_function_executable temizliği).
+REVOKE ALL ON FUNCTION public.audit_log_hash_chain() FROM PUBLIC, anon, authenticated;
