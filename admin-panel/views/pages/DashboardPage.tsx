@@ -129,11 +129,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                 </div>
             }
         >
+            {/* Kuzey yıldızı KPI (Karar #61): başarılı oynatılan maç — platformun ana metriği */}
+            <div className="relative overflow-hidden rounded-2xl border border-[#39FF14]/25 bg-gradient-to-br from-[#39FF14]/[0.08] via-[#161B22]/60 to-[#161B22]/60 p-6 shadow-[0_0_40px_rgba(57,255,20,0.06)]">
+                <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-[#39FF14]/10 blur-3xl pointer-events-none" />
+                <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                        <p className="text-[11px] font-black text-[#39FF14] uppercase tracking-[0.2em] mb-1">★ Kuzey Yıldızı — Başarılı Maç</p>
+                        <div className="flex items-end gap-3">
+                            <span className="text-5xl md:text-6xl font-black text-white leading-none tabular-nums">
+                                {Number(stats?.successful_matches ?? 0).toLocaleString('tr')}
+                            </span>
+                            <span className="text-xs text-gray-400 mb-1.5 max-w-[220px] leading-snug">
+                                ödendi → toplanıldı → oynandı. Platformun gerçek başarı ölçütü.
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex gap-5 text-right shrink-0">
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase font-bold">Tamamlanan</p>
+                            <p className="text-xl font-black text-white tabular-nums">{Number(stats?.completed_matches ?? 0).toLocaleString('tr')}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase font-bold">Toplam Maç</p>
+                            <p className="text-xl font-black text-gray-300 tabular-nums">{Number(stats?.total_matches ?? recentMatches.length).toLocaleString('tr')}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <StatCard label="TOPLAM KULLANICI" value={Number(stats?.total_users ?? adminUsers.length)} unit="Kayıtlı profil" color="#3b82f6" data={revenueSpark.length ? revenueSpark : undefined} />
                 <StatCard label="ONAY BEKLEYEN" value={Number(stats?.pending_verifications ?? 0) + Number(stats?.pending_pitches ?? 0)} unit="GK/Ref + Tesis" color="#ef4444" badge={Number(stats?.pending_pitches ?? 0) > 0 ? 'AKİF' : undefined} badgeColor="text-red-400 bg-red-500/10 border-red-500/20" />
                 <StatCard label="SİSTEM GELİRİ" value={financeLoading ? '…' : `₺${Math.round(systemRevenue).toLocaleString('tr')}`} unit={`${financeStats?.payment_count ?? 0} ödeme`} color="#eab308" data={revenueSpark.length ? revenueSpark : undefined} />
-                <StatCard label="BAŞARILI MAÇ" value={Number(stats?.successful_matches ?? 0)} unit={`${stats?.total_matches ?? recentMatches.length} maçtan · ${stats?.total_pitches ?? adminPitches.length} saha`} color="#39FF14" />
+                <StatCard label="AKTİF SAHA" value={Number(stats?.total_pitches ?? adminPitches.length)} unit={`${Number(stats?.pending_pitches ?? 0)} onay bekliyor`} color="#39FF14" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

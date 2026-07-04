@@ -65,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             case 'verification': return verifTotal > 0 ? { text: String(verifTotal), tone: 'alert' } : null;
             case 'activePromos': return n(stats?.active_promo_codes) ? { text: String(n(stats?.active_promo_codes)), tone: 'neutral' } : null;
             case 'communities': return n(stats?.total_communities) ? { text: String(n(stats?.total_communities)), tone: 'neutral' } : null;
+            case 'deletionRequests': return n(stats?.deletion_requests) ? { text: String(n(stats?.deletion_requests)), tone: 'alert' } : null;
             default: return null;
         }
     };

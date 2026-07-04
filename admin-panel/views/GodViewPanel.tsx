@@ -34,12 +34,13 @@ const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m =>
 const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage').then(m => ({ default: m.VerificationCenterPage })));
 const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplatesPage').then(m => ({ default: m.NotificationTemplatesPage })));
 const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
+const DeletionQueuePage = lazy(() => import('./pages/DeletionQueuePage').then(m => ({ default: m.DeletionQueuePage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
-  | 'SERVICE_DISPUTES' | 'MODERATION'
+  | 'SERVICE_DISPUTES' | 'MODERATION' | 'DELETION_QUEUE'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
   | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES';
 
@@ -179,6 +180,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <OwnerAccountsPage />;
             case 'MODERATION':
                 return <ModerationPage />;
+            case 'DELETION_QUEUE':
+                return <DeletionQueuePage onRefresh={onRefreshData} />;
             case 'AUDIT_LOG':
                 return <AuditLogPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             default:

@@ -60,6 +60,10 @@ export interface AdminDashboardStats {
   active_goalkeepers: number;
   active_referees: number;
   commission_rate: number;
+  deletion_requests?: number;
+  open_disputes?: number;
+  total_communities?: number;
+  active_promo_codes?: number;
 }
 
 export interface DbAuditLogRow {
@@ -983,6 +987,23 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
     p_anonymize: anonymize,
   });
   if (error) throw new Error(error.message);
+}
+
+export interface DeletionQueueRow {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  requested_at: string;
+  eligible_at: string;
+  is_eligible: boolean;
+  wait_days: number;
+}
+
+/** Silme Kuyruğu (Karar #20) — bekleyen hesap silme talepleri. */
+export async function fetchDeletionQueue(): Promise<DeletionQueueRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_deletion_queue');
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_deletion_queue RPC deploy edilmedi' : error.message);
+  return (data || []) as DeletionQueueRow[];
 }
 
 export type BroadcastSegment = 'ALL' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
