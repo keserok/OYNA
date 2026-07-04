@@ -52,6 +52,9 @@ export interface AdminLog {
   timestamp: string;
   adminId: string;
   adminName?: string;
+  /** Denetim diff'i için ham eski/yeni değer (Karar #70b) */
+  oldValue?: Record<string, unknown> | null;
+  newValue?: Record<string, unknown> | null;
 }
 
 export interface IUser {

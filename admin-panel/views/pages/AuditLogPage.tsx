@@ -6,10 +6,52 @@ import { PageShell } from '../components/PageShell';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
 import { useAdminFilter } from '../hooks/useAdminFilter';
-import { RefreshCw, ScrollText } from 'lucide-react';
+import { RefreshCw, ScrollText, X, Search } from 'lucide-react';
 import type { AdminLog } from '../../../types';
 
 import type { AdminNavigateFn } from '../GodViewPanel';
+
+/** Eski→yeni değer diff'i (Karar #70b): yalnız değişen alanlar yan yana. */
+const AuditDiff: React.FC<{ log: AdminLog; onClose: () => void }> = ({ log, onClose }) => {
+  const oldV = (log.oldValue ?? {}) as Record<string, unknown>;
+  const newV = (log.newValue ?? {}) as Record<string, unknown>;
+  const keys = Array.from(new Set([...Object.keys(oldV), ...Object.keys(newV)])).sort();
+  const fmt = (v: unknown) => v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+  const changed = keys.filter((k) => fmt(oldV[k]) !== fmt(newV[k]));
+
+  return (
+    <div className="fixed inset-0 z-[190] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-[#0D1117] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-500 font-mono uppercase">Denetim Diff</p>
+            <h3 className="text-sm font-black text-white truncate">{log.action} · {log.targetName}</h3>
+            <p className="text-[10px] text-gray-500 mt-0.5">{new Date(log.timestamp).toLocaleString('tr-TR')} · {log.adminName || log.adminId.slice(0, 8)}</p>
+          </div>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center shrink-0"><X size={16} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
+          {changed.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-6">Bu kayıtta alan bazlı eski/yeni değer yok (yalnız aksiyon kaydı).</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[9px] font-black text-gray-600 uppercase tracking-wider px-1">
+                <span>Alan</span><span className="text-red-400/70">Eski</span><span className="text-green-400/70">Yeni</span>
+              </div>
+              {changed.map((k) => (
+                <div key={k} className="grid grid-cols-[1fr_1fr_1fr] gap-2 items-start bg-black/30 border border-white/[0.06] rounded-lg px-3 py-2">
+                  <span className="text-[11px] font-mono font-bold text-gray-300 break-all">{k}</span>
+                  <span className="text-[11px] font-mono text-red-300/90 break-all line-through decoration-red-500/40">{fmt(oldV[k])}</span>
+                  <span className="text-[11px] font-mono text-green-300 break-all">{fmt(newV[k])}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface AuditLogPageProps {
   onRefresh?: () => Promise<void>;
@@ -21,6 +63,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('all');
+  const [diffLog, setDiffLog] = useState<AdminLog | null>(null);
   const { error: toastError } = useAdminToast();
 
   const load = useCallback(async () => {
@@ -124,6 +167,23 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
         </div>
       ),
     },
+    {
+      header: 'Diff',
+      render: (row: AdminLog) => {
+        const hasDiff = !!(row.oldValue || row.newValue);
+        return (
+          <button
+            type="button"
+            disabled={!hasDiff}
+            onClick={() => setDiffLog(row)}
+            title={hasDiff ? 'Eski → yeni değer' : 'Diff verisi yok'}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/10 text-[10px] font-bold text-gray-400 hover:text-white disabled:opacity-30"
+          >
+            <Search size={11} /> Diff
+          </button>
+        );
+      },
+    },
   ];
 
   return (
@@ -159,6 +219,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
         loading={loading || refreshing}
         emptyMessage={query || actionFilter !== 'all' ? 'Filtreye uygun kayıt yok' : 'Henüz denetim kaydı yok'}
       />
+      {diffLog && <AuditDiff log={diffLog} onClose={() => setDiffLog(null)} />}
     </PageShell>
   );
 };

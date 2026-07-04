@@ -15,6 +15,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # tsc --noEmit (tip kontrolü) + vitest birim testleri + prod build
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run build
@@ -28,6 +29,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # Bundled Chromium; playwright.config.ts kanal zorlamaz (CI-dostu varsayılan)
       - run: npx playwright install chromium --with-deps
       - run: npm run test:admin
         env:

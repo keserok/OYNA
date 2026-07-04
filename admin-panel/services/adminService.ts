@@ -139,6 +139,8 @@ const mapAuditRow = (row: DbAuditLogRow): AdminLog => ({
   timestamp: row.created_at,
   adminId: row.admin_id,
   adminName: row.admin_name || undefined,
+  oldValue: row.old_value ?? null,
+  newValue: row.new_value ?? null,
 });
 
 export const toTurkishAdminError = (err: unknown): string => {
