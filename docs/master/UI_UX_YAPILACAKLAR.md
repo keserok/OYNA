@@ -9,7 +9,7 @@
 
 ## 🔴 Kritik — yeni kullanıcıyı ve mağaza incelemesini doğrudan etkiler
 
-1. **İlk açılışta uygulama kendini anlatmıyor.** Splash 1,2 saniye sonra doğrudan giriş ekranına atlıyor; uygulamanın ne işe yaradığını anlatan hiçbir tanıtım yok (`views/SplashScreen.tsx:27`, `App.tsx:351-359`). `design/player-onboarding/` altında hazır v1 mockup'ları var ama uygulanmamış. → 2-3 ekranlık değer anlatımı (maç bul → saha kirala → kartını geliştir) eklenmelidir.
+1. **İlk açılışta uygulama kendini anlatmıyor.** Splash 1,2 saniye sonra doğrudan giriş ekranına atlıyor; uygulamanın ne işe yaradığını anlatan hiçbir tanıtım yok (`views/SplashScreen.tsx:27`, `App.tsx:351-359`). `arsiv/design-prototipler/player-onboarding/` altında (arşivlenmiş) v1 mockup'ları var ama uygulanmamış. → 2-3 ekranlık değer anlatımı (maç bul → saha kirala → kartını geliştir) eklenmelidir.
 2. **Misafir modu bozuk.** "ÖNCE MAÇLARA GÖZ AT" butonu maçlara değil Dashboard'a götürüyor; store'da `isGuest` diye bir durum yok, misafir sahte `'u1'` kullanıcısına düşüyor (`views/MatchJoin.tsx:304`, `store.ts:971,1026`). Misafir maça katılmaya çalışınca ya çöp veri yazılır ya RLS hatası alır; hiçbir yerde "kaydol" kapısı çıkmıyor. → `isGuest` state'i + korumalı aksiyonlarda kayıt daveti.
 3. **Android donanım geri tuşu çalışmıyor.** `backButton` dinleyicisi hiç yok — geri tuşu uygulamayı kapatır (`App.tsx:313` yalnız `appUrlOpen`). Play incelemesinde sık red nedeni. → `@capacitor/app` `backButton` → `goBack()` bağlantısı (kökteyse çıkış onayı).
 4. **Yakınlaştırma ve sistem yazı boyutu kapalı.** `index.html:6` `maximum-scale=1.0, user-scalable=no` — görme zorluğu yaşayanlar metni büyütemez. → kaldırılmalı.

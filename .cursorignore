@@ -1,0 +1,12 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AI / vibecode araçları için hariç tutma listesi (Cursor)
+#
+# arsiv/ = ESKİ tasarım prototipleri ve arşiv. Uygulamanın GÜNCEL/gerçek tasarım
+# kaynağı DEĞİLDİR. Bir design system veya referans üretirken bu klasörü tarama.
+#
+# Uygulamanın GERÇEK tasarım kaynağı:
+#   • index.css   → @theme design token'ları + custom class'lar (mesh-bg, glass, glow)
+#   • index.html  → fontlar (Inter + Space Grotesk)
+#   • components/ , views/  → gerçek üretim bileşenleri
+# ─────────────────────────────────────────────────────────────────────────────
+arsiv/
