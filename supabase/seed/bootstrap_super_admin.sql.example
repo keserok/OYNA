@@ -1,0 +1,66 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- İLK SUPER_ADMIN BOOTSTRAP — ŞABLON (Kararlar Soru 23)
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- ⚠️  BU DOSYA OTOMATİK ÇALIŞMAZ. `.example` uzantısı bilinçlidir.
+--     Migration klasörüne konmaz; elle, kontrollü çalıştırılır.
+--
+-- 🙋 SENİN AKSİYONUN:
+--   1. Aşağıdaki v_email listesini gerçek SUPER_ADMIN e-posta(lar)ınla doldur.
+--   2. O e-posta(lar)la uygulamaya EN AZ BİR KEZ giriş yapılmış olmalı
+--      (auth.users + profiles satırı oluşsun).
+--   3. Bu bloğu Supabase SQL Editor'de (veya psql ile) BİR KEZ çalıştır.
+--   4. Sonrasında yeni adminler panelden atanır (Ekipler & Yetkiler → SUPER_ADMIN).
+--
+-- Idempotent: tekrar çalıştırmak güvenli (ON CONFLICT + koşullu).
+-- Bu işlem denetime yazılmaz (henüz admin yok); ilk atama sonrası tüm rol
+-- değişiklikleri admin_set_platform_role ile audit'lenir.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $bootstrap$
+DECLARE
+  -- 👇 GERÇEK E-POSTA(LAR)I BURAYA YAZ (küçük harf). Örnek:
+  v_emails text[] := ARRAY[
+    'ilk-admin@ornek.com'      -- ← DEĞİŞTİR
+    -- , 'ikinci-admin@ornek.com'
+  ];
+  v_email text;
+  v_uid uuid;
+  v_count int := 0;
+BEGIN
+  FOREACH v_email IN ARRAY v_emails LOOP
+    IF v_email = 'ilk-admin@ornek.com' THEN
+      RAISE EXCEPTION 'Şablon e-postası değiştirilmedi. v_emails listesini gerçek e-posta ile doldur.';
+    END IF;
+
+    SELECT id INTO v_uid FROM public.profiles WHERE lower(email) = lower(v_email) LIMIT 1;
+    IF v_uid IS NULL THEN
+      RAISE NOTICE 'ATLANDI: % için profil yok — önce o e-postayla giriş yapılmalı.', v_email;
+      CONTINUE;
+    END IF;
+
+    -- admin_team_members: kanonik yetki kaynağı
+    INSERT INTO public.admin_team_members (user_id, admin_role, invited_by)
+    VALUES (v_uid, 'SUPER_ADMIN', v_uid)
+    ON CONFLICT (user_id) DO UPDATE SET admin_role = 'SUPER_ADMIN';
+
+    -- profiles bayrakları (türetilir)
+    UPDATE public.profiles
+       SET is_admin = true,
+           role = 'SUPER_ADMIN'
+     WHERE id = v_uid;
+
+    v_count := v_count + 1;
+    RAISE NOTICE 'SUPER_ADMIN atandı: % (%).', v_email, v_uid;
+  END LOOP;
+
+  IF v_count = 0 THEN
+    RAISE EXCEPTION 'Hiç SUPER_ADMIN atanamadı — e-postaların giriş yapmış olduğundan emin ol.';
+  END IF;
+  RAISE NOTICE 'Bootstrap tamam: % SUPER_ADMIN.', v_count;
+END
+$bootstrap$;
+
+-- Doğrulama:
+-- select p.email, atm.admin_role from admin_team_members atm
+--   join profiles p on p.id = atm.user_id where atm.admin_role = 'SUPER_ADMIN';

@@ -3,18 +3,20 @@
 // Invoke with Authorization: Bearer <service_role_key> OR authenticated admin JWT
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret',
-};
+import { buildCorsHeaders, enforceAdminNetworkPolicy } from '../_shared/adminGuard.ts';
 
 Deno.serve(async (req) => {
+  // Origin izinli listesi (ADMIN_ALLOWED_ORIGIN) — env boşsa '*' (dormant)
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    // Origin + IP allowlist kapısı (Soru 26/33) — env boşsa geçer (dormant)
+    const denied = enforceAdminNetworkPolicy(req, corsHeaders);
+    if (denied) return denied;
+
     // Fail-closed: ADMIN_EDGE_SECRET set edilmeden fonksiyon ÇALIŞMAZ.
     const adminSecret = Deno.env.get('ADMIN_EDGE_SECRET');
     if (!adminSecret) {

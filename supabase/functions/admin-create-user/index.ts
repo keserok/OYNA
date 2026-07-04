@@ -2,22 +2,20 @@
 // Deploy: supabase functions deploy admin-create-user
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-// F9: ADMIN_ALLOWED_ORIGIN env var ile production'da origin kısıtlaması yapılmalı.
-// Örnek: supabase secrets set ADMIN_ALLOWED_ORIGIN=https://admin.oyna.app
-const allowedOrigin = Deno.env.get('ADMIN_ALLOWED_ORIGIN') ?? '*';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': allowedOrigin,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { buildCorsHeaders, enforceAdminNetworkPolicy } from '../_shared/adminGuard.ts';
 
 Deno.serve(async (req) => {
+  // Origin izinli listesi (ADMIN_ALLOWED_ORIGIN, çoklu) — env boşsa '*' (dormant)
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    // Origin + IP allowlist kapısı (Soru 26/33) — env boşsa geçer (dormant)
+    const denied = enforceAdminNetworkPolicy(req, corsHeaders);
+    if (denied) return denied;
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
