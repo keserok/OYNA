@@ -10,6 +10,7 @@ import {
 import { AdminPermissionsProvider, useAdminPermissions } from './context/AdminPermissionsContext';
 import { AdminFeatureFlagsProvider, useAdminFeatureFlags } from './context/AdminFeatureFlagsContext';
 import { useAdminToast } from './context/AdminToastContext';
+import { useAdminRealtimeBadges } from './hooks/useAdminRealtimeBadges';
 
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -77,6 +78,9 @@ const GodViewPanelInner: React.FC<Props> = ({
     useEffect(() => {
         if (initialNavParams) setParams(initialNavParams);
     }, [initialNavParams, setParams]);
+
+    // Kritik kuyruk rozetlerini canlı tut (Karar #68/#92) — tek yerden abonelik
+    useAdminRealtimeBadges(!!onRefreshData, onRefreshData);
 
     useEffect(() => {
         const start = initialSubRoute ?? defaultRoute;
