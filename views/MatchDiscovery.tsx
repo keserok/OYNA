@@ -354,14 +354,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#39FF14]">Arama Çapı (Mesafe)</p>
                         <span className="text-[#39FF14] text-xs font-black drop-shadow-md">{searchRadius} KM</span>
                     </div>
-                    <input 
-                        type="range" 
-                        min="1" max="100" 
-                        value={searchRadius} 
+                    <input
+                        type="range"
+                        min="5" max="50" step="5"
+                        value={searchRadius}
                         onChange={(e) => setSearchRadius(Number(e.target.value))}
                         className="w-full h-2 bg-black rounded-lg appearance-none cursor-pointer border border-white/10"
                         style={{
-                          background: `linear-gradient(to right, #39FF14 0%, #39FF14 ${(searchRadius / 100) * 100}%, #161B22 ${(searchRadius / 100) * 100}%, #161B22 100%)`
+                          background: `linear-gradient(to right, #39FF14 0%, #39FF14 ${((searchRadius - 5) / 45) * 100}%, #161B22 ${((searchRadius - 5) / 45) * 100}%, #161B22 100%)`
                         }}
                     />
                     <p className="text-[9px] text-white/50 italic">Mevcut konumuna göre <span className="text-white font-bold">{searchRadius} KM</span> çapındaki sahalarda olan maçlar listelenir.</p>
@@ -809,7 +809,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                             <button
                               onClick={() => {
                                 if (userLocation) {
-                                  setSearchRadius(Math.min(searchRadius + 15, 100));
+                                  setSearchRadius(Math.min(searchRadius + 5, 50));
                                 } else {
                                   setShowWizard(true);
                                 }
