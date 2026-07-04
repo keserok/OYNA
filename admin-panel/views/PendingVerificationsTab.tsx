@@ -6,6 +6,7 @@ import {
   approveProviderVerification,
   fetchPendingVerificationsAdmin,
   fetchProviderApplication,
+  fetchAppConfig,
   getProviderDocSignedUrl,
   reviewProviderApplication,
   toTurkishAdminError,
@@ -126,15 +127,20 @@ const ApplicationDetails: React.FC<{ userId: string }> = ({ userId }) => {
 const PendingCard = memo<{
   v: PendingVerification;
   isProcessing: boolean;
+  slaHours: number;
   onApprove: () => void;
   onReject: () => void;
-}>(({ v, isProcessing, onApprove, onReject }) => {
+}>(({ v, isProcessing, slaHours, onApprove, onReject }) => {
   const bio = v.gk_bio || v.ref_bio || null;
   const fee = v.gk_fee ?? v.ref_fee ?? null;
   const joinDate = new Date(v.created_at).toLocaleDateString('tr-TR');
+  // SLA yaşlandırma (Karar #92): talep yaşı eşiği aşarsa kırmızı işaretle
+  const ageHours = (Date.now() - new Date(v.created_at).getTime()) / 3_600_000;
+  const slaBreached = ageHours > slaHours;
+  const ageLabel = ageHours < 24 ? `${Math.floor(ageHours)} saat` : `${Math.floor(ageHours / 24)} gün`;
 
   return (
-    <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4">
+    <div className={`bg-[#161B22] border rounded-2xl p-4 ${slaBreached ? 'border-red-500/40 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]' : 'border-white/5'}`}>
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-800 shrink-0">
           {v.avatar_url ? (
@@ -152,9 +158,15 @@ const PendingCard = memo<{
             <span className="px-1.5 py-0.5 text-[8px] font-black rounded uppercase bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
               {roleLabel(v)}
             </span>
-            <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-black rounded bg-orange-500/15 text-orange-400 border border-orange-500/20">
-              <Clock size={8} /> Bekliyor
-            </span>
+            {slaBreached ? (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-black rounded bg-red-500/20 text-red-300 border border-red-500/30 animate-pulse">
+                <Clock size={8} /> SLA AŞILDI · {ageLabel}
+              </span>
+            ) : (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-black rounded bg-orange-500/15 text-orange-400 border border-orange-500/20">
+                <Clock size={8} /> Bekliyor · {ageLabel}
+              </span>
+            )}
           </div>
           <p className="text-[10px] text-gray-500">{v.email ?? '-'} · {joinDate}</p>
           {bio && <p className="text-[11px] text-gray-400 mt-1 line-clamp-2">{bio}</p>}
@@ -203,10 +215,22 @@ export const PendingVerificationsTab: React.FC<PendingVerificationsTabProps> = (
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PendingVerification | null>(null);
+  const [slaHours, setSlaHours] = useState(48); // app_config.verification_sla_hours
   const { success, error: toastError } = useAdminToast();
   const onBadgeCountRef = useRef(onBadgeCount);
   onBadgeCountRef.current = onBadgeCount;
   const hasLoadedOnce = useRef(false);
+
+  useEffect(() => {
+    // SLA eşiğini app_config'ten oku (best-effort; hata → varsayılan 48)
+    void fetchAppConfig()
+      .then((rows) => {
+        const row = rows.find((r) => r.key === 'verification_sla_hours');
+        const n = Number(row?.value);
+        if (n >= 1) setSlaHours(n);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const fetchPending = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -341,6 +365,7 @@ export const PendingVerificationsTab: React.FC<PendingVerificationsTabProps> = (
               key={v.id}
               v={v}
               isProcessing={processingId === v.id}
+              slaHours={slaHours}
               onApprove={() => void handleApprove(v.id, v.full_name ?? 'Kullanıcı')}
               onReject={() => setRejectTarget(v)}
             />

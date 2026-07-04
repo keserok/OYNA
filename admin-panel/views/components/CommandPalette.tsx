@@ -1,11 +1,23 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Users, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Users, ArrowRight, Zap, Building2, UserX, Megaphone, ShieldCheck, Power } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import { COMMAND_PALETTE_ROUTES } from '../design/adminRoutes';
 import { useAdminPermissions } from '../context/AdminPermissionsContext';
 import { useAdminFeatureFlags } from '../context/AdminFeatureFlagsContext';
+import { useAdminToast } from '../context/AdminToastContext';
 import type { GodViewSubRoute } from '../GodViewPanel';
+
+/** Palet aksiyon komutu (Karar #45): navigasyon değil, doğrudan iş. */
+interface PaletteAction {
+    id: string;
+    label: string;
+    keywords: string;
+    icon: React.ElementType;
+    /** Yetki: bu route'a erişebilen görebilir. */
+    route: GodViewSubRoute;
+    run: (ctx: { navigate: (r: GodViewSubRoute) => void; close: () => void }) => void;
+}
 
 interface CommandPaletteProps {
     isOpen: boolean;
@@ -25,9 +37,25 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     const [query, setQuery] = useState('');
     const adminPitches = useAppStore((s) => s.adminPitches);
     const adminUsers = useAppStore((s) => s.adminUsers);
+    const maintenanceMode = useAppStore((s) => s.appSettings.maintenanceMode);
     const { canAccess } = useAdminPermissions();
     const { moduleEnabled } = useAdminFeatureFlags();
+    const { info } = useAdminToast();
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // Aksiyon komutları — yetkiye göre süzülür; navigasyon+bağlam tetikler (Karar #45)
+    const ACTIONS: PaletteAction[] = useMemo(() => [
+        { id: 'new-pitch', label: 'Yeni Tesis Kur', keywords: 'saha tesis ekle kurulum vitrin', icon: Building2, route: 'SAHALAR',
+          run: ({ navigate, close }) => { navigate('SAHALAR'); close(); info('Sahalar → "Yeni Tesis Kur" ile kurulum merkezini açın'); } },
+        { id: 'go-deletion', label: 'Silme Kuyruğunu Aç', keywords: 'hesap silme kvkk talep', icon: UserX, route: 'DELETION_QUEUE',
+          run: ({ navigate, close }) => { navigate('DELETION_QUEUE'); close(); } },
+        { id: 'go-verify', label: 'Doğrulama Merkezini Aç', keywords: 'kaleci hakem kimlik onay bekleyen', icon: ShieldCheck, route: 'VERIFICATION',
+          run: ({ navigate, close }) => { navigate('VERIFICATION'); close(); } },
+        { id: 'go-broadcast', label: 'Toplu Bildirim Gönder', keywords: 'kampanya broadcast duyuru bildirim', icon: Megaphone, route: 'NOTIFICATIONS',
+          run: ({ navigate, close }) => { navigate('NOTIFICATIONS'); close(); } },
+        { id: 'go-maintenance', label: `Bakım Modu (${maintenanceMode ? 'AÇIK' : 'kapalı'}) — Ayarlar`, keywords: 'bakim maintenance kapat sistem', icon: Power, route: 'SETTINGS',
+          run: ({ navigate, close }) => { navigate('SETTINGS'); close(); info('Bakım modu Ayarlar sayfasından yaz-onayla değiştirilir'); } },
+    ], [maintenanceMode, info]);
 
     useEffect(() => {
         if (isOpen) {
@@ -64,6 +92,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             .filter((u) => u.name.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
             .slice(0, 3),
         [adminUsers, q],
+    );
+
+    const filteredActions = useMemo(
+        () => ACTIONS.filter((a) =>
+            canAccess(a.route) && moduleEnabled(a.route)
+            && (!q || a.label.toLowerCase().includes(q) || a.keywords.includes(q)),
+        ).slice(0, 5),
+        [ACTIONS, q, canAccess, moduleEnabled],
     );
 
     const routesByCategory = useMemo(() => {
@@ -116,6 +152,33 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     </div>
 
                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2 space-y-3">
+                        {filteredActions.length > 0 && (
+                            <div>
+                                <p className="px-3 py-1 text-[9px] font-black text-red-400/70 uppercase tracking-widest">Hızlı Aksiyon</p>
+                                <div className="space-y-0.5 mt-1">
+                                    {filteredActions.map((a) => {
+                                        const Icon = a.icon;
+                                        return (
+                                            <button
+                                                key={a.id}
+                                                type="button"
+                                                onClick={() => a.run({ navigate: onNavigate, close: onClose })}
+                                                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-red-500/[0.06] text-gray-200 hover:text-white transition-all text-xs group"
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <Icon size={12} className="text-red-400" />
+                                                    <span className="font-bold">{a.label}</span>
+                                                </div>
+                                                <span className="text-[8px] text-red-400 opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+                                                    ÇALIŞTIR <Zap size={8} />
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {Array.from(routesByCategory.entries()).map(([category, routes]) => (
                             <div key={category}>
                                 <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">{category}</p>
@@ -191,7 +254,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                             </div>
                         )}
 
-                        {filteredRoutes.length === 0 && filteredPitches.length === 0 && filteredUsers.length === 0 && (
+                        {filteredRoutes.length === 0 && filteredPitches.length === 0 && filteredUsers.length === 0 && filteredActions.length === 0 && (
                             <div className="py-8 text-center text-xs text-gray-500 font-mono">
                                 {query ? `"${query}" ile eşleşen sonuç yok.` : 'Aramaya başlayın veya bir kategori seçin.'}
                             </div>
