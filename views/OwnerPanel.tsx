@@ -43,6 +43,7 @@ import {
 import {
   findFlashDealForSlot,
   isSlotClosed,
+  localDateISO,
   resolveHourlyPrice,
 } from './owner/ownerCalendarHelpers';
 import { getOrCreateOwnerAccount, planTierLabel, accountStatusLabel } from '../services/ownerAccountService';
@@ -90,7 +91,7 @@ interface OwnerPanelProps {
 // --- HELPERS ---
 
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateISO();
 }
 
 function getWeekDates(base = new Date()): Date[] {
@@ -107,7 +108,7 @@ function getWeekDates(base = new Date()): Date[] {
 }
 
 function formatDateISO(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return localDateISO(d);
 }
 
 function bookingToPendingRequest(b: PitchBookingFull, autoApproveMinutes: number) {
