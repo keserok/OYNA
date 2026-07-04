@@ -84,7 +84,7 @@ export interface BasicMatchRecord {
 export type Match = BasicMatchRecord;
 
 
-export type AppView = 'SPLASH' | 'ONBOARDING' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'TEAM_CREATOR' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL' | 'MESSAGES';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'MY_TEAM_TACTICS' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'TEAM_CREATOR' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL' | 'MESSAGES';
 
 export interface SavedPaymentCard {
   id: string;
@@ -318,6 +318,7 @@ export interface Pitch {
   id: string;
   name: string;
   district: string; // New: District name
+  city?: string; // İl (ilçeden ayrı — TURKEY_REGIONS ile doğrulanır)
   location: string; // Full address
   distance: string;
   rating: number;
@@ -577,6 +578,22 @@ export interface ProviderSuggestion {
   preferred_zones?: string[];
   coordinates?: { lat: number; lng: number };
   is_elite?: boolean;
+}
+
+/**
+ * OYNA ortak konum tipi — tüm uygulamanın "nerede?" için konuştuğu tek dil.
+ * GPS veya elle seçim bu şekle indirgenir; saha/maç/kaleci/hakem kapsamı buna göre yapılır.
+ */
+export interface OynaLocation {
+  city: string;
+  cityPlate?: number;
+  district: string | null;
+  coordinates: { lat: number; lng: number } | null;
+  source: 'gps' | 'manual' | 'restored';
+  accuracy: 'exact' | 'district' | 'city';
+  label: string;
+  isCovered: boolean;
+  detectedAt?: number;
 }
 
 /** Maç sonu kaleci/hakem 1-10 puanlaması. */

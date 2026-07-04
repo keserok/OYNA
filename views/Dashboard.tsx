@@ -393,7 +393,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           </div>
         </div>
         <div className="flex gap-3 relative">
-          
+          {/* Rezervasyonlarım — kısayol (bildirim zilinin solunda) */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onNavigate('MY_BOOKINGS')}
+            aria-label="Rezervasyonlarım"
+            className="w-12 h-12 flex items-center justify-center rounded-full bg-[#161B22]/80 backdrop-blur-md border border-white/5 text-[#39FF14] relative hover:bg-white/10 transition-colors shadow-lg"
+          >
+            <CalendarCheck size={20} />
+          </motion.button>
 
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -911,29 +920,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
 
 
 
-        {/* Rezervasyonlarım — saha kiralamalarını görüntüle/iptal et */}
-        <AnimatedButton
-          as="div"
-          variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onNavigate('MY_BOOKINGS')}
-          className="col-span-2 py-4 premium-glass-card premium-glass-card-hover relative overflow-hidden group cursor-pointer"
-          style={{ borderColor: 'rgba(255,255,255,0.08)' }}
-        >
-          <div className="px-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#39FF14]">
-                <CalendarCheck size={20} />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-white italic uppercase leading-none">Rezervasyonlarım</h3>
-                <p className="text-[10px] text-gray-400 mt-1 font-bold">Saha kiralamalarını yönet</p>
-              </div>
-            </div>
-            <ChevronRight size={20} className="text-gray-500 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </AnimatedButton>
+        {/* Rezervasyonlarım header'a (bildirim zilinin soluna) taşındı. */}
 
         {/* KALECİLER */}
         <AnimatedButton

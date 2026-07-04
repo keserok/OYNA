@@ -333,13 +333,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
         {Array.from({ length: 20 }).map((_, i) => (
           <BgParticle key={i} color={color} delay={i * 0.4} />
         ))}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg,rgba(255,255,255,1) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
       </div>
 
       <div className="flex flex-col min-h-screen relative z-10 px-4 pt-16">

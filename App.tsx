@@ -23,7 +23,6 @@ const Dashboard = lazy(() => import('./views/Dashboard'));
 const MatchDiscovery = lazy(() => import('./views/MatchDiscovery'));
 const MatchJoin = lazy(() => import('./views/MatchJoin'));
 const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
-const OnboardingView = lazy(() => import('./views/OnboardingView'));
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
 const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
@@ -376,18 +375,14 @@ const App: React.FC = () => {
     switch (view) {
       case 'SPLASH':
         return <SplashScreen onStart={() => {
-          // Yeni model: rol seçimi yok. Oturum yoksa ilk açılışta bir kez
-          // tanıtım (onboarding), sonra Giriş; oturum varsa role göre panel.
+          // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş;
+          // oturum varsa role göre panel.
           if (!auth.currentUser) {
-            import('./views/OnboardingView').then(({ isOnboardingDone }) => {
-              resetNavigation(isOnboardingDone() ? 'AUTH' : 'ONBOARDING');
-            });
+            resetNavigation('AUTH');
             return;
           }
           resetNavigation(navigateBasedOnRole(role));
         }} />;
-      case 'ONBOARDING':
-        return <OnboardingView onDone={() => resetNavigation('AUTH')} />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
       case 'LOCATION_PROMPT':

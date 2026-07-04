@@ -10,6 +10,8 @@ import { logout, auth } from '../supabaseAuth';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { fbUpdateUserLocation } from '../supabaseMutations';
+import { detectRegion } from '../services/locationService';
+import LocationBadge from '../components/location/LocationBadge';
 import { NOTIFICATION_CATEGORIES, fetchNotificationTemplates, updateNotificationPreference, NotificationTemplateInfo } from '../notifications/notificationPreferences';
 import type { NotificationPreferenceKey } from '../notifications/pushService';
 import { Capacitor } from '@capacitor/core';
@@ -152,7 +154,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  const { setUserLocation, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref, myRoles, setIsRoleSwitcherOpen } = useAppStore();
+  const { setUserLocation, setLocationPermissionStatus, activeRegion, setActiveRegion, searchRadius, setSearchRadius, notificationPreferences, setNotificationPreferences, updateSingleNotificationPref, myRoles, setIsRoleSwitcherOpen } = useAppStore();
   const hasMultipleRoles = myRoles.length > 1;
 
   // Şablonları yükle
@@ -250,29 +252,22 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     }
   };
 
-  const handleUpdateLocation = () => {
+  const handleUpdateLocation = async () => {
     setIsUpdatingLocation(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-          if (auth.currentUser) {
-            fbUpdateUserLocation(auth.currentUser.uid, position.coords.latitude, position.coords.longitude)
-              .then(() => setIsUpdatingLocation(false))
-              .catch(() => setIsUpdatingLocation(false));
-          } else {
-            setIsUpdatingLocation(false);
-          }
-          if (navigator.vibrate) navigator.vibrate(50);
-        },
-        (err) => {
-          console.error(err);
-          setIsUpdatingLocation(false);
-          showToast('Konum alınamadı. Lütfen cihaz ayarlarından izin verin.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
+    // Ortak konum servisi: GPS al → "Ordu · Altınordu" bölgesine çöz → aktif et.
+    try {
+      const loc = await detectRegion();
+      if (loc.coordinates) setUserLocation(loc.coordinates);
+      setLocationPermissionStatus('GRANTED');
+      setActiveRegion(loc);
+      if (auth.currentUser && loc.coordinates) {
+        await fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
+      }
+      if (navigator.vibrate) navigator.vibrate(50);
+    } catch (err) {
+      console.error(err);
+      showToast('Konum alınamadı. Lütfen cihaz ayarlarından izin verin.');
+    } finally {
       setIsUpdatingLocation(false);
     }
   };
@@ -552,20 +547,46 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
         {/* Konum */}
         <section>
-          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Konum & Tercihler</h3>
-          <div className="flex flex-col bg-[#161B22] border border-white/5 rounded-2xl overflow-hidden">
-            <button onClick={handleUpdateLocation} disabled={isUpdatingLocation} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5 text-left">
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Konum</h3>
+          <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 space-y-4">
+            <div>
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2 ml-0.5">Aktif Bölge</span>
+              <LocationBadge region={activeRegion} interactive={false} className="w-full" />
+            </div>
+
+            <button
+              onClick={handleUpdateLocation}
+              disabled={isUpdatingLocation}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-[#00B0FF]/8 border border-[#00B0FF]/25 hover:bg-[#00B0FF]/12 transition-colors disabled:opacity-60"
+            >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <div className="w-8 h-8 rounded-lg bg-[#00B0FF]/12 flex items-center justify-center text-[#00B0FF]">
                   {isUpdatingLocation ? <RefreshCw size={16} className="animate-spin" /> : <MapPin size={16} />}
                 </div>
-                <div>
-                  <span className="text-sm font-bold text-white block">Konumumu Güncelle</span>
-                  <span className="text-xs text-gray-400">Yakındaki maçları daha doğru listeler</span>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-white block">Konumumu Otomatik Bul</span>
+                  <span className="text-xs text-gray-400">GPS ile bölgeni günceller</span>
                 </div>
               </div>
               <ChevronRight size={18} className="text-gray-600" />
             </button>
+
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-gray-300">Arama Yarıçapı</span>
+                <span className="text-sm font-black text-[#39FF14]">{searchRadius} KM</span>
+              </div>
+              <input
+                type="range"
+                min={5}
+                max={50}
+                step={5}
+                value={searchRadius}
+                onChange={(e) => setSearchRadius(Number(e.target.value))}
+                className="w-full accent-[#39FF14] cursor-pointer"
+              />
+              <p className="text-[10px] text-gray-500 italic mt-1.5">Yakınındaki maçların listeleneceği arama çemberi — 5 km adımlarla (5–50 KM).</p>
+            </div>
           </div>
         </section>
 
