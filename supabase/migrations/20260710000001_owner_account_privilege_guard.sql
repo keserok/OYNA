@@ -26,13 +26,20 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  -- Admin (herhangi bir admin yolu) her alanı değiştirebilir.
+  -- Servis/definer bağlamları serbest: edge function (service_role), admin
+  -- SECURITY DEFINER RPC'si (postgres) ve bakım/migration. Açık yalnız 'authenticated'
+  -- rolüyle PostgREST üzerinden gelen owner'da olduğundan, kısıt yalnız ona uygulanır.
+  IF current_user <> 'authenticated' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Authenticated admin da her alanı değiştirebilir.
   IF public.is_admin() OR public.is_platform_admin() THEN
     RETURN NEW;
   END IF;
 
-  -- Admin olmayan (owner'ın kendisi): yalnız zararsız alanlar (billing_email,
-  -- updated_at) yazılabilir. Aşağıdaki hassas alanların değişimi reddedilir.
+  -- Buraya gelen: admin OLMAYAN, giriş yapmış owner. Yalnız zararsız alanlar
+  -- (billing_email, updated_at) yazılabilir; aşağıdaki hassas alanlar reddedilir.
   IF NEW.owner_user_id      IS DISTINCT FROM OLD.owner_user_id
      OR NEW.plan_tier           IS DISTINCT FROM OLD.plan_tier
      OR NEW.status              IS DISTINCT FROM OLD.status
