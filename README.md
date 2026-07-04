@@ -131,7 +131,7 @@ npm run test:admin  # Playwright admin panel testleri
 
 ## 🗄️ Veritabanı & Güvenlik Yönetimi
 
-Veritabanı işlemleri, otomatik migration'lar ve RLS (Row Level Security) kuralları ile ilgili detaylar için [DATABASE_README.md](DATABASE_README.md) dosyasını inceleyebilirsiniz.
+Veritabanı işlemleri, otomatik migration'lar ve RLS (Row Level Security) kuralları ile ilgili detaylar için [DATABASE_README.md](docs/eski/DATABASE_README.md) dosyasını inceleyebilirsiniz. *(Not: bu belge arşivdedir; güncel durum için [docs/master/OYNA_MASTER.md](docs/master/OYNA_MASTER.md).)*
 
 Sık kullanılan bazı veritabanı komutları:
 * **Bağlantı Testi:**
@@ -151,13 +151,15 @@ Sık kullanılan bazı veritabanı komutları:
 
 ## 📚 Ek Dökümantasyonlar
 
-Daha detaylı analiz ve geliştirici rehberleri için `docs/` klasöründeki belgelere göz atabilirsiniz:
-* [Yol Haritası](docs/OYNA_YOL_HARITASI.md) - Faz planı ve geliştirme öncelikleri.
-* [Master Prensipler](docs/OYNA_MASTER_PRENSIPLER.md) - Ürün ve mimari temel prensipler.
-* [Mimari ve Tasarım Belgesi](docs/eski/OYNA_MIMARI_VE_TASARIM_DOKUMANI.md) - Tasarım manifestosu ve master plan (arşiv).
-* [Tasarım ve Mimari Kılavuzu](docs/eski/OYNA_TASARIM_VE_MIMARI_KILAVUZU.md) - Arayüz ve durum yönetimi standartları (arşiv).
-* [Backend Sistem Mantığı](docs/eski/OYNA_BACKEND_SISTEM_MANTIGI.md) - Veritabanı şeması ve algoritmik detaylar (arşiv).
-* [Dosya ve Klasör İşlevleri](DOSYALARIN_ISLEVLERI.md) - Tüm kod dosyalarının işlevsel dökümü.
+Dokümanlar iki klasörde düzenlidir — **güncel** olanlar `docs/master/`, **arşiv** `docs/eski/`. Tam içindekiler tablosu: **[docs/README.md](docs/README.md)**.
+
+* **[🏆 OYNA Master (tek kaynak)](docs/master/OYNA_MASTER.md)** - Tüm dokümanların konsolide durum + karar özeti (buradan başlayın).
+* [Master Prensipler](docs/master/OYNA_MASTER_PRENSIPLER.md) - Ürün ve mimari temel prensipler (en üst otorite).
+* [Yol Haritası](docs/master/OYNA_YOL_HARITASI.md) - Faz planı ve geliştirme öncelikleri.
+* [Operasyonel Durum](docs/master/OYNA_OPERASYONEL_DURUM.md) - Kalan işler ve go-live durumu.
+* [Store Lansman Planı](docs/master/STORE_LANSMAN_PLANI.md) - App Store & Google Play süreci.
+* [RUNBOOK](docs/master/RUNBOOK.md) - Yazılımcısız çalıştırma & kurtarma kılavuzu.
+* _Arşiv (`docs/eski/`):_ eski mimari/tasarım belgeleri, aşılmış soru setleri, Firebase-dönemi planlar ve bayat referanslar (DATABASE_README, DOSYALARIN_ISLEVLERI).
 
 ---
 *Developed with ❤️ for OYNA Ecosystem*

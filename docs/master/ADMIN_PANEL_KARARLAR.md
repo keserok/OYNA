@@ -1,6 +1,6 @@
 # ✅ OYNA — Admin Panel 100 Soru: KARARLAR
 
-> **Ne bu belge?** `docs/ADMIN_PANEL_100_SORU.md`'deki 100 sorunun her biri için **alınan net karar** ve **güncel durumu**. Kurucu kararları ekibe devretti ("sistemimizle cevapla ve kararları al"); kararlar master prensipler + mevcut kod gerçeğine dayanır.
+> **Ne bu belge?** `docs/eski/ADMIN_PANEL_100_SORU.md`'deki 100 sorunun her biri için **alınan net karar** ve **güncel durumu**. Kurucu kararları ekibe devretti ("sistemimizle cevapla ve kararları al"); kararlar master prensipler + mevcut kod gerçeğine dayanır.
 > **Son güncelleme:** 2026-06-27 · **Dal:** `admin-panel-son`
 
 ## 🌐 4 Global Karar (her soruya uygulanır)

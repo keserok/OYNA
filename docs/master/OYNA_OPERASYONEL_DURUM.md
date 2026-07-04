@@ -4,7 +4,7 @@
 > **Son güncelleme:** Faz 7 tamamlandı + 4 yeni ödeme/e-posta edge function canlıya deploy edildi.
 > **İlke:** Buradaki maddeler **kod bug'ı değildir** — altyapı (DB, RPC, state machine, edge) hazır;
 > eksik olan yalnızca **dış kaynak (iyzico sözleşmesi, sertifika, hesap, hukuk)** veya küçük UI/test cilasıdır.
-> **iyzico aktivasyon adımları için** ayrıntı: `docs/OYNA_GO_LIVE_IYZICO.md` (go-live runbook).
+> **iyzico aktivasyon adımları için** ayrıntı: `docs/master/OYNA_GO_LIVE_IYZICO.md` (go-live runbook).
 
 ---
 
@@ -71,7 +71,7 @@ Sözleşme + anahtar gelince (#1, #2), şu üç bağlama kalır — hepsinin alt
    çağırıyor; IYZICO modunda intent başına `capture-payment`/`void-payment` edge'i tetiklenecek (pg_net).
 3. **İptal → karta iade:** iptal akışları `refund-payment` edge'ini (kademeli + iyzico karta iade) çağıracak.
 
-Detaylı adımlar + env değişkenleri: **`docs/OYNA_GO_LIVE_IYZICO.md`**.
+Detaylı adımlar + env değişkenleri: **`docs/master/OYNA_GO_LIVE_IYZICO.md`**.
 
 ---
 

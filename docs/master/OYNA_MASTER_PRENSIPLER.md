@@ -1,7 +1,7 @@
 # 🏛️ OYNA — Master Prensipler Dokümanı
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
-> **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
+> **Kaynak:** `docs/eski/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
 > **Son güncelleme:** ✅ **TÜM 20 BÖLÜM TAMAMLANDI + tutarlılık gözden geçirmesi yapıldı** (payout/yasal/iptal/ton tutarsızlıkları düzeltildi).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 

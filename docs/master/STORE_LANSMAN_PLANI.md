@@ -133,7 +133,7 @@ Sözleşme süreci uzun sürer — **bu faza hemen başlanmalı.**
 
 - [ ] **[KURUCU]** iyzico marketplace/pazaryeri sözleşmesi + KYC + canlı API anahtarları (şirket kuruluşu gerekiyorsa en uzun kalem budur).
 - [ ] **[GELİŞTİRİCİ]** `PaymentScreen.tsx`'te gerçek akışı bağla: şu an `create_payment_intent` sonrası adım hard-coded `BLOCKED` (satır 136-138), kart verisi hiçbir yere gitmiyor. iyzico Checkout Form'a yönlendirme/embed tamamlanmalı.
-- [ ] **[GELİŞTİRİCİ]** Maç katılımı → gerçek pre-auth blokaj; T-8s `pg_net` → `capture-payment`/`void-payment` tetiklemesi; iptal → `refund-payment` kart iadesi (docs/OYNA_GO_LIVE_IYZICO.md §70-79'daki bekleyen üç kalem).
+- [ ] **[GELİŞTİRİCİ]** Maç katılımı → gerçek pre-auth blokaj; T-8s `pg_net` → `capture-payment`/`void-payment` tetiklemesi; iptal → `refund-payment` kart iadesi (docs/master/OYNA_GO_LIVE_IYZICO.md §70-79'daki bekleyen üç kalem).
 - [ ] Sandbox'ta uçtan uca test: blokaj → capture → payout → kademeli iade.
 - [ ] Secrets: `PAYMENT_PROVIDER=IYZICO`, `IYZICO_API_KEY/SECRET_KEY/BASE_URL`, `PAYMENT_EDGE_SECRET`; panel `payment_provider=IYZICO`; **Finans → Go-Live Ön-Uçuş tüm satırlar yeşil**.
 - [ ] Küçük tutarlı gerçek kartla canlı test + iade.
@@ -277,4 +277,4 @@ Hafta 5-6 ████ FAZ J gönderim → inceleme → kademeli yayın
 
 - [Google Play target API gereksinimi](https://support.google.com/googleplay/android-developer/answer/11926878) — 31.08.2026'dan itibaren yeni uygulamalar API 36
 - [Apple Upcoming Requirements](https://developer.apple.com/news/upcoming-requirements/) — 28.04.2026'dan beri iOS 26 SDK/Xcode 26 zorunlu
-- Repo içi: `docs/GO_LIVE_CHECKLIST.md`, `docs/OYNA_GO_LIVE_IYZICO.md`, `docs/OYNA_YOL_HARITASI.md` (Faz 7.5 mağaza hazırlığı)
+- Repo içi: `docs/master/GO_LIVE_CHECKLIST.md`, `docs/master/OYNA_GO_LIVE_IYZICO.md`, `docs/master/OYNA_YOL_HARITASI.md` (Faz 7.5 mağaza hazırlığı)
