@@ -251,9 +251,10 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             </div>
                         </div>
 
-                        {/* Contact */}
+                        {/* Contact — PII sunucudan maskeli gelir; maskeli değer yazımını
+                            sunucu reddeder. E-posta auth kimliğidir, panelden düzenlenmez. */}
                         <div className="grid grid-cols-2 gap-4">
-                            <FI label="E-posta"><I value={edit.email} onChange={e => setEdit({ ...edit, email: e.target.value })} /></FI>
+                            <FI label="E-posta (salt okunur — maskeli)"><I value={edit.email} disabled readOnly className="opacity-60" /></FI>
                             <FI label="Telefon"><I value={edit.phone || ''} onChange={e => setEdit({ ...edit, phone: e.target.value })} placeholder="+90 5..." /></FI>
                         </div>
 

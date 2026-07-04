@@ -6,7 +6,7 @@ import { AddUserModal } from '../components/AddUserModal';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
 import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, Star, BadgeCheck, CreditCard } from 'lucide-react';
-import { logImpersonation, fetchAdminProfiles, toTurkishAdminError, setPlayerCardAdmin } from '../../services/adminService';
+import { startGhostSession, fetchAdminProfiles, toTurkishAdminError, setPlayerCardAdmin } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { maskEmail } from '../../utils/pii';
@@ -61,6 +61,10 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const [editProvider, setEditProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
     const [editUser, setEditUser] = useState<AdminUser | null>(null);
     const [user360, setUser360] = useState<AdminUser | null>(null);
+    // Ghost girişi zorunlu sebeple sunucu oturumu açar (Karar #31)
+    const [ghostTarget, setGhostTarget] = useState<{ id: string; name: string; role?: string } | null>(null);
+    const [ghostReason, setGhostReason] = useState('');
+    const [ghostBusy, setGhostBusy] = useState(false);
     const [page, setPage] = useState(0);
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned'>('all');
     const [query, setQuery] = useState('');
@@ -109,53 +113,49 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
         const sourceData = subRoute === 'KALECİLER' ? adminGoalkeepers : subRoute === 'HAKEMLER' ? adminReferees : adminUsers;
         const targetUser = sourceData.find(u => u.id === userId);
         if (!targetUser) return;
-        
-        setConfirmModal({
-            title: 'Ghost Mode Girişi',
-            description: `${targetUser.name} adlı kullanıcının profiline giriş yapmak üzeresiniz. Bu işlem sırasında kullanıcının yetkilerine sahip olacaksınız.`,
-            impactText: 'Sistemi bu kullanıcının gözünden göreceksiniz. Yaptığınız işlemler veritabanına kaydedilir.',
-            actionType: 'GHOST_MODE',
-            targetId: targetUser.id,
-            targetName: targetUser.name,
-            onCancel: () => setConfirmModal(null),
-            onConfirm: async () => {
-                if (mode === 'standalone') {
-                    try {
-                        await logImpersonation(targetUser.id);
-                        addAdminLog({
-                            action: 'GHOST_MODE',
-                            targetId: targetUser.id,
-                            targetName: targetUser.name,
-                            details: 'Standalone deep-link ghost session',
-                            adminId: adminSession?.userId || 'system',
-                        });
-                        openGhostInConsumerApp(targetUser.id, targetUser.name);
-                        notify(`🕵️ ${targetUser.name} — consumer app'te açılıyor`);
-                    } catch {
-                        notify('Ghost mode kaydı başarısız');
-                    }
-                    setConfirmModal(null);
-                    return;
-                }
+        setGhostReason('');
+        setGhostTarget({ id: targetUser.id, name: targetUser.name, role: (targetUser as any).role });
+    };
+
+    const confirmGhost = async () => {
+        if (!ghostTarget) return;
+        if (ghostReason.trim().length < 5) {
+            toastError('Ghost girişi için sebep zorunlu (en az 5 karakter).');
+            return;
+        }
+        setGhostBusy(true);
+        try {
+            // Sunucu oturumu: zorunlu sebep + 30 dk TTL + GHOST_START audit
+            const session = await startGhostSession(ghostTarget.id, ghostReason.trim());
+            const expiresLabel = new Date(session.expiresAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            addAdminLog({
+                action: 'GHOST_MODE',
+                targetId: ghostTarget.id,
+                targetName: ghostTarget.name,
+                details: `Sebep: ${ghostReason.trim()} · oturum ${expiresLabel}'e kadar`,
+                adminId: adminSession?.userId || 'system',
+            });
+            if (mode === 'standalone') {
+                openGhostInConsumerApp(ghostTarget.id, ghostTarget.name);
+                notify(`🕵️ ${ghostTarget.name} — consumer app'te açılıyor (oturum ${expiresLabel}'e kadar)`);
+            } else {
+                const targetUser = (subRoute === 'KALECİLER' ? adminGoalkeepers : subRoute === 'HAKEMLER' ? adminReferees : adminUsers)
+                    .find(u => u.id === ghostTarget.id);
                 setOriginalRole(role);
                 setImpersonatedUser(targetUser as any);
-                setRole((targetUser as any).role || 'PLAYER');
-                if ((targetUser as any).role === 'OWNER') resetNavigation('OWNER_PANEL');
+                setRole((targetUser as any)?.role || 'PLAYER');
+                if ((targetUser as any)?.role === 'OWNER') resetNavigation('OWNER_PANEL');
                 else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') resetNavigation('SERVICE_DASHBOARD');
                 else resetNavigation('DASHBOARD');
-
-                try { await logImpersonation(targetUser.id); } catch { /* audit optional */ }
-                addAdminLog({
-                    action: 'GHOST_MODE',
-                    targetId: targetUser.id,
-                    targetName: targetUser.name,
-                    details: 'Ghost Mode Session Started',
-                    adminId: adminSession?.userId || 'system',
-                });
-                notify(`🕵️ Ghost Mode: ${targetUser.name} taklit ediliyor!`);
-                setConfirmModal(null);
+                notify(`🕵️ Ghost Mode: ${ghostTarget.name} (oturum ${expiresLabel}'e kadar)`);
             }
-        });
+            setGhostTarget(null);
+            setGhostReason('');
+        } catch (err) {
+            toastError(toTurkishAdminError(err));
+        } finally {
+            setGhostBusy(false);
+        }
     };
 
     const handleBanToggle = (u: AdminUser) => {
@@ -488,6 +488,44 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     onClose={() => { setEditUser(null); void refresh(); }}
                 />
             )}
+            {ghostTarget && (
+                <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#161B22] border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
+                        <div>
+                            <h3 className="text-sm font-black text-white uppercase">Ghost Mode Girişi</h3>
+                            <p className="text-[11px] text-gray-400 mt-1">
+                                <span className="text-white font-bold">{ghostTarget.name}</span> hesabını görüntüleyeceksiniz.
+                                Sebep zorunludur; oturum 30 dk sonra sunucuda sona erer ve denetime yazılır.
+                            </p>
+                        </div>
+                        <textarea
+                            value={ghostReason}
+                            onChange={(e) => setGhostReason(e.target.value)}
+                            placeholder="Sebep (örn. destek talebi #123 incelemesi)…"
+                            rows={3}
+                            className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-red-500/40 focus:outline-none resize-none"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setGhostTarget(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-bold"
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                type="button"
+                                disabled={ghostBusy || ghostReason.trim().length < 5}
+                                onClick={() => void confirmGhost()}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black disabled:opacity-40"
+                            >
+                                Ghost Başlat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <User360Drawer
                 user={user360}
                 onClose={() => setUser360(null)}

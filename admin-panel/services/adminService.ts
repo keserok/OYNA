@@ -670,6 +670,28 @@ export async function logImpersonation(targetUserId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Ghost mode sunucu oturumu (Karar #31): zorunlu sebep + 30 dk TTL.
+ * Oturum admin_ghost_sessions'a yazılır ve GHOST_START audit kaydı düşer.
+ */
+export async function startGhostSession(
+  targetUserId: string,
+  reason: string,
+): Promise<{ sessionId: string; expiresAt: string }> {
+  const { data, error } = await supabase.rpc('admin_start_ghost', {
+    p_target_user_id: targetUserId,
+    p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+  const row = data as { session_id: string; expires_at: string };
+  return { sessionId: row.session_id, expiresAt: row.expires_at };
+}
+
+export async function endGhostSession(): Promise<void> {
+  const { error } = await supabase.rpc('admin_end_ghost');
+  if (error) throw new Error(error.message);
+}
+
 export function settingsToDbPayload(settings: Partial<AppSettingsDb>): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   if (settings.appName !== undefined) payload.app_name = settings.appName;
