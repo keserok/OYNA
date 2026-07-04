@@ -29,7 +29,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
     const { error: toastError } = useAdminToast();
 
     const stats = adminDashboardStats;
-    const commissionRate = Number(stats?.commission_rate ?? appSettings.commissionRate ?? 10);
+    // Komisyon tek kaynak (Karar #77): admin_dashboard_stats commission_config'ten okur.
+    const commissionRate = Number(stats?.commission_rate ?? 10);
     const missingAlerts = useMemo(
         () => adminMatches.filter((m) => m.missingPositions?.some((p) => p.count > 0)).length,
         [adminMatches],

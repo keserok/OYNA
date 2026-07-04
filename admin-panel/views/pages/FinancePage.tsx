@@ -3,12 +3,14 @@ import { DataTable } from '../components/DataTable';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
   fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout,
+  fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
-  type PayoutRequestRow,
+  type PayoutRequestRow, type PaymentIntentRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
 import { AdminSearchBar } from '../components/AdminSearchBar';
+import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { useAdminToast } from '../context/AdminToastContext';
 import { downloadCsv } from '../../utils/exportCsv';
 import { CreditCard, Download, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react';
@@ -26,9 +28,27 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'billing' | 'payouts' | 'golive'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'golive'>('ledger');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
+
+  // Ödeme müdahale (Karar #73): genel intent listesi + force capture/void/refund
+  const [intents, setIntents] = useState<PaymentIntentRow[]>([]);
+  const [intentsLoading, setIntentsLoading] = useState(false);
+  const [intentBusy, setIntentBusy] = useState<string | null>(null);
+  const [intentConfirm, setIntentConfirm] = useState<ActionConfirmOptions | null>(null);
+
+  const loadIntents = useCallback(async (search: string) => {
+    setIntentsLoading(true);
+    try {
+      const { rows } = await fetchPaymentIntentsAdmin({ search: search.trim() || undefined, limit: PAGE_SIZE });
+      setIntents(rows);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setIntentsLoading(false);
+    }
+  }, [toastError]);
 
   const filterRows = <T,>(rows: T[]): T[] => {
     const q = query.trim().toLowerCase();
@@ -76,6 +96,45 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   }, [toastError]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Ödeme müdahale sekmesi açıldığında / arama değiştiğinde intent listesini çek
+  useEffect(() => {
+    if (tab !== 'intents') return;
+    const t = setTimeout(() => void loadIntents(query), 300);
+    return () => clearTimeout(t);
+  }, [tab, query, loadIntents]);
+
+  const fmtTry = (n: number | null | undefined) => `₺${Number(n ?? 0).toLocaleString('tr-TR')}`;
+
+  const runIntentAction = async (fn: () => Promise<void>, okMsg: string, id: string) => {
+    setIntentBusy(id);
+    try {
+      await fn();
+      success(okMsg);
+      setIntentConfirm(null);
+      await loadIntents(query);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setIntentBusy(null);
+    }
+  };
+
+  const askIntent = (it: PaymentIntentRow, kind: 'capture' | 'void' | 'refund') => {
+    const label = `${it.user_name || it.user_id?.slice(0, 8) || 'Ödeme'} • ${fmtTry(it.amount)}`;
+    const cfg = {
+      capture: { title: 'Tahsilatı zorla (capture)', desc: `${fmtTry(it.amount)} ön-provizyon TAHSİL edilecek.`, impact: 'Para gerçekten çekilir; geri almak ayrı iade gerektirir.', at: 'FORCE_CAPTURE' as const, run: () => forceCaptureIntentAdmin(it.id, 'Finans genel müdahale'), ok: 'Tahsil edildi' },
+      void: { title: 'Ön-provizyonu iptal et (void)', desc: `${fmtTry(it.amount)} bloke serbest bırakılacak.`, impact: 'Bloke kaldırılır; ödeme alınmamış sayılır.', at: 'FORCE_VOID' as const, run: () => forceVoidIntentAdmin(it.id, 'Finans genel müdahale'), ok: 'Bloke serbest bırakıldı' },
+      refund: { title: 'İade et (refund)', desc: `${fmtTry(it.amount)} kademeli iade politikasına göre iade edilecek.`, impact: 'Tahsil edilmiş ödeme iade edilir; kesintiler politikaya göre.', at: 'FORCE_REFUND' as const, run: () => forceRefundIntentAdmin(it.id, 'Finans genel müdahale'), ok: 'İade işlendi' },
+    }[kind];
+    setIntentConfirm({
+      title: cfg.title, description: cfg.desc, impactText: cfg.impact,
+      actionType: cfg.at, targetId: it.id, targetName: label,
+      confirmPhrase: 'ONAYLA',
+      onConfirm: () => void runIntentAction(cfg.run, cfg.ok, it.id),
+      onCancel: () => setIntentConfirm(null),
+    });
+  };
 
   const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED') => {
     if (status === 'FAILED' && !window.confirm('Bu payout talebi reddedilsin mi? Rezerve tutar sahibe iade edilir.')) return;
@@ -132,13 +191,14 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const tabs = useMemo(() => ([
     { id: 'ledger' as const, label: 'Cüzdan Ledger' },
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
+    { id: 'intents' as const, label: 'Ödeme Müdahale' },
     { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
     { id: 'golive' as const, label: 'Go-Live & Mutabakat' },
   ]), [payouts.length]);
 
-  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'billing' ? filteredBilling : filteredPayouts;
-  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'billing' ? billing.length : payouts.length;
+  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'intents' ? intents : tab === 'billing' ? filteredBilling : filteredPayouts;
+  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'intents' ? intents.length : tab === 'billing' ? billing.length : payouts.length;
 
   return (
     <PageShell
@@ -149,7 +209,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           <button
             type="button"
             onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive'}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'intents' || tab === 'payouts'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -258,6 +318,41 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         />
       )}
 
+      {tab === 'intents' && (
+        <>
+          <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
+            Tüm ödeme intent'leri (rezervasyon, maç, hizmet). Askıda kalan bir ödemeyi maç kokpitine
+            gitmeden buradan tahsil edebilir, blokeyi kaldırabilir veya iade edebilirsiniz — her işlem
+            FİNANS yetkisi ister, denetime yazılır ve onay için <b>ONAYLA</b> yazmanız gerekir.
+          </p>
+          <DataTable
+            columns={[
+              { header: 'Tarih', render: (r: PaymentIntentRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
+              { header: 'Kullanıcı', render: (r: PaymentIntentRow) => <span className="text-sm text-white">{r.user_name || r.user_id?.slice(0, 8) || '—'}</span> },
+              { header: 'Bağlam', render: (r: PaymentIntentRow) => <span className="text-[11px] text-gray-400">{r.pitch_name || (r.match_id ? 'Maç' : r.related_entity_type || '—')}</span> },
+              { header: 'Tutar', render: (r: PaymentIntentRow) => <span className="text-green-400 font-bold">{fmtTry(r.amount)}</span> },
+              { header: 'Komisyon', render: (r: PaymentIntentRow) => <span className="text-[11px] text-amber-300">{fmtTry(r.commission_amount)}</span> },
+              { header: 'Durum', render: (r: PaymentIntentRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
+              { header: 'Müdahale', render: (r: PaymentIntentRow) => {
+                const s = (r.status || '').toUpperCase();
+                const canCV = s === 'BLOCKED' || s === 'PENDING';
+                const canR = s === 'CAPTURED' || s === 'PAID';
+                return (
+                  <div className="flex gap-1.5">
+                    <button type="button" disabled={intentBusy === r.id || !canCV} onClick={() => askIntent(r, 'capture')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-emerald-500/30 text-emerald-400 disabled:opacity-30">Tahsil</button>
+                    <button type="button" disabled={intentBusy === r.id || !canCV} onClick={() => askIntent(r, 'void')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-amber-500/30 text-amber-400 disabled:opacity-30">Void</button>
+                    <button type="button" disabled={intentBusy === r.id || !canR} onClick={() => askIntent(r, 'refund')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-red-500/30 text-red-400 disabled:opacity-30">İade</button>
+                  </div>
+                );
+              } },
+            ]}
+            data={intents}
+            loading={intentsLoading}
+            emptyMessage={query ? 'Eşleşen ödeme yok' : 'Ara: kullanıcı, tesis, intent ID veya referans'}
+          />
+        </>
+      )}
+
       {tab === 'payouts' && (
         <DataTable
           columns={[
@@ -295,6 +390,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           emptyMessage="Bekleyen payout talebi yok"
         />
       )}
+
+      <ActionConfirmModal isOpen={!!intentConfirm} options={intentConfirm} />
     </PageShell>
   );
 };

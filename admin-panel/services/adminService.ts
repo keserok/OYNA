@@ -1723,6 +1723,39 @@ export async function forceRefundIntentAdmin(intentId: string, notes?: string): 
   if (error) throw new Error(error.message);
 }
 
+export interface PaymentIntentRow {
+  id: string;
+  user_id: string | null;
+  user_name: string | null;
+  pitch_id: string | null;
+  pitch_name: string | null;
+  match_id: string | null;
+  related_entity_type: string | null;
+  amount: number;
+  commission_amount: number | null;
+  owner_amount: number | null;
+  status: string;
+  provider: string | null;
+  provider_ref: string | null;
+  created_at: string;
+  total_count: number;
+}
+
+/** Genel ödeme intent araması (Karar #73) — maç dışı müdahale için de. */
+export async function fetchPaymentIntentsAdmin(params: {
+  search?: string; status?: string; limit?: number; offset?: number;
+}): Promise<{ rows: PaymentIntentRow[]; total: number }> {
+  const { data, error } = await supabase.rpc('admin_fetch_payment_intents', {
+    p_search: params.search ?? null,
+    p_status: params.status ?? null,
+    p_limit: params.limit ?? 100,
+    p_offset: params.offset ?? 0,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_payment_intents RPC deploy edilmedi' : error.message);
+  const rows = (data || []) as PaymentIntentRow[];
+  return { rows, total: rows[0]?.total_count ? Number(rows[0].total_count) : rows.length };
+}
+
 export interface MatchAuditRow {
   id: string;
   action: string;
