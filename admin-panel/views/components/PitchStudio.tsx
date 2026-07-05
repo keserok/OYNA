@@ -15,7 +15,7 @@ import {
   Sparkles, Check, Eye, Star, Lock, Loader2, Plus, Trash2, ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-import { createPitchAdmin, updatePitchAdmin, toTurkishAdminError } from '../../services/adminService';
+import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
 import { getTariffs, saveTariffs, type TariffInput } from '../../../services/pitchOwnerService';
 import { setPitchFeatured, setPitchPublished } from '../../../services/pitchContentService';
 import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
@@ -104,6 +104,11 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [latLng, setLatLng] = useState<[number, number] | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [pricePerMatch, setPricePerMatch] = useState<number>(0);
+  // Saha sahibi (owner) seçimi. initialOwnerId ile karşılaştırılır: admin_update_pitch
+  // owner devrini SUPER_ADMIN'e kilitler, o yüzden owner_id yalnız değiştiğinde gönderilir.
+  const [ownerId, setOwnerId] = useState('');
+  const [initialOwnerId, setInitialOwnerId] = useState('');
+  const [ownerCandidates, setOwnerCandidates] = useState<OwnerCandidate[]>([]);
 
   // ── Olanaklar ──
   const [amenities, setAmenities] = useState<string[]>([]);
@@ -135,7 +140,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     void (async () => {
       const { data, error } = await supabase
         .from('pitches')
-        .select('name, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, is_active, verification_status, price_per_match')
+        .select('name, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, is_active, verification_status, price_per_match, owner_id')
         .eq('id', pitchId)
         .single();
       if (!alive) return;
@@ -164,11 +169,27 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       setIsActive(data.is_active !== false);
       setVerificationStatus((data.verification_status as typeof verificationStatus) ?? 'approved');
       setPricePerMatch(Number(data.price_per_match ?? 0));
+      setOwnerId((data.owner_id as string | null) ?? '');
+      setInitialOwnerId((data.owner_id as string | null) ?? '');
       setLoading(false);
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pitchId]);
+
+  // Saha sahibi adaylarını (OWNER rollü profiller) bir kez yükle.
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const owners = await listOwnerCandidatesAdmin();
+        if (alive) setOwnerCandidates(owners);
+      } catch {
+        /* sessiz geç — owner seçici opsiyonel */
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const loadCourts = useCallback(async () => {
     if (!id) return;
@@ -227,6 +248,9 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     price_per_match: pricePerMatch,
     is_active: isActive,
     ...(latLng ? { latitude: latLng[0], longitude: latLng[1] } : {}),
+    // owner_id yalnız oluşturmada ya da gerçekten değiştiğinde gönderilir. Aksi halde
+    // admin_update_pitch'in owner devri kilidi (SUPER_ADMIN) normal kayıtları engellerdi.
+    ...(isCreateMode || ownerId !== initialOwnerId ? { owner_id: ownerId } : {}),
   });
 
   const validateProfile = (): boolean => {
@@ -470,6 +494,18 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                   <div>
                     <label className={labelCls}>Adres *</label>
                     <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="Mahalle, cadde, no" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Saha Sahibi</label>
+                    <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className={inputCls}>
+                      <option value="">Sahipsiz (atanmadı)</option>
+                      {ownerCandidates.map((o) => (
+                        <option key={o.id} value={o.id}>{o.full_name || o.email || o.id.slice(0, 8)}</option>
+                      ))}
+                    </select>
+                    {!isCreateMode && ownerId !== initialOwnerId && (
+                      <p className="mt-1 text-[10px] font-bold text-amber-400">Sahiplik devri yalnız SUPER_ADMIN tarafından kaydedilebilir.</p>
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">

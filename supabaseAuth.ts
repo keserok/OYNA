@@ -285,6 +285,71 @@ export const verifyEmailOtp = async (email: string, token: string) => {
   return data;
 };
 
+// ─── E-posta + Şifre ile giriş ───────────────────────────────────────────────
+export const signInWithEmailPassword = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
+  if (error) throw error;
+  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
+  return data;
+};
+
+// ─── E-posta + Şifre ile kayıt ───────────────────────────────────────────────
+// config.toml: enable_confirmations=false → signUp anında oturum döndürür;
+// App.tsx'teki onAuthStateChanged yeni kullanıcı için profil satırını otomatik
+// oluşturur (rol PLAYER). E-posta onayı ileride açılırsa signUp oturum yerine
+// doğrulama bekletir; UI bu durumu (session yoksa) "e-postanı doğrula" olarak
+// ele almalıdır.
+export const signUpWithPassword = async (email: string, password: string, fullName: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim().toLowerCase(),
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (error) throw error;
+  if (data?.user && data.session) auth.currentUser = await buildCurrentUser(data.user);
+  return data;
+};
+
+// ─── Şifremi unuttum — Adım 1: sıfırlama kodu iste ───────────────────────────
+// Güvenlik: e-posta kayıtlı olsun olmasın her zaman başarı döner (enumeration
+// yok). Kod, password-reset-request edge fonksiyonu ile e-postaya yollanır.
+export const requestPasswordReset = async (email: string): Promise<void> => {
+  const { error } = await supabase.functions.invoke('password-reset-request', {
+    body: { email: email.trim().toLowerCase() },
+  });
+  if (error) {
+    // Ağ/altyapı hatası — akışı kesmiyoruz; kullanıcı kod ekranına geçebilir.
+    console.error('[Auth] password-reset-request hatası:', error);
+  }
+};
+
+// ─── Şifremi unuttum — Adım 2: kodu doğrula + yeni şifreyi yaz ────────────────
+export const confirmPasswordReset = async (
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> => {
+  const { data, error } = await supabase.functions.invoke('password-reset-confirm', {
+    body: { email: email.trim().toLowerCase(), code: code.trim(), newPassword },
+  });
+  if (error) {
+    // functions.invoke non-2xx'te error verir; gövdedeki sebep koduna ulaş.
+    let msg = 'reset_failed';
+    try {
+      const ctx: any = (error as any).context;
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        msg = body?.error || msg;
+      }
+    } catch { /* gövde okunamadı — genel hata */ }
+    throw new Error(msg);
+  }
+  if (!(data as any)?.ok) throw new Error((data as any)?.error || 'reset_failed');
+};
+
 // ─── Telefon OTP (SMS) ───────────────────────────────────────────────────────
 // Numara E.164 formatında olmalı: +905551112233
 // Supabase panelinde SMS sağlayıcısı (Twilio vb.) tanımlanmalıdır.

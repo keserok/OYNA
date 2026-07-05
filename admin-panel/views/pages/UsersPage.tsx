@@ -42,9 +42,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const banUser = useAppStore((s) => s.banUser);
     const unbanUser = useAppStore((s) => s.unbanUser);
     const verifyUser = useAppStore((s) => s.verifyUser);
-    const addGoalkeeper = useAppStore((s) => s.addGoalkeeper);
     const deleteGoalkeeper = useAppStore((s) => s.deleteGoalkeeper);
-    const addReferee = useAppStore((s) => s.addReferee);
     const deleteReferee = useAppStore((s) => s.deleteReferee);
     const setImpersonatedUser = useAppStore((s) => s.setImpersonatedUser);
     const setOriginalRole = useAppStore((s) => s.setOriginalRole);
@@ -473,8 +471,18 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     if (subRoute === 'KULLANICILAR') await loadServerUsers();
                     notify(`✅ ${u.name} eklendi`);
                 }}
-                onAddGoalkeeper={(gk) => { addGoalkeeper(gk); notify(`✅ ${gk.name} eklendi`); }}
-                onAddReferee={(ref) => { addReferee(ref); notify(`✅ ${ref.name} eklendi`); }}
+                onAddGoalkeeper={(gk) => {
+                    // Katalog satırı + hesap zaten createGoalkeeperAccountAdmin ile yazıldı;
+                    // burada yalnız optimistik listeye ekle, sonra DB'den senkronize et.
+                    useAppStore.setState({ adminGoalkeepers: [gk, ...useAppStore.getState().adminGoalkeepers] });
+                    notify(`✅ ${gk.name} eklendi`);
+                    void loadServices();
+                }}
+                onAddReferee={(ref) => {
+                    useAppStore.setState({ adminReferees: [ref, ...useAppStore.getState().adminReferees] });
+                    notify(`✅ ${ref.name} eklendi`);
+                    void loadServices();
+                }}
             />
 
             {detailProvider && (
