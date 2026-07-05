@@ -79,3 +79,10 @@ test-results/
 # Yerel render önizleme harness'leri (gerçek bileşen render'ı için; commit edilmez)
 preview-*.html
 preview-*.tsx
+
+# ─── design-sync (claude.ai/design) — staged scripts & build output ───
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

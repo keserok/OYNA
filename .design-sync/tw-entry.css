@@ -1,0 +1,60 @@
+/* Tailwind v4 entry for the design-sync bundle.
+   Reuses the app's own index.css (tokens in @theme, brand utilities, animations)
+   and additionally scans the authored preview .tsx files so any utility classes
+   used only in previews are compiled into the shipped stylesheet.
+   Compile:  npx @tailwindcss/cli@4 -i .design-sync/tw-entry.css -o .design-sync/.cache/compiled.css --minify */
+@import "../index.css";
+@source "./previews/**/*.{tsx,jsx,ts}";
+
+/* The DS uses only the sans (Inter) family. Drop Tailwind's default serif/mono
+   stacks so the bundle doesn't reference system fonts it never ships (Cambria,
+   Georgia, …). */
+@theme {
+  --font-serif: initial;
+  --font-mono: initial;
+}
+
+/* ── design-sync preview helpers ────────────────────────────────────────────
+   Preview-only classes (never used by the app; inert in any shipped design).
+   The capture harness freezes the clock, which stalls framer-motion enter
+   animations (initial opacity:0 / y-offset) and can leave overlay components
+   mid-transform. Because these live in a real stylesheet with !important, they
+   beat framer's inline (non-important) styles with no insertion race.
+   .ds-preview  → force every descendant to its final opaque state.
+   .ds-flatten  → neutralise fixed/overlay positioning so position:fixed
+                  components (Toast, BottomNav) render in-flow inside the card. */
+.ds-preview [style*="opacity"] { opacity: 1 !important; }
+.ds-flatten > *:not(style) {
+  position: relative !important;
+  inset: auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  /* Tailwind v4 translate/scale/rotate utilities read these custom props via the
+     `translate`/`scale`/`rotate` CSS properties. Zeroing the props (rather than
+     resetting `translate` directly) survives the CSS minifier, which otherwise
+     merges a `translate:none` reset into `transform` and loses it. */
+  --tw-translate-x: 0 !important;
+  --tw-translate-y: 0 !important;
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+  --tw-rotate: 0 !important;
+  /* framer-motion drives its enter offset via the `transform` property. */
+  transform: none !important;
+}
+
+/* The app styles with literal hex (bg-[#39FF14]), so Tailwind tree-shakes the
+   @theme brand tokens out of the build. Re-declare them here so the design
+   system's tokens are always emitted and available as CSS variables. */
+:root {
+  --color-primary: #39FF14;
+  --color-primary-dark: #1CB500;
+  --color-primary-light: #70FF56;
+  --color-bg-main: #0A0E14;
+  --color-bg-card: rgba(22, 27, 34, 0.4);
+  --color-text-main: #FFFFFF;
+  --color-text-muted: #8B949E;
+  --color-error: #FF4D4D;
+  --color-warning: #FFAA00;
+  --color-success: #00E676;
+  --color-info: #00B0FF;
+}

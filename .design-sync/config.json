@@ -1,0 +1,42 @@
+{
+  "pkg": "oyna-app",
+  "globalName": "OynaDS",
+  "shape": "package",
+  "srcDir": "components",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".design-sync/.cache/compiled.css",
+  "extraFonts": [".design-sync/assets/fonts.css"],
+  "guidelinesGlob": [],
+  "componentSrcMap": {
+    "NeonButton": "components/ui/NeonButton.tsx",
+    "GlassCard": "components/ui/GlassCard.tsx",
+    "AnimatedButton": "components/AnimatedButton.tsx",
+    "PageLayout": "components/common/PageLayout.tsx",
+    "FifaCard": "components/FifaCard.tsx",
+    "PlayerCard": "components/PlayerCard.tsx",
+    "BottomNav": "components/BottomNav.tsx",
+    "OynaLogo": "components/OynaLogo.tsx",
+    "MarketplaceCard": "components/Marketplace/MarketplaceCard.tsx",
+    "LocationBadge": "components/location/LocationBadge.tsx",
+    "Toast": "components/common/Toast.tsx",
+    "LoadingState": "components/common/StatusState.tsx",
+    "ErrorState": "components/common/StatusState.tsx",
+    "EmptyState": "components/common/StatusState.tsx"
+  },
+  "docsMap": {
+    "NeonButton": ".design-sync/groups/buttons.md",
+    "AnimatedButton": ".design-sync/groups/buttons.md",
+    "GlassCard": ".design-sync/groups/cards.md",
+    "FifaCard": ".design-sync/groups/cards.md",
+    "PlayerCard": ".design-sync/groups/cards.md",
+    "MarketplaceCard": ".design-sync/groups/cards.md",
+    "Toast": ".design-sync/groups/feedback.md",
+    "LoadingState": ".design-sync/groups/feedback.md",
+    "ErrorState": ".design-sync/groups/feedback.md",
+    "EmptyState": ".design-sync/groups/feedback.md",
+    "BottomNav": ".design-sync/groups/navigation.md",
+    "PageLayout": ".design-sync/groups/layout.md",
+    "OynaLogo": ".design-sync/groups/brand.md",
+    "LocationBadge": ".design-sync/groups/location.md"
+  }
+}
