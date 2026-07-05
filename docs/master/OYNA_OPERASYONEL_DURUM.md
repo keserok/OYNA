@@ -18,7 +18,7 @@
     tarafında doğrular). SIMULATION modunda `SIMULATION_WEBHOOK_ALLOW` set edilmedikçe 400 döner →
     sahte ödeme uygulanamaz (canlıda doğrulandı: GET→405, sahte POST→400).
 - **Migration defteri drift'i:** repo `supabase/migrations/` ↔ canlı `schema_migrations` uyumsuzluğu
-  tespit edildi; üretim içeriği **eksiksiz** (RLS 80/80, 0 ERROR advisor). 8 eksik migration repo'ya
+  tespit edildi; üretim içeriği **eksiksiz** (RLS 80/80, 0 ERROR advisor). 7 eksik migration repo'ya
   kurtarıldı; tek-komutluk kalıcı çözüm + runbook: `docs/master/SUPABASE_MIGRATION_RECONCILIATION.md`.
 - **e2e test paketi:** faz0–7 SQL entegrasyon testleri yeşil (bkz. `tests/integration/README.md`).
 

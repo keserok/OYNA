@@ -22,8 +22,9 @@ güvenlik kuralları üretimde mevcut. Sorun şu: değişikliklerin tutulduğu *
 **Bu repodaki tüm DB değişiklikleri ŞU AN üretimde canlıdır.** Sebep:
 
 - `payment-webhook` **canlı Supabase'e deploy edildi** (2026-07-05).
-- Repo'ya eklenen 8 migration **zaten üretimde vardı** — onları canlı defterden geri kurtardık
+- Repo'ya eklenen 7 migration **zaten üretimde vardı** — onları canlı defterden geri kurtardık
   (byte-byte MD5 doğrulamalı). Yani "uygulanmayı bekleyen" bir şey yok.
+  (`password_reset_codes` ayrıca PR #34 ile main'e girdiği için mükerrer kopya branch'ten çıkarıldı.)
 - **Merge, veritabanına HİÇBİR ŞEY uygulamaz.** Bu repoda migration'ı otomatik uygulayan bir
   CI/CD yoktur; `admin-tests.yml` yalnız test çalıştırır, Vercel yalnız **ön yüzü** derler.
   Merge = repo kaydının, hâlihazırda canlı olan DB ile hizalanması.
@@ -87,7 +88,7 @@ Gerektiğinde defter bu tablodan geri yüklenebilir. (İş bitince istenirse dü
 
 ## 5. Bu oturumda YAPILANLAR (kalıcı, commit'li)
 
-1. **8 gerçekten-eksik migration repo'ya kurtarıldı** — üretimde olup repo'da hiç olmayan
+1. **7 gerçekten-eksik migration repo'ya kurtarıldı** — üretimde olup repo'da hiç olmayan
    NET-YENİ özellikler. Her biri **MD5 ile birebir doğrulandı** (defterdeki SQL'e byte-byte eşit):
 
    | version | ad | ne getirir |
@@ -99,7 +100,10 @@ Gerektiğinde defter bu tablodan geri yüklenebilir. (İş bitince istenirse dü
    | 20260703072311 | `oauth_signin_roles_seed` | Google/Apple girişinde `roles` jsonb doldurma |
    | 20260703124606 | `user_reports` | kullanıcı şikâyet/moderasyon tablosu + RLS |
    | 20260703124630 | `pitch_ratings` | saha puanlama tablosu + `submit_pitch_rating` RPC |
-   | 20260705180150 | `password_reset_codes` | şifre sıfırlama kodu tablosu + temizleme fonksiyonu |
+
+   > Not: `password_reset_codes` da eksik migration'lardandı; ancak PR #34 (şifremi-unuttum
+   > özelliği) onu `20260712000000_password_reset_codes.sql` olarak main'e ekledi. İçerik birebir
+   > aynı olduğu için bu branch'teki mükerrer kopya (ledger sürümü) çıkarıldı; main'inki kanonik.
 
 2. **2 boş (0-byte) migration dosyası silindi** (defterde yok, tamamen gürültü):
    `20260603163744_consolidate_user_tables_and_security.sql`,
