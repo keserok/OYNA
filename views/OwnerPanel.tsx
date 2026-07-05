@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { 
   ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
@@ -2040,6 +2041,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       )}
 
       {activeTab === 'CALENDAR' && (
+        <ErrorBoundary onBack={() => setActiveTab('HOME')} backLabel="Özet'e Dön" fullScreen={false}>
         <FinancialCalendarView
           pitchId={facilityData?.id ?? ''}
           pricingPolicy={facilityData?.pricingPolicy}
@@ -2064,6 +2066,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
             }
           }}
         />
+        </ErrorBoundary>
       )}
       {activeTab === 'PITCHES' && (
         <PitchManager
