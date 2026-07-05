@@ -13,7 +13,13 @@
   TEK-KAYNAK (SSOT, 4 seviye admin-yönetimli), para kararları (kademeli iade + PSP + Model B owner %95).
 - **Para = SIMULATION modunda** çalışıyor (gerçek kart çekilmiyor); tüm mantık hazır.
 - **Edge functions canlıda:** `create-payment` (v1), `capture-payment`, `void-payment`, `refund-payment`,
-  `send-email`, `send-push`, `admin-broadcast`, `admin-create-user` — **hepsi ACTIVE**.
+  `send-email`, `send-push`, `admin-broadcast`, `admin-create-user`, **`payment-webhook`** — **hepsi ACTIVE**.
+  - ℹ️ `payment-webhook` **2026-07-05'te canlıya alındı** (`verify_jwt=false`, iyzico imzasını sunucu
+    tarafında doğrular). SIMULATION modunda `SIMULATION_WEBHOOK_ALLOW` set edilmedikçe 400 döner →
+    sahte ödeme uygulanamaz (canlıda doğrulandı: GET→405, sahte POST→400).
+- **Migration defteri drift'i:** repo `supabase/migrations/` ↔ canlı `schema_migrations` uyumsuzluğu
+  tespit edildi; üretim içeriği **eksiksiz** (RLS 80/80, 0 ERROR advisor). 8 eksik migration repo'ya
+  kurtarıldı; tek-komutluk kalıcı çözüm + runbook: `docs/master/SUPABASE_MIGRATION_RECONCILIATION.md`.
 - **e2e test paketi:** faz0–7 SQL entegrasyon testleri yeşil (bkz. `tests/integration/README.md`).
 
 ---
