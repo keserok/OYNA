@@ -88,10 +88,30 @@ await client.end();
 
 if (!rows.length) die('Defter boş görünüyor — bağlantı/şema doğru mu?');
 
-console.log(`→ ${rows.length} migration okundu (v${rows[0].version} … v${rows[rows.length - 1].version}).`);
+// ── KRİTİK: Defter (ledger) EN BAŞTA EKSİKTİR ────────────────────────────────
+// Defterin ilk kaydı (ör. v20260606112849) `public.pitches`'i VAR kabul eder;
+// onu YARATMAZ. Temel şema (profiles/matches/pitches… — Mayıs sonu migration'ları)
+// yalnız REPO dosyalarında kayıtlıdır, defterde değil. Bu yüzden birebir yeniden-
+// kurulabilir bir repo = [defter-öncesi temel repo dosyaları] + [defter kayıtları].
+// Aksi halde boş DB'de `db reset` "pitches yok" hatası verir.
+const firstLedgerVersion = rows[0].version;
 
-// Dosya içeriklerini hazırla
-const files = rows.map((r) => {
+const existingFiles = existsSync(MIG_DIR)
+  ? readdirSync(MIG_DIR).filter((f) => f.endsWith('.sql'))
+  : [];
+// version-prefix'i defterin ilk sürümünden KÜÇÜK olan repo dosyaları = temel (korunur)
+const foundational = existingFiles
+  .filter((f) => {
+    const m = f.match(/^(\d+)_/);
+    return m && m[1] < firstLedgerVersion;
+  })
+  .sort();
+
+console.log(`→ ${rows.length} defter kaydı okundu (v${firstLedgerVersion} … v${rows[rows.length - 1].version}).`);
+console.log(`→ Defter-öncesi temel repo dosyası (korunacak): ${foundational.length}`);
+
+// Ledger kayıtlarından üretilecek dosyalar
+const ledgerFiles = rows.map((r) => {
   const fname = `${r.version}_${safeName(r.name)}.sql`;
   const header = `-- Kaynak: supabase_migrations.schema_migrations (uygulanan gerçek SQL)\n`
               + `-- version=${r.version} name=${r.name}\n`
@@ -102,27 +122,33 @@ const files = rows.map((r) => {
 
 if (!CONFIRM) {
   console.log('\n— PROVA (dry-run). --confirm ile gerçekten yazılır. —');
-  console.log(`  Arşivlenecek mevcut dosya: ${existsSync(MIG_DIR) ? readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).length : 0}`);
-  console.log(`  Yazılacak yeni dosya:      ${files.length}`);
-  console.log('  İlk 5:'); files.slice(0, 5).forEach(f => console.log('   +', f.fname));
-  console.log('  Son 5:'); files.slice(-5).forEach(f => console.log('   +', f.fname));
+  console.log(`  Arşivlenecek mevcut dosya: ${existingFiles.length}`);
+  console.log(`  Korunacak temel dosya:     ${foundational.length}  (${foundational[0] ?? '-'} … ${foundational[foundational.length - 1] ?? '-'})`);
+  console.log(`  Ledger'dan üretilecek:      ${ledgerFiles.length}`);
+  console.log('  Ledger ilk 3:'); ledgerFiles.slice(0, 3).forEach(f => console.log('   +', f.fname));
+  console.log('  Ledger son 3:'); ledgerFiles.slice(-3).forEach(f => console.log('   +', f.fname));
   process.exit(0);
 }
 
-// Mevcut dosyaları arşive taşı (silme değil)
-if (existsSync(MIG_DIR)) {
-  const existing = readdirSync(MIG_DIR).filter((f) => f.endsWith('.sql'));
-  if (existing.length) {
-    const archive = join(REPO_ROOT, 'supabase', `migrations_archive_${stamp()}`);
-    mkdirSync(archive, { recursive: true });
-    for (const f of existing) renameSync(join(MIG_DIR, f), join(archive, f));
-    console.log(`→ ${existing.length} eski dosya arşivlendi: ${archive.replace(REPO_ROOT + '/', '')}`);
-  }
+// Mevcut TÜM dosyaları arşive taşı (silme değil, geri alınabilir)
+let archive = null;
+if (existingFiles.length) {
+  archive = join(REPO_ROOT, 'supabase', `migrations_archive_${stamp()}`);
+  mkdirSync(archive, { recursive: true });
+  for (const f of existingFiles) renameSync(join(MIG_DIR, f), join(archive, f));
+  console.log(`→ ${existingFiles.length} eski dosya arşivlendi: ${archive.replace(REPO_ROOT + '/', '')}`);
 } else {
   mkdirSync(MIG_DIR, { recursive: true });
 }
 
-for (const f of files) writeFileSync(join(MIG_DIR, f.fname), f.content, 'utf8');
-console.log(`\n✅ ${files.length} migration dosyası ledger'dan yeniden üretildi → supabase/migrations/`);
+// 1) Temel (defter-öncesi) dosyaları arşivden GERİ getir (değiştirmeden)
+for (const f of foundational) {
+  renameSync(join(archive, f), join(MIG_DIR, f));
+}
+// 2) Ledger kayıtlarını yaz
+for (const f of ledgerFiles) writeFileSync(join(MIG_DIR, f.fname), f.content, 'utf8');
+
+console.log(`\n✅ Yeniden üretildi → supabase/migrations/  (${foundational.length} temel + ${ledgerFiles.length} ledger = ${foundational.length + ledgerFiles.length} dosya)`);
 console.log('   Sıradaki: `git add -A supabase/ && git status` ile incele, sonra commit et.');
-console.log('   Doğrulama (opsiyonel): `supabase db push` → "no changes" demeli (drift kalmadı).');
+console.log('   ÖNEMLİ doğrulama: boş bir Supabase branch/staging\'de `supabase db reset` çalıştır →');
+console.log('   hatasız kurulmalı. Sonra `supabase db push` → "no changes" demeli (drift kalmadı).');

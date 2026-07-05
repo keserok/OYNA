@@ -17,6 +17,28 @@ güvenlik kuralları üretimde mevcut. Sorun şu: değişikliklerin tutulduğu *
 
 ---
 
+## 1.1 "Merge edilince değişiklikler geçerli olur mu?" — EVET, zaten geçerli
+
+**Bu repodaki tüm DB değişiklikleri ŞU AN üretimde canlıdır.** Sebep:
+
+- `payment-webhook` **canlı Supabase'e deploy edildi** (2026-07-05).
+- Repo'ya eklenen 8 migration **zaten üretimde vardı** — onları canlı defterden geri kurtardık
+  (byte-byte MD5 doğrulamalı). Yani "uygulanmayı bekleyen" bir şey yok.
+- **Merge, veritabanına HİÇBİR ŞEY uygulamaz.** Bu repoda migration'ı otomatik uygulayan bir
+  CI/CD yoktur; `admin-tests.yml` yalnız test çalıştırır, Vercel yalnız **ön yüzü** derler.
+  Merge = repo kaydının, hâlihazırda canlı olan DB ile hizalanması.
+
+Doğrulama (2026-07-05, canlı DB'de sorgulandı — hepsi mevcut):
+`password_reset_codes`, `user_reports`, `pitch_ratings` tabloları; `submit_pitch_rating`,
+`purge_expired_reset_codes`, `handle_new_user`, `admin_assign_match_goalkeeper` RPC'leri;
+`matches.chatMessages` kolonu; `payment-webhook` edge → **hepsi CANLI**.
+
+> Kısacası: **merge güvenli ve değişiklikler zaten yürürlükte.** Aşağıdaki "kalıcı çözüm"
+> merge'ün geçerliliğiyle ilgili değildir; ileride `db push`/`db reset` (geliştirici aracı)
+> güvenilirliğini sağlamak içindir.
+
+---
+
 ## 2. Rakamlarla drift
 
 | Ölçüt | Değer |
@@ -90,11 +112,19 @@ Gerektiğinde defter bu tablodan geri yüklenebilir. (İş bitince istenirse dü
 ## 6. KALICI ÇÖZÜM — tek komut (bir geliştiricinin bir kez çalıştırması yeterli)
 
 Defter, her migration'ın gerçek SQL'ini sakladığı için repo'yu **kaynağın kendisinden**
-(canlı defter) birebir yeniden üretebiliyoruz. Araç yazıldı:
+(canlı defter) yeniden üretebiliyoruz. Araç yazıldı:
 
 ```
 scripts/regenerate-migrations-from-ledger.mjs
 ```
+
+> ⚠️ **Önemli teknik not (araç bunu zaten hallediyor):** Canlı defter EN BAŞTA eksiktir —
+> ilk kaydı (`v20260606112849`) `public.pitches`'i *var kabul eder*, yaratmaz. Temel şema
+> (profiles/matches/pitches… — Mayıs sonu migration'ları) yalnız **repo dosyalarında** kayıtlıdır.
+> Bu yüzden araç, defter-öncesi temel repo dosyalarını **korur** ve yalnız defter aralığını
+> (Haziran 6+) ledger'dan yeniden üretir. Sonuç = temel repo + ledger = eksiksiz kurulum.
+> **Doğrulama şart:** çalıştırdıktan sonra boş bir Supabase branch/staging'de `supabase db reset`
+> ile hatasız kurulduğu görülmeli (bu adım, aracın ürettiği repo'yu güvenceye alır).
 
 **Neden burada (bu ortamda) tamamlanmadı?** Bu bulut oturumunda Supabase CLI yok, `pg_dump 16`
 Postgres 17 sunucusunu alamaz ve DB parolası ortamda güvenlik gereği yok. Tam yeniden-üretim,
