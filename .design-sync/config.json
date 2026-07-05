@@ -7,6 +7,7 @@
   "cssEntry": ".design-sync/.cache/compiled.css",
   "extraFonts": [".design-sync/assets/fonts.css"],
   "guidelinesGlob": [],
+  "readmeHeader": ".design-sync/conventions.md",
   "componentSrcMap": {
     "NeonButton": "components/ui/NeonButton.tsx",
     "GlassCard": "components/ui/GlassCard.tsx",
@@ -22,6 +23,14 @@
     "LoadingState": "components/common/StatusState.tsx",
     "ErrorState": "components/common/StatusState.tsx",
     "EmptyState": "components/common/StatusState.tsx"
+  },
+  "overrides": {
+    "PageLayout": { "cardMode": "column" },
+    "BottomNav": { "cardMode": "column" },
+    "MarketplaceCard": { "cardMode": "column" },
+    "Toast": { "cardMode": "column" },
+    "LoadingState": { "cardMode": "column" },
+    "EmptyState": { "cardMode": "column" }
   },
   "docsMap": {
     "NeonButton": ".design-sync/groups/buttons.md",

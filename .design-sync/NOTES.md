@@ -89,8 +89,12 @@ mapped by `cfg.docsMap`. Note: `category` only overrides a *generic* source-deri
 group, so components under real folders keep their folder name (MarketplaceCard→marketplace,
 Toast/States/PageLayout→common, LocationBadge→location). This is acceptable and honest.
 
-## Known render warns (triaged, not new)
-- (none yet — fill in as validate surfaces legitimate ones)
+## Known render warns / limitations (triaged, not new)
+- **FifaCard / PlayerCard** hard-code an external Turkish flag image
+  (`https://flagcdn.com/w40/tr.png`). It does not load in the render sandbox and
+  shows as a tiny broken-image glyph on each card. This lives in the app component
+  source (out of DS-tooling scope to edit) and loads fine in the real product. It is
+  the same external-image-host limitation that drove using data-URI avatars. Accepted.
 
 ## Re-sync risks (what can silently go stale)
 - **cssEntry is gitignored** (`.design-sync/.cache/compiled.css`). On a fresh clone it
