@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, User, Shield, Scale, Star, Trophy, Loader2 } from 'lucide-react';
 import { AdminUser, Goalkeeper, Referee, UserRole } from '../../../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createUserAdmin, toTurkishAdminError } from '../../services/adminService';
+import { createUserAdmin, createGoalkeeperAccountAdmin, createRefereeAccountAdmin, toTurkishAdminError } from '../../services/adminService';
 
 interface AddUserModalProps {
     isOpen: boolean;
@@ -19,6 +19,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rating, setRating] = useState('5.0');
+    const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
@@ -28,23 +29,24 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
 
     const handleSave = async () => {
         if (!name || !email) return;
+        // E-Posta + Geçici Şifre artık üç sekmede de zorunlu (hepsi gerçek hesap açar).
+        if (!password || password.length < 6) {
+            setError('Şifre en az 6 karakter olmalı');
+            return;
+        }
         setSaving(true);
         setError(null);
 
         try {
+            const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
             if (roleType === 'KULLANICILAR') {
-                if (!password || password.length < 6) {
-                    setError('Şifre en az 6 karakter olmalı');
-                    setSaving(false);
-                    return;
-                }
-                const created = await createUserAdmin({ email, password, fullName: name, role: UserRole.PLAYER });
+                const created = await createUserAdmin({ email, password, fullName: name, role: userRole });
                 const user: AdminUser = {
                     id: created.userId,
                     name,
                     email: created.email,
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`,
-                    role: UserRole.PLAYER,
+                    avatar,
+                    role: userRole,
                     rating: Number(rating),
                     isVerified: true,
                     isBanned: false,
@@ -54,48 +56,66 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                 };
                 onAddUser(user);
             } else if (roleType === 'KALECİLER') {
-                const id = crypto.randomUUID();
+                const coordinates = { lat: 40.9839, lng: 37.8764 };
+                const stats = { savePercentage: '80%', cleanSheets: 0, penaltySaveRate: '50%', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78 };
+                const skills = { reflexes: 85, diving: 80, handling: 78, positioning: 80, kicking: 70, speed: 75 };
+                const equipment = { gloves: 'Standart', boots: 'Standart', jersey: 'Standart' };
+                const account = await createGoalkeeperAccountAdmin({
+                    email, password, fullName: name,
+                    fee: Number(gkFee), rating: Number(rating),
+                    height: '1.85m', age: 25, style: 'PANTER', bio: 'Admin panel kaydı.',
+                    avatar, matchCount: 0, preferredZones: ['Ordu'], coordinates,
+                    stats, skills, equipment, recentAwards: '',
+                });
                 const gk: Goalkeeper = {
-                    id,
+                    id: account.userId,
                     name,
                     height: '1.85m',
                     age: 25,
                     rating: Number(rating),
                     fee: Number(gkFee),
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`,
+                    avatar,
                     style: 'PANTER',
                     bio: 'Admin panel kaydı.',
                     matchCount: 0,
                     preferredZones: ['Ordu'],
-                    coordinates: { lat: 40.9839, lng: 37.8764 },
-                    stats: { savePercentage: '80%', cleanSheets: 0, penaltySaveRate: '50%', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78 },
+                    coordinates,
+                    stats,
                     recentAwards: '',
-                    skills: { reflexes: 85, diving: 80, handling: 78, positioning: 80, kicking: 70, speed: 75 },
-                    equipment: { gloves: 'Standart', boots: 'Standart', jersey: 'Standart' },
+                    skills,
+                    equipment,
                     reviews: [],
                 };
                 onAddGoalkeeper(gk);
             } else {
-                const id = crypto.randomUUID();
+                const coordinates = { lat: 40.9839, lng: 37.8764 };
+                const stats = { avgCards: 2.1, avgDistance: '8km', authority: 85, fitness: 80, communication: 90 };
+                const account = await createRefereeAccountAdmin({
+                    email, password, fullName: name,
+                    fee: Number(refFee), rating: Number(rating), level: refLevel,
+                    avatar, matchCount: 0, style: 'Otoriter', bio: 'Admin panel kaydı.',
+                    preferredZones: ['Ordu'], coordinates, stats,
+                });
                 const ref: Referee = {
-                    id,
+                    id: account.userId,
+                    authUid: account.userId,
                     name,
                     level: refLevel,
                     matchCount: 0,
                     fee: Number(refFee),
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`,
+                    avatar,
                     rating: Number(rating),
                     style: 'Otoriter',
                     bio: 'Admin panel kaydı.',
                     preferredZones: ['Ordu'],
-                    coordinates: { lat: 40.9839, lng: 37.8764 },
-                    stats: { avgCards: 2.1, avgDistance: '8km', authority: 85, fitness: 80, communication: 90 },
+                    coordinates,
+                    stats,
                     reviews: [],
                 };
                 onAddReferee(ref);
             }
             onClose();
-            setName(''); setEmail(''); setPassword(''); setRating('5.0');
+            setName(''); setEmail(''); setPassword(''); setRating('5.0'); setUserRole(UserRole.PLAYER);
         } catch (err) {
             setError(toTurkishAdminError(err));
         } finally {
@@ -171,10 +191,20 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                             </div>
                         </div>
 
+                        <div>
+                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-1">Geçici Şifre *</label>
+                            <input value={password} onChange={e => setPassword(e.target.value)} type="password" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="min. 6 karakter" />
+                        </div>
+
                         {roleType === 'KULLANICILAR' && (
                             <div>
-                                <label className="text-[10px] text-blue-400 font-black uppercase tracking-widest block mb-1">Geçici Şifre *</label>
-                                <input value={password} onChange={e => setPassword(e.target.value)} type="password" className="w-full bg-black/40 border border-blue-500/30 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400 transition-colors" placeholder="min. 6 karakter" />
+                                <label className="text-[10px] text-blue-400 font-black uppercase tracking-widest block mb-1">Rol *</label>
+                                <select value={userRole} onChange={e => setUserRole(e.target.value as UserRole)} className="w-full bg-black/40 border border-blue-500/30 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400 transition-colors">
+                                    <option value={UserRole.PLAYER}>Oyuncu</option>
+                                    <option value={UserRole.OWNER}>Saha Sahibi</option>
+                                    <option value={UserRole.GOALKEEPER}>Kaleci</option>
+                                    <option value={UserRole.REFEREE}>Hakem</option>
+                                </select>
                             </div>
                         )}
 

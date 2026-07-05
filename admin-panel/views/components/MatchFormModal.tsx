@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, UploadCloud, Loader2 } from 'lucide-react';
 import { useImageUpload } from '../../../hooks/useImageUpload';
+import { useAppStore } from '../../../store';
 import type { MatchListing } from '../../../types';
 
 const DIFFICULTIES = ['Rahat', 'Taktiksel', 'Ciddi'] as const;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, onSave }) => {
+  const adminPitches = useAppStore((s) => s.adminPitches);
   const [saving, setSaving] = useState(false);
   const [f, setF] = useState({
     title: '',
@@ -28,6 +30,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
     status: 'ACTIVE' as NonNullable<MatchListing['status']>,
     format: '7v7',
     image: '',
+    pitchId: '',
   });
   const { uploadImage, uploading, progress } = useImageUpload('matches');
 
@@ -45,6 +48,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         status: match.status || 'ACTIVE',
         format: match.format || '7v7',
         image: match.image,
+        pitchId: match.pitchId || '',
       });
     } else {
       setF({
@@ -58,6 +62,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         status: 'ACTIVE',
         format: '7v7',
         image: '',
+        pitchId: '',
       });
     }
   }, [open, mode, match]);
@@ -79,6 +84,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         format: f.format,
         image: f.image || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=600',
         badges: [f.difficulty],
+        pitchId: f.pitchId || undefined,
       });
       onClose();
     } finally {
@@ -110,6 +116,21 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
           <div className="space-y-3">
             <Field label="Başlık">
               <input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inputCls} placeholder="Akşam Maçı..." />
+            </Field>
+            <Field label="Saha (opsiyonel)">
+              <select
+                value={f.pitchId}
+                onChange={(e) => {
+                  const pid = e.target.value;
+                  const p = adminPitches.find((x) => x.id === pid);
+                  // Saha seçilince serbest metin konumu saha adıyla otomatik doldur.
+                  setF((prev) => ({ ...prev, pitchId: pid, location: p ? p.name : prev.location }));
+                }}
+                className={inputCls}
+              >
+                <option value="">Saha seçilmedi</option>
+                {adminPitches.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
             </Field>
             <Field label="Konum / Saha">
               <input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className={inputCls} placeholder="Altınordu Arena" />
