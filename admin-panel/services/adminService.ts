@@ -1416,11 +1416,16 @@ export async function fetchProfileNameMap(userIds: string[]): Promise<Record<str
   return map;
 }
 
-export async function createUserAdmin(input: {
+/**
+ * admin-create-user edge function'a çağrı — service-role ile Auth hesabı açar ve
+ * seçilen rolle profiles satırını upsert eder. createUserAdmin + kaleci/hakem
+ * hesap açma akışlarının ortak alt katmanı (tek fetch deseni).
+ */
+async function createAuthAccountViaEdge(input: {
   email: string;
   password: string;
   fullName: string;
-  role?: string;
+  role: string;
 }): Promise<{ userId: string; email: string }> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Oturum gerekli');
@@ -1437,7 +1442,7 @@ export async function createUserAdmin(input: {
       email: input.email,
       password: input.password,
       fullName: input.fullName,
-      role: input.role ?? 'PLAYER',
+      role: input.role,
     }),
   });
 
@@ -1449,6 +1454,151 @@ export async function createUserAdmin(input: {
     throw new Error(body.error || 'Kullanıcı oluşturulamadı');
   }
   return body as { userId: string; email: string };
+}
+
+export async function createUserAdmin(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role?: string;
+}): Promise<{ userId: string; email: string }> {
+  return createAuthAccountViaEdge({
+    email: input.email,
+    password: input.password,
+    fullName: input.fullName,
+    role: input.role ?? 'PLAYER',
+  });
+}
+
+export interface GoalkeeperAccountInput {
+  email: string;
+  password: string;
+  fullName: string;
+  fee: number;
+  rating: number;
+  height?: string;
+  age?: number;
+  avatar?: string;
+  style?: string;
+  bio?: string;
+  matchCount?: number;
+  preferredZones?: string[];
+  coordinates?: { lat: number; lng: number };
+  stats?: Record<string, unknown>;
+  skills?: Record<string, unknown>;
+  equipment?: Record<string, unknown>;
+  recentAwards?: string;
+  isElite?: boolean;
+}
+
+/**
+ * Kaleci için (a) GOALKEEPER rollü gerçek giriş hesabı açar, sonra (b) goalkeepers
+ * katalog satırını id = authUid = yeni userId ile ekler. Katalog kolonları canlı
+ * şemadaki tırnaklı camelCase kolonlardır ("authUid", "matchCount", ...).
+ * Dönen userId, çağıran modal tarafından optimistik kaydın id'si olarak kullanılır.
+ */
+export async function createGoalkeeperAccountAdmin(
+  params: GoalkeeperAccountInput,
+): Promise<{ userId: string; email: string }> {
+  const account = await createAuthAccountViaEdge({
+    email: params.email,
+    password: params.password,
+    fullName: params.fullName,
+    role: 'GOALKEEPER',
+  });
+  const { error } = await supabase.from('goalkeepers').upsert({
+    id: account.userId,
+    authUid: account.userId,
+    name: params.fullName,
+    height: params.height ?? null,
+    age: params.age ?? null,
+    rating: params.rating,
+    fee: params.fee,
+    matchCount: params.matchCount ?? 0,
+    avatar: params.avatar ?? null,
+    recentAwards: params.recentAwards ?? '',
+    style: params.style ?? null,
+    bio: params.bio ?? null,
+    preferredZones: params.preferredZones ?? [],
+    isElite: params.isElite ?? false,
+    coordinates: params.coordinates ?? null,
+    stats: params.stats ?? {},
+    skills: params.skills ?? {},
+    equipment: params.equipment ?? {},
+  });
+  if (error) throw new Error(`Kaleci katalog kaydı oluşturulamadı: ${error.message}`);
+  return account;
+}
+
+export interface RefereeAccountInput {
+  email: string;
+  password: string;
+  fullName: string;
+  fee: number;
+  rating: number;
+  level: string;
+  avatar?: string;
+  style?: string;
+  bio?: string;
+  matchCount?: number;
+  preferredZones?: string[];
+  coordinates?: { lat: number; lng: number };
+  stats?: Record<string, unknown>;
+  isElite?: boolean;
+}
+
+/**
+ * Hakem için (a) REFEREE rollü gerçek giriş hesabı açar, sonra (b) referees katalog
+ * satırını id = authUid = yeni userId ile ekler (tırnaklı camelCase kolonlar).
+ */
+export async function createRefereeAccountAdmin(
+  params: RefereeAccountInput,
+): Promise<{ userId: string; email: string }> {
+  const account = await createAuthAccountViaEdge({
+    email: params.email,
+    password: params.password,
+    fullName: params.fullName,
+    role: 'REFEREE',
+  });
+  const { error } = await supabase.from('referees').upsert({
+    id: account.userId,
+    authUid: account.userId,
+    name: params.fullName,
+    level: params.level,
+    matchCount: params.matchCount ?? 0,
+    fee: params.fee,
+    avatar: params.avatar ?? null,
+    rating: params.rating,
+    style: params.style ?? null,
+    bio: params.bio ?? null,
+    preferredZones: params.preferredZones ?? [],
+    isElite: params.isElite ?? false,
+    coordinates: params.coordinates ?? null,
+    stats: params.stats ?? {},
+  });
+  if (error) throw new Error(`Hakem katalog kaydı oluşturulamadı: ${error.message}`);
+  return account;
+}
+
+export interface OwnerCandidate {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+}
+
+/** Saha sahibi (OWNER) adaylarını listeler — PitchStudio owner seçici için. */
+export async function listOwnerCandidatesAdmin(): Promise<OwnerCandidate[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email')
+    .or('role.eq.OWNER,roles.cs.["OWNER"]')
+    .order('full_name', { ascending: true })
+    .limit(200);
+  if (error) {
+    if (isRpcFallback(error) || (error.message || '').includes('row-level security')) return [];
+    throw new Error(error.message);
+  }
+  return (data || []) as OwnerCandidate[];
 }
 
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {

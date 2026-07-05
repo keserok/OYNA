@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Mail, ArrowRight, KeyRound } from 'lucide-react';
+import { Check, Mail, ArrowRight, KeyRound, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '../types';
-import { loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, demoLogin, isDemoLoginEnabled, isDemoLoginInput } from '../supabaseAuth';
+import {
+  loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, demoLogin,
+  isDemoLoginEnabled, isDemoLoginInput,
+  signInWithEmailPassword, signUpWithPassword, requestPasswordReset, confirmPasswordReset,
+} from '../supabaseAuth';
 import { setRememberMe } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
 import { useAppStore } from '../store';
@@ -159,15 +163,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const theme = getTheme(role);
   const { color, orb1, orb2, tagline, badge } = theme;
 
-  // §3.1: giriş yalnızca Google/Apple (birincil) + e-posta (ikincil); telefonla giriş YOK.
-  const [stage, setStage] = useState<'input' | 'otp'>('input');
+  // Giriş: Google/Apple + e-posta&şifre (birincil); "kod ile giriş" (OTP) ikincil.
+  // Aşamalar: input (giriş/kayıt) · otp (kod ile giriş) · forgot (kod iste) · reset (yeni şifre)
+  const [stage, setStage] = useState<'input' | 'otp' | 'forgot' | 'reset'>('input');
+  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState('');
   // Yasal onay OPT-IN olmalı: kutu önceden işaretli gelemez (KVKK/mağaza incelemesi)
   const [agreed, setAgreed] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [isLoading, setIsLoading] = useState<'send' | 'verify' | 'guest' | 'google' | 'apple' | null>(null);
+  const [isLoading, setIsLoading] = useState<
+    'send' | 'verify' | 'guest' | 'google' | 'apple' | 'password' | 'register' | 'forgot' | 'reset' | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [openModal, setOpenModal] = useState<'kvkk' | 'sozlesme' | null>(null);
 
@@ -228,9 +241,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const handleResend = async () => {
     if (resendIn > 0 || isLoading) return;
     setError(null);
-    setIsLoading('send');
+    setIsLoading(stage === 'reset' ? 'forgot' : 'send');
     try {
-      await requestOtp();
+      // reset aşamasında "tekrar gönder" şifre sıfırlama kodunu yeniden yollar.
+      if (stage === 'reset') await requestPasswordReset(email.trim());
+      else await requestOtp();
       setResendIn(60);
     } catch (err: any) {
       setError(err?.message || 'Kod tekrar gönderilemedi.');
@@ -249,6 +264,113 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     } catch (err: any) {
       console.error('OTP doğrulama hatası:', err);
       setError(err?.message || 'Kod hatalı veya süresi dolmuş.');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  // ─── E-posta + Şifre ile giriş ─────────────────────────────────────────────
+  const handlePasswordLogin = async () => {
+    if (!agreed || !contactValid || !password || isLoading) return;
+    setError(null);
+    setInfo(null);
+    // Dev/demo modu: demo hesabı (veya "mirackerem") → şifre kontrolü olmadan
+    // sabit demo şifresiyle anında giriş. Prod'da isDemoLoginEnabled=false.
+    if (demoMode && isDemoLoginInput(email)) {
+      setIsLoading('password');
+      try {
+        setRememberMe(remember);
+        await demoLogin(email.trim());
+        // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
+      } catch (err: any) {
+        console.error('Demo giriş hatası:', err);
+        setError(err?.message || 'Demo giriş başarısız.');
+        setIsLoading(null);
+      }
+      return;
+    }
+    setIsLoading('password');
+    try {
+      setRememberMe(remember);
+      await signInWithEmailPassword(email.trim(), password);
+      onSuccess();
+    } catch (err: any) {
+      console.error('[Auth] Şifreli giriş hatası:', err);
+      setError('E-posta veya şifre hatalı. Şifreni unuttuysan sıfırlayabilir ya da kod ile girebilirsin.');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  // ─── E-posta + Şifre ile kayıt ─────────────────────────────────────────────
+  const handleRegister = async () => {
+    if (!agreed || !isValidEmail(email) || !name.trim() || !password || isLoading) return;
+    if (password.length < 6) { setError('Şifre en az 6 karakter olmalı.'); return; }
+    setError(null);
+    setInfo(null);
+    setIsLoading('register');
+    try {
+      setRememberMe(remember);
+      const res = await signUpWithPassword(email.trim(), password, name.trim());
+      if (res?.session) {
+        onSuccess();
+      } else {
+        // E-posta onayı açık: oturum yok → doğrulama beklenir.
+        setInfo('Hesabın oluşturuldu. Giriş yapmak için e-postana gönderilen bağlantıyı onayla.');
+        setIsRegister(false);
+        setIsLoading(null);
+      }
+    } catch (err: any) {
+      const m = String(err?.message || '').toLowerCase();
+      if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
+        setError('Bu e-posta zaten kayıtlı. Giriş yapmayı ya da şifreni sıfırlamayı dene.');
+      } else {
+        setError(err?.message || 'Kayıt başarısız. Lütfen tekrar dene.');
+      }
+      setIsLoading(null);
+    }
+  };
+
+  // ─── Şifremi unuttum — Adım 1: kodu iste ───────────────────────────────────
+  const handleForgotSend = async () => {
+    if (!isValidEmail(email) || isLoading) return;
+    setError(null);
+    setInfo(null);
+    setIsLoading('forgot');
+    try {
+      await requestPasswordReset(email.trim());
+      setStage('reset');
+      setOtp('');
+      setNewPassword('');
+      setResendIn(60);
+      setInfo('Bu e-posta kayıtlıysa, 6 haneli sıfırlama kodu gönderildi.');
+    } catch {
+      setError('Kod gönderilemedi. Lütfen tekrar dene.');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  // ─── Şifremi unuttum — Adım 2: kodu doğrula + yeni şifreyi yaz ──────────────
+  const handleResetConfirm = async () => {
+    if (otp.length < 6 || newPassword.length < 6 || isLoading) return;
+    setError(null);
+    setInfo(null);
+    setIsLoading('reset');
+    try {
+      await confirmPasswordReset(email.trim(), otp, newPassword);
+      setStage('input');
+      setIsRegister(false);
+      setPassword('');
+      setOtp('');
+      setNewPassword('');
+      setInfo('Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.');
+    } catch (err: any) {
+      const m = String(err?.message || '');
+      if (m === 'invalid_or_expired') setError('Kod hatalı veya süresi dolmuş.');
+      else if (m === 'too_many_attempts') setError('Çok fazla hatalı deneme. Yeni kod iste.');
+      else if (m === 'weak_password') setError('Yeni şifre en az 6 karakter olmalı.');
+      else setError('Şifre güncellenemedi. Lütfen tekrar dene.');
     } finally {
       setIsLoading(null);
     }
@@ -297,10 +419,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   };
 
   const handleHeaderBack = () => {
-    if (stage === 'otp') {
+    if (stage === 'otp' || stage === 'forgot') {
       setStage('input');
       setOtp('');
       setError(null);
+      setInfo(null);
+    } else if (stage === 'reset') {
+      setStage('forgot');
+      setOtp('');
+      setNewPassword('');
+      setError(null);
+      setInfo(null);
     } else {
       onBack();
     }
@@ -308,6 +437,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
 
   const sendDisabled = !agreed || !contactValid || isLoading !== null;
   const guestDisabled = !agreed || isLoading !== null;
+  const passwordLoginDisabled = !agreed || !contactValid || !password || isLoading !== null;
+  const registerDisabled = !agreed || !isValidEmail(email) || !name.trim() || password.length < 6 || isLoading !== null;
 
   return (
     <PageLayout
@@ -358,13 +489,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
             <h2 className="text-lg font-black text-white uppercase tracking-wider italic">OYNA</h2>
             <p className="text-xs text-gray-400 mt-1 leading-relaxed">
               {stage === 'input'
-                ? 'Google, Apple veya e-posta ile saniyeler içinde başla'
-                : `${contactLabel} adresine gönderilen kodu gir`}
+                ? (isRegister
+                    ? 'E-posta ve şifreyle saniyeler içinde kayıt ol'
+                    : 'Google, Apple veya e-posta + şifre ile giriş yap')
+                : stage === 'otp'
+                ? `${contactLabel} adresine gönderilen kodu gir`
+                : stage === 'forgot'
+                ? 'Şifreni sıfırlamak için e-postanı gir'
+                : `${contactLabel} adresine gelen kodu gir ve yeni şifreni belirle`}
             </p>
           </div>
 
           <AnimatePresence mode="wait">
-            {stage === 'input' ? (
+            {stage === 'input' && (
               <motion.div
                 key="input"
                 initial={{ opacity: 0, x: -16 }}
@@ -406,11 +543,29 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                 {/* Divider */}
                 <div className="flex items-center gap-3 my-4">
                   <div className="flex-1 h-px bg-white/5" />
-                  <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">veya e-posta ile</span>
+                  <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                    {isRegister ? 'veya e-posta ile kayıt' : 'veya e-posta ile'}
+                  </span>
                   <div className="flex-1 h-px bg-white/5" />
                 </div>
 
-                {/* E-posta girişi — İKİNCİL. §3.1: telefonla giriş yok; telefon yalnız profil/iletişim alanı. */}
+                {/* Ad Soyad — yalnız kayıt akışında */}
+                {isRegister && (
+                  <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors mb-3">
+                    <User size={20} className="text-gray-500 shrink-0" />
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      value={name}
+                      onChange={(e) => { setName(e.target.value); setError(null); }}
+                      className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                      placeholder="Ad Soyad"
+                      aria-label="Ad Soyad"
+                    />
+                  </div>
+                )}
+
+                {/* E-posta */}
                 <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
                   <Mail size={20} className="text-gray-500 shrink-0" />
                   <input
@@ -418,15 +573,53 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     inputMode="email"
                     autoComplete="email"
                     value={email}
-                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); setInfo(null); }}
                     className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
                     placeholder={demoMode ? 'demo e-postası veya "mirackerem"' : 'ornek@oyna.app'}
                     aria-label="E-posta adresi"
                   />
                 </div>
-                {demoMode && (
+
+                {/* Şifre */}
+                <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors mt-3">
+                  <Lock size={20} className="text-gray-500 shrink-0" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={isRegister ? 'new-password' : 'current-password'}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(null); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { void (isRegister ? handleRegister() : handlePasswordLogin()); } }}
+                    className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                    placeholder={isRegister ? 'Şifre (en az 6 karakter)' : 'Şifre'}
+                    aria-label="Şifre"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="text-gray-500 hover:text-gray-300 shrink-0 outline-none"
+                    aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+
+                {/* Şifremi unuttum — yalnız giriş */}
+                {!isRegister && (
+                  <div className="flex justify-end mt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setStage('forgot'); setError(null); setInfo(null); }}
+                      className="text-[11px] font-bold underline outline-none"
+                      style={{ color }}
+                    >
+                      Şifremi unuttum
+                    </button>
+                  </div>
+                )}
+
+                {demoMode && !isRegister && (
                   <p className="text-[10px] text-[#39FF14] font-bold mt-2 px-1">
-                    🧪 DEMO MODU: e-postayı yazıp devam et — kod gerekmez. Sahip için "mirackerem".
+                    🧪 DEMO MODU: demo e-postasını yaz, şifre gerekmez. Sahip için "mirackerem".
                   </p>
                 )}
 
@@ -451,6 +644,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   Açık olduğunda çıkış yapana kadar bu cihazda kimliğinle oturumun açık kalır.
                 </p>
 
+                {info && (
+                  <p className="text-xs text-[#39FF14] font-bold mt-3 px-1">{info}</p>
+                )}
                 {error && (
                   <p className="text-xs text-red-400 font-bold mt-3 px-1">{error}</p>
                 )}
@@ -477,36 +673,79 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                 </div>
 
                 <div className="mt-auto pt-6 space-y-3">
-                  <AnimatedButton
-                    onClick={handleSendOtp}
-                    disabled={sendDisabled}
-                    isLoading={isLoading === 'send'}
-                    size="lg"
-                    className="w-full h-14"
-                    style={{
-                      background: sendDisabled ? 'rgba(255,255,255,0.05)' : color,
-                      color: sendDisabled ? 'rgba(255,255,255,0.2)' : '#000',
-                      boxShadow: sendDisabled ? 'none' : `0 0 20px ${color}33`
-                    }}
+                  {isRegister ? (
+                    <AnimatedButton
+                      onClick={handleRegister}
+                      disabled={registerDisabled}
+                      isLoading={isLoading === 'register'}
+                      size="lg"
+                      className="w-full h-14"
+                      style={{
+                        background: registerDisabled ? 'rgba(255,255,255,0.05)' : color,
+                        color: registerDisabled ? 'rgba(255,255,255,0.2)' : '#000',
+                        boxShadow: registerDisabled ? 'none' : `0 0 20px ${color}33`
+                      }}
+                    >
+                      KAYIT OL <ArrowRight size={16} className="ml-1" />
+                    </AnimatedButton>
+                  ) : (
+                    <AnimatedButton
+                      onClick={handlePasswordLogin}
+                      disabled={passwordLoginDisabled}
+                      isLoading={isLoading === 'password'}
+                      size="lg"
+                      className="w-full h-14"
+                      style={{
+                        background: passwordLoginDisabled ? 'rgba(255,255,255,0.05)' : color,
+                        color: passwordLoginDisabled ? 'rgba(255,255,255,0.2)' : '#000',
+                        boxShadow: passwordLoginDisabled ? 'none' : `0 0 20px ${color}33`
+                      }}
+                    >
+                      GİRİŞ YAP <ArrowRight size={16} className="ml-1" />
+                    </AnimatedButton>
+                  )}
+
+                  {/* Kod ile giriş — ikincil (yalnız giriş modunda) */}
+                  {!isRegister && (
+                    <AnimatedButton
+                      onClick={handleSendOtp}
+                      disabled={sendDisabled}
+                      isLoading={isLoading === 'send'}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-12 text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white"
+                    >
+                      KOD İLE GİRİŞ YAP
+                    </AnimatedButton>
+                  )}
+
+                  {/* Giriş ↔ Kayıt geçişi */}
+                  <button
+                    type="button"
+                    onClick={() => { setIsRegister((v) => !v); setError(null); setInfo(null); }}
+                    className="w-full text-center text-[11px] font-bold text-gray-400 hover:text-white outline-none py-1"
                   >
-                    DOĞRULAMA KODU GÖNDER <ArrowRight size={16} className="ml-1" />
-                  </AnimatedButton>
+                    {isRegister ? 'Zaten hesabın var mı? Giriş yap' : 'Hesabın yok mu? Kayıt ol'}
+                  </button>
 
                   {/* Önce göz at — kayıt olmadan keşfet (değer-kapısı modeli) */}
-                  <AnimatedButton
-                    id="guest-login-button"
-                    onClick={handleGuestLogin}
-                    disabled={guestDisabled}
-                    isLoading={isLoading === 'guest'}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-12 text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white"
-                  >
-                    ÖNCE MAÇLARA GÖZ AT
-                  </AnimatedButton>
+                  {!isRegister && (
+                    <AnimatedButton
+                      id="guest-login-button"
+                      onClick={handleGuestLogin}
+                      disabled={guestDisabled}
+                      isLoading={isLoading === 'guest'}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-12 text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white"
+                    >
+                      ÖNCE MAÇLARA GÖZ AT
+                    </AnimatedButton>
+                  )}
                 </div>
               </motion.div>
-            ) : (
+            )}
+            {stage === 'otp' && (
               <motion.div
                 key="otp"
                 initial={{ opacity: 0, x: 16 }}
@@ -583,6 +822,170 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     className="w-full h-12 text-gray-400 border border-white/10"
                   >
                     E-POSTAYI DEĞİŞTİR
+                  </AnimatedButton>
+                </div>
+              </motion.div>
+            )}
+            {stage === 'forgot' && (
+              <motion.div
+                key="forgot"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex flex-col"
+              >
+                <div className="flex items-center justify-center mb-5">
+                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center" style={{ boxShadow: `0 0 20px ${color}20` }}>
+                    <Lock size={24} style={{ color }} />
+                  </div>
+                </div>
+
+                <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block text-center tracking-widest">
+                  E-posta adresin
+                </label>
+                <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
+                  <Mail size={20} className="text-gray-500 shrink-0" />
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); setInfo(null); }}
+                    className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                    placeholder="ornek@oyna.app"
+                    aria-label="E-posta adresi"
+                    autoFocus
+                  />
+                </div>
+
+                {info && (<p className="text-xs text-[#39FF14] font-bold mt-3 text-center">{info}</p>)}
+                {error && (<p className="text-xs text-red-400 font-bold mt-3 text-center">{error}</p>)}
+
+                <div className="mt-auto pt-6 space-y-3">
+                  <AnimatedButton
+                    onClick={handleForgotSend}
+                    disabled={!isValidEmail(email) || isLoading !== null}
+                    isLoading={isLoading === 'forgot'}
+                    size="lg"
+                    className="w-full h-14"
+                    style={{
+                      background: !isValidEmail(email) ? 'rgba(255,255,255,0.05)' : color,
+                      color: !isValidEmail(email) ? 'rgba(255,255,255,0.2)' : '#000',
+                      boxShadow: !isValidEmail(email) ? 'none' : `0 0 20px ${color}33`
+                    }}
+                  >
+                    SIFIRLAMA KODU GÖNDER <ArrowRight size={16} className="ml-1" />
+                  </AnimatedButton>
+                  <AnimatedButton
+                    onClick={handleHeaderBack}
+                    disabled={isLoading !== null}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-12 text-gray-400 border border-white/10"
+                  >
+                    GİRİŞE DÖN
+                  </AnimatedButton>
+                </div>
+              </motion.div>
+            )}
+            {stage === 'reset' && (
+              <motion.div
+                key="reset"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex flex-col"
+              >
+                <div className="flex items-center justify-center mb-5">
+                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center" style={{ boxShadow: `0 0 20px ${color}20` }}>
+                    <KeyRound size={24} style={{ color }} />
+                  </div>
+                </div>
+
+                <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block text-center tracking-widest">
+                  Sıfırlama Kodu
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null); }}
+                  className="bg-[#0A0E14] border border-gray-800 rounded-2xl w-full h-16 text-center text-white font-black text-3xl tracking-[0.5em] outline-none focus:border-white/40 transition-colors placeholder:text-gray-800"
+                  placeholder="••••••"
+                  autoFocus
+                  aria-label="6 haneli sıfırlama kodu"
+                />
+
+                <label className="text-[10px] text-gray-500 font-bold uppercase mt-4 mb-2 block tracking-widest px-1">
+                  Yeni Şifre
+                </label>
+                <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
+                  <Lock size={20} className="text-gray-500 shrink-0" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setError(null); }}
+                    className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                    placeholder="En az 6 karakter"
+                    aria-label="Yeni şifre"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="text-gray-500 hover:text-gray-300 shrink-0 outline-none"
+                    aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+
+                <div className="text-center mt-4">
+                  {resendIn > 0 ? (
+                    <span className="text-xs text-gray-400 font-bold">Kodu tekrar gönder ({resendIn}s)</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={isLoading !== null}
+                      className="text-[11px] font-black underline disabled:opacity-50 outline-none"
+                      style={{ color }}
+                    >
+                      Kodu tekrar gönder
+                    </button>
+                  )}
+                </div>
+
+                {info && (<p className="text-xs text-[#39FF14] font-bold mt-3 text-center">{info}</p>)}
+                {error && (<p className="text-xs text-red-400 font-bold mt-3 text-center">{error}</p>)}
+
+                <div className="mt-auto pt-6 space-y-3">
+                  <AnimatedButton
+                    onClick={handleResetConfirm}
+                    disabled={otp.length < 6 || newPassword.length < 6 || isLoading !== null}
+                    isLoading={isLoading === 'reset'}
+                    size="lg"
+                    className="w-full h-14"
+                    style={{
+                      background: (otp.length < 6 || newPassword.length < 6) ? 'rgba(255,255,255,0.05)' : color,
+                      color: (otp.length < 6 || newPassword.length < 6) ? 'rgba(255,255,255,0.2)' : '#000',
+                      boxShadow: (otp.length < 6 || newPassword.length < 6) ? 'none' : `0 0 20px ${color}33`
+                    }}
+                  >
+                    ŞİFREYİ GÜNCELLE <ArrowRight size={16} className="ml-1" />
+                  </AnimatedButton>
+                  <AnimatedButton
+                    onClick={handleHeaderBack}
+                    disabled={isLoading !== null}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-12 text-gray-400 border border-white/10"
+                  >
+                    GERİ
                   </AnimatedButton>
                 </div>
               </motion.div>
