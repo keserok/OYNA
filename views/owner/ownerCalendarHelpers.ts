@@ -12,7 +12,7 @@ export function slotKeyToTime(key: string): string {
 }
 
 export function normalizeTime(t: string): string {
-  const parts = t.split(':');
+  const parts = String(t ?? '').split(':');
   const h = parts[0]?.padStart(2, '0') ?? '00';
   const m = (parts[1] ?? '00').padStart(2, '0');
   return `${h}:${m}`;
@@ -21,8 +21,11 @@ export function normalizeTime(t: string): string {
 export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number {
   if (pricingPolicy?.length) {
     const matched = pricingPolicy.find((p) => {
+      // Bozuk/eksik tarife satırı (startTime/endTime yoksa) render'ı ÇÖKERTMEMELİ.
+      if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
       const startH = parseInt(p.startTime.split(':')[0], 10);
       let endH = parseInt(p.endTime.split(':')[0], 10);
+      if (Number.isNaN(startH) || Number.isNaN(endH)) return false;
       if (endH === 0) endH = 24;
       if (startH <= endH) return hour >= startH && hour < endH;
       return hour >= startH || hour < endH;
