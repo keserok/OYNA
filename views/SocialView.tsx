@@ -18,6 +18,8 @@ import { getOrCreateConversation } from '../services/messageService';
 import { useAppStore } from '../store';
 import { TeamCreatorWizard } from '../components/TeamCreatorWizard';
 import { isUserOnline, formatLastSeen } from '../utils/lastSeen';
+import SegmentedTabs from '../components/ui/SegmentedTabs';
+import EmptyState from '../components/ui/EmptyState';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface SocialViewProps {
@@ -25,6 +27,12 @@ interface SocialViewProps {
 }
 
 type MainTab = 'FRIENDS' | 'TEAMS';
+type TeamsSubTab = 'ALL' | 'MINE' | 'CREATE';
+
+// Oturum-içi sekme hafızası (Spec A3): görünüm değişse de hatırlanır,
+// uygulama yeniden açılınca doğal olarak varsayılana (Takımlar→Takımlarım) döner.
+let rememberedMainTab: MainTab = 'TEAMS';
+let rememberedTeamsSubTab: TeamsSubTab = 'MINE';
 
 const GROUPS = ['Tümü', 'Favorilerim', 'Üniversite', 'Lise Tayfası', 'İş', 'Futbol'];
 
@@ -559,7 +567,8 @@ const FriendsTab: React.FC<{
 const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
   const userId = auth.currentUser?.uid || '';
 
-  const [tab, setTab] = useState<MainTab>('TEAMS');
+  const [tab, setTabState] = useState<MainTab>(rememberedMainTab);
+  const [teamsSubTab, setTeamsSubTabState] = useState<TeamsSubTab>(rememberedTeamsSubTab);
   const [friends, setFriends] = useState<FriendshipRow[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [captainTeams, setCaptainTeams] = useState<any[]>([]);
@@ -570,6 +579,22 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
   const [wizardLoading, setWizardLoading] = useState(false);
   const [messagingId, setMessagingId] = useState<string | null>(null);
   const setSelectedConversationId = useAppStore(s => s.setSelectedConversationId);
+  const socialTarget = useAppStore(s => s.socialTarget);
+  const setSocialTarget = useAppStore(s => s.setSocialTarget);
+
+  const setTab = useCallback((t: MainTab) => { rememberedMainTab = t; setTabState(t); }, []);
+  const setTeamsSubTab = useCallback((t: TeamsSubTab) => { rememberedTeamsSubTab = t; setTeamsSubTabState(t); }, []);
+
+  // Derin bağlantı / bildirim hedefi: doğru alt-sekmeye in, tüket (Spec §2.3)
+  useEffect(() => {
+    if (!socialTarget) return;
+    setTab(socialTarget.tab);
+    if (socialTarget.tab === 'TEAMS' && socialTarget.subTab
+        && ['ALL', 'MINE', 'CREATE'].includes(socialTarget.subTab)) {
+      setTeamsSubTab(socialTarget.subTab as TeamsSubTab);
+    }
+    setSocialTarget(null);
+  }, [socialTarget, setTab, setTeamsSubTab, setSocialTarget]);
 
   // Load data
   useEffect(() => {
@@ -707,32 +732,28 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
   const captainCount = captainTeams.length;
 
   return (
-    <div className="min-h-screen bg-[#070B10] text-white flex flex-col font-sans">
+    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans">
       {/* ── Header ── */}
       <div className="pt-safe px-5 pb-0 flex-shrink-0">
-        {/* Ambient glow */}
+        {/* Ambient glow — marka neonuna hizalı (Spec A5) */}
         <div
-          className="absolute top-0 right-0 w-64 h-64 pointer-events-none opacity-10 blur-[80px]"
-          style={{ background: 'radial-gradient(circle, #10B981 0%, transparent 70%)' }}
+          className="absolute top-0 right-0 w-64 h-64 pointer-events-none opacity-[0.07] blur-[80px]"
+          style={{ background: 'radial-gradient(circle, #39FF14 0%, transparent 70%)' }}
         />
 
         <div className="flex items-start justify-between pt-5 mb-1 relative z-10">
           <div>
             <h1 className="text-3xl font-black tracking-tight">Sosyal</h1>
+            {/* Sekme-başına bağlamsal özet (Spec G41) */}
             <p className="text-sm text-gray-500 mt-0.5">
-              {totalTeams} takım · {captainCount} kaptanlık
+              {tab === 'TEAMS'
+                ? `${totalTeams} takım · ${captainCount} kaptanlık`
+                : `${friends.length} arkadaş${requests.length > 0 ? ` · ${requests.length} istek` : ''}`}
             </p>
           </div>
-          <button
-            onClick={() => setShowTeamWizard(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-white/8 border border-white/15 rounded-2xl text-sm font-bold text-white hover:bg-white/12 transition-colors"
-          >
-            <Plus size={16} />
-            Takım
-          </button>
         </div>
 
-        {/* Tabs */}
+        {/* Üst seviye sekmeler — altı çizgili (Spec G38) */}
         <div className="flex gap-0 mt-5 border-b border-white/8 relative z-10">
           {([
             { id: 'FRIENDS' as MainTab, label: 'Arkadaşlar', count: friends.length + requests.length },
@@ -741,14 +762,14 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`relative flex items-center gap-2 px-1 pb-3 mr-6 text-sm font-bold transition-colors ${
+              className={`relative flex items-center gap-2 px-1 pb-3 mr-6 min-h-[44px] text-sm font-bold transition-colors ${
                 tab === t.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               {t.label}
               {t.count > 0 && (
                 <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                  tab === t.id ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+                  tab === t.id ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-white/10 text-gray-400'
                 }`}>
                   {t.count}
                 </span>
@@ -756,12 +777,28 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
               {tab === t.id && (
                 <motion.div
                   layoutId="tabUnderline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#39FF14] rounded-full"
                 />
               )}
             </button>
           ))}
         </div>
+
+        {/* Takımlar alt-sekmeleri — hap kontrol: Keşif · Evim · Üretim (Spec G38/39) */}
+        {tab === 'TEAMS' && (
+          <div className="relative z-10 mt-3">
+            <SegmentedTabs
+              layoutId="teamsSubTabs"
+              activeId={teamsSubTab}
+              onChange={id => setTeamsSubTab(id as TeamsSubTab)}
+              items={[
+                { id: 'ALL', label: 'Tüm Takımlar' },
+                { id: 'MINE', label: 'Takımlarım' },
+                { id: 'CREATE', label: 'Takım Oluştur', icon: <Plus size={13} /> },
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── TeamCreatorWizard Modal ── */}
@@ -791,14 +828,38 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
       <div className="flex-1 overflow-y-auto px-5 pt-5">
         <AnimatePresence mode="wait">
           {tab === 'TEAMS' ? (
-            <motion.div key="teams" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.18 }}>
-              <TeamsTab
-                captainTeams={captainTeams}
-                memberTeams={memberTeams}
-                loading={loadingTeams}
-                onNavigate={onNavigate}
-                onCreateTeam={() => setShowTeamWizard(true)}
-              />
+            <motion.div key={`teams-${teamsSubTab}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.18 }}>
+              {teamsSubTab === 'MINE' && (
+                <TeamsTab
+                  captainTeams={captainTeams}
+                  memberTeams={memberTeams}
+                  loading={loadingTeams}
+                  onNavigate={onNavigate}
+                  onCreateTeam={() => setTeamsSubTab('CREATE')}
+                />
+              )}
+              {teamsSubTab === 'ALL' && (
+                /* Küme 2'de list_public_teams dizinine bağlanacak (Spec I50) */
+                <EmptyState
+                  icon={Search}
+                  title="Takım Keşfi yakında"
+                  description="Şehrindeki takımları burada keşfedecek ve katılma isteği gönderebileceksin."
+                  actions={[{ label: 'Takımlarıma Dön', onClick: () => setTeamsSubTab('MINE') }]}
+                />
+              )}
+              {teamsSubTab === 'CREATE' && (
+                /* Küme 2'de J57 sihirbazı (arma üreteci dahil) buraya gömülecek;
+                   geçiş süresince mevcut sihirbaz modal olarak açılır. */
+                <EmptyState
+                  icon={Shield}
+                  title="Yeni takımını kur"
+                  description="Adını, armanı ve renklerini seç; kurucu kadronu davet et."
+                  actions={[
+                    { label: 'Takım Kur', onClick: () => setShowTeamWizard(true), primary: true },
+                    { label: 'Takımlarıma Dön', onClick: () => setTeamsSubTab('MINE') },
+                  ]}
+                />
+              )}
             </motion.div>
           ) : (
             <motion.div key="friends" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.18 }}>

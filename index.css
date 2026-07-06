@@ -22,6 +22,7 @@
   --color-primary: #39FF14;
   --color-primary-dark: #1cb500;
   --color-primary-light: #70ff56;
+  --color-on-primary: #0A0E14; /* neon zeminde metin — kontrast kuralı (Spec A5) */
   --color-bg-main: #0A0E14;
   --color-bg-card: rgba(22, 27, 34, 0.4);
   --color-text-main: #FFFFFF;

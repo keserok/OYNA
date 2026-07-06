@@ -143,6 +143,16 @@ interface AppState {
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
   selectedConversationId: string | null;
+  // SOSYAL yeniden tasarım — açık navigasyon yükleri (Foundation Spec §2.2)
+  // Bildirim/derin bağlantı Sosyal'in doğru alt-sekmesine insin diye:
+  socialTarget: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null;
+  setSocialTarget: (t: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null) => void;
+  // Takım Detayı hangi takımı gösterecek ("listedeki ilk takım" varsayımı yasak):
+  selectedTeamId: string | null;
+  setSelectedTeamId: (id: string | null) => void;
+  // Stüdyo'ya takım/taktik bağlamı (activeStudioTeam'in halefi; M80):
+  studioContext: { teamId?: string; tacticId?: string } | null;
+  setStudioContext: (c: { teamId?: string; tacticId?: string } | null) => void;
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
   // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
@@ -790,6 +800,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedMatch: (match) => set({ selectedMatch: match }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
   setSelectedConversationId: (id) => set({ selectedConversationId: id }),
+  // SOSYAL yeniden tasarım — navigasyon yükleri (Spec §2.2)
+  socialTarget: null,
+  setSocialTarget: (t) => set({ socialTarget: t }),
+  selectedTeamId: null,
+  setSelectedTeamId: (id) => set({ selectedTeamId: id }),
+  studioContext: null,
+  setStudioContext: (c) => set({ studioContext: c }),
   setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
