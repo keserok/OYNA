@@ -5,6 +5,7 @@
  * mevcut onaylı akışlarına delege edilir; burada yeni bir yetki yolu açılmaz.
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Ban, ShieldCheck, PlayCircle, Edit3, Eye, Wallet, ScrollText,
@@ -113,9 +114,12 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
 
   const reliability = user.reliabilityScore ?? Math.round((user.rating ?? 5) * 20);
 
-  return (
+  // Portal → document.body: dönüşümlü (transform) bir üst öğe içinde kalırsa
+  // `position:fixed` viewport yerine o öğeye göre konumlanıp üst kısmı ekranın
+  // dışında/arkasında kalıyordu. Body'ye portal ederek her zaman viewport'a hizalanır.
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-[180] flex justify-end">
+      <div className="fixed inset-0 z-[240] flex justify-end">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60" onClick={onClose} />
         <motion.div
           initial={{ x: '100%' }}
@@ -267,6 +271,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 };

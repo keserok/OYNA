@@ -2,8 +2,8 @@
 @source "./components/**/*.{ts,tsx}";
 @source "./views/**/*.{ts,tsx}";
 @source "./App.tsx";
-@source "./AdminApp.tsx";
-@source "./admin-main.tsx";
+@source "./admin-panel/**/*.{ts,tsx}";
+@source "./admin-panel/admin.html";
 @source "./index.html";
 
 

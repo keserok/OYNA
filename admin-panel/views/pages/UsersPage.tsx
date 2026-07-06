@@ -65,6 +65,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const [ghostBusy, setGhostBusy] = useState(false);
     const [page, setPage] = useState(0);
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned'>('all');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'PLAYER' | 'OWNER' | 'GOALKEEPER' | 'REFEREE'>('all');
     const [query, setQuery] = useState('');
     const debouncedQuery = useDebouncedValue(query, 300);
     const [serverUsers, setServerUsers] = useState<AdminUser[]>([]);
@@ -81,6 +82,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 limit: PAGE_SIZE,
                 search: debouncedQuery || undefined,
                 status: statusFilter,
+                role: roleFilter === 'all' ? undefined : roleFilter,
             });
             setServerUsers(users);
             setServerTotal(total);
@@ -89,7 +91,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
         } finally {
             setUsersLoading(false);
         }
-    }, [subRoute, page, debouncedQuery, statusFilter, toastError]);
+    }, [subRoute, page, debouncedQuery, statusFilter, roleFilter, toastError]);
 
     useEffect(() => {
         if (subRoute === 'KULLANICILAR') void loadServerUsers();
@@ -97,7 +99,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
 
     useEffect(() => {
         setPage(0);
-    }, [debouncedQuery, statusFilter, subRoute]);
+    }, [debouncedQuery, statusFilter, roleFilter, subRoute]);
 
     const refresh = async () => {
         await loadServices();
@@ -239,6 +241,18 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
 
     const totalUsers = subRoute === 'KULLANICILAR' ? serverTotal : statusFiltered.length;
     const data = subRoute === 'KULLANICILAR' ? serverUsers : statusFiltered;
+
+    // Rol filtreleri (birincil role göre, sunucu-taraflı) — durum filtrelerinden ÖNCE gelir.
+    const roleChips = useMemo(() => {
+        if (subRoute !== 'KULLANICILAR') return [];
+        return [
+            { id: 'all', label: 'Tümü' },
+            { id: 'PLAYER', label: 'Oyuncu' },
+            { id: 'OWNER', label: 'Saha Sahibi' },
+            { id: 'GOALKEEPER', label: 'Kaleci' },
+            { id: 'REFEREE', label: 'Hakem' },
+        ];
+    }, [subRoute]);
 
     const statusChips = useMemo(() => {
         if (subRoute !== 'KULLANICILAR') return [];
@@ -433,8 +447,17 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     resultCount={subRoute === 'KULLANICILAR' ? serverUsers.length : statusFiltered.length}
                     totalCount={totalUsers}
                 />
-                {statusChips.length > 0 && (
-                    <AdminFilterChips chips={statusChips} active={statusFilter} onChange={(id) => setStatusFilter(id as typeof statusFilter)} />
+                {roleChips.length > 0 && (
+                    <div className="space-y-2.5">
+                        <div>
+                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Rol</p>
+                            <AdminFilterChips chips={roleChips} active={roleFilter} onChange={(id) => setRoleFilter(id as typeof roleFilter)} />
+                        </div>
+                        <div>
+                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Durum</p>
+                            <AdminFilterChips chips={statusChips} active={statusFilter} onChange={(id) => setStatusFilter(id as typeof statusFilter)} />
+                        </div>
+                    </div>
                 )}
             </div>
 
