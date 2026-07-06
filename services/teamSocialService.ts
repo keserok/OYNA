@@ -332,6 +332,17 @@ export const setTeamInviteLink = async (teamId: string, enabled: boolean): Promi
   return (data as { invite_token: string | null }).invite_token;
 };
 
+/** Mevcut davet linki token'ı — yalnız yönetici okuyabilir (deny-all tablo,
+    erişim get_team_invite_link RPC'siyle; teams.invite_token sızıntısı kapandı). */
+export const getTeamInviteLink = async (teamId: string): Promise<string | null> => {
+  const { data, error } = await supabase.rpc('get_team_invite_link', { p_team_id: teamId });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+};
+
+/** Davet linkinin paylaşılabilir web adresi (Spec §2.3). */
+export const inviteLinkUrl = (token: string): string => `https://oyna.app/takim/${token}`;
+
 export const joinByInviteToken = async (token: string): Promise<{ team_id: string; state: string }> => {
   const { data, error } = await supabase.rpc('join_by_invite_token', { p_token: token });
   if (error) throw error;
@@ -375,6 +386,24 @@ export const disbandTeam = async (teamId: string): Promise<void> => {
 export const restoreTeam = async (teamId: string): Promise<void> => {
   const { error } = await supabase.rpc('restore_team', { p_team_id: teamId });
   if (error) throw error;
+};
+
+/** Forma numarası ata (H47) — team_members UPDATE RLS'i kaptana açık;
+    takım içinde benzersizlik DB kısıtıyla garanti (çakışmada hata döner). */
+export const setJerseyNumber = async (
+  teamId: string, userId: string, jersey: number | null,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('team_members')
+    .update({ jersey_number: jersey })
+    .eq('team_id', teamId)
+    .eq('user_id', userId);
+  if (error) {
+    if (`${error.message}`.includes('team_members_jersey_uidx')) {
+      throw new Error('JERSEY_TAKEN: Bu numara kadroda kullanımda.');
+    }
+    throw error;
+  }
 };
 
 /** Kişisel takım sırası (G eki): uzun-bas sürükle sonrası kalıcılık.

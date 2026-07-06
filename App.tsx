@@ -28,7 +28,7 @@ const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
 const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
 const MyTeam = lazy(() => import('./views/MyTeam'));
-const TeamPanelView = lazy(() => import('./views/TeamPanelView'));
+const TeamDetailView = lazy(() => import('./views/social/TeamDetailView'));
 const Marketplace = lazy(() => import('./views/Marketplace'));
 const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
 const Notifications = lazy(() => import('./views/Notifications'));
@@ -479,7 +479,8 @@ const App: React.FC = () => {
           onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
-        return <TeamPanelView onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+        // Birleşik Takım Detayı — kimlik store.selectedTeamId ile taşınır (Spec §3.8)
+        return <TeamDetailView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'MY_TEAM_TACTICS':
         return <MyTeam onBack={() => goBack('MY_TEAM')} onNavigate={(v) => navigateTo(v)} />;
       case 'STUDIO':
