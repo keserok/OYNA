@@ -17,6 +17,7 @@ import type { NotificationPreferenceKey } from '../notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { Toast } from '../components/common/Toast';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
+import PrivacySection from '../components/social/PrivacySection';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -374,6 +375,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <SettingItem icon={<Moon size={20} />} title="Tema" value="Karanlık Mod" />
           </div>
         </section>
+
+        {/* ═══ GİZLİLİK (Sosyal — Spec §3.12) ═══ */}
+        <PrivacySection />
 
         {/* ═══ BİLDİRİM AYARLARI ═══ */}
         <section>
