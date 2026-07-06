@@ -7,6 +7,7 @@ import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
+import { startPresenceHeartbeat, stopPresenceHeartbeat } from './services/socialService';
 import { identifyUser, resetUser, trackEvent } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
@@ -42,6 +43,7 @@ const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
 const SocialView = lazy(() => import('./views/SocialView'));
+const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
 const TeamCreator = lazy(() => import('./views/TeamCreator'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
 const MatchCreate = lazy(() => import('./views/MatchCreate'));
@@ -197,11 +199,10 @@ const App: React.FC = () => {
               Array.isArray(profile.roles) ? (profile.roles as string[]) : [primaryRole]
             );
 
-            // last_active_at background güncelleme
-            supabase
-              .from('profiles')
-              .update({ last_active_at: new Date().toISOString() })
-              .eq('id', user.uid);
+            // Presence heartbeat (Spec F34): ön planda ~2,5 dk'da bir +
+            // görünürlüğe dönüşte last_active_at yazılır; arka planda durur.
+            // (Tek seferlik girişte-yazma modelinin halefi — gösterge dürüstleşir.)
+            startPresenceHeartbeat(user.uid);
 
             // Yeni model: AÇILIŞ YÖNLENDİRMESİ tek kaynağa (aktif rol) dayanır.
             // Oturum kalıcı → tekrar giriş YOK. Aktif rol oyuncu → Dashboard;
@@ -219,6 +220,7 @@ const App: React.FC = () => {
           setRole(UserRole.PLAYER);
           resetNavigation('SPLASH');
           resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
+          stopPresenceHeartbeat(); // çıkışta heartbeat durur (Spec F34)
         }
       } catch (error: any) {
         console.error('[App] Auth state error:', error);
@@ -531,6 +533,8 @@ const App: React.FC = () => {
         return <TeamBuilder onBack={() => goBack('PROFILE')} />;
       case 'SOCIAL':
         return <SocialView onNavigate={(v) => navigateTo(v)} />;
+      case 'FRIEND_ADD':
+        return <FriendAddView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'MESSAGES':
         return <MessagesView
           initialConversationId={selectedConversationId}

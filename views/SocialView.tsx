@@ -7,19 +7,18 @@ import {
 } from 'lucide-react';
 import { AppView } from '../types';
 import { auth } from '../supabaseAuth';
+import { fetchUserTeams } from '../services/friendService';
 import {
-  fetchFriends, fetchPendingRequests, fetchUserTeams,
-  acceptFriendRequest, removeFriendship, toggleFriendFavorite,
-  updateFriendGroup,
-  FriendshipRow, FriendRequest,
-} from '../services/friendService';
+  getFriends, getFriendRequests, getFriendLists, subscribeSocialEvents,
+  FriendRow, FriendRequestRow, FriendList,
+} from '../services/socialService';
 import { createTeam } from '../services/teamService';
 import { getOrCreateConversation } from '../services/messageService';
 import { useAppStore } from '../store';
 import { TeamCreatorWizard } from '../components/TeamCreatorWizard';
-import { isUserOnline, formatLastSeen } from '../utils/lastSeen';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import EmptyState from '../components/ui/EmptyState';
+import FriendsPanel from './social/FriendsPanel';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface SocialViewProps {
@@ -34,14 +33,9 @@ type TeamsSubTab = 'ALL' | 'MINE' | 'CREATE';
 let rememberedMainTab: MainTab = 'TEAMS';
 let rememberedTeamsSubTab: TeamsSubTab = 'MINE';
 
-const GROUPS = ['Tümü', 'Favorilerim', 'Üniversite', 'Lise Tayfası', 'İş', 'Futbol'];
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getInitials = (name: string | null) =>
   (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-
-const getPosition = (friend: FriendshipRow) =>
-  friend.other_user.player_card?.position || 'OS';
 
 const getWinRate = (wins: number, total: number) =>
   total > 0 ? Math.round((wins / total) * 100) : 0;
@@ -292,276 +286,7 @@ const TeamsTab: React.FC<{
 };
 
 // ─── Friends Tab ─────────────────────────────────────────────────────────────
-const FriendsTab: React.FC<{
-  userId: string;
-  friends: FriendshipRow[];
-  requests: FriendRequest[];
-  loading: boolean;
-  onAccept: (id: string) => void;
-  onDecline: (id: string) => void;
-  onToggleFav: (f: FriendshipRow) => void;
-  onGroupChange: (f: FriendshipRow, group: string) => void;
-  onNavigate: (v: AppView) => void;
-  onMessage: (f: FriendshipRow) => void;
-  messagingId: string | null;
-}> = ({ userId, friends, requests, loading, onAccept, onDecline, onToggleFav, onGroupChange, onNavigate, onMessage, messagingId }) => {
-  const [search, setSearch] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('Tümü');
-  const [expandedGroupPicker, setExpandedGroupPicker] = useState<string | null>(null);
-
-  const filtered = friends.filter(f => {
-    const name = (f.other_user.full_name || '').toLowerCase();
-    const matchSearch = name.includes(search.toLowerCase());
-    if (!matchSearch) return false;
-    if (selectedGroup === 'Tümü') return true;
-    if (selectedGroup === 'Favorilerim') return f.isFavorite;
-    return f.myGroup === selectedGroup;
-  });
-
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 className="animate-spin text-emerald-400" size={28} />
-    </div>
-  );
-
-  return (
-    <div className="space-y-4 pb-6">
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Arkadaş ara"
-          className="w-full bg-white/6 border border-white/10 rounded-2xl pl-10 pr-4 py-3.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50"
-        />
-      </div>
-
-      {/* Pending Requests */}
-      {requests.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">İstekler</span>
-            <span className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-[10px] font-black text-white">
-              {requests.length}
-            </span>
-          </div>
-          <div className="space-y-2">
-            {requests.map(req => (
-              <motion.div
-                key={req.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3"
-              >
-                <div className="relative">
-                  <Avatar name={req.sender.full_name} url={req.sender.avatar_url} size={44} color="from-blue-600 to-blue-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white truncate">{req.sender.full_name || 'Oyuncu'}</span>
-                    {req.sender.player_card?.position && (
-                      <span className="text-[9px] font-black bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-md">
-                        {req.sender.player_card.position}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {req.sender.oyna_id || 'OYNA kullanıcısı'}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => onDecline(req.id)}
-                    className="w-9 h-9 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center hover:bg-red-500/20 transition-colors"
-                  >
-                    <X size={16} className="text-gray-400" />
-                  </button>
-                  <button
-                    onClick={() => onAccept(req.id)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 rounded-xl text-sm font-bold text-white hover:bg-emerald-400 transition-colors"
-                  >
-                    <Check size={15} />
-                    Onayla
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Group Filter Chips */}
-      <div>
-        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Arkadaşlarım</div>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {GROUPS.map(g => (
-            <button
-              key={g}
-              onClick={() => setSelectedGroup(g)}
-              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                selectedGroup === g
-                  ? 'bg-white text-[#0A0E14] border-white'
-                  : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Friends List */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-10">
-          <Users size={36} className="mx-auto mb-3 text-gray-700" />
-          <p className="text-sm text-gray-500">
-            {search ? 'Arkadaş bulunamadı' : 'Henüz arkadaşın yok'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((f, i) => {
-            const name = f.other_user.full_name || 'Oyuncu';
-            const pos = getPosition(f);
-            const wins = f.other_user.win_count ?? 0;
-            const total = f.other_user.total_matches ?? 0;
-            const winRate = getWinRate(wins, total);
-            const isOnline = isUserOnline(f.other_user.last_active_at);
-            const lastSeenLabel = formatLastSeen(f.other_user.last_active_at);
-            const showPicker = expandedGroupPicker === f.id;
-
-            return (
-              <motion.div
-                key={f.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="bg-white/4 border border-white/8 rounded-2xl overflow-hidden"
-              >
-                <div className="p-4">
-                  <div className="flex items-start gap-3">
-                    {/* Avatar */}
-                    <div className="relative">
-                      <Avatar name={name} url={f.other_user.avatar_url} size={50} color="from-emerald-700 to-emerald-900" />
-                      <OnlineDot active={isOnline} />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white truncate">{name}</span>
-                        {f.isFavorite && <Star size={13} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="text-[10px] font-black bg-blue-500/15 text-blue-300 border border-blue-500/25 px-1.5 py-0.5 rounded-md">
-                          {pos}
-                        </span>
-                        {f.myGroup && f.myGroup !== 'Tümü' && (
-                          <span className="text-[10px] text-gray-500">{f.myGroup}</span>
-                        )}
-                        {isOnline ? (
-                          <span className="text-[10px] text-emerald-400 font-bold">· Şimdi aktif</span>
-                        ) : lastSeenLabel ? (
-                          <span className="text-[10px] text-gray-500">· Son görülme: {lastSeenLabel}</span>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
-                        <span>{f.matches_together ?? 0} birlikte</span>
-                        <span className="text-gray-700">·</span>
-                        <span>{total}G</span>
-                      </div>
-                    </div>
-
-                    {/* Win Rate */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-lg font-black text-emerald-400">%{winRate}</div>
-                      <div className="text-[9px] text-gray-600 uppercase tracking-widest">Galibiyet</div>
-                      <div className="mt-1.5 w-14 h-1 bg-white/8 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${winRate}%` }}
-                          transition={{ duration: 0.7, delay: 0.2 }}
-                          className="h-full bg-emerald-500 rounded-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 mt-3">
-                    <button
-                      onClick={() => onMessage(f)}
-                      disabled={messagingId === f.id}
-                      title="Mesaj gönder"
-                      className="w-10 h-10 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors disabled:opacity-50"
-                    >
-                      {messagingId === f.id
-                        ? <Loader2 size={16} className="text-gray-400 animate-spin" />
-                        : <MessageCircle size={16} className="text-gray-400" />}
-                    </button>
-                    <button
-                      onClick={() => onToggleFav(f)}
-                      className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors ${
-                        f.isFavorite
-                          ? 'bg-amber-500/20 border-amber-500/40'
-                          : 'bg-white/6 border-white/10 hover:bg-amber-500/10'
-                      }`}
-                    >
-                      <Star size={16} className={f.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-gray-400'} />
-                    </button>
-                    <button
-                      onClick={() => setExpandedGroupPicker(showPicker ? null : f.id)}
-                      className="w-10 h-10 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors"
-                      title="Grup ata"
-                    >
-                      <Users size={16} className="text-gray-400" />
-                    </button>
-                    <button className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-sm font-bold text-white hover:bg-emerald-400 transition-colors">
-                      Maça Çağır
-                    </button>
-                  </div>
-
-                  {/* Group Picker */}
-                  <AnimatePresence>
-                    {showPicker && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pt-3 flex flex-wrap gap-1.5">
-                          {GROUPS.filter(g => g !== 'Tümü' && g !== 'Favorilerim').map(g => (
-                            <button
-                              key={g}
-                              onClick={() => {
-                                onGroupChange(f, f.myGroup === g ? '' : g);
-                                setExpandedGroupPicker(null);
-                              }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
-                                f.myGroup === g
-                                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                              }`}
-                            >
-                              {g}
-                            </button>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
+// (Eski FriendsTab kaldırıldı — yerine views/social/FriendsPanel; Spec §11 ölüm listesi)
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
@@ -569,8 +294,9 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
 
   const [tab, setTabState] = useState<MainTab>(rememberedMainTab);
   const [teamsSubTab, setTeamsSubTabState] = useState<TeamsSubTab>(rememberedTeamsSubTab);
-  const [friends, setFriends] = useState<FriendshipRow[]>([]);
-  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [friends, setFriends] = useState<FriendRow[]>([]);
+  const [requests, setRequests] = useState<FriendRequestRow[]>([]);
+  const [friendLists, setFriendLists] = useState<FriendList[]>([]);
   const [captainTeams, setCaptainTeams] = useState<any[]>([]);
   const [memberTeams, setMemberTeams] = useState<any[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
@@ -578,9 +304,15 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
   const [showTeamWizard, setShowTeamWizard] = useState(false);
   const [wizardLoading, setWizardLoading] = useState(false);
   const [messagingId, setMessagingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const setSelectedConversationId = useAppStore(s => s.setSelectedConversationId);
   const socialTarget = useAppStore(s => s.socialTarget);
   const setSocialTarget = useAppStore(s => s.setSocialTarget);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2400);
+  }, []);
 
   const setTab = useCallback((t: MainTab) => { rememberedMainTab = t; setTabState(t); }, []);
   const setTeamsSubTab = useCallback((t: TeamsSubTab) => { rememberedTeamsSubTab = t; setTeamsSubTabState(t); }, []);
@@ -596,29 +328,32 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
     setSocialTarget(null);
   }, [socialTarget, setTab, setTeamsSubTab, setSocialTarget]);
 
-  // Load data
+  // Arkadaş verisi — yeni RPC katmanı, tek atış (C4)
+  const loadFriendData = useCallback(async (silent = false) => {
+    if (!userId) { setLoadingFriends(false); return; }
+    if (!silent) setLoadingFriends(true);
+    try {
+      const [f, r, l] = await Promise.all([
+        getFriends(),
+        getFriendRequests(),
+        getFriendLists(),
+      ]);
+      setFriends(f);
+      setRequests(r);
+      setFriendLists(l);
+    } catch (e) {
+      console.error('[SocialView] arkadaşlar yüklenemedi', e);
+    } finally {
+      setLoadingFriends(false);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) {
       setLoadingFriends(false);
       setLoadingTeams(false);
       return;
     }
-
-    const loadFriends = async () => {
-      setLoadingFriends(true);
-      try {
-        const [f, r] = await Promise.all([
-          fetchFriends(userId),
-          fetchPendingRequests(userId),
-        ]);
-        setFriends(f);
-        setRequests(r);
-      } catch (e) {
-        console.error('[SocialView] arkadaşlar yüklenemedi', e);
-      } finally {
-        setLoadingFriends(false);
-      }
-    };
 
     const loadTeams = async () => {
       setLoadingTeams(true);
@@ -633,66 +368,33 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
       }
     };
 
-    loadFriends();
+    loadFriendData();
     loadTeams();
-  }, [userId]);
+  }, [userId, loadFriendData]);
 
-  const handleAccept = useCallback(async (requestId: string) => {
-    try {
-      await acceptFriendRequest(requestId);
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-      // Reload friends list
-      const f = await fetchFriends(userId);
-      setFriends(f);
-    } catch (e) {
-      console.error('[SocialView] istek kabul edilemedi', e);
-    }
-  }, [userId]);
+  // Bildirim-güdümlü tazeleme (F36): friend_* olayı gelince sessizce yeniden çek
+  useEffect(() => {
+    if (!userId) return;
+    const unsub = subscribeSocialEvents(userId, typeKey => {
+      if (typeKey.startsWith('friend_')) void loadFriendData(true);
+    });
+    return unsub;
+  }, [userId, loadFriendData]);
 
-  const handleDecline = useCallback(async (requestId: string) => {
-    try {
-      await removeFriendship(requestId);
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-    } catch (e) {
-      console.error('[SocialView] istek reddedilemedi', e);
-    }
-  }, []);
-
-  const handleToggleFav = useCallback(async (f: FriendshipRow) => {
-    const newVal = !f.isFavorite;
-    setFriends(prev => prev.map(x => x.id === f.id ? { ...x, isFavorite: newVal } : x));
-    try {
-      await toggleFriendFavorite(f.id, userId, f.sender_id, newVal);
-    } catch (e) {
-      // rollback
-      setFriends(prev => prev.map(x => x.id === f.id ? { ...x, isFavorite: f.isFavorite } : x));
-    }
-  }, [userId]);
-
-  const handleGroupChange = useCallback(async (f: FriendshipRow, group: string) => {
-    const newGroup = group || null;
-    setFriends(prev => prev.map(x => x.id === f.id ? { ...x, myGroup: newGroup } : x));
-    try {
-      await updateFriendGroup(f.id, userId, f.sender_id, newGroup);
-    } catch (e) {
-      setFriends(prev => prev.map(x => x.id === f.id ? { ...x, myGroup: f.myGroup } : x));
-    }
-  }, [userId]);
-
-  const handleMessage = useCallback(async (f: FriendshipRow) => {
+  const handleMessage = useCallback(async (friendId: string) => {
     if (messagingId) return;
-    const friendId = f.other_user.id;
-    setMessagingId(f.id);
+    setMessagingId(friendId);
     try {
       const conversationId = await getOrCreateConversation(friendId);
       setSelectedConversationId(conversationId);
       onNavigate('MESSAGES');
     } catch (e: any) {
       console.error('[SocialView] konuşma açılamadı', e?.message || e);
+      showToast('Konuşma açılamadı');
     } finally {
       setMessagingId(null);
     }
-  }, [messagingId, onNavigate, setSelectedConversationId]);
+  }, [messagingId, onNavigate, setSelectedConversationId, showToast]);
 
   const handleTeamWizardComplete = useCallback(async (wizardData: any) => {
     setWizardLoading(true);
@@ -719,13 +421,14 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
     }
   }, []);
 
-  // Wizard için arkadaş listesini uygun formata çevir
+  // Wizard için arkadaş listesini uygun formata çevir (yeni FriendRow şekli)
+  const listNameById = new Map(friendLists.map(l => [l.id, l.name]));
   const wizardFriends = friends.map(f => ({
-    id: f.other_user.id,
-    name: f.other_user.full_name || 'Oyuncu',
-    avatar: f.other_user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.other_user.id}`,
-    group: f.myGroup || 'Diğer',
-    rating: f.other_user.player_card?.fp ?? 0,
+    id: f.friend_id,
+    name: f.full_name || 'Oyuncu',
+    avatar: f.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.friend_id}`,
+    group: f.list_ids.length > 0 ? (listNameById.get(f.list_ids[0]) || 'Diğer') : 'Diğer',
+    rating: f.fp ?? 0,
   }));
 
   const totalTeams = captainTeams.length + memberTeams.length;
@@ -863,23 +566,31 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
             </motion.div>
           ) : (
             <motion.div key="friends" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.18 }}>
-              <FriendsTab
+              <FriendsPanel
                 userId={userId}
                 friends={friends}
                 requests={requests}
+                lists={friendLists}
                 loading={loadingFriends}
-                onAccept={handleAccept}
-                onDecline={handleDecline}
-                onToggleFav={handleToggleFav}
-                onGroupChange={handleGroupChange}
+                onRefresh={() => loadFriendData(true)}
                 onNavigate={onNavigate}
                 onMessage={handleMessage}
                 messagingId={messagingId}
+                onToast={showToast}
               />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      {/* Mini toast */}
+      {toast && (
+        <div className="fixed bottom-24 inset-x-5 z-50 flex justify-center pointer-events-none">
+          <div className="px-4 py-2.5 rounded-2xl bg-[#161B22] border border-white/10 text-sm font-semibold shadow-xl">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
