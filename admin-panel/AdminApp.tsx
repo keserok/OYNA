@@ -148,10 +148,21 @@ const AdminApp: React.FC = () => {
 
   useAdminSessionGuard(!!session, handleSessionExpire);
 
+  // Panel başarıyla açıldı → bayat-parça yenileme sayacını sıfırla ki gelecekteki
+  // bir sürüm geçişinde otomatik yenileme yeniden hakkını kullanabilsin.
+  useEffect(() => {
+    if (session && initialLoadDone && bootPhase === 'ready') {
+      try {
+        sessionStorage.removeItem('oyna_admin_chunk_reload_at');
+        sessionStorage.removeItem('oyna_admin_chunk_reload_n');
+      } catch { /* yok say */ }
+    }
+  }, [session, initialLoadDone, bootPhase]);
+
   const showBootShell = !initialLoadDone || (bootPhase !== 'ready' && !!session);
 
   if (!session && !initialLoadDone) {
-    return <AdminBootShell mode="loading" phase={bootPhase} />;
+    return <AdminBootShell mode="loading" phase={bootPhase} onEscape={handleLogout} />;
   }
 
   if (!session) {
@@ -178,7 +189,7 @@ const AdminApp: React.FC = () => {
   }
 
   if (showBootShell) {
-    return <AdminBootShell mode="loading" phase={bootPhase} />;
+    return <AdminBootShell mode="loading" phase={bootPhase} onEscape={handleLogout} />;
   }
 
   const urlParams = parseAdminUrlParams();

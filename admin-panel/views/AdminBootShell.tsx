@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { AdminBootPhase } from '../services/adminBootstrap';
 
@@ -16,11 +16,22 @@ interface Props {
   phase?: AdminBootPhase;
   message?: string;
   onRetry?: () => void;
+  /** Yükleme uzun sürerse gösterilen kaçış kapısı (ör. çıkış → giriş ekranı). */
+  onEscape?: () => void;
 }
 
-const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onRetry }) => {
+const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onRetry, onEscape }) => {
   const step = PHASE_STEP[phase];
   const allDone = phase === 'ready';
+
+  // Yükleme 12 sn'yi geçerse kullanıcı asla kilitli kalmasın: bir kaçış kapısı sun.
+  const [showEscape, setShowEscape] = useState(false);
+  useEffect(() => {
+    if (mode !== 'loading' || !onEscape) return;
+    setShowEscape(false);
+    const t = setTimeout(() => setShowEscape(true), 12_000);
+    return () => clearTimeout(t);
+  }, [mode, onEscape]);
 
   return (
     <div className="min-h-screen bg-[#050812] flex flex-col items-center justify-center gap-8 p-6 text-white">
@@ -64,6 +75,21 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
               );
             })}
           </ol>
+          {showEscape && onEscape && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">
+                Beklenenden uzun sürüyor
+              </p>
+              <button
+                type="button"
+                onClick={onEscape}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 text-[11px] font-black uppercase tracking-widest hover:bg-white/10 transition-colors"
+              >
+                <RefreshCw size={13} />
+                Giriş ekranına dön
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <>
