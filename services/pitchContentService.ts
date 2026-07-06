@@ -85,24 +85,24 @@ export async function reviewPitchChangeRequest(
   if (error) throw new Error(toTurkishError(error));
 }
 
-/** Owner: vitrinde göster/gizle (doğrulama durumundan bağımsız, Karar #28). */
+/**
+ * Owner: kendi tesisini vitrinde göster/gizle (doğrulama durumundan bağımsız,
+ * Karar #28). RLS `owner_id = auth.uid()` ile kapılıdır; sahibi olmadığın bir
+ * tesiste sessizce 0 satır güncellenirse hata olarak yüzeye çıkar (yanlış başarı
+ * bildirimi olmasın). Admin tarafı bu işlemi denetimli admin_update_pitch RPC'si
+ * üzerinden yapar (adminService.updatePitchAdmin).
+ */
 export async function setPitchPublished(pitchId: string, published: boolean): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('pitches')
     .update({ is_published: published })
-    .eq('id', pitchId);
+    .eq('id', pitchId)
+    .select('id');
   if (error) throw new Error(toTurkishError(error));
+  if (!data || data.length === 0) {
+    throw new Error('Tesis güncellenemedi: yalnız kendi tesisinin vitrin durumunu değiştirebilirsin.');
+  }
   void logAudit(pitchId, 'publish_toggle', { is_published: published });
-}
-
-/** Admin: "Öne Çıkan" bayrağı (Karar #23). */
-export async function setPitchFeatured(pitchId: string, featured: boolean): Promise<void> {
-  const { error } = await supabase
-    .from('pitches')
-    .update({ is_featured: featured })
-    .eq('id', pitchId);
-  if (error) throw new Error(toTurkishError(error));
-  void logAudit(pitchId, 'featured_toggle', { is_featured: featured });
 }
 
 /** Admin: owner'ın beyan ettiği kalite notlarını onaylar (Karar #2). */

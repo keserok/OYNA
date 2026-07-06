@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Bell, MessageSquare, Lock, X } from 'lucide-react';
+import { Bell, MessageSquare, Lock, X, Send } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
 import { PageLoadingSkeleton } from '../components/PageLoadingSkeleton';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
   fetchNotificationTemplates,
   updateNotificationTemplate,
+  sendTemplateTest,
   toTurkishAdminError,
   type NotificationTemplateRow,
 } from '../../services/adminService';
@@ -28,14 +29,21 @@ const CATEGORY_LABELS: Record<string, string> = {
  */
 const PREVIEW_SAMPLES: Record<string, string> = {
   player_name: 'Ahmet Y.',
+  sender_name: 'Ahmet Y.',
+  gk_name: 'Burak K.',
+  ref_name: 'Selim T.',
+  team_name: 'Şimşekler',
+  pitch_name: 'Yeşilçim Halısaha',
+  field_name: 'Yeşilçim Halısaha',
   match_date: 'Cmt 20:00',
   match_time: '20:00',
-  field_name: 'Yeşilçim Halısaha',
-  team_name: 'Şimşekler',
+  match_count: '3',
+  distance: '1.2 km',
+  rating: '4.8',
+  promo_text: 'Bu hafta sonu tüm sahalar %20 indirimli!',
   amount: '120 ₺',
   city: 'Ordu',
   opponent_name: 'Mehmet K.',
-  rating: '4.8',
 };
 
 /**
@@ -71,6 +79,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
   const [templates, setTemplates] = useState<NotificationTemplateRow[]>([]);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +140,18 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
     }
   };
 
+  const sendTest = async (row: NotificationTemplateRow) => {
+    setTesting(row.type_key);
+    try {
+      await sendTemplateTest(row.type_key, PREVIEW_SAMPLES);
+      success(`“${row.label_tr}” test bildirimi hesabına gönderildi — Bildirimler’den görebilirsin`);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setTesting(null);
+    }
+  };
+
   const grouped = templates.reduce<Record<string, NotificationTemplateRow[]>>((acc, r) => {
     const cat = r.category ?? 'GENEL';
     (acc[cat] ||= []).push(r);
@@ -159,6 +180,8 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
               Buradan bildirim <b>METİNLERİNİ</b> değiştirebilirsin; davranış (zorunluluk / ses) kilitlidir.
               Metinlerdeki <code className="text-cyan-200 bg-black/30 px-1 rounded">{'{{degisken}}'}</code> kalıpları
               gönderim sırasında gerçek değerlerle doldurulur — önizlemede örnek değerlerle gösterilir.
+              <b> Test Gönder</b> ile bir şablonu örnek verilerle kendine <b>gerçek bildirim</b> olarak yollayıp
+              sonucu Bildirimler’de görebilirsin.
             </p>
           </div>
 
@@ -206,13 +229,24 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => openEditor(row)}
-                        className="mt-auto self-start px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-bold text-gray-200 transition-colors"
-                      >
-                        Düzenle
-                      </button>
+                      <div className="mt-auto flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditor(row)}
+                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-bold text-gray-200 transition-colors"
+                        >
+                          Düzenle
+                        </button>
+                        <button
+                          type="button"
+                          disabled={testing === row.type_key}
+                          onClick={() => void sendTest(row)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 rounded-lg text-[11px] font-bold text-cyan-300 transition-colors disabled:opacity-40"
+                          title="Bu şablonu örnek verilerle kendine test bildirimi olarak gönder"
+                        >
+                          <Send size={11} /> {testing === row.type_key ? 'Gönderiliyor…' : 'Test Gönder'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

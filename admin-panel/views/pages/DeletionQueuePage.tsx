@@ -5,7 +5,7 @@
  * aktif rezervasyon/ödeme guard'ı ve audit sunucuda zorlanır.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { UserX, RefreshCw, Trash2, Clock, ShieldCheck } from 'lucide-react';
+import { UserX, RefreshCw, Trash2, Clock, ShieldCheck, Undo2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { PageShell } from '../components/PageShell';
 import { StatusBadge } from '../components/StatusBadge';
@@ -13,7 +13,7 @@ import { ActionConfirmModal, type ActionConfirmOptions } from '../components/Act
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
-  fetchDeletionQueue, processAccountDeletion, toTurkishAdminError,
+  fetchDeletionQueue, processAccountDeletion, cancelAccountDeletion, toTurkishAdminError,
   type DeletionQueueRow,
 } from '../../services/adminService';
 
@@ -54,6 +54,33 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
     } finally {
       setBusy(null);
     }
+  };
+
+  const runCancel = async (row: DeletionQueueRow) => {
+    setBusy(row.user_id);
+    try {
+      await cancelAccountDeletion(row.user_id);
+      success('Silme talebi iptal edildi, kullanıcı bilgilendirildi');
+      setConfirm(null);
+      await load();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const askCancel = (row: DeletionQueueRow) => {
+    setConfirm({
+      title: 'Silme Talebini İptal Et',
+      description: `${row.full_name || row.user_id.slice(0, 8)} kullanıcısının hesap silme talebi geri alınacak. Hesap aktif kalmaya devam eder ve kullanıcıya bildirim gider.`,
+      impactText: 'Kullanıcı hesabını korumak istediğini bildirdiyse veya yanlış talep açıldıysa kullanılır.',
+      actionType: 'BAN_USER',
+      targetId: row.user_id,
+      targetName: row.full_name || row.user_id.slice(0, 8),
+      onConfirm: () => void runCancel(row),
+      onCancel: () => setConfirm(null),
+    });
   };
 
   const askDelete = (row: DeletionQueueRow, anonymize: boolean) => {
@@ -116,6 +143,15 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
           <button
             type="button"
             disabled={busy === r.user_id}
+            onClick={() => askCancel(r)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase bg-sky-500/10 text-sky-300 border-sky-500/25 disabled:opacity-40"
+            title="Silme talebini iptal et (hesap korunur)"
+          >
+            <Undo2 size={11} /> İptal Et
+          </button>
+          <button
+            type="button"
+            disabled={busy === r.user_id}
             onClick={() => askDelete(r, true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase bg-amber-500/10 text-amber-300 border-amber-500/25 disabled:opacity-40"
             title="Anonimleştir (istatistik korunur)"
@@ -146,8 +182,11 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
         <RefreshCw size={20} className="text-gray-500 shrink-0" />
         <p className="text-[11px] text-gray-400 leading-relaxed">
           Kullanıcının talebiyle başlayan silme kuyruğu. Bekleme süresi dolan talepler <b>SİLİNEBİLİR</b> olarak
-          işaretlenir. Anonimleştirme kişisel veriyi kaldırıp istatistik bütünlüğünü korur; kalıcı silme kaydı
-          tamamen kaldırır. Aktif rezervasyon/ödeme varsa işlem reddedilir.
+          işaretlenir. <b>Anonimleştirme</b> kişisel veriyi (uygulama <i>ve</i> kimlik doğrulama kaydındaki gerçek
+          e-posta dahil) kaldırıp istatistik bütünlüğünü korur; <b>kalıcı silme</b> kaydı tamamen kaldırır.
+          Aktif rezervasyon/ödeme veya admin hesabıysa işlem reddedilir. <b>İptal Et</b> ile talep geri alınabilir.
+          Sistem Parametreleri’nden <i>“Otomatik Hesap Silme İşleme”</i> açılırsa süresi dolan talepler her gün
+          otomatik anonimleştirilir.
         </p>
       </div>
 

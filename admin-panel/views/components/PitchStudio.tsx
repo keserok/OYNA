@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
+// NOT: vitrin bayrakları (yayında/öne çıkan) denetimli admin_update_pitch RPC'sinden geçer.
 import { getTariffs, saveTariffs, type TariffInput } from '../../../services/pitchOwnerService';
-import { setPitchFeatured, setPitchPublished } from '../../../services/pitchContentService';
 import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
 import PhotoManager from '../../../components/pitch-editor/PhotoManager';
 import ShowcaseScoreCard from '../../../components/pitch-editor/ShowcaseScoreCard';
@@ -327,7 +327,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     const next = !isPublished;
     setIsPublished(next);
     try {
-      await setPitchPublished(id, next);
+      await updatePitchAdmin(id, { is_published: next });
       success(next ? 'Tesis vitrinde görünür.' : 'Tesis vitrinden gizlendi.');
       onSaved();
     } catch (err) {
@@ -341,7 +341,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     const next = !isFeatured;
     setIsFeatured(next);
     try {
-      await setPitchFeatured(id, next);
+      await updatePitchAdmin(id, { is_featured: next });
       success(next ? 'Tesis öne çıkarıldı.' : 'Öne çıkarma kaldırıldı.');
       onSaved();
     } catch (err) {

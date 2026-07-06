@@ -1021,6 +1021,14 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
   if (error) throw new Error(error.message);
 }
 
+/** Silme Kuyruğu — kullanıcının silme talebini iptal eder + kullanıcıyı bilgilendirir. */
+export async function cancelAccountDeletion(userId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_cancel_account_deletion', {
+    p_user_id: userId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export interface DeletionQueueRow {
   user_id: string;
   full_name: string | null;
@@ -1044,15 +1052,29 @@ export async function broadcastNotification(
   title: string,
   body: string,
   segment: BroadcastSegment = 'ALL',
+  templateId?: string | null,
 ): Promise<number> {
   const { data, error } = await supabase.rpc('admin_broadcast_notification', {
     p_title: title,
     p_body: body,
     p_segment: segment,
     p_type: 'ADMIN_BROADCAST',
+    p_template_id: templateId ?? null,
   });
   if (error) throw new Error(error.message);
   return Number(data);
+}
+
+/**
+ * Bildirim şablonunu, örnek değişken değerleriyle admin'in KENDİSİNE gerçek bir
+ * test bildirimi olarak gönderir — şablon düzenleme döngüsünü uçtan uca kapatır.
+ */
+export async function sendTemplateTest(typeKey: string, vars: Record<string, string> = {}): Promise<void> {
+  const { error } = await supabase.rpc('admin_send_template_test', {
+    p_type_key: typeKey,
+    p_vars: vars,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function fetchCommunitiesAdmin(opts?: {

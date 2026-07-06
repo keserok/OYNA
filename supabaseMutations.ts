@@ -317,13 +317,22 @@ const mapFromSnakeCase = (obj: any) => {
 };
 
 export const fbGetGoalkeepers = async () => {
-  const { data, error } = await supabase.from('goalkeepers').select('*');
+  // Pazaryeri yalnız ONAYLI kalecileri listeler. RLS de bunu zorlar; buradaki
+  // filtre, consumer uygulamayı admin olarak gezenlerin de yalnız onaylıları
+  // görmesini garanti eder (admin RLS politikası tümünü döndürebilir).
+  const { data, error } = await supabase
+    .from('goalkeepers')
+    .select('*')
+    .eq('verification_status', 'approved');
   if (error) throw new Error(`Kaleciler yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
 
 export const fbGetReferees = async () => {
-  const { data, error } = await supabase.from('referees').select('*');
+  const { data, error } = await supabase
+    .from('referees')
+    .select('*')
+    .eq('verification_status', 'approved');
   if (error) throw new Error(`Hakemler yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };

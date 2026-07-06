@@ -9,8 +9,7 @@ import { PageShell } from '../components/PageShell';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAdminToast } from '../context/AdminToastContext';
 import { MapPin, Edit2, Trash2, Zap, Star, Eye, EyeOff } from 'lucide-react';
-import { fetchPitchesAdmin, toTurkishAdminError } from '../../services/adminService';
-import { setPitchFeatured, setPitchPublished } from '../../../services/pitchContentService';
+import { fetchPitchesAdmin, updatePitchAdmin, toTurkishAdminError } from '../../services/adminService';
 import { supabase } from '../../../supabaseClient';
 import { mapAdminPitchRowToUi, PITCH_STATUS_FILTERS, type PitchStatusFilter } from '../../utils/pitchMapper';
 import { useAppStore } from '../../../store';
@@ -57,8 +56,10 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
         const next = { ...cur, [kind]: !cur[kind] };
         setShowcaseFlags((prev) => ({ ...prev, [pitchId]: next }));
         try {
-            if (kind === 'published') await setPitchPublished(pitchId, next.published);
-            else await setPitchFeatured(pitchId, next.featured);
+            // Admin vitrin bayrakları denetimli admin_update_pitch RPC'sinden geçer
+            // (is_platform_admin + audit + satır doğrulaması); doğrudan tablo yazımı değil.
+            if (kind === 'published') await updatePitchAdmin(pitchId, { is_published: next.published });
+            else await updatePitchAdmin(pitchId, { is_featured: next.featured });
             success(kind === 'published'
                 ? (next.published ? 'Tesis vitrinde görünür' : 'Tesis vitrinden gizlendi')
                 : (next.featured ? 'Öne çıkarıldı' : 'Öne çıkarma kaldırıldı'));

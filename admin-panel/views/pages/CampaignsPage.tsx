@@ -4,13 +4,18 @@ import {
   fetchSegmentPreview,
   fetchAppConfig,
   fetchBroadcastCampaigns,
+  fetchNotificationTemplates,
   toTurkishAdminError,
   type BroadcastSegment,
   type BroadcastCampaignRow,
+  type NotificationTemplateRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { useAdminToast } from '../context/AdminToastContext';
-import { Megaphone, Send, Users, History, Smartphone, FlaskConical } from 'lucide-react';
+import { Megaphone, Send, Users, History, Smartphone, FlaskConical, FileText } from 'lucide-react';
+
+/** Doldurulmamış {{degisken}} kalıbı kaldı mı? (Toplu gönderimde kişiye özel ikame yapılamaz.) */
+const hasUnfilledPlaceholder = (text: string): boolean => /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(text);
 
 const SEGMENTS = [
   { id: 'ALL', label: 'Tüm Kullanıcılar' },
@@ -31,6 +36,7 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
   const [previewLoading, setPreviewLoading] = useState(false);
   const [pushLive, setPushLive] = useState<boolean | null>(null);
   const [history, setHistory] = useState<BroadcastCampaignRow[]>([]);
+  const [templates, setTemplates] = useState<NotificationTemplateRow[]>([]);
   const { success, error: toastError } = useAdminToast();
 
   const loadCount = useCallback(async (seg: BroadcastSegment) => {
@@ -62,18 +68,38 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
     }
   }, []);
 
+  const loadTemplates = useCallback(async () => {
+    try {
+      setTemplates(await fetchNotificationTemplates());
+    } catch {
+      /* şablon yoksa sessiz geç */
+    }
+  }, []);
+
+  const applyTemplate = (id: string) => {
+    const t = templates.find((r) => r.id === id);
+    if (!t) return;
+    setTitle(t.title_tr);
+    setBody(t.body_tr);
+  };
+
   useEffect(() => { void loadCount(segment); }, [segment, loadCount]);
-  useEffect(() => { void loadHistory(); void loadPushStatus(); }, [loadHistory, loadPushStatus]);
+  useEffect(() => { void loadHistory(); void loadPushStatus(); void loadTemplates(); }, [loadHistory, loadPushStatus, loadTemplates]);
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) {
       toastError('Başlık ve mesaj gerekli.');
       return;
     }
+    // Toplu gönderimde kişiye özel değişken ikamesi yapılamaz; kalıp kaldıysa engelle.
+    if (hasUnfilledPlaceholder(title) || hasUnfilledPlaceholder(body)) {
+      toastError('Mesajda doldurulmamış {{…}} alanı var. Toplu gönderimde değişkenler kişiye göre doldurulamaz — lütfen gerçek metinle değiştir.');
+      return;
+    }
     setSending(true);
     try {
       const sent = await broadcastNotification(title.trim(), body.trim(), segment);
-      success(`${sent} kullanıcıya bildirim gönderildi${pushLive ? '' : ' (simülasyon: uygulama içi)'}`);
+      success(`${sent} kullanıcıya bildirim gönderildi${pushLive ? ' (uygulama içi + push)' : ' (uygulama içi)'}`);
       setTitle('');
       setBody('');
       void loadCount(segment);
@@ -134,6 +160,26 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
               </span>
             )}
           </div>
+          {templates.length > 0 && (
+            <div>
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                <FileText size={11} /> Şablondan doldur (opsiyonel)
+              </label>
+              <select
+                defaultValue=""
+                onChange={(e) => { if (e.target.value) applyTemplate(e.target.value); e.target.value = ''; }}
+                className="w-full mt-1.5 h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-pink-500/40"
+              >
+                <option value="">Bir şablon seç ve metni doldur…</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label_tr}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-500 mt-1">
+                Şablon metni başlık/mesaja kopyalanır; toplu gönderim için {'{{…}}'} alanlarını gerçek metinle değiştir.
+              </p>
+            </div>
+          )}
           <div>
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Başlık</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full mt-1.5 h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-pink-500/40" />
@@ -172,8 +218,11 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
                   className={`shrink-0 text-[9px] font-black px-2 py-1 rounded-md ${
                     c.is_simulation ? 'text-amber-400 bg-amber-500/10' : 'text-green-400 bg-green-500/10'
                   }`}
+                  title={c.is_simulation
+                    ? 'Uygulama içi bildirim oluşturuldu; telefonlara push gönderilmedi (push kapalıydı).'
+                    : 'Uygulama içi bildirim + telefonlara push (push açıktı).'}
                 >
-                  {c.is_simulation ? 'SİMÜLASYON' : 'GERÇEK'}
+                  {c.is_simulation ? 'UYGULAMA İÇİ' : 'PUSH + UYGULAMA'}
                 </span>
               </div>
             ))}
