@@ -467,9 +467,15 @@ const IstatistikTab: React.FC<{ stats: TeamStats; team: Team; loading: boolean }
 // ─── Main Component ───────────────────────────────────────────────────────────
 const TeamPanelView: React.FC<TeamPanelViewProps> = ({ onBack, onNavigate }) => {
   const myTeams = useAppStore(s => s.myTeams);
+  const selectedTeamId = useAppStore(s => s.selectedTeamId);
   const userId = auth.currentUser?.uid || '';
   const [activeTeamIdx, setActiveTeamIdx] = useState(0);
-  const team = myTeams[activeTeamIdx] ?? null;
+  // Açık kimlik ilkesi (A4/G42): Sosyal'den gelen selectedTeamId önceliklidir;
+  // yoksa eski davranış (ilk takım) korunur. "Index-0" hatası kapanır.
+  const selectedIdx = selectedTeamId
+    ? myTeams.findIndex(t => t.id === selectedTeamId)
+    : -1;
+  const team = (selectedIdx >= 0 ? myTeams[selectedIdx] : myTeams[activeTeamIdx]) ?? null;
 
   const [tab, setTab] = useState<PanelTab>('KADRO');
   const [matchHistory, setMatchHistory] = useState<TeamMatchRow[]>([]);
