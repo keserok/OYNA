@@ -150,6 +150,12 @@ interface AppState {
   // Takım Detayı hangi takımı gösterecek ("listedeki ilk takım" varsayımı yasak):
   selectedTeamId: string | null;
   setSelectedTeamId: (id: string | null) => void;
+  // Takım Detayı açılış sekmesi (derin bağlantı: team/{id}/members → KADRO)
+  teamInitialTab: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null;
+  setTeamInitialTab: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
+  // Birleşik gelen kutusu: açılışta odaklanacak takım sohbeti (team/{id}/chat)
+  selectedTeamChatId: string | null;
+  setSelectedTeamChatId: (id: string | null) => void;
   // Stüdyo'ya takım/taktik bağlamı (activeStudioTeam'in halefi; M80):
   studioContext: { teamId?: string; tacticId?: string } | null;
   setStudioContext: (c: { teamId?: string; tacticId?: string } | null) => void;
@@ -661,6 +667,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSocialTarget: (t) => set({ socialTarget: t }),
   selectedTeamId: null,
   setSelectedTeamId: (id) => set({ selectedTeamId: id }),
+  teamInitialTab: null,
+  setTeamInitialTab: (t) => set({ teamInitialTab: t }),
+  selectedTeamChatId: null,
+  setSelectedTeamChatId: (id) => set({ selectedTeamChatId: id }),
   studioContext: null,
   setStudioContext: (c) => set({ studioContext: c }),
   setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),

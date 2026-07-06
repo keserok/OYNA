@@ -174,6 +174,20 @@ export const getTacticById = async (tacticId: string): Promise<Record<string, an
   return data as Record<string, any> | null;
 };
 
+/** Taktik paylaşım linkini aç/yenile/kapat (yalnız yazar — N92).
+    enabled=true her çağrıda YENİ token üretir. → oyna.app/t/{token} */
+export const setTacticShareLink = async (
+  tacticId: string, enabled: boolean,
+): Promise<string | null> => {
+  const { data, error } = await supabase.rpc('set_tactic_share_link', {
+    p_tactic_id: tacticId, p_enabled: enabled,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Paylaşım linki ayarlanamadı.');
+  return (data as { share_token: string | null }).share_token;
+};
+
+export const tacticShareUrl = (token: string): string => `https://oyna.app/t/${token}`;
+
 // ─── Maça taktik atama (L76) ────────────────────────────────────────
 
 /** Maça onaylı takım taktiği ata (yalnız yönetici; maç başına tek plan). */

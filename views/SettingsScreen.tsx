@@ -321,6 +321,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const categoryLabels: Record<string, { label: string; icon: React.ReactNode }> = {
     MATCH:    { label: 'Maç Bildirimleri', icon: <span>⚽</span> },
     TEAM:     { label: 'Takım Bildirimleri', icon: <span>🛡️</span> },
+    SOCIAL:   { label: 'Sosyal', icon: <span>👥</span> },
     REMINDER: { label: 'Hatırlatıcılar', icon: <span>⏰</span> },
     DISCOVERY:{ label: 'Keşif', icon: <span>📍</span> },
     PROMO:    { label: 'Kampanyalar', icon: <span>🎁</span> },

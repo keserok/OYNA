@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Send, MoreVertical, Ban, Flag, Loader2,
-  MessageCircle, Check, CheckCheck,
+  MessageCircle, Check, CheckCheck, BellOff, Bell, Shield, ClipboardList, ChevronRight,
 } from 'lucide-react';
 import { auth } from '../supabaseAuth';
 import {
@@ -10,13 +10,29 @@ import {
   blockUser, subscribeToConversation,
   ConversationSummary, Message,
 } from '../services/messageService';
+import {
+  getTeamChatOverview, getTeamMessages, sendTeamMessage, markTeamChatRead,
+  setTeamChatMuted, subscribeTeamChat, parseTacticMessage,
+  TeamChatOverviewRow, TeamMessage,
+} from '../services/teamChatService';
+import { supabase } from '../supabaseClient';
+import { useAppStore } from '../store';
+import TeamCrest from '../components/social/TeamCrest';
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// ================================================================
+// MessagesView — BİRLEŞİK gelen kutusu (Spec §3.10 / N90):
+// 1:1 sohbetler + takım sohbetleri tek listede, son etkinliğe göre.
+// DM makinesi aynen korunur; takım sohbeti ayrı tablo/servis.
+// Rozet: konuşma okunmamışları (bildirim kutusuna yazılmaz — N93).
+// ================================================================
+
 interface MessagesViewProps {
   /** Geriye gitme (BottomNav / üst seviye). */
   onBack: () => void;
-  /** SocialView'den gelen başlangıç konuşması — varsa direkt o sohbeti aç. */
+  /** SocialView'den gelen başlangıç DM'i — varsa direkt o sohbeti aç. */
   initialConversationId?: string | null;
+  /** Takım Detayı / derin bağlantıdan gelen takım sohbeti hedefi. */
+  initialTeamChatId?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -57,19 +73,54 @@ const Avatar: React.FC<{ name: string | null; url: string | null; size?: number 
   );
 };
 
-// ─── Konuşma Listesi ─────────────────────────────────────────────────────────
-const ConversationList: React.FC<{
-  conversations: ConversationSummary[];
+// Sohbette taktik kartı — "[taktik:ID] Ad · Diziliş" gövdesi zengin çizilir
+const TacticCard: React.FC<{ tacticId: string; label: string; mine: boolean }> = ({
+  tacticId, label, mine,
+}) => {
+  const openStudio = () => {
+    const s = useAppStore.getState();
+    s.setStudioContext({ tacticId });
+    s.navigateTo('STUDIO');
+  };
+  return (
+    <button
+      onClick={openStudio}
+      className={`w-full text-left rounded-2xl border p-3 flex items-center gap-2.5 active:scale-[0.98] ${
+        mine ? 'bg-emerald-600/60 border-white/20' : 'bg-white/6 border-white/12'
+      }`}
+    >
+      <span className="w-9 h-9 rounded-xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center shrink-0">
+        <ClipboardList size={16} className="text-[#39FF14]" />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[10px] font-black uppercase tracking-widest text-white/50">Taktik</span>
+        <span className="block text-sm font-bold text-white truncate">{label}</span>
+      </span>
+      <span className="text-[10px] font-black text-[#39FF14] shrink-0 flex items-center">
+        Stüdyo'da Aç <ChevronRight size={12} />
+      </span>
+    </button>
+  );
+};
+
+// ─── Birleşik liste satır modeli ────────────────────────────────────────────
+type InboxItem =
+  | { kind: 'DM'; at: string | null; dm: ConversationSummary }
+  | { kind: 'TEAM'; at: string | null; team: TeamChatOverviewRow };
+
+// ─── Konuşma Listesi (birleşik) ─────────────────────────────────────────────
+const InboxList: React.FC<{
+  items: InboxItem[];
   loading: boolean;
-  onSelect: (c: ConversationSummary) => void;
-}> = ({ conversations, loading, onSelect }) => {
+  onSelect: (item: InboxItem) => void;
+}> = ({ items, loading, onSelect }) => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="animate-spin text-emerald-400" size={28} />
     </div>
   );
 
-  if (conversations.length === 0) return (
+  if (items.length === 0) return (
     <div className="text-center py-16">
       <MessageCircle size={40} className="mx-auto mb-3 text-gray-700" />
       <p className="text-sm text-gray-500">Henüz mesajın yok</p>
@@ -78,30 +129,79 @@ const ConversationList: React.FC<{
 
   return (
     <div className="space-y-2 pb-6">
-      {conversations.map((c, i) => {
-        const name = c.otherName || c.otherOynaId || 'Oyuncu';
+      {items.map((item, i) => {
+        if (item.kind === 'DM') {
+          const c = item.dm;
+          const name = c.otherName || c.otherOynaId || 'Oyuncu';
+          return (
+            <motion.button
+              key={`dm-${c.id}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i, 8) * 0.03 }}
+              onClick={() => onSelect(item)}
+              className="w-full text-left bg-white/4 border border-white/8 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-white/8 transition-colors"
+            >
+              <Avatar name={name} url={c.otherAvatar} size={50} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-white truncate">{name}</span>
+                  <span className="text-[10px] text-gray-500 flex-shrink-0">{timeAgo(c.lastMessageAt)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <span className={`text-xs truncate ${c.unreadCount > 0 ? 'text-gray-200 font-semibold' : 'text-gray-500'}`}>
+                    {c.lastMessagePreview || 'Konuşmaya başla'}
+                  </span>
+                  {c.unreadCount > 0 && (
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
+                      {c.unreadCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </motion.button>
+          );
+        }
+
+        const t = item.team;
+        const preview = t.last_body
+          ? `${t.last_sender ? `${t.last_sender}: ` : ''}${parseTacticMessage(t.last_body) ? '📋 Taktik paylaşıldı' : t.last_body}`
+          : 'Takım sohbetine başla';
         return (
           <motion.button
-            key={c.id}
+            key={`team-${t.team_id}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-            onClick={() => onSelect(c)}
-            className="w-full text-left bg-white/4 border border-white/8 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-white/8 transition-colors"
+            transition={{ delay: Math.min(i, 8) * 0.03 }}
+            onClick={() => onSelect(item)}
+            className="w-full text-left bg-white/4 border border-white/8 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-white/8 transition-colors relative overflow-hidden"
           >
-            <Avatar name={name} url={c.otherAvatar} size={50} />
+            {/* Takım-rengi kimlik şeridi */}
+            <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: t.color1 || '#39FF14' }} />
+            <div
+              className="w-[50px] h-[50px] rounded-2xl flex items-center justify-center border border-white/8 flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${t.color1 || '#39FF14'}22, transparent)` }}
+            >
+              <TeamCrest config={t.crest_config} color1={t.color1} color2={t.color2} size={36} />
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-white truncate">{name}</span>
-                <span className="text-[10px] text-gray-500 flex-shrink-0">{timeAgo(c.lastMessageAt)}</span>
+                <span className="font-bold text-white truncate flex items-center gap-1.5">
+                  <Shield size={12} className="text-white/35 shrink-0" />
+                  {t.team_name}
+                  {t.muted && <BellOff size={11} className="text-gray-500 shrink-0" />}
+                </span>
+                <span className="text-[10px] text-gray-500 flex-shrink-0">{timeAgo(t.last_at)}</span>
               </div>
               <div className="flex items-center justify-between gap-2 mt-0.5">
-                <span className={`text-xs truncate ${c.unreadCount > 0 ? 'text-gray-200 font-semibold' : 'text-gray-500'}`}>
-                  {c.lastMessagePreview || 'Konuşmaya başla'}
+                <span className={`text-xs truncate ${t.unread_count > 0 && !t.muted ? 'text-gray-200 font-semibold' : 'text-gray-500'}`}>
+                  {preview}
                 </span>
-                {c.unreadCount > 0 && (
-                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
-                    {c.unreadCount}
+                {t.unread_count > 0 && (
+                  <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
+                    t.muted ? 'bg-white/10 text-gray-400' : 'bg-emerald-500 text-white'
+                  }`}>
+                    {t.unread_count}
                   </span>
                 )}
               </div>
@@ -113,7 +213,7 @@ const ConversationList: React.FC<{
   );
 };
 
-// ─── Sohbet Görünümü ─────────────────────────────────────────────────────────
+// ─── 1:1 Sohbet Görünümü (mevcut makine — dokunulmadı) ──────────────────────
 const ChatView: React.FC<{
   conversation: ConversationSummary;
   myUid: string;
@@ -139,14 +239,12 @@ const ChatView: React.FC<{
     });
   }, []);
 
-  // Yeni mesajı (id tekilliği koruyarak) listeye ekle.
   const pushMessage = useCallback((m: Message) => {
     if (seenIdsRef.current.has(m.id)) return;
     seenIdsRef.current.add(m.id);
     setMessages(prev => [...prev, m]);
   }, []);
 
-  // İlk yükleme: geçmiş + okundu işaretle
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -168,12 +266,10 @@ const ChatView: React.FC<{
     return () => { active = false; };
   }, [conversation.id, scrollToBottom]);
 
-  // Realtime abonelik — gelen mesajları canlı ekle; unmount'ta temizle.
   useEffect(() => {
     const unsubscribe = subscribeToConversation(conversation.id, (m) => {
       pushMessage(m);
       scrollToBottom(true);
-      // Karşıdan gelen mesajı görünür haldeyken anında okundu işaretle.
       if (m.senderId !== myUid) {
         markConversationRead(conversation.id);
       }
@@ -181,7 +277,6 @@ const ChatView: React.FC<{
     return () => unsubscribe();
   }, [conversation.id, myUid, pushMessage, scrollToBottom]);
 
-  // Görünür olduğunda (sekmeye geri dönüş) tekrar okundu işaretle.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
@@ -222,7 +317,6 @@ const ChatView: React.FC<{
 
   const handleReport = useCallback(() => {
     setMenuOpen(false);
-    // Şikayet → admin notu (hafif): mevcut altyapı yoksa kullanıcıya bilgi ver.
     setActionInfo('Şikayetin alındı, ekibimiz inceleyecek.');
   }, []);
 
@@ -250,7 +344,6 @@ const ChatView: React.FC<{
           <MoreVertical size={18} className="text-gray-300" />
         </button>
 
-        {/* "..." Menü */}
         <AnimatePresence>
           {menuOpen && (
             <>
@@ -376,70 +469,363 @@ const ChatView: React.FC<{
   );
 };
 
+// ─── Takım Sohbeti Görünümü (Küme 4 — grup stili) ───────────────────────────
+const TeamChatView: React.FC<{
+  team: TeamChatOverviewRow;
+  myUid: string;
+  onBack: () => void;
+}> = ({ team, myUid, onBack }) => {
+  const [messages, setMessages] = useState<TeamMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [muted, setMuted] = useState(team.muted);
+  const [error, setError] = useState<string | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  // Gönderen ad/avatar önbelleği — realtime payload profil taşımaz
+  const senderCacheRef = useRef<Map<string, { name: string; avatar: string | null }>>(new Map());
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    });
+  }, []);
+
+  const pushMessage = useCallback((m: TeamMessage) => {
+    if (seenIdsRef.current.has(m.id)) return;
+    seenIdsRef.current.add(m.id);
+    setMessages(prev => [...prev, m]);
+  }, []);
+
+  // İlk yükleme: geçmiş + okundu
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    seenIdsRef.current = new Set();
+    (async () => {
+      try {
+        const history = await getTeamMessages(team.team_id);
+        if (!active) return;
+        history.forEach(m => {
+          seenIdsRef.current.add(m.id);
+          senderCacheRef.current.set(m.senderId, { name: m.senderName, avatar: m.senderAvatar });
+        });
+        setMessages(history);
+        scrollToBottom();
+        await markTeamChatRead(team.team_id);
+      } catch (e: any) {
+        if (active) setError(e?.message || 'Mesajlar yüklenemedi.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [team.team_id, scrollToBottom]);
+
+  // Realtime — gönderen bilinmiyorsa profili bir kez çek
+  useEffect(() => {
+    const unsubscribe = subscribeTeamChat(team.team_id, async (raw) => {
+      let sender = senderCacheRef.current.get(raw.senderId);
+      if (!sender) {
+        const { data } = await supabase
+          .from('profiles').select('full_name, avatar_url').eq('id', raw.senderId).maybeSingle();
+        sender = { name: data?.full_name || 'Oyuncu', avatar: data?.avatar_url ?? null };
+        senderCacheRef.current.set(raw.senderId, sender);
+      }
+      pushMessage({ ...raw, senderName: sender.name, senderAvatar: sender.avatar });
+      scrollToBottom(true);
+      if (raw.senderId !== myUid) markTeamChatRead(team.team_id);
+    });
+    return () => unsubscribe();
+  }, [team.team_id, myUid, pushMessage, scrollToBottom]);
+
+  const handleSend = useCallback(async () => {
+    const body = draft.trim();
+    if (!body || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      const msg = await sendTeamMessage(team.team_id, body);
+      const me = senderCacheRef.current.get(myUid);
+      pushMessage({ ...msg, senderName: me?.name || 'Sen', senderAvatar: me?.avatar ?? null });
+      setDraft('');
+      scrollToBottom(true);
+    } catch (e: any) {
+      setError(e?.message || 'Mesaj gönderilemedi.');
+    } finally {
+      setSending(false);
+    }
+  }, [draft, sending, team.team_id, myUid, pushMessage, scrollToBottom]);
+
+  const toggleMute = useCallback(async () => {
+    setMenuOpen(false);
+    try {
+      await setTeamChatMuted(team.team_id, !muted);
+      setMuted(m => !m);
+    } catch (e: any) {
+      setError(e?.message || 'Ayar kaydedilemedi.');
+    }
+  }, [team.team_id, muted]);
+
+  const goToTeam = useCallback(() => {
+    const s = useAppStore.getState();
+    s.setSelectedTeamId(team.team_id);
+    s.navigateTo('MY_TEAM');
+  }, [team.team_id]);
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* ── Başlık — takım kimliği ── */}
+      <div className="flex-shrink-0 px-4 py-3 border-b border-white/8 flex items-center gap-3 relative bg-[#070B10]/80 backdrop-blur-xl">
+        <button
+          onClick={onBack}
+          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+        >
+          <ArrowLeft size={18} className="text-gray-300" />
+        </button>
+        <button onClick={goToTeam} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/8 flex-shrink-0"
+            style={{ background: `linear-gradient(135deg, ${team.color1 || '#39FF14'}22, transparent)` }}
+          >
+            <TeamCrest config={team.crest_config} color1={team.color1} color2={team.color2} size={30} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-white truncate flex items-center gap-1.5">
+              {team.team_name}
+              {muted && <BellOff size={12} className="text-gray-500" />}
+            </div>
+            <div className="text-[11px] text-gray-500 truncate">Takım sohbeti · Takıma git ›</div>
+          </div>
+        </button>
+        <button
+          onClick={() => setMenuOpen(v => !v)}
+          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+        >
+          <MoreVertical size={18} className="text-gray-300" />
+        </button>
+
+        <AnimatePresence>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                className="absolute right-4 top-14 z-20 w-52 bg-[#0D1117] border border-white/12 rounded-2xl overflow-hidden shadow-xl"
+              >
+                <button
+                  onClick={toggleMute}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-gray-200 hover:bg-white/8 transition-colors"
+                >
+                  {muted ? <Bell size={16} className="text-[#39FF14]" /> : <BellOff size={16} className="text-amber-400" />}
+                  {muted ? 'Sesi Aç' : 'Sessize Al'}
+                </button>
+                <div className="h-px bg-white/8" />
+                <button
+                  onClick={goToTeam}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-gray-200 hover:bg-white/8 transition-colors"
+                >
+                  <Shield size={16} className="text-white/50" />
+                  Takım Detayı
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Mesaj Akışı — grup stili (gönderen adı + avatar) ── */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="animate-spin text-emerald-400" size={24} />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-16 text-gray-500 text-sm">
+            Takım sohbetine ilk mesajı sen yaz. ⚽
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {messages.map((m, i) => {
+              const mine = m.senderId === myUid;
+              const prev = messages[i - 1];
+              const showHeader = !mine && (!prev || prev.senderId !== m.senderId);
+              const tactic = parseTacticMessage(m.body);
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
+                >
+                  {!mine && (
+                    showHeader
+                      ? <Avatar name={m.senderName} url={m.senderAvatar} size={28} />
+                      : <span className="w-7 flex-shrink-0" />
+                  )}
+                  <div className={`max-w-[78%] ${tactic ? 'w-[78%]' : ''}`}>
+                    {showHeader && (
+                      <div className="text-[10px] font-bold text-white/45 mb-0.5 ml-1">{m.senderName}</div>
+                    )}
+                    {tactic ? (
+                      <TacticCard tacticId={tactic.tacticId} label={tactic.label} mine={mine} />
+                    ) : (
+                      <div
+                        className={`px-3.5 py-2.5 rounded-2xl ${
+                          mine
+                            ? 'bg-emerald-500 text-white rounded-br-md'
+                            : 'bg-white/8 text-gray-100 border border-white/10 rounded-bl-md'
+                        }`}
+                      >
+                        <p className="text-sm leading-snug whitespace-pre-wrap break-words">{m.body}</p>
+                        <div className={`mt-1 ${mine ? 'text-right' : 'text-left'}`}>
+                          <span className={`text-[10px] ${mine ? 'text-emerald-100/80' : 'text-gray-500'}`}>
+                            {clockTime(m.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Hata ── */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="mx-4 mb-2 px-3.5 py-2 rounded-xl text-xs font-semibold border bg-red-500/10 border-red-500/30 text-red-300"
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mesaj Girişi ── */}
+      <div className="flex-shrink-0 px-4 py-3 border-t border-white/8 flex items-end gap-2 bg-[#070B10]/80 backdrop-blur-xl pb-safe">
+        <textarea
+          value={draft}
+          onChange={e => { setDraft(e.target.value); if (error) setError(null); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          rows={1}
+          placeholder={`${team.team_name} sohbetine yaz...`}
+          className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50"
+        />
+        <button
+          onClick={handleSend}
+          disabled={sending || !draft.trim()}
+          className="w-11 h-11 rounded-2xl bg-emerald-500 flex items-center justify-center hover:bg-emerald-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+        >
+          {sending
+            ? <Loader2 size={18} className="text-white animate-spin" />
+            : <Send size={18} className="text-white" />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
-const MessagesView: React.FC<MessagesViewProps> = ({ onBack, initialConversationId }) => {
+type ActiveChat =
+  | { kind: 'DM'; dm: ConversationSummary }
+  | { kind: 'TEAM'; team: TeamChatOverviewRow }
+  | null;
+
+const MessagesView: React.FC<MessagesViewProps> = ({
+  onBack, initialConversationId, initialTeamChatId,
+}) => {
   const myUid = auth.currentUser?.uid || '';
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [teamChats, setTeamChats] = useState<TeamChatOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState<ConversationSummary | null>(null);
+  const [active, setActive] = useState<ActiveChat>(null);
   const [listError, setListError] = useState<string | null>(null);
 
-  const loadConversations = useCallback(async (): Promise<ConversationSummary[]> => {
+  const loadInbox = useCallback(async (): Promise<{
+    dms: ConversationSummary[]; teams: TeamChatOverviewRow[];
+  }> => {
     setLoading(true);
     setListError(null);
     try {
-      const list = await getMyConversations();
-      setConversations(list);
-      return list;
+      const [dms, teams] = await Promise.all([getMyConversations(), getTeamChatOverview()]);
+      setConversations(dms);
+      setTeamChats(teams);
+      return { dms, teams };
     } catch (e: any) {
       setListError(e?.message || 'Konuşmalar yüklenemedi.');
-      return [];
+      return { dms: [], teams: [] };
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // İlk yükleme + başlangıç konuşmasını otomatik aç.
+  // İlk yükleme + başlangıç hedefini otomatik aç (DM veya takım sohbeti).
   useEffect(() => {
-    let active = true;
+    let alive = true;
     (async () => {
-      const list = await loadConversations();
-      if (!active) return;
-      if (initialConversationId) {
-        const found = list.find(c => c.id === initialConversationId);
-        if (found) {
-          setActive(found);
-        } else {
-          // Liste henüz bu konuşmayı içermiyorsa minimal bir kabuk ile aç.
-          setActive({
+      const { dms, teams } = await loadInbox();
+      if (!alive) return;
+      if (initialTeamChatId) {
+        const t = teams.find(x => x.team_id === initialTeamChatId);
+        if (t) setActive({ kind: 'TEAM', team: t });
+      } else if (initialConversationId) {
+        const found = dms.find(c => c.id === initialConversationId);
+        setActive({
+          kind: 'DM',
+          dm: found ?? {
             id: initialConversationId,
-            lastMessageAt: null,
-            lastMessagePreview: null,
-            otherId: '',
-            otherName: null,
-            otherAvatar: null,
-            otherOynaId: null,
+            lastMessageAt: null, lastMessagePreview: null,
+            otherId: '', otherName: null, otherAvatar: null, otherOynaId: null,
             unreadCount: 0,
-          });
-        }
+          },
+        });
       }
     })();
-    return () => { active = false; };
-    // initialConversationId yalnız mount'ta değerlendirilir.
+    return () => { alive = false; };
+    // Başlangıç hedefleri yalnız mount'ta değerlendirilir.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sohbetten listeye dönerken sayaçları tazele.
+  // Birleşik liste — son etkinliğe göre (Spec §3.10)
+  const items = useMemo<InboxItem[]>(() => {
+    const rows: InboxItem[] = [
+      ...conversations.map(c => ({ kind: 'DM' as const, at: c.lastMessageAt, dm: c })),
+      ...teamChats.map(t => ({ kind: 'TEAM' as const, at: t.last_at, team: t })),
+    ];
+    return rows.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  }, [conversations, teamChats]);
+
   const handleBackToList = useCallback(() => {
     setActive(null);
-    loadConversations();
-  }, [loadConversations]);
+    loadInbox();
+  }, [loadInbox]);
 
   if (active) {
     return (
       <div className="h-screen bg-[#070B10] text-white flex flex-col font-sans pt-safe">
-        <ChatView conversation={active} myUid={myUid} onBack={handleBackToList} />
+        {active.kind === 'DM' ? (
+          <ChatView conversation={active.dm} myUid={myUid} onBack={handleBackToList} />
+        ) : (
+          <TeamChatView team={active.team} myUid={myUid} onBack={handleBackToList} />
+        )}
       </div>
     );
   }
@@ -466,11 +852,9 @@ const MessagesView: React.FC<MessagesViewProps> = ({ onBack, initialConversation
             {listError}
           </div>
         )}
-        <ConversationList
-          conversations={conversations}
-          loading={loading}
-          onSelect={setActive}
-        />
+        <InboxList items={items} loading={loading} onSelect={item => {
+          setActive(item.kind === 'DM' ? { kind: 'DM', dm: item.dm } : { kind: 'TEAM', team: item.team });
+        }} />
       </div>
     </div>
   );

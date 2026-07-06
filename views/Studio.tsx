@@ -20,7 +20,9 @@ import {
 } from '../services/teamSocialService';
 import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
+    setTacticShareLink, tacticShareUrl,
 } from '../services/tacticSocialService';
+import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
 
 // Paylaşılan tipler ve sabitler (SSOT)
 import type {
@@ -2750,37 +2752,77 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         </div>
                                     )}
 
+                                    {/* Dürüst veri: uydurma yaş/reyting satırı öldü (Spec §11) */}
                                     <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[9px] text-gray-500 font-mono uppercase tracking-widest">
-                                        <span>Ortalama Yaş: 26</span>
-                                        <span>Takım Reytingi: 4.8</span>
+                                        <span>{activeTactic.formation} · {formatLabel(activeTactic.size)}</span>
                                         <span className="text-[#39FF14]">Powered by OYNA</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="w-full max-w-sm mt-8 space-y-3">
-                                <button 
+                                {/* Paylaşım GERÇEK link üretir (N92): salt-okunur oyna.app/t/{token}.
+                                    Kayıtsız taslak paylaşılamaz — dürüst kural. */}
+                                <button
                                     onClick={async () => {
-                                        if (navigator.share) {
-                                            try {
+                                        const savedId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
+                                            ? activeTactic.id : null;
+                                        if (!savedId) {
+                                            showToast('Önce taktiği kaydet — linki kayıtlı taktik taşır.', 'error');
+                                            return;
+                                        }
+                                        try {
+                                            const token = await setTacticShareLink(savedId, true);
+                                            if (!token) throw new Error('Link üretilemedi.');
+                                            const url = tacticShareUrl(token);
+                                            if (navigator.share) {
                                                 await navigator.share({
-                                                    title: 'Oyna Taktik Tahtası',
-                                                    text: `${activeTactic.formation} Dizilişli Taktik Tahtam`,
-                                                    url: window.location.href,
+                                                    title: `${activeTactic.name} — OYNA Taktik`,
+                                                    text: `${activeTactic.formation} dizilişli taktiğim: ${activeTactic.name}`,
+                                                    url,
                                                 });
-                                            } catch (error) {
-                                                console.error('Error sharing:', error);
+                                            } else {
+                                                await navigator.clipboard.writeText(url);
+                                                showToast('Paylaşım linki kopyalandı!');
                                             }
-                                        } else {
-                                            showToast('Paylaşım özelliği bu tarayıcıda desteklenmiyor.', 'error');
+                                        } catch (e) {
+                                            if ((e as Error)?.name !== 'AbortError') {
+                                                showToast((e as Error)?.message || 'Paylaşılamadı.', 'error');
+                                            }
                                         }
                                     }}
                                     className="w-full py-5 bg-[#39FF14] text-black font-black rounded-[24px] text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(57,255,20,0.3)] flex items-center justify-center gap-3"
                                 >
-                                    <Share2 size={20} /> TAKTİĞİ PAYLAŞ
+                                    <Share2 size={20} /> LİNKLE PAYLAŞ
                                 </button>
-                                
-                                <button 
+
+                                {/* Takım sohbetine zengin kart olarak düşer (Küme 4) */}
+                                {(activeTactic.teamId || selectedTeamId) && (
+                                    <button
+                                        onClick={async () => {
+                                            const savedId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
+                                                ? activeTactic.id : null;
+                                            const targetTeam = activeTactic.teamId || selectedTeamId;
+                                            if (!savedId || !targetTeam) {
+                                                showToast('Önce taktiği takıma kaydet.', 'error');
+                                                return;
+                                            }
+                                            try {
+                                                await sendTeamMessage(targetTeam,
+                                                    tacticMessageBody(savedId, activeTactic.name, activeTactic.formation));
+                                                showToast('Taktik takım sohbetine gönderildi 💬');
+                                                setShowExportModal(false);
+                                            } catch (e) {
+                                                showToast((e as Error)?.message || 'Gönderilemedi.', 'error');
+                                            }
+                                        }}
+                                        className="w-full py-4 bg-white/8 border border-white/12 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <MessageSquare size={16} className="text-[#39FF14]" /> TAKIM SOHBETİNE GÖNDER
+                                    </button>
+                                )}
+
+                                <button
                                     onClick={() => setShowExportModal(false)}
                                     className="w-full py-4 bg-white/5 text-white/60 font-bold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all"
                                 >

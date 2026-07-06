@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Settings, Swords, UserPlus, ClipboardList, Calendar,
-  MapPin, Loader2, Heart, Check, Shield, Link2,
+  MapPin, Loader2, Heart, Check, Shield, Link2, MessageCircle,
 } from 'lucide-react';
 import { AppView } from '../../types';
 import { auth } from '../../supabaseAuth';
@@ -340,6 +340,8 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   const userId = auth.currentUser?.uid || '';
   const teamId = useAppStore(s => s.selectedTeamId);
   const setStudioContext = useAppStore(s => s.setStudioContext);
+  const setSelectedTeamChatId = useAppStore(s => s.setSelectedTeamChatId);
+  const setTeamInitialTab = useAppStore(s => s.setTeamInitialTab);
 
   const [team, setTeam] = useState<MyTeamRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -401,7 +403,11 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   // üretir; onu izlemek her üst-render'da yeniden yüklemeye yol açardı.
   useEffect(() => {
     if (!teamId) { onBack(); return; }
-    setTab('GENEL'); setTactics(null);
+    // Derin bağlantı sekme hedefi (team/{id}/members → KADRO) — tüket
+    const initial = useAppStore.getState().teamInitialTab;
+    setTab(initial ?? 'GENEL');
+    if (initial) setTeamInitialTab(null);
+    setTactics(null);
     void loadTeam(); void loadSquad(); void loadMatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, loadTeam, loadSquad, loadMatches]);
@@ -505,6 +511,18 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                   {team.city ? ` · ${team.city}` : ''} · {team.member_count} oyuncu
                 </p>
               </div>
+              {/* 💬 Takım sohbeti — birleşik kutuda açılır (Spec §3.8 başlık) */}
+              <button
+                onClick={() => {
+                  if (!teamId) return;
+                  setSelectedTeamChatId(teamId);
+                  onNavigate('MESSAGES');
+                }}
+                aria-label="Takım sohbeti"
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
+              >
+                <MessageCircle size={17} />
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => setSettingsOpen(true)}

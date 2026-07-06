@@ -75,6 +75,8 @@ const App: React.FC = () => {
     selectedMatch,
     selectedDiaryId,
     selectedConversationId,
+    selectedTeamChatId,
+    setSelectedTeamChatId,
     selectedGk,
     selectedRef,
     navigateTo,
@@ -269,6 +271,9 @@ const App: React.FC = () => {
             setSelectedTeamId: s.setSelectedTeamId,
             setStudioContext: s.setStudioContext,
             setSocialTarget: s.setSocialTarget,
+            setSelectedConversationId: s.setSelectedConversationId,
+            setSelectedTeamChatId: s.setSelectedTeamChatId,
+            setTeamInitialTab: s.setTeamInitialTab,
           });
         },
       );
@@ -320,6 +325,9 @@ const App: React.FC = () => {
           setSelectedTeamId: s.setSelectedTeamId,
           setStudioContext: s.setStudioContext,
           setSocialTarget: s.setSocialTarget,
+          setSelectedConversationId: s.setSelectedConversationId,
+          setSelectedTeamChatId: s.setSelectedTeamChatId,
+          setTeamInitialTab: s.setTeamInitialTab,
         });
       }).then((handle) => { remove = () => handle.remove(); });
     });
@@ -534,8 +542,10 @@ const App: React.FC = () => {
       case 'MESSAGES':
         return <MessagesView
           initialConversationId={selectedConversationId}
+          initialTeamChatId={selectedTeamChatId}
           onBack={() => {
             setSelectedConversationId(null);
+            setSelectedTeamChatId(null);
             goBack('SOCIAL');
           }}
         />;

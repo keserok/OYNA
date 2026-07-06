@@ -172,6 +172,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           setSelectedTeamId: s.setSelectedTeamId,
           setStudioContext: s.setStudioContext,
           setSocialTarget: s.setSocialTarget,
+          setSelectedConversationId: s.setSelectedConversationId,
+          setSelectedTeamChatId: s.setSelectedTeamChatId,
+          setTeamInitialTab: s.setTeamInitialTab,
         });
         onBack();
       } else if (n.matchId) {

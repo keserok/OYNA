@@ -27,7 +27,25 @@ export type NotificationPreferenceKey =
   | 'match_reminder_24h'
   | 'nearby_match'
   | 'promo_offers'
-  | 'weekly_summary';
+  | 'weekly_summary'
+  // Sosyal taksonomi (Spec §7 — tümü kapatılabilir; sessiz mağduriyet yok)
+  | 'friend_request'
+  | 'friend_accepted'
+  | 'referral_joined'
+  | 'team_member_invite'
+  | 'team_invite_accepted'
+  | 'team_join_request'
+  | 'team_join_approved'
+  | 'team_join_rejected'
+  | 'team_member_removed'
+  | 'team_captain_transferred'
+  | 'match_invite_joined'
+  | 'match_tactic_assigned'
+  | 'tactic_proposed'
+  | 'tactic_approved'
+  | 'tactic_rejected'
+  | 'NEW_MESSAGE'
+  | 'team_chat_message';
 
 export type NotificationPreferences = Record<NotificationPreferenceKey, NotificationPreference>;
 
@@ -45,6 +63,24 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   nearby_match:       { enabled: false, mandatory: false },
   promo_offers:       { enabled: false, mandatory: false },
   weekly_summary:     { enabled: true,  mandatory: false },
+  // Sosyal — varsayılan açık, hepsi kapatılabilir
+  friend_request:           { enabled: true, mandatory: false },
+  friend_accepted:          { enabled: true, mandatory: false },
+  referral_joined:          { enabled: true, mandatory: false },
+  team_member_invite:       { enabled: true, mandatory: false },
+  team_invite_accepted:     { enabled: true, mandatory: false },
+  team_join_request:        { enabled: true, mandatory: false },
+  team_join_approved:       { enabled: true, mandatory: false },
+  team_join_rejected:       { enabled: true, mandatory: false },
+  team_member_removed:      { enabled: true, mandatory: false },
+  team_captain_transferred: { enabled: true, mandatory: false },
+  match_invite_joined:      { enabled: true, mandatory: false },
+  match_tactic_assigned:    { enabled: true, mandatory: false },
+  tactic_proposed:          { enabled: true, mandatory: false },
+  tactic_approved:          { enabled: true, mandatory: false },
+  tactic_rejected:          { enabled: true, mandatory: false },
+  NEW_MESSAGE:              { enabled: true, mandatory: false },
+  team_chat_message:        { enabled: true, mandatory: false },
 };
 
 // ─── Push Token Kaydı ────────────────────────────────────────────
@@ -79,6 +115,9 @@ export interface DeepLinkActions {
   setSelectedTeamId?: (id: string | null) => void;
   setStudioContext?: (c: { teamId?: string; tacticId?: string } | null) => void;
   setSocialTarget?: (t: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null) => void;
+  setSelectedConversationId?: (id: string | null) => void;
+  setSelectedTeamChatId?: (id: string | null) => void;
+  setTeamInitialTab?: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
 }
 
 export const handleDeepLink = (
@@ -109,12 +148,24 @@ export const handleDeepLink = (
       setView('PROFILE');
       break;
     case 'team':
-      if (id && actions.setSelectedTeamId) {
+      if (id && sub === 'chat' && actions.setSelectedTeamChatId) {
+        actions.setSelectedTeamChatId(id); // birleşik kutu → takım sohbeti
+        setView('MESSAGES');
+      } else if (id && actions.setSelectedTeamId) {
         actions.setSelectedTeamId(id); // kimlik açıkça taşınır (A4/G42)
-        setView('MY_TEAM'); // /chat ve /members alt-hedefleri Küme 4'te
+        if (sub === 'members' && actions.setTeamInitialTab) {
+          actions.setTeamInitialTab('KADRO'); // Kadro → Bekleyenler
+        }
+        setView('MY_TEAM');
       } else {
         setView('SOCIAL');
       }
+      break;
+    case 'messages':
+      if (id && actions.setSelectedConversationId) {
+        actions.setSelectedConversationId(id); // DM push'u → doğrudan sohbet
+      }
+      setView('MESSAGES');
       break;
     case 'tactic':
       if (id && actions.setStudioContext) {
@@ -233,6 +284,9 @@ export const subscribeToInAppNotifications = (
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
+        // Sohbet push taşıyıcıları (inbox=false) uygulama-içi zile düşmez —
+        // rozet kaynağı konuşma okunmamış sayaçlarıdır (N93).
+        if ((payload.new as any)?.inbox === false) return;
         onNotification(payload.new);
       },
     )

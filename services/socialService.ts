@@ -363,7 +363,12 @@ export const subscribeSocialEvents = (
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-      payload => onEvent(String((payload.new as { type_key?: string })?.type_key || '')),
+      payload => {
+        const row = payload.new as { type_key?: string; inbox?: boolean };
+        // Sohbet trafiği sosyal veriyi değiştirmez — tazeleme tetiklemesin
+        if (row?.inbox === false || row?.type_key === 'team_chat_message') return;
+        onEvent(String(row?.type_key || ''));
+      },
     )
     .subscribe();
   return () => { void supabase.removeChannel(channel); };
