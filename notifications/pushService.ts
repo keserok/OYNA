@@ -70,20 +70,36 @@ export const savePushTokenToSupabase = async (token: string, userId: string) => 
 };
 
 // ─── Deep Link Yöneticisi ─────────────────────────────────────────
-export const handleDeepLink = (deepLink: string, setView: (v: string) => void, setSelectedMatch?: (m: any) => void) => {
+// Hedef yükleri store aksiyonlarıyla taşınır (Spec §2.3): team/{id}
+// artık kimliği DÜŞÜRMEZ; tactic/{id} Stüdyo'yu studioContext ile,
+// social/{tab}/{subTab} Sosyal'i socialTarget ile açar.
+// (Store'u doğrudan import edemeyiz — store bu modülü import ediyor.)
+export interface DeepLinkActions {
+  setSelectedMatch?: (m: any) => void;
+  setSelectedTeamId?: (id: string | null) => void;
+  setStudioContext?: (c: { teamId?: string; tacticId?: string } | null) => void;
+  setSocialTarget?: (t: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null) => void;
+}
+
+export const handleDeepLink = (
+  deepLink: string,
+  setView: (v: string) => void,
+  actions: DeepLinkActions = {},
+) => {
   if (!deepLink) return;
 
-  // Format: oyna://match/UUID | oyna://profile/UUID | oyna://team/UUID
+  // Format: oyna://match/UUID | oyna://team/UUID[/chat|members] |
+  //         oyna://tactic/UUID | oyna://social/{tab}/{subTab} | oyna://profile/UUID
   const url = new URL(deepLink.replace('oyna://', 'https://oyna.app/'));
-  const [, resource, id] = url.pathname.split('/');
+  const [resource, id, sub] = url.pathname.split('/').filter(Boolean);
 
   switch (resource) {
     case 'match':
-      if (setSelectedMatch) {
+      if (actions.setSelectedMatch && id) {
         // Maç verisini Supabase'den çek ve MATCH_JOIN'e git
         supabase.from('matches').select('*').eq('id', id).single().then(({ data }) => {
           if (data) {
-            setSelectedMatch(data);
+            actions.setSelectedMatch!(data);
             setView('MATCH_JOIN');
           }
         });
@@ -93,7 +109,27 @@ export const handleDeepLink = (deepLink: string, setView: (v: string) => void, s
       setView('PROFILE');
       break;
     case 'team':
-      setView('MY_TEAM');
+      if (id && actions.setSelectedTeamId) {
+        actions.setSelectedTeamId(id); // kimlik açıkça taşınır (A4/G42)
+        setView('MY_TEAM'); // /chat ve /members alt-hedefleri Küme 4'te
+      } else {
+        setView('SOCIAL');
+      }
+      break;
+    case 'tactic':
+      if (id && actions.setStudioContext) {
+        actions.setStudioContext({ tacticId: id }); // Stüdyo tam hidre açılır
+      }
+      setView('STUDIO');
+      break;
+    case 'social':
+      if (actions.setSocialTarget) {
+        actions.setSocialTarget({
+          tab: (id || '').toUpperCase() === 'TEAMS' ? 'TEAMS' : 'FRIENDS',
+          subTab: sub ? sub.toUpperCase() : undefined,
+        });
+      }
+      setView('SOCIAL');
       break;
     default:
       setView('DASHBOARD');

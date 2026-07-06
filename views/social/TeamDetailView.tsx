@@ -25,6 +25,7 @@ import {
 } from '../../services/teamService';
 import {
   TacticShowcaseItem, getTeamTacticsShowcase, setActiveTactic, toggleTacticFavorite,
+  MatchTacticInfo, getMatchTactic, assignMatchTactic,
 } from '../../services/tacticSocialService';
 import {
   ScoreProposal, proposeMatchScore, approveMatchScore, getPendingScoreProposal,
@@ -352,6 +353,10 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   const [inviteOpen, setInviteOpen] = useState(false);
   const [scoreMatch, setScoreMatch] = useState<TeamMatchRow | null>(null);
   const [tacticBusy, setTacticBusy] = useState<string | null>(null);
+  // Maça taktik atama (L76) — yaklaşan maçın planı + atama sayfası
+  const [assignedPlan, setAssignedPlan] = useState<MatchTacticInfo | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignBusy, setAssignBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -401,11 +406,21 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, loadTeam, loadSquad, loadMatches]);
 
-  // Taktik vitrini tembel yüklenir (sekmeye ilk girişte)
+  // Taktik vitrini tembel yüklenir (sekmeye ilk girişte ya da atama sayfası açılınca)
   useEffect(() => {
-    if (tab !== 'TAKTIK' || tactics !== null || !teamId) return;
+    if ((tab !== 'TAKTIK' && !assignOpen) || tactics !== null || !teamId) return;
     getTeamTacticsShowcase(teamId).then(setTactics).catch(() => setTactics([]));
-  }, [tab, tactics, teamId]);
+  }, [tab, assignOpen, tactics, teamId]);
+
+  // Yaklaşan maça atanmış plan
+  useEffect(() => {
+    if (!nextMatch) { setAssignedPlan(null); return; }
+    let alive = true;
+    getMatchTactic(nextMatch.id)
+      .then(p => { if (alive) setAssignedPlan(p); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [nextMatch]);
 
   const openStudio = useCallback((tacticId?: string) => {
     if (!teamId) return;
@@ -753,23 +768,52 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
                           Yaklaşan
                         </h3>
-                        <div className="flex items-center gap-3 rounded-2xl bg-white/4 border border-white/6 p-3">
-                          <span
-                            className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-[10px] border border-white/10 shrink-0"
-                            style={{ backgroundColor: `${nextMatch.opponentColor}33` }}
-                          >
-                            {nextMatch.opponentShort}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[13px] font-bold truncate">vs {nextMatch.opponentName}</div>
-                            <div className="text-[10px] text-white/40">
-                              {formatDateTR(nextMatch.date)} · {nextMatch.time}
-                              {nextMatch.location ? ` · ${nextMatch.location}` : ''}
+                        <div className="rounded-2xl bg-white/4 border border-white/6 p-3">
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-[10px] border border-white/10 shrink-0"
+                              style={{ backgroundColor: `${nextMatch.opponentColor}33` }}
+                            >
+                              {nextMatch.opponentShort}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[13px] font-bold truncate">vs {nextMatch.opponentName}</div>
+                              <div className="text-[10px] text-white/40">
+                                {formatDateTR(nextMatch.date)} · {nextMatch.time}
+                                {nextMatch.location ? ` · ${nextMatch.location}` : ''}
+                              </div>
                             </div>
+                            <span className="text-[10px] font-black px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14] shrink-0">
+                              {countdownLabel(nextMatch.date)}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-black px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14] shrink-0">
-                            {countdownLabel(nextMatch.date)}
-                          </span>
+                          {/* Maç planı — atanmışsa herkes görür; yönetici atar/değiştirir (L76) */}
+                          {(assignedPlan || isAdmin) && (
+                            <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-white/6">
+                              <ClipboardList size={13} className="text-[#39FF14] shrink-0" />
+                              {assignedPlan ? (
+                                <button
+                                  onClick={() => openStudio(assignedPlan.tacticId)}
+                                  className="flex-1 min-w-0 text-left text-[12px] font-bold truncate active:opacity-70"
+                                >
+                                  {assignedPlan.name || 'Taktik'}
+                                  <span className="text-white/40 font-semibold">
+                                    {assignedPlan.formation ? ` · ${assignedPlan.formation}` : ''}
+                                  </span>
+                                </button>
+                              ) : (
+                                <span className="flex-1 text-[11px] text-white/35">Maç planı atanmadı</span>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => setAssignOpen(true)}
+                                  className="h-8 px-2.5 rounded-lg bg-white/6 border border-white/10 text-[10px] font-black text-white/70 active:scale-95 shrink-0"
+                                >
+                                  {assignedPlan ? 'Değiştir' : 'Taktik Ata'}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -874,6 +918,78 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
             onDone={() => { void loadMatches(); void loadTeam(true); }}
             onToast={showToast}
           />
+          {/* Taktik atama sayfası — yalnız ONAYLI taktikler (sunucu da doğrular) */}
+          <BottomSheet open={assignOpen} onClose={() => setAssignOpen(false)} ariaLabel="Maça taktik ata">
+            <div className="pb-6">
+              <h3 className="text-base font-black">Maç Planını Seç</h3>
+              <p className="text-[11px] text-white/45 mt-0.5">
+                {nextMatch ? `vs ${nextMatch.opponentName} · ${formatDateTR(nextMatch.date)}` : ''}
+              </p>
+              <div className="mt-4">
+                {tactics === null ? (
+                  <SkeletonList rows={3} />
+                ) : (
+                  (() => {
+                    const approved = tactics.filter(t => t.status === 'APPROVED');
+                    if (approved.length === 0) {
+                      return (
+                        <EmptyState
+                          icon={ClipboardList}
+                          title="Onaylı taktik yok"
+                          description="Önce Stüdyo'da bir takım taktiği kur ve onayla."
+                          actions={[{ label: "Stüdyo'da Taktik Kur", onClick: () => openStudio(), primary: true }]}
+                        />
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {approved.map(t => {
+                          const current = assignedPlan?.tacticId === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              disabled={!!assignBusy || !nextMatch}
+                              onClick={async () => {
+                                if (!nextMatch) return;
+                                setAssignBusy(t.id);
+                                try {
+                                  await assignMatchTactic(nextMatch.id, t.id);
+                                  setAssignedPlan({
+                                    tacticId: t.id, teamId: teamId!,
+                                    name: t.name, formation: t.formation, size: t.size,
+                                  });
+                                  setAssignOpen(false);
+                                  showToast('Maç planı atandı — takım bilgilendirildi 📋');
+                                } catch (e) {
+                                  showToast((e as Error)?.message || 'Taktik atanamadı.');
+                                } finally { setAssignBusy(null); }
+                              }}
+                              className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left active:scale-[0.99] disabled:opacity-60 ${
+                                current ? 'border-[#39FF14]/40 bg-[#39FF14]/6' : 'border-white/8 bg-white/4'
+                              }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[13px] font-bold truncate">{t.name || 'Adsız Taktik'}</div>
+                                <div className="text-[10px] text-white/40">
+                                  {t.formation || ''}{t.size ? ` · ${formatLabel(t.size)}` : ''}
+                                  {t.is_active ? ' · Aktif taktik' : ''}
+                                </div>
+                              </div>
+                              {assignBusy === t.id ? (
+                                <Loader2 size={14} className="animate-spin text-white/40" />
+                              ) : current ? (
+                                <Check size={15} className="text-[#39FF14]" />
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+          </BottomSheet>
           <TeamSettingsSheet
             open={settingsOpen}
             team={team}

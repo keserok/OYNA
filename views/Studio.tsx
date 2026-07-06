@@ -14,6 +14,13 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { FORMATIONS as FORMATIONS_SSOT } from '../utils/formations';
+// Küme 3 köprüsü: kanonik takım/kadro okumaları + tek kayıt kapısı
+import {
+    MyTeamRow, TeamSquadRow, getMyTeams, getTeamSquad, formatLabel,
+} from '../services/teamSocialService';
+import {
+    saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
+} from '../services/tacticSocialService';
 
 // Paylaşılan tipler ve sabitler (SSOT)
 import type {
@@ -139,61 +146,138 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [showTacticsModal, setShowTacticsModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
-    const [saveTeamName, setSaveTeamName] = useState('');
     const [saveTacticName, setSaveTacticName] = useState('');
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
 
-    // Global Store
-    const { myTeams, activeStudioTeam, friends } = useAppStore();
+    // Global Store — arkadaşlar oyuncu-seçicide kullanılır
+    const { friends } = useAppStore();
+    const studioContext = useAppStore(s => s.studioContext);
+    const setStudioContext = useAppStore(s => s.setStudioContext);
 
-    // Fetch tactics from Firestore
-    
-    const populateSlotsWithTeamRoster = (teamId: string, currentSlots: Slot[]) => {
-        const teamData = myTeams.find(t => t.id === teamId);
-        if (!teamData) return currentSlots;
+    // ── Küme 3 köprüsü: kanonik takımlar + GERÇEK kadrolar ──
+    // store.myTeams (hayalet roster JSONB) ÖLDÜ; kaynak get_my_teams +
+    // get_team_squad. Kadrolar takım seçilince tembel yüklenir.
+    const [studioTeams, setStudioTeams] = useState<MyTeamRow[]>([]);
+    const [squadsByTeam, setSquadsByTeam] = useState<Record<string, TeamSquadRow[]>>({});
+    const squadsRef = useRef(squadsByTeam);
+    squadsRef.current = squadsByTeam;
 
-        const newSlots = currentSlots.map(s => ({ ...s, player: undefined }));
-        const availablePlayers = teamData.roster ? [...teamData.roster].map(p => ({
-            id: p.id,
-            name: p.name,
-            role: p.position === 'FWD' ? 'FWD' : p.position === 'CM' ? 'MID' : p.position === 'CB' ? 'DEF' : p.position,
-            rating: p.rating ? (p.rating < 10 ? p.rating * 20 : p.rating) : 80,
-            avatar: p.avatar,
-            instruction: p.instruction
-        })) : [];
+    useEffect(() => {
+        if (!auth.currentUser) return;
+        getMyTeams()
+            .then(rows => setStudioTeams(rows.filter(r => !r.is_archived)))
+            .catch(e => console.error('[Studio] takımlar yüklenemedi', e));
+    }, []);
 
-        // GK
+    const ensureSquad = async (teamId: string): Promise<TeamSquadRow[]> => {
+        const cached = squadsRef.current[teamId];
+        if (cached) return cached;
+        const rows = await getTeamSquad(teamId);
+        setSquadsByTeam(prev => ({ ...prev, [teamId]: rows }));
+        return rows;
+    };
+
+    const squadRowToPlayer = (m: TeamSquadRow): Player => ({
+        id: m.user_id,
+        name: m.full_name,
+        role: m.pos || 'CM',
+        rating: m.fp || 70,
+    });
+
+    const populateSlotsWithSquad = (squad: TeamSquadRow[], currentSlots: Slot[]): Slot[] => {
+        const newSlots = currentSlots.map(s => ({ ...s, player: undefined as Player | undefined }));
+        const availablePlayers = squad.map(squadRowToPlayer);
+
+        // GK önce eşleşir
         const gkSlotIndex = newSlots.findIndex(s => s.role === 'GK');
         if (gkSlotIndex !== -1) {
             const gkIndex = availablePlayers.findIndex(p => p.role === 'GK' || p.role === 'KALECİ');
             if (gkIndex !== -1) {
-                newSlots[gkSlotIndex].player = availablePlayers[gkIndex] as any;
+                newSlots[gkSlotIndex].player = availablePlayers[gkIndex];
                 availablePlayers.splice(gkIndex, 1);
             }
         }
-
-        // Others
         newSlots.forEach((slot, idx) => {
             if (!slot.player && availablePlayers.length > 0) {
                 let matchingIdx = availablePlayers.findIndex(p => p.role === slot.role);
                 if (matchingIdx === -1) matchingIdx = 0;
-                newSlots[idx].player = availablePlayers[matchingIdx] as any;
+                newSlots[idx].player = availablePlayers[matchingIdx];
                 availablePlayers.splice(matchingIdx, 1);
             }
         });
-
         return newSlots;
     };
 
+    // DB satırı → TacticState (fetch + derin bağlantı hidrasyonu ortak)
+    const parseDbTactic = (d: any): TacticState => ({
+        id: d.id,
+        name: d.name,
+        teamName: d.teamName,
+        teamId: d.teamId ?? null,
+        size: d.size,
+        formation: d.formation,
+        slots: JSON.parse(d.slots || '[]'),
+        subs: JSON.parse(d.subs || '[]'),
+        captainId: d.captainId || null,
+        notes: d.notes || '',
+        opponents: JSON.parse(d.opponents || '[]'),
+        mentality: d.mentality || 'Balanced',
+        tempo: d.tempo || 'Normal',
+        identity: d.identity || 'BALANCED',
+        drawings: JSON.parse(d.drawings || '[]'),
+        status: d.status || undefined,
+        proposedBy: d.proposedBy ?? null,
+    });
+
+    // studioContext tüketimi (M80): Takım Detayı'ndan gelen takım/taktik
+    // bağlamı — activeStudioTeam makinesinin halefi.
     useEffect(() => {
-        if (activeStudioTeam) {
-            setSelectedTeamId(activeStudioTeam.id);
-            const teamData = activeStudioTeam;
-            const newSlots = populateSlotsWithTeamRoster(teamData.id, activeTactic.slots);
-            setActiveTactic({ ...activeTactic, slots: newSlots, teamName: teamData.name });
-            setIsTeamConfirmed(true);
-        }
-    }, [activeStudioTeam]);
+        const ctx = studioContext;
+        if (!ctx) return;
+        setStudioContext(null); // tek kullanımlık — tüket
+        void (async () => {
+            try {
+                if (ctx.tacticId) {
+                    const row = await getTacticById(ctx.tacticId);
+                    if (!row) { showToast('Taktik bulunamadı ya da erişimin yok.', 'error'); return; }
+                    const hydrated = parseDbTactic(row);
+                    setPlans(prev => {
+                        const idx = prev.findIndex(p => p.id === hydrated.id);
+                        if (idx >= 0) {
+                            const next = [...prev]; next[idx] = hydrated;
+                            setActivePlanIndex(idx);
+                            return next;
+                        }
+                        setActivePlanIndex(prev.length);
+                        return [...prev, hydrated];
+                    });
+                    if (hydrated.teamId) {
+                        setSelectedTeamId(hydrated.teamId);
+                        setIsTeamConfirmed(true);
+                        void ensureSquad(hydrated.teamId);
+                    }
+                    setViewMode('STUDIO');
+                } else if (ctx.teamId) {
+                    setSelectedTeamId(ctx.teamId);
+                    const [squad, teams] = await Promise.all([ensureSquad(ctx.teamId), getMyTeams()]);
+                    const teamRow = teams.find(t => t.team_id === ctx.teamId);
+                    setStudioTeams(teams.filter(r => !r.is_archived));
+                    setPlans(prev => {
+                        const idx = Math.min(activePlanIndex, prev.length - 1);
+                        return prev.map((p, i) => i === idx
+                            ? { ...p, slots: populateSlotsWithSquad(squad, p.slots), teamName: teamRow?.name, teamId: ctx.teamId }
+                            : p);
+                    });
+                    setIsTeamConfirmed(true);
+                    setViewMode('STUDIO');
+                }
+            } catch (e) {
+                console.error('[Studio] bağlam yüklenemedi', e);
+                showToast('Stüdyo bağlamı yüklenemedi.', 'error');
+            }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [studioContext]);
 
     useEffect(() => {
         if (!auth.currentUser) return;
@@ -209,24 +293,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 return;
             }
 
-            const fetchedTactics: TacticState[] = (data || []).map((d: any) => ({
-                id: d.id,
-                name: d.name,
-                teamName: d.teamName,
-                size: d.size,
-                formation: d.formation,
-                slots: JSON.parse(d.slots || '[]'),
-                subs: JSON.parse(d.subs || '[]'),
-                captainId: d.captainId || null,
-                notes: d.notes || '',
-                opponents: JSON.parse(d.opponents || '[]'),
-                mentality: d.mentality || 'Balanced',
-                tempo: d.tempo || 'Normal',
-                identity: d.identity || 'BALANCED',
-                drawings: JSON.parse(d.drawings || '[]')
-            }));
-
-            setDbTactics(fetchedTactics);
+            setDbTactics((data || []).map(parseDbTactic));
         };
         fetchTactics();
 
@@ -521,106 +588,85 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         showToast("Yeni taktik alanı oluşturuldu!");
     };
 
+    // Kayıt TEK KAPIDAN: save_team_tactic RPC. Status SUNUCUDA belirlenir
+    // (yönetici → APPROVED, üye → PENDING_APPROVAL + yöneticilere bildirim,
+    // takımsız → kişisel kütüphane). İstemci status yazımı ÖLDÜ (M85).
     const handleSaveTactic = async () => {
-        if (!saveTacticName.trim() || !saveTeamName.trim()) {
-            showToast("Takım ve Taktik isimleri boş olamaz.", 'error');
+        if (!saveTacticName.trim()) {
+            showToast("Taktik ismi boş olamaz.", 'error');
             return;
         }
-
         if (!auth.currentUser) {
-            // Guest/Offline demo fallback: Save to local store state
-            const tacticData = {
-                id: `mock_${Date.now()}`,
-                name: saveTacticName,
-                teamName: saveTeamName,
-                teamId: selectedTeamId || null,
-                status: 'PENDING_APPROVAL' as const,
-                proposedBy: 'guest',
-                size: activeTactic.size,
-                formation: activeTactic.formation,
-                slots: JSON.stringify(activeTactic.slots),
-                subs: JSON.stringify(activeTactic.subs),
-                captainId: activeTactic.captainId,
-                notes: activeTactic.notes,
-                opponents: JSON.stringify(activeTactic.opponents),
-                mentality: activeTactic.mentality,
-                tempo: activeTactic.tempo,
-                identity: activeTactic.identity,
-                drawings: JSON.stringify(activeTactic.drawings || []),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-
-            useAppStore.setState(state => ({
-                teamTactics: [...state.teamTactics, tacticData]
-            }));
-
-            setActiveTactic({
-                ...activeTactic,
-                id: tacticData.id,
-                name: saveTacticName,
-                teamName: saveTeamName,
-                status: 'PENDING_APPROVAL' as any,
-                proposedBy: 'guest'
-            });
-
-            showToast("Taktik öneriniz kaptana gönderildi (Demo Modu)!");
-            setShowSaveModal(false);
+            showToast("Taktiği kaydetmek için giriş yapmalısın.", 'error');
             return;
         }
 
         try {
-            const teamData = myTeams.find(t => t.id === selectedTeamId);
-            const isCaptain = teamData ? (teamData.captain === auth.currentUser.uid) : true;
-
-            const tacticData = {
-                userId: auth.currentUser.uid,
-                mode: 'FARAZI',
-                name: saveTacticName,
-                teamName: saveTeamName,
-                teamId: selectedTeamId || null,
-                status: isCaptain ? 'APPROVED' : 'PENDING_APPROVAL',
-                proposedBy: isCaptain ? null : auth.currentUser.uid,
+            const existingId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
+                ? activeTactic.id : null;
+            const res = await saveTeamTactic(selectedTeamId ?? null, existingId, {
+                name: saveTacticName.trim(),
                 size: activeTactic.size,
                 formation: activeTactic.formation,
-                slots: JSON.stringify(activeTactic.slots),
-                subs: JSON.stringify(activeTactic.subs),
+                slots: activeTactic.slots,
+                subs: activeTactic.subs,
+                opponents: activeTactic.opponents,
+                drawings: activeTactic.drawings || [],
                 captainId: activeTactic.captainId,
                 notes: activeTactic.notes,
-                opponents: JSON.stringify(activeTactic.opponents),
                 mentality: activeTactic.mentality,
                 tempo: activeTactic.tempo,
                 identity: activeTactic.identity,
-                drawings: JSON.stringify(activeTactic.drawings || []),
-                updatedAt: new Date().toISOString()
-            };
+            });
 
-            if (activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)) {
-                await supabase.from('tactics').update(tacticData).eq('id', activeTactic.id);
-                showToast(isCaptain ? "Taktik güncellendi!" : "Taktik öneriniz güncellendi!");
-                setActiveTactic({ ...activeTactic, name: saveTacticName, teamName: saveTeamName });
-            } else {
-                const { data: inserted, error: insertErr } = await supabase.from('tactics').insert({
-                    ...tacticData,
-                    createdAt: new Date().toISOString()
-                }).select().single();
-                if (insertErr) throw insertErr;
-                const savedTactic = { 
-                    ...activeTactic, 
-                    id: inserted.id, 
-                    name: saveTacticName, 
-                    teamName: saveTeamName, 
-                    teamId: selectedTeamId || undefined, 
-                    status: tacticData.status as any, 
-                    proposedBy: tacticData.proposedBy || undefined 
-                };
-                setActiveTactic(savedTactic);
-                showToast(isCaptain ? "Taktik başarıyla kaydedildi!" : "Taktik öneriniz kaptana gönderildi!");
-            }
+            const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+            setActiveTactic({
+                ...activeTactic,
+                id: res.tacticId,
+                name: saveTacticName.trim(),
+                teamName: teamRow?.name,
+                teamId: selectedTeamId || null,
+                status: res.status as TacticState['status'],
+                proposedBy: res.status === 'PENDING_APPROVAL' ? auth.currentUser.uid : null,
+            });
+            showToast(res.status === 'PENDING_APPROVAL'
+                ? "Taktik önerin takım yöneticilerine gönderildi!"
+                : "Taktik kaydedildi!");
             setShowSaveModal(false);
         } catch (error) {
             console.error("Error saving tactic:", error);
-            showToast("Taktik kaydedilirken bir hata oluştu.", 'error');
+            showToast((error as Error)?.message || "Taktik kaydedilirken bir hata oluştu.", 'error');
+        }
+    };
+
+    // Stüdyo-içi öneri karar akışı: bekleyen takım taktiği + yönetici (M87)
+    const myRoleForActiveTeam = studioTeams.find(t => t.team_id === (activeTactic.teamId || selectedTeamId))?.my_role;
+    const canDecideProposal = !!(
+        activeTactic.status === 'PENDING_APPROVAL'
+        && activeTactic.teamId
+        && (myRoleForActiveTeam === 'CAPTAIN' || myRoleForActiveTeam === 'ADMIN')
+        && activeTactic.proposedBy
+        && activeTactic.proposedBy !== auth.currentUser?.uid
+    );
+    const [decidingProposal, setDecidingProposal] = useState(false);
+
+    const decideProposal = async (approve: boolean) => {
+        if (!activeTactic.id || decidingProposal) return;
+        setDecidingProposal(true);
+        try {
+            if (approve) {
+                await approveTacticRpc(activeTactic.id);
+                setActiveTactic({ ...activeTactic, status: 'APPROVED' });
+                showToast("Taktik onaylandı — oyun defterine eklendi!");
+            } else {
+                await rejectTacticRpc(activeTactic.id);
+                setActiveTactic({ ...activeTactic, status: 'REJECTED' });
+                showToast("Öneri reddedildi; yazarın kişisel kütüphanesine kopyalandı.");
+            }
+        } catch (e) {
+            showToast((e as Error)?.message || 'İşlem tamamlanamadı.', 'error');
+        } finally {
+            setDecidingProposal(false);
         }
     };
 
@@ -1527,7 +1573,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="flex gap-2">
                                 <button 
                                     onClick={() => {
-                                        setSaveTeamName(activeTactic.teamName || '');
                                         setSaveTacticName(activeTactic.name || '');
                                         setShowSaveModal(true);
                                     }}
@@ -1963,20 +2008,22 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </h3>
                     </div>
                     
-                    {/* Horizontal Team List */}
+                    {/* Horizontal Team List — kanonik get_my_teams (hayalet güç puanı öldü) */}
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 mb-4">
-                        {myTeams.map((team) => (
+                        {studioTeams.map((team) => (
                             <button
-                                key={team.id}
-                                onClick={() => setSelectedTeamId(team.id)}
+                                key={team.team_id}
+                                onClick={() => { setSelectedTeamId(team.team_id); void ensureSquad(team.team_id); }}
                                 className={`flex-shrink-0 w-[140px] p-3 rounded-2xl border transition-all text-left ${
-                                    selectedTeamId === team.id
+                                    selectedTeamId === team.team_id
                                         ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
                                         : 'bg-white/5 border-white/5 hover:bg-white/10'
                                 }`}
                             >
                                 <h4 className="text-white font-bold text-xs mb-1 truncate">{team.name}</h4>
-                                <div className="text-[10px] font-bold text-gray-500">Güç: <span className={selectedTeamId === team.id ? 'text-[#39FF14]' : 'text-white'}>{team.rating}</span></div>
+                                <div className="text-[10px] font-bold text-gray-500">
+                                    <span className={selectedTeamId === team.team_id ? 'text-[#39FF14]' : 'text-white'}>{team.member_count}</span> oyuncu · {formatLabel(team.format)}
+                                </div>
                             </button>
                         ))}
                     </div>
@@ -1985,10 +2032,22 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         {selectedTeamId && !isSquadComplete && (
                             <button
                                 onClick={() => {
-                                    const teamData = myTeams.find(t => t.id === selectedTeamId);
-                                    const newSlots = populateSlotsWithTeamRoster(selectedTeamId, activeTactic.slots);
-                                    setActiveTactic({ ...activeTactic, slots: newSlots, teamName: teamData?.name });
-                                    setIsTeamConfirmed(true);
+                                    void (async () => {
+                                        try {
+                                            const squad = await ensureSquad(selectedTeamId);
+                                            const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+                                            setActiveTactic({
+                                                ...activeTactic,
+                                                slots: populateSlotsWithSquad(squad, activeTactic.slots),
+                                                teamName: teamRow?.name,
+                                                teamId: selectedTeamId,
+                                            });
+                                            setIsTeamConfirmed(true);
+                                        } catch (e) {
+                                            console.error('[Studio] kadro yüklenemedi', e);
+                                            showToast('Kadro yüklenemedi.', 'error');
+                                        }
+                                    })();
                                 }}
                                 className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-black text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
                             >
@@ -2173,7 +2232,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <button 
                             disabled={!canSave}
                             onClick={() => {
-                                setSaveTeamName(activeTactic.teamName || '');
                                 setSaveTacticName(activeTactic.name || '');
                                 setShowSaveModal(true);
                             }}
@@ -2443,24 +2501,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="space-y-4">
                                     {selectedTeamRosterId === null ? (
                                         <div className="grid gap-3">
-                                            {myTeams && myTeams.length === 0 ? (
+                                            {studioTeams.length === 0 ? (
                                                 <div className="text-center py-8 bg-[#161B22]/50 border border-white/5 rounded-2xl">
                                                     <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">Takım Bulunamadı</p>
                                                 </div>
                                             ) : (
-                                                myTeams && myTeams.map(team => (
-                                                    <div 
-                                                        key={team.id} 
-                                                        onClick={() => setSelectedTeamRosterId(team.id)} 
+                                                studioTeams.map(team => (
+                                                    <div
+                                                        key={team.team_id}
+                                                        onClick={() => { setSelectedTeamRosterId(team.team_id); void ensureSquad(team.team_id); }}
                                                         className="bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-[#39FF14]/50 transition-all group"
                                                     >
                                                         <div className="flex items-center gap-4">
                                                             <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-xl shadow-lg transition-transform group-hover:scale-105" style={{ backgroundColor: team.color1 || '#10B981' }}>
-                                                                {team.shortName ? team.shortName.charAt(0) : team.name.charAt(0)}
+                                                                {(team.short_name || team.name).charAt(0)}
                                                             </div>
                                                             <div>
                                                                 <h3 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{team.name}</h3>
-                                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{team.players?.length || team.roster?.length || 0} Oyuncu • {team.location}</p>
+                                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{team.member_count} Oyuncu{team.city ? ` • ${team.city}` : ''}</p>
                                                             </div>
                                                         </div>
                                                         <ChevronRight className="text-gray-500 group-hover:translate-x-1 transition-transform" />
@@ -2470,50 +2528,47 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         </div>
                                     ) : (
                                         <div className="space-y-3 animate-fade-blur-in">
-                                            <button 
+                                            <button
                                                 onClick={() => setSelectedTeamRosterId(null)}
                                                 className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 border border-white/10 px-3 py-1.5 rounded-xl bg-white/5 w-max"
                                             >
                                                 <ChevronLeft size={16} />
                                                 <span className="text-[10px] font-black uppercase tracking-widest">Takımlara Dön</span>
                                             </button>
-                                            
+
                                             <h3 className="text-[10px] font-black text-[#39FF14] mb-3 uppercase tracking-widest">
-                                                {myTeams.find(t => t.id === selectedTeamRosterId)?.name} KADROSU
+                                                {studioTeams.find(t => t.team_id === selectedTeamRosterId)?.name} KADROSU
                                             </h3>
-                                            
-                                            {myTeams.find(t => t.id === selectedTeamRosterId)?.roster.map(p => (
-                                                <button 
-                                                    key={p.id}
-                                                    onClick={() => {
-                                                        const matchedFriend = (friends || []).find(f => f.id === p.id);
-                                                        const player: Player = {
-                                                            id: p.id,
-                                                            name: p.name,
-                                                            role: matchedFriend?.pos || p.position || 'CM',
-                                                            rating: matchedFriend?.fp || p.rating || 80,
-                                                            isCustom: false
-                                                        };
-                                                        handleSelectPlayer(player);
-                                                    }}
-                                                    className="w-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:border-[#39FF14]/50 transition-all text-left group"
-                                                >
-                                                    <div className="flex items-center gap-4 pointer-events-none">
-                                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-black text-lg border border-white/10 shadow-lg group-hover:bg-[#39FF14] group-hover:text-black transition-all">
-                                                            {p.name.charAt(0)}
+
+                                            {/* GERÇEK kadro (get_team_squad) — hayalet roster öldü */}
+                                            {!squadsByTeam[selectedTeamRosterId] ? (
+                                                <div className="py-8 flex justify-center">
+                                                    <Loader2 size={20} className="animate-spin text-white/40" />
+                                                </div>
+                                            ) : (
+                                                squadsByTeam[selectedTeamRosterId].map(m => (
+                                                    <button
+                                                        key={m.user_id}
+                                                        onClick={() => handleSelectPlayer(squadRowToPlayer(m))}
+                                                        className="w-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:border-[#39FF14]/50 transition-all text-left group"
+                                                    >
+                                                        <div className="flex items-center gap-4 pointer-events-none">
+                                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-black text-lg border border-white/10 shadow-lg group-hover:bg-[#39FF14] group-hover:text-black transition-all">
+                                                                {m.full_name.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
+                                                                <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">
+                                                                    {m.pos || 'OYUNCU'}{m.jersey_number != null ? ` • #${m.jersey_number}` : ''}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <h4 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{p.name}</h4>
-                                                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">
-                                                                {p.position || 'OYUNCU'}
-                                                            </p>
+                                                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] transition-all pointer-events-none">
+                                                            <Plus size={16} />
                                                         </div>
-                                                    </div>
-                                                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] transition-all pointer-events-none">
-                                                        <Plus size={16} />
-                                                    </div>
-                                                </button>
-                                            ))}
+                                                    </button>
+                                                ))
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -2829,36 +2884,40 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             
                             <div className="space-y-4 mb-8">
                                 <div>
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Takım İsmi</label>
-                                    <input 
-                                        type="text" 
-                                        value={saveTeamName}
-                                        onChange={(e) => setSaveTeamName(e.target.value)}
-                                        placeholder="Takımınızın adını girin..."
-                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
-                                    />
-                                </div>
-                                <div>
                                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Taktik İsmi</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         value={saveTacticName}
                                         onChange={(e) => setSaveTacticName(e.target.value)}
                                         placeholder="Bu taktiğin adı ne olsun?"
                                         className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
                                     />
                                 </div>
+                                {/* Hedef bağlam: status sunucuda belirlenir — dürüst önizleme */}
+                                <div className="bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-xs">
+                                    {(() => {
+                                        const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+                                        if (!teamRow) {
+                                            return <span className="text-gray-400">📁 <b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span>;
+                                        }
+                                        const admin = teamRow.my_role === 'CAPTAIN' || teamRow.my_role === 'ADMIN';
+                                        return admin
+                                            ? <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-[#39FF14]">onaylı</b> kaydedilir.</span>
+                                            : <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span>;
+                                    })()}
+                                </div>
                             </div>
 
-                            <button 
+                            <button
                                 onClick={handleSaveTactic}
-                                disabled={!saveTacticName.trim() || !saveTeamName.trim()}
+                                disabled={!saveTacticName.trim()}
                                 className="w-full h-14 bg-[#39FF14] text-black font-black text-xs tracking-widest uppercase rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(57,255,20,0.2)]"
                             >
                                 {(() => {
-                                    const teamData = myTeams.find(t => t.id === selectedTeamId);
-                                    const isCaptain = teamData ? (teamData.captain === auth.currentUser?.uid) : true;
-                                    return isCaptain ? "KAYDEDİLSİN" : "KAPTANA VE TAKIMA ÖNER";
+                                    const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+                                    if (!teamRow) return "KAYDET";
+                                    const admin = teamRow.my_role === 'CAPTAIN' || teamRow.my_role === 'ADMIN';
+                                    return admin ? "KAYDET" : "TAKIMA ÖNER";
                                 })()}
                             </button>
                         </motion.div>
@@ -2915,6 +2974,41 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         </motion.div>
     )}
 </AnimatePresence>
+
+{/* Öneri karar çubuğu — bekleyen takım taktiği + yönetici (M87) */}
+            <AnimatePresence>
+                {canDecideProposal && viewMode === 'STUDIO' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 40 }}
+                        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-2.5rem)] max-w-md rounded-3xl bg-[#161B22] border border-amber-400/30 shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-4"
+                    >
+                        <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1">
+                            Onay Bekleyen Öneri
+                        </div>
+                        <p className="text-xs text-white/60 mb-3">
+                            "{activeTactic.name}" takım taktiği olarak önerildi. İncele ve karar ver.
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => decideProposal(false)}
+                                disabled={decidingProposal}
+                                className="flex-1 min-h-[44px] rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white/70 active:scale-[0.97] disabled:opacity-50"
+                            >
+                                Reddet
+                            </button>
+                            <button
+                                onClick={() => decideProposal(true)}
+                                disabled={decidingProposal}
+                                className="flex-1 min-h-[44px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-sm font-black active:scale-[0.97] disabled:opacity-50"
+                            >
+                                {decidingProposal ? '…' : 'Onayla'}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
 {/* Toast Notification */}
             <AnimatePresence>

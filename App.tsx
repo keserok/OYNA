@@ -27,7 +27,6 @@ const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
 const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
-const MyTeam = lazy(() => import('./views/MyTeam'));
 const TeamDetailView = lazy(() => import('./views/social/TeamDetailView'));
 const Marketplace = lazy(() => import('./views/Marketplace'));
 const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
@@ -44,7 +43,6 @@ const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
 const SocialView = lazy(() => import('./views/SocialView'));
 const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
-const TeamCreator = lazy(() => import('./views/TeamCreator'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
 const MatchCreate = lazy(() => import('./views/MatchCreate'));
 const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
@@ -263,18 +261,15 @@ const App: React.FC = () => {
               : undefined,
           });
         },
-        // Deep link handler
+        // Deep link handler — tüm oyna:// kaynakları tek yöneticiden (tek makine)
         (deepLink) => {
-          if (!deepLink) return;
-          const parts = deepLink.replace('oyna://', '').split('/');
-          if (parts[0] === 'match' && parts[1]) {
-            supabase.from('matches').select('*').eq('id', parts[1]).single().then(({ data }) => {
-              if (data) {
-                useAppStore.getState().setSelectedMatch(data as any);
-                useAppStore.getState().navigateTo('MATCH_JOIN');
-              }
-            });
-          }
+          const s = useAppStore.getState();
+          handleDeepLink(deepLink, (v) => s.navigateTo(v as AppView), {
+            setSelectedMatch: (m) => s.setSelectedMatch(m),
+            setSelectedTeamId: s.setSelectedTeamId,
+            setStudioContext: s.setStudioContext,
+            setSocialTarget: s.setSocialTarget,
+          });
         },
       );
 
@@ -319,11 +314,13 @@ const App: React.FC = () => {
     let remove: (() => void) | undefined;
     import('@capacitor/app').then(({ App: CapApp }) => {
       CapApp.addListener('appUrlOpen', ({ url }) => {
-        handleDeepLink(
-          url,
-          (v) => useAppStore.getState().navigateTo(v as AppView),
-          (m) => useAppStore.getState().setSelectedMatch(m),
-        );
+        const s = useAppStore.getState();
+        handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+          setSelectedMatch: (m) => s.setSelectedMatch(m),
+          setSelectedTeamId: s.setSelectedTeamId,
+          setStudioContext: s.setStudioContext,
+          setSocialTarget: s.setSocialTarget,
+        });
       }).then((handle) => { remove = () => handle.remove(); });
     });
     return () => { if (remove) remove(); };
@@ -481,8 +478,6 @@ const App: React.FC = () => {
       case 'MY_TEAM':
         // Birleşik Takım Detayı — kimlik store.selectedTeamId ile taşınır (Spec §3.8)
         return <TeamDetailView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
-      case 'MY_TEAM_TACTICS':
-        return <MyTeam onBack={() => goBack('MY_TEAM')} onNavigate={(v) => navigateTo(v)} />;
       case 'STUDIO':
         return <Studio onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'PROFILE':
@@ -542,20 +537,6 @@ const App: React.FC = () => {
           onBack={() => {
             setSelectedConversationId(null);
             goBack('SOCIAL');
-          }}
-        />;
-      case 'TEAM_CREATOR':
-        return <TeamCreator
-          onBack={() => goBack('PROFILE')}
-          onComplete={async (teamData) => {
-            try {
-              await useAppStore.getState().createTeam(teamData);
-              navigateTo('MY_TEAM');
-            } catch (error) {
-              console.error('Takım oluşturulamadı:', error);
-              showToast('Takım oluşturulamadı. Lütfen tekrar dene.');
-              goBack('PROFILE');
-            }
           }}
         />;
       case 'POST_MATCH_EVAL':

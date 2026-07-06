@@ -14,6 +14,7 @@ import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests } from '../services/serviceRequestService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
 import { normalizeRole, inferSquadSize, applyCanonicalCoords } from '../shared/lobbyEnrichment';
 import { ORDU_CENTER } from '../utils/orduData';
@@ -2136,6 +2137,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </motion.div>
             )}
 
+
+        {/* ── Takım planı önizlemesi — yalnız atanan takımın üyeleri (L76) ── */}
+        <TeamPlanBanner matchId={match.id} />
 
         {/* ── TAKTİK SAHA ─────────────────────────────────────────────────── */}
         <AnimatePresence mode="wait">
