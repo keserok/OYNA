@@ -27,7 +27,25 @@ export type NotificationPreferenceKey =
   | 'match_reminder_24h'
   | 'nearby_match'
   | 'promo_offers'
-  | 'weekly_summary';
+  | 'weekly_summary'
+  // Sosyal taksonomi (Spec §7 — tümü kapatılabilir; sessiz mağduriyet yok)
+  | 'friend_request'
+  | 'friend_accepted'
+  | 'referral_joined'
+  | 'team_member_invite'
+  | 'team_invite_accepted'
+  | 'team_join_request'
+  | 'team_join_approved'
+  | 'team_join_rejected'
+  | 'team_member_removed'
+  | 'team_captain_transferred'
+  | 'match_invite_joined'
+  | 'match_tactic_assigned'
+  | 'tactic_proposed'
+  | 'tactic_approved'
+  | 'tactic_rejected'
+  | 'NEW_MESSAGE'
+  | 'team_chat_message';
 
 export type NotificationPreferences = Record<NotificationPreferenceKey, NotificationPreference>;
 
@@ -45,6 +63,24 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   nearby_match:       { enabled: false, mandatory: false },
   promo_offers:       { enabled: false, mandatory: false },
   weekly_summary:     { enabled: true,  mandatory: false },
+  // Sosyal — varsayılan açık, hepsi kapatılabilir
+  friend_request:           { enabled: true, mandatory: false },
+  friend_accepted:          { enabled: true, mandatory: false },
+  referral_joined:          { enabled: true, mandatory: false },
+  team_member_invite:       { enabled: true, mandatory: false },
+  team_invite_accepted:     { enabled: true, mandatory: false },
+  team_join_request:        { enabled: true, mandatory: false },
+  team_join_approved:       { enabled: true, mandatory: false },
+  team_join_rejected:       { enabled: true, mandatory: false },
+  team_member_removed:      { enabled: true, mandatory: false },
+  team_captain_transferred: { enabled: true, mandatory: false },
+  match_invite_joined:      { enabled: true, mandatory: false },
+  match_tactic_assigned:    { enabled: true, mandatory: false },
+  tactic_proposed:          { enabled: true, mandatory: false },
+  tactic_approved:          { enabled: true, mandatory: false },
+  tactic_rejected:          { enabled: true, mandatory: false },
+  NEW_MESSAGE:              { enabled: true, mandatory: false },
+  team_chat_message:        { enabled: true, mandatory: false },
 };
 
 // ─── Push Token Kaydı ────────────────────────────────────────────
@@ -70,20 +106,39 @@ export const savePushTokenToSupabase = async (token: string, userId: string) => 
 };
 
 // ─── Deep Link Yöneticisi ─────────────────────────────────────────
-export const handleDeepLink = (deepLink: string, setView: (v: string) => void, setSelectedMatch?: (m: any) => void) => {
+// Hedef yükleri store aksiyonlarıyla taşınır (Spec §2.3): team/{id}
+// artık kimliği DÜŞÜRMEZ; tactic/{id} Stüdyo'yu studioContext ile,
+// social/{tab}/{subTab} Sosyal'i socialTarget ile açar.
+// (Store'u doğrudan import edemeyiz — store bu modülü import ediyor.)
+export interface DeepLinkActions {
+  setSelectedMatch?: (m: any) => void;
+  setSelectedTeamId?: (id: string | null) => void;
+  setStudioContext?: (c: { teamId?: string; tacticId?: string } | null) => void;
+  setSocialTarget?: (t: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null) => void;
+  setSelectedConversationId?: (id: string | null) => void;
+  setSelectedTeamChatId?: (id: string | null) => void;
+  setTeamInitialTab?: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
+}
+
+export const handleDeepLink = (
+  deepLink: string,
+  setView: (v: string) => void,
+  actions: DeepLinkActions = {},
+) => {
   if (!deepLink) return;
 
-  // Format: oyna://match/UUID | oyna://profile/UUID | oyna://team/UUID
+  // Format: oyna://match/UUID | oyna://team/UUID[/chat|members] |
+  //         oyna://tactic/UUID | oyna://social/{tab}/{subTab} | oyna://profile/UUID
   const url = new URL(deepLink.replace('oyna://', 'https://oyna.app/'));
-  const [, resource, id] = url.pathname.split('/');
+  const [resource, id, sub] = url.pathname.split('/').filter(Boolean);
 
   switch (resource) {
     case 'match':
-      if (setSelectedMatch) {
+      if (actions.setSelectedMatch && id) {
         // Maç verisini Supabase'den çek ve MATCH_JOIN'e git
         supabase.from('matches').select('*').eq('id', id).single().then(({ data }) => {
           if (data) {
-            setSelectedMatch(data);
+            actions.setSelectedMatch!(data);
             setView('MATCH_JOIN');
           }
         });
@@ -93,7 +148,39 @@ export const handleDeepLink = (deepLink: string, setView: (v: string) => void, s
       setView('PROFILE');
       break;
     case 'team':
-      setView('MY_TEAM');
+      if (id && sub === 'chat' && actions.setSelectedTeamChatId) {
+        actions.setSelectedTeamChatId(id); // birleşik kutu → takım sohbeti
+        setView('MESSAGES');
+      } else if (id && actions.setSelectedTeamId) {
+        actions.setSelectedTeamId(id); // kimlik açıkça taşınır (A4/G42)
+        if (sub === 'members' && actions.setTeamInitialTab) {
+          actions.setTeamInitialTab('KADRO'); // Kadro → Bekleyenler
+        }
+        setView('MY_TEAM');
+      } else {
+        setView('SOCIAL');
+      }
+      break;
+    case 'messages':
+      if (id && actions.setSelectedConversationId) {
+        actions.setSelectedConversationId(id); // DM push'u → doğrudan sohbet
+      }
+      setView('MESSAGES');
+      break;
+    case 'tactic':
+      if (id && actions.setStudioContext) {
+        actions.setStudioContext({ tacticId: id }); // Stüdyo tam hidre açılır
+      }
+      setView('STUDIO');
+      break;
+    case 'social':
+      if (actions.setSocialTarget) {
+        actions.setSocialTarget({
+          tab: (id || '').toUpperCase() === 'TEAMS' ? 'TEAMS' : 'FRIENDS',
+          subTab: sub ? sub.toUpperCase() : undefined,
+        });
+      }
+      setView('SOCIAL');
       break;
     default:
       setView('DASHBOARD');
@@ -197,6 +284,9 @@ export const subscribeToInAppNotifications = (
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
+        // Sohbet push taşıyıcıları (inbox=false) uygulama-içi zile düşmez —
+        // rozet kaynağı konuşma okunmamış sayaçlarıdır (N93).
+        if ((payload.new as any)?.inbox === false) return;
         onNotification(payload.new);
       },
     )

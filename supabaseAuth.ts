@@ -62,12 +62,21 @@ supabase.auth.getSession().then(async ({ data: { session } }) => {
   }
 });
 
-supabase.auth.onAuthStateChange(async (_event, session) => {
-  if (session?.user) {
-    auth.currentUser = await buildCurrentUser(session.user);
-  } else {
-    auth.currentUser = null;
-  }
+supabase.auth.onAuthStateChange((_event, session) => {
+  // ÖNEMLİ: bu callback çalışırken supabase-js auth KİLİDİNİ tutar.
+  // İçeride başka bir supabase çağrısını await etmek (buildCurrentUser →
+  // profiles sorgusu) kilitlenme yaratır: oturumlu açılışta INITIAL_SESSION
+  // callback'i asla bitmez → uygulama AUTH'ta kalır, sonraki girişler de
+  // sonsuz "YÜKLENİYOR"a düşer. İş, kilit bırakıldıktan sonra koşturulur.
+  setTimeout(() => {
+    void (async () => {
+      if (session?.user) {
+        auth.currentUser = await buildCurrentUser(session.user);
+      } else {
+        auth.currentUser = null;
+      }
+    })();
+  }, 0);
 });
 
 // ─── Google OAuth ────────────────────────────────────────────────────────────
@@ -188,15 +197,21 @@ export const onAuthStateChanged = (
     }
   });
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) {
-      const user = await buildCurrentUser(session.user);
-      auth.currentUser = user;
-      callback(user);
-    } else {
-      auth.currentUser = null;
-      callback(null);
-    }
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Kilitlenme koruması (üstteki not): callback auth kilidini tutar —
+    // supabase çağrıları kilit bırakıldıktan sonra yapılır.
+    setTimeout(() => {
+      void (async () => {
+        if (session?.user) {
+          const user = await buildCurrentUser(session.user);
+          auth.currentUser = user;
+          callback(user);
+        } else {
+          auth.currentUser = null;
+          callback(null);
+        }
+      })();
+    }, 0);
   });
 
   return () => subscription.unsubscribe();

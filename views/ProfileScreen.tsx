@@ -468,9 +468,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     </div>
                 </button>
 
-                {/* ═══ TAKIMLARIM CARD ═══ */}
+                {/* ═══ TAKIMLARIM CARD — takım kimliği seçilmeden detay açılmaz (A4) ═══ */}
                 <button
-                    onClick={() => onNavigate && onNavigate('MY_TEAM')}
+                    onClick={() => {
+                        useAppStore.getState().setSocialTarget({ tab: 'TEAMS', subTab: 'MINE' });
+                        onNavigate && onNavigate('SOCIAL');
+                    }}
                     className="w-full bg-[#161B22]/60 backdrop-blur-md border border-[#FACC15]/30 rounded-3xl p-5 flex items-center justify-between group hover:bg-[#FACC15]/5 hover:border-[#FACC15]/50 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden"
                 >
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full group-hover:bg-[#FACC15]/20 transition-all" />

@@ -44,6 +44,7 @@ export const fetchNotifications = async (limit = 50): Promise<AppNotification[]>
     .from('notifications')
     .select('*')
     .eq('user_id', uid)
+    .eq('inbox', true) // sohbet push taşıyıcıları kutuda listelenmez (N93)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -90,7 +91,11 @@ export const subscribeToNotifications = (
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
-      (payload) => onInsert(mapNotification(payload.new)),
+      (payload) => {
+        // Sohbet push taşıyıcıları (inbox=false) zil/kutu akışına girmez
+        if ((payload.new as any)?.inbox === false) return;
+        onInsert(mapNotification(payload.new));
+      },
     )
     .subscribe();
 
