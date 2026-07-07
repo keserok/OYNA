@@ -43,9 +43,10 @@ export interface TacticState {
     identity: GameIdentity;
     groupColor?: 'DEFAULT' | 'RED' | 'NAVY' | 'GREEN';
     drawings?: DrawingLine[];
-    status?: 'APPROVED' | 'PENDING_APPROVAL';
+    status?: 'APPROVED' | 'PENDING_APPROVAL' | 'REJECTED';
     proposedBy?: string | null;
     priority?: number;
+    teamId?: string | null; // takım taktiği köprüsü (Küme 3) — DB "teamId"
 }
 
 export interface DrawingLine {

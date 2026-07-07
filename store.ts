@@ -143,6 +143,22 @@ interface AppState {
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
   selectedConversationId: string | null;
+  // SOSYAL yeniden tasarım — açık navigasyon yükleri (Foundation Spec §2.2)
+  // Bildirim/derin bağlantı Sosyal'in doğru alt-sekmesine insin diye:
+  socialTarget: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null;
+  setSocialTarget: (t: { tab: 'FRIENDS' | 'TEAMS'; subTab?: string; entityId?: string } | null) => void;
+  // Takım Detayı hangi takımı gösterecek ("listedeki ilk takım" varsayımı yasak):
+  selectedTeamId: string | null;
+  setSelectedTeamId: (id: string | null) => void;
+  // Takım Detayı açılış sekmesi (derin bağlantı: team/{id}/members → KADRO)
+  teamInitialTab: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null;
+  setTeamInitialTab: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
+  // Birleşik gelen kutusu: açılışta odaklanacak takım sohbeti (team/{id}/chat)
+  selectedTeamChatId: string | null;
+  setSelectedTeamChatId: (id: string | null) => void;
+  // Stüdyo'ya takım/taktik bağlamı (activeStudioTeam'in halefi; M80):
+  studioContext: { teamId?: string; tacticId?: string } | null;
+  setStudioContext: (c: { teamId?: string; tacticId?: string } | null) => void;
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
   // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
@@ -216,17 +232,6 @@ interface AppState {
   addMyTeam: (team: Team) => void;
   loadMyTeams: () => Promise<void>;
   createTeam: (input: TeamService.NewTeamInput) => Promise<Team>;
-
-  // ─── Studio Transfer ─────────────────────────────────────────────
-  activeStudioTeam: Team | null;
-  setActiveStudioTeam: (team: Team | null) => void;
-  teamTactics: any[];
-  fetchTeamTactics: (teamId: string) => Promise<void>;
-  proposeTactic: (tacticData: any) => Promise<any>;
-  approveTactic: (tacticId: string) => Promise<any>;
-  rejectTactic: (tacticId: string) => Promise<void>;
-  updateTacticPriorities: (teamId: string, orderedTacticIds: string[]) => Promise<void>;
-  updateTacticSlots: (tacticId: string, slots: any) => void;
 
   // ─── Opponent Finder Ads ─────────────────────────────────────────
   opponentAds: Team[];
@@ -634,142 +639,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     return team;
   },
 
-  // Studio Transfer
-  activeStudioTeam: null,
-  setActiveStudioTeam: (team) => set({ activeStudioTeam: team }),
-  teamTactics: [],
-  fetchTeamTactics: async (teamId) => {
-    try {
-      const { data, error } = await supabase
-        .from('tactics')
-        .select('*')
-        .eq('teamId', teamId)
-        .order('priority', { ascending: true });
-      if (error) throw error;
-      set({ teamTactics: data || [] });
-    } catch (err) {
-      console.error('fetchTeamTactics failed:', err);
-    }
-  },
-  proposeTactic: async (tacticData) => {
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      const newMock = {
-        ...tacticData,
-        id: `mock_${Date.now()}`,
-        status: 'PENDING_APPROVAL',
-        priority: get().teamTactics.filter(t => t.status === 'APPROVED').length,
-        createdAt: new Date().toISOString()
-      };
-      set(state => ({ teamTactics: [...state.teamTactics, newMock] }));
-      return newMock;
-    }
-    try {
-      const { data, error } = await supabase
-        .from('tactics')
-        .insert({
-          ...tacticData,
-          status: 'PENDING_APPROVAL',
-          createdAt: new Date().toISOString()
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      set(state => ({ teamTactics: [...state.teamTactics, data] }));
-      return data;
-    } catch (err) {
-      console.error('proposeTactic failed:', err);
-      throw err;
-    }
-  },
-  approveTactic: async (tacticId) => {
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      set(state => ({
-        teamTactics: state.teamTactics.map(t => t.id === tacticId ? { ...t, status: 'APPROVED' } : t)
-      }));
-      return get().teamTactics.find(t => t.id === tacticId);
-    }
-    try {
-      const { data, error } = await supabase
-        .from('tactics')
-        .update({ status: 'APPROVED' })
-        .eq('id', tacticId)
-        .select()
-        .single();
-      if (error) throw error;
-      set(state => ({
-        teamTactics: state.teamTactics.map(t => t.id === tacticId ? data : t)
-      }));
-      return data;
-    } catch (err) {
-      console.error('approveTactic failed:', err);
-      throw err;
-    }
-  },
-  rejectTactic: async (tacticId) => {
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      set(state => ({
-        teamTactics: state.teamTactics.filter(t => t.id !== tacticId)
-      }));
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from('tactics')
-        .delete()
-        .eq('id', tacticId);
-      if (error) throw error;
-      set(state => ({
-        teamTactics: state.teamTactics.filter(t => t.id !== tacticId)
-      }));
-    } catch (err) {
-      console.error('rejectTactic failed:', err);
-      throw err;
-    }
-  },
-  updateTacticPriorities: async (teamId, orderedTacticIds) => {
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      set(state => {
-        const reordered = state.teamTactics.map(t => {
-          const idx = orderedTacticIds.indexOf(t.id);
-          if (idx !== -1) {
-            return { ...t, priority: idx };
-          }
-          return t;
-        });
-        reordered.sort((a, b) => (a.priority ?? 9999) - (b.priority ?? 9999));
-        return { teamTactics: reordered };
-      });
-      return;
-    }
-    try {
-      const updates = orderedTacticIds.map((id, index) => 
-        supabase.from('tactics').update({ priority: index }).eq('id', id)
-      );
-      await Promise.all(updates);
-      set(state => {
-        const reordered = [...state.teamTactics];
-        reordered.sort((a, b) => {
-          const idxA = orderedTacticIds.indexOf(a.id);
-          const idxB = orderedTacticIds.indexOf(b.id);
-          return (idxA !== -1 ? idxA : 9999) - (idxB !== -1 ? idxB : 9999);
-        });
-        return { teamTactics: reordered };
-      });
-    } catch (err) {
-      console.error('updateTacticPriorities failed:', err);
-    }
-  },
-  updateTacticSlots: (tacticId, slots) => {
-    const slotsStr = typeof slots === 'string' ? slots : JSON.stringify(slots);
-    set(state => ({
-      teamTactics: state.teamTactics.map(t => t.id === tacticId ? { ...t, slots: slotsStr } : t)
-    }));
-    if (import.meta.env.VITE_SUPABASE_URL) {
-      Promise.resolve(supabase.from('tactics').update({ slots: slotsStr }).eq('id', tacticId)).catch(err => {
-        console.error('Failed to sync tactic slots to DB:', err);
-      });
-    }
-  },
+  // Studio Transfer ÖLDÜ (Küme 3): activeStudioTeam → studioContext;
+  // teamTactics makinesi → save_team_tactic/approve_tactic/reject_tactic
+  // RPC'leri + tacticSocialService (tek makine, sunucu otoritesi).
 
   // Opponent Ads
   opponentAds: [],
@@ -793,6 +665,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedMatch: (match) => set({ selectedMatch: match }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
   setSelectedConversationId: (id) => set({ selectedConversationId: id }),
+  // SOSYAL yeniden tasarım — navigasyon yükleri (Spec §2.2)
+  socialTarget: null,
+  setSocialTarget: (t) => set({ socialTarget: t }),
+  selectedTeamId: null,
+  setSelectedTeamId: (id) => set({ selectedTeamId: id }),
+  teamInitialTab: null,
+  setTeamInitialTab: (t) => set({ teamInitialTab: t }),
+  selectedTeamChatId: null,
+  setSelectedTeamChatId: (id) => set({ selectedTeamChatId: id }),
+  studioContext: null,
+  setStudioContext: (c) => set({ studioContext: c }),
   setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),

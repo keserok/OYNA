@@ -4,6 +4,9 @@ import { OynaLogo } from '../components/OynaLogo';
 
 interface SplashScreenProps {
   onStart: () => void;
+  /** Oturum geri yüklemesi çözülene dek otomatik ilerlemeyi bekletir
+      (yoksa kayıtlı oturum varken 1,2 sn'de AUTH'a düşülüyordu). */
+  ready?: boolean;
 }
 
 // Her harf için ayrı animasyon varyantı
@@ -22,11 +25,12 @@ const letterVariants = {
   }),
 };
 
-export default function SplashScreen({ onStart }: SplashScreenProps) {
+export default function SplashScreen({ onStart, ready = true }: SplashScreenProps) {
   useEffect(() => {
+    if (!ready) return; // oturum durumu belli olmadan otomatik geçme
     const timer = setTimeout(onStart, 1200);
     return () => clearTimeout(timer);
-  }, [onStart]);
+  }, [onStart, ready]);
 
   const letters = ['O', 'Y', 'N', 'A'];
 

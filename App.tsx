@@ -7,6 +7,7 @@ import { useAppStore } from './store';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
+import { startPresenceHeartbeat, stopPresenceHeartbeat } from './services/socialService';
 import { identifyUser, resetUser, trackEvent } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
@@ -26,8 +27,7 @@ const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
 const PaymentScreen = lazy(() => import('./views/PaymentScreen'));
-const MyTeam = lazy(() => import('./views/MyTeam'));
-const TeamPanelView = lazy(() => import('./views/TeamPanelView'));
+const TeamDetailView = lazy(() => import('./views/social/TeamDetailView'));
 const Marketplace = lazy(() => import('./views/Marketplace'));
 const ProfileScreen = lazy(() => import('./views/ProfileScreen'));
 const Notifications = lazy(() => import('./views/Notifications'));
@@ -42,7 +42,7 @@ const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
 const SocialView = lazy(() => import('./views/SocialView'));
-const TeamCreator = lazy(() => import('./views/TeamCreator'));
+const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
 const MatchCreate = lazy(() => import('./views/MatchCreate'));
 const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
@@ -68,6 +68,8 @@ const ViewLoader = () => (
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
+  // Oturum geri yüklemesi ilk kez çözüldü mü? (Splash otomatik geçişi bunu bekler)
+  const [authResolved, setAuthResolved] = React.useState(false);
   const {
     view,
     role,
@@ -75,6 +77,8 @@ const App: React.FC = () => {
     selectedMatch,
     selectedDiaryId,
     selectedConversationId,
+    selectedTeamChatId,
+    setSelectedTeamChatId,
     selectedGk,
     selectedRef,
     navigateTo,
@@ -197,11 +201,10 @@ const App: React.FC = () => {
               Array.isArray(profile.roles) ? (profile.roles as string[]) : [primaryRole]
             );
 
-            // last_active_at background güncelleme
-            supabase
-              .from('profiles')
-              .update({ last_active_at: new Date().toISOString() })
-              .eq('id', user.uid);
+            // Presence heartbeat (Spec F34): ön planda ~2,5 dk'da bir +
+            // görünürlüğe dönüşte last_active_at yazılır; arka planda durur.
+            // (Tek seferlik girişte-yazma modelinin halefi — gösterge dürüstleşir.)
+            startPresenceHeartbeat(user.uid);
 
             // Yeni model: AÇILIŞ YÖNLENDİRMESİ tek kaynağa (aktif rol) dayanır.
             // Oturum kalıcı → tekrar giriş YOK. Aktif rol oyuncu → Dashboard;
@@ -219,6 +222,7 @@ const App: React.FC = () => {
           setRole(UserRole.PLAYER);
           resetNavigation('SPLASH');
           resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
+          stopPresenceHeartbeat(); // çıkışta heartbeat durur (Spec F34)
         }
       } catch (error: any) {
         console.error('[App] Auth state error:', error);
@@ -228,6 +232,7 @@ const App: React.FC = () => {
         }
       } finally {
         setIsAuthReady(true);
+        setAuthResolved(true);
       }
     });
     return () => unsubscribe();
@@ -261,18 +266,18 @@ const App: React.FC = () => {
               : undefined,
           });
         },
-        // Deep link handler
+        // Deep link handler — tüm oyna:// kaynakları tek yöneticiden (tek makine)
         (deepLink) => {
-          if (!deepLink) return;
-          const parts = deepLink.replace('oyna://', '').split('/');
-          if (parts[0] === 'match' && parts[1]) {
-            supabase.from('matches').select('*').eq('id', parts[1]).single().then(({ data }) => {
-              if (data) {
-                useAppStore.getState().setSelectedMatch(data as any);
-                useAppStore.getState().navigateTo('MATCH_JOIN');
-              }
-            });
-          }
+          const s = useAppStore.getState();
+          handleDeepLink(deepLink, (v) => s.navigateTo(v as AppView), {
+            setSelectedMatch: (m) => s.setSelectedMatch(m),
+            setSelectedTeamId: s.setSelectedTeamId,
+            setStudioContext: s.setStudioContext,
+            setSocialTarget: s.setSocialTarget,
+            setSelectedConversationId: s.setSelectedConversationId,
+            setSelectedTeamChatId: s.setSelectedTeamChatId,
+            setTeamInitialTab: s.setTeamInitialTab,
+          });
         },
       );
 
@@ -317,11 +322,16 @@ const App: React.FC = () => {
     let remove: (() => void) | undefined;
     import('@capacitor/app').then(({ App: CapApp }) => {
       CapApp.addListener('appUrlOpen', ({ url }) => {
-        handleDeepLink(
-          url,
-          (v) => useAppStore.getState().navigateTo(v as AppView),
-          (m) => useAppStore.getState().setSelectedMatch(m),
-        );
+        const s = useAppStore.getState();
+        handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+          setSelectedMatch: (m) => s.setSelectedMatch(m),
+          setSelectedTeamId: s.setSelectedTeamId,
+          setStudioContext: s.setStudioContext,
+          setSocialTarget: s.setSocialTarget,
+          setSelectedConversationId: s.setSelectedConversationId,
+          setSelectedTeamChatId: s.setSelectedTeamChatId,
+          setTeamInitialTab: s.setTeamInitialTab,
+        });
       }).then((handle) => { remove = () => handle.remove(); });
     });
     return () => { if (remove) remove(); };
@@ -374,7 +384,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case 'SPLASH':
-        return <SplashScreen onStart={() => {
+        return <SplashScreen ready={authResolved} onStart={() => {
           // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş;
           // oturum varsa role göre panel.
           if (!auth.currentUser) {
@@ -477,9 +487,8 @@ const App: React.FC = () => {
           onViewTicket={() => resetNavigation('MATCH_TICKET')}
         />;
       case 'MY_TEAM':
-        return <TeamPanelView onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
-      case 'MY_TEAM_TACTICS':
-        return <MyTeam onBack={() => goBack('MY_TEAM')} onNavigate={(v) => navigateTo(v)} />;
+        // Birleşik Takım Detayı — kimlik store.selectedTeamId ile taşınır (Spec §3.8)
+        return <TeamDetailView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'STUDIO':
         return <Studio onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'PROFILE':
@@ -531,26 +540,16 @@ const App: React.FC = () => {
         return <TeamBuilder onBack={() => goBack('PROFILE')} />;
       case 'SOCIAL':
         return <SocialView onNavigate={(v) => navigateTo(v)} />;
+      case 'FRIEND_ADD':
+        return <FriendAddView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'MESSAGES':
         return <MessagesView
           initialConversationId={selectedConversationId}
+          initialTeamChatId={selectedTeamChatId}
           onBack={() => {
             setSelectedConversationId(null);
+            setSelectedTeamChatId(null);
             goBack('SOCIAL');
-          }}
-        />;
-      case 'TEAM_CREATOR':
-        return <TeamCreator
-          onBack={() => goBack('PROFILE')}
-          onComplete={async (teamData) => {
-            try {
-              await useAppStore.getState().createTeam(teamData);
-              navigateTo('MY_TEAM');
-            } catch (error) {
-              console.error('Takım oluşturulamadı:', error);
-              showToast('Takım oluşturulamadı. Lütfen tekrar dene.');
-              goBack('PROFILE');
-            }
           }}
         />;
       case 'POST_MATCH_EVAL':
@@ -558,7 +557,7 @@ const App: React.FC = () => {
       case 'MATCH_CREATE':
         return <MatchCreate onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       default:
-        return <SplashScreen onStart={() => navigateTo('AUTH')} />;
+        return <SplashScreen ready={authResolved} onStart={() => navigateTo('AUTH')} />;
     }
   };
 

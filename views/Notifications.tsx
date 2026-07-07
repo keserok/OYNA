@@ -166,7 +166,16 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   const routeTo = useCallback(
     (n: AppNotification) => {
       if (n.deepLink) {
-        handleDeepLink(n.deepLink, (v) => navigateTo(v as AppView), setSelectedMatch);
+        const s = useAppStore.getState();
+        handleDeepLink(n.deepLink, (v) => navigateTo(v as AppView), {
+          setSelectedMatch,
+          setSelectedTeamId: s.setSelectedTeamId,
+          setStudioContext: s.setStudioContext,
+          setSocialTarget: s.setSocialTarget,
+          setSelectedConversationId: s.setSelectedConversationId,
+          setSelectedTeamChatId: s.setSelectedTeamChatId,
+          setTeamInitialTab: s.setTeamInitialTab,
+        });
         onBack();
       } else if (n.matchId) {
         navigateTo('MATCH_JOIN' as AppView);
