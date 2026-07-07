@@ -82,7 +82,8 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         minRating: Number(f.minRating) || 3,
         status: f.status,
         format: f.format,
-        image: f.image || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=600',
+        // Boş → sunucu tetikleyicisi maçın sahasının fotoğrafını otomatik yazar.
+        image: f.image.trim(),
         badges: [f.difficulty],
         pitchId: f.pitchId || undefined,
       });
@@ -175,7 +176,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
                 ) : f.image ? (
                   <img src={f.image} alt="" className="w-full h-full object-cover rounded-lg p-1" />
                 ) : (
-                  <span className="text-xs text-gray-500 flex items-center gap-2"><UploadCloud size={18} /> Görsel yükle</span>
+                  <span className="text-xs text-gray-500 flex items-center gap-1.5 text-center px-2"><UploadCloud size={18} /> Özel görsel yükle — boş bırakılırsa sahanın fotoğrafı otomatik gösterilir</span>
                 )}
                 <input type="file" className="hidden" accept="image/*" disabled={uploading} onChange={async (e) => {
                   const file = e.target.files?.[0];
@@ -185,6 +186,15 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
                   }
                 }} />
               </label>
+              {f.image && !uploading && (
+                <button
+                  type="button"
+                  onClick={() => setF((prev) => ({ ...prev, image: '' }))}
+                  className="mt-1.5 text-[10px] font-bold text-gray-400 hover:text-white uppercase tracking-wider"
+                >
+                  ↺ Otomatiğe döndür (saha fotoğrafı)
+                </button>
+              )}
             </Field>
           </div>
 
