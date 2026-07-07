@@ -293,6 +293,9 @@ interface AppState {
   // ─── Goalkeeper CRUD ───────────────────────────────────────────
   addGoalkeeper: (gk: Goalkeeper) => Promise<void>;
   updateGoalkeeper: (gk: Goalkeeper) => Promise<void>;
+  /** FAZ 8A — sağlayıcının KENDİ profil/müsaitlik güncellemesi (admin RPC değil,
+   *  provider_update_own_profile). Kısmi payload; store'da merge edilir. */
+  updateOwnProvider: (kind: 'GK' | 'REF', partial: { id: string } & Record<string, any>) => Promise<void>;
   deleteGoalkeeper: (id: string) => Promise<void>;
 
   // ─── Referee CRUD ──────────────────────────────────────────────
@@ -890,11 +893,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   updateGoalkeeper: async (gk) => {
     const prev = get().adminGoalkeepers;
-    set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? gk : g) });
+    // Kısmi payload tüm kaydı ezmesin: mevcut kayıtla merge et
+    set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? { ...g, ...gk } : g) });
     try {
       const { updateGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
       await updateGoalkeeperAdmin(gk);
     } catch (e) { set({ adminGoalkeepers: prev }); throw e; }
+  },
+  updateOwnProvider: async (kind, partial) => {
+    const isGk = kind === 'GK';
+    const prevGk = get().adminGoalkeepers;
+    const prevRef = get().adminReferees;
+    if (isGk) set({ adminGoalkeepers: prevGk.map(g => g.id === partial.id ? { ...g, ...partial } : g) });
+    else set({ adminReferees: prevRef.map(r => r.id === partial.id ? { ...r, ...partial } : r) });
+    try {
+      const { updateOwnProviderProfile } = await import('./services/serviceProviderService');
+      const { id: _id, ...fields } = partial;
+      await updateOwnProviderProfile(fields);
+    } catch (e) {
+      if (isGk) set({ adminGoalkeepers: prevGk }); else set({ adminReferees: prevRef });
+      throw e;
+    }
   },
   deleteGoalkeeper: async (id) => {
     const prev = get().adminGoalkeepers;
@@ -923,7 +942,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   updateReferee: async (ref) => {
     const prev = get().adminReferees;
-    set({ adminReferees: prev.map(r => r.id === ref.id ? ref : r) });
+    // Kısmi payload tüm kaydı ezmesin: mevcut kayıtla merge et
+    set({ adminReferees: prev.map(r => r.id === ref.id ? { ...r, ...ref } : r) });
     try {
       const { updateRefereeAdmin } = await import('./admin-panel/services/adminService');
       await updateRefereeAdmin(ref);

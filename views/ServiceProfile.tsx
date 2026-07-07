@@ -51,7 +51,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
   const photoPool = isRef ? REFEREE_PHOTOS : GOALKEEPER_PHOTOS;
 
-  const { adminGoalkeepers, adminReferees, updateGoalkeeper, updateReferee } = useAppStore();
+  const { adminGoalkeepers, adminReferees, updateOwnProvider } = useAppStore();
   const currentUser = auth.currentUser;
   
   const userProfile = React.useMemo(() => {
@@ -120,28 +120,33 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const accentBg = isRef ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
   const gradientFrom = isRef ? 'from-red-950' : 'from-green-950';
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!userProfile) {
-      onBack();
+      setSaveError('Sağlayıcı profilin yüklenemedi. Lütfen sayfayı yenileyip tekrar dene.');
       return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
-      const update = {
-        ...userProfile,
+      // FAZ 8A — self-servis RPC (provider_update_own_profile): admin yetkisi
+      // istemez; radius sağlayıcı ayarı olarak settings JSONB'ye yazılır.
+      await updateOwnProvider(isRef ? 'REF' : 'GK', {
+        id: userProfile.id,
         bio: tempBio,
         fee,
         name: displayName,
         style: selectedStyle,
         avatar: customPhoto || userProfile.avatar,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
-      };
-      if (isRef) await updateReferee(update as Referee);
-      else await updateGoalkeeper(update as Goalkeeper);
+        settings: { ...(userProfile as any).settings, radiusKm },
+      });
       setBio(tempBio);
       onBack();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Profil kaydetme hatası:', err);
+      setSaveError(err?.message || 'Profil kaydedilemedi. Lütfen tekrar dene.');
     } finally {
       setSaving(false);
     }
@@ -202,6 +207,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       </div>
 
       <div className="pb-20 space-y-5 px-4">
+
+        {saveError && (
+          <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30">
+            <p className="text-[11px] font-bold text-red-400">{saveError}</p>
+          </div>
+        )}
 
         {/* ─── Hero Photo Section ─── */}
         <motion.div
@@ -497,12 +508,18 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           <button 
             className="w-full mt-4 py-3 rounded-xl font-black text-sm text-black transition-colors"
             style={{ background: accentColor }}
-            onClick={() => {
-                // Burada veritabanına kayıt işlemi olacak
+            onClick={async () => {
                 if (userProfile?.id) {
-                    const update = { id: userProfile.id, coordinates: { lat: mapCenter[0], lng: mapCenter[1] }, settings: { ...(userProfile.settings || {}), radiusKm } };
-                    if (isRef) useAppStore.getState().updateReferee(update as any);
-                    else useAppStore.getState().updateGoalkeeper(update as any);
+                    try {
+                        await updateOwnProvider(isRef ? 'REF' : 'GK', {
+                            id: userProfile.id,
+                            coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
+                            settings: { ...(userProfile.settings || {}), radiusKm },
+                        });
+                        setSaveError(null);
+                    } catch (err: any) {
+                        setSaveError(err?.message || 'Lokasyon kaydedilemedi.');
+                    }
                 }
             }}
           >

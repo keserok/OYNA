@@ -141,6 +141,9 @@ Keşif turundaki "tek `provider_profiles` + `gk_details`/`ref_details`" önerisi
 
 **📦 Faz Sonu Çıktısı:** Kaptan 2 dokunuşta gerçek talep gönderir; sağlayıcı anında görür, ayarları kaydolur, süresi geçen talep kendini temizler, liste akıllı sıralanır. **Risk:** `Marketplace.tsx` söküm sırasında `MatchJoin` akışını bozmak → ortak `HireSheet` iki yüzeyden de kullanılıp tek e2e senaryoyla korunur.
 
+> **✅ Uygulandı (07.07.2026)** — `20260714000000_faz8a_provider_wallet_and_repair.sql` + servis/UI, canlıya deploy + 27 e2e assertion yeşil (`tests/integration/faz8a_provider_wallet.sql`):
+> **8A.1** Marketplace BID/sahte-DIRECT söküldü → tek yol `create_service_request` (ücret/komisyon backend'den, başarı ekranı "talep gönderildi" der) · **8A.2** `provider_update_own_profile` RPC (bio/ücret/stil/foto/bölge/konum/`working_hours`/`settings`/müsaitlik — kolonlar canlıya eklendi; korumalı alan reddi) + ServiceProfile/ServiceSettings/AKTİFLİK modalı bu yola bağlandı; store merge onarımı · **8A.3** Cüzdan: `payout_methods` (IBAN+kart, PAN saklanmaz — son 4 hane + token) + `request_payout_with_method` (TC kimlik kapısı korunur) + kokpite Cüzdan sekmesi + yöntem yönetimi UI; `handleTransfer` bypass'ı kapatıldı; payout sonucu bildirimi (trigger) · **8A.4** create/respond/expire → `notifications` INSERT (push webhook otomatik) + kokpitte realtime yenileme · **8A.5** Dinamik TTL (`app_config`: 4s/60dk/30dk tabanı) + `expire_service_requests` pg_cron (*/5dk) — EXPIRED ölü alanı canlandı, blokaj void ediliyor. **Bonus onarım:** sağlayıcı reddinde `void_preauth` UNAUTHORIZED atıyordu (intent kaptana ait) → blokaj doğrudan serbest bırakılıyor. **Kalan:** 8A.6 karma sıralama + `provider_stats`, 8A.7 legacy temizlik (service_offers/JOBS başvurusu).
+
 ---
 
 ## 5. FAZ 8B — İtibar & Bağ (Sosyal Vitrin) 🌟
