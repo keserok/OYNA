@@ -31,14 +31,18 @@ interface AvatarProps {
 
 const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', online, className = '' }) => {
   const s = SIZES[size];
+  // Görsel yüklenemezse baş harflere düş (kırık/boş kare görünmesin)
+  const [broken, setBroken] = React.useState(false);
+  React.useEffect(() => { setBroken(false); }, [src]);
   return (
     <div className={`relative shrink-0 ${className}`}>
-      {src ? (
+      {src && !broken ? (
         <img
           src={src}
           alt={name || 'Oyuncu'}
           className={`${s.box} object-cover bg-white/5`}
           loading="lazy"
+          onError={() => setBroken(true)}
         />
       ) : (
         <div

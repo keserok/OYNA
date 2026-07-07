@@ -26,7 +26,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => (
   <AnimatePresence>
     {open && (
-      <div className="fixed inset-0 z-50 flex items-end justify-center">
+      // z-[55]: alt navigasyonun (z-50) üstünde — SOCIAL'de sheet'in birincil
+      // butonu navın altında kalıp dokunulamıyordu; onay diyaloğu (z-[60]) üstte.
+      <div className="fixed inset-0 z-[55] flex items-end justify-center">
         <motion.button
           {...MODAL_BACKDROP}
           aria-label="Kapat"
