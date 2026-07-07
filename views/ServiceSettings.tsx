@@ -45,7 +45,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   const accentColor = isRef ? '#ef4444' : '#22c55e';
   const accentBg = isRef ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)';
 
-  const { adminGoalkeepers, adminReferees, updateGoalkeeper, updateReferee } = useAppStore();
+  const { adminGoalkeepers, adminReferees, updateOwnProvider } = useAppStore();
   const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
   
   const savedSettings = me?.settings || {};
@@ -70,13 +70,12 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   const [darkMode, setDarkMode] = useState(savedSettings.darkMode ?? true);
   const [language, setLanguage] = useState<'TR' | 'EN'>(savedSettings.language ?? 'TR');
 
-  // Save changes to DB
+  // FAZ 8A — ayarlar self-servis RPC ile DB'ye gerçekten yazılır
   const updateSettings = (key: string, value: any) => {
     if (!me) return;
     const newSettings = { ...savedSettings, [key]: value };
-    const update = { id: me.id, settings: newSettings };
-    if (isRef) updateReferee(update as any);
-    else updateGoalkeeper(update as any);
+    updateOwnProvider(isRef ? 'REF' : 'GK', { id: me.id, settings: newSettings })
+      .catch((err: any) => console.error('Ayar kaydedilemedi:', err?.message));
   };
 
   // Apply dark/light mode to document

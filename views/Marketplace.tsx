@@ -11,6 +11,7 @@ import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { EmptyState } from '../components/common/StatusState';
+import { createServiceRequest } from '../services/serviceRequestService';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -48,15 +49,15 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     const [activeTab, setActiveTab] = useState<'GK' | 'REF'>(initialType);
     const [selectedProfile, setSelectedProfile] = useState<Goalkeeper | Referee | null>(null);
     const [isHiring, setIsHiring] = useState(false);
-    const [showToast, setShowToast] = useState(false);
-    const [bidAmount, setBidAmount] = useState<number>(0);
-    const [isBidding, setIsBidding] = useState(false);
+    // FAZ 8A — gerçek talep sonucu (ücret/komisyon backend'den döner; pazarlık yok)
+    const [hireResult, setHireResult] = useState<{ fee: number; providerAmount: number } | null>(null);
+    const [hireError, setHireError] = useState<string | null>(null);
 
     // If initialType is provided, we might want to lock the tab or just default to it.
     // The user said "yalnızca ... çıksın", so I'll hide the tabs if initialType is passed.
     const isLocked = !!initialType;
 
-    const { adminGoalkeepers, adminReferees, adminMatches, setAdminMatches, updateMatch, activeRegion, userLocation } = useAppStore();
+    const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, userLocation } = useAppStore();
     const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
 
     const [filterDistrict, setFilterDistrict] = useState<string>('Tümü');
@@ -88,81 +89,49 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
         return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);
     }, [adminMatches]);
 
-    const [showBidScreen, setShowBidScreen] = useState(false);
     const [showMatchSelection, setShowMatchSelection] = useState(false);
-    const [hireMode, setHireMode] = useState<'BID' | 'DIRECT'>('DIRECT');
     const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
     const [showSuccessScreen, setShowSuccessScreen] = useState(false);
 
     const handleSelect = (p: Goalkeeper | Referee) => {
         setSelectedProfile(p);
-        setBidAmount(p.fee);
-        setShowBidScreen(false);
         setShowMatchSelection(false);
         setShowSuccessScreen(false);
-    };
-
-    const handleInitiateOffer = () => {
-        setHireMode('BID');
-        setShowBidScreen(true);
+        setHireError(null);
     };
 
     const handleDirectHire = () => {
-        setHireMode('DIRECT');
-        if (selectedProfile) {
-            setBidAmount(selectedProfile.fee);
-        }
+        setHireError(null);
         setShowMatchSelection(true);
     };
 
-    const handleConfirmMatch = (match: any) => {
+    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj + %10 komisyon
+    // + sağlayıcı onayı + bildirim). Maç kaydı doğrudan mutasyona uğratılmaz;
+    // sağlayıcı kabul edip tahsilat yapılınca backend gk_id/refereeId'yi yazar.
+    const handleConfirmMatch = async (match: any) => {
+        if (!selectedProfile || isHiring) return;
         setSelectedMatchForHire(match);
         setIsHiring(true);
-        
-        if (hireMode === 'DIRECT') {
-            let updatedMatch = { ...match };
-            if (activeTab === 'GK') {
-                const slots = match.slots ? [...match.slots] : [];
-                const gkSlotIndex = slots.findIndex((s: any) => s.role === 'GK' && s.status === 'OPEN');
-                if (gkSlotIndex !== -1) {
-                    slots[gkSlotIndex] = { ...slots[gkSlotIndex], status: 'TAKEN' };
-                    updatedMatch.slots = slots;
-                }
-                if (updatedMatch.missingPositions) {
-                    updatedMatch.missingPositions = updatedMatch.missingPositions.map((pos: any) =>
-                        pos.role === 'GK' ? { ...pos, count: Math.max(0, pos.count - 1) } : pos
-                    );
-                }
-            } else {
-                updatedMatch.refereeId = selectedProfile?.id;
-            }
-
-            if (updateMatch) {
-                updateMatch(updatedMatch);
-            } else {
-                setAdminMatches(adminMatches.map(m => m.id === match.id ? updatedMatch : m));
-            }
-        } else {
-            // BID Mode: Don't update the match. Instead, create an offer.
-            // Example: await supabase.from('offers').insert({...})
-            console.log(`Bid created for Match: ${match.id}, Profile: ${selectedProfile?.id}, Amount: ${bidAmount}`);
-        }
-
-        setTimeout(() => {
-            setIsHiring(false);
+        setHireError(null);
+        try {
+            const result = await createServiceRequest(match.id, selectedProfile.id, activeTab);
+            setHireResult({ fee: result.fee, providerAmount: result.providerAmount });
             setShowSuccessScreen(true);
-            
+
             setTimeout(() => {
                 setShowSuccessScreen(false);
                 setSelectedProfile(null);
                 setShowMatchSelection(false);
-                setShowBidScreen(false);
-                
+                setHireResult(null);
                 if (onSelect && selectedProfile) {
                     onSelect(selectedProfile);
                 }
-            }, 3000);
-        }, 1500);
+            }, 3500);
+        } catch (err: any) {
+            setHireError(err?.message || 'Talep oluşturulamadı. Lütfen tekrar dene.');
+        } finally {
+            setIsHiring(false);
+        }
     };
 
     return (
@@ -286,19 +255,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                     transition={{ type: 'spring', delay: 0.1 }}
                                     className="flex flex-col items-center gap-6 z-10"
                                 >
-                                    <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center shadow-lg ${
-                                        hireMode === 'BID' 
-                                            ? 'bg-[#FACC15]/10 border-[#FACC15] text-[#FACC15] shadow-[0_0_25px_rgba(250,204,21,0.3)]' 
-                                            : 'bg-emerald-500/10 border-[#39FF14] text-[#39FF14] shadow-[0_0_25px_rgba(57,255,20,0.3)]'
-                                    }`}>
+                                    <div className="w-20 h-20 rounded-full border-2 flex items-center justify-center shadow-lg bg-emerald-500/10 border-[#39FF14] text-[#39FF14] shadow-[0_0_25px_rgba(57,255,20,0.3)]">
                                         <Sparkles size={38} className="animate-pulse" />
                                     </div>
-                                    
+
                                     <div className="space-y-3">
-                                        <h3 className={`text-2xl font-black italic uppercase tracking-tighter ${
-                                            hireMode === 'BID' ? 'text-[#FACC15]' : 'text-[#39FF14]'
-                                        }`}>
-                                            {hireMode === 'BID' ? 'TEKLİFİNİZ GÖNDERİLDİ' : 'KİRALAMA BAŞARILI'}
+                                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[#39FF14]">
+                                            TALEP GÖNDERİLDİ
                                         </h3>
                                         
                                         <div className="bg-[#161B22]/80 border border-white/5 rounded-3xl p-5 max-w-sm mx-auto space-y-3 text-left">
@@ -323,17 +286,21 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             <div className="w-full h-px bg-white/5" />
                                             
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[9px] font-black text-white/40 uppercase">TUTAR</span>
-                                                <span className={`text-sm font-black ${
-                                                    hireMode === 'BID' ? 'text-[#FACC15]' : 'text-[#39FF14]'
-                                                }`}>
-                                                    {bidAmount} ₺
+                                                <span className="text-[9px] font-black text-white/40 uppercase">HİZMET BEDELİ</span>
+                                                <span className="text-sm font-black text-[#39FF14]">
+                                                    {hireResult?.fee ?? selectedProfile.fee} ₺
                                                 </span>
                                             </div>
+                                            {hireResult && (
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[9px] font-black text-white/40 uppercase">SAĞLAYICININ NET KAZANCI</span>
+                                                    <span className="text-xs font-bold text-white/70">{hireResult.providerAmount} ₺</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest animate-pulse mt-4">
-                                            Yönlendiriliyorsunuz, lütfen bekleyin...
+
+                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-4">
+                                            {activeTab === 'GK' ? 'Kaleci' : 'Hakem'} onayladığında bildirim alacaksın. Ödeme, onay ve maç kesinleşmesine kadar yalnızca bloke edilir.
                                         </p>
                                     </div>
                                 </motion.div>
@@ -352,13 +319,19 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             Hangi maç için {activeTab === 'GK' ? 'kaleci' : 'hakem'} kiralamak istiyorsunuz?
                                         </p>
                                     </div>
-                                    <button 
-                                        onClick={() => { setShowMatchSelection(false); setShowBidScreen(false); }} 
+                                    <button
+                                        onClick={() => setShowMatchSelection(false)}
                                         className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
                                     >
                                         <X size={16} />
                                     </button>
                                 </div>
+
+                                {hireError && (
+                                    <div className="mb-4 p-3 rounded-2xl bg-red-500/10 border border-red-500/30 relative z-10">
+                                        <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide">{hireError}</p>
+                                    </div>
+                                )}
 
                                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24 relative z-10">
                                     {isHiring ? (
@@ -418,74 +391,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             );
                                         })
                                     )}
-                                </div>
-                            </div>
-                        ) : showBidScreen ? (
-                            /* Bidding Price Overlay */
-                            <div className="flex-1 flex flex-col p-6 relative">
-                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 pointer-events-none" />
-                                
-                                <div className="flex items-center justify-between mb-8 relative z-10">
-                                    <div>
-                                        <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">
-                                            TEKLİF TUTARINI BELİRLE
-                                        </h2>
-                                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">
-                                            Teklif etmek istediğiniz hizmet bedelini ayarlayın
-                                        </p>
-                                    </div>
-                                    <button 
-                                        onClick={() => setShowBidScreen(false)} 
-                                        className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-
-                                <div className="flex-1 flex flex-col justify-center items-center gap-8 relative z-10">
-                                    <div className="flex flex-col items-center justify-center w-full max-w-sm py-10 gap-6 bg-[#161B22]/60 border border-white/5 rounded-3xl relative">
-                                        <span className="text-[10px] font-black tracking-[0.15em] text-white/40 uppercase">TEKLİF EDİLEN TUTAR</span>
-                                        
-                                        <div className="flex items-center gap-8">
-                                            <button 
-                                                onClick={() => setBidAmount(prev => Math.max(0, prev - 25))}
-                                                className="w-12 h-12 rounded-full border border-white/10 bg-white/[0.03] text-white flex items-center justify-center hover:bg-white/10 active:scale-90 font-black text-xl transition-all"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="text-4xl font-black text-white italic tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                                                {bidAmount} ₺
-                                            </span>
-                                            <button 
-                                                onClick={() => setBidAmount(prev => prev + 25)}
-                                                className="w-12 h-12 rounded-full border border-white/10 bg-white/[0.03] text-white flex items-center justify-center hover:bg-white/10 active:scale-90 font-black text-xl transition-all"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                        
-                                        <span className={`text-[9px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full border ${
-                                            activeTab === 'GK' 
-                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-[#39FF14]' 
-                                                : 'bg-yellow-500/10 border-yellow-500/30 text-[#FACC15]'
-                                        }`}>
-                                            PROFESYONEL BEDELİ: {selectedProfile.fee} ₺
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="pb-8 relative z-10">
-                                    <button
-                                        onClick={() => { setShowBidScreen(false); setShowMatchSelection(true); }}
-                                        className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg ${
-                                            activeTab === 'GK' 
-                                                ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25' 
-                                                : 'bg-[#FACC15] hover:bg-[#FACC15]/90 shadow-yellow-900/25'
-                                        }`}
-                                    >
-                                        MAÇ SEÇİMİNE GEÇ
-                                        <ChevronRight size={16} />
-                                    </button>
                                 </div>
                             </div>
                         ) : (
@@ -558,47 +463,26 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                     </div>
                                 </div>
 
-                                {/* Footer Actions (Side by Side Premium Actions) */}
+                                {/* Footer Action — tek yol: sabit ücretle talep gönder (pazarlık yok, Prensipler §4.3) */}
                                 <div className="absolute bottom-0 left-0 w-full p-6 bg-[#0A0E14]/90 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
-                                    <button
-                                        onClick={handleInitiateOffer}
-                                        className="flex-1 h-14 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/10 text-white font-black uppercase text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                                    >
-                                        <MessageSquare size={14} className="text-white/60" />
-                                        TEKLİF GÖNDER
-                                    </button>
+                                    <div className="flex flex-col items-start pr-2">
+                                        <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Hizmet Bedeli</span>
+                                        <span className="text-xl font-black text-white tabular-nums">{selectedProfile.fee}₺</span>
+                                    </div>
                                     <button
                                         onClick={handleDirectHire}
                                         className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-lg ${
-                                            activeTab === 'GK' 
-                                                ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25' 
+                                            activeTab === 'GK'
+                                                ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25'
                                                 : 'bg-[#FACC15] hover:bg-[#FACC15]/90 shadow-yellow-900/25'
                                         }`}
                                     >
                                         <Zap size={14} />
-                                        DİREKT KİRALA
+                                        KİRALA — TALEP GÖNDER
                                     </button>
                                 </div>
                             </>
                         )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Toast */}
-            <AnimatePresence>
-                {showToast && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100]"
-                    >
-                        <div className={`px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center ${activeTab === 'GK' ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'}`}>
-                            <Activity size={32} className="mb-2 animate-pulse" />
-                            <h3 className="font-black text-xl italic uppercase">İSTEK GÖNDERİLDİ</h3>
-                            <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Profesyonel ile iletişime geçilecek!</p>
-                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

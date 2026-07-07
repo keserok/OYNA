@@ -110,3 +110,38 @@ export const submitServiceApplication = async (
     }
   }
 };
+
+// ─── FAZ 8A — Sağlayıcı self-servis profil güncelleme ────────────────────────
+// admin_update_goalkeeper/referee admin yetkisi ister ve working_hours/settings
+// alanlarını yok sayar; sağlayıcının KENDİ kayıtları bu RPC ile DB'ye ulaşır.
+export interface OwnProviderProfileUpdate {
+  name?: string;
+  bio?: string;
+  fee?: number;
+  style?: string;
+  avatar?: string;
+  height?: string;
+  age?: number;
+  preferredZones?: string[];
+  coordinates?: { lat: number; lng: number };
+  workingHours?: { activeDays: string[]; activeHours: string };
+  settings?: Record<string, unknown>;
+  isAvailable?: boolean;
+}
+
+export const updateOwnProviderProfile = async (
+  payload: OwnProviderProfileUpdate,
+): Promise<void> => {
+  // undefined alanları at — RPC yalnız gönderilen anahtarları günceller
+  const clean = Object.fromEntries(
+    Object.entries(payload).filter(([, v]) => v !== undefined),
+  );
+  const { error } = await supabase.rpc('provider_update_own_profile', {
+    p_payload: clean,
+  });
+  if (error) {
+    console.error('[ServiceProvider] profil güncelleme hatası:', error);
+    const withDesc = error.message?.match(/[A-Z_]+:\s*(.+)$/);
+    throw new Error(withDesc ? withDesc[1] : 'Profil güncellenemedi. Lütfen tekrar dene.');
+  }
+};

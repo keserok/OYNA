@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Pitch, Goalkeeper, Referee, AdminUser, UserRole } from '../../types';
 import { useAppStore } from '../../store';
 import * as FB from '../../supabaseMutations';
@@ -98,8 +99,12 @@ const useToast = () => {
 };
 
 // ── Modal Shell ───────────────────────────────────────────────────────────────
-const Shell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }> = ({ title, onClose, children, footer }) => (
-    <motion.div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+const Shell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }> = ({ title, onClose, children, footer }) => createPortal(
+    // Portal → document.body: dönüşümlü (transform) bir üst öğe içindeyken
+    // `position:fixed` viewport yerine o öğeye göre konumlanıp modalın üst kısmı
+    // ekran dışına taşıyor ve kaydırılamıyordu. Body'ye portal + max-h/scroll ile
+    // modal her zaman ekranda ve tamamen kaydırılabilir kalır.
+    <motion.div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[240] flex items-end sm:items-center justify-center p-0 sm:p-4"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}>
         <motion.div className="bg-[#0D1117] border border-white/10 w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[95vh]"
@@ -112,7 +117,8 @@ const Shell: React.FC<{ title: string; onClose: () => void; children: React.Reac
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 space-y-5">{children}</div>
             <div className="p-4 border-t border-white/10 bg-[#121820] rounded-b-3xl shrink-0">{footer}</div>
         </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
 );
 
 // ── Grade Picker ─────────────────────────────────────────────────────────────

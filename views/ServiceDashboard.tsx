@@ -10,6 +10,17 @@ import {
   getProviderIdentityStatus,
   submitProviderIdentity,
 } from '../services/serviceRequestService';
+import {
+  getWalletSummary,
+  getPayoutMethods,
+  addPayoutMethod,
+  deletePayoutMethod,
+  setDefaultPayoutMethod,
+  requestPayoutWithMethod,
+  getPendingPayout,
+  PayoutMethod,
+  PayoutRequestRow,
+} from '../services/walletService';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
@@ -35,8 +46,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const {
     unreadNotificationsCount,
     setIsNotificationsOpen,
-    updateGoalkeeper,
-    updateReferee,
+    updateOwnProvider,
     adminMatches
   } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>('HOME');
@@ -59,12 +69,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [setupHours, setSetupHours] = useState<string[]>(['19:00', '20:00', '21:00']);
   const [activeDays, setActiveDays] = useState<string[]>(['Bugün']);
   const [activeHours, setActiveHours] = useState<string>('18:00 - 23:00');
-  // Wallet card state
+  // FAZ 8A — Cüzdan: kayıtlı ödeme yöntemleri (payout_methods) + çekim talebi
   const [showCardOptions, setShowCardOptions] = useState(false);
-  const [showWithdraw, setShowWithdraw] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCardNo, setNewCardNo] = useState('');
+  const [newMethodKind, setNewMethodKind] = useState<'IBAN' | 'CARD'>('IBAN');
+  const [newIban, setNewIban] = useState('');
+  const [addingMethod, setAddingMethod] = useState(false);
+  const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([]);
+  const [pendingPayout, setPendingPayout] = useState<PayoutRequestRow | null>(null);
+  const [reservedBalance, setReservedBalance] = useState(0);
   
   // UX Enhancements States
   const [matchLiveStatus, setMatchLiveStatus] = useState<Record<string, 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED'>>({});
@@ -75,10 +89,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [flipCard, setFlipCard] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferSuccess, setTransferSuccess] = useState(false);
-  const [showCardSelect, setShowCardSelect] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [myOffers, setMyOffers] = useState<any[]>([]);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [walletHistory, setWalletHistory] = useState<WalletHistoryItem[]>([]);
   const [walletHistoryLoading, setWalletHistoryLoading] = useState(false);
   const [walletHistoryError, setWalletHistoryError] = useState<string | null>(null);
@@ -201,8 +212,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 email: auth.currentUser?.email || 'test@example.com',
                 isAvailable: me.isAvailable ?? true,
                 rating: me.rating,
-                matchesPlayed: me.matchCount || 42,
-                walletBalance: 1250,
+                matchesPlayed: me.matchCount || 0,
                 createdAt: new Date(),
                 stats: me.stats,
                 workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
@@ -285,23 +295,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
-  const fetchWallet = async () => {
-      // Bug A: cüzdan bakiyesi daima gerçek oturum uid'i ile okunmalı.
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
+  // FAZ 8A — kayıtlı ödeme yöntemleri + bekleyen çekim talebi
+  const fetchPayoutData = async () => {
       try {
-          const { data, error } = await supabase.from('profiles').select('wallet_balance').eq('id', uid).single();
-          if (error) {
-              console.error("Error fetching wallet balance", error);
-              showActionError('Bakiye bilgisi alınamadı. Lütfen tekrar dene.');
-              return;
-          }
-          if (data) {
-              setWalletBalance(data.wallet_balance || 0);
-          }
+          const [methods, pending] = await Promise.all([getPayoutMethods(), getPendingPayout()]);
+          setPayoutMethods(methods);
+          setPendingPayout(pending);
       } catch (err) {
-          console.error("Error fetching wallet balance", err);
-          showActionError('Bakiye bilgisi alınamadı. Lütfen tekrar dene.');
+          console.error('fetchPayoutData:', err);
       }
   };
 
@@ -337,17 +338,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
-  // FAZ 5 — Kazanç bakiyesi (anlık ödeme bakiyesi)
+  // FAZ 5/8A — Kazanç bakiyesi (TEK kaynak: get_wallet_summary)
   const fetchEarnings = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_wallet_summary');
-      if (error) {
-        console.warn('fetchEarnings:', error.message);
-        return;
-      }
-      if (data) {
-        setEarningsBalance(Number((data as any).earnings_balance) || 0);
-      }
+      const summary = await getWalletSummary();
+      setEarningsBalance(summary.earningsBalance);
+      setReservedBalance(summary.reservedBalance);
     } catch (err) {
       console.error('fetchEarnings:', err);
     }
@@ -426,13 +422,38 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   useEffect(() => {
     if (!userProfile?.id) return;
     fetchOffers();
-    fetchWallet();
+    fetchPayoutData();
     fetchWalletHistory();
     fetchIncomingRequests();
     fetchEarnings();
     fetchIdentityStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
+
+  // FAZ 8A — Gerçek zamanlı talep bildirimi: create/respond/expire RPC'leri
+  // notifications tablosuna INSERT atar; sağlayıcı ekranı bunu dinleyip yeniler.
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const channel = supabase
+      .channel(`svc-req:${uid}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
+        (payload: any) => {
+          const key = String(payload?.new?.type_key || '');
+          if (key.startsWith('service_request')) {
+            fetchIncomingRequests();
+            fetchEarnings();
+          } else if (key.startsWith('payout_')) {
+            fetchEarnings();
+            fetchPayoutData();
+            fetchWalletHistory();
+          }
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id]);
 
   const handleToggleClick = () => {
       if (isAvailable) {
@@ -442,35 +463,50 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }
   };
 
+  // FAZ 8A — kayıtlar artık provider_update_own_profile RPC'si ile DB'ye gerçekten
+  // yazılır (eski yol admin yetkisi istiyor ve bu alanları yok sayıyordu).
+  const providerKind = isRef ? 'REF' as const : 'GK' as const;
+
   const setOnlineStatus = async (status: boolean) => {
       setIsAvailable(status);
       if (userProfile && userProfile.uid) {
-          const update = { id: userProfile.uid, isAvailable: status };
-          if (isRef) updateReferee(update as any);
-          else updateGoalkeeper(update as any);
+          try {
+              await updateOwnProvider(providerKind, { id: userProfile.uid, isAvailable: status });
+          } catch (err: any) {
+              setIsAvailable(!status);
+              showActionError(err?.message || 'Müsaitlik durumu kaydedilemedi.');
+          }
       }
   };
 
   const handleUpdateFee = async (newFee: number) => {
+      const prevFee = baseFee;
       setBaseFee(newFee);
       if (userProfile && userProfile.id) {
-          const update = { id: userProfile.id, fee: newFee };
-          if (isRef) updateReferee(update as any);
-          else updateGoalkeeper(update as any);
-          console.log("Supabase: Fee updated to:", newFee);
+          try {
+              await updateOwnProvider(providerKind, { id: userProfile.id, fee: newFee });
+              showActionSuccess('Ücretin güncellendi.');
+          } catch (err: any) {
+              setBaseFee(prevFee);
+              showActionError(err?.message || 'Ücret kaydedilemedi.');
+          }
       }
   };
 
-  const handleSaveOnlineSetup = () => {
+  const handleSaveOnlineSetup = async () => {
       setActiveDays(setupDays);
       const activeHoursStr = setupHours.length > 0 ? `${setupHours[0]} - ${setupHours[setupHours.length-1]}` : 'Belirsiz';
       setActiveHours(activeHoursStr);
-      
+
       if (userProfile && userProfile.id) {
           const workingHours = { activeDays: setupDays, activeHours: activeHoursStr };
-          const update = { id: userProfile.id, workingHours, isAvailable: true };
-          if (isRef) updateReferee(update as any);
-          else updateGoalkeeper(update as any);
+          try {
+              await updateOwnProvider(providerKind, { id: userProfile.id, workingHours, isAvailable: true });
+              showActionSuccess('Aktiflik ayarların kaydedildi.');
+          } catch (err: any) {
+              showActionError(err?.message || 'Aktiflik ayarları kaydedilemedi.');
+              return;
+          }
       }
       setIsAvailable(true);
       setShowOnlineSetupModal(false);
@@ -479,37 +515,24 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // Bug B: Mock geri sayım interval'i kaldırıldı. timeLeft'in tek kaynağı
   // myUpcomingMatches'e dayalı gerçek hesaplamadır (yukarıdaki useEffect).
 
+  // FAZ 8A — çekim artık request_payout_with_method RPC'siyle: TC kimlik kapısı,
+  // bakiye kontrolü ve tek-bekleyen-talep kuralı backend'de zorlanır; admin
+  // FİNANS kuyruğu (admin_process_payout) talebi sonuçlandırınca bildirim düşer.
   const handleTransfer = async () => {
-      // Bug A: para çekme daima gerçek oturum uid'i üzerinden yapılmalı,
-      // aksi halde demo sağlayıcının cüzdanı sıfırlanır.
-      const uid = auth.currentUser?.uid;
-      if (!uid || walletBalance <= 0) return;
+      const method = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0];
+      if (!method) { setShowCardOptions(true); return; }
+      if (earningsBalance <= 0) { showActionError('Çekilebilir bakiyen bulunmuyor.'); return; }
+      if (identityStatus !== 'VERIFIED') { setShowIdentityModal(true); return; }
       setIsTransferring(true);
       try {
-          const currentAmount = walletBalance;
-          const { error } = await supabase
-              .from('profiles')
-              .update({ wallet_balance: 0 })
-              .eq('id', uid);
-
-          if (!error) {
-              await supabase.from('wallet_transactions').insert({
-                  user_id: uid,
-                  amount: currentAmount,
-                  type: 'WITHDRAWAL',
-                  status: 'COMPLETED',
-                  description: 'Banka Hesabına Çekim'
-              });
-              setWalletBalance(0);
-              setTransferSuccess(true);
-              setTimeout(() => setTransferSuccess(false), 3000);
-          } else {
-              console.error("Error withdrawing:", error);
-              showActionError('Para çekme işlemi başarısız oldu. Lütfen tekrar dene.');
-          }
-      } catch (err) {
-          console.error("Transfer error:", err);
-          showActionError('Para çekme işlemi başarısız oldu. Lütfen tekrar dene.');
+          await requestPayoutWithMethod(earningsBalance, method.id);
+          setTransferSuccess(true);
+          setTimeout(() => setTransferSuccess(false), 3000);
+          await Promise.all([fetchEarnings(), fetchPayoutData(), fetchWalletHistory()]);
+      } catch (err: any) {
+          console.error('Transfer error:', err);
+          if (String(err?.message || '').includes('kimlik')) setShowIdentityModal(true);
+          showActionError(err?.message || 'Çekim talebi oluşturulamadı. Lütfen tekrar dene.');
       } finally {
           setIsTransferring(false);
       }
@@ -1433,58 +1456,77 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="bg-gradient-to-br from-gray-800 to-[#161B22] p-6 rounded-[32px] border border-white/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-6 opacity-5"><Wallet size={120} /></div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Toplam Kazanç</p>
-              <h2 className="text-4xl font-black text-white mt-2">{earningsBalance}₺</h2>
-              
+              <h2 className="text-4xl font-black text-white mt-2">{earningsBalance + reservedBalance}₺</h2>
+
               <div className="mt-6 flex gap-4">
                   <div className="flex-1">
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Çekilebilir</p>
-                      <p className="text-xl font-bold text-green-400">{walletBalance}₺</p>
+                      <p className="text-xl font-bold text-green-400">{earningsBalance}₺</p>
                   </div>
                   <div className="flex-1 border-l border-white/10 pl-4">
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Bekleyen</p>
-                      <p className="text-xl font-bold text-gray-300">800₺</p>
+                      <p className="text-[10px] text-gray-500 uppercase font-bold">Çekim Bekleyen</p>
+                      <p className="text-xl font-bold text-gray-300">{reservedBalance}₺</p>
                   </div>
               </div>
 
+              {pendingPayout && (
+                  <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                      <p className="text-[10px] text-yellow-400 font-bold">
+                          {pendingPayout.amount}₺ tutarındaki çekim talebin işleniyor ({pendingPayout.iban}).
+                          Sonuçlanınca bildirim alacaksın.
+                      </p>
+                  </div>
+              )}
+
               <div className="mt-6 flex flex-col gap-3">
-                  {selectedCard && (
-                      <p className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                          SEÇİLİ KART: <span className="text-white">{selectedCard}</span>
+                  {(() => {
+                      const defaultMethod = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0];
+                      const methodLabel = defaultMethod
+                          ? (defaultMethod.kind === 'IBAN'
+                              ? `IBAN •• ${defaultMethod.iban?.slice(-4)}`
+                              : `${defaultMethod.cardBrand ?? 'KART'} **** ${defaultMethod.cardLast4}`)
+                          : 'ÖDEME YÖNTEMİ EKLE';
+                      return (
+                          <div className="flex gap-2">
+                              <button
+                                  onClick={() => setShowCardOptions(true)}
+                                  className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
+                              >
+                                  <CreditCard size={18} /> {methodLabel}
+                              </button>
+                              <button
+                                onClick={handleTransfer}
+                                disabled={isTransferring || !!pendingPayout || earningsBalance <= 0}
+                                className={`flex-1 py-3 ${isTransferring || !!pendingPayout || earningsBalance <= 0 ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-[#34C759] hover:bg-[#2dbb4f]'} text-white rounded-2xl font-black text-sm shadow-lg shadow-green-900/20 transition-all active:scale-95 flex items-center justify-center gap-2`}
+                              >
+                                  {isTransferring ? (
+                                      <RefreshCcw size={18} className="animate-spin" />
+                                  ) : transferSuccess ? (
+                                      <Check size={18} />
+                                  ) : (
+                                      <Banknote size={18} />
+                                  )}
+                                  {isTransferring ? 'GÖNDERİLİYOR...' : transferSuccess ? 'TALEP ALINDI' : 'PARAYI ÇEK'}
+                              </button>
+                          </div>
+                      );
+                  })()}
+                  {identityStatus !== 'VERIFIED' && (
+                      <p className="text-center text-[9px] font-bold text-yellow-500/80 uppercase tracking-widest">
+                          İlk çekim öncesi TC kimlik doğrulaması gerekir
                       </p>
                   )}
-                  <div className="flex gap-2">
-                       <button
-                           onClick={() => setShowCardOptions(true)}
-                           className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
-                       >
-                           <CreditCard size={18} /> {selectedCard ? selectedCard : 'KART SEÇ / EKLE'}
-                       </button>
-                       <button 
-                         onClick={handleTransfer}
-                         disabled={isTransferring || !selectedCard}
-                         className={`flex-1 py-3 ${isTransferring || !selectedCard ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-[#34C759] hover:bg-[#2dbb4f]'} text-white rounded-2xl font-black text-sm shadow-lg shadow-green-900/20 transition-all active:scale-95 flex items-center justify-center gap-2`}
-                       >
-                           {isTransferring ? (
-                               <RefreshCcw size={18} className="animate-spin" />
-                           ) : transferSuccess ? (
-                               <Check size={18} />
-                           ) : (
-                               <Banknote size={18} />
-                           )}
-                           {isTransferring ? 'AKTARILIYOR...' : transferSuccess ? 'ONAYLANDI' : 'HEMEN AKTAR'}
-                       </button>
-                  </div>
               </div>
-              
+
               <AnimatePresence>
                   {transferSuccess && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-center"
                       >
-                          <p className="text-[10px] text-green-400 font-bold">Para banka hesabına gönderildi!</p>
+                          <p className="text-[10px] text-green-400 font-bold">Çekim talebin alındı — finans onayından sonra hesabına geçecek.</p>
                       </motion.div>
                   )}
               </AnimatePresence>
@@ -1647,8 +1689,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                  <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">
                     {activeTab === 'HOME' && 'Ana Sayfa'}
                     {activeTab === 'JOBS' && 'Maç Bul'}
-                    
-                    
+                    {activeTab === 'WALLET' && 'Cüzdan'}
                     {activeTab === 'MENU' && 'Menü'}
                  </p>
              </div>
@@ -1681,7 +1722,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             <span className="text-[9px] font-black uppercase tracking-tighter">Ana Sayfa</span>
          </button>
 
-         <button 
+         <button
             onClick={() => setActiveTab('JOBS')}
             className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
          >
@@ -1691,11 +1732,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             <span className="text-[9px] font-black uppercase tracking-tighter">Maç Bul</span>
          </button>
 
-         
+         <button
+            onClick={() => setActiveTab('WALLET')}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'WALLET' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+         >
+            <div className={`p-1 rounded-lg ${activeTab === 'WALLET' ? 'bg-[#FACC15]/10' : ''}`}>
+                <Wallet size={20} />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter">Cüzdan</span>
+         </button>
 
-         
-
-         <button 
+         <button
             onClick={() => setActiveTab('MENU')}
             className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
          >
@@ -1976,7 +2023,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </div>
       )}
 
-      {/* Card Options: Ekle veya Seç */}
+      {/* FAZ 8A — Kayıtlı ödeme yöntemleri (payout_methods) */}
       {showCardOptions && (
           <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end">
               <motion.div
@@ -1987,32 +2034,55 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
                   <div className="flex justify-between items-center mb-5">
                       <div>
-                          <h3 className="text-xl font-black text-white">Kart İşlemi</h3>
-                          <p className="text-[10px] text-gray-500 mt-0.5">Mevcut kartı seç veya yeni kart ekle</p>
+                          <h3 className="text-xl font-black text-white">Ödeme Yöntemlerim</h3>
+                          <p className="text-[10px] text-gray-500 mt-0.5">Kazancın varsayılan yönteme aktarılır</p>
                       </div>
                       <button onClick={() => setShowCardOptions(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                      <button
-                          onClick={() => { setShowCardOptions(false); setShowCardSelect(true); }}
-                          className="py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-black text-sm flex flex-col items-center gap-2 hover:border-blue-500/30 transition-all"
-                      >
-                          <CreditCard size={22} className="text-blue-400" />
-                          Kayıtlı Kartlar
-                      </button>
-                      <button
-                          onClick={() => { setShowCardOptions(false); setShowAddCard(true); }}
-                          className="py-4 rounded-2xl border border-green-500/30 bg-green-500/8 text-green-400 font-black text-sm flex flex-col items-center gap-2 hover:bg-green-500/15 transition-all"
-                      >
-                          <PlusCircle size={22} />
-                          Yeni Kart Ekle
-                      </button>
+                  <div className="space-y-3 mb-4 max-h-[40vh] overflow-y-auto">
+                      {payoutMethods.length === 0 ? (
+                          <p className="text-center py-6 text-gray-500 text-xs font-bold uppercase tracking-widest">
+                              Henüz kayıtlı yöntem yok
+                          </p>
+                      ) : payoutMethods.map(m => (
+                          <div key={m.id} className={`p-4 bg-[#0A0E14] border rounded-2xl flex items-center gap-3 ${m.isDefault ? 'border-green-500/40' : 'border-white/5'}`}>
+                              {m.kind === 'IBAN' ? <Banknote size={20} className="text-green-400" /> : <CreditCard size={20} className="text-blue-400" />}
+                              <button
+                                  onClick={async () => {
+                                      try { await setDefaultPayoutMethod(m.id); await fetchPayoutData(); }
+                                      catch (err: any) { showActionError(err?.message || 'İşlem başarısız.'); }
+                                  }}
+                                  className="flex-1 text-left"
+                              >
+                                  <p className="font-mono text-sm text-white">
+                                      {m.kind === 'IBAN' ? `${m.iban?.slice(0, 4)} •••• ${m.iban?.slice(-4)}` : `${m.cardBrand ?? 'KART'} **** ${m.cardLast4}`}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500">{m.holderName}{m.isDefault ? ' · Varsayılan' : ' · Varsayılan yap'}</p>
+                              </button>
+                              <button
+                                  onClick={async () => {
+                                      try { await deletePayoutMethod(m.id); await fetchPayoutData(); }
+                                      catch (err: any) { showActionError(err?.message || 'Yöntem silinemedi.'); }
+                                  }}
+                                  className="p-2 bg-white/5 rounded-xl text-gray-500 hover:text-red-400 transition-colors"
+                              >
+                                  <X size={14} />
+                              </button>
+                          </div>
+                      ))}
                   </div>
+                  <button
+                      onClick={() => { setShowCardOptions(false); setShowAddCard(true); }}
+                      className="w-full py-4 rounded-2xl border border-green-500/30 bg-green-500/10 text-green-400 font-black text-sm flex items-center justify-center gap-2 hover:bg-green-500/15 transition-all"
+                  >
+                      <PlusCircle size={20} />
+                      YENİ YÖNTEM EKLE (IBAN / KART)
+                  </button>
               </motion.div>
           </div>
       )}
 
-      {/* Add New Card Modal */}
+      {/* FAZ 8A — Yeni ödeme yöntemi ekle (IBAN veya kart; kart no yalnız son 4 hane saklanır) */}
       {showAddCard && (
           <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end">
               <motion.div
@@ -2022,67 +2092,81 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               >
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
                   <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-black text-white">Yeni Kart</h3>
+                      <h3 className="text-xl font-black text-white">Yeni Ödeme Yöntemi</h3>
                       <button onClick={() => setShowAddCard(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
-                  <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Kart Numarası</p>
-                      <input
-                          value={newCardNo}
-                          onChange={e => setNewCardNo(e.target.value)}
-                          placeholder="TR00 0000 0000 0000 0000 00"
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-blue-500/50 transition-colors"
-                      />
+                  <div className="bg-[#0A0E14] p-1.5 rounded-2xl flex border border-white/5">
+                      <button
+                          onClick={() => setNewMethodKind('IBAN')}
+                          className={`flex-1 py-3 text-[11px] font-black rounded-xl transition-all ${newMethodKind === 'IBAN' ? 'bg-green-500 text-black' : 'text-gray-500'}`}
+                      >
+                          IBAN
+                      </button>
+                      <button
+                          onClick={() => setNewMethodKind('CARD')}
+                          className={`flex-1 py-3 text-[11px] font-black rounded-xl transition-all ${newMethodKind === 'CARD' ? 'bg-blue-500 text-white' : 'text-gray-500'}`}
+                      >
+                          BANKA KARTI
+                      </button>
                   </div>
+                  {newMethodKind === 'IBAN' ? (
+                      <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-1.5">IBAN</p>
+                          <input
+                              value={newIban}
+                              onChange={e => setNewIban(e.target.value)}
+                              placeholder="TR00 0000 0000 0000 0000 0000 00"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-green-500/50 transition-colors"
+                          />
+                      </div>
+                  ) : (
+                      <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Kart Numarası</p>
+                          <input
+                              value={newCardNo}
+                              onChange={e => setNewCardNo(e.target.value)}
+                              placeholder="0000 0000 0000 0000"
+                              inputMode="numeric"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-blue-500/50 transition-colors"
+                          />
+                          <p className="text-[9px] text-gray-500 mt-1">Güvenlik: yalnız son 4 hane saklanır.</p>
+                      </div>
+                  )}
                   <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Kart Sahibi</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Hesap / Kart Sahibi</p>
                       <input
                           value={newCardHolder}
                           onChange={e => setNewCardHolder(e.target.value)}
                           placeholder="AD SOYAD"
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-colors"
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-white/30 transition-colors"
                       />
                   </div>
                   <button
-                      disabled={!newCardNo || !newCardHolder}
-                      onClick={() => {
-                          setSelectedCard(newCardNo);
-                          setNewCardNo(''); setNewCardHolder('');
-                          setShowAddCard(false);
+                      disabled={addingMethod || !newCardHolder || (newMethodKind === 'IBAN' ? !newIban : !newCardNo)}
+                      onClick={async () => {
+                          setAddingMethod(true);
+                          try {
+                              await addPayoutMethod({
+                                  kind: newMethodKind,
+                                  holderName: newCardHolder,
+                                  iban: newMethodKind === 'IBAN' ? newIban : undefined,
+                                  cardNumber: newMethodKind === 'CARD' ? newCardNo : undefined,
+                              });
+                              setNewCardNo(''); setNewIban(''); setNewCardHolder('');
+                              setShowAddCard(false);
+                              await fetchPayoutData();
+                              showActionSuccess('Ödeme yöntemi kaydedildi.');
+                          } catch (err: any) {
+                              showActionError(err?.message || 'Ödeme yöntemi eklenemedi.');
+                          } finally {
+                              setAddingMethod(false);
+                          }
                       }}
                       className="w-full py-4 rounded-2xl font-black text-white text-sm disabled:opacity-40 bg-blue-600 hover:bg-blue-500 transition-colors"
                   >
-                      KARTI KAYDET VE SEÇ
+                      {addingMethod ? 'KAYDEDİLİYOR...' : 'YÖNTEMİ KAYDET'}
                   </button>
               </motion.div>
-          </div>
-      )}
-
-      {showCardSelect && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4">
-              <div className="bg-[#161B22] w-full max-w-md rounded-3xl border border-white/10 p-6 flex flex-col animate-in slide-in-from-bottom-10">
-                  <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-black text-white italic tracking-tight">KAYITLI KARTLAR</h3>
-                      <button onClick={() => setShowCardSelect(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
-                          <X size={20} />
-                      </button>
-                  </div>
-                  <div className="space-y-3">
-                      {['TR00 0000 0000 0000 0000 00', 'TR11 1111 1111 1111 1111 11', 'Mastercard **** 4242'].map(card => (
-                          <button
-                              key={card}
-                              onClick={() => {
-                                  setSelectedCard(card);
-                                  setShowCardSelect(false);
-                              }}
-                              className="w-full p-4 bg-[#0A0E14] border border-white/5 rounded-2xl flex items-center gap-3 hover:border-blue-500/50 transition-all text-left"
-                          >
-                              <CreditCard size={20} className="text-gray-400" />
-                              <span className="font-mono text-sm text-white">{card}</span>
-                          </button>
-                      ))}
-                  </div>
-              </div>
           </div>
       )}
 

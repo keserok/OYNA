@@ -422,6 +422,8 @@ export async function fetchAdminProfiles(options?: {
   limit?: number;
   search?: string;
   status?: AdminProfileStatusFilter;
+  /** Birincil role göre sunucu-taraflı filtre (PLAYER/OWNER/GOALKEEPER/REFEREE). */
+  role?: string;
 }): Promise<{
   users: AdminUser[];
   total: number;
@@ -430,6 +432,7 @@ export async function fetchAdminProfiles(options?: {
   const offset = options?.offset ?? 0;
   const search = options?.search?.trim() || null;
   const status = options?.status && options.status !== 'all' ? options.status : null;
+  const role = options?.role && options.role !== 'all' ? options.role : null;
 
   const rpcParams: Record<string, unknown> = {
     p_offset: offset,
@@ -437,6 +440,7 @@ export async function fetchAdminProfiles(options?: {
   };
   if (search) rpcParams.p_search = search;
   if (status) rpcParams.p_status = status;
+  if (role) rpcParams.p_role = role;
 
   const { data, error } = await supabase.rpc('admin_fetch_profiles', rpcParams);
   if (!error && data) {
@@ -459,6 +463,7 @@ export async function fetchAdminProfiles(options?: {
   }
   if (status === 'banned') q = q.eq('is_banned', true);
   else if (status === 'active') q = q.eq('is_banned', false);
+  if (role) q = q.eq('role', role);
 
   const { data: fallback, error: fbErr, count } = await q.range(offset, offset + limit - 1);
 
@@ -470,6 +475,7 @@ export async function fetchAdminProfiles(options?: {
     if (search) {
       retryQ = retryQ.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
     }
+    if (role) retryQ = retryQ.eq('role', role);
     const retry = await retryQ.range(offset, offset + limit - 1);
     if (retry.error) throw new Error(retry.error.message);
     return {
@@ -2609,4 +2615,44 @@ export async function loadAdminInventoryFromRpc(): Promise<{
     texts,
     warnings,
   };
+}
+
+// ─── FAZ 8A — Sağlayıcı operasyonel yönetimi (müsaitlik/saat/ayar + cüzdan izi) ─
+export interface ProviderOpsInfo {
+  isAvailable: boolean;
+  verificationStatus: string | null;
+  workingHours: { activeDays?: string[]; activeHours?: string } | null;
+  settings: Record<string, unknown> | null;
+  recentPayouts: Array<{ id: string; amount: number; status: string; iban: string; method_kind: string | null; created_at: string }>;
+}
+
+/** Panelin canlı durum okuması: müsaitlik + doğrulama + saatler + son çekimler. */
+export async function fetchProviderOpsAdmin(providerId: string, type: 'GK' | 'REF'): Promise<ProviderOpsInfo> {
+  const { data, error } = await supabase.rpc('admin_fetch_provider_ops', {
+    p_provider_id: providerId,
+    p_provider_type: type,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_provider_ops RPC deploy edilmedi' : toTurkishAdminError(error));
+  const d = data as any;
+  return {
+    isAvailable: !!d?.is_available,
+    verificationStatus: d?.verification_status ?? null,
+    workingHours: d?.working_hours ?? null,
+    settings: d?.settings ?? null,
+    recentPayouts: Array.isArray(d?.recent_payouts) ? d.recent_payouts : [],
+  };
+}
+
+/** Müsaitlik (profiles.is_available), çalışma saatleri ve ayarları günceller (MODERATOR kapılı, audit'li). */
+export async function updateProviderOpsAdmin(
+  providerId: string,
+  type: 'GK' | 'REF',
+  payload: { isAvailable?: boolean; workingHours?: { activeDays: string[]; activeHours: string }; settings?: Record<string, unknown> },
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_provider_ops', {
+    p_provider_id: providerId,
+    p_provider_type: type,
+    p_payload: payload,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_update_provider_ops RPC deploy edilmedi' : toTurkishAdminError(error));
 }
