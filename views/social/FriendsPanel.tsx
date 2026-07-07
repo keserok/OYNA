@@ -9,7 +9,7 @@ import Avatar from '../../components/ui/Avatar';
 import Chip from '../../components/ui/Chip';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonList from '../../components/ui/SkeletonList';
-import BottomSheet from '../../components/ui/BottomSheet';
+import GlassModal from '../../components/ui/GlassModal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FriendProfileSheet from './FriendProfileSheet';
 import { useMyMatches } from '../../hooks/useMyMatches';
@@ -120,6 +120,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
       if (listSheet === 'CREATE') {
         const created = await createFriendList(userId, name, listEmoji || null);
         setChip(created.id);
+        onToast(`"${name}" listesi hazır — arkadaş kartından ekle`);
       } else if (listSheet) {
         await renameFriendList(listSheet.id, name, listEmoji || null);
       }
@@ -292,6 +293,14 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
             description="Birlikte oynadıklarını bul, rehberini bağla ya da OYNA-ID ile ekle."
             actions={[{ label: '+ Arkadaş Ekle', onClick: () => onNavigate('FRIEND_ADD'), primary: true }]}
           />
+        ) : activeList && !search.trim() ? (
+          // Boş liste "Sonuç yok" gibi okunmasın — yeni liste akışına yol göster
+          <EmptyState
+            icon={Users}
+            title={`${activeList.emoji ? activeList.emoji + ' ' : ''}${activeList.name} henüz boş`}
+            description="Arkadaş kartına dokun, Listeler'den bu listeye ekle."
+            actions={[{ label: 'Tüm Arkadaşları Gör', onClick: () => setChip('ALL') }]}
+          />
         ) : (
           <EmptyState icon={Search} title="Sonuç yok" description="Filtreyi ya da aramayı değiştirmeyi dene." />
         )
@@ -354,17 +363,14 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
         onToast={onToast}
       />
 
-      {/* Liste oluştur / yönet sayfası */}
-      <BottomSheet
+      {/* Liste oluştur / yönet — ortalanmış cam pencere */}
+      <GlassModal
         open={listSheet !== null}
         onClose={() => setListSheet(null)}
         ariaLabel="Liste yönetimi"
-        maxHeightClass="max-h-[60vh]"
+        title={listSheet === 'CREATE' ? 'Yeni Liste' : 'Listeyi Düzenle'}
       >
-        <div className="pb-4">
-          <h3 className="text-base font-black mb-4">
-            {listSheet === 'CREATE' ? 'Yeni Liste' : 'Listeyi Düzenle'}
-          </h3>
+        <div className="pb-1">
           <div className="flex gap-2">
             <input
               value={listEmoji}
@@ -396,17 +402,16 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
             </button>
           )}
         </div>
-      </BottomSheet>
+      </GlassModal>
 
-      {/* Liste → maç seçici (FCFS) */}
-      <BottomSheet
+      {/* Liste → maç seçici (FCFS) — ortalanmış cam pencere */}
+      <GlassModal
         open={invitePicker}
         onClose={() => setInvitePicker(false)}
         ariaLabel="Maç seç"
-        maxHeightClass="max-h-[70vh]"
+        title="Hangi maça?"
       >
-        <div className="pb-4">
-          <h3 className="text-base font-black">Hangi maça?</h3>
+        <div className="pb-1">
           <p className="text-[11px] text-white/40 mb-3">
             {activeList?.name} listesindekilere davet gider · boş slota <b>ilk ödeyen katılır</b>.
           </p>
@@ -441,7 +446,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
             </div>
           )}
         </div>
-      </BottomSheet>
+      </GlassModal>
 
       <ConfirmDialog
         open={deleteList !== null}
