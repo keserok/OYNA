@@ -68,6 +68,8 @@ const ViewLoader = () => (
 const App: React.FC = () => {
   const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
+  // Oturum geri yüklemesi ilk kez çözüldü mü? (Splash otomatik geçişi bunu bekler)
+  const [authResolved, setAuthResolved] = React.useState(false);
   const {
     view,
     role,
@@ -230,6 +232,7 @@ const App: React.FC = () => {
         }
       } finally {
         setIsAuthReady(true);
+        setAuthResolved(true);
       }
     });
     return () => unsubscribe();
@@ -381,7 +384,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case 'SPLASH':
-        return <SplashScreen onStart={() => {
+        return <SplashScreen ready={authResolved} onStart={() => {
           // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş;
           // oturum varsa role göre panel.
           if (!auth.currentUser) {
@@ -554,7 +557,7 @@ const App: React.FC = () => {
       case 'MATCH_CREATE':
         return <MatchCreate onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       default:
-        return <SplashScreen onStart={() => navigateTo('AUTH')} />;
+        return <SplashScreen ready={authResolved} onStart={() => navigateTo('AUTH')} />;
     }
   };
 
