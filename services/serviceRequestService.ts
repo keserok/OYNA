@@ -19,6 +19,10 @@ const mapServiceRequest = (r: any): ServiceRequest => ({
   providerAmount: Number(r.provider_amount),
   requestKind: r.request_kind,
   status: r.status,
+  initiatedBy: r.initiated_by ?? undefined,
+  providerConfirmed: !!r.provider_confirmed,
+  captainConfirmed: !!r.captain_confirmed,
+  appliedAt: r.applied_at ?? undefined,
   paymentIntentId: r.payment_intent_id ?? undefined,
   payoutReleased: !!r.payout_released,
   acceptedAt: r.accepted_at ?? undefined,
@@ -155,6 +159,65 @@ export const createServiceRequest = async (
     commission: Number(data.commission),
     providerAmount: Number(data.provider_amount),
   };
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// 5.3 — SAĞLAYICI-BAŞLATAN BAŞVURU (kaleci/hakem maça başvurur → kaptan kabul)
+//        Aynı service_requests motorunu ters yönde kullanır (escrow: blokaj →
+//        capture → cüzdan → iki-taraflı onay → payout).
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Kaleci/Hakem açık bir maça BAŞVURUR (status=APPLIED, para yok). */
+export const applyToMatchAsProvider = async (
+  matchId: string,
+  providerType: ProviderType,
+): Promise<{ requestId: string; fee: number; providerAmount: number }> => {
+  const { data, error } = await supabase.rpc('apply_to_match_as_provider', {
+    p_match_id: matchId,
+    p_provider_type: providerType,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Başvuru gönderilemedi.');
+  return {
+    requestId: data?.request_id,
+    fee: Number(data?.fee ?? 0),
+    providerAmount: Number(data?.provider_amount ?? 0),
+  };
+};
+
+/** Kaptan bir sağlayıcı başvurusunu KABUL eder → ücret bloke edilir (ACCEPTED). */
+export const acceptProviderApplication = async (requestId: string): Promise<void> => {
+  const { error } = await supabase.rpc('accept_provider_application', { p_request_id: requestId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Başvuru kabul edilemedi.');
+};
+
+/** Kaptan bir sağlayıcı başvurusunu reddeder. */
+export const declineProviderApplication = async (requestId: string): Promise<void> => {
+  const { error } = await supabase.rpc('decline_provider_application', { p_request_id: requestId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Başvuru reddedilemedi.');
+};
+
+/** Sağlayıcı kendi bekleyen başvurusunu geri çeker (APPLIED iken). */
+export const withdrawProviderApplication = async (requestId: string): Promise<void> => {
+  const { error } = await supabase.rpc('withdraw_provider_application', { p_request_id: requestId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Başvuru geri çekilemedi.');
+};
+
+/** Maç sonu — SAĞLAYICI "maçı oynadım" onayı (iki-taraflı payout kapısı). */
+export const providerConfirmService = async (requestId: string): Promise<void> => {
+  const { error } = await supabase.rpc('provider_confirm_service', { p_request_id: requestId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Onay kaydedilemedi.');
+};
+
+/** Maç sonu — KAPTAN "sağlayıcı geldi" onayı (iki-taraflı payout kapısı). */
+export const captainConfirmService = async (requestId: string): Promise<void> => {
+  const { error } = await supabase.rpc('captain_confirm_service', { p_request_id: requestId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Onay kaydedilemedi.');
+};
+
+/** Sağlayıcının KENDİ başvuru/talep akışı (APPLIED dahil) — ServiceDashboard "Maç Bul" durumları. */
+export const getMyProviderApplications = async (): Promise<ServiceRequest[]> => {
+  // getIncomingRequests ile aynı kaynak; okunabilirlik için ayrı isim.
+  return getIncomingRequests();
 };
 
 /** Sağlayıcı gelen talebi kabul/red eder. */
