@@ -222,10 +222,15 @@ interface CalendarBooking {
 
 function mapDbBookingToCalendar(b: PitchBookingFull): CalendarBooking {
   const start = (b.start_time ?? '00:00').slice(0, 5);
+  const endRaw = (b.end_time ?? '').slice(0, 5);
+  const startH = parseInt(start.split(':')[0], 10);
+  let endH = endRaw ? parseInt(endRaw.split(':')[0], 10) : startH + 1;
+  if (endRaw.slice(0, 2) === '00') endH = 24;      // gece yarısı bitişi
+  if (!Number.isFinite(endH) || endH <= startH) endH = startH + 1;
   return {
     id: b.id,
     time: start.replace(':', '.'),
-    duration: 1,
+    duration: Math.max(1, endH - startH),           // B4/OP-P1-7: gerçek süre (çok-saatlik rezervasyon)
     user: b.customer_name || b.title || 'Misafir',
     type: b.source === 'SUBSCRIPTION' ? 'SUB' : b.source === 'OWNER_MANUAL' ? 'PHONE' : 'APP',
     status: b.payment_status === 'PAID' ? 'PAID' : b.payment_status === 'PARTIAL' ? 'PARTIAL' : 'PENDING',
@@ -376,7 +381,7 @@ const FinancialCalendarView: React.FC<{
 
     useEffect(() => {
         if (!isRealPitch || !pitchId) return;
-        return subscribeToOwnerBookings(pitchId, loadBookings);
+        return subscribeToOwnerBookings(pitchId, loadBookings, 'calendar');
     }, [isRealPitch, pitchId, loadBookings]);
 
     useEffect(() => {
@@ -467,9 +472,21 @@ const FinancialCalendarView: React.FC<{
     const dailyCollected = currentBookings.reduce((acc, curr) => acc + curr.paid, 0);
     const dailyTotal = currentBookings.reduce((acc, curr) => acc + curr.price, 0);
     const dailyPending = dailyTotal - dailyCollected;
-    const occupancyRate = Math.round((currentBookings.length / timeSlots.length) * 100);
+    // OP-P1-6: rezervasyon SAYISI değil kapladığı SAAT toplamı (16 saatlik operasyon penceresi).
+    const bookedHours = currentBookings.reduce((acc, curr) => acc + (curr.duration || 1), 0);
+    const occupancyRate = Math.min(100, Math.round((bookedHours / 16) * 100));
 
-    const getBooking = (time: string) => currentBookings.find(b => b.time === time || b.time === time.replace('.', ':'));
+    // OP-P1-7: bir saat dilimini hangi rezervasyonun kapsadığını + başlangıç mı olduğunu döndürür.
+    const getSlotCoverage = (time: string): { booking: CalendarBooking; isStart: boolean } | null => {
+        const hour = parseInt(time.split('.')[0], 10);
+        for (const b of currentBookings) {
+            const sh = parseInt(String(b.time).split(/[.:]/)[0], 10);
+            if (!Number.isFinite(sh)) continue;
+            const eh = sh + (b.duration || 1);
+            if (hour >= sh && hour < eh) return { booking: b, isStart: hour === sh };
+        }
+        return null;
+    };
 
     const handleQuickCreate = async (time: string) => {
         setIsQuickCreateOpen(time);
@@ -662,7 +679,9 @@ const FinancialCalendarView: React.FC<{
                     </div>
                 ) : (
                     timeSlots.map((time) => {
-                        const booking = getBooking(time);
+                        const coverage = getSlotCoverage(time);
+                        const booking = coverage?.booking ?? null;
+                        const isContinuation = !!coverage && !coverage.isStart;
                         const isSub = booking?.type === 'SUB';
                         const subStyles = { bg: 'bg-blue-900/30', border: 'border-blue-500/50', text: 'text-blue-400', bar: 'bg-blue-500' };
                         const styles = booking ? (isSub ? subStyles : getStatusStyles(booking.status)) : null;
@@ -688,7 +707,17 @@ const FinancialCalendarView: React.FC<{
                                         <span className="text-xs font-black uppercase tracking-wider">Kapalı</span>
                                     </div>
                                 ) : booking ? (
-                                    <button 
+                                    isContinuation ? (
+                                    <button
+                                        onClick={() => setSelectedBooking(booking)}
+                                        className={`w-full h-16 rounded-xl border ${styles?.border} ${styles?.bg} flex items-center gap-3 px-4 text-left opacity-75 active:scale-[0.98]`}
+                                        title="Çok saatlik rezervasyonun devamı"
+                                    >
+                                        <div className={`w-1.5 h-8 rounded ${styles?.bar}`}></div>
+                                        <span className="text-[11px] font-bold text-gray-300 truncate">{booking.user} · devam ({booking.duration} saat)</span>
+                                    </button>
+                                    ) : (
+                                    <button
                                         onClick={() => setSelectedBooking(booking)}
                                         className={`w-full relative overflow-hidden rounded-xl border ${styles?.bg} ${styles?.border} transition-all active:scale-[0.98] text-left`}
                                     >
@@ -710,9 +739,13 @@ const FinancialCalendarView: React.FC<{
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm font-black text-white font-mono">{booking.price}₺</p>
+                                                {booking.duration > 1 && (
+                                                    <p className="text-[9px] font-bold text-gray-400 mt-0.5">{booking.duration} saat</p>
+                                                )}
                                             </div>
                                         </div>
                                     </button>
+                                    )
                                 ) : (
                                     <div className="flex gap-2 h-16 w-full">
                                         <button 
@@ -1651,7 +1684,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     if (!realPitchId) return;
     return subscribeToOwnerBookings(realPitchId, () => {
       refreshDashboard(realPitchId, autoApproveMinutes);
-    });
+    }, 'panel');
   }, [realPitchId, autoApproveMinutes, refreshDashboard]);
 
   // Mock fallback kaldırıldı — tesis yoksa onboarding ekranı gösterilir
