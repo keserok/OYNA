@@ -7,7 +7,7 @@ import {
     Search, MapPin, UserCheck, Calendar,
     Swords, Type, UserPlus, GripHorizontal, Settings2,
     MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
-    Layers, Gauge, Crosshair, Share2, List, ChevronRight, RotateCw, Hash, Loader2
+    Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Hash, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -45,6 +45,41 @@ const AnimationToolbar = lazy(() =>
 
 const FORMATIONS = FORMATIONS_SSOT as Record<SquadSize, Record<string, Slot[]>>;
 
+// Stüdyoda seçilebilir boyutlar (3v3–11v11; halı saha odaklı).
+const STUDIO_SIZES: SquadSize[] = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+
+// Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
+const exampleForSize = (size: SquadSize): string => {
+    const outfield = parseInt(String(size), 10) - 1;
+    const map: Record<number, string> = {
+        1: '1', 2: '1-1', 3: '1-1-1', 4: '2-1-1', 5: '2-2-1',
+        6: '2-3-1', 7: '3-3-1', 8: '3-3-2', 9: '4-3-2', 10: '4-4-2',
+    };
+    return map[outfield] || '2-3-1';
+};
+
+// Satır sayısı deseninden (ör. "3-2-1", arkadan öne) plana-özel diziliş üretir.
+// Kaleci en altta; satırlar 75→24 arası dağıtılır; ilk satır DEF, son satır FWD, ortalar MID.
+const generateFormationFromPattern = (size: SquadSize, pattern: string): { slots: Slot[]; label: string } | null => {
+    const outfield = parseInt(String(size), 10) - 1;
+    const nums = pattern.split(/[-\s+.,]+/).map(s => s.trim()).filter(s => s !== '').map(Number);
+    if (!nums.length || nums.some(n => !Number.isInteger(n) || n < 1 || n > 9)) return null;
+    if (nums.reduce((a, b) => a + b, 0) !== outfield) return null;
+    const L = nums.length;
+    const slots: Slot[] = [{ id: 's1', x: 50, y: 90, role: 'GK' }];
+    let idx = 2;
+    nums.forEach((n, i) => {
+        const y = L === 1 ? 46 : Math.round(75 - i * (51 / (L - 1)));
+        const role = i === 0 ? 'DEF' : (i === L - 1 ? 'FWD' : 'MID');
+        for (let j = 0; j < n; j++) {
+            const x = n === 1 ? 50 : Math.round(18 + j * (64 / (n - 1)));
+            slots.push({ id: 's' + idx, x, y, role });
+            idx++;
+        }
+    });
+    return { slots, label: nums.join('-') };
+};
+
 
 interface StudioProps {
     onBack: () => void;
@@ -71,6 +106,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     
     // Farazi Tools
     const [tool, setTool] = useState<StudioTool>('move');
+    // Faz 1 — Boyut/Formasyon seçici (butona yapışık dropdown) + özel formasyon
+    const [openSelector, setOpenSelector] = useState<'size' | 'formation' | null>(null);
+    const [customPattern, setCustomPattern] = useState('');
+    const [customError, setCustomError] = useState<string | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
     const [playMode, setPlayMode] = useState<PlayMode>('SYNC');
@@ -400,6 +439,21 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
+    };
+
+    // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
+    const handleCustomFormation = () => {
+        const res = generateFormationFromPattern(activeTactic.size, customPattern);
+        if (!res) {
+            setCustomError(`Kaleci hariç toplam ${parseInt(String(activeTactic.size), 10) - 1} oyuncu olmalı. Örn: ${exampleForSize(activeTactic.size)}`);
+            return;
+        }
+        const { newSlots, newSubs } = preservePlayersAndSubs(res.slots, activeTactic.subs);
+        let captainId = activeTactic.captainId;
+        if (captainId && !newSlots.some((s: any) => s.player?.id === captainId)) captainId = null;
+        setActiveTactic({ ...activeTactic, formation: res.label, slots: newSlots, subs: newSubs, captainId, drawings: [] });
+        setOpenSelector(null); setCustomPattern(''); setCustomError(null);
+        showToast(`Özel formasyon uygulandı: ${res.label}`);
     };
 
     const handleSelectPlayer = (player: Player) => {
@@ -978,31 +1032,84 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </Reorder.Group>
             </div>
 
-            {/* Formation & Size Selector */}
-            <div className="px-6 pb-4 space-y-3">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    {(['5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'] as SquadSize[]).map(size => (
-                        <button 
-                            key={size}
-                            onClick={() => handleSizeChange(size)}
-                            className={`flex-1 min-w-[60px] py-2 rounded-xl text-[10px] font-black tracking-widest transition-all border ${activeTactic.size === size ? 'bg-[#39FF14]/20 border-[#39FF14] text-[#39FF14]' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
+            {/* Boyut & Formasyon — butona yapışık dropdown'lar (anında uygulanır) */}
+            <div className="px-6 pb-4">
+                <div className="flex gap-2 relative">
+                    {/* Boyut (oyuncu sayısı) */}
+                    <div className="relative shrink-0">
+                        <button
+                            onClick={() => setOpenSelector(openSelector === 'size' ? null : 'size')}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-black tracking-widest hover:bg-white/10 transition-all"
                         >
-                            {size}
+                            <Users size={14} className="text-[#39FF14]" /> {activeTactic.size}
+                            <ChevronDown size={14} className={`transition-transform ${openSelector === 'size' ? 'rotate-180' : ''}`} />
                         </button>
-                    ))}
-                </div>
+                        {openSelector === 'size' && (
+                            <div className="absolute top-full left-0 mt-2 z-40 w-44 bg-[#0E1420] border border-white/10 rounded-2xl p-2 shadow-2xl max-h-64 overflow-y-auto no-scrollbar">
+                                {STUDIO_SIZES.map(sz => (
+                                    <button
+                                        key={sz}
+                                        onClick={() => { handleSizeChange(sz); setOpenSelector(null); }}
+                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeTactic.size === sz ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'text-gray-300 hover:bg-white/5'}`}
+                                    >
+                                        <span>{sz}</span>
+                                        <span className="text-[10px] text-gray-500 font-mono">{parseInt(String(sz), 10)} kişi</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    {(Object.keys(FORMATIONS[activeTactic.size]) as FormationType[]).map(f => (
-                        <button 
-                            key={f}
-                            onClick={() => handleFormationChange(f)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeTactic.formation === f ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                    {/* Formasyon (+ satır sayısıyla özel formasyon) */}
+                    <div className="relative flex-1 min-w-0">
+                        <button
+                            onClick={() => setOpenSelector(openSelector === 'formation' ? null : 'formation')}
+                            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-black tracking-widest hover:bg-white/10 transition-all"
                         >
-                            {f}
+                            <span className="flex items-center gap-2 min-w-0"><Layout size={14} className="text-[#39FF14] shrink-0" /><span className="truncate">{activeTactic.formation}</span></span>
+                            <ChevronDown size={14} className={`shrink-0 transition-transform ${openSelector === 'formation' ? 'rotate-180' : ''}`} />
                         </button>
-                    ))}
+                        {openSelector === 'formation' && (
+                            <div className="absolute top-full left-0 right-0 mt-2 z-40 bg-[#0E1420] border border-white/10 rounded-2xl p-2 shadow-2xl">
+                                <div className="max-h-52 overflow-y-auto no-scrollbar space-y-0.5">
+                                    {Object.keys(FORMATIONS[activeTactic.size]).map(f => (
+                                        <button
+                                            key={f}
+                                            onClick={() => { handleFormationChange(f); setOpenSelector(null); }}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeTactic.formation === f ? 'bg-[#39FF14] text-black' : 'text-gray-300 hover:bg-white/5'}`}
+                                        >
+                                            {f}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-white/10">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest px-1 mb-1.5">Yeni formasyon (satır sayısı)</p>
+                                    <div className="flex gap-2">
+                                        <input
+                                            value={customPattern}
+                                            onChange={e => { setCustomPattern(e.target.value); setCustomError(null); }}
+                                            onKeyDown={e => e.key === 'Enter' && handleCustomFormation()}
+                                            placeholder={`örn. ${exampleForSize(activeTactic.size)}`}
+                                            inputMode="numeric"
+                                            className="flex-1 min-w-0 bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
+                                        />
+                                        <button
+                                            onClick={handleCustomFormation}
+                                            className="px-3 py-2 rounded-xl bg-[#39FF14] text-black text-[10px] font-black tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+                                        >
+                                            UYGULA
+                                        </button>
+                                    </div>
+                                    {customError
+                                        ? <p className="text-[10px] text-red-400 mt-1.5 px-1">{customError}</p>
+                                        : <p className="text-[10px] text-gray-600 mt-1.5 px-1">Kaleci hariç {parseInt(String(activeTactic.size), 10) - 1} oyuncu, arkadan öne. Bu diziliş yalnız bu plana özeldir.</p>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
+                {/* Dışarı tıklayınca kapat */}
+                {openSelector && <div className="fixed inset-0 z-30" onClick={() => setOpenSelector(null)} />}
             </div>
 
             {/* Toolbar */}

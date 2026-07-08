@@ -24,8 +24,10 @@ export interface Slot {
     archetype?: Archetype;
 }
 
-export type SquadSize = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '10v10' | '11v11';
-export type FormationType = '1-2-1' | '2-1-1' | '2-2-1' | '3-1-1' | '2-3-1' | '3-2-1' | '2-2-2' | '3-3-1' | '4-2-1' | '3-3-2' | '4-3-1' | '4-4-1' | '4-3-2' | '4-4-2' | '4-3-3' | '3-5-2';
+export type SquadSize = '2v2' | '3v3' | '4v4' | '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '10v10' | '11v11';
+// Formasyon artık serbest etiket (string): yerleşik SSOT dizilişlerinin yanında
+// kullanıcının satır-sayısıyla ürettiği plana-özel dizilişleri de taşır.
+export type FormationType = string;
 
 export interface TacticState {
     id?: string;
