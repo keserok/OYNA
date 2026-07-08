@@ -1680,6 +1680,65 @@ export async function deleteStaffTask(taskId: string): Promise<void> {
 // SKOR QR
 // ----------------------------------------------------------------------------
 
+export interface OwnerScoreMatch {
+  matchId: string;
+  title: string;
+  when: string;
+  status: string;
+  courtName: string;
+  hasScore: boolean;
+}
+
+/**
+ * Manuel skor girişi için: oturum açmış owner'ın tesislerindeki maçları getirir
+ * (yakın tarihli, APP_MATCH). Owner get_or_create_match_score_token ile token
+ * üretmeye yetkilidir (RLS + RPC owner kontrolü). Owner değilse boş döner.
+ */
+export async function getOwnerScoreMatches(): Promise<OwnerScoreMatch[]> {
+  try {
+    const uid = await getCurrentUserId();
+    const { data: pitchRows, error: pErr } = await supabase
+      .from('pitches')
+      .select('id')
+      .eq('owner_id', uid);
+    if (pErr) throw pErr;
+    const pitchIds = ((pitchRows ?? []) as { id: string }[]).map((p) => p.id);
+    if (pitchIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('pitch_bookings')
+      .select('match_id, booking_date, start_time, courts(name), matches(id, title, status, date, time, "homeScore", "awayScore")')
+      .in('pitch_id', pitchIds)
+      .eq('source', 'APP_MATCH')
+      .not('match_id', 'is', null)
+      .order('booking_date', { ascending: false })
+      .limit(40);
+    if (error) throw error;
+    const seen = new Set<string>();
+    const rows: OwnerScoreMatch[] = [];
+    for (const r of (data ?? []) as Record<string, unknown>[]) {
+      const m = r.matches as Record<string, unknown> | null;
+      const matchId = String((m?.id as string) ?? (r.match_id as string) ?? '');
+      if (!matchId || seen.has(matchId)) continue;
+      seen.add(matchId);
+      const bookingDate = String(r.booking_date ?? '');
+      const startTime = String(r.start_time ?? '').slice(0, 5);
+      const hasScore = m?.homeScore != null && m?.awayScore != null;
+      rows.push({
+        matchId,
+        title: String((m?.title as string) ?? 'Oyuncu Maçı'),
+        when: `${String((m?.date as string) ?? bookingDate)} ${String((m?.time as string) ?? startTime)}`.trim(),
+        status: String((m?.status as string) ?? 'ACTIVE'),
+        courtName: String((r.courts as { name?: string } | null)?.name ?? 'Saha'),
+        hasScore,
+      });
+    }
+    return rows;
+  } catch (error) {
+    console.error('getOwnerScoreMatches:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 /** Maç için skor QR token'ı oluşturur/getirir (SECURITY DEFINER RPC). */
 export async function getOrCreateScoreToken(matchId: string): Promise<string> {
   try {

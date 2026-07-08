@@ -2047,8 +2047,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <QrCode size={24} className="text-white" />
                       </div>
-                      <span className="text-sm font-black italic text-white">QR OKUT</span>
-                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">Skor Girişi</span>
+                      <span className="text-sm font-black italic text-white">SKOR GİR</span>
+                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">QR veya Manuel</span>
                     </button>
                     <button 
                       onClick={() => setActiveTab('CALENDAR')}
