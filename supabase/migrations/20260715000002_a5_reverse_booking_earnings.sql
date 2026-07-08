@@ -59,8 +59,11 @@ BEGIN
 END;
 $function$;
 
+-- Yalnız service_role: iç auth kontrolü olmayan yardımcı; owner_cancel/cancel_app
+-- (SECURITY DEFINER) İÇİNDEN definer yetkisiyle çağrılır. authenticated'a AÇILMAZ
+-- (bkz. 20260715000003 — doğrudan RPC ile owner kazancı iptali saldırısını kapatır).
 REVOKE ALL ON FUNCTION public.reverse_booking_earnings(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.reverse_booking_earnings(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.reverse_booking_earnings(uuid) TO service_role;
 
 -- ------------------------------------------------------------------------------
 -- owner_cancel_confirmed_booking: (a) SELECT'e FOR UPDATE OF b (yarış guard'ı),
