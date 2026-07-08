@@ -14,6 +14,8 @@ import {
   type FinanceDashboardData,
 } from '../../services/pitchOwnerService';
 import { useOwnerToast } from './components/useOwnerToast';
+import { OwnerDemoDataBar } from './components/OwnerDemoDataBar';
+import { localDateISO } from './ownerCalendarHelpers';
 
 const EXPENSE_COLORS: Record<string, string> = {
   Fatura: '#00F5FF',
@@ -41,7 +43,9 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const [newExpense, setNewExpense] = useState({ title: '', amount: '', category: 'Diğer' });
   const [newDebtor, setNewDebtor] = useState({ name: '', phone: '', amount: '' });
 
-  const monthKey = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  // B6: UTC yerine yerel ay anahtarı — TR gecesinde (00:00-03:00) ayın 1'inde
+  // gider listesi yanlış ayı göstermesin.
+  const monthKey = useMemo(() => localDateISO().slice(0, 7), []);
 
   const load = React.useCallback(async () => {
     if (!pitchId || pitchId.startsWith('mock-')) {
@@ -123,6 +127,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
     }
   };
 
+  const hasDemoData = expenses.some((e) => e.is_demo) || debtors.some((d) => d.is_demo);
   const weeklyData = dashboard?.weeklyRevenue ?? [];
   const maxWeekVal = Math.max(...weeklyData.map((d) => d.collected), 1);
   const paymentMethods = dashboard?.paymentMethods ?? [];
@@ -143,7 +148,9 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }
 
   return (
-    <div className="p-6 pb-32 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 sm:p-6 pb-32 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+      <div className="max-w-5xl mx-auto w-full">
+      <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
       {isDemoMode && (
         <div className="mb-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold text-center">
           DEMO MODU — Finans verileri demo tesise aittir
@@ -315,12 +322,17 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             )}
             {debtors.map((d) => (
               <div key={d.id} className="bg-[#161B22] p-4 rounded-2xl border border-red-500/20 flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-bold text-white">{d.name}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white flex items-center gap-2">
+                    <span className="truncate">{d.name}</span>
+                    {d.is_demo && (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>
+                    )}
+                  </p>
                   <p className="text-[10px] text-gray-500">{d.phone ?? ''}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-red-400 font-black">{d.amount_owed}₺</span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-red-400 font-black">{d.amount_owed.toLocaleString('tr-TR')}₺</span>
                   <button
                     onClick={() => {
                       if (readOnly) return;
@@ -346,18 +358,27 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
               <Plus size={18} />
             </button>
           </div>
+          <div className="grid gap-3 md:grid-cols-2">
           {expenses.map((e) => (
-            <div key={e.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between">
-              <div>
-                <p className="text-sm font-bold text-white">{e.title}</p>
+            <div key={e.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white flex items-center gap-2">
+                  <span className="truncate">{e.title}</span>
+                  {e.is_demo && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>
+                  )}
+                </p>
                 <p className="text-[10px] text-gray-500">{e.category} • {e.expense_date}</p>
               </div>
-              <span className="text-red-400 font-black">{e.amount?.toLocaleString('tr-TR')}₺</span>
+              <span className="text-red-400 font-black shrink-0">{e.amount?.toLocaleString('tr-TR')}₺</span>
             </div>
           ))}
+          </div>
           {expenses.length === 0 && <p className="text-sm text-gray-500">Bu ay gider kaydı yok.</p>}
         </div>
       )}
+
+      </div>{/* /max-w wrapper */}
 
       {isAddExpenseModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4">

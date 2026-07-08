@@ -160,7 +160,10 @@ const mapDbPitchToUiPitch = (
     ownerId: row.owner_id ?? undefined,
     isPublished: row.is_published !== false,
     isFeatured: row.is_featured === true,
-    workingHours: wh
+    // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
+    // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
+    workingHoursRaw: wh ?? null,
+    workingHours: wh && !Array.isArray(wh)
       ? {
           open: wh.open ?? '08:00',
           close: wh.close ?? '02:00',

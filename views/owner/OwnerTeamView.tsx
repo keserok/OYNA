@@ -14,6 +14,7 @@ import {
 } from '../../services/pitchOwnerService';
 import type { PitchStaffMember, PitchStaffTask } from '../../types';
 import { useOwnerToast } from './components/useOwnerToast';
+import { OwnerDemoDataBar } from './components/OwnerDemoDataBar';
 
 interface OwnerTeamViewProps {
   pitchId: string;
@@ -80,6 +81,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   useEffect(() => { load(); }, [load]);
 
   const onDutyStaff = staff.filter((s) => s.status === 'ON_DUTY');
+  const hasDemoData = staff.some((s) => s.is_demo) || tasks.some((t) => t.is_demo);
 
   const handleToggleTask = async (task: PitchStaffTask) => {
     if (!canUseDb || readOnly) return;
@@ -168,7 +170,9 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   }
 
   return (
-    <div className="p-6 pb-32 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 sm:p-6 pb-32 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+      <div className="max-w-5xl mx-auto w-full">
+      <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
       {isDemoMode && (
         <div className="mb-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-300 uppercase tracking-wide">
           Demo tesis — ekip verileri örnek kayıtlardır
@@ -286,7 +290,8 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
           {tasks.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-8">Henüz görev yok.</p>
           ) : (
-            tasks.map((task) => (
+            <div className="grid gap-3 md:grid-cols-2">
+            {tasks.map((task) => (
               <button
                 key={task.id}
                 type="button"
@@ -313,10 +318,14 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                     <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${PRIORITY_COLOR[task.priority]}`}>
                       {PRIORITY_LABEL[task.priority]}
                     </span>
+                    {task.is_demo && (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">DEMO</span>
+                    )}
                   </div>
                 </div>
               </button>
-            ))
+            ))}
+            </div>
           )}
         </div>
       )}
@@ -326,7 +335,8 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
           {staff.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-8">Personel ekleyin.</p>
           ) : (
-            staff.map((member) => (
+            <div className="grid gap-3 md:grid-cols-2">
+            {staff.map((member) => (
               <div key={member.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center gap-4">
                 <img
                   src={member.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=8b5cf6&color=fff`}
@@ -334,7 +344,12 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                   alt={member.name}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-white">{member.name}</p>
+                  <p className="text-sm font-black text-white flex items-center gap-2">
+                    {member.name}
+                    {member.is_demo && (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">DEMO</span>
+                    )}
+                  </p>
                   <p className="text-[10px] text-gray-500 font-bold uppercase">{member.role_title}</p>
                 </div>
                 {canUseDb && (
@@ -360,10 +375,13 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                   </div>
                 )}
               </div>
-            ))
+            ))}
+            </div>
           )}
         </div>
       )}
+
+      </div>{/* /max-w wrapper */}
 
       {isAddTaskOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-end sm:items-center justify-center p-4">

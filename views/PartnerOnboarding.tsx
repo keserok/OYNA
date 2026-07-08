@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowRight, ChevronLeft, Check, Crown, Gift, Share2, Phone, X, Award, ShieldCheck, Zap, Activity, TrendingUp, MapPin, Hourglass, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { useAppStore } from '../store';
+import { UserRole } from '../types';
 
 interface PartnerOnboardingProps {
   onComplete: () => void;
@@ -96,6 +98,18 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               .single();
           if (pitchErr) throw pitchErr;
           const pitchId = (newPitch as { id: string }).id;
+
+          // Tesis sahibi rolünü kazandır: bir sonraki girişte OwnerPanel'e düşsün
+          // ve "Rol Değiştir" ile oyuncu moduna geçebilsin (Faz: rol geçişi).
+          // Onboarding'i bloklamaz — hata olsa tesis yine oluşmuştur.
+          try {
+            await supabase.rpc('claim_owner_role');
+            const store = useAppStore.getState();
+            store.setRole(UserRole.OWNER);
+            store.setMyRoles(Array.from(new Set([...(store.myRoles || []), UserRole.OWNER, UserRole.PLAYER])));
+          } catch (roleErr) {
+            console.warn('claim_owner_role:', roleErr);
+          }
 
           setLoadingStep(1);
 

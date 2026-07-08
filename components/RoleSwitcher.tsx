@@ -6,28 +6,17 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { setActiveRole } from '../services/userService';
 import { MODAL_BACKDROP, MODAL_CARD } from './common/motion';
+// Rol → açılış ekranı + geçilebilir rol ayıklama tek kaynaktan (App.tsx ile ortak; drift yok).
+import { roleToLandingView, switchableRoles } from '../shared/roles';
 
-// ─── Rol → açılış ekranı eşlemesi (master prensipler) ──────────────────────────
-// PLAYER → DASHBOARD, GOALKEEPER/REFEREE → SERVICE_DASHBOARD, OWNER → OWNER_PANEL
-export const roleToLandingView = (role: UserRole): import('../types').AppView => {
-  if (role === UserRole.OWNER) return 'OWNER_PANEL';
-  if (role === UserRole.GOALKEEPER || role === UserRole.REFEREE) return 'SERVICE_DASHBOARD';
-  return 'DASHBOARD';
-};
+// Geriye dönük uyumluluk için yeniden dışa aktar (eski içe aktarımlar kırılmasın).
+export { roleToLandingView };
 
 const ROLE_META: Record<string, { label: string; sub: string; icon: React.ReactNode; color: string }> = {
   [UserRole.PLAYER]:     { label: 'Oyuncu',  sub: 'Maç yap, takıma katıl',          icon: <span className="text-base">⚽</span>,        color: '#f59e0b' },
   [UserRole.GOALKEEPER]: { label: 'Kaleci',  sub: 'Maç başı ücretini konuştur',     icon: <Shield size={18} />,                       color: '#22c55e' },
   [UserRole.REFEREE]:    { label: 'Hakem',   sub: 'Yönettiğin maçtan kazan',        icon: <Scale size={18} />,                        color: '#ef4444' },
   [UserRole.OWNER]:      { label: 'Tesis',   sub: 'Sahanı ve rezervasyonları yönet', icon: <Building2 size={18} />,                    color: '#3b82f6' },
-};
-
-const normalizeRole = (r: string): UserRole | null => {
-  const up = (r || '').toUpperCase();
-  if (up === UserRole.PLAYER || up === UserRole.GOALKEEPER || up === UserRole.REFEREE || up === UserRole.OWNER) {
-    return up as UserRole;
-  }
-  return null;
 };
 
 interface RoleSwitcherProps {
@@ -51,10 +40,8 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Geçerli, benzersiz rolleri ayıkla
-  const availableRoles = Array.from(
-    new Set(roles.map(normalizeRole).filter((r): r is UserRole => r !== null))
-  );
+  // Geçerli, benzersiz rolleri ayıkla (görünürlük kapılarıyla TEK kaynak).
+  const availableRoles = switchableRoles(roles);
 
   const handleConfirm = async () => {
     if (!pending || !auth.currentUser) return;

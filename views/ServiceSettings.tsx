@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole } from '../types';
 import {
   ArrowLeft, Bell, Lock, Moon, Sun, HelpCircle,
-  ChevronRight, LogOut, Star, KeyRound, Trash2
+  ChevronRight, LogOut, Star, KeyRound, Trash2, RefreshCw
 } from 'lucide-react';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
+import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { APP_VERSION } from '../utils/appVersion';
 import DeleteAccountModal from '../components/common/DeleteAccountModal';
 
@@ -53,7 +54,8 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   const accentColor = isRef ? '#ef4444' : '#22c55e';
   const accentBg = isRef ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)';
 
-  const { adminGoalkeepers, adminReferees, updateOwnProvider } = useAppStore();
+  const { adminGoalkeepers, adminReferees, updateOwnProvider, myRoles, setIsRoleSwitcherOpen } = useAppStore();
+  const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
   const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
   
   const savedSettings = me?.settings || {};
@@ -227,6 +229,27 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
             </div>
           </div>
         </motion.div>
+
+        {/* Rol Değiştir — uygulama-içi geçiş (RoleSwitcher). Yalnız birden çok
+            role sahip kullanıcıda görünür. "Oyuncu Moduna Geç" ⇒ oyuncu Dashboard'ı. */}
+        {canSwitchRole && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => setIsRoleSwitcherOpen(true)}
+            className="w-full rounded-[24px] p-5 flex items-center gap-4 border border-blue-500/25 bg-gradient-to-r from-blue-900/25 to-[#0d1420] hover:border-blue-500/50 transition-all active:scale-[0.99] text-left"
+          >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-500/15 text-blue-400 shrink-0">
+              <RefreshCw size={22} />
+            </div>
+            <div className="flex-1">
+              <p className="font-black text-white text-sm">Oyuncu Moduna Geç</p>
+              <p className="text-[10px] text-blue-300/70 font-medium mt-0.5">Oyuncu arayüzüne / maçlara geç</p>
+            </div>
+            <ChevronRight size={18} className="text-blue-400 shrink-0" />
+          </motion.button>
+        )}
 
         {/* Bildirimler */}
         <SectionCard

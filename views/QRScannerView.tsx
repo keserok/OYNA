@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ArrowLeft, Trophy, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Trophy, CheckCircle2, AlertCircle, RefreshCw, QrCode, ListChecks, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
+import { getOwnerScoreMatches, getOrCreateScoreToken, type OwnerScoreMatch } from '../services/pitchOwnerService';
 
 interface QRScannerViewProps {
   onBack: () => void;
@@ -24,6 +25,11 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
+  // WP3: QR/Kod vs Manuel (owner kendi maçını seçip skor girer, QR gerekmeden).
+  const [mode, setMode] = useState<'QR' | 'MANUAL'>('QR');
+  const [ownerMatches, setOwnerMatches] = useState<OwnerScoreMatch[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [pickingId, setPickingId] = useState<string | null>(null);
 
   // Skor QR token'ını doğrula
   const validateToken = async (token: string) => {
@@ -64,8 +70,34 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
     }
   };
 
+  // Manuel sekmede owner'ın maçlarını yükle.
   useEffect(() => {
-    if (showManualInput) return;
+    if (mode !== 'MANUAL') return;
+    setMatchesLoading(true);
+    getOwnerScoreMatches()
+      .then(setOwnerMatches)
+      .catch(() => setOwnerMatches([]))
+      .finally(() => setMatchesLoading(false));
+  }, [mode]);
+
+  const handlePickMatch = async (m: OwnerScoreMatch) => {
+    setPickingId(m.matchId);
+    setError(null);
+    try {
+      const token = await getOrCreateScoreToken(m.matchId);
+      setMatchInfo({ id: m.matchId, title: m.title });
+      setScanResult(token);
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
+      setError(raw.includes('yetki') ? 'Bu maç için skor girme yetkiniz yok.' : 'Maç seçilemedi. Tekrar deneyin.');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setPickingId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (mode !== 'QR' || showManualInput) return;
 
     const scanner = new Html5QrcodeScanner(
       "reader",
@@ -101,7 +133,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
         });
       }
     };
-  }, [showManualInput]);
+  }, [mode, showManualInput]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +193,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
         <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
-        <h1 className="text-lg font-bold italic tracking-tight uppercase">QR & KOD SİSTEMİ</h1>
+        <h1 className="text-lg font-bold italic tracking-tight uppercase">SKOR GİR</h1>
         <div className="w-10"></div>
       </div>
 
@@ -175,6 +207,17 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
               exit={{ opacity: 0, scale: 0.9 }}
               className="w-full max-w-sm"
             >
+              {/* WP3: QR/Kod vs Manuel sekmeleri */}
+              <div className="flex p-1 bg-white/5 rounded-2xl border border-white/10 mb-6">
+                <button type="button" onClick={() => setMode('QR')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'QR' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                  <QrCode size={15} /> QR / Kod
+                </button>
+                <button type="button" onClick={() => setMode('MANUAL')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                  <ListChecks size={15} /> Manuel
+                </button>
+              </div>
+
+              {mode === 'QR' ? (<>
               <div className="text-center mb-8">
                 <div className="inline-flex p-4 rounded-3xl bg-blue-500/10 text-blue-400 mb-4">
                   <RefreshCw size={32} className="animate-spin-slow" />
@@ -237,6 +280,34 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult }) => {
                   Kod veya QR okutulduğunda ilgili maç otomatik olarak eşleşecek ve skor giriş ekranı açılacaktır.
                 </p>
               </div>
+              </>) : (
+                <div className="space-y-3">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex p-4 rounded-3xl bg-blue-500/10 text-blue-400 mb-4"><ListChecks size={28} /></div>
+                    <h2 className="text-2xl font-black italic mb-1 uppercase">Maç Seç</h2>
+                    <p className="text-gray-400 text-xs">Tesisindeki bir maçı seç, skoru gir (QR gerekmez).</p>
+                  </div>
+                  {matchesLoading ? (
+                    <div className="text-center py-10 text-blue-400"><RefreshCw size={24} className="animate-spin inline" /></div>
+                  ) : ownerMatches.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500 text-sm">Skor girilebilecek maç bulunamadı.</div>
+                  ) : (
+                    ownerMatches.map((m) => (
+                      <button key={m.matchId} type="button" disabled={!!pickingId} onClick={() => handlePickMatch(m)} className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-blue-500/30 transition-all disabled:opacity-50 text-left">
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-white truncate">{m.title}</p>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase truncate">{m.courtName} · {m.when}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {m.hasScore && <span className="text-[9px] font-black text-emerald-400 uppercase">Skor girildi</span>}
+                          {pickingId === m.matchId ? <RefreshCw size={16} className="animate-spin text-blue-400" /> : <ChevronRight size={18} className="text-gray-600" />}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                  {error && <p className="text-red-400 text-[10px] font-bold mt-2 text-center uppercase tracking-widest">{error}</p>}
+                </div>
+              )}
             </motion.div>
           ) : !isSuccess ? (
             <motion.div 

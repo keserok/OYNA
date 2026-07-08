@@ -4,6 +4,8 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './t
 import { auth, onAuthStateChanged, logout } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
+import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
+import { setActiveRole } from './services/userService';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
@@ -193,29 +195,53 @@ const App: React.FC = () => {
           } else {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
-            setRole(primaryRole);
+            // FAZ 7.5: sahip olunan roller — çoklu rol geçişi + açılış rolü seçimi.
+            // Güvenlik payı: roles ∪ aktif rol. Eski owner hesaplarında profiles.roles
+            // 'OWNER'ı içermeyebilir; birleşim sayesinde açılış yine doğru panele düşer.
+            const ownedRoles = Array.from(new Set<string>([
+              ...(Array.isArray(profile.roles) ? (profile.roles as string[]) : []),
+              primaryRole,
+            ]));
+            useAppStore.getState().setMyRoles(ownedRoles);
+
+            // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
+            // TOKEN_REFRESHED + yeniden INITIAL_SESSION…). Açılış-rolü OVERRIDE'ı
+            // YALNIZ uygulamaya giriş anında (splash/auth/…) uygulanır. Aksi halde
+            // arka plan token yenilemesi (≈saatlik / sekme odağı), kullanıcının
+            // uygulama-içi "Rol Değiştir" ile geçtiği rolü sessizce geri alırdı.
+            const currentView = useAppStore.getState().view;
+            const isEntering = ['SPLASH', 'AUTH', 'ROLE_SELECTION', 'PENDING_VERIFICATION'].includes(currentView);
+            // Admin koruması: aktif rol GEÇİLEBİLİR bir rol değilse (ADMIN/SUPER_ADMIN
+            // → normalizeRole null döner), açılış-rolü override'ı UYGULANMAZ. Aksi
+            // halde pickLandingRole PLAYER'a düşer ve setActiveRole admin rolünü
+            // PLAYER'a yazarak yetki kaybına yol açardı. Bu roller admin panelinden yönetilir.
+            const canOverride = isEntering && normalizeRole(primaryRole) !== null;
+            // 1A — "her zaman kendi paneli": GİRİŞTE sağlayıcı/tesis rolü varsa aktif
+            // rol otomatik ona alınır (öncelik OWNER>REF>GK>PLAYER). Oturum içindeki
+            // yenilemede (ve admin rolünde) aktif rol DB'dekiyle senkron kalır — override yok.
+            const landingRole = canOverride ? pickLandingRole(ownedRoles, primaryRole) : primaryRole;
+            setRole(landingRole);
             // FAZ 7.4: analitik + hata bağlamına kullanıcıyı bağla (env yoksa no-op)
-            identifyUser(user.uid, { role: primaryRole, is_admin: !!profile.is_admin });
-            // FAZ 7.5: çoklu rol geçişi için kullanıcının rollerini sakla
-            useAppStore.getState().setMyRoles(
-              Array.isArray(profile.roles) ? (profile.roles as string[]) : [primaryRole]
-            );
+            identifyUser(user.uid, { role: landingRole, is_admin: !!profile.is_admin });
+
+            // Aktif rol (profiles.role) açılış rolünden farklıysa (yalnız girişte, admin
+            // hariç) sunucuda da eşitle → rol-bazlı sorgu/segment/RLS tutarlı kalır.
+            // landingRole daima roles[] içindedir, RPC güvenle geçer. En iyi çaba:
+            // hata olsa bile bu oturumun yönlendirmesini BLOKLAMAZ.
+            if (canOverride && landingRole !== primaryRole) {
+              setActiveRole(landingRole).catch((e) =>
+                console.warn('[App] Açılış rolü kalıcılaştırılamadı:', e));
+            }
 
             // Presence heartbeat (Spec F34): ön planda ~2,5 dk'da bir +
             // görünürlüğe dönüşte last_active_at yazılır; arka planda durur.
             // (Tek seferlik girişte-yazma modelinin halefi — gösterge dürüstleşir.)
             startPresenceHeartbeat(user.uid);
 
-            // Yeni model: AÇILIŞ YÖNLENDİRMESİ tek kaynağa (aktif rol) dayanır.
-            // Oturum kalıcı → tekrar giriş YOK. Aktif rol oyuncu → Dashboard;
-            // onaylı kaleci/hakem → ServiceDashboard; onaylı tesis → OwnerPanel.
-            // Aktif rol yalnızca admin onayından sonra sağlayıcı role çevrilir
-            // (set_active_role), bu yüzden bekleyen başvuru oyuncuyu KİLİTLEMEZ.
-            const currentView = useAppStore.getState().view;
-            // LOCATION_PROMPT listede DEĞİL: yeni kayıt konum ekranındayken
-            // token yenilenmesi kullanıcıyı ekrandan koparmasın.
-            if (['SPLASH', 'AUTH', 'ROLE_SELECTION', 'PENDING_VERIFICATION'].includes(currentView)) {
-              resetNavigation(navigateBasedOnRole(primaryRole));
+            // Oturum kalıcı → tekrar giriş YOK. Yalnız girişte yönlendir; oturum
+            // içindeki token yenilemesi kullanıcıyı bulunduğu ekrandan KOPARMAZ.
+            if (isEntering) {
+              resetNavigation(navigateBasedOnRole(landingRole));
             }
           }
         } else {
@@ -355,13 +381,10 @@ const App: React.FC = () => {
     });
     return () => { if (remove) remove(); };
   }, []);
-  // Aktif role göre açılış ekranı. Oyuncu (ve varsayılan) → Dashboard.
-  // Sağlayıcı/tesis rolleri yalnız admin onayından sonra aktif role atanır.
-  const navigateBasedOnRole = (currentRole: UserRole | null): AppView => {
-    if (currentRole === UserRole.OWNER) return 'OWNER_PANEL';
-    if (currentRole === UserRole.REFEREE || currentRole === UserRole.GOALKEEPER) return 'SERVICE_DASHBOARD';
-    return 'DASHBOARD';
-  };
+  // Aktif role göre açılış ekranı — tek kaynak (shared/roles.roleToLandingView).
+  // PLAYER→Dashboard, GK/REF→ServiceDashboard, OWNER→OwnerPanel.
+  const navigateBasedOnRole = (currentRole: UserRole | null): AppView =>
+    roleToLandingView(currentRole);
 
   const handleRoleSelect = async (selectedRole: UserRole, data?: any) => {
     setRole(selectedRole);
@@ -386,12 +409,13 @@ const App: React.FC = () => {
       case 'SPLASH':
         return <SplashScreen ready={authResolved} onStart={() => {
           // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş;
-          // oturum varsa role göre panel.
+          // oturum varsa role göre panel. Rolü store'dan TAZE oku (kapanıştaki
+          // `role` eski/PLAYER olabilir → kaleci/hakem yanlış panele düşerdi).
           if (!auth.currentUser) {
             resetNavigation('AUTH');
             return;
           }
-          resetNavigation(navigateBasedOnRole(role));
+          resetNavigation(navigateBasedOnRole(useAppStore.getState().role));
         }} />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
@@ -604,7 +628,7 @@ const App: React.FC = () => {
 
       {/* FAZ 7.5: Çoklu rol geçişi — rol değiştirici sheet (yalnızca >1 rol varsa açılabilir) */}
       <AnimatePresence>
-        {isRoleSwitcherOpen && new Set(myRoles).size > 1 && (
+        {isRoleSwitcherOpen && hasMultipleSwitchableRoles(myRoles) && (
           <Suspense fallback={null}>
             <RoleSwitcher
               roles={myRoles}
