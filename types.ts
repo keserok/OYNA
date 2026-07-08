@@ -885,6 +885,8 @@ export interface BookingPayment {
   note: string | null;
   recorded_by?: string | null;
   created_at: string;
+  /** A2: 'APP' (uygulama/OYNA tahsilatı) | 'OWNER_MANUAL' (owner elle girdi). */
+  source?: 'APP' | 'OWNER_MANUAL';
 }
 
 // `pitch_bookings` tablosu (zenginleştirilmiş)
