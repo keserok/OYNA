@@ -829,11 +829,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 seqStep: maxSeq + 1
             });
         } else if (tool === 'move') {
-            // Boş sahaya dokunuş: seçimi kaldır; uzun basınca (500ms) o noktaya rakip bırak (S11/S17).
+            // Boş sahaya dokunuş: seçimi kaldır. RAKİP modundayken uzun basınca (500ms)
+            // o noktaya rakip bırak (BİZ modunda rakip eklenmez).
             setSelectedEl(null);
-            const px = x, py = y;
-            if (longPressRef.current) clearTimeout(longPressRef.current);
-            longPressRef.current = setTimeout(() => { addOpponentAt(px, py); longPressRef.current = null; }, 500);
+            if (drawSide === 'OPP') {
+                const px = x, py = y;
+                if (longPressRef.current) clearTimeout(longPressRef.current);
+                longPressRef.current = setTimeout(() => { addOpponentAt(px, py); longPressRef.current = null; }, 500);
+            }
         }
     };
 
@@ -855,7 +858,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         if (navigator.vibrate) navigator.vibrate(15);
     };
 
-    // Rakip dizilişi: mevcut dizilişi rakip yarısına AYNALA (S20).
+    // Rakip takımını sahaya diz: mevcut dizilişi rakip yarısına AYNALA (S20).
     const mirrorOpponents = () => {
         pushHistory();
         const stamp = Date.now();
@@ -867,15 +870,29 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             player: { id: `opp_p_${stamp}_${i}`, name: `R${i + 1}`, role: 'OPP', rating: 0, isOpponent: true },
         }));
         setActiveTactic({ ...activeTactic, opponents: mirrored });
-        showToast('Rakip dizilişi eklendi (ayna).');
+        showToast('Rakip takım sahaya dizildi (ayna).');
     };
 
-    const renameOpponent = (id: string, name: string, instruction?: string) => {
+    // "RAKİP" butonu: rakip yoksa takımı diz; her hâlde RAKİP düzenleme moduna geç.
+    // Rakip varken RE-diz yapıp elle düzenlemeyi silmez (deneyimi bozmaz).
+    const placeOpponentTeam = () => {
+        if (activeTactic.opponents.length === 0) {
+            mirrorOpponents();
+        } else {
+            showToast('Rakip düzenleme modu — BİZ/RAKİP ile geçebilirsin.');
+        }
+        setDrawSide('OPP');
+        setSelectedEl(null);
+    };
+
+    // Rakip notu (serbest metin, maks 10 karakter) — mevki çipleri yerine (kullanıcı isteği).
+    const renameOpponent = (id: string, note: string) => {
+        const clipped = note.slice(0, 10);
         setActiveTactic({
             ...activeTactic,
             opponents: activeTactic.opponents.map(o =>
                 o.id === id
-                    ? { ...o, player: { ...(o.player as Player), name: name.trim() || o.player?.name || 'Rakip' }, instruction: instruction ?? o.instruction }
+                    ? { ...o, player: { ...(o.player as Player), name: clipped } }
                     : o),
         });
     };
@@ -963,6 +980,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const handleDragStart = (type: 'slot' | 'opponent', id: string, e: React.PointerEvent) => {
         if (tool !== 'move' || !canvasRef.current) return;
         e.stopPropagation();
+        // Yalnız SEÇİLİ tarafın oyuncuları düzenlenebilir (BİZ=slot, RAKİP=opponent).
+        if ((drawSide === 'US' && type === 'opponent') || (drawSide === 'OPP' && type === 'slot')) return;
         e.currentTarget.releasePointerCapture(e.pointerId);
 
         let currentX = 0;
@@ -1277,27 +1296,27 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"></path></svg> PAS
                     </button>
-                    {/* BİZ / RAKİP çizim tarafı — koşu/pas hangi tarafa çizilecek (S19) */}
-                    {tool.startsWith('draw') && (
-                        <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
-                            <button
-                                onClick={() => setDrawSide('US')}
-                                className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
-                            >BİZ</button>
-                            <button
-                                onClick={() => setDrawSide('OPP')}
-                                className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                            >RAKİP</button>
-                        </div>
-                    )}
-                    {/* Rakip dizilişi ekle (ayna) (S20) */}
+                    {/* Rakip takımı sahaya diz (ayna) + rakip düzenleme moduna geç */}
                     <button
-                        onClick={mirrorOpponents}
-                        title="Rakip dizilişi ekle (mevcut dizilişi aynala)"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400 transition-all whitespace-nowrap"
+                        onClick={placeOpponentTeam}
+                        title="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400'}`}
                     >
-                        <Swords size={14} /> RAKİP DİZİLİŞİ
+                        <Swords size={14} /> RAKİP
                     </button>
+                    {/* BİZ / RAKİP — hangi takımı DÜZENLİYORUM (taşıma/isim/çizim yalnız o tarafta) */}
+                    <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
+                        <button
+                            onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); }}
+                            title="Bizim takımı düzenle"
+                            className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                        >BİZ</button>
+                        <button
+                            onClick={() => { setDrawSide('OPP'); setSelectedEl(null); }}
+                            title="Rakibi düzenle"
+                            className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                        >RAKİP</button>
+                    </div>
                     {drawings.length > 0 && (
                         !isAdvancedAnimLoaded ? (
                             // ⚡ Modül henüz indirilmedi: on-demand indirme butonu
@@ -1458,7 +1477,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <motion.div 
                             key={opp.id}
                             onPointerDown={(e) => handleDragStart('opponent', opp.id, e)}
-                            className={`absolute w-10 h-10 z-20 ${tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto'} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''}`}
+                            className={`absolute w-10 h-10 z-20 ${tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto'} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${drawSide === 'US' ? 'opacity-40' : ''}`}
                             animate={anim ? anim.animate : {
                                 left: `${opp.x}%`,
                                 top: `${opp.y}%`
@@ -1501,7 +1520,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     handleDragStart('slot', slot.id, e);
                                 }
                             }}
-                            className={`absolute w-12 h-12 z-20 ${tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''}`}
+                            className={`absolute w-12 h-12 z-20 ${tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${drawSide === 'OPP' ? 'opacity-40' : ''}`}
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : 20 }}
                         >
                             {slot.player ? (
@@ -1567,6 +1586,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 customSeqValue={customSeqValue}
                                 setCustomSeqValue={setCustomSeqValue}
                                 setDrawings={setDrawings}
+                                hideLines={hideLines}
                             />
                         </Suspense>
                     )}
@@ -2630,7 +2650,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 {namingOpp && (() => {
                     const opp = activeTactic.opponents.find(o => o.id === namingOpp);
                     if (!opp) return null;
-                    const OPP_ROLES = ['Kaleci', 'Stoper', 'Bek', 'Pivot', 'Orta Saha', 'Kanat', 'Forvet', 'Tehlikeli'];
                     return (
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -2642,26 +2661,22 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 onClick={e => e.stopPropagation()}
                                 className="w-full max-w-sm bg-[#0E1420] border border-red-500/30 rounded-[24px] p-5 shadow-2xl"
                             >
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="w-8 h-8 rounded-full bg-red-900/80 border-2 border-red-500 flex items-center justify-center"><Swords size={14} className="text-white" /></div>
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Rakip</h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-red-900/80 border-2 border-red-500 flex items-center justify-center"><Swords size={14} className="text-white" /></div>
+                                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Rakip Notu</h3>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500 font-mono">{(opp.player?.name || '').length}/10</span>
                                 </div>
                                 <input
                                     value={opp.player?.name || ''}
                                     onChange={e => renameOpponent(opp.id, e.target.value)}
-                                    placeholder="Rakip adı"
-                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-3"
+                                    maxLength={10}
+                                    autoFocus
+                                    placeholder="Not (ör. hızlı, 10 no)"
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-2"
                                 />
-                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Mevki</p>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {OPP_ROLES.map(r => (
-                                        <button
-                                            key={r}
-                                            onClick={() => renameOpponent(opp.id, opp.player?.name || 'Rakip', r)}
-                                            className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${opp.instruction === r ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
-                                        >{r}</button>
-                                    ))}
-                                </div>
+                                <p className="text-[10px] text-gray-600 mb-4 px-1">Serbest not — en fazla 10 karakter. Sahada rakibin altında görünür.</p>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => { handleRemoveOpponent(opp.id); setNamingOpp(null); }}

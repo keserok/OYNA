@@ -130,13 +130,14 @@ interface AdvancedAnimationModuleProps {
     customSeqValue: string;
     setCustomSeqValue: (v: string) => void;
     setDrawings: (fn: (prev: DrawingLine[]) => DrawingLine[]) => void;
+    hideLines?: boolean;
 }
 
 const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
     drawings, isSimulating, showBall, playMode,
     seqMap, totalSeqDuration, selectedSeqBadge, setSelectedSeqBadge,
     isCustomSeqInputOpen, setIsCustomSeqInputOpen, customSeqValue, setCustomSeqValue,
-    setDrawings
+    setDrawings, hideLines
 }) => {
     return (
         <>
@@ -157,8 +158,8 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                 );
             })}
 
-            {/* Sekans Rozetleri (timeline sıralama editörü) */}
-            {playMode === 'SEQ' && drawings.map((line) => {
+            {/* Sekans Rozetleri (timeline sıralama editörü) — "Sadece Hareket" açıkken gizlenir */}
+            {playMode === 'SEQ' && !hideLines && drawings.map((line) => {
                 const midIdx = Math.floor(line.points.length / 2);
                 const midPoint = line.points[midIdx];
                 if (!midPoint) return null;
