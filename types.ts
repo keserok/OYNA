@@ -351,6 +351,8 @@ export interface Pitch {
   paramClientId?: string;
   ownerId?: string;
   workingHours?: { open: string; close: string; slotDuration: number; activeDays?: string[] };
+  /** DB'deki ham working_hours (dizi ya da nesne) — gün-bazlı çözümleme için korunur. */
+  workingHoursRaw?: unknown;
   pricingPolicy?: any[];
   surfaceType?: 'SUNİ ÇİM' | 'DOĞAL ÇİM' | 'PARKE' | 'TARTAN';
   dimensions?: string; // e.g. "30x50"
@@ -929,6 +931,7 @@ export interface PitchExpense {
   note: string | null;
   created_by?: string | null;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchDebtor {
@@ -943,6 +946,7 @@ export interface PitchDebtor {
   is_resolved: boolean;
   last_reminded_at?: string | null;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchStaffMember {
@@ -955,6 +959,7 @@ export interface PitchStaffMember {
   phone: string | null;
   sort_order: number;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchStaffTask {
@@ -968,6 +973,7 @@ export interface PitchStaffTask {
   due_time: string | null;
   due_date: string | null;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchBankAccount {

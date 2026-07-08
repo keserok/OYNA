@@ -5,18 +5,15 @@ import {
   Building2,
   ChevronRight,
   Clock,
-  CreditCard,
   Globe,
   HelpCircle,
   LayoutDashboard,
   LogOut,
-  Plus,
   RefreshCw,
   Settings,
   Shield,
   Tag,
   Trophy,
-  Zap,
 } from 'lucide-react';
 import type { OwnerMenuStats } from './ownerMenuTypes';
 
@@ -26,7 +23,6 @@ export interface OwnerMenuViewProps {
   facilityName?: string;
   facilityDistrict?: string;
   facilityImage?: string;
-  planTier?: string;
   accountStatus?: string;
   stats: OwnerMenuStats;
   onEditProfile: () => void;
@@ -34,10 +30,7 @@ export interface OwnerMenuViewProps {
   onOperations: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
-  onAddFacility?: () => void;
   onPricingPolicy: () => void;
-  onPaymentSettings: () => void;
-  onBilling: () => void;
   onLogout: () => void;
   onSecurity: () => void;
   onSupport: () => void;
@@ -45,9 +38,7 @@ export interface OwnerMenuViewProps {
   onToggleNotifications: () => void;
   onWidgetSettings: () => void;
   onPitches: () => void;
-  onPlanUpgrade?: () => void;
   isReadOnly?: boolean;
-  canWithdrawals?: boolean;
   /** Uygulama-içi rol geçişi sayfasını (RoleSwitcher) açar. */
   onSwitchRole?: () => void;
   /** Kullanıcı birden çok role sahip mi? (yalnız o zaman rol geçişi anlamlı) */
@@ -108,7 +99,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   facilityName = 'Tesisim',
   facilityDistrict = '',
   facilityImage,
-  planTier = 'Starter',
   accountStatus = 'Aktif',
   stats,
   onEditProfile,
@@ -116,10 +106,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onOperations,
   onBankAccounts,
   onWithdrawals,
-  onAddFacility,
   onPricingPolicy,
-  onPaymentSettings,
-  onBilling,
   onLogout,
   onSecurity,
   onSupport,
@@ -127,9 +114,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onToggleNotifications,
   onWidgetSettings,
   onPitches,
-  onPlanUpgrade,
   isReadOnly = false,
-  canWithdrawals = true,
   onSwitchRole,
   canSwitchRole = false,
 }) => {
@@ -161,9 +146,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               <Building2 size={28} className="text-gray-500" />
             </div>
           )}
-          <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg border-2 border-[#1A1F2C]">
-            {planTier}
-          </div>
         </div>
         <div>
           <h2 className="text-xl font-black text-white">{facilityName}</h2>
@@ -173,22 +155,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           <p className="text-[10px] text-emerald-400 font-bold uppercase mt-0.5">{accountStatus}</p>
         </div>
       </div>
-
-      {onPlanUpgrade && (
-        <button
-          type="button"
-          onClick={onPlanUpgrade}
-          className="w-full mb-6 p-5 rounded-[24px] border border-amber-500/30 bg-gradient-to-r from-amber-900/20 to-[#161B22] flex items-center justify-between group hover:border-amber-500/50 transition-all active:scale-[0.98]"
-        >
-          <div className="text-left">
-            <h3 className="font-black text-white text-sm">Planı Yükselt</h3>
-            <p className="text-[10px] text-amber-300/70 font-medium mt-0.5">
-              Daha fazla tesis, saha ve premium özellikler
-            </p>
-          </div>
-          <ChevronRight size={18} className="text-amber-400 group-hover:translate-x-1 transition-transform" />
-        </button>
-      )}
 
       {isReadOnly && (
         <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 font-bold text-center">
@@ -235,14 +201,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               badge={<StatusBadge label={`${stats.courtCount} saha`} tone="info" />}
               onClick={onPitches}
             />
-            {onAddFacility && (
-              <MenuRow
-                icon={<Plus size={18} />}
-                iconClass="text-emerald-400"
-                label="Yeni Tesis Ekle"
-                onClick={onAddFacility}
-              />
-            )}
             <MenuRow
               icon={<Clock size={18} />}
               label="Çalışma Saatleri"
@@ -292,20 +250,16 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               icon={<Banknote size={18} />}
               label="Para Çekme"
               badge={
-                canWithdrawals ? (
-                  <StatusBadge
-                    label={
-                      stats.availableBalance != null
-                        ? `₺${stats.availableBalance.toLocaleString('tr-TR')}`
-                        : 'Bakiye'
-                    }
-                    tone="success"
-                  />
-                ) : (
-                  <StatusBadge label="Pro plan" tone="warning" />
-                )
+                <StatusBadge
+                  label={
+                    stats.availableBalance != null
+                      ? `₺${stats.availableBalance.toLocaleString('tr-TR')}`
+                      : 'Bakiye'
+                  }
+                  tone="success"
+                />
               }
-              onClick={() => (canWithdrawals ? onWithdrawals() : onPlanUpgrade?.())}
+              onClick={onWithdrawals}
             />
             <MenuRow
               icon={<Tag size={18} />}
@@ -313,27 +267,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               badge={<StatusBadge label={`${stats.tariffCount} tarife`} tone="info" />}
               onClick={onPricingPolicy}
             />
-            <MenuRow
-              icon={<CreditCard size={18} />}
-              iconClass="text-blue-400"
-              label="Param Ödeme Entegrasyonu"
-              badge={
-                <StatusBadge
-                  label={stats.paramConfigured ? 'Yapılandırıldı' : 'Eksik'}
-                  tone={stats.paramConfigured ? 'success' : 'warning'}
-                />
-              }
-              onClick={onPaymentSettings}
-            />
-            {/* SaaS & Fatura girişi şimdilik gizli (kapsam dışı — abonelik altyapısı korunuyor, geri açılabilir). */}
-            {false && (
-              <MenuRow
-                icon={<Zap size={18} />}
-                iconClass="text-amber-400"
-                label="SaaS & Fatura"
-                onClick={onBilling}
-              />
-            )}
           </div>
         </section>
 

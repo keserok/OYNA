@@ -1,5 +1,6 @@
 import type { Pitch } from '../types';
 import { resolveTariffForSlot } from './tariffService';
+import { resolveWorkingHoursForDate } from '../shared/workingHours';
 
 export type SlotAvailabilityStatus = 'available' | 'booked' | 'closed' | 'pending';
 
@@ -139,8 +140,15 @@ export function buildAvailabilitySlots(
   bookings: PitchBookingRow[],
   courtId?: string | null
 ): TimeSlotAvailability[] {
-  const wh = pitch.workingHours || DEFAULT_WORKING_HOURS;
-  const ranges = generateSlotRanges(wh);
+  // TEK KAYNAK: ham working_hours'tan rezervasyon GÜNÜNE göre pencere çözümle
+  // (owner gün-bazlı dizi kaydeder; eski tek-nesne şekli de desteklenir).
+  const resolved = resolveWorkingHoursForDate(
+    (pitch as { workingHoursRaw?: unknown }).workingHoursRaw ?? pitch.workingHours,
+    bookingDate,
+  );
+  const wh = resolved.closed ? { open: resolved.open, close: resolved.open, slotDuration: resolved.slotDuration } : resolved;
+  // Gün tamamen kapalıysa hiç bookable slot yok.
+  const ranges = resolved.closed ? [] : generateSlotRanges(wh);
   const pitchBookings = bookings.filter(
     b =>
       b.pitch_id === pitch.id &&
