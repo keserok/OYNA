@@ -77,23 +77,23 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     let active = true;
     setLoading(true);
     (async () => {
-      try {
-        const [profile, id] = await Promise.all([getFullUserProfile(uid), getAuthIdentity()]);
-        if (!active) return;
-        setIdentity(id);
-        setAvatar(profile?.avatar_url ?? null);
-        setName(profile?.full_name ?? '');
-        setSavedName(profile?.full_name ?? '');
-        setBirthdate(profile?.birthdate ?? '');
-        setSavedBirth(profile?.birthdate ?? '');
-        const em = profile?.email ?? id.email ?? '';
-        setEmail(em);
-        setSavedEmail(em);
-      } catch {
-        /* sessiz — alanlar boş kalır */
-      } finally {
-        if (active) setLoading(false);
+      // Bağımsız çek: biri başarısız olsa diğeri yine dolsun.
+      const [profileRes, idRes] = await Promise.allSettled([getFullUserProfile(uid), getAuthIdentity()]);
+      if (!active) return;
+      const id = idRes.status === 'fulfilled' ? idRes.value : null;
+      if (id) setIdentity(id);
+      const profile = profileRes.status === 'fulfilled' ? profileRes.value : null;
+      if (profile) {
+        setAvatar(profile.avatar_url ?? null);
+        setName(profile.full_name ?? '');
+        setSavedName(profile.full_name ?? '');
+        setBirthdate(profile.birthdate ?? '');
+        setSavedBirth(profile.birthdate ?? '');
       }
+      const em = profile?.email ?? id?.email ?? '';
+      setEmail(em);
+      setSavedEmail(em);
+      setLoading(false);
     })();
     return () => { active = false; };
   }, [open, uid]);
@@ -110,6 +110,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
       const url = await uploadImage(file);
       await updateProfileBasics(uid, { avatar_url: url });
       setAvatar(url);
+      if (auth.currentUser) auth.currentUser.photoURL = url; // bellek-içi senkron (bayat kalmasın)
       setAvatarMsg({ text: 'Profil fotoğrafın güncellendi.', variant: 'success' });
     } catch (err) {
       setAvatarMsg({ text: err instanceof Error ? err.message : 'Fotoğraf yüklenemedi.', variant: 'error' });
@@ -122,7 +123,9 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     setSavingName(true); setNameMsg(null);
     try {
       await updateProfileName(uid, name);
-      setSavedName(name.trim());
+      const trimmed = name.trim();
+      setSavedName(trimmed);
+      if (auth.currentUser) auth.currentUser.displayName = trimmed; // bellek-içi senkron
       setNameMsg({ text: 'İsmin güncellendi.', variant: 'success' });
     } catch (err) {
       setNameMsg({ text: err instanceof Error ? err.message : 'İsim güncellenemedi.', variant: 'error' });
@@ -147,8 +150,15 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setEmailMsg({ text: 'Geçerli bir e-posta gir.', variant: 'error' }); return; }
     setSavingEmail(true); setEmailMsg(null);
     try {
-      await updateUserEmail(e);
-      setEmailMsg({ text: `Onay linki ${e} adresine gönderildi. Onayladıktan sonra e-postan değişir.`, variant: 'success' });
+      const res = await updateUserEmail(e);
+      if (res.applied) {
+        // Onay kapalı → e-posta anında değişti.
+        setSavedEmail(e); setEmail(e);
+        setEmailMsg({ text: 'E-postan güncellendi.', variant: 'success' });
+      } else {
+        // Onay açık → yeni adrese doğrulama linki gitti.
+        setEmailMsg({ text: `Onay linki ${e} adresine gönderildi. Onayladıktan sonra e-postan değişir.`, variant: 'success' });
+      }
     } catch (err) {
       setEmailMsg({ text: err instanceof Error ? err.message : 'E-posta güncellenemedi.', variant: 'error' });
     } finally { setSavingEmail(false); }
@@ -161,8 +171,11 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     setSavingPass(true); setPassMsg(null);
     try {
       await updateUserPassword(newPassword);
+      const wasCreate = !hasPassword;
       setNewPassword(''); setConfirmPassword('');
-      setPassMsg({ text: hasPassword ? 'Şifren güncellendi.' : 'Şifren oluşturuldu. Artık e-posta + şifre ile de giriş yapabilirsin.', variant: 'success' });
+      setPassMsg({ text: wasCreate ? 'Şifren oluşturuldu. Artık e-posta + şifre ile de giriş yapabilirsin.' : 'Şifren güncellendi.', variant: 'success' });
+      // Şifre ilk kez oluşturulduysa kimliği tazele ki etiket "Şifre Değiştir"e dönsün.
+      if (wasCreate) getAuthIdentity().then(setIdentity).catch(() => {});
     } catch (err) {
       setPassMsg({ text: err instanceof Error ? err.message : 'Şifre kaydedilemedi.', variant: 'error' });
     } finally { setSavingPass(false); }
@@ -293,7 +306,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                     {savingEmail ? '...' : 'Kaydet'}
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-500 mt-1.5">Değişiklik için yeni adresine bir onay linki gönderilir.</p>
+                <p className="text-[11px] text-gray-500 mt-1.5">Ayara göre e-postan anında değişir ya da yeni adresine bir onay linki gönderilir.</p>
                 <MsgLine msg={emailMsg} />
               </>
             )}
