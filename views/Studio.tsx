@@ -57,13 +57,80 @@ const ACADEMYS = [
 
 const FORMATIONS = FORMATIONS_SSOT as Record<SquadSize, Record<string, Slot[]>>;
 
+// GÜNCEL / Modern Trendler — kendi kendine yeten (backend'siz) gerçek taktik
+// içeriği. Her kart açılır-kapanır (accordion); amatör sahaya uyarlama içerir.
+type TrendCard = {
+    id: string;
+    tag: string;
+    title: string;
+    summary: string;
+    icon: 'Layout' | 'Target' | 'Layers';
+    accent: 'orange' | 'blue' | 'purple';
+    detail: string[];
+};
+const FEATURED_TREND = {
+    id: 'leverkusen',
+    tag: 'Haftalık Analiz',
+    title: "Leverkusen'in 3-4-2-1 Dominansı",
+    summary: "Xabi Alonso'nun dar alanda kurduğu elmas yapısı ve beklerin hücum katkısını amatör sahaya nasıl uyarlarsın?",
+    detail: [
+        "3-4-2-1, topa sahipken 3 stoperin arkada güven verdiği, iki kanat bekin (wing-back) tüm çizgiyi kat ettiği bir sistemdir. Amatör sahada bu 'iki bek sürekli koşacak' demektir — en dayanıklı iki oyuncunu kanatlara koy.",
+        "İki '10 numara' (çift ofansif orta saha) stoperlerle bekler arasındaki yarım-alanlara (half-space) yerleşir. Görevleri pas kanalını açmak ve topu ceza sahasına taşımak. Onlara 'geniş açılmayın, içeride kalın' talimatı ver.",
+        "Tek santrfor derinlik verir ve stoperleri meşgul eder; boşalan alana 10'lar sızar. Rakip önde presliyse top 3 stoper arasında sabırla dolaşır — ilk pasta acele etme.",
+        "Amatör uyarlama: 7v7'de bunu 1-2-2-1'e indir (kaleci + 2 stoper + 2 kanat + 1 forvet). Prensip aynı kalır: arkada sayı üstünlüğü, kanatlarda genişlik, merkezde çift yaratıcı.",
+    ],
+};
+const MODERN_TRENDS: TrendCard[] = [
+    {
+        id: 'box-midfield',
+        tag: 'Orta saha kurguları',
+        title: 'Box Midfields',
+        summary: 'Merkezde 2+2 kare (box) yapısıyla orta sahayı ezmek.',
+        icon: 'Layout', accent: 'orange',
+        detail: [
+            "İki derin + iki ileri orta saha bir 'kare' (box) oluşturur. Bu kare merkezde her zaman bir pas üçgeni garantiler — rakip birini kapatınca diğeri boşta kalır.",
+            "Beklerin içeri kat etmesiyle (inverted fullback) doğal oluşur: bek içeri gelir, kare tamamlanır, kanat forvete genişlik kalır.",
+            "Amatör faydası: top merkezden asla kaybolmaz. 'Her zaman iki pas seçeneğin olsun' kuralını fiziksel olarak zorlar.",
+        ],
+    },
+    {
+        id: 'inverted-fullbacks',
+        tag: 'Modern bek rolleri',
+        title: 'Inverted Fullbacks',
+        summary: 'Bekin kanattan içeri, orta sahaya kat etmesi.',
+        icon: 'Target', accent: 'blue',
+        detail: [
+            "Bek, topa sahipken çizgide kalmak yerine orta sahaya (içeri) girer. Takım hücumdayken 3 stoper + fazladan bir orta saha ile oynar; kontratağa karşı 'rest defense' (dinlenen savunma) kurulur.",
+            "Kanat genişliğini artık kanat forveti verir; bek merkezde oyun kurar. Guardiola'nın City'de popülerleştirdiği silah.",
+            "Amatör uyarlama: en oyun-okuyan bekini seç. Top kaybında zaten merkezde olduğu için ilk savunma perdesini o kurar.",
+        ],
+    },
+    {
+        id: 'half-spaces',
+        tag: 'Yarım-alan kullanımı',
+        title: 'Half-Spaces',
+        summary: 'Sahayı 5 dikey koridora böl; 2. ve 4. koridorları sömür.',
+        icon: 'Layers', accent: 'purple',
+        detail: [
+            "Sahayı dikey 5 koridora böl. Kenarlar (1 ve 5) kanat; merkez (3) kalabalık. Asıl altın bölge 2. ve 4. koridorlar — 'yarım-alanlar'.",
+            "Buradan hem kaleyi görürsün hem pas açına sahip olursun. Stoperler seni takip etmekte tereddüt eder (merkezi terk etmek istemezler).",
+            "Amatör uyarlama: 10 numaranı ya da içe kat eden kanadını sürekli bu iki koridora sok. 'Çizgide değil, çizgiyle merkez arasında dur' talimatı ver.",
+        ],
+    },
+];
+
 interface StudioProps {
     onBack: () => void;
     onNavigate: (view: any) => void;
 }
 
 const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
-    const [viewMode, setViewMode] = useState<'SELECTION' | 'STUDIO' | 'EDUCATION' | 'CURRENT'>('STUDIO');
+    // Açılış yönü bağlama göre: Taktik Öner / bildirim / takım planı gibi bir
+    // bağlamla gelindiyse doğrudan tahtaya (STUDIO); bağlamsız (Dashboard
+    // "TAKTİK STÜDYO" kartı) Gelişim & Taktik Merkezi'ne (SELECTION) düşülür.
+    const [viewMode, setViewMode] = useState<'SELECTION' | 'STUDIO' | 'EDUCATION' | 'CURRENT'>(
+        () => useAppStore.getState().studioContext ? 'STUDIO' : 'SELECTION'
+    );
     // Unified Plans State
     const [plans, setPlans] = useState<TacticState[]>([{
         id: crypto.randomUUID(),
@@ -138,6 +205,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [dragSuccess, setDragSuccess] = useState(false);
     const [currentStageIndex, setCurrentStageIndex] = useState(0);
     const currentScenario = ACADEMYS[currentStageIndex];
+
+    // GÜNCEL/Modern Trendler: hangi kartın açık (accordion) ve hangilerinin
+    // yerel olarak kaydedildiği (oturum içi dürüst bookmark durumu).
+    const [expandedTrend, setExpandedTrend] = useState<string | null>(null);
+    const [savedTrends, setSavedTrends] = useState<Set<string>>(new Set());
 
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
     const [isTeamConfirmed, setIsTeamConfirmed] = useState(false);
@@ -879,43 +951,41 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </div>
 
                         <div className="grid grid-cols-1 gap-4">
-                            {/* Option 1: Eğitim (LOCKED) */}
-                            <div className="group relative h-40 bg-gradient-to-br from-blue-600/10 to-indigo-600/10 rounded-[32px] border border-white/5 overflow-hidden text-left p-6 transition-all opacity-60">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full" />
-                                <div className="absolute top-4 right-6 bg-black/50 border border-white/10 px-3 py-1 rounded-full flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                    <span className="text-[10px] font-black text-white tracking-widest uppercase">YAKINDA</span>
-                                </div>
-                                <div className="relative z-10 h-full flex flex-col justify-between grayscale">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 border border-white/10">
+                            {/* Option 1: Eğitim — IQ Academy (10 aşamalı hücum masterclass) */}
+                            <button
+                                onClick={() => { setAcademyState('MENU'); setViewMode('EDUCATION'); }}
+                                className="group relative h-40 bg-gradient-to-br from-blue-600/10 to-indigo-600/10 rounded-[32px] border border-blue-500/20 overflow-hidden text-left p-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
+                                <div className="relative z-10 h-full flex flex-col justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/30">
                                         <Dumbbell size={24} />
                                     </div>
                                     <div>
                                         <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">EĞİTİM</h3>
-                                        <p className="text-xs text-white/40 font-medium">Taktiksel zekanı geliştir, yeni metodlar öğren.</p>
+                                        <p className="text-xs text-blue-300/60 font-medium">Taktiksel zekanı geliştir, yeni metodlar öğren.</p>
                                     </div>
                                 </div>
-                                <Dumbbell size={120} className="absolute -right-8 -bottom-8 text-white/5 -rotate-12 transition-all" />
-                            </div>
+                                <Dumbbell size={120} className="absolute -right-8 -bottom-8 text-white/5 -rotate-12 group-hover:text-blue-500/10 transition-all" />
+                            </button>
 
-                            {/* Option 2: Güncel (LOCKED) */}
-                            <div className="group relative h-40 bg-gradient-to-br from-amber-600/10 to-orange-600/10 rounded-[32px] border border-white/5 overflow-hidden text-left p-6 transition-all opacity-60">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full" />
-                                <div className="absolute top-4 right-6 bg-black/50 border border-white/10 px-3 py-1 rounded-full flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                    <span className="text-[10px] font-black text-white tracking-widest uppercase">YAKINDA</span>
-                                </div>
-                                <div className="relative z-10 h-full flex flex-col justify-between grayscale">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 border border-white/10">
+                            {/* Option 2: Güncel — Modern Trendler */}
+                            <button
+                                onClick={() => setViewMode('CURRENT')}
+                                className="group relative h-40 bg-gradient-to-br from-amber-600/10 to-orange-600/10 rounded-[32px] border border-amber-500/20 overflow-hidden text-left p-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full" />
+                                <div className="relative z-10 h-full flex flex-col justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 border border-amber-500/30">
                                         <Zap size={24} />
                                     </div>
                                     <div>
                                         <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">GÜNCEL</h3>
-                                        <p className="text-xs text-white/40 font-medium">Dünya futbolundan en yeni dizilişler ve trendler.</p>
+                                        <p className="text-xs text-amber-300/60 font-medium">Dünya futbolundan en yeni dizilişler ve trendler.</p>
                                     </div>
                                 </div>
-                                <Zap size={120} className="absolute -right-8 -bottom-8 text-white/5 -rotate-12 transition-all" />
-                            </div>
+                                <Zap size={120} className="absolute -right-8 -bottom-8 text-white/5 -rotate-12 group-hover:text-amber-500/10 transition-all" />
+                            </button>
 
                             {/* Option 3: Studio (Existing) */}
                             <button 
@@ -1490,66 +1560,111 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </div>
 
                         <div className="space-y-6">
-                            {/* Pro Analysis Card */}
+                            {/* Öne çıkan analiz — açılır gerçek içerik */}
                             <div className="bg-gradient-to-br from-amber-600/10 to-orange-900/20 rounded-[32px] border border-amber-500/20 overflow-hidden shadow-2xl">
                                 <div className="p-8">
                                     <div className="flex items-center gap-3 mb-4">
                                         <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
-                                        <span className="text-xs font-black text-amber-500 uppercase tracking-widest">Haftalık Analiz</span>
+                                        <span className="text-xs font-black text-amber-500 uppercase tracking-widest">{FEATURED_TREND.tag}</span>
                                     </div>
                                     <h3 className="text-3xl font-black text-white italic uppercase leading-none mb-4">Leverkusen'in<br/>3-4-2-1 Dominansı</h3>
                                     <p className="text-sm text-gray-400 font-medium mb-8 leading-relaxed max-w-[95%]">
-                                        Xabi Alonso'nun dar alanda kurduğu elmas yapısı ve beklerin hücum katkısını amatör sahaya nasıl uyarlarsın?
+                                        {FEATURED_TREND.summary}
                                     </p>
                                     <div className="flex gap-4">
-                                        <button onClick={() => showToast("Analiz detayları yakında eklenecek!", "success")} className="flex-1 py-4 bg-amber-500 text-black font-black rounded-2xl text-xs tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all">
-                                            ANALİZİ OKU
+                                        <button
+                                            onClick={() => setExpandedTrend(prev => prev === FEATURED_TREND.id ? null : FEATURED_TREND.id)}
+                                            className="flex-1 py-4 bg-amber-500 text-black font-black rounded-2xl text-xs tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        >
+                                            {expandedTrend === FEATURED_TREND.id ? 'ANALİZİ KAPAT' : 'ANALİZİ OKU'}
                                         </button>
-                                        <button onClick={() => showToast("Analiz kaydedildi!", "success")} className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-white hover:bg-white/10 transition-all">
+                                        <button
+                                            onClick={() => setSavedTrends(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(FEATURED_TREND.id)) { next.delete(FEATURED_TREND.id); showToast('Kaydedilenlerden çıkarıldı.'); }
+                                                else { next.add(FEATURED_TREND.id); showToast('Analiz kaydedildi.'); }
+                                                return next;
+                                            })}
+                                            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all border ${savedTrends.has(FEATURED_TREND.id) ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-white/5 text-white border-transparent hover:bg-white/10'}`}
+                                            title={savedTrends.has(FEATURED_TREND.id) ? 'Kaydedildi' : 'Kaydet'}
+                                        >
                                             <Save size={20} className="hover:scale-110 transition-transform"/>
                                         </button>
                                     </div>
+                                    <AnimatePresence initial={false}>
+                                        {expandedTrend === FEATURED_TREND.id && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.25 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="mt-6 pt-6 border-t border-amber-500/15 space-y-4">
+                                                    {FEATURED_TREND.detail.map((para, i) => (
+                                                        <div key={i} className="flex gap-3">
+                                                            <span className="shrink-0 w-6 h-6 rounded-lg bg-amber-500/15 text-amber-400 text-[11px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
+                                                            <p className="text-sm text-gray-300 leading-relaxed">{para}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                             </div>
 
-                            {/* Glossary / Tactics Box */}
+                            {/* Kavram kartları — tıklayınca gerçek açıklama açılır */}
                             <div className="grid grid-cols-1 gap-4">
-                                <div onClick={() => showToast("Box Midfield detayları yakında eklenecek!", "success")} className="bg-[#161B22] rounded-[24px] p-6 border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all cursor-pointer">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-14 h-14 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <Layout size={28} />
+                                {MODERN_TRENDS.map(card => {
+                                    const isOpen = expandedTrend === card.id;
+                                    const Icon = card.icon === 'Layout' ? Layout : card.icon === 'Target' ? Target : Layers;
+                                    const accent = card.accent === 'orange'
+                                        ? { icon: 'bg-orange-500/10 text-orange-400', num: 'bg-orange-500/15 text-orange-400', border: 'border-orange-500/30' }
+                                        : card.accent === 'blue'
+                                        ? { icon: 'bg-blue-500/10 text-blue-400', num: 'bg-blue-500/15 text-blue-400', border: 'border-blue-500/30' }
+                                        : { icon: 'bg-purple-500/10 text-purple-400', num: 'bg-purple-500/15 text-purple-400', border: 'border-purple-500/30' };
+                                    return (
+                                        <div key={card.id} className={`bg-[#161B22] rounded-[24px] border transition-all ${isOpen ? accent.border : 'border-white/5'}`}>
+                                            <button
+                                                onClick={() => setExpandedTrend(prev => prev === card.id ? null : card.id)}
+                                                className="w-full p-6 flex items-center justify-between group text-left"
+                                            >
+                                                <div className="flex items-center gap-5">
+                                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${accent.icon}`}>
+                                                        <Icon size={28} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-base font-black text-white uppercase italic">{card.title}</h4>
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{card.tag}</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={20} className={`text-gray-600 group-hover:text-white transition-all ${isOpen ? 'rotate-90 text-white' : ''}`} />
+                                            </button>
+                                            <AnimatePresence initial={false}>
+                                                {isOpen && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.25 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="px-6 pb-6 space-y-3">
+                                                            <p className="text-sm text-gray-300 leading-relaxed italic mb-1">{card.summary}</p>
+                                                            {card.detail.map((para, i) => (
+                                                                <div key={i} className="flex gap-3">
+                                                                    <span className={`shrink-0 w-6 h-6 rounded-lg text-[11px] font-black flex items-center justify-center mt-0.5 ${accent.num}`}>{i + 1}</span>
+                                                                    <p className="text-sm text-gray-300 leading-relaxed">{para}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
-                                        <div>
-                                            <h4 className="text-base font-black text-white uppercase italic">Box Midfields</h4>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Orta saha kurguları</p>
-                                        </div>
-                                    </div>
-                                    <ChevronLeft size={20} className="text-gray-600 rotate-180 group-hover:text-white transition-colors" />
-                                </div>
-                                <div onClick={() => showToast("Inverted Fullbacks detayları yakında eklenecek!", "success")} className="bg-[#161B22] rounded-[24px] p-6 border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all cursor-pointer">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <Target size={28} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-base font-black text-white uppercase italic">Inverted Fullbacks</h4>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Modern bek rolleri</p>
-                                        </div>
-                                    </div>
-                                    <ChevronLeft size={20} className="text-gray-600 rotate-180 group-hover:text-white transition-colors" />
-                                </div>
-                                <div onClick={() => showToast("Half-Spaces detayları yakında eklenecek!", "success")} className="bg-[#161B22] rounded-[24px] p-6 border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all cursor-pointer">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <Layers size={28} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-base font-black text-white uppercase italic">Half-Spaces</h4>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Yarım-alan kullanımı</p>
-                                        </div>
-                                    </div>
-                                    <ChevronLeft size={20} className="text-gray-600 rotate-180 group-hover:text-white transition-colors" />
-                                </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </motion.div>
