@@ -226,26 +226,33 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         rating: m.fp || 70,
     });
 
+    // Mevkiyi (pos) saha hattına eşle: GK/DEF/MID/FWD.
+    const posToLine = (pos?: string): 'GK' | 'DEF' | 'MID' | 'FWD' => {
+        const p = (pos || '').toUpperCase();
+        if (/GK|KALE/.test(p)) return 'GK';
+        if (/CB|LB|RB|WB|STOP|BEK|DEF|\bDF\b/.test(p)) return 'DEF';
+        if (/ST|CF|LW|RW|WING|KANAT|FOR|\bFW\b/.test(p)) return 'FWD';
+        if (/DM|CM|AM|LM|RM|MID|ORTA|PIVOT/.test(p)) return 'MID';
+        return 'MID';
+    };
+
+    // Akıllı dizme (S22): mevki hattına göre eşleştir, çakışmada fp yüksek olan sahaya.
     const populateSlotsWithSquad = (squad: TeamSquadRow[], currentSlots: Slot[]): Slot[] => {
         const newSlots = currentSlots.map(s => ({ ...s, player: undefined as Player | undefined }));
-        const availablePlayers = squad.map(squadRowToPlayer);
-
-        // GK önce eşleşir
-        const gkSlotIndex = newSlots.findIndex(s => s.role === 'GK');
-        if (gkSlotIndex !== -1) {
-            const gkIndex = availablePlayers.findIndex(p => p.role === 'GK' || p.role === 'KALECİ');
-            if (gkIndex !== -1) {
-                newSlots[gkSlotIndex].player = availablePlayers[gkIndex];
-                availablePlayers.splice(gkIndex, 1);
-            }
-        }
-        newSlots.forEach((slot, idx) => {
-            if (!slot.player && availablePlayers.length > 0) {
-                let matchingIdx = availablePlayers.findIndex(p => p.role === slot.role);
-                if (matchingIdx === -1) matchingIdx = 0;
-                newSlots[idx].player = availablePlayers[matchingIdx];
-                availablePlayers.splice(matchingIdx, 1);
-            }
+        // fp'ye göre azalan sırala → greedy en-iyi-önce yerleştirme.
+        const players = squad.map(m => ({ ...squadRowToPlayer(m), line: posToLine(m.pos) }))
+            .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        const used = new Set<string>();
+        // 1. Geçiş: her slotu HATTI uyan en yüksek fp'li oyuncuyla doldur.
+        newSlots.forEach((slot, i) => {
+            const cand = players.find(p => !used.has(p.id) && p.line === slot.role);
+            if (cand) { newSlots[i].player = cand; used.add(cand.id); }
+        });
+        // 2. Geçiş: kalan boş slotları en yüksek fp'li kalan oyuncularla doldur.
+        newSlots.forEach((slot, i) => {
+            if (newSlots[i].player) return;
+            const cand = players.find(p => !used.has(p.id));
+            if (cand) { newSlots[i].player = cand; used.add(cand.id); }
         });
         return newSlots;
     };
@@ -1029,7 +1036,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const isSquadComplete = activeTactic.slots.every(s => !!s.player);
     const hasGK = activeTactic.slots.some(s => s.role === 'GK' && !!s.player);
-    const canSave = isSquadComplete && hasGK;
+    const filledCount = activeTactic.slots.filter(s => !!s.player).length;
+    const missingCount = activeTactic.slots.length - filledCount;
+    // S23: eksik kadroyla da kaydedilebilir — yeter ki bir kaleci olsun (plan ≠ maç 11'i).
+    const canSave = hasGK;
+    const confirmedTeam = studioTeams.find(t => t.team_id === (activeTactic.teamId || selectedTeamId));
 
     // Get all players on the pitch (own team + opponents)
     const allPlayersOnPitch = [
@@ -1608,22 +1619,33 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     
                     {/* Horizontal Team List — kanonik get_my_teams (hayalet güç puanı öldü) */}
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 mb-4">
-                        {studioTeams.map((team) => (
+                        {studioTeams.map((team) => {
+                            const need = activeTactic.slots.length;
+                            const ready = Math.min(team.member_count, need);
+                            const enough = team.member_count >= need;
+                            return (
                             <button
                                 key={team.team_id}
                                 onClick={() => { setSelectedTeamId(team.team_id); void ensureSquad(team.team_id); }}
-                                className={`flex-shrink-0 w-[140px] p-3 rounded-2xl border transition-all text-left ${
+                                className={`flex-shrink-0 w-[150px] p-3 rounded-2xl border transition-all text-left ${
                                     selectedTeamId === team.team_id
                                         ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
                                         : 'bg-white/5 border-white/5 hover:bg-white/10'
                                 }`}
                             >
-                                <h4 className="text-white font-bold text-xs mb-1 truncate">{team.name}</h4>
-                                <div className="text-[10px] font-bold text-gray-500">
-                                    <span className={selectedTeamId === team.team_id ? 'text-[#39FF14]' : 'text-white'}>{team.member_count}</span> oyuncu · {formatLabel(team.format)}
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{(team.short_name || team.name || '?').slice(0, 2).toUpperCase()}</span>
+                                    <h4 className="text-white font-bold text-xs truncate flex-1">{team.name}</h4>
                                 </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="text-[10px] font-bold text-gray-500">
+                                        <span className={enough ? 'text-[#39FF14]' : 'text-amber-400'}>{ready}/{need}</span> hazır
+                                    </div>
+                                    <div className="text-[9px] text-gray-600 font-mono tabular-nums">{team.wins}G {team.draws}B {team.losses}M</div>
+                                </div>
+                                {!enough && <div className="mt-1 text-[8px] font-black text-amber-400 uppercase tracking-widest">Eksik kadro</div>}
                             </button>
-                        ))}
+                        );})}
                     </div>
 
                     <div className="flex flex-col gap-2">
@@ -1675,6 +1697,51 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </div>
             </div>
             )}
+
+            {/* Onaylı takım çipi (S21) + eksik kadro rozeti (S23) */}
+            {isTeamConfirmed && (
+                <div className="px-6 pb-3 mt-4">
+                    <div className="flex items-center gap-3 bg-[#161B22] rounded-2xl border border-white/5 p-3">
+                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-black shrink-0" style={{ background: confirmedTeam?.color1 || '#39FF14' }}>
+                            {(confirmedTeam?.short_name || activeTactic.teamName || '?').slice(0, 2).toUpperCase()}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-sm font-black text-white truncate">{activeTactic.teamName || 'Takımım'}</div>
+                            <div className="text-[10px] font-bold text-gray-500">
+                                <span className={missingCount === 0 ? 'text-[#39FF14]' : 'text-amber-400'}>{filledCount}/{activeTactic.slots.length}</span> dizili
+                                {missingCount > 0 && <span className="ml-2 text-amber-400 font-black uppercase tracking-widest">· {missingCount} eksik</span>}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setIsTeamConfirmed(false)}
+                            className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest px-3 py-2 rounded-xl bg-[#39FF14]/10 hover:bg-[#39FF14]/20 transition-all"
+                        >Değiştir</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Yedek tepsisi (S27) — kalıcı yatay şerit */}
+            <div className="px-6 pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                    <List size={12} className="text-gray-500" />
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yedekler ({activeTactic.subs.length})</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {activeTactic.subs.map(sub => (
+                        <div key={sub.id} className="flex-shrink-0 flex items-center gap-2 bg-white/5 border border-white/10 rounded-full pl-1 pr-2 py-1">
+                            <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-black text-white">{sub.name.charAt(0)}</span>
+                            <span className="text-[11px] font-bold text-white max-w-[90px] truncate">{sub.name}</span>
+                            <button onClick={() => handleRemoveSub(sub.id)} className="text-gray-500 hover:text-red-400 transition-colors"><X size={12} /></button>
+                        </div>
+                    ))}
+                    <button
+                        onClick={() => setShowPlayerSelect({ type: 'sub' })}
+                        className="flex-shrink-0 flex items-center gap-1.5 bg-white/5 border border-dashed border-white/20 rounded-full px-3 py-1.5 text-[11px] font-bold text-gray-400 hover:text-white hover:border-white/40 transition-all"
+                    >
+                        <Plus size={12} /> Ekle
+                    </button>
+                </div>
+            </div>
 
             {/* Tactical Settings (Mentality & Tempo) Redesign */}
             <div className="px-6 pb-6 mt-8">
