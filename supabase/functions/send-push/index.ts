@@ -123,8 +123,10 @@ Deno.serve(async (req: Request) => {
 
     // 3.5 Zorunlu OLMAYAN bildirimler için sessiz saat + saatlik hız limiti.
     //     Zorunlu türler (maç iptali, davet, gk/hakem kararı vb.) bu kapılardan MUAF.
+    //     Sessiz saat = global (app_config) VEYA kullanıcının kendi seçtiği
+    //     quiet_hours (Ayarlar → Bildirimler). İkisinden biri aktifse ertelenir.
     const isMandatory = await isTypeMandatory(notification.type_key, prefForType)
-    if (!isMandatory && inSilentHours(gate)) {
+    if (!isMandatory && (inSilentHours(gate) || inUserQuietHours(prefs))) {
       await logPushStatus(notification, typedProfile, 'deferred')
       return new Response('Silent hours', { status: 200 })
     }
@@ -417,6 +419,32 @@ function inSilentHours(g: NotificationGate): boolean {
   return g.silentStart < g.silentEnd
     ? (h >= g.silentStart && h < g.silentEnd)
     : (h >= g.silentStart || h < g.silentEnd)
+}
+
+// İstanbul saatini dakikaya çevir (HH*60+MM) — kullanıcı quiet_hours karşılaştırması için.
+function istanbulNowMinutes(): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date())
+  const hh = Number(parts.find((p) => p.type === 'hour')?.value ?? '0')
+  const mm = Number(parts.find((p) => p.type === 'minute')?.value ?? '0')
+  return hh * 60 + mm
+}
+
+// Kullanıcının kendi seçtiği sessiz saat aralığında mıyız?
+// prefs.quiet_hours = {"start":"23:00","end":"08:00"} (yerel TR). Yoksa false.
+function inUserQuietHours(prefs: Record<string, unknown>): boolean {
+  const qh = (prefs as { quiet_hours?: { start?: string; end?: string } }).quiet_hours
+  if (!qh?.start || !qh?.end) return false
+  const toMin = (s: string): number => {
+    const [h, m] = s.split(':').map(Number)
+    return (h || 0) * 60 + (m || 0)
+  }
+  const start = toMin(qh.start)
+  const end = toMin(qh.end)
+  if (start === end) return false
+  const now = istanbulNowMinutes()
+  return start < end ? (now >= start && now < end) : (now >= start || now < end)
 }
 
 async function isTypeMandatory(

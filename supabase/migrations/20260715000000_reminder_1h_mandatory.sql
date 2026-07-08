@@ -12,3 +12,16 @@ UPDATE public.notification_templates
 SET is_mandatory = true,
     can_user_disable = false
 WHERE type_key = 'match_reminder_1h';
+
+-- Mevcut kullanıcıların kayıtlı tercihlerini de düzelt: daha önce 1sa
+-- hatırlatıcısını kapatmış olanlar send-push'ta (opt-out kapısı stored pref'e
+-- bakıyor) zorunluluktan yararlanamazdı. Bu anahtarı taşıyan tüm profillerde
+-- {enabled:true, mandatory:true} olarak geri yaz.
+UPDATE public.profiles
+SET notification_preferences = jsonb_set(
+      notification_preferences,
+      '{match_reminder_1h}',
+      '{"enabled": true, "mandatory": true}'::jsonb,
+      true
+    )
+WHERE notification_preferences ? 'match_reminder_1h';

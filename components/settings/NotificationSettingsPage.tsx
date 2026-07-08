@@ -23,7 +23,7 @@ import SettingsSubPage from '../common/SettingsSubPage';
 // • Kategori ana anahtarları (tek dokunuşla tüm alt bildirimleri aç/kapat)
 // • Genişleyen detay (ince ayar isteyen için)
 // • Hızlı ön ayarlar (Hepsi / Sadece Maç / Sessiz)
-// • Sessiz saatler (notification_preferences.quiet_hours — backend zaten okuyor)
+// • Sessiz saatler (notification_preferences.quiet_hours — send-push inUserQuietHours ile uygular)
 // • Cihaz izni uyarısı (OS'ta bildirim kapalıysa)
 interface NotificationSettingsPageProps {
   open: boolean;
