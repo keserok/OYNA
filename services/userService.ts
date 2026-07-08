@@ -242,6 +242,15 @@ export const updateProfileBasics = async (
   if (error) throw error;
 };
 
+// Görünen ad — DB'de hem name (NOT NULL, legacy) hem full_name (görüntülenen)
+// tutuluyor; ikisini de senkron tutar ki isim her yerde tutarlı görünsün.
+export const updateProfileName = async (userId: string, fullName: string): Promise<void> => {
+  const trimmed = fullName.trim();
+  if (!trimmed) throw new Error('İsim boş olamaz.');
+  const { error } = await supabase.from('profiles').update({ name: trimmed, full_name: trimmed }).eq('id', userId);
+  if (error) throw error;
+};
+
 export interface WalletHistoryItem {
   id: string;
   date: string;
