@@ -26,6 +26,7 @@ import {
 import {
   TacticShowcaseItem, getTeamTacticsShowcase, setActiveTactic, toggleTacticFavorite,
   MatchTacticInfo, getMatchTactic, assignMatchTactic,
+  voteTactic, approveTacticRpc, rejectTacticRpc,
 } from '../../services/tacticSocialService';
 import {
   ScoreProposal, proposeMatchScore, approveMatchScore, getPendingScoreProposal,
@@ -469,6 +470,42 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
     } catch (e) { showToast((e as Error)?.message || 'Favori güncellenemedi.'); }
   };
 
+  // S36: hızlı yüzde oyu (Zayıf %25 / İyi %60 / Efsane %90) — optimistik ortalama.
+  const voteOnTactic = async (t: TacticShowcaseItem, percent: number) => {
+    const prevMine = t.my_vote;
+    try {
+      await voteTactic(t.id, percent);
+      setTactics(prev => (prev ?? []).map(x => {
+        if (x.id !== t.id) return x;
+        const hadVote = prevMine != null;
+        const newCount = hadVote ? x.vote_count : x.vote_count + 1;
+        const sumBefore = x.avg_vote * x.vote_count;
+        const newSum = hadVote ? (sumBefore - (prevMine as number) + percent) : (sumBefore + percent);
+        return { ...x, my_vote: percent, vote_count: newCount, avg_vote: newCount ? newSum / newCount : percent };
+      }));
+    } catch (e) { showToast((e as Error)?.message || 'Oy verilemedi.'); }
+  };
+
+  // S35: kaptan/yönetici satır-içi onay/ret (öneri akışı).
+  const approveT = async (t: TacticShowcaseItem) => {
+    setTacticBusy(t.id);
+    try {
+      await approveTacticRpc(t.id);
+      setTactics(prev => (prev ?? []).map(x => x.id === t.id ? { ...x, status: 'APPROVED' } : x));
+      showToast(`"${t.name || 'Taktik'}" onaylandı`);
+    } catch (e) { showToast((e as Error)?.message || 'Onaylanamadı.'); }
+    finally { setTacticBusy(null); }
+  };
+  const rejectT = async (t: TacticShowcaseItem) => {
+    setTacticBusy(t.id);
+    try {
+      await rejectTacticRpc(t.id);
+      setTactics(prev => (prev ?? []).filter(x => x.id !== t.id));
+      showToast('Taktik reddedildi');
+    } catch (e) { showToast((e as Error)?.message || 'Reddedilemedi.'); }
+    finally { setTacticBusy(null); }
+  };
+
   if (!teamId) return null;
 
   if (!loading && !team) {
@@ -735,38 +772,92 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 {formatLabel(t.size)}
                               </span>
                             )}
-                            {t.vote_count > 0 && (
-                              <span>%{Math.round(t.avg_vote)} beğeni · {t.vote_count} oy</span>
-                            )}
                           </div>
+
+                          {/* Güven barı (S36) */}
+                          {t.vote_count > 0 && (
+                            <div className="mt-2.5">
+                              <div className="flex items-center justify-between text-[10px] mb-1">
+                                <span className="text-white/45 font-bold uppercase tracking-widest">Güven</span>
+                                <span className="font-black text-[#39FF14]">%{Math.round(t.avg_vote)} · {t.vote_count} oy</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
+                                <div className="h-full bg-[#39FF14] rounded-full transition-all" style={{ width: `${Math.min(100, Math.max(3, Math.round(t.avg_vote)))}%` }} />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Oy çipleri (S36) — kendi oyum vurgulu */}
+                          {!pending && (
+                            <div className="flex gap-1.5 mt-2.5">
+                              {[{ l: 'Zayıf', v: 25 }, { l: 'İyi', v: 60 }, { l: 'Efsane', v: 90 }].map(o => (
+                                <button
+                                  key={o.v}
+                                  onClick={() => voteOnTactic(t, o.v)}
+                                  className={`flex-1 h-8 rounded-lg text-[11px] font-black transition-all active:scale-95 ${t.my_vote === o.v ? 'bg-[#39FF14] text-black' : 'bg-white/6 text-white/55 hover:bg-white/10'}`}
+                                >
+                                  {o.l}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Aksiyonlar — bekleyen + yönetici için satır-içi Onayla/Reddet (S35) */}
                           <div className="flex items-center gap-2 mt-3">
-                            <button
-                              onClick={() => openStudio(t.id)}
-                              className="flex-1 h-10 rounded-xl bg-white/6 border border-white/10 text-xs font-bold text-white/85 active:scale-[0.98]"
-                            >
-                              Stüdyo'da Aç ›
-                            </button>
-                            {isAdmin && !t.is_active && !pending && (
-                              <button
-                                onClick={() => activateTactic(t)}
-                                disabled={tacticBusy === t.id}
-                                className="h-10 px-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-black active:scale-95 disabled:opacity-50"
-                              >
-                                {tacticBusy === t.id ? '…' : 'Aktif Yap'}
-                              </button>
+                            {pending && isAdmin ? (
+                              <>
+                                <button
+                                  onClick={() => approveT(t)}
+                                  disabled={tacticBusy === t.id}
+                                  className="flex-1 h-10 rounded-xl bg-[#39FF14]/12 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                >
+                                  <Check size={14} /> {tacticBusy === t.id ? '…' : 'Onayla'}
+                                </button>
+                                <button
+                                  onClick={() => rejectT(t)}
+                                  disabled={tacticBusy === t.id}
+                                  className="h-10 px-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs font-black active:scale-95 disabled:opacity-50"
+                                >
+                                  Reddet
+                                </button>
+                                <button
+                                  onClick={() => openStudio(t.id)}
+                                  className="h-10 px-3 rounded-xl bg-white/6 border border-white/10 text-xs font-bold text-white/70 active:scale-95"
+                                >
+                                  Aç ›
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => openStudio(t.id)}
+                                  className="flex-1 h-10 rounded-xl bg-white/6 border border-white/10 text-xs font-bold text-white/85 active:scale-[0.98]"
+                                >
+                                  Stüdyo'da Aç ›
+                                </button>
+                                {isAdmin && !t.is_active && !pending && (
+                                  <button
+                                    onClick={() => activateTactic(t)}
+                                    disabled={tacticBusy === t.id}
+                                    className="h-10 px-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-black active:scale-95 disabled:opacity-50"
+                                  >
+                                    {tacticBusy === t.id ? '…' : 'Aktif Yap'}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => favTactic(t)}
+                                  aria-label="Favori"
+                                  className={`h-10 px-3 rounded-xl border flex items-center gap-1.5 text-xs font-bold active:scale-95 ${
+                                    t.i_favorited
+                                      ? 'bg-[#FF4D4D]/10 border-[#FF4D4D]/25 text-[#FF4D4D]'
+                                      : 'bg-white/4 border-white/10 text-white/50'
+                                  }`}
+                                >
+                                  <Heart size={13} fill={t.i_favorited ? 'currentColor' : 'none'} />
+                                  {t.fav_count}
+                                </button>
+                              </>
                             )}
-                            <button
-                              onClick={() => favTactic(t)}
-                              aria-label="Favori"
-                              className={`h-10 px-3 rounded-xl border flex items-center gap-1.5 text-xs font-bold active:scale-95 ${
-                                t.i_favorited
-                                  ? 'bg-[#FF4D4D]/10 border-[#FF4D4D]/25 text-[#FF4D4D]'
-                                  : 'bg-white/4 border-white/10 text-white/50'
-                              }`}
-                            >
-                              <Heart size={13} fill={t.i_favorited ? 'currentColor' : 'none'} />
-                              {t.fav_count}
-                            </button>
                           </div>
                         </div>
                       );
