@@ -30,12 +30,8 @@ import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
-<<<<<<< Updated upstream
-import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
-import { APP_VERSION } from '../utils/appVersion';
-=======
 import { subscribeToOpenMatches } from '../services/matchService';
->>>>>>> Stashed changes
+import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 
