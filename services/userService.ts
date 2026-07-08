@@ -25,6 +25,12 @@ export interface OynaUser {
   position?: string | null;
   /** Kısa tanıtım — sade profilde gösterilir. */
   bio?: string | null;
+  /** Doğum tarihi (date) — profil rozetinde yaş olarak gösterilir. */
+  birthdate?: string | null;
+  /** Kullanılan ayak: SAG | SOL | CIFT. */
+  preferredFoot?: 'SAG' | 'SOL' | 'CIFT' | null;
+  /** Güven puanı, DB'de 0.0–5.0; UI'da ×20 ile 0–100 gösterilir. */
+  trustScore?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -219,15 +225,18 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     cardTier: (data.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
     position: data.position ?? null,
     bio: data.bio ?? null,
+    birthdate: data.birthdate ?? null,
+    preferredFoot: (data.preferred_foot as 'SAG' | 'SOL' | 'CIFT' | null) ?? null,
+    trustScore: typeof data.trust_score === 'number' ? data.trust_score : null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 };
 
-/** Sade profil "Profili Düzenle": mevki/bio/avatar günceller (kullanıcının kendi satırı). */
+/** Sade profil "Profili Düzenle": mevki/bio/avatar/doğum tarihi/ayak günceller (kullanıcının kendi satırı). */
 export const updateProfileBasics = async (
   userId: string,
-  fields: { position?: string; bio?: string; avatar_url?: string },
+  fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; preferred_foot?: 'SAG' | 'SOL' | 'CIFT' | null },
 ): Promise<void> => {
   const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
   if (error) throw error;
