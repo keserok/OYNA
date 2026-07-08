@@ -885,14 +885,17 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setSelectedEl(null);
     };
 
-    // Rakip notu (serbest metin, maks 10 karakter) — mevki çipleri yerine (kullanıcı isteği).
-    const renameOpponent = (id: string, note: string) => {
-        const clipped = note.slice(0, 10);
+    // Rakip: İSİM (player.name, maks 14) + NOT (instruction, maks 10 karakter).
+    const updateOpponent = (id: string, patch: { name?: string; note?: string }) => {
         setActiveTactic({
             ...activeTactic,
             opponents: activeTactic.opponents.map(o =>
                 o.id === id
-                    ? { ...o, player: { ...(o.player as Player), name: clipped } }
+                    ? {
+                        ...o,
+                        player: patch.name !== undefined ? { ...(o.player as Player), name: patch.name.slice(0, 14) } : o.player,
+                        instruction: patch.note !== undefined ? patch.note.slice(0, 10) : o.instruction,
+                    }
                     : o),
         });
     };
@@ -2645,7 +2648,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 )}
             </AnimatePresence>
 
-            {/* Rakip isimlendirme sheet (S18) */}
+            {/* Rakip kartı — İSİM + NOT, ekranın ortasında basit kart (S18) */}
             <AnimatePresence>
                 {namingOpp && (() => {
                     const opp = activeTactic.opponents.find(o => o.id === namingOpp);
@@ -2653,30 +2656,47 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     return (
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+                            className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
                             onClick={() => setNamingOpp(null)}
                         >
                             <motion.div
-                                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                                initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.94, opacity: 0 }}
                                 onClick={e => e.stopPropagation()}
-                                className="w-full max-w-sm bg-[#0E1420] border border-red-500/30 rounded-[24px] p-5 shadow-2xl"
+                                className="w-full max-w-xs bg-[#0E1420] border border-red-500/30 rounded-[24px] p-5 shadow-2xl"
                             >
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-red-900/80 border-2 border-red-500 flex items-center justify-center"><Swords size={14} className="text-white" /></div>
-                                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Rakip Notu</h3>
-                                    </div>
-                                    <span className="text-[10px] text-gray-500 font-mono">{(opp.player?.name || '').length}/10</span>
+                                <div className="flex items-center gap-2 mb-5">
+                                    <div className="w-9 h-9 rounded-full bg-red-900/80 border-2 border-red-500 flex items-center justify-center"><Swords size={15} className="text-white" /></div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Rakip Oyuncu</h3>
+                                </div>
+
+                                {/* İsim */}
+                                <div className="flex items-center justify-between mb-1.5 px-1">
+                                    <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">İsim</label>
+                                    <span className="text-[10px] text-gray-600 font-mono">{(opp.player?.name || '').length}/14</span>
                                 </div>
                                 <input
                                     value={opp.player?.name || ''}
-                                    onChange={e => renameOpponent(opp.id, e.target.value)}
-                                    maxLength={10}
+                                    onChange={e => updateOpponent(opp.id, { name: e.target.value })}
+                                    maxLength={14}
                                     autoFocus
-                                    placeholder="Not (ör. hızlı, 10 no)"
-                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-2"
+                                    placeholder="ör. Ahmet, 10 no"
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-4"
                                 />
-                                <p className="text-[10px] text-gray-600 mb-4 px-1">Serbest not — en fazla 10 karakter. Sahada rakibin altında görünür.</p>
+
+                                {/* Not */}
+                                <div className="flex items-center justify-between mb-1.5 px-1">
+                                    <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Not</label>
+                                    <span className="text-[10px] text-gray-600 font-mono">{(opp.instruction || '').length}/10</span>
+                                </div>
+                                <input
+                                    value={opp.instruction || ''}
+                                    onChange={e => updateOpponent(opp.id, { note: e.target.value })}
+                                    maxLength={10}
+                                    placeholder="ör. hızlı, sağ ayak"
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-1.5"
+                                />
+                                <p className="text-[10px] text-gray-600 mb-5 px-1">İsim ve not sahada rakibin altında görünür (not maks 10 karakter).</p>
+
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => { handleRemoveOpponent(opp.id); setNamingOpp(null); }}
