@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest } from '../types';
-import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
+import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import {
   getIncomingRequests,
@@ -36,13 +36,15 @@ interface ServiceDashboardProps {
   role: UserRole;
   onBack: () => void;
   onNavigate: (view: AppView) => void;
+  /** Gerçek oturum kapatma (App merkezî handleLogout) → giriş ekranına düşer. */
+  onLogout?: () => void;
 }
 
 type Tab = 'HOME' | 'JOBS' | 'PRICING' | 'WALLET' | 'MENU' | 'PROFILE_VIEW' | 'SETTINGS_VIEW';
 
 // Removed equipment mock data
 
-const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNavigate }) => {
+const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNavigate, onLogout }) => {
   const isRef = role === UserRole.REFEREE;
   const {
     unreadNotificationsCount,
@@ -232,20 +234,31 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
 
     const unsubscribe = subscribeToOpenMatches((matches) => {
-      // Map matches from Supabase to JobListing format needed here
-      const jobs = matches.map((m: any) => ({
-        id: m.id,
-        roleNeeded: role === UserRole.GOALKEEPER ? 'GK' : 'REF',
-        date: m.date || 'Bugün',
-        time: m.time || '21:00',
-        location: m.pitch_id || 'Bilinmiyor',
-        duration: '90 Dk',
-        fee: m.budget ? parseInt(m.budget) : 350,
-        teamName: 'Rakip Aranıyor',
-        format: m.format || '7v7',
-        difficulty: 'Ciddi',
-        status: m.status || 'OPEN',
-      }));
+      // matches tablosunun GERÇEK sütunlarına eşle (pitch_name/captain_name/budget
+      // YOK → eskiden kartlar undefined/UUID gösteriyordu). Ayrıca yalnız bu
+      // sağlayıcı rolünü henüz doldurmamış maçları göster (kaleci/hakem aranıyor).
+      const jobs = matches
+        .filter((m: any) => (role === UserRole.GOALKEEPER ? !m.gk_id : !m.refereeId && !m.ref_id))
+        .map((m: any) => {
+          const slots = Array.isArray(m.slots) ? m.slots : [];
+          const filled = slots.filter((s: any) => s?.player || s?.userId).length;
+          return {
+            id: m.id,
+            roleNeeded: role === UserRole.GOALKEEPER ? 'GK' : 'REF',
+            date: m.date || 'Bugün',
+            time: m.time || '21:00',
+            pitchName: m.title || m.location || 'Saha',
+            location: m.location || '—',
+            captainName: 'Kaptan',
+            players: filled || slots.length,
+            missing: role === UserRole.GOALKEEPER ? 'Kaleci' : 'Hakem',
+            duration: m.duration ? `${m.duration} Dk` : '90 Dk',
+            fee: Number(m.price) > 0 ? Number(m.price) : (role === UserRole.REFEREE ? 350 : 250),
+            format: m.format || '7v7',
+            difficulty: m.difficulty || 'Ciddi',
+            status: m.status || 'OPEN',
+          };
+        });
       setOpenMatches(jobs);
     });
 
@@ -1315,20 +1328,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       <div className="space-y-6 pb-40 pt-4">
 
          {/* Header */}
-         <div className="flex items-center justify-between px-6 mb-2 mt-4">
+         <div className="px-6 mb-2 mt-4">
             <div>
               <h3 className="font-black text-white text-sm flex items-center gap-2">
                 🧤 {isRef ? 'HAKEM' : 'KALECİ'} ARAYAN MAÇLAR
                 <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{openMatches.length}</span>
               </h3>
-              <p className="text-[10px] text-gray-500 mt-0.5">Takımlar seni bekliyor — başvur, oyna, kazan</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Bölgendeki maçlar — başvur, oyna, kazan</p>
             </div>
-            <button
-              onClick={() => { if(typeof window !== 'undefined' && (window as any).openLeafletMap) (window as any).openLeafletMap(); }}
-              className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-black px-3 py-2 rounded-xl hover:bg-blue-500/20 transition-all"
-            >
-              <MapPin size={12} /> Harita
-            </button>
          </div>
 
          {/* Pending Applications Section */}
@@ -1359,41 +1366,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          {/* GK Match Cards */}
          <div className="px-6 space-y-3">
             
-            {/* SOS / Emergency Request Card */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-red-950/40 border-2 border-red-500/50 rounded-[24px] overflow-hidden relative shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-            >
-                <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-pulse" />
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 animate-pulse">
-                        <AlertTriangle size={16} />
-                      </div>
-                      <div>
-                        <h4 className="font-black text-white text-sm">ACİL GÖREV (SOS)</h4>
-                        <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider">Son Dakika İptali • 1 Saat Kaldı</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-black text-red-400">450₺</p>
-                      <p className="text-[8px] text-red-500/80 font-black uppercase">ÇİFT ÜCRET</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-black/40 rounded-xl p-2.5 border border-red-500/20 mb-3">
-                    <p className="text-xs text-red-200">
-                      <strong className="text-red-400">Moda Spor Tesisleri</strong>'nde acil {isRef ? 'hakem' : 'kaleci'} ihtiyacı. Eski {isRef ? 'hakem' : 'kaleci'} kaza yaptı, maç başlamak üzere!
-                    </p>
-                  </div>
-
-                  <button className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase shadow-lg shadow-red-500/30 transition-colors">
-                    Hemen Kabul Et (Sahaya Yakınım)
-                  </button>
+            {/* Açık maç yoksa net boş durum (eskiden hep bir sahte "SOS" kartı
+                gösteriliyordu — gerçek veri değildi, kaldırıldı). */}
+            {openMatches.length === 0 && (
+              <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
+                <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search size={22} className="text-gray-600" />
                 </div>
-            </motion.div>
+                <p className="text-gray-400 text-sm font-bold">Şu an {isRef ? 'hakem' : 'kaleci'} arayan açık maç yok.</p>
+                <p className="text-gray-600 text-[11px] mt-1">Yeni maçlar açıldığında burada listelenecek.</p>
+              </div>
+            )}
             {openMatches.map(job => (
                 <motion.div
                     key={job.id}
@@ -1647,7 +1630,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button onClick={() => onBack()} className="w-full bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between group hover:bg-red-500/20 transition-all mt-8">
+          <button onClick={() => (onLogout ?? onBack)()} className="w-full bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between group hover:bg-red-500/20 transition-all mt-8">
               <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><X size={20} /></div>
                   <span className="font-bold text-red-500">Çıkış Yap</span>
@@ -1670,7 +1653,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* Settings sub-view */}
       {activeTab === 'SETTINGS_VIEW' && (
-        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onBack} />
+        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
       )}
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>
@@ -1681,10 +1664,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </div>
 
       <header className="p-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
+         {/* Kök panel: sekmeler alt navigasyonla değişir → geri butonu YOK
+             (oyuncu Dashboard'ıyla tutarlı). Geri butonu yalnız alt-sayfalarda
+             (Profil/Ayarlar) bulunur; onlar kendi başlıklarında taşır. */}
          <div className="flex items-center gap-3">
-             <button onClick={onBack} className="p-2 bg-[#161B22] rounded-full text-white hover:bg-gray-800 transition-colors border border-white/5">
-                 <ArrowLeft size={20} />
-             </button>
              <div>
                  <h1 className="font-black text-white text-lg leading-none">{isRef ? 'HAKEM' : 'KALECİ'}</h1>
                  <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">

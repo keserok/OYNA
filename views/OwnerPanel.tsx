@@ -90,6 +90,8 @@ interface OwnerPanelProps {
   onBack: () => void;
   onNavigate: (view: any) => void;
   onNeedOnboarding?: () => void;
+  /** Gerçek oturum kapatma (App merkezî handleLogout) → giriş ekranına düşer. */
+  onLogout?: () => void;
 }
 
 // --- HELPERS ---
@@ -1484,7 +1486,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     );
 };
 
- const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding }) => {
+ const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
   const notify = useOwnerToast();
   const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles } = useAppStore();
   const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
@@ -2281,7 +2283,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         />
       )}
       {showLogoutConfirm && (
-        <OwnerLogoutModal onClose={() => setShowLogoutConfirm(false)} onConfirm={() => onBack()} />
+        <OwnerLogoutModal onClose={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); (onLogout ?? onBack)(); }} />
       )}
 
       {showRevenueModal && (
