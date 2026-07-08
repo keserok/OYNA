@@ -231,7 +231,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   };
 
   const calculatedBudget = useMemo(() => {
-    return selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
+    // totalPrice yoksa (seed/taslak sahte Pitch'lerinde olmayabilir) NaN'a düşme.
+    return selectedPitch && selectedPitch.totalPrice ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
   }, [selectedPitch, perTeam]);
 
   const costPerPerson = (manualBudget !== null && manualBudget >= 0) ? manualBudget : calculatedBudget;
@@ -308,7 +309,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   }, [perTeam]);
 
   // ── Yayınlanabilirlik durumu (canlı checklist + engel sebebi) ────────────
-  const squadCount = useMemo(() => Object.keys(myPlayers).length, [myPlayers]);
+  // Kadro sayısı SAHADAKİ (görünür) oyunculardan türetilir — format küçültülünce
+  // görünmeyen (yetim) myPlayers girdileri sayıma dahil olmaz.
+  const squadCount = useMemo(() => pitchSlots.filter(s => s.player).length, [pitchSlots]);
   const readiness = useMemo(() => {
     const hasPitch = !!selectedPitch;
     const hasTime = !!selectedTimeSlot;
