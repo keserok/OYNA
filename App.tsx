@@ -245,8 +245,11 @@ const App: React.FC = () => {
             }
           }
         } else {
+          const prevView = useAppStore.getState().view;
           setRole(UserRole.PLAYER);
-          resetNavigation('SPLASH');
+          // İlk açılış (oturum yok) SPLASH'te kalır; bir panelden ÇIKIŞ yapıldıysa
+          // doğrudan giriş (AUTH) ekranına düşülür.
+          resetNavigation(prevView === 'SPLASH' ? 'SPLASH' : 'AUTH');
           resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
           stopPresenceHeartbeat(); // çıkışta heartbeat durur (Spec F34)
         }
@@ -386,6 +389,17 @@ const App: React.FC = () => {
   const navigateBasedOnRole = (currentRole: UserRole | null): AppView =>
     roleToLandingView(currentRole);
 
+  // Merkezi çıkış: gerçekten oturumu kapatır; onAuthStateChanged(null) tetiklenir ve
+  // kullanıcı giriş (AUTH) ekranına düşer. Tüm arayüzlerdeki 'Çıkış Yap' buna bağlanır.
+  const handleLogout = React.useCallback(async () => {
+    try {
+      await logout();
+    } catch (e) {
+      console.error('[App] Çıkış hatası:', e);
+    }
+    resetNavigation('AUTH');
+  }, [resetNavigation]);
+
   const handleRoleSelect = async (selectedRole: UserRole, data?: any) => {
     setRole(selectedRole);
     if (auth.currentUser) {
@@ -433,7 +447,7 @@ const App: React.FC = () => {
       case 'PENDING_VERIFICATION':
         return <PendingVerificationView
           onApproved={() => resetNavigation(navigateBasedOnRole(role))}
-          onLogout={() => resetNavigation('SPLASH')}
+          onLogout={() => resetNavigation('AUTH')}
           onReapply={(note) => { setVerificationNote(note); navigateTo('SERVICE_APPLICATION'); }}
         />;
       case 'ADMIN_PANEL':
@@ -444,10 +458,11 @@ const App: React.FC = () => {
             onBack={() => goBack(navigateBasedOnRole(role))}
             onNavigate={(v) => navigateTo(v as AppView)}
             onNeedOnboarding={() => navigateTo('PARTNER_ONBOARDING')}
+            onLogout={handleLogout}
           />
         );
       case 'SERVICE_DASHBOARD':
-        return <ServiceDashboard role={role!} onBack={() => goBack(navigateBasedOnRole(role))} onNavigate={(v) => navigateTo(v)} />;
+        return <ServiceDashboard role={role!} onBack={() => goBack(navigateBasedOnRole(role))} onNavigate={(v) => navigateTo(v)} onLogout={handleLogout} />;
       case 'PARTNER_ONBOARDING':
         return <PartnerOnboarding
           onComplete={() => resetNavigation('OWNER_PANEL')}
