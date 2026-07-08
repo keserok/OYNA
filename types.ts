@@ -542,10 +542,11 @@ export interface BusinessInsight {
 // Eski üç model (aşağıda) @deprecated; yeni akışlar ServiceRequest kullanır.
 // ═══════════════════════════════════════════════════════════════════════════
 export type ProviderType = 'GK' | 'REF';
+// 'APPLIED' = sağlayıcı-başlatan başvuru (kaleci/hakem maça başvurdu, kaptan onayı bekliyor).
 export type ServiceRequestStatus =
-  | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CAPTURED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+  | 'APPLIED' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CAPTURED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
 
-/** Tek talep modeli — kadro/kaptan bir kaleci/hakem talep eder. */
+/** Tek talep modeli — kaptan bir sağlayıcı talep eder (CAPTAIN) ya da sağlayıcı maça başvurur (PROVIDER). */
 export interface ServiceRequest {
   id: string;
   matchId: string;
@@ -557,6 +558,12 @@ export interface ServiceRequest {
   providerAmount: number;           // ücret − %10 komisyon (sağlayıcının eline geçen)
   requestKind: 'INDIVIDUAL' | 'SQUAD_VOTE';
   status: ServiceRequestStatus;
+  /** Talebi kim başlattı: kaptan (klasik kiralama) mı, sağlayıcı (maça başvuru) mu. */
+  initiatedBy?: 'CAPTAIN' | 'PROVIDER';
+  /** İki-taraflı maç sonu onayı (yalnız PROVIDER-başlatanda payout kapısı). */
+  providerConfirmed?: boolean;
+  captainConfirmed?: boolean;
+  appliedAt?: string;
   paymentIntentId?: string;
   payoutReleased: boolean;
   acceptedAt?: string;

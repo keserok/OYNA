@@ -17,9 +17,11 @@ import {
   forceVoidIntentAdmin,
   forceRefundIntentAdmin,
   fetchMatchTimelineAdmin,
+  fetchMatchServiceRequestsAdmin,
   toTurkishAdminError,
   type MatchIntentRow,
   type MatchTimelineRow,
+  type ServiceRequestAdminRow,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { ActionConfirmModal, type ActionConfirmOptions } from './ActionConfirmModal';
@@ -80,6 +82,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const [intentsLoading, setIntentsLoading] = useState(false);
   const [timeline, setTimeline] = useState<MatchTimelineRow[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const [serviceReqs, setServiceReqs] = useState<ServiceRequestAdminRow[]>([]);
+  const [serviceReqsLoading, setServiceReqsLoading] = useState(false);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
   const [notifyTitle, setNotifyTitle] = useState('');
@@ -106,10 +110,19 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     finally { setTimelineLoading(false); }
   }, [matchId, toastError]);
 
+  const loadServiceReqs = useCallback(async () => {
+    if (!matchId) return;
+    setServiceReqsLoading(true);
+    try { setServiceReqs(await fetchMatchServiceRequestsAdmin(matchId)); }
+    catch (err) { toastError(toTurkishAdminError(err)); }
+    finally { setServiceReqsLoading(false); }
+  }, [matchId, toastError]);
+
   useEffect(() => {
     if (tab === 'odeme') void loadIntents();
     if (tab === 'audit') void loadTimeline();
-  }, [tab, loadIntents, loadTimeline]);
+    if (tab === 'sonuc') void loadServiceReqs();
+  }, [tab, loadIntents, loadTimeline, loadServiceReqs]);
 
   const refreshLocalSlots = useCallback((slots: MatchListing['slots'], isAway: boolean) => {
     if (!local) return;
@@ -497,6 +510,36 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                       {adminGoalkeepers.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                     </select>
                   </div>
+                </div>
+
+                {/* Sağlayıcı talepleri (kaleci/hakem başvuruları + kiralama, escrow durumu) */}
+                <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Sağlayıcı Talepleri</p>
+                    <button type="button" onClick={() => void loadServiceReqs()} className="text-[10px] text-gray-500 hover:text-white">Yenile</button>
+                  </div>
+                  {serviceReqsLoading ? (
+                    <p className="text-[11px] text-gray-500">Yükleniyor…</p>
+                  ) : serviceReqs.length === 0 ? (
+                    <p className="text-[11px] text-gray-600">Bu maçta hizmet talebi/başvurusu yok.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {serviceReqs.map((r) => (
+                        <div key={r.id} className="flex items-center justify-between gap-2 bg-black/30 border border-white/5 rounded-lg px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-xs text-white font-bold truncate">
+                              {r.provider_name} <span className="text-gray-500">· {r.provider_type === 'GK' ? 'Kaleci' : 'Hakem'}</span>
+                            </p>
+                            <p className="text-[9px] text-gray-500">
+                              {r.initiated_by === 'PROVIDER' ? 'Başvuru' : 'Kiralama'} · {fmtMoney(r.provider_amount)}
+                              {r.status === 'CAPTURED' && ` · Onay: ${r.provider_confirmed ? '✓' : '○'} sağlayıcı / ${r.captain_confirmed ? '✓' : '○'} kaptan`}
+                            </p>
+                          </div>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${intentBadge(r.status)}`}>{r.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
