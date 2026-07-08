@@ -102,7 +102,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     isDraftMode,
     perTeam, isReady,
     handleSlotMove, pitchSlots,
-    costPerPerson,
+    costPerPerson, matchDeposit,
     loadSquadFromTeam, readiness, squadCount,
     publishMatch,
   } = useMatchCreate(onNavigate);
@@ -263,6 +263,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <ChecklistPill ok={readiness.hasTime} label="Saat" />
           <ChecklistPill ok={squadCount > 0} label={`Kadro ${squadCount}/${perTeam}`} soft />
         </div>
+        {matchDeposit > 0 && readiness.canPublish && (
+          <div className="mb-2.5 flex items-start gap-2 text-[10px] font-bold text-white/45 leading-snug">
+            <Lock size={11} className="text-[#FACC15] shrink-0 mt-0.5" />
+            <span>Yayınlayınca <span className="text-[#FACC15] font-black">{matchDeposit}₺</span> kapora kartında bloke edilir (çekilmez) · maç dolmazsa iade.</span>
+          </div>
+        )}
         <AnimatedButton
           onClick={async () => { if (isReady) { await publishMatch(); } else { setActiveSheet('PITCH'); } }}
           isLoading={isPublishing}

@@ -243,6 +243,19 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   // Manuel override kaldırıldı — ücret her zaman otomatik hesaplanır.
   const costPerPerson = calculatedBudget;
 
+  // ── Talep edilen kapora (owner'ın tarifesinden; yoksa toplam ücretin %20'si) ──
+  // Maç "Yayınla" anında bu tutar kaptanın kartında BLOKE edilir (çekilmez);
+  // maç kesinleşince (eşik) tahsil, dolmazsa serbest bırakılır.
+  const matchDeposit = useMemo(() => {
+    if (!selectedPitch) return 0;
+    const tariffs = (selectedPitch as unknown as { tariffs?: { deposit_amount?: number }[] }).tariffs;
+    const ownerDeposit = (tariffs || [])
+      .map(t => Number(t?.deposit_amount) || 0)
+      .find(d => d > 0);
+    if (ownerDeposit && ownerDeposit > 0) return Math.ceil(ownerDeposit);
+    return selectedPitch.totalPrice ? Math.ceil(selectedPitch.totalPrice * 0.2) : 0;
+  }, [selectedPitch]);
+
   // ── UX: Profile göre otomatik ön-doldurma (tek sefer) ────────────────────
   // Kurucu, maçı kurarken zaten oynayacak: onu kendi mevkisine göre sahaya
   // dizeriz ve yaş grubu varsayılanını doğum tarihinden işaretleriz.
@@ -490,7 +503,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     draftMatch, isDraftMode,
     perTeam, isReady,
     handleSlotMove, pitchSlots,
-    toggleOrientation, calculatedBudget, costPerPerson,
+    toggleOrientation, calculatedBudget, costPerPerson, matchDeposit,
     loadSquadFromTeam, readiness, squadCount,
     publishMatch
   };
