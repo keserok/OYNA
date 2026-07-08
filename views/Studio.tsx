@@ -122,6 +122,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [openSelector, setOpenSelector] = useState<'size' | 'formation' | null>(null);
     const [customPattern, setCustomPattern] = useState('');
     const [customError, setCustomError] = useState<string | null>(null);
+    // Faz 3 — etkileşim & animasyon motoru
+    const [hideLines, setHideLines] = useState(false);              // "Sadece Hareket" (S12)
+    const [showClearSheet, setShowClearSheet] = useState(false);    // granüler temizle (S13)
+    const [undoStack, setUndoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
+    const [redoStack, setRedoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
+    const [selectedEl, setSelectedEl] = useState<{ type: 'slot' | 'opponent' | 'line'; id: string } | null>(null);
+    // Faz 4 — rakip çizim tarafı (BİZ / RAKİP) (S19) + isimlendirme sheet (S18)
+    const [drawSide, setDrawSide] = useState<'US' | 'OPP'>('US');
+    const [namingOpp, setNamingOpp] = useState<string | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
     const [playMode, setPlayMode] = useState<PlayMode>('SYNC');
@@ -362,6 +371,39 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setActiveTactic({ ...activeTactic, drawings: derivedDrawings });
     };
 
+    // ── Geri Al / Yinele (S14) — aktif planın sahne anlık-görüntü yığını (maks 30) ──
+    type Scene = { slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] };
+    const sceneSnapshot = (): Scene => ({
+        slots: JSON.parse(JSON.stringify(activeTactic.slots)),
+        opponents: JSON.parse(JSON.stringify(activeTactic.opponents || [])),
+        drawings: JSON.parse(JSON.stringify(activeTactic.drawings || [])),
+    });
+    // Bir mutasyondan ÖNCE çağrılır: mevcut sahneyi geçmişe iter, yinele yığınını temizler.
+    const pushHistory = () => {
+        setUndoStack(prev => [...prev.slice(-29), sceneSnapshot()]);
+        setRedoStack([]);
+    };
+    const applyScene = (s: Scene) =>
+        setActiveTactic({ ...activeTactic, slots: s.slots, opponents: s.opponents, drawings: s.drawings });
+    const undo = () => {
+        if (!undoStack.length) return;
+        const snap = undoStack[undoStack.length - 1];
+        setRedoStack(r => [...r, sceneSnapshot()]);
+        setUndoStack(u => u.slice(0, -1));
+        applyScene(snap);
+        setSelectedEl(null);
+    };
+    const redo = () => {
+        if (!redoStack.length) return;
+        const snap = redoStack[redoStack.length - 1];
+        setUndoStack(u => [...u.slice(-29), sceneSnapshot()]);
+        setRedoStack(r => r.slice(0, -1));
+        applyScene(snap);
+        setSelectedEl(null);
+    };
+    // Plan değişince geçmiş sıfırlanır (her planın kendi sahnesi vardır).
+    useEffect(() => { setUndoStack([]); setRedoStack([]); setSelectedEl(null); }, [activePlanIndex]);
+
     // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
 
@@ -400,6 +442,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
 
     const handleSizeChange = (size: SquadSize) => {
+        pushHistory();
         const defaultFormation = Object.keys(FORMATIONS[size])[0] as FormationType;
         let baseSlots = JSON.parse(JSON.stringify(FORMATIONS[size][defaultFormation]));
         const { newSlots, newSubs } = preservePlayersAndSubs(baseSlots, activeTactic.subs);
@@ -409,6 +452,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
 
     const handleIdentityChange = (identity: GameIdentity) => {
+        pushHistory();
         const baseSlots = JSON.parse(JSON.stringify(FORMATIONS[activeTactic.size][activeTactic.formation]));
         const newSlots = baseSlots.map((slot: Slot) => {
             // Keep existing player and archetype
@@ -441,6 +485,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
 
     const handleFormationChange = (f: FormationType) => {
+        pushHistory();
         let baseSlots = JSON.parse(JSON.stringify(FORMATIONS[activeTactic.size][f]));
         const { newSlots, newSubs } = preservePlayersAndSubs(baseSlots, activeTactic.subs);
         let captainId = activeTactic.captainId;
@@ -460,6 +505,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             setCustomError(`Kaleci hariç toplam ${parseInt(String(activeTactic.size), 10) - 1} oyuncu olmalı. Örn: ${exampleForSize(activeTactic.size)}`);
             return;
         }
+        pushHistory();
         const { newSlots, newSubs } = preservePlayersAndSubs(res.slots, activeTactic.subs);
         let captainId = activeTactic.captainId;
         if (captainId && !newSlots.some((s: any) => s.player?.id === captainId)) captainId = null;
@@ -754,30 +800,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
         if (tool.startsWith('draw')) {
             setIsDrawing(true);
-            
+            pushHistory(); // çizim öncesi sahneyi geçmişe al (S14)
+
             // Find nearest slot or opponent (within 5% radius)
+            // Çizim tarafına göre (BİZ/RAKİP) yalnız o tarafın ögelerine bağlan (S19)
             let attachedTo: string | undefined;
             const threshold = 5;
             let minDistance = Infinity;
-
-            activeTactic.slots.forEach(slot => {
-                const dist = Math.sqrt(Math.pow(slot.x - x, 2) + Math.pow(slot.y - y, 2));
-                if (dist < threshold && dist < minDistance) {
-                    minDistance = dist;
-                    attachedTo = slot.id;
-                }
+            const attachCandidates = drawSide === 'OPP' ? activeTactic.opponents : activeTactic.slots;
+            attachCandidates.forEach(el => {
+                const dist = Math.sqrt(Math.pow(el.x - x, 2) + Math.pow(el.y - y, 2));
+                if (dist < threshold && dist < minDistance) { minDistance = dist; attachedTo = el.id; }
             });
 
-            activeTactic.opponents.forEach(opp => {
-                const dist = Math.sqrt(Math.pow(opp.x - x, 2) + Math.pow(opp.y - y, 2));
-                if (dist < threshold && dist < minDistance) {
-                    minDistance = dist;
-                    attachedTo = opp.id;
-                }
-            });
-
-            // Check if there is already a line attached to this item of the same type.
-            // A player can have a run and a pass simultaneously.
+            // Aynı ögede aynı türden çizgi varsa değiştir (bir oyuncunun hem koşusu hem pası olabilir).
             if (attachedTo) {
                 const lineType = tool === 'draw_pass' ? 'arrow' : 'line';
                 setDrawings(prev => prev.filter(d => d.attachedTo !== attachedTo || d.type !== lineType));
@@ -787,31 +823,62 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             setCurrentLine({
                 id: `l${Date.now()}`,
                 points: [{ x, y }],
-                color: attachedTo ? (activeTactic.slots.find(s => s.id === attachedTo) ? '#39FF14' : '#ef4444') : '#39FF14',
+                color: drawSide === 'OPP' ? '#ef4444' : '#39FF14',
                 type: tool === 'draw_pass' ? 'arrow' : 'line',
                 attachedTo,
                 seqStep: maxSeq + 1
             });
-        } else if (tool === 'opponent') {
-            const newOpponent: Slot = {
-                id: `opp_${Date.now()}`,
-                x,
-                y,
-                role: 'OPP',
-                player: {
-                    id: `opp_p_${Date.now()}`,
-                    name: `Rakip ${activeTactic.opponents.length + 1}`,
-                    role: 'OPP',
-                    rating: 0,
-                    isOpponent: true
-                }
-            };
-            setActiveTactic({ ...activeTactic, opponents: [...activeTactic.opponents, newOpponent] });
-            if (navigator.vibrate) navigator.vibrate(10);
+        } else if (tool === 'move') {
+            // Boş sahaya dokunuş: seçimi kaldır; uzun basınca (500ms) o noktaya rakip bırak (S11/S17).
+            setSelectedEl(null);
+            const px = x, py = y;
+            if (longPressRef.current) clearTimeout(longPressRef.current);
+            longPressRef.current = setTimeout(() => { addOpponentAt(px, py); longPressRef.current = null; }, 500);
         }
     };
 
     const rafRef = useRef<number | null>(null);
+    // Sürükleme başlangıç konumu + pre-drag sahne (yalnız gerçekten taşınırsa geçmişe yazılır).
+    const dragStartRef = useRef<{ x: number; y: number; snap: Scene } | null>(null);
+    // Rakip eklemek için uzun-basma zamanlayıcısı (S17).
+    const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Boş sahaya uzun basınca o noktaya rakip bırak (S17).
+    const addOpponentAt = (x: number, y: number) => {
+        pushHistory();
+        const stamp = Date.now();
+        const newOpponent: Slot = {
+            id: `opp_${stamp}`, x, y, role: 'OPP',
+            player: { id: `opp_p_${stamp}`, name: `Rakip ${activeTactic.opponents.length + 1}`, role: 'OPP', rating: 0, isOpponent: true },
+        };
+        setActiveTactic({ ...activeTactic, opponents: [...activeTactic.opponents, newOpponent] });
+        if (navigator.vibrate) navigator.vibrate(15);
+    };
+
+    // Rakip dizilişi: mevcut dizilişi rakip yarısına AYNALA (S20).
+    const mirrorOpponents = () => {
+        pushHistory();
+        const stamp = Date.now();
+        const mirrored: Slot[] = activeTactic.slots.map((s, i) => ({
+            id: `opp_${stamp}_${i}`,
+            x: Math.round(100 - s.x),
+            y: Math.round(100 - s.y),
+            role: 'OPP',
+            player: { id: `opp_p_${stamp}_${i}`, name: `R${i + 1}`, role: 'OPP', rating: 0, isOpponent: true },
+        }));
+        setActiveTactic({ ...activeTactic, opponents: mirrored });
+        showToast('Rakip dizilişi eklendi (ayna).');
+    };
+
+    const renameOpponent = (id: string, name: string, instruction?: string) => {
+        setActiveTactic({
+            ...activeTactic,
+            opponents: activeTactic.opponents.map(o =>
+                o.id === id
+                    ? { ...o, player: { ...(o.player as Player), name: name.trim() || o.player?.name || 'Rakip' }, instruction: instruction ?? o.instruction }
+                    : o),
+        });
+    };
 
     const handlePointerMove = (e: React.PointerEvent) => {
         if (!canvasRef.current) return;
@@ -864,13 +931,32 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const handlePointerUp = () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        
+        // Uzun-basma iptali (500ms dolmadan bırakıldıysa rakip eklenmez).
+        if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+
         if (isDrawing && currentLine) {
             const finalLine = { ...currentLine } as DrawingLine;
             setDrawings([...drawings, finalLine]);
             setIsDrawing(false);
             setCurrentLine(null);
         }
+        // Sürükleme mi, dokunuş mu? (S11) — taşındıysa geçmişe yaz; dokunuşsa SEÇ.
+        if (draggedItem && dragStartRef.current) {
+            const cur = draggedItem.type === 'slot'
+                ? activeTactic.slots.find(s => s.id === draggedItem.id)
+                : activeTactic.opponents.find(o => o.id === draggedItem.id);
+            const moved = !!cur && Math.hypot(cur.x - dragStartRef.current.x, cur.y - dragStartRef.current.y) > 0.4;
+            if (moved) {
+                const snap = dragStartRef.current.snap;
+                setUndoStack(prev => [...prev.slice(-29), snap]);
+                setRedoStack([]);
+            } else {
+                // Dokunuş: öğeyi seç; rakipse isimlendirme sheet'ini aç (S18).
+                setSelectedEl({ type: draggedItem.type, id: draggedItem.id });
+                if (draggedItem.type === 'opponent') setNamingOpp(draggedItem.id);
+            }
+        }
+        dragStartRef.current = null;
         setDraggedItem(null);
     };
 
@@ -893,13 +979,29 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         const pointerX = ((e.clientX - rect.left) / rect.width) * 100;
         const pointerY = ((e.clientY - rect.top) / rect.height) * 100;
 
+        dragStartRef.current = { x: currentX, y: currentY, snap: sceneSnapshot() };
         setDraggedItem({ type, id, offsetX: pointerX - currentX, offsetY: pointerY - currentY });
         if (navigator.vibrate) navigator.vibrate(10);
     };
 
     const handleRemoveOpponent = (id: string) => {
+        pushHistory();
         setActiveTactic({ ...activeTactic, opponents: activeTactic.opponents.filter(o => o.id !== id) });
+        setSelectedEl(null);
     };
+
+    // ── Granüler temizle (S13) ──
+    const clearDrawingsOnly = () => { pushHistory(); setDrawings([]); setShowClearSheet(false); setSelectedEl(null); showToast('Çizimler silindi · GERİ AL ile dön'); };
+    const clearOpponentsOnly = () => { pushHistory(); setActiveTactic({ ...activeTactic, opponents: [] }); setShowClearSheet(false); setSelectedEl(null); showToast('Rakipler silindi · GERİ AL ile dön'); };
+    const clearSelected = () => {
+        if (!selectedEl) return;
+        pushHistory();
+        if (selectedEl.type === 'line') setActiveTactic({ ...activeTactic, drawings: drawings.filter(d => d.id !== selectedEl.id) });
+        else if (selectedEl.type === 'opponent') setActiveTactic({ ...activeTactic, opponents: activeTactic.opponents.filter(o => o.id !== selectedEl.id), drawings: drawings.filter(d => d.attachedTo !== selectedEl.id) });
+        else if (selectedEl.type === 'slot') setActiveTactic({ ...activeTactic, drawings: drawings.filter(d => d.attachedTo !== selectedEl.id) });
+        setShowClearSheet(false); setSelectedEl(null); showToast('Seçili öge silindi · GERİ AL ile dön');
+    };
+    const clearAllScene = () => { pushHistory(); setIsSimulating(false); setActiveTactic({ ...activeTactic, opponents: [], drawings: [] }); setShowClearSheet(false); setSelectedEl(null); showToast('Tahta temizlendi · GERİ AL ile dön'); };
 
 
 
@@ -1175,11 +1277,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"></path></svg> PAS
                     </button>
-                    <button 
-                        onClick={() => setTool('opponent')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'opponent' ? 'bg-red-500 text-white' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                    {/* BİZ / RAKİP çizim tarafı — koşu/pas hangi tarafa çizilecek (S19) */}
+                    {tool.startsWith('draw') && (
+                        <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
+                            <button
+                                onClick={() => setDrawSide('US')}
+                                className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                            >BİZ</button>
+                            <button
+                                onClick={() => setDrawSide('OPP')}
+                                className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                            >RAKİP</button>
+                        </div>
+                    )}
+                    {/* Rakip dizilişi ekle (ayna) (S20) */}
+                    <button
+                        onClick={mirrorOpponents}
+                        title="Rakip dizilişi ekle (mevcut dizilişi aynala)"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400 transition-all whitespace-nowrap"
                     >
-                        <Swords size={14} /> RAKİP EKLE
+                        <Swords size={14} /> RAKİP DİZİLİŞİ
                     </button>
                     {drawings.length > 0 && (
                         !isAdvancedAnimLoaded ? (
@@ -1215,11 +1332,33 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         )
                     )}
                     <div className="w-px h-8 bg-white/10 mx-1"></div>
-                    <button 
-                        onClick={() => {
-                            setIsSimulating(false);
-                            setActiveTactic({...activeTactic, opponents: [], drawings: []});
-                        }}
+                    {/* Geri Al / Yinele (S14) */}
+                    <button
+                        onClick={undo}
+                        disabled={undoStack.length === 0}
+                        title="Geri Al"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <RotateCw size={14} className="-scale-x-100" /> GERİ AL
+                    </button>
+                    <button
+                        onClick={redo}
+                        disabled={redoStack.length === 0}
+                        title="Yinele"
+                        className="flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <RotateCw size={14} />
+                    </button>
+                    {/* Sadece Hareket (S12) — çizgileri gizle, yalnız top+oyuncu hareketi görünür */}
+                    <button
+                        onClick={() => setHideLines(v => !v)}
+                        title={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${hideLines ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                    >
+                        {hideLines ? <EyeOff size={14} /> : <Eye size={14} />} SADECE HAREKET
+                    </button>
+                    <button
+                        onClick={() => setShowClearSheet(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-red-500/20 hover:text-red-500 transition-all whitespace-nowrap"
                     >
                         <Trash2 size={14} /> TEMİZLE
@@ -1276,23 +1415,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
                                     <polygon points="0 0, 10 3.5, 0 7" fill="#39FF14" />
                                 </marker>
+                                <marker id="arrowhead-opp" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+                                </marker>
                             </defs>
-                            {drawings.map(line => (
-                                <path 
+                            {!hideLines && drawings.map(line => (
+                                <path
                                     key={line.id}
                                     d={getSmoothPathStr(line.points, canvasRef.current!.clientWidth, canvasRef.current!.clientHeight)}
                                     fill="none"
                                     stroke={line.color}
-                                    strokeWidth="3"
+                                    strokeWidth={selectedEl?.type === 'line' && selectedEl.id === line.id ? '5' : '3'}
                                     strokeDasharray={line.type === 'line' ? '8,8' : 'none'}
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    markerEnd="url(#arrowhead)"
-                                    opacity={isSimulating ? "0.3" : "0.8"}
+                                    markerEnd={line.color === '#ef4444' ? 'url(#arrowhead-opp)' : 'url(#arrowhead)'}
+                                    opacity={isSimulating ? "0.3" : (selectedEl?.type === 'line' && selectedEl.id === line.id ? '1' : '0.8')}
                                     className="transition-opacity duration-500"
                                 />
                             ))}
-                            {currentLine && (
+                            {!hideLines && currentLine && (
                                 <path 
                                     d={getSmoothPathStr(currentLine.points, canvasRef.current!.clientWidth, canvasRef.current!.clientHeight)}
                                     fill="none"
@@ -1301,7 +1443,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     strokeDasharray={currentLine.type === 'line' ? '8,8' : 'none'}
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    markerEnd="url(#arrowhead)"
+                                    markerEnd={currentLine.color === '#ef4444' ? 'url(#arrowhead-opp)' : 'url(#arrowhead)'}
                                     opacity="0.8"
                                 />
                             )}
@@ -1324,7 +1466,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             transition={anim ? anim.transition as any : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : 20 }}
                         >
-                            <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-lg bg-red-900/80 border-red-500 text-white`}>
+                            <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-lg bg-red-900/80 text-white transition-all ${selectedEl?.type === 'opponent' && selectedEl.id === opp.id ? 'border-white ring-2 ring-white/70 scale-110' : 'border-red-500'}`}>
                                 <Swords size={16} />
                             </div>
                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
@@ -2479,6 +2621,108 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 {decidingProposal ? '…' : 'Onayla'}
                             </button>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Rakip isimlendirme sheet (S18) */}
+            <AnimatePresence>
+                {namingOpp && (() => {
+                    const opp = activeTactic.opponents.find(o => o.id === namingOpp);
+                    if (!opp) return null;
+                    const OPP_ROLES = ['Kaleci', 'Stoper', 'Bek', 'Pivot', 'Orta Saha', 'Kanat', 'Forvet', 'Tehlikeli'];
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+                            onClick={() => setNamingOpp(null)}
+                        >
+                            <motion.div
+                                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                                onClick={e => e.stopPropagation()}
+                                className="w-full max-w-sm bg-[#0E1420] border border-red-500/30 rounded-[24px] p-5 shadow-2xl"
+                            >
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="w-8 h-8 rounded-full bg-red-900/80 border-2 border-red-500 flex items-center justify-center"><Swords size={14} className="text-white" /></div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Rakip</h3>
+                                </div>
+                                <input
+                                    value={opp.player?.name || ''}
+                                    onChange={e => renameOpponent(opp.id, e.target.value)}
+                                    placeholder="Rakip adı"
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-3"
+                                />
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Mevki</p>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {OPP_ROLES.map(r => (
+                                        <button
+                                            key={r}
+                                            onClick={() => renameOpponent(opp.id, opp.player?.name || 'Rakip', r)}
+                                            className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${opp.instruction === r ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                                        >{r}</button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => { handleRemoveOpponent(opp.id); setNamingOpp(null); }}
+                                        className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-500/15 text-red-400 text-xs font-black hover:bg-red-500/25 transition-all border border-red-500/30"
+                                    ><Trash2 size={14} /> Sil</button>
+                                    <button
+                                        onClick={() => setNamingOpp(null)}
+                                        className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                    >Tamam</button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    );
+                })()}
+            </AnimatePresence>
+
+            {/* Granüler Temizle sheet (S13) */}
+            <AnimatePresence>
+                {showClearSheet && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+                        onClick={() => setShowClearSheet(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full max-w-sm bg-[#0E1420] border border-white/10 rounded-[24px] p-5 shadow-2xl"
+                        >
+                            <div className="flex items-center gap-2 mb-4">
+                                <Trash2 size={18} className="text-red-400" />
+                                <h3 className="text-sm font-black text-white uppercase tracking-widest">Neyi temizleyelim?</h3>
+                            </div>
+                            <div className="space-y-2">
+                                <button onClick={clearDrawingsOnly} disabled={drawings.length === 0}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 text-white text-sm font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <span className="flex items-center gap-3"><PenTool size={16} className="text-[#39FF14]" /> Sadece çizimler</span>
+                                    <span className="text-[10px] text-gray-500 font-mono">{drawings.length}</span>
+                                </button>
+                                <button onClick={clearOpponentsOnly} disabled={activeTactic.opponents.length === 0}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 text-white text-sm font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <span className="flex items-center gap-3"><Swords size={16} className="text-red-400" /> Sadece rakipler</span>
+                                    <span className="text-[10px] text-gray-500 font-mono">{activeTactic.opponents.length}</span>
+                                </button>
+                                {selectedEl && (
+                                    <button onClick={clearSelected}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 text-white text-sm font-bold hover:bg-white/10 transition-all">
+                                        <Crosshair size={16} className="text-amber-400" /> Seçili ögeyi sil
+                                    </button>
+                                )}
+                                <button onClick={clearAllScene}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/15 text-red-400 text-sm font-black hover:bg-red-500/25 transition-all border border-red-500/30">
+                                    <Trash2 size={16} /> Hepsini sil
+                                </button>
+                            </div>
+                            <button onClick={() => setShowClearSheet(false)}
+                                className="w-full mt-3 py-3 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
+                                Vazgeç
+                            </button>
+                            <p className="text-[10px] text-gray-600 text-center mt-2">Sildikten sonra <b className="text-gray-400">GERİ AL</b> ile dönebilirsin.</p>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
