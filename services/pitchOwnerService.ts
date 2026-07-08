@@ -1680,6 +1680,28 @@ export async function deleteStaffTask(taskId: string): Promise<void> {
 // SKOR QR
 // ----------------------------------------------------------------------------
 
+/** WP5: Finans & Ekip ekranlarına silinebilir demo veri ekler (is_demo=true). */
+export async function seedOwnerScreenDemo(pitchId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('seed_owner_screen_demo', { p_pitch_id: pitchId });
+    if (error) throw error;
+  } catch (error) {
+    console.error('seedOwnerScreenDemo:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** WP5: Owner ekranlarındaki tüm demo satırlarını topluca siler. */
+export async function purgeOwnerScreenDemo(pitchId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('purge_owner_screen_demo', { p_pitch_id: pitchId });
+    if (error) throw error;
+  } catch (error) {
+    console.error('purgeOwnerScreenDemo:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 export interface OwnerScoreMatch {
   matchId: string;
   title: string;

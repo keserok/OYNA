@@ -931,6 +931,7 @@ export interface PitchExpense {
   note: string | null;
   created_by?: string | null;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchDebtor {
@@ -945,6 +946,7 @@ export interface PitchDebtor {
   is_resolved: boolean;
   last_reminded_at?: string | null;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchStaffMember {
@@ -957,6 +959,7 @@ export interface PitchStaffMember {
   phone: string | null;
   sort_order: number;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchStaffTask {
@@ -970,6 +973,7 @@ export interface PitchStaffTask {
   due_time: string | null;
   due_date: string | null;
   created_at?: string;
+  is_demo?: boolean;
 }
 
 export interface PitchBankAccount {
