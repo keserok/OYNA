@@ -94,7 +94,9 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     price: Number(r.price ?? 0),
     difficulty,
     minRating: Number(r.minRating ?? 3),
-    image: r.image || 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=600',
+    // Görsel yoksa boş bırak: düzenlemede formu boş açar, kaydetince tetikleyici
+    // sahanın fotoğrafını otomatik yazar (stok görsel geri sızmasın).
+    image: r.image || '',
     badges: parseJsonArray<string>(r.badges, [difficulty]),
     missingPositions: missing.length ? missing : computeMissingFromSlots(slots),
     slots,
