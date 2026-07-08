@@ -4,7 +4,7 @@ import {
   Loader2, ChevronLeft, Calendar, MapPin, Check,
 } from 'lucide-react';
 import Avatar from '../../components/ui/Avatar';
-import BottomSheet from '../../components/ui/BottomSheet';
+import GlassModal from '../../components/ui/GlassModal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import StatPill from '../../components/social/StatPill';
 import { useMyMatches } from '../../hooks/useMyMatches';
@@ -16,9 +16,11 @@ import {
 } from '../../services/socialService';
 
 // ================================================================
-// FriendProfileSheet — arkadaş profil alt-sayfası (Spec §3.3 / D22-25)
-// Zenginlik burada yaşar: istatistik üçlüsü, Maça Çağır (birincil),
-// ikincil sıra (Mesaj·Favori·Listeler), taşma (Çıkar·Engelle·Şikâyet).
+// FriendProfileSheet — arkadaş profil penceresi (Spec §3.3 / D22-25)
+// Ekran ortasında buzlu cam modal (GlassModal): zenginlik burada
+// yaşar — istatistik üçlüsü, Maça Çağır (birincil), ikincil sıra
+// (Mesaj·Favori·Listeler), taşma (Çıkar·Engelle·Şikâyet).
+// Kapatma: dışarı dokunuş (⋯ butonu sağ üstte olduğundan yüzen X yok).
 // ================================================================
 
 interface FriendProfileSheetProps {
@@ -124,7 +126,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
 
   return (
     <>
-      <BottomSheet open={!!friend} onClose={close} ariaLabel="Arkadaş profili">
+      <GlassModal open={!!friend} onClose={close} ariaLabel="Arkadaş profili" showClose={false}>
         {panel === 'NONE' && (
           <div className="pb-4">
             {/* Başlık */}
@@ -344,7 +346,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             </button>
           </div>
         )}
-      </BottomSheet>
+      </GlassModal>
 
       {/* Yıkıcı onaylar (D25) */}
       <ConfirmDialog

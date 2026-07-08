@@ -1133,6 +1133,12 @@ const MatchCard: React.FC<{
   const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
   const myRole = roleMap[dna.role];
   const glowColor = match.mentalityColor;
+
+  // Poster: normalde maçın sahasının fotoğrafı otomatik dolar. Görsel yoksa
+  // ya da URL kırıksa boş kare yerine sahanın rengiyle şık bir zemin göster.
+  const [imgBroken, setImgBroken] = useState(false);
+  useEffect(() => { setImgBroken(false); }, [match.image]);
+  const hasPoster = !!match.image && !imgBroken;
   
   // Güven skoru 3.0'ın altındakiler veya minRating'i karşılayamayanlar için kilitli premium kart mantığı
   const isLocked = match.minRating && match.minRating > trustScore;
@@ -1198,8 +1204,12 @@ const MatchCard: React.FC<{
       }}
       className="relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
     >
-      {/* Arka Plan Posteri */}
-      <img src={match.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.location} referrerPolicy="no-referrer" />
+      {/* Arka Plan Posteri (saha fotoğrafı) — yoksa sahanın rengiyle zemin */}
+      {hasPoster ? (
+        <img src={match.image} onError={() => setImgBroken(true)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.location} referrerPolicy="no-referrer" />
+      ) : (
+        <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${glowColor}55 0%, #0A0E14 60%)` }} />
+      )}
       
       {/* Renk Tonu ve Güçlü Karartma (Gradient) */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-transparent" />

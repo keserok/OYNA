@@ -161,7 +161,11 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onRefresh, onNavigate 
       header: 'MAÇ',
       render: (m: MatchListing) => (
         <div className="flex items-center gap-3 min-w-[200px]">
-          <img src={m.image} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0" />
+          {m.image ? (
+            <img src={m.image} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg border border-white/10 shrink-0 bg-white/5 flex items-center justify-center text-gray-600"><Swords size={14} /></div>
+          )}
           <div className="min-w-0">
             <p className="font-bold text-white text-sm truncate flex items-center gap-1.5">
               {m.title}
