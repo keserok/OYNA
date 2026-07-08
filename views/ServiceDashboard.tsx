@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest } from '../types';
-import { ArrowLeft, MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
+import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import {
   getIncomingRequests,
@@ -233,20 +233,31 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
 
     const unsubscribe = subscribeToOpenMatches((matches) => {
-      // Map matches from Supabase to JobListing format needed here
-      const jobs = matches.map((m: any) => ({
-        id: m.id,
-        roleNeeded: role === UserRole.GOALKEEPER ? 'GK' : 'REF',
-        date: m.date || 'Bugün',
-        time: m.time || '21:00',
-        location: m.pitch_id || 'Bilinmiyor',
-        duration: '90 Dk',
-        fee: m.budget ? parseInt(m.budget) : 350,
-        teamName: 'Rakip Aranıyor',
-        format: m.format || '7v7',
-        difficulty: 'Ciddi',
-        status: m.status || 'OPEN',
-      }));
+      // matches tablosunun GERÇEK sütunlarına eşle (pitch_name/captain_name/budget
+      // YOK → eskiden kartlar undefined/UUID gösteriyordu). Ayrıca yalnız bu
+      // sağlayıcı rolünü henüz doldurmamış maçları göster (kaleci/hakem aranıyor).
+      const jobs = matches
+        .filter((m: any) => (role === UserRole.GOALKEEPER ? !m.gk_id : !m.refereeId && !m.ref_id))
+        .map((m: any) => {
+          const slots = Array.isArray(m.slots) ? m.slots : [];
+          const filled = slots.filter((s: any) => s?.player || s?.userId).length;
+          return {
+            id: m.id,
+            roleNeeded: role === UserRole.GOALKEEPER ? 'GK' : 'REF',
+            date: m.date || 'Bugün',
+            time: m.time || '21:00',
+            pitchName: m.title || m.location || 'Saha',
+            location: m.location || '—',
+            captainName: 'Kaptan',
+            players: filled || slots.length,
+            missing: role === UserRole.GOALKEEPER ? 'Kaleci' : 'Hakem',
+            duration: m.duration ? `${m.duration} Dk` : '90 Dk',
+            fee: Number(m.price) > 0 ? Number(m.price) : (role === UserRole.REFEREE ? 350 : 250),
+            format: m.format || '7v7',
+            difficulty: m.difficulty || 'Ciddi',
+            status: m.status || 'OPEN',
+          };
+        });
       setOpenMatches(jobs);
     });
 
@@ -1360,41 +1371,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          {/* GK Match Cards */}
          <div className="px-6 space-y-3">
             
-            {/* SOS / Emergency Request Card */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-red-950/40 border-2 border-red-500/50 rounded-[24px] overflow-hidden relative shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-            >
-                <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-pulse" />
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 animate-pulse">
-                        <AlertTriangle size={16} />
-                      </div>
-                      <div>
-                        <h4 className="font-black text-white text-sm">ACİL GÖREV (SOS)</h4>
-                        <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider">Son Dakika İptali • 1 Saat Kaldı</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-black text-red-400">450₺</p>
-                      <p className="text-[8px] text-red-500/80 font-black uppercase">ÇİFT ÜCRET</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-black/40 rounded-xl p-2.5 border border-red-500/20 mb-3">
-                    <p className="text-xs text-red-200">
-                      <strong className="text-red-400">Moda Spor Tesisleri</strong>'nde acil {isRef ? 'hakem' : 'kaleci'} ihtiyacı. Eski {isRef ? 'hakem' : 'kaleci'} kaza yaptı, maç başlamak üzere!
-                    </p>
-                  </div>
-
-                  <button className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase shadow-lg shadow-red-500/30 transition-colors">
-                    Hemen Kabul Et (Sahaya Yakınım)
-                  </button>
+            {/* Açık maç yoksa net boş durum (eskiden hep bir sahte "SOS" kartı
+                gösteriliyordu — gerçek veri değildi, kaldırıldı). */}
+            {openMatches.length === 0 && (
+              <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
+                <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search size={22} className="text-gray-600" />
                 </div>
-            </motion.div>
+                <p className="text-gray-400 text-sm font-bold">Şu an {isRef ? 'hakem' : 'kaleci'} arayan açık maç yok.</p>
+                <p className="text-gray-600 text-[11px] mt-1">Yeni maçlar açıldığında burada listelenecek.</p>
+              </div>
+            )}
             {openMatches.map(job => (
                 <motion.div
                     key={job.id}
@@ -1682,10 +1669,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </div>
 
       <header className="p-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
+         {/* Kök panel: sekmeler alt navigasyonla değişir → geri butonu YOK
+             (oyuncu Dashboard'ıyla tutarlı). Geri butonu yalnız alt-sayfalarda
+             (Profil/Ayarlar) bulunur; onlar kendi başlıklarında taşır. */}
          <div className="flex items-center gap-3">
-             <button onClick={onBack} className="p-2 bg-[#161B22] rounded-full text-white hover:bg-gray-800 transition-colors border border-white/5">
-                 <ArrowLeft size={20} />
-             </button>
              <div>
                  <h1 className="font-black text-white text-lg leading-none">{isRef ? 'HAKEM' : 'KALECİ'}</h1>
                  <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">
