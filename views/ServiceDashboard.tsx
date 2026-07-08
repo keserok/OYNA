@@ -9,6 +9,9 @@ import {
   reportServiceAttendance,
   getProviderIdentityStatus,
   submitProviderIdentity,
+  applyToMatchAsProvider,
+  withdrawProviderApplication,
+  providerConfirmService,
 } from '../services/serviceRequestService';
 import {
   getWalletSummary,
@@ -27,8 +30,12 @@ import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
+<<<<<<< Updated upstream
 import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
 import { APP_VERSION } from '../utils/appVersion';
+=======
+import { subscribeToOpenMatches } from '../services/matchService';
+>>>>>>> Stashed changes
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 
@@ -170,12 +177,32 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       return () => clearInterval(timer);
   }, [myUpcomingMatches]);
 
+  // Sağlayıcının bekleyen başvuruları (APPLIED = kaptan onayı bekliyor) —
+  // gerçek service_requests'ten; görüntü alanları için maçla zenginleştirilir.
   const pendingApplications = useMemo(() => {
-      if (!userProfile) return [];
-      return adminMatches.filter((m: any) => {
-          return m.applicants && Array.isArray(m.applicants) && m.applicants.some((a: any) => a.userId === userProfile.id || a.userId === userProfile.uid) && m.status !== 'CONFIRMED' && m.status !== 'COMPLETED';
-      });
-  }, [adminMatches, userProfile]);
+      return incomingRequests
+          .filter(r => r.status === 'APPLIED')
+          .map(r => {
+              const m: any = adminMatches.find((am: any) => am.id === r.matchId) || {};
+              return {
+                  requestId: r.id,
+                  id: r.matchId,
+                  pitchName: m.title || m.pitchName || m.location || 'Saha',
+                  location: m.location || m.district || '',
+                  date: m.date || '',
+                  time: m.time || '',
+                  fee: r.fee,
+              };
+          });
+  }, [incomingRequests, adminMatches]);
+
+  // Sağlayıcının zaten başvurduğu/atandığı maçlar → "BAŞVUR" butonu "Başvuruldu"ya döner
+  const appliedMatchIds = useMemo(
+      () => new Set(incomingRequests.filter(r => ['APPLIED','ACCEPTED','CAPTURED'].includes(r.status)).map(r => r.matchId)),
+      [incomingRequests]
+  );
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   // FAZ 5 — Gelen taleplerin durum bazlı gruplanması
   const newRequests = useMemo(
@@ -616,45 +643,67 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   };
 
   const submitBid = async () => {
-      const uid = auth.currentUser?.uid || 'mock-user-id';
-      const displayName = userProfile?.fullName || 'İsimsiz Üye';
-      const photoURL = auth.currentUser?.photoURL || '';
+      const uid = auth.currentUser?.uid;
 
       if (selectedOffer) {
           return acceptOffer();
       }
 
-      if (!uid || !selectedJob?.id) return;
-      
-      // Local double-booking/conflict check
-      if (selectedJob) {
-          const hasConflict = myUpcomingMatches.some(um => um.date === selectedJob.date && um.time === selectedJob.time);
-          if (hasConflict) {
-              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var.');
-              return;
-          }
+      if (!uid) { showActionError('Oturumun bulunamadı. Lütfen tekrar giriş yap.'); return; }
+      if (!selectedJob?.id) return;
+
+      // Yerel çifte-rezervasyon uyarısı (sunucu tarafı da _provider_has_conflict ile korur)
+      const hasConflict = myUpcomingMatches.some(um => um.date === selectedJob.date && um.time === selectedJob.time);
+      if (hasConflict) {
+          showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var.');
+          return;
       }
 
       setIsTransferring(true);
       try {
-          await applyToMatch(selectedJob.id, {
-            uid,
-            displayName,
-            role: isRef ? 'REFEREE' : 'GOALKEEPER',
-            photoURL
-          });
-          console.log("Applied to match:", selectedJob.id);
-
+          // Gerçek başvuru: service_requests motoru (status=APPLIED). Kaptan kabul edince
+          // ücret bloke edilir; maç sonunda iki-taraflı onayla payout serbest kalır.
+          await applyToMatchAsProvider(selectedJob.id, providerKind);
           setShowBidSuccess(true);
+          // Başvuru listesini tazele → kart "Başvuruldu" durumuna geçer
+          await fetchIncomingRequests();
           setTimeout(() => {
               setShowBidSuccess(false);
               setSelectedJob(null);
-          }, 2000);
-      } catch (error) {
-          console.error("Error submitting bid:", error);
-          showActionError('Başvuru yapılırken bir hata oluştu. Lütfen tekrar dene.');
+          }, 1800);
+      } catch (error: any) {
+          console.error("Error submitting application:", error);
+          showActionError(error?.message || 'Başvuru yapılırken bir hata oluştu. Lütfen tekrar dene.');
       } finally {
           setIsTransferring(false);
+      }
+  };
+
+  // Bekleyen başvuruyu geri çek (APPLIED iken)
+  const handleWithdrawApplication = async (requestId: string) => {
+      setWithdrawingId(requestId);
+      try {
+          await withdrawProviderApplication(requestId);
+          showActionSuccess('Başvuru geri çekildi.');
+          await fetchIncomingRequests();
+      } catch (err: any) {
+          showActionError(err?.message || 'Başvuru geri çekilemedi.');
+      } finally {
+          setWithdrawingId(null);
+      }
+  };
+
+  // Maç sonu: sağlayıcı "maçı oynadım" onayı (iki-taraflı payout kapısı)
+  const handleProviderConfirm = async (requestId: string) => {
+      setConfirmingId(requestId);
+      try {
+          await providerConfirmService(requestId);
+          showActionSuccess('Maçı onayladın. Kaptan da onaylayınca ücret cüzdanına geçer.');
+          await Promise.all([fetchIncomingRequests(), fetchEarnings()]);
+      } catch (err: any) {
+          showActionError(err?.message || 'Onay kaydedilemedi.');
+      } finally {
+          setConfirmingId(null);
       }
   };
 
@@ -1008,12 +1057,29 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           <p className="text-sm font-black text-green-400 mt-1">{req.providerAmount}₺</p>
                                       </div>
                                   </div>
+                                  {/* İki-taraflı onay: sağlayıcı-başlatan CAPTURED talepte "Maçı Onayla" */}
+                                  {req.status === 'CAPTURED' && !req.payoutReleased && req.initiatedBy === 'PROVIDER' && (
+                                    req.providerConfirmed ? (
+                                      <div className="w-full mt-3 py-2 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
+                                          <Check size={13} /> Onayladın · Kaptan onayı bekleniyor
+                                      </div>
+                                    ) : (
+                                      <button
+                                          onClick={() => handleProviderConfirm(req.id)}
+                                          disabled={confirmingId === req.id}
+                                          className="w-full mt-3 py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-[11px] font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
+                                      >
+                                          {confirmingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <Check size={13} />}
+                                          Maçı Oynadım · Onayla
+                                      </button>
+                                    )
+                                  )}
                                   {/* Sorun Bildir: CAPTURED ama henüz tamamlanmamış (payout serbest değil) */}
                                   {req.status === 'CAPTURED' && !req.payoutReleased && (
                                       <button
                                           onClick={() => handleReportAttendance(req.id)}
                                           disabled={reportingId === req.id}
-                                          className="w-full mt-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[11px] font-black uppercase tracking-wider hover:bg-yellow-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                          className="w-full mt-2 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[11px] font-black uppercase tracking-wider hover:bg-yellow-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                                       >
                                           {reportingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <Flag size={13} />}
                                           Sorun Bildir
@@ -1349,13 +1415,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                          key={job.id}
                          className="bg-[#161B22]/60 border border-yellow-500/30 rounded-[24px] overflow-hidden"
                      >
-                         <div className="p-4 flex items-center justify-between opacity-70">
+                         <div className="p-4 flex items-center justify-between">
                              <div>
-                                 <h4 className="font-black text-white text-sm">{job.pitchName || job.location || 'Saha Bilinmiyor'}</h4>
-                                 <p className="text-[10px] text-gray-400">{job.date} • {job.time}</p>
+                                 <h4 className="font-black text-white text-sm">{job.pitchName || job.location || 'Saha'}</h4>
+                                 <p className="text-[10px] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'} · {job.fee}₺</p>
                              </div>
-                             <div className="bg-yellow-500/20 text-yellow-500 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
-                                 Kaptan Onayı Bekleniyor
+                             <div className="flex items-center gap-2">
+                                 <span className="bg-yellow-500/20 text-yellow-500 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
+                                     Kaptan Onayı Bekleniyor
+                                 </span>
+                                 <button
+                                     onClick={() => handleWithdrawApplication(job.requestId)}
+                                     disabled={withdrawingId === job.requestId}
+                                     className="text-[9px] font-black uppercase tracking-wider text-gray-400 border border-white/10 rounded-md px-2 py-1 hover:bg-white/5 disabled:opacity-50"
+                                 >
+                                     {withdrawingId === job.requestId ? '...' : 'Geri Çek'}
+                                 </button>
                              </div>
                          </div>
                      </motion.div>
@@ -1413,13 +1488,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             <MapPin size={9} /> {job.location}
                           </div>
                         </div>
-                        <motion.button
-                          whileTap={{ scale: 0.94 }}
-                          onClick={() => handleOpenBid(job as any)}
-                          className="px-4 py-1.5 rounded-xl text-[10px] font-black text-black bg-green-400 hover:bg-green-300 transition-colors shadow-[0_0_12px_rgba(34,197,94,0.4)]"
-                        >
-                          BAŞVUR
-                        </motion.button>
+                        {appliedMatchIds.has(job.id) ? (
+                          <span className="px-4 py-1.5 rounded-xl text-[10px] font-black text-green-400 bg-green-500/10 border border-green-500/30 flex items-center gap-1">
+                            <Check size={11} /> Başvuruldu
+                          </span>
+                        ) : (
+                          <motion.button
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => handleOpenBid(job as any)}
+                            className="px-4 py-1.5 rounded-xl text-[10px] font-black text-black bg-green-400 hover:bg-green-300 transition-colors shadow-[0_0_12px_rgba(34,197,94,0.4)]"
+                          >
+                            BAŞVUR
+                          </motion.button>
+                        )}
                       </div>
                     </div>
                 </motion.div>
