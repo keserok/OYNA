@@ -3,7 +3,7 @@ import {
     ChevronLeft, Users, Save, Plus, Trash2, Minus,
     Shield, Target, Info, Brain, Activity,
     TrendingUp, Send, SaveAll, Star, X, Check,
-    PenTool, MousePointer2, Eye, EyeOff, Layout,
+    PenTool, MousePointer2, Eye, EyeOff, Layout, Copy,
     Search, MapPin, UserCheck, Calendar,
     Swords, Type, UserPlus, GripHorizontal, Settings2,
     MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
@@ -47,6 +47,18 @@ const FORMATIONS = FORMATIONS_SSOT as Record<SquadSize, Record<string, Slot[]>>;
 
 // Stüdyoda seçilebilir boyutlar (3v3–11v11; halı saha odaklı).
 const STUDIO_SIZES: SquadSize[] = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+
+// Plan yönetimi — en fazla 6 plan (A–F), renk mentaliteden türetilir + pip override.
+const MAX_PLANS = 6;
+type PlanColor = 'DEFAULT' | 'RED' | 'NAVY' | 'GREEN';
+const PLAN_COLORS: PlanColor[] = ['DEFAULT', 'RED', 'NAVY', 'GREEN'];
+const planLetter = (i: number) => String.fromCharCode(65 + i); // A, B, C, ...
+const mentalityColor = (m: TacticState['mentality']): PlanColor =>
+    m === 'Attacking' ? 'RED' : m === 'Defensive' ? 'NAVY' : 'GREEN';
+// Etkin renk: groupColor DEFAULT/boşsa mentaliteden türetilir, aksi halde elle seçilen renk.
+const resolvePlanColor = (plan: TacticState): PlanColor =>
+    (!plan.groupColor || plan.groupColor === 'DEFAULT') ? mentalityColor(plan.mentality) : plan.groupColor;
+const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444', NAVY: '#6366f1', GREEN: '#10b981' };
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
 const exampleForSize = (size: SquadSize): string => {
@@ -537,19 +549,31 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         if (newActiveIndex !== -1) setActivePlanIndex(newActiveIndex);
     };
 
+    // Sekme gövdesi = yalnız SEÇ (renk artık ayrı pip ile değişir).
     const handlePlanClick = (index: number) => {
-        const isActive = activePlanIndex === index;
-        if (isActive) {
-            const colors: ('DEFAULT' | 'RED' | 'NAVY' | 'GREEN')[] = ['DEFAULT', 'RED', 'NAVY', 'GREEN'];
-            const newPlans = [...plans];
-            const currentPlan = newPlans[index];
-            const currentColor = currentPlan.groupColor || 'DEFAULT';
-            const nextColor = colors[(colors.indexOf(currentColor) + 1) % colors.length];
-            newPlans[index] = { ...currentPlan, groupColor: nextColor };
-            setPlans(newPlans);
-        } else {
-            setActivePlanIndex(index);
-        }
+        setActivePlanIndex(index);
+    };
+
+    // Köşe pip'i: tek tıkla renk döngüsü (DEFAULT=otomatik → RED → NAVY → GREEN).
+    const cyclePlanColor = (index: number) => {
+        const newPlans = [...plans];
+        const cur = (newPlans[index].groupColor || 'DEFAULT') as PlanColor;
+        const next = PLAN_COLORS[(PLAN_COLORS.indexOf(cur) + 1) % PLAN_COLORS.length];
+        newPlans[index] = { ...newPlans[index], groupColor: next };
+        setPlans(newPlans);
+    };
+
+    // Planı kopyala (tam kopya: diziliş + çizimler + rakipler dahil).
+    const handleDuplicatePlan = (index: number) => {
+        if (plans.length >= MAX_PLANS) { showToast(`En fazla ${MAX_PLANS} plan olabilir.`, 'error'); return; }
+        const copy: TacticState = JSON.parse(JSON.stringify(plans[index]));
+        copy.id = crypto.randomUUID();
+        copy.name = `${plans[index].name} (kopya)`;
+        copy.status = undefined; copy.proposedBy = null; copy.priority = undefined;
+        const newPlans = [...plans.slice(0, index + 1), copy, ...plans.slice(index + 1)];
+        setPlans(newPlans);
+        setActivePlanIndex(index + 1);
+        showToast('Plan kopyalandı.');
     };
 
     const handleRenamePlan = (index: number) => {
@@ -597,28 +621,30 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setShowResetConfirmModal(false);
     };
 
+    // Yeni plan: aktif planın KADROSUNU ve DİZİLİŞİNİ koruyarak açılır (varyant üret).
     const handleNewTactic = () => {
-        let baseSlots = JSON.parse(JSON.stringify(FORMATIONS['7v7']['2-3-1']));
-        const { newSlots, newSubs } = preservePlayersAndSubs(baseSlots, activeTactic.subs || []);
-
+        if (plans.length >= MAX_PLANS) { showToast(`En fazla ${MAX_PLANS} plan olabilir.`, 'error'); return; }
+        const src = activeTactic;
         const newPlan: TacticState = {
             id: crypto.randomUUID(),
-            name: `Yeni Taktik ${plans.length + 1}`,
-            size: '7v7',
-            formation: '2-3-1',
-            slots: newSlots,
-            subs: newSubs,
-            captainId: activeTactic.captainId,
+            name: `Plan ${planLetter(plans.length)}`,
+            size: src.size,
+            formation: src.formation,
+            slots: JSON.parse(JSON.stringify(src.slots)),
+            subs: JSON.parse(JSON.stringify(src.subs || [])),
+            captainId: src.captainId,
             notes: '',
             opponents: [],
-            mentality: activeTactic.mentality,
-            tempo: activeTactic.tempo,
-            identity: activeTactic.identity
+            mentality: src.mentality,
+            tempo: src.tempo,
+            identity: src.identity,
+            teamId: src.teamId,
+            teamName: src.teamName,
+            drawings: [],
         };
-        
         setPlans([...plans, newPlan]);
         setActivePlanIndex(plans.length);
-        showToast("Yeni taktik alanı oluşturuldu!");
+        showToast(`Plan ${planLetter(plans.length)} eklendi — kadro ve diziliş korundu.`);
     };
 
     // Kayıt TEK KAPIDAN: save_team_tactic RPC. Status SUNUCUDA belirlenir
@@ -938,7 +964,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 >
                     {plans.map((plan, index) => {
                         const isActive = activePlanIndex === index;
-                        
+                        const effColor = resolvePlanColor(plan);
+                        const isAutoColor = !plan.groupColor || plan.groupColor === 'DEFAULT';
+
                         const getGroupColorStyles = (color: 'DEFAULT'|'RED'|'NAVY'|'GREEN'|undefined, isAct: boolean) => {
                             let base = '';
                             switch(color) {
@@ -985,18 +1013,29 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 dragElastic={0.2}
                                 whileHover={{ scale: isActive ? 1 : 1.02 }}
                                 whileDrag={{ scale: 1.05, zIndex: 50, cursor: 'grabbing', opacity: 0.95 }}
-                                className={`relative snap-center flex-shrink-0 flex flex-col justify-between h-[80px] w-[140px] rounded-[20px] p-3 transition-colors duration-300 border cursor-grab active:cursor-grabbing ${getGroupColorStyles(plan.groupColor, isActive)}`}
+                                className={`relative snap-center flex-shrink-0 flex flex-col justify-between h-[80px] w-[148px] rounded-[20px] p-3 transition-colors duration-300 border cursor-grab active:cursor-grabbing ${getGroupColorStyles(effColor, isActive)}`}
                             >
                                 <div className="flex justify-between items-start w-full">
-                                    <div className="flex-1"></div>
-                                    {isActive && editingPlanIndex !== index && (
-                                        <div className="flex items-center gap-1">
-                                            <button onClick={() => handleRenamePlan(index)} className="p-1 cursor-pointer text-gray-400 hover:text-white transition-colors" title="İsmi Değiştir"><PenTool size={12}/></button>
-                                            {plans.length > 1 && (
-                                                <button onClick={() => handleDeletePlan(index)} className="p-1 cursor-pointer text-gray-400 hover:text-red-500 transition-colors" title="Taktik Sil"><Trash2 size={12}/></button>
-                                            )}
-                                        </div>
-                                    )}
+                                    {/* Sabit A–F harf kimliği */}
+                                    <span className="text-[11px] font-black text-white/90 bg-black/30 rounded-md px-1.5 py-0.5 leading-none font-mono">{planLetter(index)}</span>
+                                    <div className="flex items-center gap-1">
+                                        {/* Renk pip'i — her zaman görünür, tek tıkla döngü (kesik=otomatik, dolu=elle) */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); cyclePlanColor(index); }}
+                                            title={isAutoColor ? 'Renk: mentaliteden (otomatik) — değiştirmek için dokun' : 'Renk: elle seçildi — değiştirmek için dokun'}
+                                            className={`w-4 h-4 rounded-full cursor-pointer ${isAutoColor ? 'border border-dashed border-white/70' : 'border-2 border-white/90'}`}
+                                            style={{ backgroundColor: PIP_HEX[effColor] }}
+                                        />
+                                        {isActive && editingPlanIndex !== index && (
+                                            <>
+                                                <button onClick={(e) => { e.stopPropagation(); handleRenamePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="İsmi Değiştir"><PenTool size={12}/></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDuplicatePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="Planı Kopyala"><Copy size={12}/></button>
+                                                {plans.length > 1 && (
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-red-500 transition-colors" title="Planı Sil"><Trash2 size={12}/></button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                                 {editingPlanIndex === index ? (
                                     <input
@@ -1012,7 +1051,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <button
                                         onClick={() => handlePlanClick(index)}
                                         onDoubleClick={() => isActive && handleRenamePlan(index)}
-                                        className={`text-center text-sm font-black uppercase tracking-tighter truncate w-full transition-all ${getTextColorStyles(plan.groupColor, isActive)}`}
+                                        className={`text-center text-sm font-black uppercase tracking-tighter truncate w-full transition-all ${getTextColorStyles(effColor, isActive)}`}
                                     >
                                         {plan.name}
                                     </button>
@@ -1021,14 +1060,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         );
                     })}
                     
-                    <button
-                        onClick={handleNewTactic}
-                        className="flex-shrink-0 w-[60px] h-[80px] rounded-[20px] bg-black/20 border-2 border-dashed border-white/10 hover:border-white/30 text-white/30 hover:text-white/60 transition-all flex flex-col items-center justify-center gap-1 group"
-                        title="Yeni Taktik Ekle"
-                    >
-                        <Plus size={20} className="group-hover:scale-110 transition-transform" />
-                        <span className="text-[9px] font-black tracking-widest uppercase">Ekle</span>
-                    </button>
+                    {plans.length < MAX_PLANS && (
+                        <button
+                            onClick={handleNewTactic}
+                            className="flex-shrink-0 w-[60px] h-[80px] rounded-[20px] bg-black/20 border-2 border-dashed border-white/10 hover:border-white/30 text-white/30 hover:text-white/60 transition-all flex flex-col items-center justify-center gap-1 group"
+                            title="Yeni plan (kadro & diziliş korunur)"
+                        >
+                            <Plus size={20} className="group-hover:scale-110 transition-transform" />
+                            <span className="text-[9px] font-black tracking-widest uppercase">Ekle</span>
+                        </button>
+                    )}
                 </Reorder.Group>
             </div>
 
