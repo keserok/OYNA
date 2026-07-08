@@ -274,7 +274,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           subtitle={darkMode ? 'Karanlık mod aktif' : 'Aydınlık mod aktif'}
           color="#3b82f6"
         >
-          <div className="flex items-center justify-between py-3 border-b border-white/5 gap-4">
+          <div className="flex items-center justify-between py-3 gap-4">
             <div className="flex-1">
               <p className="text-sm font-bold">Karanlık Mod</p>
               <p className="text-[10px] text-gray-500">{darkMode ? 'Koyu tema aktif' : 'Açık tema aktif'}</p>
@@ -293,16 +293,6 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
                 {darkMode ? '🌙' : '☀️'}
               </motion.span>
             </button>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-sm font-bold">Dil</p>
-              <p className="text-[10px] text-gray-500">Uygulama dili</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-gray-400">Türkçe</span>
-              <span className="text-[9px] font-black uppercase tracking-wide text-gray-500 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">İngilizce yakında</span>
-            </div>
           </div>
         </SectionCard>
 
