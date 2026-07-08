@@ -35,13 +35,15 @@ interface ServiceDashboardProps {
   role: UserRole;
   onBack: () => void;
   onNavigate: (view: AppView) => void;
+  /** Gerçek oturum kapatma (App merkezî handleLogout) → giriş ekranına düşer. */
+  onLogout?: () => void;
 }
 
 type Tab = 'HOME' | 'JOBS' | 'PRICING' | 'WALLET' | 'MENU' | 'PROFILE_VIEW' | 'SETTINGS_VIEW';
 
 // Removed equipment mock data
 
-const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNavigate }) => {
+const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNavigate, onLogout }) => {
   const isRef = role === UserRole.REFEREE;
   const {
     unreadNotificationsCount,
@@ -1633,7 +1635,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button onClick={() => onBack()} className="w-full bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between group hover:bg-red-500/20 transition-all mt-8">
+          <button onClick={() => (onLogout ?? onBack)()} className="w-full bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between group hover:bg-red-500/20 transition-all mt-8">
               <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><X size={20} /></div>
                   <span className="font-bold text-red-500">Çıkış Yap</span>
@@ -1656,7 +1658,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* Settings sub-view */}
       {activeTab === 'SETTINGS_VIEW' && (
-        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onBack} />
+        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
       )}
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>

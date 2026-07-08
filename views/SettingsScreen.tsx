@@ -276,7 +276,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const handleLogout = async () => {
     try {
       await logout();
-      onNavigate('SPLASH');
+      onNavigate('AUTH'); // çıkışta doğrudan giriş ekranına
     } catch (error) {
       console.error('Error logging out:', error);
       showToast('Çıkış yapılırken bir hata oluştu. Lütfen tekrar dene.');
