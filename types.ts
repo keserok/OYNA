@@ -351,6 +351,8 @@ export interface Pitch {
   paramClientId?: string;
   ownerId?: string;
   workingHours?: { open: string; close: string; slotDuration: number; activeDays?: string[] };
+  /** DB'deki ham working_hours (dizi ya da nesne) — gün-bazlı çözümleme için korunur. */
+  workingHoursRaw?: unknown;
   pricingPolicy?: any[];
   surfaceType?: 'SUNİ ÇİM' | 'DOĞAL ÇİM' | 'PARKE' | 'TARTAN';
   dimensions?: string; // e.g. "30x50"

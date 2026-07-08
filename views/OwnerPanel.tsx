@@ -9,6 +9,7 @@ import {
 
 import { useAppStore } from '../store';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
+import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../shared/workingHours';
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
@@ -316,9 +317,10 @@ const FinancialCalendarView: React.FC<{
   courts?: PitchCourt[];
   readOnly?: boolean;
   canFlashDeals?: boolean;
+  workingHours?: unknown;
   onNavigate?: (view: string) => void;
   onPricingUpdated?: () => void;
-}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, onNavigate, onPricingUpdated }) => {
+}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, onNavigate, onPricingUpdated }) => {
     const notify = useOwnerToast();
     const weekDates = useMemo(() => getWeekDates(), []);
     const todayIndex = useMemo(() => {
@@ -352,6 +354,11 @@ const FinancialCalendarView: React.FC<{
 
     const isRealPitch = !!pitchId && !pitchId.startsWith('mock-');
     const selectedDateISO = formatDateISO(weekDates[selectedDate] ?? new Date());
+    // WP6: seçili günün çalışma penceresi (owner ayarı = takvim penceresi = tüketici).
+    const dayHours = useMemo(
+        () => resolveWorkingHoursForDate(workingHours as any, selectedDateISO),
+        [workingHours, selectedDateISO],
+    );
     const activeCourts = courts.filter((c) => c.is_active !== false);
 
     useEffect(() => {
@@ -474,9 +481,11 @@ const FinancialCalendarView: React.FC<{
     const dailyCollected = currentBookings.reduce((acc, curr) => acc + curr.paid, 0);
     const dailyTotal = currentBookings.reduce((acc, curr) => acc + curr.price, 0);
     const dailyPending = dailyTotal - dailyCollected;
-    // OP-P1-6: rezervasyon SAYISI değil kapladığı SAAT toplamı (16 saatlik operasyon penceresi).
+    // OP-P1-6 + WP6: rezervasyon SAYISI değil kapladığı SAAT toplamı; payda = GERÇEK
+    // çalışma penceresi (owner'ın o güne ayarladığı açık saat sayısı).
     const bookedHours = currentBookings.reduce((acc, curr) => acc + (curr.duration || 1), 0);
-    const occupancyRate = Math.min(100, Math.round((bookedHours / 16) * 100));
+    const openHours = dayHours.closed ? 0 : openHourCount(dayHours.open, dayHours.close);
+    const occupancyRate = openHours > 0 ? Math.min(100, Math.round((bookedHours / openHours) * 100)) : 0;
 
     // OP-P1-7: bir saat dilimini hangi rezervasyonun kapsadığını + başlangıç mı olduğunu döndürür.
     const getSlotCoverage = (time: string): { booking: CalendarBooking; isStart: boolean } | null => {
@@ -693,11 +702,13 @@ const FinancialCalendarView: React.FC<{
                         const hasFlashDeal = currentPrice < standardPrice;
                         const slotClosed = isSlotClosed(time, selectedCourtId, closedSlots);
                         const nextTime = `${(parseInt(time.split('.')[0]) + 1).toString().padStart(2, '0')}.00`;
-                        
+                        // WP6: bu saat çalışma penceresi içinde mi (owner ayarı).
+                        const withinHours = !dayHours.closed && isHourWithinWorkingHours(parseInt(time.split('.')[0], 10), dayHours.open, dayHours.close);
+
                         return (
                             <div key={time} className="flex gap-4 group">
                                 <div className="w-20 pt-4 flex flex-col items-center">
-                                    <span className={`text-[11px] font-mono font-black tracking-tighter ${booking || slotClosed ? 'text-white' : 'text-gray-600'}`}>
+                                    <span className={`text-[11px] font-mono font-black tracking-tighter ${booking || slotClosed ? 'text-white' : withinHours ? 'text-gray-600' : 'text-gray-700'}`}>
                                         {time} - {nextTime}
                                     </span>
                                 </div>
@@ -707,6 +718,11 @@ const FinancialCalendarView: React.FC<{
                                     <div className="h-16 rounded-xl border border-red-500/30 bg-red-950/30 flex items-center justify-center gap-2 text-red-400">
                                         <Lock size={16} />
                                         <span className="text-xs font-black uppercase tracking-wider">Kapalı</span>
+                                    </div>
+                                ) : !withinHours && !booking ? (
+                                    <div className="h-16 rounded-xl border border-white/5 bg-white/[0.015] flex items-center justify-center gap-2 text-gray-600">
+                                        <Clock size={14} />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">Çalışma saati dışı</span>
                                     </div>
                                 ) : booking ? (
                                     isContinuation ? (
@@ -2092,6 +2108,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           courts={courts}
           readOnly={isReadOnly}
           canFlashDeals={can.flashDeals}
+          workingHours={facilityData?.workingHours}
           onNavigate={onNavigate}
           onPricingUpdated={async () => {
             if (!realPitchId || !facilityData?.ownerId) return;
