@@ -57,25 +57,36 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     // The user said "yalnızca ... çıksın", so I'll hide the tabs if initialType is passed.
     const isLocked = !!initialType;
 
-    const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, userLocation } = useAppStore();
+    const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, selectedRegions, userLocation } = useAppStore();
     const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
 
     const [filterDistrict, setFilterDistrict] = useState<string>('Tümü');
     const [filterDay, setFilterDay] = useState<string>('Tümü');
     const [filterTime, setFilterTime] = useState<string>('Tümü');
 
-    // İlçe seçenekleri aktif ile göre (sabit değil).
+    // İlçe seçenekleri birincil (aktif) ile göre (sabit değil).
     const zoneCity = activeRegion?.city ?? LAUNCH_CITY;
-    const cityDistricts = useMemo(() => districtsOfCity(zoneCity), [zoneCity]);
+
+    // Çoklu bölge kapsamı: kapsanan (isCovered) seçili şehirlerin birleşimi.
+    const scopeCities = useMemo(() => {
+        const regions = selectedRegions.length > 0 ? selectedRegions : (activeRegion ? [activeRegion] : []);
+        return Array.from(new Set(regions.filter(r => r.isCovered).map(r => r.city)));
+    }, [selectedRegions, activeRegion]);
+
+    // Kapsanan tüm şehirlerin ilçeleri (yumuşak ilçe eşleşmesi için birleşim).
+    const cityDistricts = useMemo(
+        () => Array.from(new Set((scopeCities.length ? scopeCities : [zoneCity]).flatMap(c => districtsOfCity(c)))),
+        [scopeCities, zoneCity],
+    );
 
     const filteredProfiles = useMemo(() => {
-        const scopeCity = activeRegion?.isCovered ? activeRegion.city : null;
         return profiles.filter(p => {
-            // Aktif bölge kapsamı: sağlayıcının hizmet bölgeleri bu ille ilgili mi? (bölgesizler hariç tutulmaz)
-            const matchesRegion = !scopeCity || !p.preferredZones || p.preferredZones.length === 0 ||
+            // Seçili bölge kapsamı: sağlayıcının hizmet bölgeleri seçili illerden
+            // biriyle ilgili mi? (bölgesizler hariç tutulmaz)
+            const matchesRegion = scopeCities.length === 0 || !p.preferredZones || p.preferredZones.length === 0 ||
                 p.preferredZones.some(z => {
                     const parts = z.split('/').map(s => s.trim());
-                    return parts[0] === scopeCity || z === scopeCity || cityDistricts.includes(parts[parts.length - 1]);
+                    return scopeCities.includes(parts[0]) || scopeCities.includes(z) || cityDistricts.includes(parts[parts.length - 1]);
                 });
             // "İl / İlçe" ve düz "İlçe" formatlarının ikisini de yakala.
             const matchesDistrict = filterDistrict === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z => z === filterDistrict || z.split('/').pop()?.trim() === filterDistrict));
@@ -83,7 +94,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
             const matchesTime = filterTime === 'Tümü' || (p.workingHours && p.workingHours.activeHours && p.workingHours.activeHours.includes(filterTime));
             return matchesRegion && matchesDistrict && matchesDay && matchesTime;
         });
-    }, [profiles, filterDistrict, filterDay, filterTime, activeRegion, cityDistricts]);
+    }, [profiles, filterDistrict, filterDay, filterTime, scopeCities, cityDistricts]);
 
     const myMatches = useMemo(() => {
         return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);

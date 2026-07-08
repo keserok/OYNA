@@ -3,12 +3,17 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole } from '../types';
 import {
-  ArrowLeft, Bell, Lock, Shield, Globe, Moon, Sun, HelpCircle,
-  ChevronRight, LogOut, Star, RefreshCw
+  ArrowLeft, Bell, Lock, Moon, Sun, HelpCircle,
+  ChevronRight, LogOut, Star, KeyRound, Trash2, RefreshCw
 } from 'lucide-react';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
+import { APP_VERSION } from '../utils/appVersion';
+import DeleteAccountModal from '../components/common/DeleteAccountModal';
+
+const CONTACT_EMAIL = 'destek@oyna.app';
 
 interface ServiceSettingsProps {
   role: UserRole;
@@ -16,7 +21,7 @@ interface ServiceSettingsProps {
   onLogout: () => void;
 }
 
-type SectionKey = null | 'notifications' | 'privacy' | 'appearance' | 'support';
+type SectionKey = null | 'notifications' | 'privacy' | 'appearance' | 'security' | 'support';
 
 // ─── Standalone toggle row — never re-renders siblings ─────────────────────
 const ToggleRow = React.memo(({
@@ -30,6 +35,9 @@ const ToggleRow = React.memo(({
       {desc && <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{desc}</p>}
     </div>
     <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
       onClick={onChange}
       className="shrink-0 w-11 h-6 rounded-full relative transition-colors duration-300 outline-none focus:outline-none"
       style={{ background: checked ? accentColor : 'rgba(255,255,255,0.1)' }}
@@ -70,7 +78,37 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
 
   // Appearance
   const [darkMode, setDarkMode] = useState(savedSettings.darkMode ?? true);
-  const [language, setLanguage] = useState<'TR' | 'EN'>(savedSettings.language ?? 'TR');
+
+  // Hesap güvenliği
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [securityMessage, setSecurityMessage] = useState<{ text: string; variant: 'success' | 'error' } | null>(null);
+
+  const handlePasswordChange = async () => {
+    if (newPassword.length < 6) {
+      setSecurityMessage({ text: 'Şifre en az 6 karakter olmalı.', variant: 'error' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSecurityMessage({ text: 'Şifreler eşleşmiyor.', variant: 'error' });
+      return;
+    }
+    setIsSavingPassword(true);
+    setSecurityMessage(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setSecurityMessage({ text: 'Şifreniz güncellendi.', variant: 'success' });
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setSecurityMessage({ text: err instanceof Error ? err.message : 'Şifre güncellenemedi.', variant: 'error' });
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
   // FAZ 8A — ayarlar self-servis RPC ile DB'ye gerçekten yazılır
   const updateSettings = (key: string, value: any) => {
@@ -180,14 +218,14 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
             {isRef ? '⚖️' : '🧤'}
           </div>
           <div className="flex-1">
-            <p className="font-black">{isRef ? 'CÜNEYT A.' : 'UĞURCAN Ç.'}</p>
+            <p className="font-black">{me?.name || (isRef ? 'Hakem' : 'Kaleci')}</p>
             <p className="text-[10px] text-gray-400 font-medium">
-              {isRef ? 'FIFA Lisanslı Hakem' : 'Elit Kaleci'}
+              {isRef ? 'Hakem' : 'Kaleci'} Hesabı
             </p>
             <div className="flex items-center gap-1 mt-1">
               <Star size={10} className="text-yellow-400" fill="currentColor" />
-              <span className="text-[10px] font-black">4.9</span>
-              <span className="text-[10px] text-gray-500">• {isRef ? '150' : '42'} maç</span>
+              <span className="text-[10px] font-black">{typeof me?.rating === 'number' ? me.rating.toFixed(1) : '—'}</span>
+              <span className="text-[10px] text-gray-500">• {me?.matchCount ?? 0} maç</span>
             </div>
           </div>
         </motion.div>
@@ -259,7 +297,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           subtitle={darkMode ? 'Karanlık mod aktif' : 'Aydınlık mod aktif'}
           color="#3b82f6"
         >
-          <div className="flex items-center justify-between py-3 border-b border-white/5 gap-4">
+          <div className="flex items-center justify-between py-3 gap-4">
             <div className="flex-1">
               <p className="text-sm font-bold">Karanlık Mod</p>
               <p className="text-[10px] text-gray-500">{darkMode ? 'Koyu tema aktif' : 'Açık tema aktif'}</p>
@@ -279,26 +317,60 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               </motion.span>
             </button>
           </div>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-sm font-bold">Dil</p>
-              <p className="text-[10px] text-gray-500">Uygulama dili</p>
+        </SectionCard>
+
+        {/* Hesap Güvenliği */}
+        <SectionCard
+          sectionKey="security"
+          icon={<KeyRound size={18} />}
+          title="Hesap Güvenliği"
+          subtitle="Şifre değiştir, hesabı sil"
+          color="#ef4444"
+        >
+          <div className="space-y-4 pb-1">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase">Yeni Şifre</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500/40"
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Şifre tekrar"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500/40"
+              />
+              {securityMessage && (
+                <p className={`text-[11px] font-bold ${securityMessage.variant === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                  {securityMessage.text}
+                </p>
+              )}
+              <button
+                onClick={handlePasswordChange}
+                disabled={isSavingPassword || !newPassword || !confirmPassword}
+                className="w-full py-3 rounded-2xl font-black text-sm text-white disabled:opacity-50"
+                style={{ background: '#3b82f6' }}
+              >
+                {isSavingPassword ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+              </button>
             </div>
-            <div className="flex bg-white/5 rounded-xl p-1 gap-1">
-              {(['TR', 'EN'] as const).map(lang => (
-                <button
-                  key={lang}
-                  onClick={() => { setLanguage(lang); updateSettings('language', lang); }}
-                  className="px-3 py-1 rounded-lg text-xs font-black transition-all"
-                  style={{
-                    background: language === lang ? '#3b82f6' : 'transparent',
-                    color: language === lang ? '#fff' : '#6b7280'
-                  }}
-                >
-                  {lang}
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-red-500/20"
+              style={{ background: 'rgba(239,68,68,0.06)' }}
+            >
+              <div className="flex items-center gap-3">
+                <Trash2 size={16} className="text-red-400" />
+                <div className="text-left">
+                  <span className="text-sm font-bold text-red-400 block">Hesabı Kalıcı Olarak Sil</span>
+                  <span className="text-[10px] text-red-400/60">Bu işlem geri alınamaz</span>
+                </div>
+              </div>
+            </button>
           </div>
         </SectionCard>
 
@@ -311,13 +383,13 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           color="#f97316"
         >
           {[
-            { label: 'Sık Sorulan Sorular', desc: 'Ödeme, maç ve profil hakkında' },
-            { label: 'Canlı Destek', desc: 'Hafta içi 09:00-22:00' },
-            { label: 'Hata Bildir', desc: 'Sorun mu yaşıyorsun?' },
-            { label: 'Uygulama Versiyonu', desc: 'OYNA v2.4.0' },
+            { label: 'Sık Sorulan Sorular', desc: 'Ödeme, maç ve profil hakkında', subject: 'Sık Sorulan Sorular' },
+            { label: 'Canlı Destek', desc: 'Hafta içi 09:00-22:00', subject: 'Canlı Destek Talebi' },
+            { label: 'Hata Bildir', desc: 'Sorun mu yaşıyorsun?', subject: 'Hata Bildirimi' },
           ].map(item => (
             <button
               key={item.label}
+              onClick={() => { window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`OYNA — ${item.subject}`)}`; }}
               className="w-full flex items-center justify-between py-3 border-b border-white/5 last:border-0 text-left"
             >
               <div>
@@ -327,6 +399,12 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               <ChevronRight size={16} className="text-gray-600" />
             </button>
           ))}
+          <div className="w-full flex items-center justify-between py-3 text-left">
+            <div>
+              <p className="text-sm font-bold">Uygulama Versiyonu</p>
+              <p className="text-[10px] text-gray-500">OYNA v{APP_VERSION}</p>
+            </div>
+          </div>
         </SectionCard>
 
         {/* Çıkış */}
@@ -361,6 +439,19 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           OYNA © 2025 • Tüm hakları saklıdır
         </p>
       </div>
+
+      {/* Hesap silme modal — tek kaynak, oyuncu ayarlarıyla aynı bileşen */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <DeleteAccountModal
+            onClose={() => setShowDeleteModal(false)}
+            onConfirmed={() => {
+              setShowDeleteModal(false);
+              onLogout();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

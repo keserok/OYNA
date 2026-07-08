@@ -15,6 +15,7 @@ import {
   Tag,
   Trophy,
 } from 'lucide-react';
+import { APP_VERSION } from '../../../utils/appVersion';
 import type { OwnerMenuStats } from './ownerMenuTypes';
 
 export interface OwnerMenuViewProps {
@@ -323,7 +324,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         </section>
 
         <div className="text-center pt-4">
-          <p className="text-[10px] text-gray-600 font-mono">OYNA Business v2.5.0</p>
+          <p className="text-[10px] text-gray-600 font-mono">OYNA Business v{APP_VERSION}</p>
         </div>
       </div>
     </div>
