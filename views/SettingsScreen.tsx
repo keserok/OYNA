@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Globe, Bell, Shield, HelpCircle, LogOut, ChevronRight,
-  RefreshCw, Moon, MapPin, Lock, CheckCircle2, XCircle, Smartphone,
-  AlertCircle, Download, Trash2, X, Repeat
+  RefreshCw, Moon, MapPin, Lock, Smartphone,
+  AlertCircle, Download, Trash2, Repeat
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
@@ -16,138 +16,30 @@ import { NOTIFICATION_CATEGORIES, fetchNotificationTemplates, updateNotification
 import type { NotificationPreferenceKey } from '../notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { Toast } from '../components/common/Toast';
-import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
 import PrivacySection from '../components/social/PrivacySection';
+import DeleteAccountModal from '../components/common/DeleteAccountModal';
+import { APP_VERSION } from '../utils/appVersion';
+import { getFullUserProfile, getMatchHistory } from '../services/userService';
 
 interface SettingsScreenProps {
   onBack: () => void;
   onNavigate: (view: AppView) => void;
 }
 
-// ─── İki adımlı hesap silme modal ─────────────────────────────────────────────
-const DeleteAccountModal: React.FC<{
-  onClose: () => void;
-  onConfirmed: () => void;
-}> = ({ onClose, onConfirmed }) => {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [confirmText, setConfirmText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
-
-  const handleConfirm = async () => {
-    if (confirmText !== 'HESABIMI SİL') return;
-    setLoading(true);
-    try {
-      await supabase.rpc('request_account_deletion');
-      setToast({ message: 'Silme talebiniz alındı. 7 gün içinde hesabınız silinecek.', variant: 'success' });
-      setTimeout(() => {
-        onConfirmed();
-      }, 2000);
-    } catch {
-      setToast({ message: 'Bir hata oluştu. Lütfen tekrar deneyin.', variant: 'error' });
-      setLoading(false);
-    }
-  };
-
-  return (
-    <motion.div
-      {...MODAL_BACKDROP}
-      className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
-    >
-      <motion.div
-        {...MODAL_CARD}
-        className="w-full max-w-sm rounded-[28px] p-6"
-        style={{
-          background: 'linear-gradient(180deg, #1a0808 0%, #0A0E14 100%)',
-          border: '1px solid rgba(239,68,68,0.2)',
-        }}
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-black text-white text-lg">
-            {step === 1 ? 'Hesabı Sil' : 'Son Adım'}
-          </h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
-            <X size={18} />
-          </button>
-        </div>
-
-        {toast && (
-          <div className={`mb-4 p-3 rounded-xl text-sm font-bold text-center border ${
-            toast.variant === 'success'
-              ? 'bg-green-500/15 border-green-500/25 text-green-300'
-              : 'bg-red-500/15 border-red-500/25 text-red-300'
-          }`}>
-            {toast.message}
-          </div>
-        )}
-
-        {step === 1 ? (
-          <>
-            <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-              Bu işlem <span className="text-red-400 font-bold">geri alınamaz</span>. Hesabın, tüm verilerinle birlikte 7 gün içinde kalıcı olarak silinecek.
-              Devam etmek istediğine emin misin?
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => setStep(2)}
-                className="w-full h-12 rounded-2xl font-black text-sm bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
-              >
-                Evet, Devam Et
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
-              >
-                İptal
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
-              Onaylamak için aşağıya <span className="text-red-400 font-bold">HESABIMI SİL</span> yazın:
-            </p>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={e => setConfirmText(e.target.value)}
-              placeholder="HESABIMI SİL"
-              className="w-full h-12 bg-black/40 border border-white/10 rounded-xl px-4 text-white font-bold text-sm outline-none focus:border-red-500/50 mb-4"
-            />
-            <div className="space-y-3">
-              <button
-                onClick={handleConfirm}
-                disabled={confirmText !== 'HESABIMI SİL' || loading}
-                className="w-full h-12 rounded-2xl font-black text-sm bg-red-600 text-white disabled:opacity-40 transition-opacity"
-              >
-                {loading ? 'İŞLENİYOR...' : 'Hesabımı Kalıcı Olarak Sil'}
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
-              >
-                İptal
-              </button>
-            </div>
-          </>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-};
+const CONTACT_EMAIL = 'destek@oyna.app';
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) => {
-  const [lang, setLang] = useState('TR');
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [showNotifSettings, setShowNotifSettings] = useState(false);
   const [templates, setTemplates] = useState<NotificationTemplateInfo[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [isNative] = useState(() => Capacitor.isNativePlatform());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDataDownloadModal, setShowDataDownloadModal] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isExportingProfile, setIsExportingProfile] = useState(false);
+  const [profileExportError, setProfileExportError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = (message: string) => {
@@ -253,6 +145,47 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     }
   };
 
+  // KVKK m.11 — kişisel verilerimi JSON olarak indir (oyuncu). Tesis sahibi
+  // exportuyla aynı kalıp: profil + maç geçmişi + bildirim tercihleri.
+  const handleExportPlayerData = async () => {
+    setIsExportingProfile(true);
+    setProfileExportError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) throw new Error('Oturumunuz bulunamadı.');
+
+      const [profile, matchHistory] = await Promise.all([
+        getFullUserProfile(uid),
+        getMatchHistory(uid),
+      ]);
+
+      const payload = {
+        exported_at: new Date().toISOString(),
+        user_id: uid,
+        profile,
+        match_history: matchHistory,
+        notification_preferences: notificationPreferences,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `oyna-verilerim-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('handleExportPlayerData:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      setProfileExportError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'Veriler indirilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsExportingProfile(false);
+    }
+  };
+
   const handleUpdateLocation = async () => {
     setIsUpdatingLocation(true);
     // Ortak konum servisi: GPS al → "Ordu · Altınordu" bölgesine çöz → aktif et.
@@ -311,22 +244,51 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     </button>
   );
 
-  // Kategori başına şablonları grupla
-  const templatesByCategory: Record<string, NotificationTemplateInfo[]> = {};
-  templates.forEach(t => {
-    if (!templatesByCategory[t.category]) templatesByCategory[t.category] = [];
-    templatesByCategory[t.category].push(t);
-  });
+  // Etkileşimli görünüp hiçbir şey yapmayan kontroller güveni zedeler — henüz
+  // gerçek bir işlevi olmayan ayarlar (tema, dil) SettingItem yerine bunu kullanır:
+  // tıklanabilir gibi görünmez, ok işareti yoktur.
+  const InfoItem = ({ icon, title, value, note, color = 'text-gray-500' }: any) => (
+    <div className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/5 first:rounded-t-2xl last:rounded-b-2xl border-b-0 last:border-b">
+      <div className="flex items-center gap-4">
+        <div className="text-gray-400">{icon}</div>
+        <span className="text-sm font-bold text-white">{title}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className={`text-xs font-bold ${color}`}>{value}</span>
+        {note && (
+          <span className="text-[9px] font-black uppercase tracking-wide text-gray-500 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">
+            {note}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
-  const categoryLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-    MATCH:    { label: 'Maç Bildirimleri', icon: <span>⚽</span> },
-    TEAM:     { label: 'Takım Bildirimleri', icon: <span>🛡️</span> },
-    SOCIAL:   { label: 'Sosyal', icon: <span>👥</span> },
-    REMINDER: { label: 'Hatırlatıcılar', icon: <span>⏰</span> },
-    DISCOVERY:{ label: 'Keşif', icon: <span>📍</span> },
-    PROMO:    { label: 'Kampanyalar', icon: <span>🎁</span> },
-    SYSTEM:   { label: 'Genel', icon: <span>📊</span> },
+  // Kategori başına şablonları grupla — tek kaynak NOTIFICATION_CATEGORIES
+  // (notifications/notificationPreferences.ts). Bilinmeyen bir kategori DB'de
+  // eklenirse "Diğer Bildirimler" altında yakalanır, sessizce kaybolmaz.
+  const categoryIcons: Record<string, React.ReactNode> = {
+    MATCH: <span>⚽</span>,
+    STAFF: <span>🧤</span>,
+    REMINDER: <span>⏰</span>,
+    DISCOVERY: <span>📍</span>,
+    GENERAL: <span>📊</span>,
   };
+  const categorizedKeys = new Set(NOTIFICATION_CATEGORIES.flatMap(c => c.preferences as string[]));
+  const notificationGroups = [
+    ...NOTIFICATION_CATEGORIES.map(cat => ({
+      key: cat.key,
+      label: cat.label,
+      icon: categoryIcons[cat.key] ?? <span>🔔</span>,
+      items: templates.filter(t => (cat.preferences as string[]).includes(t.type_key)),
+    })),
+    {
+      key: 'OTHER',
+      label: 'Diğer Bildirimler',
+      icon: <span>🔔</span>,
+      items: templates.filter(t => !categorizedKeys.has(t.type_key)),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#0A0E14] pb-16">
@@ -348,7 +310,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Hesap</h3>
           <div className="flex flex-col">
-            <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" />
+            <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" onClick={() => onNavigate('PROFILE')} />
             {hasMultipleRoles && (
               <SettingItem
                 icon={<Repeat size={20} />}
@@ -366,14 +328,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Uygulama</h3>
           <div className="flex flex-col">
-            <SettingItem
+            <InfoItem
               icon={<Globe size={20} />}
               title="Dil / Language"
-              value={lang === 'TR' ? 'Türkçe' : 'English'}
-              onClick={() => setLang(lang === 'TR' ? 'EN' : 'TR')}
+              value="Türkçe"
+              note="İngilizce yakında"
               color="text-yellow-500"
             />
-            <SettingItem icon={<Moon size={20} />} title="Tema" value="Karanlık Mod" />
+            <InfoItem icon={<Moon size={20} />} title="Tema" value="Karanlık Mod" />
           </div>
         </section>
 
@@ -439,19 +401,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                 className="overflow-hidden"
               >
                 <div className="mt-3 space-y-4">
-                  {Object.entries(categoryLabels).map(([catKey, catMeta]) => {
-                    const catTemplates = templatesByCategory[catKey] || [];
-                    if (catTemplates.length === 0) return null;
+                  {notificationGroups.map((group) => {
+                    if (group.items.length === 0) return null;
                     return (
-                      <div key={catKey} className="bg-[#0F1318] border border-white/5 rounded-2xl overflow-hidden">
+                      <div key={group.key} className="bg-[#0F1318] border border-white/5 rounded-2xl overflow-hidden">
                         {/* Kategori Başlığı */}
                         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 bg-white/[0.02]">
-                          <span className="text-base">{catMeta.icon}</span>
-                          <span className="text-xs font-black uppercase tracking-widest text-gray-300">{catMeta.label}</span>
+                          <span className="text-base">{group.icon}</span>
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-300">{group.label}</span>
                         </div>
 
                         {/* Bildirim Satırları */}
-                        {catTemplates.map((tmpl, idx) => {
+                        {group.items.map((tmpl, idx) => {
                           const prefKey = tmpl.type_key as NotificationPreferenceKey;
                           const pref = notificationPreferences[prefKey];
                           const isEnabled = pref?.enabled ?? true;
@@ -461,7 +422,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                           return (
                             <div
                               key={tmpl.type_key}
-                              className={`flex items-center justify-between px-4 py-3.5 ${idx < catTemplates.length - 1 ? 'border-b border-white/[0.04]' : ''}`}
+                              className={`flex items-center justify-between px-4 py-3.5 ${idx < group.items.length - 1 ? 'border-b border-white/[0.04]' : ''}`}
                             >
                               <div className="flex items-center gap-3 flex-1 pr-4">
                                 {isMandatory ? (
@@ -483,6 +444,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                                   <RefreshCw size={12} className="animate-spin text-gray-400" />
                                 )}
                                 <button
+                                  role="switch"
+                                  aria-checked={isEnabled}
                                   onClick={() => !isMandatory && handleToggleNotif(prefKey, !isEnabled)}
                                   disabled={isMandatory || isSaving}
                                   className={`relative w-11 h-6 rounded-full transition-all duration-200 ${
@@ -492,7 +455,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                                         ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.4)]'
                                         : 'bg-gray-700'
                                   }`}
-                                  aria-label={isEnabled ? 'Kapat' : 'Aç'}
+                                  aria-label={isMandatory ? `${tmpl.label_tr} — güvenlik nedeniyle zorunlu` : (isEnabled ? `${tmpl.label_tr} bildirimini kapat` : `${tmpl.label_tr} bildirimini aç`)}
                                 >
                                   <span
                                     className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${
@@ -601,18 +564,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <div className="space-y-3">
             {/* Kişisel Veri İndir */}
             <button
-              onClick={() => setShowDataDownloadModal(true)}
-              className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/5 rounded-2xl hover:bg-white/5 transition-colors"
+              onClick={handleExportPlayerData}
+              disabled={isExportingProfile}
+              className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/5 rounded-2xl hover:bg-white/5 transition-colors disabled:opacity-60"
             >
               <div className="flex items-center gap-4">
-                <div className="text-gray-400"><Download size={20} /></div>
+                <div className="text-gray-400">{isExportingProfile ? <RefreshCw size={20} className="animate-spin" /> : <Download size={20} />}</div>
                 <div className="text-left">
                   <span className="text-sm font-bold text-white block">Kişisel Verilerimi İndir</span>
-                  <span className="text-xs text-gray-500">KVKK kapsamında veri talebi</span>
+                  <span className="text-xs text-gray-500">{isExportingProfile ? 'Hazırlanıyor...' : 'KVKK m.11 kapsamında veri talebi'}</span>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-gray-600" />
+              {!isExportingProfile && <ChevronRight size={16} className="text-gray-600" />}
             </button>
+            {profileExportError && (
+              <div className="flex items-center gap-2 text-red-300 text-[11px] bg-red-900/20 border border-red-500/30 rounded-lg p-2">
+                <AlertCircle size={14} className="shrink-0" /> {profileExportError}
+              </div>
+            )}
 
             {/* Hesabı Kalıcı Sil */}
             <button
@@ -635,7 +604,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Destek</h3>
           <div className="flex flex-col">
-            <SettingItem icon={<HelpCircle size={20} />} title="Yardım Merkezi" value="" />
+            <SettingItem
+              icon={<HelpCircle size={20} />}
+              title="Yardım Merkezi"
+              value=""
+              onClick={() => { window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('OYNA — Yardım Talebi')}`; }}
+            />
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 font-bold text-sm hover:bg-red-500/20 transition-colors"
@@ -646,7 +620,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         </section>
 
         <div className="text-center">
-          <p className="text-[10px] text-gray-600 font-mono">v2.5.0 • Push Notifications Entegre</p>
+          <p className="text-[10px] text-gray-600 font-mono">v{APP_VERSION} • Push Notifications Entegre</p>
         </div>
 
       </main>
@@ -654,38 +628,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       {/* Aksiyon hatası toast */}
       <AnimatePresence>
         {toastMsg && <Toast message={toastMsg} variant="error" />}
-      </AnimatePresence>
-
-      {/* Kişisel veri indirme placeholder modal */}
-      <AnimatePresence>
-        {showDataDownloadModal && (
-          <motion.div
-            {...MODAL_BACKDROP}
-            className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
-            onClick={() => setShowDataDownloadModal(false)}
-          >
-            <motion.div
-              {...MODAL_CARD}
-              className="w-full max-w-sm rounded-[28px] p-6 text-center"
-              style={{ background: '#161B22', border: '1px solid rgba(255,255,255,0.08)' }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Download size={26} className="text-gray-300" />
-              </div>
-              <h3 className="text-lg font-black text-white mb-2">Yakında Aktif Olacak</h3>
-              <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                Kişisel veri indirme özelliği çok yakında kullanıma açılacak.
-              </p>
-              <button
-                onClick={() => setShowDataDownloadModal(false)}
-                className="w-full h-12 rounded-2xl font-black text-sm bg-white/10 text-white"
-              >
-                Tamam
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
       </AnimatePresence>
 
       {/* Hesap silme modal */}

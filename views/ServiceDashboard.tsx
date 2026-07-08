@@ -28,6 +28,7 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { subscribeToOpenMatches, applyToMatch } from '../services/matchService';
+import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 
@@ -1654,7 +1655,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <ChevronRight size={20} className="text-red-500 group-hover:translate-x-1 transition-transform" />
           </button>
           <div className="pt-8 text-center">
-              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">OYNA v2.4.0</p>
+              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">OYNA v{APP_VERSION}</p>
           </div>
       </motion.div>
   );

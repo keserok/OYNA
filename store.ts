@@ -116,6 +116,30 @@ function persistActiveRegion(region: OynaLocation | null) {
   }
 }
 
+// ─── Arama yarıçapı kalıcılığı ────────────────────────────────────
+// activeRegion ile aynı desen: olmadan her açılışta sessizce 25km'ye dönüyordu.
+const SEARCH_RADIUS_KEY = 'oyna_search_radius';
+
+function loadSearchRadius(): number {
+  if (typeof window === 'undefined') return 25;
+  try {
+    const raw = localStorage.getItem(SEARCH_RADIUS_KEY);
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) && parsed >= 5 && parsed <= 50 ? parsed : 25;
+  } catch {
+    return 25;
+  }
+}
+
+function persistSearchRadius(radius: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SEARCH_RADIUS_KEY, String(radius));
+  } catch {
+    /* yoksay */
+  }
+}
+
 // Kullanıcılar Supabase'den hydrate edilir; mock veri yok.
 export const INITIAL_USERS: AdminUser[] = [];
 
@@ -510,8 +534,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUserLocation: (userLocation) => set({ userLocation }),
   locationPermissionStatus: 'NOT_REQUESTED',
   setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
-  searchRadius: 25,
-  setSearchRadius: (searchRadius) => set({ searchRadius }),
+  searchRadius: loadSearchRadius(),
+  setSearchRadius: (searchRadius) => {
+    set({ searchRadius });
+    persistSearchRadius(searchRadius);
+  },
   activeRegion: loadActiveRegion(),
   setActiveRegion: (activeRegion) => {
     set({ activeRegion });

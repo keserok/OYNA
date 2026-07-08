@@ -1,11 +1,14 @@
 /// <reference types="vitest/config" />
 import path from 'path';
+import { readFileSync } from 'fs';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 const ADMIN_DEV = process.env.ADMIN_DEV === '1';
+// Tek kaynak: tüm ekranlardaki sürüm rozetleri buradan (import.meta.env.VITE_APP_VERSION) okunur.
+const APP_VERSION = (JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')) as { version: string }).version;
 
 function adminDevRedirect(): Plugin {
   return {
@@ -53,6 +56,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     entries: ['index.html', 'admin-panel/admin.html']
+  },
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(APP_VERSION),
   },
   plugins: [adminDevRedirect(), react(), tailwindcss()],
   build: {
