@@ -48,6 +48,10 @@ export interface OwnerMenuViewProps {
   onPlanUpgrade?: () => void;
   isReadOnly?: boolean;
   canWithdrawals?: boolean;
+  /** Uygulama-içi rol geçişi sayfasını (RoleSwitcher) açar. */
+  onSwitchRole?: () => void;
+  /** Kullanıcı birden çok role sahip mi? (yalnız o zaman rol geçişi anlamlı) */
+  canSwitchRole?: boolean;
 }
 
 function StatusBadge({
@@ -126,6 +130,8 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onPlanUpgrade,
   isReadOnly = false,
   canWithdrawals = true,
+  onSwitchRole,
+  canSwitchRole = false,
 }) => {
   const verificationLabel =
     stats.verificationStatus === 'approved'
@@ -190,24 +196,28 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         </div>
       )}
 
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onBack}
-        onKeyDown={(e) => e.key === 'Enter' && onBack()}
-        className="bg-gradient-to-r from-blue-900/30 to-[#161B22] p-5 rounded-[24px] border border-blue-500/20 mb-8 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all active:scale-[0.98]"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-500/15 rounded-xl flex items-center justify-center text-blue-400">
-            <RefreshCw size={24} />
+      {/* Uygulama-içi rol geçişi — aktif rolü gerçekten değiştirir (RoleSwitcher).
+          Eski davranış yalnız onBack çağırıyordu; oyuncu moduna GEÇMİYORDU. */}
+      {onSwitchRole && canSwitchRole && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onSwitchRole}
+          onKeyDown={(e) => e.key === 'Enter' && onSwitchRole()}
+          className="bg-gradient-to-r from-blue-900/30 to-[#161B22] p-5 rounded-[24px] border border-blue-500/20 mb-8 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500/15 rounded-xl flex items-center justify-center text-blue-400">
+              <RefreshCw size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-white">Oyuncu Moduna Geç</h3>
+              <p className="text-[10px] text-blue-300/70 font-medium">Oyuncu arayüzüne / maçlara geç</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-white">Oyuncu Moduna Geç</h3>
-            <p className="text-[10px] text-blue-300/70 font-medium">Oyuncu girişine yönlendir</p>
-          </div>
+          <ChevronRight size={16} className="text-blue-400" />
         </div>
-        <ChevronRight size={16} className="text-blue-400" />
-      </div>
+      )}
 
       <div className="space-y-6">
         <section>

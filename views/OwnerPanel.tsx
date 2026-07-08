@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { useAppStore } from '../store';
+import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
@@ -1461,7 +1462,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
  const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding }) => {
   const notify = useOwnerToast();
-  const { setIsNotificationsOpen } = useAppStore();
+  const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles } = useAppStore();
+  const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
   const [courts, setCourts] = useState<PitchCourt[]>([]);
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
@@ -2233,6 +2235,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onPitches={() => {
             if (guardWrite()) setActiveTab('PITCHES');
           }}
+          onSwitchRole={() => setIsRoleSwitcherOpen(true)}
+          canSwitchRole={canSwitchRole}
           onPlanUpgrade={ownerAccount?.plan_tier !== 'enterprise' ? handlePlanUpgrade : undefined}
           isReadOnly={isReadOnly}
           canWithdrawals={can.withdrawals}
