@@ -14,6 +14,7 @@ import {
   type FinanceDashboardData,
 } from '../../services/pitchOwnerService';
 import { useOwnerToast } from './components/useOwnerToast';
+import { localDateISO } from './ownerCalendarHelpers';
 
 const EXPENSE_COLORS: Record<string, string> = {
   Fatura: '#00F5FF',
@@ -41,7 +42,9 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const [newExpense, setNewExpense] = useState({ title: '', amount: '', category: 'Diğer' });
   const [newDebtor, setNewDebtor] = useState({ name: '', phone: '', amount: '' });
 
-  const monthKey = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  // B6: UTC yerine yerel ay anahtarı — TR gecesinde (00:00-03:00) ayın 1'inde
+  // gider listesi yanlış ayı göstermesin.
+  const monthKey = useMemo(() => localDateISO().slice(0, 7), []);
 
   const load = React.useCallback(async () => {
     if (!pitchId || pitchId.startsWith('mock-')) {

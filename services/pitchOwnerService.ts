@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { supabase } from '../supabaseClient';
+import { localDateISO } from '../views/owner/ownerCalendarHelpers';
 import type {
   OwnerPitch,
   OwnerDailySummary,
@@ -159,7 +160,9 @@ function nextMonthFirstDay(month: string): string {
 }
 
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  // B6: UTC (toISOString) yerine cihaz-yerel gün. TR'de (UTC+3) gece 00:00-03:00
+  // arası toISOString önceki günü döndürüyordu → owner "bugün/bu ay" pencereleri kayıyordu.
+  return localDateISO();
 }
 
 function addDaysISO(base: string, days: number): string {
@@ -316,6 +319,9 @@ export async function recordBookingPayment(
       payment_method: method,
       note: note ?? null,
       recorded_by: uid,
+      // A2: owner'ın elle girdiği ödeme OYNA'dan geçmez → cüzdana kredi YAZILMAZ.
+      // Trigger credit_owner_booking_earning bu damgayla owner-manuel kartı krediden çıkarır.
+      source: 'OWNER_MANUAL',
     });
     if (error) throw error;
     // pitch_bookings.paid_amount + payment_status DB trigger ile güncellenir.
@@ -999,6 +1005,22 @@ export interface HourlyOccupancyCell {
 
 const DEFAULT_OPERATING_HOURS = 16; // 08:00–00:00
 
+/**
+ * B4: Bir rezervasyonun kapsadığı saat sayısı. '00:00' bitişini (ve gece-taşan
+ * aralıkları) 24 kabul eder; 20:00-22:00 → 2 saat, 23:00-00:00 → 1 saat.
+ */
+function spanHours(start?: string | null, end?: string | null): number {
+  const toH = (t?: string | null): number => {
+    if (!t) return 0;
+    const [h, m] = String(t).split(':').map(Number);
+    return (Number.isFinite(h) ? h : 0) + (Number.isFinite(m) ? m : 0) / 60;
+  };
+  const s = toH(start);
+  let e = toH(end);
+  if (e <= s) e += 24; // '00:00' bitişi veya gece-taşan
+  return Math.max(0, e - s);
+}
+
 export function buildEmptyHourlyGrid(courtCount = 0): HourlyOccupancyCell[] {
   return Array.from({ length: 24 }, (_, h) => ({
     time: `${h.toString().padStart(2, '0')}:00`,
@@ -1015,12 +1037,18 @@ export function buildHourlyOccupancyGrid(
   const activeCourts = courts.length > 0 ? courts : [{ id: '_default', name: 'Saha' }];
   return Array.from({ length: 24 }, (_, h) => {
     const time = `${h.toString().padStart(2, '0')}:00`;
-    const hourPrefix = time.slice(0, 2);
     const pitches: (null | 'DAILY' | 'SUB')[] = activeCourts.map((court) => {
+      // B4: başlangıç saati yerine KAPSANAN her saati işaretle → çok-saatlik
+      // rezervasyon (20:00-22:00) hem 20 hem 21 hücresini doldurur (çifte-satış kapanır).
       const match = bookings.find((b) => {
         if (b.court_id !== court.id) return false;
-        const startH = (b.start_time ?? '').slice(0, 2);
-        return startH === hourPrefix;
+        if (b.status === 'CANCELLED') return false;
+        const sH = Number((b.start_time ?? '').slice(0, 2));
+        let eH = Number((b.end_time ?? '').slice(0, 2));
+        if ((b.end_time ?? '').slice(0, 2) === '00') eH = 24; // gece yarısı bitişi
+        if (!Number.isFinite(sH)) return false;
+        if (!Number.isFinite(eH) || eH <= sH) eH = sH + 1; // end yoksa 1 saat varsay
+        return h >= sH && h < eH;
       });
       if (!match) return null;
       return match.source === 'SUBSCRIPTION' ? 'SUB' : 'DAILY';
@@ -1042,7 +1070,10 @@ export function computeCourtDailyStats(
     const confirmed = courtBookings.filter((b) => b.status === 'CONFIRMED');
     const revenue = confirmed.reduce((s, b) => s + (b.price ?? 0), 0);
     const collected = courtBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
-    const bookedHours = courtBookings.length;
+    // B4: rezervasyon SAYISI yerine kapladığı SAAT toplamı (2 saatlik kiralama = 2 saat).
+    const bookedHours = courtBookings
+      .filter((b) => b.status !== 'CANCELLED')
+      .reduce((s, b) => s + spanHours(b.start_time, b.end_time), 0);
     const totalHours = operatingHours;
     const occupancyPercent =
       totalHours > 0 ? Math.round((bookedHours / totalHours) * 100) : 0;
@@ -1065,7 +1096,10 @@ export function computeOverallOccupancy(
 ): number {
   if (courtCount <= 0) return 0;
   const totalSlots = courtCount * operatingHours;
-  const booked = bookings.filter((b) => b.status !== 'CANCELLED').length;
+  // B4: rezervasyon SAYISI yerine kapladığı SAAT toplamı (gerçek doluluk).
+  const booked = bookings
+    .filter((b) => b.status !== 'CANCELLED')
+    .reduce((s, b) => s + spanHours(b.start_time, b.end_time), 0);
   return Math.min(100, Math.round((booked / totalSlots) * 100));
 }
 
@@ -1277,7 +1311,21 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
   });
 
   const todayRows = await getPitchBookings(pitchId, todayISO());
-  const grid = buildHourlyOccupancyGrid(todayRows, [{ id: 'x', name: 'all' }]);
+  // B4: sahte court ('x') hiçbir gerçek court_id ile eşleşmediğinden heatmap DAİMA 0
+  // kalıyordu. Gerçek aktif court listesini geçir → yoğunluk gerçek veriyi yansıtır.
+  const { data: courtRows } = await supabase
+    .from('courts')
+    .select('id, name')
+    .eq('pitch_id', pitchId)
+    .eq('is_active', true);
+  const courtsForGrid = ((courtRows ?? []) as { id: string; name: string }[]).map((c) => ({
+    id: c.id,
+    name: c.name,
+  }));
+  const grid = buildHourlyOccupancyGrid(
+    todayRows,
+    courtsForGrid.length ? courtsForGrid : [{ id: '_default', name: 'Saha' }],
+  );
   const maxOcc = Math.max(...grid.map((g) => g.occupancy), 1);
   const hourlyIntensity = grid.map((g) => ({
     hour: g.time,
@@ -1637,9 +1685,12 @@ export async function getOrCreateScoreToken(matchId: string): Promise<string> {
 export function subscribeToOwnerBookings(
   pitchId: string,
   onChange: () => void,
+  channelKey = 'default',
 ): () => void {
+  // OP-P1-10: aynı topic'e iki abonelik (panel + takvim) çakışıyordu; benzersiz
+  // channelKey ile her tüketici kendi kanalını alır (biri diğerini kapatmaz).
   const channel = supabase
-    .channel(`owner-bookings-${pitchId}`)
+    .channel(`owner-bookings-${channelKey}-${pitchId}`)
     .on(
       'postgres_changes',
       {
