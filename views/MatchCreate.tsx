@@ -6,6 +6,7 @@ import {
   Feather, Scale, Wallet, Radio, KeyRound,
 } from 'lucide-react';
 import { AppView } from '../types';
+import { useAppStore } from '../store';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
 import SharedPitch from '../components/SharedPitch';
@@ -88,7 +89,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     selectedSlotForPicker, setSelectedSlotForPicker,
     format, setFormat,
     dna, setDna,
-    setManualBudget,
     matchTitle, setMatchTitle,
     homeTeamName, setHomeTeamName,
     awayTeamName, setAwayTeamName,
@@ -106,6 +106,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     loadSquadFromTeam, readiness, squadCount,
     publishMatch,
   } = useMatchCreate(onNavigate);
+
+  const setSocialTarget = useAppStore(s => s.setSocialTarget);
 
   const assignedIds = useMemo(
     () => pitchSlots.filter(s => s.player).map(s => (s.player as any).id as string),
@@ -301,6 +303,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             openSlotCount={openSlotCount}
             onAddFriends={addPlayersToSlots}
             onPickTeam={async (teamId, teamName) => { await loadSquadFromTeam(teamId, teamName); }}
+            onGoToTeamCreate={() => { setSocialTarget({ tab: 'TEAMS', subTab: 'CREATE' }); onNavigate('SOCIAL'); }}
           />
         )}
 
@@ -413,13 +416,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 flex items-center gap-1.5"><Wallet size={12} /> Ücret (Kişi Başı)</p>
-                  <span className="text-sm font-black text-white">{costPerPerson > 0 ? `${costPerPerson} ₺` : 'Ücretsiz'}</span>
+              <div className="space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 flex items-center gap-1.5"><Wallet size={12} /> Kişi Başı Ücret</p>
+                <div className="rounded-2xl bg-white/[0.03] border border-white/10 px-4 py-3.5 flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-black text-white">{costPerPerson > 0 ? `${costPerPerson} ₺` : '—'}</p>
+                    <p className="text-[10px] text-white/40 mt-0.5">Saha ücreti ÷ toplam oyuncu · otomatik</p>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] border border-[#39FF14]/30 bg-[#39FF14]/[0.06] rounded-full px-2.5 py-1">Otomatik</span>
                 </div>
-                <input type="range" min="0" max="500" step="10" value={costPerPerson} onChange={e => setManualBudget(parseInt(e.target.value))} className="w-full accent-[#FACC15]" />
-                <div className="flex justify-between text-[9px] text-white/25 font-bold"><span>Ücretsiz</span><span>500 ₺</span></div>
+                <p className="text-[10px] text-white/30 leading-relaxed">Sahanın toplam ücreti iki takımdaki toplam oyuncuya bölünür; kurucu değiştiremez.</p>
               </div>
 
               <div className="space-y-3">

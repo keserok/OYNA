@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Check, Users, Shield, Plus, Loader2, ChevronRight } from 'lucide-react';
+import { X, Search, Check, Users, Shield, Loader2, ChevronRight } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import Chip from '../ui/Chip';
 import SegmentedTabs from '../ui/SegmentedTabs';
@@ -9,10 +9,7 @@ import SkeletonList from '../ui/SkeletonList';
 import TeamCrest from './TeamCrest';
 import { isUserOnline } from '../../utils/lastSeen';
 import { getFriends, FriendRow } from '../../services/socialService';
-import {
-  getMyTeams, MyTeamRow, formatLabel, createTeamRpc, parseTeamError, TeamFormat,
-} from '../../services/teamSocialService';
-import { useAppStore } from '../../store';
+import { getMyTeams, MyTeamRow, formatLabel } from '../../services/teamSocialService';
 
 // ════════════════════════════════════════════════════════════════════════
 // MatchSquadPicker — maç oluşturmada kadro kurma seçicisi (SOSYAL stilli).
@@ -35,13 +32,14 @@ interface MatchSquadPickerProps {
   assignedIds?: string[];
   /** Kalan boş slot sayısı — çoklu seçimde üst sınır ipucu. */
   openSlotCount?: number;
+  /** Takımı olmayan kullanıcıyı Sosyal → Takım Oluştur'a yönlendirir. */
+  onGoToTeamCreate?: () => void;
 }
 
-type Tab = 'FRIENDS' | 'TEAMS' | 'CREATE';
-const CREATE_FORMATS: TeamFormat[] = ['5v5', '6v6', '7v7', '8v8', '11v11'];
+type Tab = 'FRIENDS' | 'TEAMS';
 
 const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
-  onClose, onAddFriends, onPickTeam, onToast, assignedIds = [], openSlotCount,
+  onClose, onAddFriends, onPickTeam, onToast, assignedIds = [], openSlotCount, onGoToTeamCreate,
 }) => {
   const [tab, setTab] = useState<Tab>('FRIENDS');
 
@@ -56,14 +54,6 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
   const [teams, setTeams] = useState<MyTeamRow[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [pickingTeam, setPickingTeam] = useState<string | null>(null);
-
-  // ── Hızlı takım oluşturma ──
-  const [newName, setNewName] = useState('');
-  const [newCity, setNewCity] = useState('');
-  const [newFormat, setNewFormat] = useState<TeamFormat>('7v7');
-  const [creating, setCreating] = useState(false);
-
-  const loadMyTeams = useAppStore(s => s.loadMyTeams);
 
   const assigned = useMemo(() => new Set(assignedIds), [assignedIds]);
 
@@ -126,30 +116,6 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
     }
   };
 
-  const quickCreate = async () => {
-    const name = newName.trim();
-    if (name.length < 2 || creating) return;
-    setCreating(true);
-    try {
-      const { team_id } = await createTeamRpc({
-        name,
-        city: newCity.trim() || undefined,
-        format: newFormat,
-        is_recruiting: true,
-      });
-      onToast?.(`"${name}" kuruldu — kadroyu davetle doldur ⚽`);
-      await Promise.all([loadTeams(), loadMyTeams().catch(() => {})]);
-      setNewName(''); setNewCity('');
-      // Yeni takımı hemen ev sahibi yap ve sahaya (şimdilik yalnız kaptanı) diz
-      await onPickTeam(team_id, name);
-      onClose();
-    } catch (e) {
-      onToast?.(parseTeamError(e));
-    } finally {
-      setCreating(false);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -177,7 +143,6 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
           items={[
             { id: 'FRIENDS', label: 'Arkadaşlar' },
             { id: 'TEAMS', label: 'Takımlarım' },
-            { id: 'CREATE', label: 'Takım Kur', icon: <Plus size={13} /> },
           ]}
         />
       </div>
@@ -264,8 +229,8 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
                 <EmptyState
                   icon={Shield}
                   title="Henüz takımın yok"
-                  description="Hızlıca bir takım kurup kadronu sahaya dizebilirsin."
-                  actions={[{ label: '+ Takım Kur', onClick: () => setTab('CREATE'), primary: true }]}
+                  description="Sosyal sekmesinden takımını kurup kadronu buradan sahaya dizebilirsin."
+                  actions={onGoToTeamCreate ? [{ label: 'Takım Oluştur', onClick: onGoToTeamCreate, primary: true }] : []}
                 />
               ) : (
                 <div className="space-y-2.5">
@@ -309,60 +274,6 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
             </motion.div>
           )}
 
-          {tab === 'CREATE' && (
-            <motion.div key="create" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.16 }}>
-              <div className="rounded-3xl bg-white/4 border border-white/8 p-5 space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30 flex items-center justify-center">
-                    <Shield size={22} className="text-[#39FF14]" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-white italic uppercase tracking-tight">Hızlı Takım Kur</h3>
-                    <p className="text-[11px] text-white/45">Sadece isim yeter — sonra arkadaşlarını davet et.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Takım Adı</label>
-                  <input
-                    value={newName}
-                    onChange={e => setNewName(e.target.value.slice(0, 30))}
-                    placeholder="ör. Ordu Şimşekleri"
-                    autoFocus
-                    className="w-full h-12 px-4 rounded-2xl bg-white/[0.03] border border-white/10 text-sm font-semibold text-white placeholder:text-white/25 focus:outline-none focus:border-[#39FF14]/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Şehir <span className="text-white/25 normal-case font-normal">(opsiyonel)</span></label>
-                  <input
-                    value={newCity}
-                    onChange={e => setNewCity(e.target.value.slice(0, 30))}
-                    placeholder="ör. Ordu"
-                    className="w-full h-12 px-4 rounded-2xl bg-white/[0.03] border border-white/10 text-sm font-semibold text-white placeholder:text-white/25 focus:outline-none focus:border-white/25"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Varsayılan Format</label>
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                    {CREATE_FORMATS.map(f => (
-                      <Chip key={f} label={f} selected={newFormat === f} onClick={() => setNewFormat(f)} />
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  disabled={newName.trim().length < 2 || creating}
-                  onClick={quickCreate}
-                  className="w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm uppercase tracking-widest disabled:opacity-40 active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  {creating ? <><Loader2 size={16} className="animate-spin" /> Kuruluyor…</> : 'Takımı Kur & Kadroya Diz'}
-                </button>
-                <p className="text-[10px] text-white/30 text-center leading-relaxed">
-                  Detaylı arma, renk ve toplu davet için Sosyal → Takım Oluştur sihirbazını kullanabilirsin.
-                </p>
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
 

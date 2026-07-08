@@ -230,12 +230,18 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       setOrientation(newOrient);
   };
 
+  // Kişi başı ücret KURUCU tarafından belirlenemez: sahanın toplam ücreti iki
+  // takımdaki toplam oyuncuya (perTeam×2) bölünür. Maç-oluşturma arayüzünden
+  // kurulan maçlarda kullanıcıya %5 fazla yansır (platform hizmet payı). Yukarı yuvarlanır.
+  const MATCH_CREATE_SURCHARGE = 1.05;
   const calculatedBudget = useMemo(() => {
     // totalPrice yoksa (seed/taslak sahte Pitch'lerinde olmayabilir) NaN'a düşme.
-    return selectedPitch && selectedPitch.totalPrice ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
+    if (!selectedPitch || !selectedPitch.totalPrice) return 0;
+    return Math.ceil((selectedPitch.totalPrice / (perTeam * 2)) * MATCH_CREATE_SURCHARGE);
   }, [selectedPitch, perTeam]);
 
-  const costPerPerson = (manualBudget !== null && manualBudget >= 0) ? manualBudget : calculatedBudget;
+  // Manuel override kaldırıldı — ücret her zaman otomatik hesaplanır.
+  const costPerPerson = calculatedBudget;
 
   // ── UX: Profile göre otomatik ön-doldurma (tek sefer) ────────────────────
   // Kurucu, maçı kurarken zaten oynayacak: onu kendi mevkisine göre sahaya
