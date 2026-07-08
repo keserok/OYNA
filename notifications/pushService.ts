@@ -58,7 +58,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   gk_rejected:        { enabled: true,  mandatory: true  },
   ref_accepted:       { enabled: true,  mandatory: true  },
   ref_rejected:       { enabled: true,  mandatory: true  },
-  match_reminder_1h:  { enabled: true,  mandatory: false },
+  match_reminder_1h:  { enabled: true,  mandatory: true  },
   match_reminder_24h: { enabled: true,  mandatory: false },
   nearby_match:       { enabled: false, mandatory: false },
   promo_offers:       { enabled: false, mandatory: false },

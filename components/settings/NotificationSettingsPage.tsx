@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Bell, Lock, RefreshCw, Moon, AlertCircle, Smartphone, ChevronDown,
+  Bell, Lock, RefreshCw, Moon, AlertCircle, ChevronDown,
   Zap, Trophy, Volume2,
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
@@ -32,9 +32,26 @@ interface NotificationSettingsPageProps {
 
 interface QuietHours { start: string; end: string }
 
+// Düdük — standart bir emoji/lucide ikonu olmadığından hakemi temsilen küçük SVG.
+const WhistleIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M14 10h7a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1.2" />
+    <circle cx="8" cy="14" r="6" />
+    <circle cx="8" cy="14" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+// Kadro = kaleci (eldiven) + hakem (düdük)
+const StaffIcon: React.FC = () => (
+  <span className="inline-flex items-center gap-1 text-amber-300">
+    <span>🧤</span>
+    <WhistleIcon />
+  </span>
+);
+
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   MATCH: <span>⚽</span>,
-  STAFF: <span>🧤</span>,
+  STAFF: <StaffIcon />,
   REMINDER: <span>⏰</span>,
   DISCOVERY: <span>📍</span>,
   GENERAL: <span>📊</span>,
@@ -48,6 +65,10 @@ const PRESETS: { key: string; label: string; icon: React.ReactNode; on: string[]
   { key: 'MATCH_ONLY', label: 'Sadece Maç', icon: <Trophy size={14} />, on: ['MATCH', 'STAFF', 'REMINDER'] },
   { key: 'QUIET', label: 'Sessiz', icon: <Moon size={14} />, on: [] },
 ];
+
+// Üründe her zaman zorunlu türler — DB şablonu/kayıtlı tercih gecikse bile
+// UI'da kilitli kalır (ör. maçtan 1 saat önce hatırlatıcısı kapatılamaz).
+const FORCED_MANDATORY = new Set<string>(['match_reminder_1h']);
 
 const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ open, onClose }) => {
   const { notificationPreferences, setNotificationPreferences } = useAppStore();
@@ -112,6 +133,15 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
     [notificationPreferences],
   );
 
+  // Tek zorunluluk kaynağı: kayıtlı tercih VEYA DB şablonu VEYA ürün-zorunlusu.
+  const isMandatory = useCallback(
+    (t: NotificationTemplateInfo) => {
+      const cur = prefOf(t.type_key);
+      return !!(cur?.mandatory || t.is_mandatory || FORCED_MANDATORY.has(t.type_key));
+    },
+    [prefOf],
+  );
+
   // Tek yazma yolu: iyimser store güncellemesi + DB. quiet_hours dahil tüm
   // ekstra alanları korur (updateAllNotificationPreferences pass-through yapar).
   const persist = useCallback(async (next: NotificationPreferences) => {
@@ -127,17 +157,15 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
     const next: NotificationPreferences = { ...notificationPreferences };
     items.forEach(t => {
       const key = t.type_key as NotificationPreferenceKey;
-      const cur = next[key];
-      const mandatory = cur?.mandatory || t.is_mandatory;
-      if (!mandatory) next[key] = { enabled, mandatory: false };
+      if (!isMandatory(t)) next[key] = { enabled, mandatory: false };
     });
     persist(next);
   };
 
   const toggleSingle = (t: NotificationTemplateInfo) => {
     const key = t.type_key as NotificationPreferenceKey;
+    if (isMandatory(t)) return;
     const cur = notificationPreferences[key];
-    if (cur?.mandatory || t.is_mandatory) return;
     const next: NotificationPreferences = { ...notificationPreferences, [key]: { enabled: !(cur?.enabled ?? true), mandatory: false } };
     persist(next);
   };
@@ -148,9 +176,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
       const enabled = on.includes(g.key);
       g.items.forEach(t => {
         const key = t.type_key as NotificationPreferenceKey;
-        const cur = next[key];
-        const mandatory = cur?.mandatory || t.is_mandatory;
-        if (!mandatory) next[key] = { enabled, mandatory: false };
+        if (!isMandatory(t)) next[key] = { enabled, mandatory: false };
       });
     });
     persist(next);
@@ -167,29 +193,15 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
 
   // Kategori ana anahtar durumu: herhangi bir zorunlu-olmayan açıksa "açık"
   const categoryEnabled = (items: NotificationTemplateInfo[]) =>
-    items.some(t => {
-      const cur = prefOf(t.type_key);
-      const mandatory = cur?.mandatory || t.is_mandatory;
-      return !mandatory && (cur?.enabled ?? true);
-    });
+    items.some(t => !isMandatory(t) && (prefOf(t.type_key)?.enabled ?? true));
 
   const hasOptional = (items: NotificationTemplateInfo[]) =>
-    items.some(t => !(prefOf(t.type_key)?.mandatory || t.is_mandatory));
+    items.some(t => !isMandatory(t));
 
   return (
     <SettingsSubPage open={open} onClose={onClose} title="Bildirimler" subtitle="Neyin bildirileceğini yönet">
-      {/* Cihaz izni uyarısı */}
-      {!isNative ? (
-        <div className="mb-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3">
-          <Smartphone size={18} className="text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-bold text-amber-300">Telefon bildirimleri uygulama gerektirir</p>
-            <p className="text-xs text-amber-200/70 mt-0.5 leading-relaxed">
-              Ayarların burada kaydedilir ve iOS/Android uygulamasında devreye girer.
-            </p>
-          </div>
-        </div>
-      ) : permissionDenied ? (
+      {/* Cihaz izni uyarısı — yalnızca native cihazda izin kapalıysa */}
+      {isNative && permissionDenied && (
         <div className="mb-5 bg-red-500/10 border border-red-500/25 rounded-2xl p-4 flex items-start gap-3">
           <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
           <div>
@@ -200,7 +212,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
             </p>
           </div>
         </div>
-      ) : null}
+      )}
 
       {/* Hızlı ön ayarlar */}
       <div className="mb-5">
@@ -332,8 +344,8 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                     >
                       {group.items.map((t, idx) => {
                         const cur = prefOf(t.type_key);
-                        const mandatory = cur?.mandatory || t.is_mandatory;
-                        const enabled = cur?.enabled ?? true;
+                        const mandatory = isMandatory(t);
+                        const enabled = mandatory ? true : (cur?.enabled ?? true);
                         return (
                           <div
                             key={t.type_key}
@@ -343,7 +355,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                               {mandatory && <Lock size={12} className="text-gray-500 shrink-0" />}
                               <div className="min-w-0">
                                 <span className="text-[13px] font-semibold text-white block truncate">{t.label_tr}</span>
-                                {mandatory && <span className="text-[10px] text-gray-500">Güvenlik nedeniyle zorunlu</span>}
+                                {mandatory && <span className="text-[10px] text-gray-500">Zorunlu — kapatılamaz</span>}
                               </div>
                             </div>
                             <button

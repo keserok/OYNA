@@ -44,7 +44,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
   const {
     setUserLocation, setLocationPermissionStatus, activeRegion, setActiveRegion,
-    searchRadius, setSearchRadius, notificationPreferences, myRoles, setIsRoleSwitcherOpen,
+    selectedRegions, searchRadius, setSearchRadius, notificationPreferences, myRoles, setIsRoleSwitcherOpen,
   } = useAppStore();
   const hasMultipleRoles = myRoles.length > 1;
 
@@ -272,29 +272,37 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         {/* Konum */}
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Konum</h3>
-          <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 space-y-4">
+          <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 space-y-3">
             <div>
-              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2 ml-0.5">Aktif Bölge</span>
-              <LocationBadge region={activeRegion} interactive onClick={() => setSubPage('region')} className="w-full" />
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2 ml-0.5">
+                Bölgelerim{selectedRegions.length > 1 ? ` (${selectedRegions.length})` : ''}
+              </span>
+              {selectedRegions.length > 1 ? (
+                <button
+                  onClick={() => setSubPage('region')}
+                  className="w-full flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-[#0F1318] border border-[#39FF14]/20 hover:bg-white/5 transition-colors text-left"
+                >
+                  {selectedRegions.map((r, i) => (
+                    <span key={`${r.city}|${r.district ?? ''}|${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-bold">
+                      <MapPin size={11} /> {r.label}
+                    </span>
+                  ))}
+                  <ChevronRight size={16} className="text-gray-500 ml-auto" />
+                </button>
+              ) : (
+                <LocationBadge region={activeRegion} interactive onClick={() => setSubPage('region')} className="w-full" />
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setSubPage('region')}
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#161B22] border border-white/10 hover:bg-white/5 transition-colors"
-              >
-                <MapPin size={16} className="text-[#FFAA00]" />
-                <span className="text-xs font-bold text-white">Elle Seç</span>
-              </button>
-              <button
-                onClick={handleUpdateLocation}
-                disabled={isUpdatingLocation}
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#00B0FF]/8 border border-[#00B0FF]/25 hover:bg-[#00B0FF]/12 transition-colors disabled:opacity-60"
-              >
-                {isUpdatingLocation ? <RefreshCw size={16} className="animate-spin text-[#00B0FF]" /> : <MapPin size={16} className="text-[#00B0FF]" />}
-                <span className="text-xs font-bold text-white">Otomatik Bul</span>
-              </button>
-            </div>
+            {/* Otomatik Bul — bölge butonuyla aynı hiyerarşide, tam genişlik */}
+            <button
+              onClick={handleUpdateLocation}
+              disabled={isUpdatingLocation}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#00B0FF]/8 border border-[#00B0FF]/25 hover:bg-[#00B0FF]/12 transition-colors disabled:opacity-60"
+            >
+              {isUpdatingLocation ? <RefreshCw size={16} className="animate-spin text-[#00B0FF]" /> : <MapPin size={16} className="text-[#00B0FF]" />}
+              <span className="text-sm font-bold text-white">Konumumu Otomatik Bul</span>
+            </button>
 
             <div className="pt-1">
               <div className="flex items-center justify-between mb-2">
@@ -310,7 +318,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                 onChange={(e) => setSearchRadius(Number(e.target.value))}
                 className="w-full accent-[#39FF14] cursor-pointer"
               />
-              <p className="text-[10px] text-gray-500 italic mt-1.5">Yakınındaki maçların listeleneceği arama çemberi — 5 km adımlarla (5–50 KM).</p>
+              <p className="text-[10px] text-gray-500 italic mt-1.5">Her seçili bölgenin merkezinden {searchRadius} KM çapındaki maçlar listelenir — 5 km adımlarla (5–50 KM).</p>
             </div>
           </div>
         </section>

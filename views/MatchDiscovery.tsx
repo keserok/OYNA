@@ -46,6 +46,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     acceptPlayerSeekAdRequest,
     navigateTo,
     userLocation,
+    selectedRegions,
     searchRadius,
     setSearchRadius
   } = useAppStore();
@@ -120,27 +121,41 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
 
   useEffect(() => {
-    if (userLocation) {
-        fetchNearbyMatches(userLocation.lat, userLocation.lng, searchRadius).then((results) => {
-            if (results && results.length > 0) {
-                // get_nearby_matches HAM matches satırı döndürür (SETOF matches);
-                // satırı olduğu gibi yay ki kart tüm alanları (location/date/time/
-                // slots/price...) bulsun. Eksik alanlar için güvenli varsayılanlar.
-                const mapped = results.map((m: any) => ({
-                    ...m,
-                    title: m.title || `${m.location || 'Maç'}`,
-                    distance: m.distance_meters ?? m.distance,
-                }));
-                setNearbyMatches(mapped);
-            } else {
-                setNearbyMatches([]);
-            }
-        });
+    // Çoklu bölge: her seçili bölgenin merkezinden yakındaki maçları çek ve
+    // id ile birleştir (kullanıcı seçtiği tüm bölgelerdeki maçları görsün).
+    // Seçili bölge yoksa GPS konumuna göre tekil davranışa döner.
+    const centers = (
+      selectedRegions.length > 0
+        ? selectedRegions.map((r) => r.coordinates).filter(Boolean)
+        : userLocation ? [userLocation] : []
+    ) as { lat: number; lng: number }[];
+
+    if (centers.length === 0) {
+      setNearbyMatches([]);
+      return;
     }
-  }, [userLocation, searchRadius]);
+
+    let cancelled = false;
+    Promise.all(centers.map((c) => fetchNearbyMatches(c.lat, c.lng, searchRadius))).then((perCenter) => {
+      if (cancelled) return;
+      // get_nearby_matches HAM matches satırı döndürür (SETOF matches); satırı
+      // olduğu gibi yay ki kart tüm alanları bulsun. id ile tekilleştir.
+      const byId = new Map<string, any>();
+      perCenter.flat().forEach((m: any) => {
+        if (!m) return;
+        const id = m.id ?? `${m.location ?? ''}-${m.date ?? ''}-${m.time ?? ''}`;
+        if (!byId.has(id)) {
+          byId.set(id, { ...m, title: m.title || `${m.location || 'Maç'}`, distance: m.distance_meters ?? m.distance });
+        }
+      });
+      setNearbyMatches(Array.from(byId.values()));
+    });
+    return () => { cancelled = true; };
+  }, [userLocation, selectedRegions, searchRadius]);
 
   const enhancedMatches = useMemo(() => {
-    const sourceMatches = (userLocation && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
+    const hasScope = selectedRegions.length > 0 || !!userLocation;
+    const sourceMatches = (hasScope && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
     const activeMatches = sourceMatches.filter(
@@ -207,7 +222,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         distance: m.distance
       };
     });
-  }, [adminMatches, nearbyMatches, userLocation]);
+  }, [adminMatches, nearbyMatches, userLocation, selectedRegions]);
 
   const isFilterActive = useMemo(() => {
     return !!(dna.format || dna.budget || dna.duration || (dna.age && dna.age !== 'Tümü') || dna.gender || dna.role || dna.mentality || dna.district);
