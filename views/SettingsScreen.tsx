@@ -18,6 +18,7 @@ import SettingsSubPage from '../components/common/SettingsSubPage';
 import NotificationSettingsPage from '../components/settings/NotificationSettingsPage';
 import RegionPickerPage from '../components/settings/RegionPickerPage';
 import ProfileInfoPage from '../components/settings/ProfileInfoPage';
+import FieldRolePage from '../components/settings/FieldRolePage';
 import { APP_VERSION } from '../utils/appVersion';
 
 interface SettingsScreenProps {
@@ -27,7 +28,7 @@ interface SettingsScreenProps {
 
 const CONTACT_EMAIL = 'destek@oyna.app';
 
-type SubPage = null | 'notifications' | 'privacy' | 'region' | 'profile';
+type SubPage = null | 'notifications' | 'privacy' | 'region' | 'profile' | 'role';
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) => {
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
@@ -45,7 +46,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
   const {
     setUserLocation, setLocationPermissionStatus, activeRegion, setActiveRegion,
-    selectedRegions, searchRadius, setSearchRadius, notificationPreferences, myRoles, setIsRoleSwitcherOpen,
+    selectedRegions, searchRadius, setSearchRadius, notificationPreferences, myRoles,
   } = useAppStore();
   const hasMultipleRoles = myRoles.length > 1;
 
@@ -221,25 +222,25 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       <main className="p-6 space-y-8">
 
-        {/* Rol Değiştir — en üstte tek belirgin buton (yalnızca çok rollülerde) */}
-        {hasMultipleRoles && (
-          <button
-            onClick={() => setIsRoleSwitcherOpen(true)}
-            className="w-full flex items-center justify-between p-4 rounded-2xl border border-[#3b82f6]/25 hover:bg-[#3b82f6]/10 transition-colors"
-            style={{ background: 'rgba(59,130,246,0.08)' }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#3b82f6]/15 border border-[#3b82f6]/30 flex items-center justify-center text-[#3b82f6]">
-                <Repeat size={19} />
-              </div>
-              <div className="text-left">
-                <span className="text-sm font-black text-white block">Rol Değiştir</span>
-                <span className="text-[11px] text-gray-400">Oyuncu, kaleci, hakem veya tesis paneline geç</span>
-              </div>
+        {/* Sahada Rolün — en üstte tek belirgin buton (rol başvuru + geçiş home'u) */}
+        <button
+          onClick={() => setSubPage('role')}
+          className="w-full flex items-center justify-between p-4 rounded-2xl border border-[#3b82f6]/25 hover:bg-[#3b82f6]/10 transition-colors"
+          style={{ background: 'rgba(59,130,246,0.08)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#3b82f6]/15 border border-[#3b82f6]/30 flex items-center justify-center text-[#3b82f6]">
+              <Repeat size={19} />
             </div>
-            <ChevronRight size={18} className="text-[#3b82f6]" />
-          </button>
-        )}
+            <div className="text-left">
+              <span className="text-sm font-black text-white block">Sahada Rolün</span>
+              <span className="text-[11px] text-gray-400">
+                {hasMultipleRoles ? 'Rol değiştir veya yeni role başvur' : 'Kaleci, hakem veya tesis için başvur'}
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-[#3b82f6]" />
+        </button>
 
         {/* Hesap */}
         <section>
@@ -403,6 +404,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       {/* Alt sayfalar — tam ekran, içeriye girilir */}
       <ProfileInfoPage open={subPage === 'profile'} onClose={() => setSubPage(null)} />
+      <FieldRolePage open={subPage === 'role'} onClose={() => setSubPage(null)} onNavigate={onNavigate} />
       <NotificationSettingsPage open={subPage === 'notifications'} onClose={() => setSubPage(null)} />
       <RegionPickerPage open={subPage === 'region'} onClose={() => setSubPage(null)} />
       <SettingsSubPage open={subPage === 'privacy'} onClose={() => setSubPage(null)} title="Gizlilik" subtitle="Görünürlük ve engellenenler">
