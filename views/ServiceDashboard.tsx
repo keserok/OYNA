@@ -1327,20 +1327,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       <div className="space-y-6 pb-40 pt-4">
 
          {/* Header */}
-         <div className="flex items-center justify-between px-6 mb-2 mt-4">
+         <div className="px-6 mb-2 mt-4">
             <div>
               <h3 className="font-black text-white text-sm flex items-center gap-2">
                 🧤 {isRef ? 'HAKEM' : 'KALECİ'} ARAYAN MAÇLAR
                 <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{openMatches.length}</span>
               </h3>
-              <p className="text-[10px] text-gray-500 mt-0.5">Takımlar seni bekliyor — başvur, oyna, kazan</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Bölgendeki maçlar — başvur, oyna, kazan</p>
             </div>
-            <button
-              onClick={() => { if(typeof window !== 'undefined' && (window as any).openLeafletMap) (window as any).openLeafletMap(); }}
-              className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-black px-3 py-2 rounded-xl hover:bg-blue-500/20 transition-all"
-            >
-              <MapPin size={12} /> Harita
-            </button>
          </div>
 
          {/* Pending Applications Section */}
