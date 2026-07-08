@@ -1004,57 +1004,65 @@ const FinancialCalendarView: React.FC<{
 
 const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNames: string[] }> = ({ data, courtNames }) => {
     const pitches = courtNames.length > 0 ? courtNames : ['Henüz saha yok'];
-    
+    // Başlık ve hücreler AYNI grid şablonunu paylaşır → saat etiketleri her dikdörtgenin
+    // sol köşesine tam oturur, kayma olmaz. İlk sütun saha adı, kalan sütunlar saatler.
+    const gridStyle: React.CSSProperties = {
+        display: 'grid',
+        gridTemplateColumns: `5rem repeat(${data.length}, minmax(0, 1fr))`,
+        columnGap: '2px',
+    };
+
     return (
         <div className="w-full overflow-x-auto custom-scrollbar pb-2">
-            <div className="min-w-[800px]">
-                {/* Header: Hours */}
-                <div className="flex mb-2">
-                    <div className="w-20 shrink-0"></div>
-                    <div className="flex-1 flex justify-between px-2">
-                        {data.map((item, idx) => (
-                            <span key={idx} className="text-[8px] font-black text-gray-500 w-8 text-center">
+            <div className="min-w-[820px]">
+                {/* Başlık: saatler — her etiket kendi sütununun SOL kenarında (dikdörtgenin başlangıç köşesi). */}
+                <div style={gridStyle} className="mb-1.5 h-4 items-end">
+                    <div />
+                    {data.map((item, idx) => (
+                        <div key={idx} className="relative h-4">
+                            <span className="absolute left-0 bottom-0 -translate-x-1/2 text-[8px] font-black text-gray-500 tabular-nums leading-none">
                                 {item.time.split(':')[0]}
                             </span>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
+                    {/* Son köşe: kapanış saati (ör. 24) — son dikdörtgenin sağ köşesi. */}
                 </div>
 
-                {/* Rows: Pitches */}
+                {/* Satırlar: sahalar */}
                 <div className="space-y-2">
                     {pitches.map((pitchName, pitchIdx) => (
-                        <div key={pitchIdx} className="flex items-center group">
-                            <div className="w-20 shrink-0 text-[10px] font-bold text-gray-400 group-hover:text-white transition-colors">
+                        <div key={pitchIdx} style={gridStyle} className="items-center group">
+                            <div className="pr-2 text-[10px] font-bold text-gray-400 truncate group-hover:text-white transition-colors">
                                 {pitchName}
                             </div>
-                            <div className="flex-1 flex justify-between px-2 gap-1">
-                                {data.map((item, timeIdx) => {
-                                    const bookingType = item.pitches[pitchIdx];
-                                    const isOccupied = bookingType !== null;
-                                    
-                                    let bgColor = 'bg-white/5';
-                                    let borderColor = 'border-white/5';
-                                    let shadow = '';
-                                    
-                                    if (bookingType === 'SUB') {
-                                        bgColor = 'bg-blue-500/40';
-                                        borderColor = 'border-blue-500/50';
-                                        shadow = 'shadow-[0_0_10px_rgba(59,130,246,0.2)]';
-                                    } else if (bookingType === 'DAILY') {
-                                        bgColor = 'bg-emerald-500/40';
-                                        borderColor = 'border-emerald-500/50';
-                                        shadow = 'shadow-[0_0_10px_rgba(16,185,129,0.2)]';
-                                    }
+                            {data.map((item, timeIdx) => {
+                                const bookingType = item.pitches[pitchIdx];
+                                const isOccupied = bookingType !== null;
+                                const startH = item.time.split(':')[0];
+                                const endH = ((parseInt(startH, 10) + 1) % 24).toString().padStart(2, '0');
 
-                                    return (
-                                        <div 
-                                            key={timeIdx}
-                                            className={`flex-1 h-8 rounded-md transition-all duration-300 border ${bgColor} ${borderColor} ${shadow} ${!isOccupied ? 'hover:bg-white/10' : ''}`}
-                                            title={`${pitchName} - ${item.time}: ${bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ'}`}
-                                        ></div>
-                                    );
-                                })}
-                            </div>
+                                let bgColor = 'bg-white/5';
+                                let borderColor = 'border-white/5';
+                                let shadow = '';
+
+                                if (bookingType === 'SUB') {
+                                    bgColor = 'bg-blue-500/40';
+                                    borderColor = 'border-blue-500/50';
+                                    shadow = 'shadow-[0_0_10px_rgba(59,130,246,0.2)]';
+                                } else if (bookingType === 'DAILY') {
+                                    bgColor = 'bg-emerald-500/40';
+                                    borderColor = 'border-emerald-500/50';
+                                    shadow = 'shadow-[0_0_10px_rgba(16,185,129,0.2)]';
+                                }
+
+                                return (
+                                    <div
+                                        key={timeIdx}
+                                        className={`h-8 rounded-md transition-all duration-300 border ${bgColor} ${borderColor} ${shadow} ${!isOccupied ? 'hover:bg-white/10' : ''}`}
+                                        title={`${pitchName} · ${startH}:00-${endH}:00 · ${bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ'}`}
+                                    ></div>
+                                );
+                            })}
                         </div>
                     ))}
                 </div>
@@ -1486,16 +1494,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   const { isReadOnly, isPastDue, can, requireFeature, guardWrite, maxFacilities, maxCourts, maxStaff } =
     useOwnerEntitlements(ownerAccount, notify);
 
-  const handlePlanUpgrade = () => {
-    notify(
-      'Plan yükseltmesi için destek@oyna.app adresine yazın; ekibimiz planınızı güncelleyecektir.',
-      'info',
-    );
-  };
-
   const handleTabSelect = (tab: OwnerTab) => {
-    if (tab === 'FINANCE' && !requireFeature('finance')) return;
-    if (tab === 'TEAM' && !requireFeature('team')) return;
+    // Finans & Ekip her owner'a açık — plan kilidi yok.
     setActiveTab(tab);
   };
   const [showPricingPolicy, setShowPricingPolicy] = useState(false);
@@ -1596,16 +1596,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     });
     await refreshDashboard(pitch.id, pitch.auto_approve_minutes ?? 35, facilityCourts);
   }, [refreshDashboard]);
-
-  const handleAddFacility = () => {
-    if (!guardWrite()) return;
-    if (!isDemoMode && ownedFacilities.length >= maxFacilities) {
-      notify(`Mevcut planınız en fazla ${maxFacilities} tesis destekliyor.`, 'warning');
-      handlePlanUpgrade();
-      return;
-    }
-    onNeedOnboarding?.();
-  };
 
   const switchFacility = async (pitchId: string) => {
     const uid = facilityData?.ownerId;
@@ -1762,20 +1752,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         id: 'rejected',
         tone: 'danger',
         message: 'Tesis başvurunuz reddedildi — ayarlardan güncelleyin',
-      });
-    }
-    if (ownerAccount && ['suspended', 'cancelled'].includes(ownerAccount.status)) {
-      list.push({
-        id: 'saas-blocked',
-        tone: 'danger',
-        message: `SaaS hesabınız ${accountStatusLabel(ownerAccount.status).toLowerCase()} — destek ile iletişime geçin`,
-      });
-    }
-    if (isPastDue) {
-      list.push({
-        id: 'past-due',
-        tone: 'warning',
-        message: 'Ödeme bekleniyor — hesabınız yakında askıya alınabilir',
       });
     }
     return list;
@@ -2035,8 +2011,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       {activeTab === 'HOME' && !isLoading && (
           <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
               <OwnerCommandStrip
-                planLabel={ownerAccount ? planTierLabel(ownerAccount.plan_tier) : 'Starter'}
-                trialDaysLeft={trialDaysLeft}
                 pendingCount={pendingCount}
                 isFacilityOpen={isFacilityOpen}
                 onPendingClick={pendingCount > 0 ? () => setActiveTab('PENDING_ACTIONS') : undefined}
@@ -2148,37 +2122,20 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           maxCourts={maxCourts}
         />
       )}
-      {activeTab === 'FINANCE' && can.finance && (
+      {/* Finans & Ekip her owner'a açık — plan/abonelik kilidi yok (karar: owner abonelik ödemez). */}
+      {activeTab === 'FINANCE' && (
         <OwnerFinanceView
           pitchId={realPitchId ?? facilityData?.id ?? ''}
           isDemoMode={isDemoMode}
           readOnly={isReadOnly}
         />
       )}
-      {activeTab === 'FINANCE' && !can.finance && (
-        <OwnerUpgradeGate
-          title="Finans modülü kilitli"
-          description="Gelir-gider takibi, veresiye yönetimi ve detaylı raporlar Pro planında açılır."
-          features={['Aylık net kazanç özeti', 'Gider kategorileri', 'Veresiye müşteri takibi', 'Haftalık gelir grafikleri']}
-          onUpgrade={handlePlanUpgrade}
-          onBack={() => setActiveTab('HOME')}
-        />
-      )}
-      {activeTab === 'TEAM' && can.team && (
+      {activeTab === 'TEAM' && (
         <OwnerTeamView
           pitchId={realPitchId ?? facilityData?.id ?? ''}
           isDemoMode={isDemoMode}
           readOnly={isReadOnly}
           maxStaff={maxStaff}
-        />
-      )}
-      {activeTab === 'TEAM' && !can.team && (
-        <OwnerUpgradeGate
-          title="Ekip modülü kilitli"
-          description="Personel görevleri, vardiya takibi ve ekip yönetimi planınızda aktif değil."
-          features={['Görev atama ve öncelik', 'Vardiya durumu', 'Personel limiti yönetimi', 'Saha sorumlusu takibi']}
-          onUpgrade={handlePlanUpgrade}
-          onBack={() => setActiveTab('HOME')}
         />
       )}
       {activeTab === 'PENDING_ACTIONS' && (
@@ -2199,7 +2156,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           facilityName={facilityData?.name}
           facilityDistrict={[facilityData?.district, facilityData?.city].filter(Boolean).join(', ')}
           facilityImage={facilityData?.images?.[0]}
-          planTier={ownerAccount ? planTierLabel(ownerAccount.plan_tier) : 'Starter'}
           accountStatus={ownerAccount ? accountStatusLabel(ownerAccount.status) : 'Aktif'}
           stats={menuStats}
           onEditProfile={() => {
@@ -2214,18 +2170,10 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onBankAccounts={() => {
             if (guardWrite()) setShowBankAccountList(true);
           }}
-          onWithdrawals={() => {
-            if (!requireFeature('withdrawals')) return;
-            setShowWithdrawals(true);
-          }}
-          onAddFacility={!isDemoMode && !isReadOnly && !isAdminPreview ? handleAddFacility : undefined}
+          onWithdrawals={() => setShowWithdrawals(true)}
           onPricingPolicy={() => {
             if (guardWrite()) setShowPricingPolicy(true);
           }}
-          onPaymentSettings={() => {
-            if (guardWrite()) setShowPaymentSettings(true);
-          }}
-          onBilling={() => setShowBilling(true)}
           onSecurity={() => setShowSecurity(true)}
           onSupport={() => setShowSupport(true)}
           onLogout={() => setShowLogoutConfirm(true)}
@@ -2237,9 +2185,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           }}
           onSwitchRole={() => setIsRoleSwitcherOpen(true)}
           canSwitchRole={canSwitchRole}
-          onPlanUpgrade={ownerAccount?.plan_tier !== 'enterprise' ? handlePlanUpgrade : undefined}
           isReadOnly={isReadOnly}
-          canWithdrawals={can.withdrawals}
         />
       )}
 
@@ -2306,22 +2252,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onClose={() => setShowPricingPolicy(false)}
           facilityId={facilityData?.id}
           onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
-        />
-      )}
-      {showPaymentSettings && (
-        <OwnerPaymentSettingsModal
-          onClose={() => setShowPaymentSettings(false)}
-          facilityId={facilityData?.id}
-          onSave={(paymentData) => setFacilityData((prev: any) => ({ ...prev, ...paymentData }))}
-        />
-      )}
-      {showBilling && facilityData?.ownerId && (
-        <OwnerBillingSettingsModal
-          onClose={() => setShowBilling(false)}
-          userId={facilityData.ownerId}
-          initialEmail={ownerAccount?.billing_email}
-          planTier={ownerAccount ? planTierLabel(ownerAccount.plan_tier) : 'Starter'}
-          onSaved={(email) => setOwnerAccount((prev) => (prev ? { ...prev, billing_email: email } : prev))}
         />
       )}
       {showSecurity && <OwnerSecurityModal onClose={() => setShowSecurity(false)} />}
@@ -2393,8 +2323,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       <OwnerBottomNav
         activeTab={activeTab}
         pendingCount={pendingCount}
-        financeLocked={!can.finance}
-        teamLocked={!can.team}
+        financeLocked={false}
+        teamLocked={false}
         onSelect={(tab) => {
           if (tab === 'MORE') setActiveTab('MORE');
           else handleTabSelect(tab);
