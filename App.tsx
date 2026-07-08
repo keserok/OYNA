@@ -4,7 +4,7 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './t
 import { auth, onAuthStateChanged, logout } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
-import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles } from './shared/roles';
+import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
 import { setActiveRole } from './services/userService';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
 import { Capacitor } from '@capacitor/core';
@@ -211,19 +211,24 @@ const App: React.FC = () => {
             // uygulama-içi "Rol Değiştir" ile geçtiği rolü sessizce geri alırdı.
             const currentView = useAppStore.getState().view;
             const isEntering = ['SPLASH', 'AUTH', 'ROLE_SELECTION', 'PENDING_VERIFICATION'].includes(currentView);
+            // Admin koruması: aktif rol GEÇİLEBİLİR bir rol değilse (ADMIN/SUPER_ADMIN
+            // → normalizeRole null döner), açılış-rolü override'ı UYGULANMAZ. Aksi
+            // halde pickLandingRole PLAYER'a düşer ve setActiveRole admin rolünü
+            // PLAYER'a yazarak yetki kaybına yol açardı. Bu roller admin panelinden yönetilir.
+            const canOverride = isEntering && normalizeRole(primaryRole) !== null;
             // 1A — "her zaman kendi paneli": GİRİŞTE sağlayıcı/tesis rolü varsa aktif
             // rol otomatik ona alınır (öncelik OWNER>REF>GK>PLAYER). Oturum içindeki
-            // yenilemede aktif rol DB'dekiyle (primaryRole) senkron kalır — override yok.
-            const landingRole = isEntering ? pickLandingRole(ownedRoles, primaryRole) : primaryRole;
+            // yenilemede (ve admin rolünde) aktif rol DB'dekiyle senkron kalır — override yok.
+            const landingRole = canOverride ? pickLandingRole(ownedRoles, primaryRole) : primaryRole;
             setRole(landingRole);
             // FAZ 7.4: analitik + hata bağlamına kullanıcıyı bağla (env yoksa no-op)
             identifyUser(user.uid, { role: landingRole, is_admin: !!profile.is_admin });
 
-            // Aktif rol (profiles.role) açılış rolünden farklıysa (yalnız girişte)
-            // sunucuda da eşitle → rol-bazlı sorgu/segment/RLS tutarlı kalır.
+            // Aktif rol (profiles.role) açılış rolünden farklıysa (yalnız girişte, admin
+            // hariç) sunucuda da eşitle → rol-bazlı sorgu/segment/RLS tutarlı kalır.
             // landingRole daima roles[] içindedir, RPC güvenle geçer. En iyi çaba:
             // hata olsa bile bu oturumun yönlendirmesini BLOKLAMAZ.
-            if (isEntering && landingRole !== primaryRole) {
+            if (canOverride && landingRole !== primaryRole) {
               setActiveRole(landingRole).catch((e) =>
                 console.warn('[App] Açılış rolü kalıcılaştırılamadı:', e));
             }
