@@ -32,26 +32,9 @@ interface NotificationSettingsPageProps {
 
 interface QuietHours { start: string; end: string }
 
-// Düdük — standart bir emoji/lucide ikonu olmadığından hakemi temsilen küçük SVG.
-const WhistleIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M14 10h7a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1.2" />
-    <circle cx="8" cy="14" r="6" />
-    <circle cx="8" cy="14" r="1.4" fill="currentColor" stroke="none" />
-  </svg>
-);
-
-// Kadro = kaleci (eldiven) + hakem (düdük)
-const StaffIcon: React.FC = () => (
-  <span className="inline-flex items-center gap-1 text-amber-300">
-    <span>🧤</span>
-    <WhistleIcon />
-  </span>
-);
-
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   MATCH: <span>⚽</span>,
-  STAFF: <StaffIcon />,
+  STAFF: <span>🧤</span>,
   REMINDER: <span>⏰</span>,
   DISCOVERY: <span>📍</span>,
   GENERAL: <span>📊</span>,
