@@ -1,0 +1,1999 @@
+<title>Taktik Stüdyo — 50 Karar Sorusu</title>
+<style>
+  :root{
+    --bg:#080d16; --panel:#0e1420; --panel-2:#131c2a; --raise:#182232;
+    --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.06);
+    --ink:#e7edf4; --ink-soft:#9aa8b8; --ink-faint:#6b7889;
+    --accent:#39ff14; --accent-ink:#06140a; --accent-dim:rgba(57,255,20,.13);
+    --accent-line:rgba(57,255,20,.32);
+    --cyan:#57c9f6; --cyan-dim:rgba(87,201,246,.12);
+    --shadow:0 18px 50px -24px rgba(0,0,0,.8);
+    --font-display:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --font-body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --maxw:1180px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f6f2; --panel:#ffffff; --panel-2:#eef3ec; --raise:#e7efe6;
+      --line:rgba(9,26,15,.12); --line-2:rgba(9,26,15,.07);
+      --ink:#0f2318; --ink-soft:#4e6257; --ink-faint:#7d8f84;
+      --accent:#0e9a3e; --accent-ink:#ffffff; --accent-dim:rgba(14,154,62,.10);
+      --accent-line:rgba(14,154,62,.34);
+      --cyan:#0b7bb5; --cyan-dim:rgba(11,123,181,.09);
+      --shadow:0 16px 40px -26px rgba(11,40,22,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#080d16; --panel:#0e1420; --panel-2:#131c2a; --raise:#182232;
+    --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.06);
+    --ink:#e7edf4; --ink-soft:#9aa8b8; --ink-faint:#6b7889;
+    --accent:#39ff14; --accent-ink:#06140a; --accent-dim:rgba(57,255,20,.13);
+    --accent-line:rgba(57,255,20,.32); --cyan:#57c9f6; --cyan-dim:rgba(87,201,246,.12);
+    --shadow:0 18px 50px -24px rgba(0,0,0,.8);
+  }
+  :root[data-theme="light"]{
+    --bg:#f3f6f2; --panel:#ffffff; --panel-2:#eef3ec; --raise:#e7efe6;
+    --line:rgba(9,26,15,.12); --line-2:rgba(9,26,15,.07);
+    --ink:#0f2318; --ink-soft:#4e6257; --ink-faint:#7d8f84;
+    --accent:#0e9a3e; --accent-ink:#ffffff; --accent-dim:rgba(14,154,62,.10);
+    --accent-line:rgba(14,154,62,.34); --cyan:#0b7bb5; --cyan-dim:rgba(11,123,181,.09);
+    --shadow:0 16px 40px -26px rgba(11,40,22,.4);
+  }
+  *{box-sizing:border-box}
+  html{overflow-x:clip}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);
+    overflow-x:clip;
+    line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  a{color:inherit}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .hero-pitch{position:absolute;inset:0;width:100%;height:100%;opacity:.5;pointer-events:none;
+    overflow:hidden}
+  .hero-inner{position:relative;padding:clamp(38px,7vw,78px) 0 clamp(30px,4vw,44px)}
+  .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.34em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 18px;font-weight:600}
+  .eyebrow .dot{color:var(--ink-faint)}
+  h1{font-family:var(--font-display);font-weight:800;letter-spacing:-.028em;
+    font-size:clamp(2.5rem,7vw,5.2rem);line-height:.94;margin:0;text-wrap:balance;
+    text-transform:uppercase;font-style:italic}
+  h1 .amp{color:var(--accent)}
+  .lede{max-width:60ch;margin:22px 0 0;font-size:clamp(1rem,1.6vw,1.18rem);
+    color:var(--ink-soft);line-height:1.6}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px 22px;margin:28px 0 0;
+    padding:16px 20px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .legend .li{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-soft)}
+  .legend .k{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;font-weight:700;padding:3px 8px;border-radius:6px}
+  .k.k-rec{background:var(--accent);color:var(--accent-ink)}
+  .k.k-why{background:var(--panel-2);color:var(--ink-soft);border:1px solid var(--line)}
+  .k.k-opt{background:var(--cyan-dim);color:var(--cyan);border:1px solid transparent}
+
+  .statbar{display:flex;flex-wrap:wrap;align-items:center;gap:14px 26px;margin-top:26px}
+  .stat{display:flex;align-items:baseline;gap:9px}
+  .stat b{font-family:var(--font-display);font-weight:800;font-size:1.5rem;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .stat span{font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.12em;
+    font-family:var(--font-mono)}
+  .stat.on b{color:var(--accent)}
+
+  /* ---------- LAYOUT ---------- */
+  .grid{display:grid;grid-template-columns:230px minmax(0,1fr);gap:clamp(24px,4vw,56px);
+    padding:clamp(30px,5vw,54px) 0 90px;align-items:start}
+  .grid>*{min-width:0}
+  nav.toc{position:sticky;top:16px}
+  .toc-h{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 12px;padding-left:2px}
+  .toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;
+    counter-reset:none}
+  .toc li{min-width:0}
+  .toc a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
+    text-decoration:none;color:var(--ink-soft);border:1px solid transparent;transition:none;
+    min-width:0}
+  .toc-code{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:700;
+    width:20px;flex:none}
+  .toc-name{font-size:12.5px;line-height:1.3;flex:1;min-width:0;overflow-wrap:anywhere}
+  .toc-n{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);
+    font-variant-numeric:tabular-nums}
+  @media (prefers-reduced-motion: no-preference){.toc a{transition:background .15s,color .15s,border-color .15s}}
+  .toc a:hover{background:var(--panel);color:var(--ink);border-color:var(--line)}
+  .toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ---------- SECTIONS ---------- */
+  .sec{margin:0 0 clamp(40px,6vw,64px);scroll-margin-top:16px}
+  .sec-head{display:flex;align-items:center;gap:16px;padding:0 0 18px;margin-bottom:22px;
+    border-bottom:1px solid var(--line)}
+  .sec-code{font-family:var(--font-display);font-weight:800;font-style:italic;
+    font-size:clamp(2rem,4vw,2.9rem);line-height:1;color:var(--accent);
+    letter-spacing:-.04em;flex:none;font-variant-numeric:tabular-nums}
+  .sec-titles{flex:1;min-width:0}
+  .sec-tag{font-family:var(--font-mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--ink-faint);display:block;margin-bottom:3px}
+  .sec-title{font-family:var(--font-display);font-weight:800;font-size:clamp(1.15rem,2.4vw,1.5rem);
+    letter-spacing:-.015em;margin:0;line-height:1.15;text-wrap:balance}
+  .sec-count{font-family:var(--font-mono);font-size:12px;color:var(--ink-faint);flex:none;
+    font-variant-numeric:tabular-nums;padding-top:6px}
+
+  .q-list{display:flex;flex-direction:column;gap:18px}
+
+  /* ---------- QUESTION CARD ---------- */
+  .q{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:clamp(18px,2.4vw,26px);box-shadow:var(--shadow);scroll-margin-top:16px;
+    position:relative}
+  .q.done{opacity:.58}
+  .q.done .q-text{text-decoration:line-through;text-decoration-color:var(--ink-faint);
+    text-decoration-thickness:1px}
+  .q-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .q-num{font-family:var(--font-mono);font-weight:700;font-size:13px;letter-spacing:.08em;
+    color:var(--accent);background:var(--accent-dim);border:1px solid var(--accent-line);
+    padding:3px 10px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .q-done{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);user-select:none}
+  .q-done input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;
+    border:1.5px solid var(--line);border-radius:5px;background:var(--panel-2);cursor:pointer;
+    position:relative;flex:none}
+  .q-done input:checked{background:var(--accent);border-color:var(--accent)}
+  .q-done input:checked::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:9px;
+    border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(42deg)}
+  .q-done input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .q-text{font-family:var(--font-display);font-weight:700;font-size:clamp(1.06rem,1.9vw,1.28rem);
+    line-height:1.34;letter-spacing:-.012em;margin:0 0 16px;text-wrap:balance;color:var(--ink);
+    overflow-wrap:anywhere}
+
+  .opts{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px}
+  .opt{display:block;padding:11px 14px;border-radius:11px;background:var(--panel-2);
+    border:1px solid var(--line-2);border-left:2px solid var(--cyan)}
+  .opt-label{display:block;font-weight:650;font-size:14.5px;color:var(--ink);margin-bottom:2px}
+  .opt-detail{display:block;font-size:13.5px;color:var(--ink-soft);line-height:1.5}
+
+  .rec{background:var(--accent-dim);border:1px solid var(--accent-line);border-radius:12px;
+    padding:14px 16px;display:flex;gap:13px;align-items:flex-start;margin-bottom:12px}
+  .rec-tag{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.14em;
+    background:var(--accent);color:var(--accent-ink);padding:4px 9px;border-radius:6px;flex:none;
+    margin-top:2px}
+  .rec-text{margin:0;font-size:15px;line-height:1.55;color:var(--ink);font-weight:520;
+    min-width:0;overflow-wrap:anywhere}
+  .why{display:flex;gap:13px;align-items:flex-start;padding:0 2px}
+  .why-tag{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.14em;
+    color:var(--ink-faint);border:1px solid var(--line);padding:4px 9px;border-radius:6px;flex:none;
+    margin-top:2px}
+  .why-text{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-soft);
+    min-width:0;overflow-wrap:anywhere}
+
+  footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--ink-faint);
+    font-size:13px;line-height:1.7}
+  footer .fmono{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em}
+
+  /* progress rail */
+  .prog{position:fixed;left:0;top:0;height:3px;background:var(--accent);width:0;z-index:50;
+    box-shadow:0 0 12px var(--accent-line)}
+
+  @media (max-width:860px){
+    .grid{grid-template-columns:1fr;gap:0}
+    nav.toc{position:static;margin-bottom:34px;padding:16px;background:var(--panel);
+      border:1px solid var(--line);border-radius:14px}
+    .toc ol{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  }
+  @media (max-width:520px){.toc ol{grid-template-columns:1fr}
+    .rec,.why{flex-direction:column;gap:8px}}
+</style>
+
+<div class="prog" id="prog"></div>
+
+<header class="hero">
+  <svg class="hero-pitch" viewBox="0 0 1200 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="none" stroke="var(--accent)" stroke-width="1.4" opacity="0.22">
+      <line x1="600" y1="-20" x2="600" y2="380"/>
+      <circle cx="600" cy="180" r="92"/>
+      <circle cx="600" cy="180" r="3" fill="var(--accent)" stroke="none"/>
+      <rect x="-4" y="96" width="150" height="168"/>
+      <rect x="-4" y="150" width="60" height="60"/>
+      <rect x="1058" y="96" width="150" height="168"/>
+      <rect x="1148" y="150" width="60" height="60"/>
+    </g>
+  </svg>
+  <div class="wrap hero-inner">
+    <p class="eyebrow">OYNA <span class="dot">·</span> TAKTİK STÜDYO <span class="dot">·</span> KARAR DOSYASI</p>
+    <h1>50 Karar<br>Bir <span class="amp">Milyon Dolarlık</span> Tahta</h1>
+    <p class="lede">Bunlar, taktik stüdyoyu sıfırdan hak ettiği çıtaya çıkarmak için birlikte vermemiz gereken <strong>50 tasarım kararı</strong>. Her kart bir soru, somut seçenekler, benim <strong>güçlü önerim</strong> ve <strong>neden</strong>. Numarayla cevap ver — dilersen gruplar hâlinde. Cevaplarına göre tahtayı kuracağım.</p>
+
+    <div class="legend" role="note">
+      <span class="li"><span class="k k-opt">Seçenek</span> değerlendireceğin yollar</span>
+      <span class="li"><span class="k k-rec">Öneri</span> benim güçlü tercihim</span>
+      <span class="li"><span class="k k-why">Neden</span> gerekçesi</span>
+    </div>
+
+    <div class="statbar">
+      <span class="stat"><b>50</b><span>Karar</span></span>
+      <span class="stat"><b>9</b><span>Bölüm</span></span>
+      <span class="stat on"><b id="doneCount">0</b><span>Karar verildi</span></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <nav class="toc" aria-label="Bölümler">
+      <p class="toc-h">Bölümler</p>
+      <ol>
+          <li><a href="#sec-01"><span class="toc-code">01</span><span class="toc-name">Formasyon sistemi &amp; özel formasyon üretici</span><span class="toc-n">5</span></a></li>
+          <li><a href="#sec-02"><span class="toc-code">02</span><span class="toc-name">Plan/sekme yönetimi &amp; plan-bazlı model</span><span class="toc-n">5</span></a></li>
+          <li><a href="#sec-03"><span class="toc-code">03</span><span class="toc-name">Etkileşim çekirdeği: öğe seçimi &amp; animasyon/koreografi motoru</span><span class="toc-n">6</span></a></li>
+          <li><a href="#sec-04"><span class="toc-code">04</span><span class="toc-name">Rakip &amp; etkileşim</span><span class="toc-n">4</span></a></li>
+          <li><a href="#sec-05"><span class="toc-code">05</span><span class="toc-name">Takım seçimi &amp; kadro entegrasyonu</span><span class="toc-n">7</span></a></li>
+          <li><a href="#sec-06"><span class="toc-code">06</span><span class="toc-name">Mentalite/tempo/metrikler &amp; futbol zekası</span><span class="toc-n">7</span></a></li>
+          <li><a href="#sec-07"><span class="toc-code">07</span><span class="toc-name">Takım bağlantısı &amp; sosyal döngü</span><span class="toc-n">5</span></a></li>
+          <li><a href="#sec-08"><span class="toc-code">08</span><span class="toc-name">Alt bar &amp; birincil aksiyonlar / bilgi mimarisi</span><span class="toc-n">4</span></a></li>
+          <li><a href="#sec-09"><span class="toc-code">09</span><span class="toc-name">Görsel/etkileşim tasarımı &amp; mobil ergonomi</span><span class="toc-n">7</span></a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <section class="sec" id="sec-01">
+        <header class="sec-head">
+          <span class="sec-code">01</span>
+          <div class="sec-titles">
+            <span class="sec-tag">FORMASYON</span>
+            <h2 class="sec-title">Formasyon sistemi &amp; özel formasyon üretici</h2>
+          </div>
+          <span class="sec-count">5 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S01">
+          <div class="q-head">
+            <span class="q-num">S01</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S01" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Tek-buton formasyon seçici hangi form faktöründe açılmalı?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Alttan açılan bottom-sheet</span>
+              <span class="opt-detail">Tahtanın altından yükselen, başparmakla erişilebilen kart; üstte SquadSize segmenti, altında mini saha önizlemeli formasyon kartları ve en sonda '+ Özel Formasyon' fayansı.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Butona yapışık dropdown/popover</span>
+              <span class="opt-detail">Butonun hemen altında küçük açılır liste; hızlı ama önizleme alanı dar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tam ekran modal</span>
+              <span class="opt-detail">Formasyon + kadro + boyut hepsi tek büyük ekranda.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Alttan açılan bottom-sheet seç: boyut segmenti üstte, mini saha önizlemeli formasyon kartları altta, özel formasyon girişi aynı yüzeyde.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Mevcut kod formasyonları üst kenarda yatay bir pill satırı olarak diziyor; bu tek-el ergonomisinde uzanma ve yatay kaydırma zorlar. Bottom-sheet başparmak bölgesine iner, her formasyon için mini thumbnail göstererek 'körlemesine seçim' sorununu çözer ve özel formasyon girişini doğal biçimde aynı yüzeye yerleştirir.</p>
+          </div>
+        </article>
+        <article class="q" id="S02">
+          <div class="q-head">
+            <span class="q-num">S02</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S02" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">SquadSize (5v5–11v11) seçimi formasyon seçicinin neresinde yaşamalı?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Aynı sheet'in üstünde segment kontrolü</span>
+              <span class="opt-detail">Boyut değişince alttaki formasyon önizleme ızgarası anında o boyuta göre canlı filtrelenir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tamamen ayrı ekran/adım</span>
+              <span class="opt-detail">Önce boyut, sonra formasyon; iki ayrı yüzey.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Formasyon adıyla birleşik tek liste</span>
+              <span class="opt-detail">'7v7 2-3-1', '7v7 3-2-1'... hepsi tek uzun listede.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Boyutu aynı sheet'in üstünde yatay segment kontrolü yap; seçilince altındaki formasyon ızgarası canlı filtrelensin, 7v7 görsel varsayılan olarak vurgulansın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">FORMATIONS SSOT zaten boyut→formasyon sözlüğü olarak yapılı ve handleSizeChange boyut değişince varsayılana düşüyor; boyut+formasyonu tek yüzeyde tutmak veri modeliyle birebir örtüşür. Ayrı adım bağlam kaybı, dev liste 11v11'de kalabalık yaratır. Segment + canlı filtre en az tıkla en yüksek keşfedilebilirliği verir.</p>
+          </div>
+        </article>
+        <article class="q" id="S03">
+          <div class="q-head">
+            <span class="q-num">S03</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S03" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Formasyon kartına dokununca değişiklik nasıl uygulanmalı — önizleme mi, anında mı?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Dokun = tahtada anlık canlı önizleme, 'Uygula' ile onay</span>
+              <span class="opt-detail">Oyuncular arka plandaki gerçek tahtaya animasyonla kayar; 'Vazgeç' eski dizilime döndürür.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Dokun = anında uygula, sheet kapanır</span>
+              <span class="opt-detail">Tek tıkla değişir; geri almak için tekrar seçmek gerekir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Kart içi statik minyatür + 'Uygula'</span>
+              <span class="opt-detail">Gerçek tahta değil, kart içindeki küçük saha güncellenir.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Dokununca gerçek tahtada anlık canlı önizleme göster, 'Uygula' ile kalıcı yap; sheet açıkken 'Vazgeç' eski dizilime döndürsün.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">handleFormationChange her geçişte çizimleri sıfırlıyor ve preservePlayersAndSubs oyuncuları yeniden yerleştiriyor — yani yanlış seçim gerçek veri kaybı demek. Canlı önizleme + onay, kullanıcının değişimi görüp geri dönmesine izin vererek bu tahribatı geri alınabilir kılar; 'gör-sonra-uygula' milyon dolarlık çıtada güven inşa eder.</p>
+          </div>
+        </article>
+        <article class="q" id="S04">
+          <div class="q-head">
+            <span class="q-num">S04</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S04" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Özel formasyon üretmenin temel yöntemi ne olsun (talep: kullanıcı kendi formasyonunu üretsin, anında tahtaya yansısın)?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Mevcut dizilimi 'Formasyon Olarak Kaydet'</span>
+              <span class="opt-detail">Kullanıcı TAŞI ile oyuncuları yerleştirir, bir butonla o anki noktalar adlandırılıp formasyon olur.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Boş sahaya sıfırdan slot bırakma</span>
+              <span class="opt-detail">Ayrı 'üretici modu'; boş sahaya tek tek nokta ekle, rol ata.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Satır sayısı yazarak (2-3-1 gir)</span>
+              <span class="opt-detail">Kullanıcı hat dizilimini rakamla girer, sistem otomatik yerleştirir.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Birincil yol 'Mevcut dizilimi formasyon olarak kaydet' olsun; ikincil olarak 2-3-1 rakam girişini otomatik yerleştirme kısayolu sun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Stüdyoda zaten serbest slot sürükleme (StudioTool 'move') var; kullanıcı istediği şekli çoktan kurabiliyor — ayrı 'boş sahaya slot bırak' modu bu yeteneği tekrar edip öğrenme yükü ekler. 'Anlık tahtaya yansısın' talebini en doğrudan karşılayan yol, hâlihazırdaki dizilimi tek tıkla kalıcılaştırmaktır; rakam girişi sıfırdan başlamak isteyene hızlı iskele verir.</p>
+          </div>
+        </article>
+        <article class="q" id="S05">
+          <div class="q-head">
+            <span class="q-num">S05</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S05" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Bir özel formasyon kaydedilince hem KAPSAMI hem veri modeline OTURUŞU nasıl olmalı (FormationType kapalı bir string union)?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Takım kütüphanesine yaz + customFormationId + saklı {x,y,role} şablonu</span>
+              <span class="opt-detail">Yerleşik union değerleri değişmeden kalır; özel dizilimler teamId'ye bağlı kütüphanede id ile saklanır, tüm planlarda ve üyelerce yeniden seçilebilir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece bu plana özel, slots[] içinde isimsiz</span>
+              <span class="opt-detail">Formasyon adı 'Özel' sabiti; yalnız aktif planda yaşar, yeniden kullanılamaz.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece bu cihaz/kullanıcı (yerel taslak)</span>
+              <span class="opt-detail">Kişisel şablon; takımla paylaşılmaz, id referansı sunucuda tutulmaz.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Özel formasyonu varsayılan olarak takım kütüphanesine (teamId) yaz ve formation alanını genişletip customFormationId + saklı {x,y,role} şablonuna işaret ettir; kaydet diyaloğunda 'Sadece bu plan' ikincil onay olarak kalsın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">TacticState.teamId zaten takım köprüsü ve ürünün özü 'takımlarla sağlam bağ'; kaptanın dizilimini kütüphaneye koymak onu başka planlarda ve üyelerce yeniden kullanılabilir, paylaşılabilir kılar. FormationType kapalı union olduğundan her dizilimi tipe eklemek imkânsız — id-referanslı şablon yerleşik SSOT'u bozmadan sonsuz özel dizilime kapı açar. Plan-yerel/slots-içi saklamak formasyonu tek kullanımlık çöpe çevirir ve paylaşım talebini imkânsız kılar.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-02">
+        <header class="sec-head">
+          <span class="sec-code">02</span>
+          <div class="sec-titles">
+            <span class="sec-tag">PLANLAR</span>
+            <h2 class="sec-title">Plan/sekme yönetimi &amp; plan-bazlı model</h2>
+          </div>
+          <span class="sec-count">5 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S06">
+          <div class="q-head">
+            <span class="q-num">S06</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S06" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Renk değiştirme nasıl tetiklenmeli? Bugün aktif sekmeye TEKRAR basınca renk döngülüyor — bu hem gizli hem 'aktif planı tekrar görme' ile 'renk değiştirme' niyetini karıştırıyor. Kullanıcının literal talebi ise 'tüm sekme butonunda tek tıkla renk'.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Sekme köşesinde her zaman görünür renk noktası (pip)</span>
+              <span class="opt-detail">Sekme gövdesi = seç; sağ-üst köşedeki renk noktası = tek tıkla renk döngüsü. İki niyet fiziksel olarak ayrılır, hâlâ tek dokunuş.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tüm sekmeye tek tık = renk (kullanıcının literal talebi)</span>
+              <span class="opt-detail">Aktif sekmeye basınca renk döner; seçim yalnız pasif sekmelerde. 'Aktife dönüp bakma' hareketini bozar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Aktif planın altında açılan mini renk şeridi</span>
+              <span class="opt-detail">Aktif sekme seçilince altında 4 renkli çip sırası belirir, tek tık uygular; görünür ama bir seviye derin.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Sekme köşesine her zaman görünür renk noktası (pip) koy: sekme gövdesi = seç, pip = tek tıkla renk döngüsü. Bunu kullanıcıya 'literal tüm-sekme tıklaması vs ayrık pip' ödünleşmesi olarak sun ve pip'i öner; ama kullanıcı literal davranışta ısrar ederse tüm-sekme moduna ayar bırak.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kullanıcının asıl derdi 'tek tıkla renk' ile 'seç' niyetinin çakışması; literal 'tüm sekmeye tık' bu çakışmayı çözmez, aktif planı tekrar açma hareketini kurban eder. Görünür pip her iki niyeti de tek dokunuşta ama ayrı hedeflerde çözerek talebin ruhunu (tek tık, keşfedilebilir) literal halinden daha iyi karşılar. iOS/Notion'daki 'küçük ayrık renk göstergesi' kalıbı mobilde tek-el ergonomisi için kanıtlı; yine de bu bir tasarım ödünü olduğundan kararı tek yönlü dayatmak yerine kullanıcıya ödünleşmeyi açıkça göstermek doğru olur.</p>
+          </div>
+        </article>
+        <article class="q" id="S07">
+          <div class="q-head">
+            <span class="q-num">S07</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S07" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Sekme renk paleti taktik ANLAM taşımalı mı, taşıyacaksa serbest override ile nasıl uzlaştırılmalı (bugün 4 renk yalnız görsel)?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Otomatik mentalite tabanı + pip ile elle override</span>
+              <span class="opt-detail">Renk mentaliteden türetilir (Kırmızı=Hücumcu, Lacivert=Defansif, Yeşil=Dengeli) ve pip'e her tıkta kullanıcı bu değeri elle geçersiz kılabilir; override edilince 'elle' işareti kalır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tamamen serbest etiket</span>
+              <span class="opt-detail">Renk kullanıcının kendi kodlaması; esnek ama takım içinde ortak anlam yok, mentaliteyle bağ kopuk.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Katı otomatik, override yok</span>
+              <span class="opt-detail">Renk daima mentaliteyi yansıtır; tutarlı ama kişisel kodlamaya izin vermez.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Rengi mentaliteden OTOMATİK türet (taban), pip ile ELLE override'a izin ver — bu tek tutarlı model bir önceki sorudaki pip mekanizmasıyla birebir örtüşür.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Önceki soruda renk döngüsü pip'e bağlandı; renk hem serbest hem otomatik olamayacağı için tutarlı çözüm 'otomatik taban + elle override'dır. Kaptan planları saha kenarında saniyeler içinde ayırt etmeli; kırmızı=hücum, lacivert=defans futbolda zaten sezgisel olduğundan otomatik eşleme ortak takım dili ve keşfedilebilirlik verir. Pip ile override ileri kullanıcının kişisel kodlamasını korur — böylece dekoratif süs olmaktan çıkıp anlam kazanır ama esneklik feda edilmez.</p>
+          </div>
+        </article>
+        <article class="q" id="S08">
+          <div class="q-head">
+            <span class="q-num">S08</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S08" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Bir planı KOPYALAMA (duplicate) yeteneği nasıl sunulmalı? Bugün handleNewTactic hep boş 7v7 2-3-1 üretiyor; varyant üretmek imkânsız.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Aktif sekmedeki İsim/Sil ikonlarının yanına 'Kopyala' ikonu</span>
+              <span class="opt-detail">Tek tık 'Plan A (kopya)' üretir ve ona geçer; tanıdık ikon satırında keşfedilebilir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">'Ekle' butonuna basınca 'Boş' mu 'Aktiften kopya' mı seçtiren mini menü</span>
+              <span class="opt-detail">Tek giriş noktası ama bir ekstra dokunuş.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sekmeyi basılı tutunca bağlam menüsü (Kopyala/Adlandır/Sil/Renk)</span>
+              <span class="opt-detail">Tüm işlemler tek long-press menüsünde; sekme sadeleşir ama işlemler gizlenir.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Aktif sekmedeki İsim-değiştir/Sil ikon satırına üçüncü bir 'Kopyala' ikonu ekle.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Gerçekte planlar sıfırdan değil birbirinin varyantı olarak doğar ('Plan A ama daha defansif'). Kopyalama en çok tekrar edilecek iş; onu bağlam menüsüne gömmek az-tık ilkesini bozar. İkon zaten aktif sekmede beliren tanıdık satıra eklenince sıfır öğrenme maliyetiyle keşfedilir.</p>
+          </div>
+        </article>
+        <article class="q" id="S09">
+          <div class="q-head">
+            <span class="q-num">S09</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S09" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Kaç plana izin verilmeli ve isimlendirme modeli ne olsun? Bugün sınırsız plan ('Yeni Taktik 5') ve sekmeler 140px yatay kayıyor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Maks 6 plan, A–F harf sistemi + opsiyonel etiket</span>
+              <span class="opt-detail">'Plan B: Geri Blok' gibi kısa etiket; sekmeler ekrana sığar, harf sabit kimlik verir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Maks 4 plan</span>
+              <span class="opt-detail">Tüm sekmeler kaydırmasız; en sade ama çok planlı kaptanı kısıtlar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sınırsız + serbest metin (mevcut)</span>
+              <span class="opt-detail">Esnek ama sekmeler sonsuz kayar, hızlı ayırt etme kaybolur.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Maks 6 planla sınırla; sabit A–F harf kimliği + opsiyonel kısa etiket kullan.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Bir maç için 6 senaryo (başlangıç, öndeyken, gerideyken, adam eksik/fazla, son dakika) gerçekçi üst sınır; ötesi karar felcidir. Sabit harf saha kenarında 'B'ye geç' sözlü komutunu mümkün kılar ve renk+harf birlikte anında ayırt etme sağlar. Sonsuz kaydırılan serbest sekmeler tek-el ergonomisini bozar — sınır burada özellik, kısıt değil.</p>
+          </div>
+        </article>
+        <article class="q" id="S10">
+          <div class="q-head">
+            <span class="q-num">S10</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S10" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Yeni plan üretilince (handleNewTactic) hangi başlangıç durumu gelmeli? Bugün her yeni plan sabit boş 7v7 2-3-1; kadro ve bağlam kayboluyor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Aktif planın kadrosu + dizilişi korunarak açılsın</span>
+              <span class="opt-detail">Yeni plan o an sahadaki oyuncular ve dizilişle başlar; kullanıcı sadece varyant yapar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Boş diziliş ama kadro korunsun</span>
+              <span class="opt-detail">Oyuncular yedeğe düşer, diziliş sıfır; yerleştirmeyi kullanıcı yapar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tamamen boş 7v7 2-3-1 (mevcut)</span>
+              <span class="opt-detail">Her şey sıfırdan; her yeni planda kadroyu yeniden kurma yükü.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Yeni plan, aktif planın kadrosunu ve dizilişini koruyarak açılsın (kullanıcı oradan varyant üretsin).</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Planlar pratikte 'aynı takımla farklı düzen' olduğundan her yeni planda 11 oyuncuyu tekrar dizmek katlanılmaz tekrar yükü ve en büyük terk sebebidir. Aktif plandan türetmek 'Ekle'ye basıp saniyeler içinde varyant oynamayı sağlar; sabit boş 2-3-1 kullanıcının o ana kadarki tüm emeğini çöpe atar.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-03">
+        <header class="sec-head">
+          <span class="sec-code">03</span>
+          <div class="sec-titles">
+            <span class="sec-tag">ANİMASYON</span>
+            <h2 class="sec-title">Etkileşim çekirdeği: öğe seçimi &amp; animasyon/koreografi motoru</h2>
+          </div>
+          <span class="sec-count">6 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S11">
+          <div class="q-head">
+            <span class="q-num">S11</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S11" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Stüdyoda bugün 'ögeyi seçme' kavramı yok — oysa granüler silme, rakip isimlendirme, çizgi düzenleme ve SEQ adım-vurgulama hepsi bir seçim modeli varsayıyor. Bir jeton/çizgi/rakip nasıl SEÇİLSİN?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tek dokun = seç (görünür halka + haptik), sürükle = taşı</span>
+              <span class="opt-detail">Bir ögeye kısa dokunuş onu seçili yapar (parlayan halka + hafif titreşim) ve o ögenin bağlam eylemleri (Sil/İsim/Düzenle) belirir; basılı tutup çekmek taşır. Boşa dokunmak seçimi kaldırır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Uzun bas = seç, tek dokun = birincil eylem</span>
+              <span class="opt-detail">Seçim long-press'e gizlenir; keşfi zor ama kaza ile seçimi önler.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Kalıcı 'Seç' modu (araç çubuğunda ok)</span>
+              <span class="opt-detail">Ayrı seçim aracı; açıkken dokunuşlar seçer. Net ama bir mod daha ekler.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Tek dokun = seç (görünür halka + haptik) + sürükle = taşı modelini birincil yap; seçili ögeye özel bağlam eylemleri (Sil/İsim/Düzenle) sahanın altında belirsin. Çoklu seçimi ilk sürüme koyma.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">'Seçili öğeyi sil', rakibe basınca isimlendirme ve SEQ adımını vurgulama gibi talep edilen davranışların HEPSİ önce bir seçim etkileşimi gerektirir — bu model olmadan talep 4'ün yarısı (yalnız gerekeni sil) fiilen uygulanamaz. Tek dokun=seç en keşfedilebilir kalıptır ve sürükle=taşı ile çakışmaz çünkü sürükleme hareket eşiğiyle ayrışır. Görünür halka + haptik, tek elle çalışan kaptana 'neyi sileceğimi/adlandıracağımı' hiç düşündürmeden gösterir; çoklu seçim ilk sürümde gereksiz karmaşadır.</p>
+          </div>
+        </article>
+        <article class="q" id="S12">
+          <div class="q-head">
+            <span class="q-num">S12</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S12" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">'Bir butona basınca YALNIZCA top ve oyuncu hareketleri görünsün, çizgiler gizlensin' talebi için katman görünürlüğünü nasıl kuralım?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tek 'Sadece Hareket' anahtarı (göz ikonu)</span>
+              <span class="opt-detail">Açıkken tüm çizim çizgileri 0 opaklığa animasyonla geçer, yalnız hareket eden oyuncu/rakip markörleri ve top kalır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Katman filtresi çipleri: Koşu / Pas / Rakip izi / Oyuncu ayrı ayrı</span>
+              <span class="opt-detail">4 küçük göz-ikonlu çip; güçlü ama daha çok tık ve ekran alanı.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">İki kademeli: OYNAT'ta çizgiler otomatik %20 saydamlaşır, 'Sadece Hareket' tümüyle gizler</span>
+              <span class="opt-detail">Mevcut opacity davranışını çizimlere de uygula, üstüne tam-gizle.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">'Sadece Hareket' adında tek anahtar (dolu/çizili göz ikonu) koy; açıkken tüm çizgiler gizlenir, OYNAT'a ilk basışta bu modu varsayılan öner ama kullanıcı geri açabilsin. Durumu plana kaydetme, oynatma-oturumuna özel tut.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Talep tam olarak budur ve tek anahtar az-tık ilkesine uyar. Çizgiler oynatma sırasında görsel gürültü yaratır; takım arkadaşına 'topun nasıl aktığını' göstermek çizgisiz çok daha okunaklıdır. Göz ikonu evrensel 'göster/gizle' metaforu olduğundan sıfır öğrenme gerektirir; 4'lü filtre çipi mobilde başparmakla 4 hedefe basmayı ve ekran doldurmayı getirir, ileride 'gelişmiş' altına saklanabilir.</p>
+          </div>
+        </article>
+        <article class="q" id="S13">
+          <div class="q-head">
+            <span class="q-num">S13</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S13" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">TEMİZLE bugün tek dokunuşta hem tüm rakipleri hem tüm çizimleri onaysız siliyor. Kullanıcı hem GERİ AL hem granüler silme (hepsi ya da seçili/gereken) istedi. Nasıl parçalayalım?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Ayrı kalıcı GERİ AL + TEMİZLE bottom-sheet (4 seçenek) + 5sn geri-al toast</span>
+              <span class="opt-detail">GERİ AL her zaman görünür; TEMİZLE alt sayfada 'Sadece çizimler / Sadece rakipler / Seçili öğe / Hepsi' sunar (Seçili öğe, önceki seçim modeliyle çalışır), tam temizlik geri-alınabilir toast bırakır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Bölünmüş menü: dokun=son adımı sil, uzun bas=granüler menü</span>
+              <span class="opt-detail">Tek buton; granülariteyi uzun basışta aç. Yer kaplamaz ama gizli.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Bağlama duyarlı: seçili öğe varsa 'Seçileni Sil', yoksa 'Tümünü Temizle' (onaylı)</span>
+              <span class="opt-detail">Buton etiketi duruma göre değişir; tam temizlemede geri-al toast.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Ayrı bir GERİ AL butonu her zaman görünür olsun; TEMİZLE ise bottom-sheet ile 4 granüler seçenek sunsun (Sadece çizimler / Sadece rakipler / Seçili öğe / Hepsi) ve tam temizlik 5 sn'lik geri-alınabilir toast bıraksın. Yıkıcı 'Hepsi' seçeneği kırmızıyla işaretlensin.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kullanıcı hem GERİ AL hem granüler silme istedi ve 'Seçili öğe' seçeneği ancak bu bölümde tanımlanan seçim modeliyle gerçek olur. Mevcut tek-tık toplu silme 20 dakikalık koreografiyi kaza ile yok edebilir; kaptan sahada tek elle çalışırken en çok bundan korkar. Bottom-sheet başparmak erişimine en yakın bölge; kalıcı GERİ AL güveni, süreli toast ise cesareti artırır. Bu, 'ya hepsi ya sadece gereken' talebini kaza riski olmadan karşılar.</p>
+          </div>
+        </article>
+        <article class="q" id="S14">
+          <div class="q-head">
+            <span class="q-num">S14</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S14" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Şu an hiç GERİ AL/YİNELE yok. Geçmiş yığını (history stack) neyi kapsasın?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tüm tahta durumu anlık-görüntü yığını (~30 adım)</span>
+              <span class="opt-detail">Çizimler + oyuncu/rakip konumları + rakip ekleme + isim; her pointer-up bir adım.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Yalnızca çizimler (drawings[])</span>
+              <span class="opt-detail">En hafif; oyuncu/rakip taşımaları geçmişe girmez.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Çizimler + rakip ekleme/silme, sürükleme taşımaları hariç</span>
+              <span class="opt-detail">Yıkıcı işlemler geri-alınır, ince konum ayarı geri-alınmaz.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Tüm tahta durumunu kapsayan tek anlık-görüntü yığını kur; her pointer-up (çizim bitişi, oyuncu/rakip taşıma bitişi, ekleme/silme) bir adım olsun ve yığını ~30 adımla sınırla.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kullanıcı 'yanlış yaptığım son şeyi geri al' der; bunun çizim mi taşıma mı olduğunu ayırt etmesini beklemek milyon-dolarlık çıtayı düşürür. activeTactic zaten tek SSOT nesnesi olduğundan anlık görüntü ucuz; 30 adım sınırı düşük telefonda bellek baskısını önler. Yalnız pointer-up'ta kayıt, RAF'lı sürüklemede yığını şişirmez.</p>
+          </div>
+        </article>
+        <article class="q" id="S15">
+          <div class="q-head">
+            <span class="q-num">S15</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S15" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Oynatma kontrolleri şu an sadece OYNAT/SIFIRLA (tek buton) ve döngü 'repeat: Infinity' sabit. Kontrol setini nasıl genişletelim?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Saha altında yüzen bar: Oynat/Duraklat + Baştan Al + Hız (0.5x/1x/2x) + Döngü anahtarı</span>
+              <span class="opt-detail">Duraklat ile durdurma ayrışır; hız tempoyu gösterir; döngü kapatılabilir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece Oynat/Duraklat + Hız, döngü hep açık</span>
+              <span class="opt-detail">Daha az buton; ama 'bir kez oynat ve dursun' senaryosu yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Oynat/Duraklat + zaman çizelgesi kaydırıcı (scrubber)</span>
+              <span class="opt-detail">En güçlü ama en karmaşık.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Saha altında yüzen kompakt bir çubuk ekle: Oynat/Duraklat, Baştan Al, Hız (0.5x/1x/2x) ve Döngü anahtarı; 'repeat: Infinity' sabitini bu döngü anahtarına bağla.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Mevcut tek SIFIRLA butonu duraklatma ile durdurmayı karıştırıyor; kaptan bir anı dondurup anlatmak ister (Duraklat), sonsuz döngü ise sunumda göz yorar. Hız kontrolü 'yavaş pas oyunu' ile 'hızlı kontra' farkını görsel anlatır ve doğrudan mentalite/tempo sistemine bağlanır. Saha-altı yüzen bar başparmak bölgesinde durur, toolbar'ın yatay kaydırmasından kurtarır.</p>
+          </div>
+        </article>
+        <article class="q" id="S16">
+          <div class="q-head">
+            <span class="q-num">S16</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S16" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">SEQ (sıralı) modda zaman çizelgesi yok; yalnız saha üstünde numaralı rozetler var. Sıralamayı nasıl düzenletelim?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Saha altında yatay adım şeridi (playhead'li)</span>
+              <span class="opt-detail">1-2-3 baloncukları sürükle-bırak ile yeniden sıralanır; bir adıma dokununca sahadaki ilgili çizgi/oyuncu (seçim modeliyle) vurgulanır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Mevcut saha-üstü rozetleri koru, sadece sürükleyerek sıra değişimi ekle</span>
+              <span class="opt-detail">En az değişiklik; ama üst üste binen çizgilerde rozetler karışır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Kaydırılabilir zaman çizelgesi + adım süreleri</span>
+              <span class="opt-detail">DAW-benzeri tam kontrol, en zengin ama en karmaşık.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Saha altına yatay bir adım şeridi (playhead'li) ekle; adımlar sürükle-bırak ile sıralanır ve bir adıma dokununca sahadaki ilgili çizgi/oyuncu vurgulanır. Saha-üstü rozetler ikincil kalsın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Yoğun koreografide 6-8 çizgi üst üste bindiğinde saha-üstü rozetler birbirine girer — bu tam SEQ'in en çok kullanıldığı senaryodur. Ayrı şerit sırayı tek bakışta okutur; sürükle-bırak (framer Reorder zaten kullanımda) tanıdık jesttir. Şeritten sahaya çift yönlü vurgulama, bölüm başında tanımlanan seçim modelini yeniden kullanarak 'hangi rozet hangi pas' karışıklığını yok eder.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-04">
+        <header class="sec-head">
+          <span class="sec-code">04</span>
+          <div class="sec-titles">
+            <span class="sec-tag">RAKİP</span>
+            <h2 class="sec-title">Rakip &amp; etkileşim</h2>
+          </div>
+          <span class="sec-count">4 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S17">
+          <div class="q-head">
+            <span class="q-num">S17</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S17" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Rakip ekleme etkileşimi nasıl olmalı? Şu an ayrı 'RAKİP EKLE' tool'u seçilip tahtaya her basışta tek tek 'Rakip N' ekleniyor; araç çubuğu sadeleşecek.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Uzun basma ile rakip bırak (mod yok) + 'Rakip dizilişi ekle' butonu</span>
+              <span class="opt-detail">TAŞI modunda boş alana long-press → oraya rakip düşer; ayrı tool araç çubuğundan silinir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tek dokunuşla ekleme modu + üstte adet göstergesi</span>
+              <span class="opt-detail">Rakip modu açıkken her boş dokunuş bir rakip bırakır; 'Rakip 3/7' rozeti görünür.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">'Rakip dizilişi ekle' tek butonu + elle ince ayar</span>
+              <span class="opt-detail">Tek tık hazır bir rakip bloğu koyar; tek tek ekleme ikincil.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Uzun basma ile bırakmayı birincil, 'Rakip dizilişi ekle' butonunu tamamlayıcı yap; ayrı 'RAKİP EKLE' tool'unu araç çubuğundan kaldır.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Araç çubuğunu tek elle erişilebilir tutmak için buton sayısını düşürmek şart; long-press dokunmatik zihinsel modeliyle uyumlu (uzun bas = yeni öge) ve TAŞI modundan çıkmadan rakip serpiştirmeyi sağlar. Tek tek 8 kez dokunmak yerine hazır blok butonu az-tık ilkesine uyar.</p>
+          </div>
+        </article>
+        <article class="q" id="S18">
+          <div class="q-head">
+            <span class="q-num">S18</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S18" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Rakibe basınca açılan isimlendirme paneli nasıl gelmeli (talep: rakibe basınca isimlendirilebilsin)? Bugün rakibin tek etkileşimi sürükleme; isimlendirme UI'si yok.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Kısa dokunuş → seç + alttan kompakt sheet (isim + rol + savunma talimatı + sil), basılı tutup çekme → taşıma</span>
+              <span class="opt-detail">Sheet'te isim, hazır mevki çipleri (Stoper/Pivot/Kanat/Tehlikeli) + serbest metin; oyuncu slotu diliyle tutarlı, kırmızı temalı.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Balon (popover) rakibin üstünde inline düzenleme</span>
+              <span class="opt-detail">İsim input + hızlı rol çipleri; küçük telefonda üst kenarda ekran dışına taşar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Mevcut talimat modalını genişletip 'İsim' alanı ekle</span>
+              <span class="opt-detail">İsim + görev + koşu/pas tek yerde ama modal ağır.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Kısa dokunuş → seç + alttan kompakt sheet, basılı tutup çekme → taşıma ayrımını uygula (3. bölümdeki seçim modeliyle aynı jest); sheet'te isim, hazır mevki çipleri (Stoper/Pivot/Kanat/Tehlikeli + serbest metin) ve sil bulunsun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Rakibin tek etkileşimi bugün sürükleme; tap'i seçim+isimlendirmeye ayırmak keşfedilebilirliği çözer ve stüdyonun genel seçim modeliyle tutarlı kalır. Bottom-sheet tek elle başparmakla erişilebilir ve oyuncu slotu düzenleme diliyle aynıdır — iki ayrı zihinsel model öğrenilmez. Halı sahada rakip çoğu zaman 'şu tehlikeli pivot' diye anılır; hazır çipler tek dokunuşla etiketler, serbest metin gerçek isim isteyene kapı bırakır.</p>
+          </div>
+        </article>
+        <article class="q" id="S19">
+          <div class="q-head">
+            <span class="q-num">S19</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S19" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Rakipler koşu/pas yapabilecek (talep). Rakiple oyuncu üst üste yığıldığında (5% attach eşiği) çizilen koşu/pasın kime ait olduğu nasıl belirlenmeli?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Çizim aracında kalıcı 'BİZ / RAKİP' anahtarı</span>
+              <span class="opt-detail">Anahtar hangi taraftaysa attach yalnız o tarafın ögelerine yapılır ve çizgi rengi (biz yeşil #39FF14 / rakip kırmızı #ef4444) ona göre kilitlenir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Başlangıç noktasının en yakın tek türüne bağla, çakışmada seçim balonu</span>
+              <span class="opt-detail">İki öge de eşikteyse 'Kimin koşusu?' mini seçim çıkar; her çizimde ekstra tık riski.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Serbest bırak: her zaman mutlak en yakın öge (mevcut davranış)</span>
+              <span class="opt-detail">Ek UI yok; kullanıcı ögeyi aralar.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Çizim aracına kalıcı bir 'BİZ / RAKİP' anahtarı ekle; anahtar hangi taraftaysa attach yalnız o tarafın ögelerine yapılsın, çizgi rengi ona göre kilitlensin. Koşu=kesik, pas=oklu ayrımı her iki tarafta da geçerli olsun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kalıcı anahtar bir mod yükü ekler, ama alternatifler daha pahalı: 'en yakına bağla + çakışmada seçim balonu' rakip presi gibi oyuncuların iç içe geçtiği en yoğun senaryoda HER çizgide bir ekstra karar balonu doğurur — yani bilişsel yükü çizim başına tekrarlar; kalıcı anahtar ise niyeti oturum başına bir kez set eder ve seri çizimde sıfır ekstra tık ister. Anahtar aynı zamanda çizgi rengini deterministik yapar (kod zaten rakip=kırmızı, biz=yeşil üretiyor); renk=kim, tip=ne ayrımı dört-renk kaosundan hızlı okunur ve kesik/oklu redundansı renk körlüğünü telafi eder. Anahtarın taraf durumunu belirgin bir renkli başlıkla göstermek mod-körlüğü riskini de kapatır.</p>
+          </div>
+        </article>
+        <article class="q" id="S20">
+          <div class="q-head">
+            <span class="q-num">S20</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S20" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Rakip dizilişi ve 'ne yaparsa' senaryosu tek tıkla nasıl kurulsun? Şu an rakipler yalnız elle tek tek konuyor ve rakip hareketi yalnız serbest çizim.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tek tık ayna diziliş + 'Rakip formasyonu' seçici + hazır davranış preset'leri</span>
+              <span class="opt-detail">Tek tık activeTactic.formation'ı y-ekseninde çevirip aynı sayıda rakip bırakır; istersen rakibe 4-4-2 gibi farklı diziliş atarsın; 'Yüksek pres/Alçak blok/Kontra' preset'i tüm rakiplere hazır koşu/pas çizer, üstüne serbest düzenleme.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece ayna diziliş</span>
+              <span class="opt-detail">Formasyonu simetrik yansıtır; farklı diziliş ve davranış senaryosu yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece serbest çizim + adlandırılmış senaryo etiketi</span>
+              <span class="opt-detail">Kullanıcı her şeyi çizer, preset yok; güçlü kullanıcıya esnek ama amatöre yük.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Üçünü katmanla: tek tık 'ayna diziliş' (varsayılan) → 'Rakip formasyonu' seçici (değiştir) → hazır davranış preset'leri (Yüksek pres/Alçak blok/Kontra) ile hareket, hepsinin üstüne serbest düzenleme.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kullanıcıların çoğu 'bize karşı nasıl dizilir ve nasıl pres yapar' provası yapar; ayna diziliş sıfır düşünceyle dolu rakip saha verir, formasyon seçici SSOT'tan bedava gelen asimetrik senaryoyu (tek forvetli rakip vb.) açar, davranış preset'i ise amatörün sıfırdan kuramayacağı pres/blok çizgilerini futbolca doğru şekilde tek tıkla üretir. Bu üç katman tahtayı 'oyuncu diz' aracından 'maç simülasyonu' aracına yükseltir ve OYNA'nın futbol-zekâsı iddiasını en güçlü farklılaştıran özelliktir; serbest düzenleme güçlü kullanıcıyı kısıtlamaz.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-05">
+        <header class="sec-head">
+          <span class="sec-code">05</span>
+          <div class="sec-titles">
+            <span class="sec-tag">KADRO</span>
+            <h2 class="sec-title">Takım seçimi &amp; kadro entegrasyonu</h2>
+          </div>
+          <span class="sec-count">7 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S21">
+          <div class="q-head">
+            <span class="q-num">S21</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S21" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Takım seçim paneli bugün 140px yatay kaydırmalı minimal kartlar gösterip isTeamConfirmed olunca tamamen kayboluyor. Panelin yeni kimliği ne olsun?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Zengin takım kartı + onay sonrası kalıcı 'takım çipi'</span>
+              <span class="opt-detail">Kartta crest (color1/color2), 'hazır oyuncu / formasyon boyutu' oranı (ör. 9/11) ve next_match_date rozeti; onaydan sonra panel üstte küçük çipe dönüşür (tek tık geri açılır).</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece görsel zenginleştirme</span>
+              <span class="opt-detail">Kartlara crest ve renk eklenir ama onay sonrası panel yine tamamen gizlenir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Mevcut minimal kartlar kalsın</span>
+              <span class="opt-detail">Sadece member_count + format; değişiklik yok.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Zengin takım kartı + onay sonrası kalıcı 'takım çipi' seç; kartta 'hazır oyuncu / formasyon boyutu' oranını ve crest rengini mutlaka göster.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">MyTeamRow zaten color1/color2, member_count, next_match_date veriyor; bunları göstermek 'sağlam takım bağı' hissini bedava üretir. Kritik olan: isTeamConfirmed paneli tümden yok ediyor, oysa yanlış takım seçince veya başka plana geçince takımı değiştirmenin tek-el yolu yok. Kalıcı çip geri dönüş maliyetini sıfırlar ve 9 kişilik takım / 11v11 uyumsuzluğunu onay anında görünür kılar.</p>
+          </div>
+        </article>
+        <article class="q" id="S22">
+          <div class="q-head">
+            <span class="q-num">S22</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S22" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">populateSlotsWithSquad şu an sadece GK'yi eşleştirip kalan oyuncuları DİZİ SIRASINA göre dolduruyor (mevki eşleşmesi yok). Otomatik dizme mantığı ne olsun?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Mevki + fp (güç puanı) önceliği ile akıllı dizme</span>
+              <span class="opt-detail">pos ile slot rolünü eşleştir; aynı mevkide çok aday varsa fp yüksek olan sahaya, düşüğü yedeğe, eşleşmeyen yedeğe.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece mevki eşleşmesi</span>
+              <span class="opt-detail">pos→rol eşleştir, artıkları en yakın boş slota koy; fp tie-breaker yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Mevcut sıra-temelli dizme kalsın</span>
+              <span class="opt-detail">GK dışında sıraya göre doldur.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Mevki + fp önceliği ile akıllı dizme yap: pos ile slot rolünü eşleştir, çakışmada fp yüksek olan sahaya çıksın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">squadRowToPlayer zaten pos ve fp'yi taşıyor ama otomatik dizme bunları yok sayıp bek oyuncusunu forvet slotuna atabiliyor; bu 'futbol zekası' iddiasını ilk saniyede çürütür. Mevki eşleştirmesiyle tek tıkta gerçekten oynanabilir bir 11 elde edilir ve elle düzeltme (mobilde en pahalı işlem) minimuma iner; fp tie-breaker kadroyu 'en iyi 11' hissiyle optimize eder.</p>
+          </div>
+        </article>
+        <article class="q" id="S23">
+          <div class="q-head">
+            <span class="q-num">S23</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S23" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">member_count formasyon boyutundan azsa (8 kişilik takım, 11v11) slotlar boş kalıyor, isSquadComplete asla true olmuyor ve KAYDET kilitli kalıyor. Eksik kadro nasıl yönetilsin?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Otomatik hayali dolgu + 'EKSİK' rozeti + iki kısayol</span>
+              <span class="opt-detail">Boş slotlara isCustom 'Oyuncu 9/10' yerleştir; slot tıklanınca 'gerçek oyuncuyla değiştir' ve 'takıma çağır' (is_recruiting) kısayolları çıkar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Boş slotu 'davet et' aksiyonuna bağla</span>
+              <span class="opt-detail">Boş slot tıklanınca 'Takıma oyuncu çağır' kısayolu; hayali dolgu yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Yalnız uyarı göster</span>
+              <span class="opt-detail">'Kadro eksik' uyarısı + eksik slot sayısı, kaydı yine kilitle.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Otomatik hayali dolgu + 'EKSİK' rozeti yap; boş slot tıklanınca 'gerçek oyuncuyla değiştir' ve 'takıma çağır' kısayollarını birlikte sun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Halı sahada takımlar çoğu zaman tam mevcutlu değildir; 11v11'i 8 kişilik gerçek kadroyla planlamak yaygın. Mevcut davranış (KAYDET sonsuza dek kilitli) kullanıcıyı çıkmaza sokar. isCustom altyapısı zaten var; onu eksik slotlara uygulamak taktiği anında oynatılabilir kılar, 'EKSİK' rozeti dürüstlüğü korur ve is_recruiting üzerinden takımı büyütmeye organik kanca kurar.</p>
+          </div>
+        </article>
+        <article class="q" id="S24">
+          <div class="q-head">
+            <span class="q-num">S24</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S24" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Oyuncu seçim modalı FRIENDS/TEAMS/CUSTOM üç sekme + TEAMS'te takım→kadro iki kademeli drill-down yapıyor. Bu yapı korunsun mu?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tek arama kutulu birleşik liste + kaynak filtre çipleri</span>
+              <span class="opt-detail">Üstte arama; altında 'Takımım · Arkadaşlar · Hayali' çipleriyle filtrelenen tek liste. Aktif takım varsa varsayılan 'Takımım' ve kadro doğrudan görünür (drill-down yok).</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Üç sekme kalsın ama TEAMS drill-down kalksın</span>
+              <span class="opt-detail">Aktif takım seçiliyse TEAMS direkt kadroyu gösterir, ara adım atlanır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Mevcut üç sekme + drill-down kalsın</span>
+              <span class="opt-detail">Değişiklik yok.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Tek arama kutulu birleşik liste + kaynak filtre çipleri yap; aktif takım seçiliyken varsayılan doğrudan o takımın kadrosu olsun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">En sık işlem 'bu boş slota şu oyuncuyu koy'; üç sekme + iki kademeli drill-down bunu 3-4 tıka çıkarıyor. Aktif takım zaten selectedTeamId ile bilindiğinden modalı açar açmaz o kadroyu göstermek en olası niyeti karşılar. Birleşik arama 11v11 kadrolarda isim/forma no ile saniyede bulmayı sağlar; kaynak çipleri arkadaş/hayali erişimini tek dokunuşta korur.</p>
+          </div>
+        </article>
+        <article class="q" id="S25">
+          <div class="q-head">
+            <span class="q-num">S25</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S25" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Gelecek maça oyuncu uygunluğu (next_match_id ile bilinen katılım) hem stüdyodaki auto-fill'e hem maça atanan planın sahaya çıkacak 11'ine nasıl bağlansın? Bugün ikisi de kopuk.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Katılımı hem auto-fill'e hem maç planı slotlarına bağla</span>
+              <span class="opt-detail">'Katılacak' oyuncular plandaki yerlerine ön-doldurulur; gelmeyen oyuncunun slotu uyarı rengiyle işaretlenir; yeşil/gri/kırmızı rozet. Kaptan gelmeyeni tek dokunuşla ikame eder.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece pasif uygunluk rozeti</span>
+              <span class="opt-detail">Katılımı rozetle göster ama ne auto-fill sırasını ne maç kadrosunu etkileme; kopukluk sürer.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Şimdilik entegre etme</span>
+              <span class="opt-detail">Uygunluk stüdyo dışında kalsın, plan salt-görüntü olsun.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Uygunluğu tek bir 'katılım↔slot' bağıyla hem auto-fill'e hem maça atanan plana uygula: katılacaklar plandaki yerlerine ön-doldurulsun, gelmeyenin slotu uyarı rengiyle yansın, renkli rozet göstersin.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">OYNA bir halı saha uygulaması — taktiğin nihai amacı 'kağıttaki plan' değil yaklaşan maçta sahaya çıkan gerçek 11'dir. next_match_id zaten elde; katılım verisiyle birleşince tahta gerçek kadroya dönüşür. Uygunluğu hem düzenleme anındaki auto-fill'e hem maç planına aynı kuralla bağlamak, aksi halde iki ayrı yerde tekrar edilecek 'gelmeyen oyuncuyu işaretle' kararını tek yerde çözer ve 'planladığın kadro ile gelen kadro' arasındaki en pahalı kopukluğu kapatır — stüdyoyu takımla en sağlam bağlayan özelliktir.</p>
+          </div>
+        </article>
+        <article class="q" id="S26">
+          <div class="q-head">
+            <span class="q-num">S26</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S26" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Oyuncu yerleştirme yalnızca 'dokun→slot ata' ile yapılıyor. Sürükle-bırak yerleştirme eklensin mi ve nasıl?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Alt oyuncu tepsisinden sahaya sürükle-bırak + jeton-üstüne-bırakınca swap</span>
+              <span class="opt-detail">Alttaki yatay tepsiden oyuncuyu saha slotuna bırak; iki jeton üst üste gelince yer değiştir. Dokunuşla ekleme yedek yol kalır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece slot-slot sürükleme</span>
+              <span class="opt-detail">Sahadaki iki jetonu sürükleyerek yer değiştir; ekleme yine dokunuşla.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Dokunuş yeterli</span>
+              <span class="opt-detail">Sürükle-bırak eklenmesin.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Alt oyuncu tepsisinden sahaya sürükle-bırak + jeton-üstüne-bırakınca swap ekle; dokunuşla ekleme yedek yol olarak kalsın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Taktik tahtasının doğal etkileşimi sürüklemedir ve framer-motion zaten projede (Reorder ile). Sürükle-bırak 'şu oyuncuyu buraya al, bununla yer değiştir' niyetini tek jestte ifade eder — dokun-menü-seç zincirinden çok daha az tıklı. Üst üste bırakınca swap, halı sahada çok sık olan ilk 11 içi rotasyonu anında yapar; dokunuşu yedekte tutmak tek elle/küçük ekranda erişilebilirliği korur.</p>
+          </div>
+        </article>
+        <article class="q" id="S27">
+          <div class="q-head">
+            <span class="q-num">S27</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S27" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">subs[] (yedekler) modelde var ama stüdyoda görüntüsü/yönetimi belirsiz. İlk11↔yedek geçişi ve maç günü rotasyonu nasıl deneyimlensin?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Sahanın altında kalıcı yatay yedek tepsisi + sürükleyerek ilk11 ile takas</span>
+              <span class="opt-detail">Yedekler saha altında şerit; bir yedeği saha jetonu üstüne sürükleyince ikisi yer değiştirir. Uygun olmayan (gelmeyen) yedek soluk gösterilir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Ayrı 'Kadro' sekmesi/sheet'i</span>
+              <span class="opt-detail">İlk11 ve yedekler ayrı bir yüzeyde listelenir; net ama sahadan kopuk, sürükleme sezgisi zayıf.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Yedek yönetimi yok, hepsi tek havuz</span>
+              <span class="opt-detail">subs[] görünmez; oyuncu ya sahada ya modalda. Rotasyon kavramı yok.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Sahanın altında kalıcı yatay yedek tepsisi kur ve yedeği ilk11 jetonu üstüne sürükleyince takas yaptır; gelmeyen/uygun olmayan yedeği soluklaştır.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Halı sahada oyun kadar rotasyon da merkezidir — herkes oynar, kaptan maç boyu değişiklik yapar; subs[] alanı tam bu yüzden modelde var ama görünür bir yönetim olmadan ölü kalıyor. Yedekleri sahanın hemen altına, bir önceki soruda kurulan sürükle-bırak-takas jestiyle aynı dille koymak yeni bir zihinsel model eklemeden ilk11↔yedek geçişini tek jeste indirir; uygunluk verisiyle soluklaştırma, kaptanın maç günü gelmeyen yedeği yanlışlıkla oyuna almasını önler.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-06">
+        <header class="sec-head">
+          <span class="sec-code">06</span>
+          <div class="sec-titles">
+            <span class="sec-tag">METRİK / IQ</span>
+            <h2 class="sec-title">Mentalite/tempo/metrikler &amp; futbol zekası</h2>
+          </div>
+          <span class="sec-count">7 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S28">
+          <div class="q-head">
+            <span class="q-num">S28</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S28" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Mentalite (Defansif/Dengeli/Hücumcu) + Tempo (Yavaş/Normal/Hızlı) iki ayrı kart + 6 dikey buton yerine kompakt sistemin ana kontrolü ne olsun?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tek 2-eksenli XY pad (dokunmatik nokta)</span>
+              <span class="opt-detail">Yatay=tempo, dikey=mentalite; sürükledikçe metrikler ve saha canlı güncellenir.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tek 3x3 matris (mentalite x tempo) — 9 isimli hazır stil</span>
+              <span class="opt-detail">Tek dokunuşla ikisi birden; 'Kontrollü Baskı', 'Fırtına' gibi isimli hücreler.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">İki yatay 3-kademeli slider alt alta</span>
+              <span class="opt-detail">Başparmakla sürükle; tanıdık ama iki ayrı hedef.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Mevcut iki kartı yatay çiplere küçültmek</span>
+              <span class="opt-detail">Sadece görsel sıkıştırma, mantık aynı.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">İki eksenli XY pad (yatay=tempo, dikey=mentalite) tercih edilmeli; matris/slider B planı olsun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kullanıcı 'kompakt' istedi. XY pad tek başparmakla tek jestte iki değişkeni birden ayarlar (az-tık, tek-el), sürükledikçe hat yüksekliği/pres gibi metrikleri canlı gösterir ve 'milyon dolarlık his' verir. 6 dikey buton dikeyde çok yer yer ve iki ayrı hedef ister; XY pad hem yer kazandırır hem mentalite-tempo ilişkisini görsel olarak öğretir.</p>
+          </div>
+        </article>
+        <article class="q" id="S29">
+          <div class="q-head">
+            <span class="q-num">S29</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S29" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">identity (BALANCED/HIGH_PRESS/PARK_BUS/COUNTER_ATTACK) zaten slotları kaydırıyor; mentalite/tempo ile kavramsal olarak çakışıyor. İlişki nasıl kurulsun?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">identity ana 'preset', mentalite/tempo ince ayar</span>
+              <span class="opt-detail">Kimlik seçince mentalite+tempo+slot ofseti birlikte set edilir, sonra ince ayar yapılır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">identity'yi kaldır, mentalite+tempo'dan OTOMATİK türet</span>
+              <span class="opt-detail">Yüksek mentalite+hızlı tempo = ÖNDE BASKI rozeti otomatik atanır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Üçünü tek 'Oyun Stili' kartında birleştir</span>
+              <span class="opt-detail">identity etiket, mentalite/tempo o kimliğin içindeki 2 slider.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">identity ana preset olsun, mentalite/tempo ince ayar kalsın; kimlik seçimi ikisini + slot ofsetini birlikte kursun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kod zaten handleIdentityChange içinde HIGH_PRESS/PARK_BUS/COUNTER_ATTACK için slotları kaydırıyor — güçlü bir 'tek tıkla dizil' hareketi. Bunu mentalite+tempo ile senkronlamak, kullanıcının 3 ayrı yerden çelişkili sinyal vermesini önler (PARK_BUS + Hücumcu + Hızlı saçmalığı). Preset→ince ayar hem yeni başlayana hızlı başlangıç hem uzmana kontrol verir.</p>
+          </div>
+        </article>
+        <article class="q" id="S30">
+          <div class="q-head">
+            <span class="q-num">S30</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S30" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Slot x,y'den türetilecek YENİ metrikler için ilk sürümde hangi çekirdek set gösterilsin (talep: farklı metrikler eklenip geliştirilecek)?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">5'li çekirdek: Hat Yüksekliği, Genişlik, Kompaktlık, Pres Yoğunluğu, Risk/Denge</span>
+              <span class="opt-detail">x,y dağılımı + INSTRUCTIONS + archetype ağırlığından; radar için ideal köşe sayısı.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">3'lü sade: Hat Yüksekliği, Genişlik, Risk</span>
+              <span class="opt-detail">En okunur, en az bilişsel yük; mobil ekrana rahat sığar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">7'li tam: + Kanat/Merkez Eğilimi + Bölgesel Sayısal Üstünlük</span>
+              <span class="opt-detail">Derin analiz ama mobilde kalabalık.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">5'li çekirdek set (Hat Yüksekliği, Genişlik, Kompaktlık, Pres Yoğunluğu, Risk/Denge) ile başla; Pres'i identity/tempo tabanı + INSTRUCTIONS ince ayarı bileşiminden hesapla.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Bu beşi tamamen mevcut veriden (slot x,y + INSTRUCTIONS + archetype) türetilebilir, ekstra girdi istemez ve halı saha oyuncusunun sezgisiyle örtüşür ('çok mu açıldık', 'hat çok mu yüksek'). Metrik değişince tahta gerçekten değişir, süs olmaz. 3 fazla sadeleşip futbol zekası hissini zayıflatır; 7 mobilde kalabalık yapar. Bileşik pres formülü hem identity/tempo hem talimat sistemini ödüllendirir.</p>
+          </div>
+        </article>
+        <article class="q" id="S31">
+          <div class="q-head">
+            <span class="q-num">S31</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S31" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Bu metrikler tahtanın neresinde ve hangi biçimde görselleştirilsin?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Katlanır panel: kapalıyken 3 kritik rozet, açınca 5-köşeli radar + bar detayı + çim üstü boş bölge uyarısı</span>
+              <span class="opt-detail">Varsayılan minimal, dokununca genişler; sahayı boğmaz.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sahanın altında sabit 5-köşeli radar + tek satır özet</span>
+              <span class="opt-detail">Hep görünür; mentalite/tempo değişince canlı morph eder ama yer kaplar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Yatay bar listesi (her metrik 0-100 dolu çubuk)</span>
+              <span class="opt-detail">Renk kodlu, en okunur; radar sezgisi yok.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Katlanır panel: varsayılan 3 kritik rozet görünür, dokununca 5-köşeli radar + bar detayına açılsın; boş bölge uyarısı çim üstünde noktalansın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Mobilde sürekli açık radar sahayı sıkıştırır ama metrikleri tümden gizlemek futbol zekası vaadini öldürür. Progressive disclosure az-tık ve keşfedilebilirliği birlikte verir. Radar 5 metrik için doğal biçim, bar tek metriğe odaklıyken daha okunur — ikisini panelin iki katmanına koymak en iyisi. Çim üstü uyarı soyut sayıyı somut aksiyona bağlar.</p>
+          </div>
+        </article>
+        <article class="q" id="S32">
+          <div class="q-head">
+            <span class="q-num">S32</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S32" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Gerçek-zamanlı futbol zekası uyarıları (ör. 'sağ kanat boş', 'hat çok yüksek') nasıl tetiklenip sunulsun? Rakip dizilişi bu uyarılarda kullanılsın mı?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Çim üstü bağlamsal pin + panelde en fazla 3 önceliklendirilmiş uyarı + kaydet anında özet; rakip için bölgesel sayısal üstünlük</span>
+              <span class="opt-detail">Sorunlu bölgede titreşen nokta 'sağ bek çok içeride, kanat açık' der; rakip varsa 'biz 3 - rakip 2, sağ kanat' hafif kullanılır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece panel içi uyarı listesi (kırmızı/sarı)</span>
+              <span class="opt-detail">Sahada yer kaplamaz ama sorunu bölgeye bağlamaz.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece kaydet/öner anında toplu rapor</span>
+              <span class="opt-detail">Düzenlerken sessiz; öğretici anlık geri bildirim yok.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Çim üstü bağlamsal pin + aynı anda panelde en fazla 3 önceliklendirilmiş uyarı göster; kaydet anında da özetle. Rakip dizilişini bölgesel sayısal üstünlük için hafifçe kullan, tam matchup zekasını ikinci faza bırak.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Uyarıyı doğrudan sorunlu bölgede göstermek soyut metriği anında 'gördüm, anladım'a çevirir — koçluk hissinin kalbi. 3 ile sınırlamak dikkati korur; kaydet anındaki tekrar hatalı planın takıma önerilmesini son anda engeller. Rakiplerin artık koşu/pas yapması sahayı simülasyona yaklaştırıyor; bölgesel üstünlük ucuz hesaplanır ve 'nerede fazlalık/açık var' sorusunu halı saha diliyle yanıtlar.</p>
+          </div>
+        </article>
+        <article class="q" id="S33">
+          <div class="q-head">
+            <span class="q-num">S33</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S33" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Otomatik 'Taktik Skoru/Özeti' üretilecek mi, hangi biçimde?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">3 boyutlu yıldız kartı (Hücum/Savunma/Denge) + tek cümle koç yorumu</span>
+              <span class="opt-detail">Her biri 5 yıldız; 'Kontratağa uygun ama pres boşlukları var' gibi tek cümle.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tek harf/puan (ör. B+ / 78) + 1 cümle</span>
+              <span class="opt-detail">Hızlı sezgi ama tek boyuta indirger, 'kötü plan' damgası hissi.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece metinsel koç yorumu, puan yok</span>
+              <span class="opt-detail">Yorumu anlatı verir ama karşılaştırılamaz.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Skor yok — sadece ham metrikler</span>
+              <span class="opt-detail">Yorumlamayı kullanıcıya bırak.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">3 boyutlu yıldız kartı (Hücum/Savunma/Denge) + tek cümle koç yorumu birleştir; tek harf puandan kaçın.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Tek harf puan 'kötü plan' damgası gibi hissedilip amatör kullanıcıyı kırar ve tek boyuta indirger; ham metrik yorumu kullanıcıya yükler. Hücum/Savunma/Denge üçlüsü FIFA/FM kültüründen tanıdık, tek bakışta profil verir, hiçbir planı 'başarısız' ilan etmez. Tek cümle yorum özeti aksiyona bağlar ve 'En İyi Taktikler' vitrininde, kaptan onayında karşılaştırılabilir kimlik sağlar.</p>
+          </div>
+        </article>
+        <article class="q" id="S34">
+          <div class="q-head">
+            <span class="q-num">S34</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S34" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Mentalite/tempo/metrikler artık PLANA ÖZEL olacak. Planlar arası bu farkı hem sekmelerde hem tam KARŞILAŞTIRMADA (diziliş + metrik birlikte) nasıl deneyimletelim?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Sekmede mini metrik parmak izi + tek 'Karşılaştır' yüzeyi: diziliş için hayalet overlay + metrik için ikili radar</span>
+              <span class="opt-detail">Her sekmede planın Hücum/Savunma dengesini gösteren minik gösterge; 'Karşılaştır'da ikinci planın oyuncuları %35 opaklıkla bindirilir (kim nereye kayıyor) ve metrikleri aynı radarda çakışır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece diziliş için hayalet overlay</span>
+              <span class="opt-detail">Konum farkı net ama plan-bazlı metrik farkı görünmez.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece ikili radar / metrik farkı</span>
+              <span class="opt-detail">Sayısal fark okunur ama 'oyuncular nereye kayıyor' konum sezgisi kaybolur.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Tek bir karşılaştırma yüzeyinde iki katmanı birleştir: sekmelere mini metrik parmak izi göm, 'Karşılaştır' modunda diziliş için %35 hayalet overlay + metrik için ikili radar birlikte gelsin.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Mentalite/tempo/metrikler gerçekten plana özel olunca asıl değer planlar arası farkı görebilmektir — yoksa neden birden çok plan? Karşılaştırmanın iki boyutu (oyuncular nereye kayıyor + metrik profili nasıl değişiyor) ayrı sorular değil, aynı 'Karşılaştır' yüzeyinin iki katmanıdır; onları tek yerde birleştirmek hem tekrarı önler hem kararı bütünler. Hayalet overlay küçük telefonda yan-yana iki sahadan çok daha okunur ve koddaki koordinat sistemiyle bedava gelir; sekme parmak izi hangi planın hücumcu/defansif olduğunu tek bakışta gösterip renkle-ayırma talebini metrik anlamıyla güçlendirir.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-07">
+        <header class="sec-head">
+          <span class="sec-code">07</span>
+          <div class="sec-titles">
+            <span class="sec-tag">TAKIM BAĞI</span>
+            <h2 class="sec-title">Takım bağlantısı &amp; sosyal döngü</h2>
+          </div>
+          <span class="sec-count">5 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S35">
+          <div class="q-head">
+            <span class="q-num">S35</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S35" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Üye bir taktiği 'TAKIMA ÖNER' edince (status=PENDING_APPROVAL), kaptan/yönetici onayını nerede versin? Bugün onay yalnız o taktiği Stüdyo'da açana görünüyor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Çok kanal: Stüdyo bandı + bildirim + Takım Detayı vitrininde satır-içi Onayla/Reddet</span>
+              <span class="opt-detail">Kaptan öneriyi Stüdyo'yu açmaya mecbur kalmadan bildirimden veya sosyal ekrandan onaylar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece Stüdyo karar çubuğu (bugünkü)</span>
+              <span class="opt-detail">canDecideProposal ile taktik açılınca alttan çıkan bant; başka yerde yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Bildirim + vitrin satır-içi karar</span>
+              <span class="opt-detail">Stüdyo bandı olmadan; öneri sosyal ekranda çözülür.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Kararı çok kanala yay: Stüdyo bandını koru AMA asıl karar noktası bildirim ve Takım Detayı vitrinindeki satır-içi Onayla/Reddet olsun.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Bugün onay yalnız o taktiği Stüdyo'da açan yöneticiye görünür; kaptan 'taktik önerin var' diye uygulamayı açtığında doğru taktiğe manuel gitmek zorunda — bu PENDING önerilerin unutulmasına yol açar. Kaptanın telefonda tek elle, bildirimden veya sosyal ekrandan karar vermesi öneri→onay döngüsünü saatlerden saniyelere indirir ve sosyal motoru canlı tutar.</p>
+          </div>
+        </article>
+        <article class="q" id="S36">
+          <div class="q-head">
+            <span class="q-num">S36</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S36" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">tacticSocialService'te voteTactic (0-100 %) hazır ama vitrinde oy verme UI'ı yok. Oylama nasıl toplansın?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">3 hızlı yüzde chip (Zayıf/İyi/Efsane → %25/%60/%90)</span>
+              <span class="opt-detail">Tek dokunuş; ortalama kartta ince yeşil bar + '%X güven · N oy'.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Kaydırmalı yüzde slider (0-100)</span>
+              <span class="opt-detail">İnce ayar ama mobilde tek elle isabet zor, her oy bir sürükleme.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">5 yıldız → yüzdeye eşlenir</span>
+              <span class="opt-detail">Tanıdık ama 'güven %' anlamını zayıflatır.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">3 hızlı yüzde chip'i (Zayıf/İyi/Efsane → %25/%60/%90) kullan; ortalamayı kartta ince yeşil bar + '%X güven · N oy' olarak göster.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Slider mobilde tek elle isabet ister ve her oy bir sürükleme işidir; halı saha kullanıcısı maç öncesi hızlı 'buna varım/yokum' sinyali vermek ister. Üç chip tek dokunuşla net güven sinyali toplar; avg_vote/vote_count zaten sunucuda hazır olduğundan kartta anında 'takım bu plana ne kadar inanıyor' hissi doğar — aktif taktik seçimine meşruiyet katar.</p>
+          </div>
+        </article>
+        <article class="q" id="S37">
+          <div class="q-head">
+            <span class="q-num">S37</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S37" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">set_active_tactic takımda tek aktif taktik tutuyor. 'Aktif taktik' rozeti/etkisi ürün genelinde nerede görünsün?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Takım Detayı üstünde kalıcı 'Aktif Plan' banner'ı + maça plan atanmadıysa maç ekranında öntanımlı öner</span>
+              <span class="opt-detail">TeamPlanBanner her sekmede görünür, tek dokunuşla Stüdyo'da açılır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece vitrin kartında rozet (bugüne yakın)</span>
+              <span class="opt-detail">Takım Detayı &gt; Taktikler'de 'Aktif' etiketi; başka yerde iz yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece üst şeritte banner</span>
+              <span class="opt-detail">Görünür ama maç günü kadrosuyla bağ kurmaz.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Aktif taktiği Takım Detayı üstünde kalıcı 'Aktif Plan' banner'ına yükselt ve maça plan atanmadığında maç ekranında öntanımlı öner.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Tek aktif taktik kavramı ancak her yerde görünürse anlam kazanır; vitrine gömülü rozet 'şu an hangi planla oynuyoruz' sorusunu cevaplamaz. Üstte sabit banner takım kimliğini pekiştirir, maç ekranına taşınca aktif plan ile maç günü kadrosu arasındaki kopukluk kapanır — futbol zekası deneyimi 'plan → sahaya çıkan 11' zincirini tamamlar.</p>
+          </div>
+        </article>
+        <article class="q" id="S38">
+          <div class="q-head">
+            <span class="q-num">S38</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S38" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">assignMatchTactic maç başına TEK onaylı taktik atıyor. Kullanıcı Plan A/B/C üretebilirken maça kaç plan bağlansın?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Birincil + tek yedek plan (Başlangıç ve Plan B)</span>
+              <span class="opt-detail">Maça iki plan; kadro ekranında sekmeyle geçiş. assignMatchTactic'e primary/backup slot alanı.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Maça tek birincil plan (bugünkü)</span>
+              <span class="opt-detail">Net ama 'öndeysek/gerideysek' senaryosu yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Senaryo etiketli çok plan</span>
+              <span class="opt-detail">Öndeyken/Geride/Adam eksik gibi 2-3 onaylı plan; hazırlık yükü ve UI karmaşası.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Maça birincil + tek yedek (Başlangıç ve Plan B) bağlamaya izin ver; üçüncüsünü şimdilik açma.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Halı sahada gerçek karar anı 'gol yedik, ne yapıyoruz' anıdır; tek plan bu anı boş bırakır, üç+ senaryo amatör takım için gereksiz hazırlık yükü ve UI karmaşası getirir. Başlangıç + Plan B, mevcut çoklu-plan üretme yeteneğini maç gününe bağlayan en yalın köprü; assignMatchTactic'i primary/backup slot alanıyla genişletmek şemayı sade tutar.</p>
+          </div>
+        </article>
+        <article class="q" id="S39">
+          <div class="q-head">
+            <span class="q-num">S39</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S39" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Paylaşım için İKİ ayrı yol var: setTacticShareLink (salt-okunur link) ve sendTeamMessage (sohbet kartı). Bu ikisi kullanıcıya nasıl sunulsun?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Tek 'Paylaş' → hedef seçici; takım bağlamında sohbet öntanımlı vurgulu</span>
+              <span class="opt-detail">En üstte 'Takımıma (sohbet)', altında 'Bağlantı kopyala/WhatsApp'.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">İki ayrı buton (bugünkü): LİNKLE PAYLAŞ + TAKIM SOHBETİNE GÖNDER</span>
+              <span class="opt-detail">Eşit iki buton; kullanıcı farkı çözmek zorunda.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Bağlam-duyarlı: takımdaysa sohbet birincil, link ikincil</span>
+              <span class="opt-detail">Takım taktiğinde sohbet vurgulu; kişisel taktikte link.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Tek 'Paylaş' butonu → hedef seçici aç: en üstte 'Takımıma (sohbet)', altında 'Bağlantı kopyala/WhatsApp'; takım bağlamında sohbeti öntanımlı vurgula.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">İki eşit büyük buton karar yükü yaratır ve 'link' ile 'sohbet kartı' farkını kullanıcı çözmek zorunda kalır; milyon dolarlık çıtada paylaşım tek net niyettir, hedef ikincil seçimdir. Bağlam-duyarlı vurgu takım taktiğinin doğal olarak takıma gitmesini teşvik ederek sosyal döngüyü içeride tutar; dış link kadro devşirme/övünme için ikincil kalır.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-08">
+        <header class="sec-head">
+          <span class="sec-code">08</span>
+          <div class="sec-titles">
+            <span class="sec-tag">ALT BAR / IA</span>
+            <h2 class="sec-title">Alt bar &amp; birincil aksiyonlar / bilgi mimarisi</h2>
+          </div>
+          <span class="sec-count">4 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S40">
+          <div class="q-head">
+            <span class="q-num">S40</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S40" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Alt bardaki birincil aksiyon bireysel vs takım bağlamına göre şu an sadece kaydet modalında değişiyor (KAYDET / TAKIMA ÖNER). Bu bağlam farkını alt barın kendisinde nasıl gösterelim?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Buton etiketi bağlama göre değişsin + altında hedef satırı</span>
+              <span class="opt-detail">'KÜTÜPHANEME KAYDET' / 'TAKIMA KAYDET' / 'TAKIMA ÖNER' — modal açmadan doğru fiil görünür. Kaptan bir öneriyi incelerken 'ONAYLA' (ikincil REDDET) olur.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Etiket sabit 'KAYDET', üstünde hedef rozeti</span>
+              <span class="opt-detail">'KAYDET' kalır, küçük rozet (Kişisel / Takım / Öneri) durur.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">İki katmanlı buton</span>
+              <span class="opt-detail">Ana buton kaydeder, yandaki ok hedefi değiştirir.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Birincil buton etiketini bağlama göre canlı değiştir (KÜTÜPHANEME KAYDET / TAKIMA KAYDET / TAKIMA ÖNER; kaptan öneri incelerken ONAYLA + ikincil REDDET) ve altına küçük hedef satırı koy.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Kod zaten teamRow.my_role ile bu durumları hesaplıyor ama kullanıcı bunu ancak modalı açınca görüyor. Fiili aksiyonu butonun kendisinde göstermek 'öneri mi kayıt mı gidiyor?' belirsizliğini tıklamadan çözer — takımla sağlam bağ ve güven için kritik, çünkü üye yanlışlıkla 'kaydettim' sanıp önerinin onay beklediğini fark etmeyebilir. Aynı ekranın kaptan için 'karar ver' olması onay döngüsünü Stüdyo içinde tutar.</p>
+          </div>
+        </article>
+        <article class="q" id="S41">
+          <div class="q-head">
+            <span class="q-num">S41</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S41" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Alt bardaki 'YENİ TAKTİK' butonu aslında sayfayı reload edip her şeyi silme riski taşıyan bir onay modalı açıyor. Bu aksiyonu nasıl yeniden tasarlayalım?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Gerçek 'yeni boş plan' oluştur + giriş noktasını plan sekmelerindeki '+' ile birleştir</span>
+              <span class="opt-detail">Reload yerine mevcut planları koruyup temiz bir yeni TacticState ekler; sekme olarak açılır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Alt bardan çıkar, plan sekmelerine taşı</span>
+              <span class="opt-detail">'+ Yeni' sekmelerin yanına gider; alt bar sadece Taktikler + birincil aksiyona iner.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">'Sıfırla' olarak dürüstçe etiketle + koruma</span>
+              <span class="opt-detail">İsim 'SIFIRLA' olur, kaydedilmemiş değişiklik varsa uyarır ve reload yerine state reset yapar.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">'YENİ TAKTİK'i sayfa reload'undan ayırıp gerçek 'yeni boş plan' oluşturmaya çevir ve giriş noktasını plan sekmelerindeki '+' ile birleştir.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Bir birincil-alan butonunun tüm kaydedilmemiş planları reload ile yok etmesi milyon dolarlık üründe kabul edilemez bir tuzaktır ve etiketi ('Yeni Taktik') yaptığı işi (sayfa yenile) yanlış tanıtıyor. Plan oluşturmayı zaten çoklu-plan modelini yöneten sekme şeridine bağlamak IA açısından tutarlı ve keşfedilebilir olur.</p>
+          </div>
+        </article>
+        <article class="q" id="S42">
+          <div class="q-head">
+            <span class="q-num">S42</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S42" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Studio'da açık bir 'düzenle' vs 'oynat/izle' modu yok; simülasyon yalnızca çizim varken beliren GELİŞMİŞ ANİMASYON içinde saklı. Mod mimarisini nasıl kuralım?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">İki net mod: DÜZENLE / OYNAT</span>
+              <span class="opt-detail">Üstte segment; DÜZENLE'de araçlar, OYNAT'ta oynatma/hız/sekans kontrolleri ve temiz sahne.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tek mod, oynatma yüzen bir çubukta</span>
+              <span class="opt-detail">Çizim olunca alttan yüzen mini oynatıcı çıkar; mod yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Üç mod: KADRO / TAKTİK / OYNAT</span>
+              <span class="opt-detail">Kadro dizme, çizim/rakip, animasyon izleme ayrı sekmelerde.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Net iki mod kur: DÜZENLE ve OYNAT; oynatma kontrollerini 'gelişmiş animasyon' modülünün arkasından çıkarıp OYNAT modunun birincil içeriği yap.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Şu an oynatma yalnızca çizim varken + ayrı lazy modül indirilince görünür; bu, en 'vay be' dedirten özelliği (hareketli taktik) keşfedilemez kılıyor. Düzenleme ile izlemeyi modlara ayırmak sahneyi sadeleştirir (OYNAT'ta araçlar gizlenir), düşük telefonlarda daha akıcı olur ve kullanıcının 'şimdi çiziyorum / şimdi izliyorum' zihinsel modelini netleştirir.</p>
+          </div>
+        </article>
+        <article class="q" id="S43">
+          <div class="q-head">
+            <span class="q-num">S43</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S43" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Alt barın üç eşit 1/3 bölmesi (TAKTİKLER / YENİ TAKTİK / KAYDET) tüm aksiyonlara eşit görsel ağırlık veriyor; ayrıca KAYDET hem header hem alt barda çift. Alt bar hiyerarşisini nasıl kuralım?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">1 baskın birincil + 2 küçük ikincil ikon; header'dan KAYDET/PAYLAŞ kalksın</span>
+              <span class="opt-detail">KAYDET/ÖNER geniş ve vurgulu; Taktiklerim ve Yeni küçük ikon butonlar. Header sadece geri + düzenlenebilir taktik adı.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Birincil aksiyon + 'daha fazla' menüsü</span>
+              <span class="opt-detail">Tek büyük birincil; diğer her şey '•••' menüsünde.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">İki bölmeli: birincil aksiyon + araç çekmecesi</span>
+              <span class="opt-detail">Sol yarı bağlamsal birincil, sağ yarı taktik yönetimi çekmecesi.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Alt barı tek baskın birincil aksiyon + iki küçük ikincil ikon (Taktiklerim, Yeni) olacak şekilde ağırlıklandır; header'dan KAYDET/PAYLAŞ'ı kaldırıp sadece geri + düzenlenebilir taktik adı bırak.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Eşit 1/3 düzen görsel hiyerarşiyi yok ediyor ve KAYDET'in iki yerde olması 'hangisi gerçek kaydet?' tereddüdü doğuruyor (Fitts/Hick maliyeti). Taktik tahtası tek-el, başparmakla kullanılır; 'bir ekran, bir birincil aksiyon' ilkesi karar hızını artırır, ikincilleri küçültmek başparmak hedefini büyütür ve yanlış dokunuşu azaltır. Header'ı adlandırma+navigasyona indirgemek bilişsel yükü düşürür.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+      <section class="sec" id="sec-09">
+        <header class="sec-head">
+          <span class="sec-code">09</span>
+          <div class="sec-titles">
+            <span class="sec-tag">MOBİL / UX</span>
+            <h2 class="sec-title">Görsel/etkileşim tasarımı &amp; mobil ergonomi</h2>
+          </div>
+          <span class="sec-count">7 soru</span>
+        </header>
+        <div class="q-list">
+        <article class="q" id="S44">
+          <div class="q-head">
+            <span class="q-num">S44</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S44" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Saha zemininin görsel kimliği ne olsun? Şu an koyu #0A0E14 arka plan + neon #39FF14 vurgu var.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Koyu 'gece maçı' tahtası (mevcut neon dil korunur)</span>
+              <span class="opt-detail">Koyu zemin + ince halı doku + soluk çizgiler (%8); oyuncu/rakip/çizgiler neon renklerle patlar; hafif dikey gradyan (lacivert→siyah).</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Gerçekçi çim yeşili saha</span>
+              <span class="opt-detail">Açık yeşil çim + beyaz çizgiler; neon çizgilerin kontrastı düşer.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">İki temalı geçiş (koyu/aydınlık) tek dokunuşla</span>
+              <span class="opt-detail">Güneşte açık, gece koyu; ekstra sürdürme maliyeti.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Koyu 'gece maçı' tahtasını marka dili olarak sabitle; ince halı-doku + soluk çizgiler (%8) + hafif dikey gradyan ekle ve tüm öge renklerinin zemine karşı WCAG kontrast oranını doğrula.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Bu salt estetik değil ölçülebilir bir ergonomi kararı: neon #39FF14/#FACC15 paleti yalnız koyu zeminde WCAG AA kontrast eşiğini (≈4.5:1) aşar, çim yeşilinde bu neonlar okunmaz hale gelir ve renk körü kullanıcıda kaybolur. Halı saha kullanıcısı çoğunlukla gece, düşük ortam ışığında ve parlak stat aydınlatması altında oynar; koyu tema hem bu bağlamda göz kamaşmasını azaltır hem OLED ekranlarda pil tüketimini düşürür. Doku ve soluk çizgiler boş sahanın 'ölü' hissini kırıp profesyonel taktik tahtası algısı yaratır; kontrast doğrulaması ise okunabilirliği zevke değil ölçüye bağlar.</p>
+          </div>
+        </article>
+        <article class="q" id="S45">
+          <div class="q-head">
+            <span class="q-num">S45</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S45" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Oyuncu jetonu dokunma hedefi ve parmak-altı doğruluğu nasıl çözülsün? 11v11'de 22 jeton küçük telefona sığdığında parmakla tam isabet zor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">44px şeffaf hit-area + drag'de 1.25x büyütme + manyetik snap + haptik</span>
+              <span class="opt-detail">Görsel jeton kompakt kalır, dokunma alanı min 44x44px; basılı tutunca büyür, bırakınca en yakın noktaya snap, snap anında navigator.vibrate(10).</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece 44px şeffaf hit-area</span>
+              <span class="opt-detail">Görsel küçük, tıklanabilir daire büyük; snap ve haptik yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sürüklerken büyütme + snap, hit-area değişmez</span>
+              <span class="opt-detail">Hassasiyet artar ama küçük hedefte ilk dokunuş zor.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Üçünü birlikte uygula: kompakt görünür jeton + min 44x44px şeffaf dokunma alanı + basılı tutunca 1.25x büyüme + bırakınca en yakın formasyon noktasına manyetik snap; snap anında hafif haptik.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">11v11'de görsel boyutu büyütmek sahayı tıkar; çözüm görsel değil dokunma alanını büyütmektir (Fitts yasası). Snap formasyonu düzenli gösterip 'dağınık tahta' hissini önler; haptik geri bildirim yerleşmeyi onaylayarak tek-el kullanımda göz yükünü azaltır. Bu üçlü milyon dolarlık mobil çıtanın standart isabet çözümüdür.</p>
+          </div>
+        </article>
+        <article class="q" id="S46">
+          <div class="q-head">
+            <span class="q-num">S46</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S46" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Sahayı yakınlaştırma/kaydırma jesti eklenecek mi, nasıl? 11v11 ve yoğun çizim senaryolarında ekran kalabalıklaşıyor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Pinch-to-zoom + iki-parmak pan, çift-dokun ile sığdır; zoom SADECE 'taşı' modunda aktif</span>
+              <span class="opt-detail">Çizim modunda tek parmak her zaman çizer (touch-action ile çakışma engellenir); zoom kalıcı değil, her açılış sığdırılmış başlar.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Jest yok, saha ekrana sabit sığar</span>
+              <span class="opt-detail">En basit ama 11v11'de jetonlar/çizgiler üst üste biner.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sabit + tek 'Yakınlaştır' butonu (2-3 kademe)</span>
+              <span class="opt-detail">Jest karmaşası yok ama daha az akıcı.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Pinch-to-zoom + iki-parmak pan ekle, çift-dokunuşla 'sahaya sığdır'; ancak zoom SADECE 'taşı' modunda aktif olsun, çizim modunda tek parmak her zaman çizsin. Zoom durumunu plana kaydetme, her açılışta sığdırılmış başla.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">11v11 + çoklu pas/koşu çizgisinde parmakla hassas düzenleme zoom olmadan imkânsızdır; pinch bugün mobilde evrensel beklenti. Çizim modunda zoom'u kapatmak, kullanıcının çizerken yanlışlıkla sahayı kaydırmasını önler — taktik tahtalarında en sık şikâyet edilen çakışma. Zoom'u kalıcı yapmamak, her plan geçişinde tutarlı başlangıç kadrajı garanti eder.</p>
+          </div>
+        </article>
+        <article class="q" id="S47">
+          <div class="q-head">
+            <span class="q-num">S47</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S47" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Taktik tahtası doğası gereği yataydır; 11v11'de 22 jeton + çoklu çizgi dikey telefonda sıkışır. Ekran yönü stratejisi ne olsun?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Portre-birincil (dikeyde optimize) + isteğe bağlı 'döndür = tam ekran tahta'</span>
+              <span class="opt-detail">Tüm UI dikeyde tek-el çalışır; telefon yatay çevrilince yalnız saha tam ekran genişler (paneller gizlenir), çevrilince geri döner.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Portre kilidi</span>
+              <span class="opt-detail">Uygulama hep dikey; en tutarlı ama 11v11'de saha küçük kalır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tam responsive landscape (tüm UI yatayda yeniden akar)</span>
+              <span class="opt-detail">En geniş saha ama her paneli iki düzende tasarlama/bakım maliyeti yüksek, tek-el ergonomisi bozulur.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Portre-birincil kalsın ama telefon yatay çevrilince saha tam-ekran tahtaya genişleyip panelleri gizleyen bir 'sunum/inceleme' moduna geçsin; çevrilince otomatik geri dönsün.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">OYNA tek elle, ayakta, saha kenarında kullanılan bir uygulama — tüm birincil akış (kaydet/öner/oyuncu seç) portrede başparmakla erişilebilir olmalı, tam landscape UI bunu bozar ve her paneli iki kez tasarlama borcu getirir. Ama 11v11 dizilim ve koreografi gerçekten yatay alan ister; 'döndür = tam ekran tahta' bu ikilemi çözer: düzenleme/paylaşım portrede, geniş inceleme/sunum yatayda. Bu, zoom'un tam telafi edemediği 'yeterli saha alanı' sorununu düşük maliyetle kapatır ve mobil-önce ilkesini korur.</p>
+          </div>
+        </article>
+        <article class="q" id="S48">
+          <div class="q-head">
+            <span class="q-num">S48</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S48" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Set çok sayıda gizli/jest-temelli etkileşim ekliyor (tek-dokun seçim, köşe pip'i, long-press rakip, 'Sadece Hareket', pinch-zoom, XY pad). İlk kullanım ve keşfedilebilirlik nasıl çözülsün?</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Bağlamsal coach-mark'lar + zengin boş durum + tek seferlik jest ipuçları</span>
+              <span class="opt-detail">Boş tahtada 'Oyuncu eklemek için dokun, dizmek için sürükle' rehberi; her yeni yüzey ilk açılışında tek balon ipucu; ipuçları görülünce bir daha çıkmaz, 'İpuçlarını tekrar göster' ayarı kalır.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Tek seferlik tam ekran onboarding turu</span>
+              <span class="opt-detail">İlk girişte 4-5 slaytlık tur; kapsamlı ama atlanır ve unutulur, bağlamdan kopuk.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Keşfi kullanıcıya bırak (ipucu yok)</span>
+              <span class="opt-detail">En temiz ekran ama gizli jestler bulunamaz, güçlü özellikler ölü kalır.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Bağlamsal coach-mark'lar + zengin boş durum + tek seferlik jest ipuçları uygula; her ipucu ilgili yüzey ilk açıldığında bağlamında çıksın, bir daha tekrarlamasın, 'İpuçlarını tekrar göster' ayarı bırak.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Bu set XY pad, köşe pip'i, long-press rakip bırakma, tek-dokun seçim gibi çok sayıda güçlü ama görünmez etkileşim ekliyor; hepsi 'kullanıcı bilir' varsayarsa milyon dolarlık özellikler ölü kalır ve stüdyo boş bir tahta gibi görünür. Bağlamdan kopuk tam-ekran tur atlanır ve unutulur; oysa özelliği tam ihtiyaç anında (o yüzey ilk açılınca) gösteren bağlamsal ipucu öğrenmeyi kullanıma bağlar. Zengin boş durum ilk 10 saniyede 'ne yapabilirim' sorusunu yanıtlayarak keşfedilebilirlik çıtasını karşılar.</p>
+          </div>
+        </article>
+        <article class="q" id="S49">
+          <div class="q-head">
+            <span class="q-num">S49</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S49" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">Kayıp önleme için otomatik taslak kaydı nasıl çalışsın? Şu an değişiklikler yalnız manuel KAYDET ile korunuyor; uygulama kapanır/çökerse taktik uçuyor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">Her değişiklikte localStorage'a sessiz taslak + açılışta geri yükleme sorusu</span>
+              <span class="opt-detail">800ms debounce ile yerel taslak; açılışta 'Kaldığın yerden devam et / Sıfırla' modalı. Sunucuya dokunmaz.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Debounce'lu sunucuya otomatik taslak</span>
+              <span class="opt-detail">Cihazlar arası senkron ama ağ maliyeti + yarım taktikleri kirletme riski.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Yalnızca 'çıkarken kaydedilmemiş değişiklik' uyarısı</span>
+              <span class="opt-detail">Otomatik kayıt yok; veri hâlâ risk altında.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">Her anlamlı değişiklikte (slot taşıma, çizim, mentalite) 800ms debounce ile localStorage'a sessiz taslak yaz; tekrar açılışta kaydedilmemiş taslak varsa 'Kaldığın yerden devam et / Sıfırla' modalı göster. Sunucu kaydını manuel/öner akışına bırak.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Halı saha kullanıcısı taktiği çoğu zaman maç öncesi telaşla, zayıf ağda kurar; bir bildirim veya çağrı uygulamayı arka plana atınca dakikalarca emek uçarsa güven kaybolur. localStorage anında, çevrimdışı ve ücretsizdir; sunucu otomatik-kaydı yarım taktikleri kirletip öner/onay akışını bozar. Geri yükleme modalı kontrolü kullanıcıda bırakarak istenmeyen üzerine yazmayı önler ve header geri butonunun veri kaybı riskini de kapatır.</p>
+          </div>
+        </article>
+        <article class="q" id="S50">
+          <div class="q-head">
+            <span class="q-num">S50</span>
+            <label class="q-done">
+              <input type="checkbox" data-q="S50" />
+              <span>karar verildi</span>
+            </label>
+          </div>
+          <h3 class="q-text">prefers-reduced-motion ve düşük telefon performansı için animasyon stratejisi ne olsun? Kod her CTA'da animate-pulse, framer-motion Reorder, scale/glow kullanıyor.</h3>
+          <ul class="opts">
+            <li class="opt">
+              <span class="opt-label">prefers-reduced-motion algıla → dekoratif animasyonları kapat + içerik yoğunluğuna göre otomatik performans kısma</span>
+              <span class="opt-detail">animate-pulse ve glow durur, işlevsel geçişler (sekans oynatma) kalır; çizgi/top sayısı eşiği aşınca hayalet iz/glow otomatik kısılır, 'gelişmiş' altında manuel geçersiz kılma.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Sadece prefers-reduced-motion'a saygı</span>
+              <span class="opt-detail">Dekoratif animasyon kapanır ama yoğun koreografide otomatik kısma yok.</span>
+            </li>
+            <li class="opt">
+              <span class="opt-label">Kullanıcı ayarında manuel 'Sade mod' anahtarı</span>
+              <span class="opt-detail">Kontrol kullanıcıda ama çoğu kişi bulamaz.</span>
+            </li>
+          </ul>
+          <div class="rec">
+            <span class="rec-tag">ÖNERİ</span>
+            <p class="rec-text">prefers-reduced-motion:reduce'u dinle ve tüm dekoratif animasyonları (animate-pulse, glow, hover scale) kapat, yalnız işlevsel hareketleri (sekans oynatma, modal) kısaltılmış süreyle bırak; ayrıca aktif çizgi/top sayısı eşiği aşınca hayalet iz/glow'u otomatik kıs, 'gelişmiş' altında manuel geçersiz kılma bırak.</p>
+          </div>
+          <div class="why">
+            <span class="why-tag">NEDEN</span>
+            <p class="why-text">Sürekli animate-pulse hem erişilebilirlik açısından vestibüler rahatsızlık yaratır hem düşük telefonlarda GPU'yu boşuna meşgul edip sürükleme akıcılığını düşürür. OYNA'nın hedef kitlesi ağırlıkla orta-alt segment telefon kullanır ve oynatma tökezlerse 'milyon-dolarlık' algı anında çöker. OS'un reduced-motion tercihine saygı tek sistem çağrısıyla erişilebilirlik + performans kazandırır; içerik yoğunluğuna göre otomatik kısma yoğun koreografide bile 60fps hedefini korur, işlevsel animasyonu korumak sekans/pas anlaşılırlığını feda etmez.</p>
+          </div>
+        </article>
+        </div>
+      </section>
+
+      <footer>
+        <p class="fmono">OYNA · TAKTİK STÜDYO · 9 BÖLÜM · 50 KARAR</p>
+        <p>Bu dosya, çok-uzmanlı bir tasarım paneli (formasyon, plan, animasyon, rakip, kadro, metrik/futbol-zekâsı, takım bağı, bilgi mimarisi, mobil/UX) tarafından üretilip sentezlendi ve eleştiri süzgecinden geçirildi. Öneriler mevcut kod tabanına (Studio.tsx, TacticState modeli, takım köprüsü) göre kalibre edildi. Bir soru için kendi cevabın "diğer" ise, kısaca yaz — ona göre kurarım.</p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var KEY='oyna-taktik-50-v1';
+    var saved={};
+    try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){saved={}}
+    var boxes=Array.prototype.slice.call(document.querySelectorAll('.q-done input'));
+    var counter=document.getElementById('doneCount');
+    function refresh(){
+      var n=0;
+      boxes.forEach(function(b){
+        var card=b.closest('.q');
+        if(b.checked){n++;card.classList.add('done')}else{card.classList.remove('done')}
+      });
+      if(counter)counter.textContent=n;
+    }
+    boxes.forEach(function(b){
+      var id=b.getAttribute('data-q');
+      if(saved[id])b.checked=true;
+      b.addEventListener('change',function(){
+        saved[id]=b.checked;
+        try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+        refresh();
+      });
+    });
+    refresh();
+
+    var prog=document.getElementById('prog');
+    function onScroll(){
+      var h=document.documentElement;
+      var max=(h.scrollHeight-h.clientHeight)||1;
+      var p=Math.min(1,Math.max(0,(h.scrollTop||window.pageYOffset)/max));
+      prog.style.width=(p*100).toFixed(2)+'%';
+    }
+    document.addEventListener('scroll',onScroll,{passive:true});
+    onScroll();
+  })();
+</script>
