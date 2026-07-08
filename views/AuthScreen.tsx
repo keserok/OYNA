@@ -260,11 +260,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     setIsLoading('verify');
     try {
       await verifyEmailOtp(email.trim(), otp);
-      onSuccess();
+      // onSuccess() ÇAĞIRMA: yerel `role` hâlâ eski (PLAYER) olduğundan kaleci/
+      // hakem/tesis'i yanlışlıkla oyuncu Dashboard'ına düşürür. Navigasyonu App'teki
+      // onAuthStateChanged dinleyicisine bırak (profildeki GERÇEK role göre yönlendirir).
+      // Spinner, dinleyici doğru panele yönlendirip bu ekranı kaldırana dek döner.
     } catch (err: any) {
       console.error('OTP doğrulama hatası:', err);
       setError(err?.message || 'Kod hatalı veya süresi dolmuş.');
-    } finally {
       setIsLoading(null);
     }
   };
@@ -293,11 +295,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     try {
       setRememberMe(remember);
       await signInWithEmailPassword(email.trim(), password);
-      onSuccess();
+      // onSuccess() ÇAĞIRMA: yerel `role` hâlâ eski (PLAYER) olduğundan kaleci/
+      // hakem/tesis'i yanlışlıkla oyuncu Dashboard'ına düşürür (dinleyici sonra
+      // gerçek rolü okusa da view artık allowlist'te olmadığından düzeltemez).
+      // Navigasyonu App'teki onAuthStateChanged dinleyicisine bırak. Spinner,
+      // dinleyici doğru panele yönlendirip bu ekranı kaldırana dek döner.
     } catch (err: any) {
       console.error('[Auth] Şifreli giriş hatası:', err);
       setError('E-posta veya şifre hatalı. Şifreni unuttuysan sıfırlayabilir ya da kod ile girebilirsin.');
-    } finally {
       setIsLoading(null);
     }
   };
@@ -313,7 +318,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
       setRememberMe(remember);
       const res = await signUpWithPassword(email.trim(), password, name.trim());
       if (res?.session) {
-        onSuccess();
+        // Oturum açıldı → navigasyonu App'teki onAuthStateChanged dinleyicisine bırak:
+        // yeni kullanıcıda profili oluşturup LOCATION_PROMPT'a (onboarding) yönlendirir.
+        // onSuccess() burada DASHBOARD'a zorlarsa hem onboarding atlanır hem stale-role
+        // sorunu yaşanır. Spinner, dinleyici yönlendirene dek döner.
       } else {
         // E-posta onayı açık: oturum yok → doğrulama beklenir.
         setInfo('Hesabın oluşturuldu. Giriş yapmak için e-postana gönderilen bağlantıyı onayla.');

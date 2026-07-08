@@ -409,12 +409,13 @@ const App: React.FC = () => {
       case 'SPLASH':
         return <SplashScreen ready={authResolved} onStart={() => {
           // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş;
-          // oturum varsa role göre panel.
+          // oturum varsa role göre panel. Rolü store'dan TAZE oku (kapanıştaki
+          // `role` eski/PLAYER olabilir → kaleci/hakem yanlış panele düşerdi).
           if (!auth.currentUser) {
             resetNavigation('AUTH');
             return;
           }
-          resetNavigation(navigateBasedOnRole(role));
+          resetNavigation(navigateBasedOnRole(useAppStore.getState().role));
         }} />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
