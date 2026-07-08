@@ -1916,6 +1916,51 @@ export async function forceCaptureIntentAdmin(intentId: string, notes?: string):
   if (error) throw new Error(error.message);
 }
 
+// ── Sağlayıcı talepleri/başvuruları (kaleci/hakem) — maç bazında admin görünürlüğü ──
+export interface ServiceRequestAdminRow {
+  id: string;
+  provider_id: string;
+  provider_name: string;
+  provider_type: string;         // GK | REF
+  status: string;                // APPLIED | ACCEPTED | CAPTURED | COMPLETED | ...
+  initiated_by: string | null;   // CAPTAIN | PROVIDER
+  fee: number;
+  provider_amount: number;
+  provider_confirmed: boolean;
+  captain_confirmed: boolean;
+  created_at: string;
+}
+
+/** Bir maçın tüm hizmet taleplerini (yeni PROVIDER-başlatan başvurular dahil) döndürür. */
+export async function fetchMatchServiceRequestsAdmin(matchId: string): Promise<ServiceRequestAdminRow[]> {
+  const { data, error } = await supabase
+    .from('service_requests')
+    .select('id, provider_id, provider_type, status, initiated_by, fee, provider_amount, provider_confirmed, captain_confirmed, created_at')
+    .eq('match_id', matchId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  const rows = (data || []) as any[];
+  const ids = Array.from(new Set(rows.map((r) => r.provider_id).filter(Boolean)));
+  const names: Record<string, string> = {};
+  if (ids.length) {
+    const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', ids);
+    (profs || []).forEach((p: any) => { names[p.id] = p.full_name; });
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    provider_id: r.provider_id,
+    provider_name: names[r.provider_id] || '—',
+    provider_type: r.provider_type,
+    status: r.status,
+    initiated_by: r.initiated_by ?? null,
+    fee: Number(r.fee),
+    provider_amount: Number(r.provider_amount),
+    provider_confirmed: !!r.provider_confirmed,
+    captain_confirmed: !!r.captain_confirmed,
+    created_at: r.created_at,
+  }));
+}
+
 export async function forceVoidIntentAdmin(intentId: string, reason?: string): Promise<void> {
   const { error } = await supabase.rpc('admin_force_void_intent', { p_intent_id: intentId, p_reason: reason ?? null });
   if (error) throw new Error(error.message);
