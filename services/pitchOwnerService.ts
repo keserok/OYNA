@@ -190,6 +190,26 @@ export async function getOwnerPitches(ownerId: string): Promise<OwnerPitch[]> {
   }
 }
 
+/**
+ * Admin/SUPER_ADMIN önizleme: sahip olmayan bir yöneticinin owner panelini gerçek
+ * bir tesisle açabilmesi için tüm (demo olmayan) tesisleri getirir. RLS gerçek
+ * yazma/okuma yetkisini yine sunucuda (is_admin) zorlar; bu yalnız listeler.
+ */
+export async function getAllPitchesForAdmin(): Promise<OwnerPitch[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitches')
+      .select('*, courts(*), pitch_tariffs(*)')
+      .eq('is_demo', false)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as OwnerPitch[];
+  } catch (error) {
+    console.error('getAllPitchesForAdmin:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 export async function getOwnerDailySummary(
   pitchId: string,
 ): Promise<OwnerDailySummary | null> {

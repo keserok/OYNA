@@ -52,6 +52,7 @@ import type { OwnerAccount } from '../types';
 import { supabase } from '../supabaseClient';
 import {
   getOwnerPitches,
+  getAllPitchesForAdmin,
   saveWorkingHours,
   togglePitchOpen,
   getOwnerBalance,
@@ -1470,6 +1471,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   const [autoApproveMinutes, setAutoApproveMinutes] = useState(35);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [isAdminPreview, setIsAdminPreview] = useState(false);
 
   const [pendingRequests, setPendingRequests] = useState<any[]>(INITIAL_PENDING_REQUESTS);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
@@ -1609,10 +1611,10 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     setShowFacilityPicker(false);
     setIsLoading(true);
     try {
-      const list = await getOwnerPitches(uid);
-      const next = list.find((p) => p.id === pitchId && !p.is_demo);
+      // Yüklü listeden seç (hem owner hem admin-önizleme için çalışır; admin
+      // getOwnerPitches'te görünmez ama ownedFacilities zaten tüm tesisleri taşır).
+      const next = ownedFacilities.find((p) => p.id === pitchId && !p.is_demo);
       if (next) {
-        setOwnedFacilities(list.filter((p) => !p.is_demo));
         await applyPitch(next, false, uid);
       }
     } catch (err) {
@@ -1638,6 +1640,32 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         setOwnedFacilities(owned);
         let pitch: OwnerPitch | null = owned[0] ?? null;
         let demo = false;
+
+        // Admin/SUPER_ADMIN önizleme: kendi tesisi olmayan bir yönetici, owner panelini
+        // gerçek bir tesisle açar (onboarding'e düşmez). Yazma yetkisi sunucuda is_admin
+        // ile zaten var. Böylece yönetici takvim/operasyonu gerçek veride görebilir/yönetebilir.
+        if (!pitch) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('role, is_admin')
+            .eq('id', uid)
+            .maybeSingle();
+          const isAdmin =
+            (prof as { is_admin?: boolean; role?: string } | null)?.is_admin === true ||
+            ['ADMIN', 'SUPER_ADMIN'].includes(String((prof as { role?: string } | null)?.role ?? ''));
+          if (isAdmin) {
+            try {
+              const allReal = await getAllPitchesForAdmin();
+              if (allReal.length) {
+                setOwnedFacilities(allReal);
+                setIsAdminPreview(true);
+                pitch = allReal[0];
+              }
+            } catch (e) {
+              console.warn('Admin önizleme tesisleri yüklenemedi:', e);
+            }
+          }
+        }
 
         if (!pitch) {
           let demoId = await getOwnerDemoPitchId();
@@ -1706,6 +1734,13 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
   const statusBanners = useMemo((): OwnerStatusBanner[] => {
     const list: OwnerStatusBanner[] = [];
+    if (isAdminPreview) {
+      list.push({
+        id: 'admin-preview',
+        tone: 'info',
+        message: `Yönetici önizleme — ${facilityData?.name ?? 'tesis'} yönetiliyor (kendi tesisiniz değil)`,
+      });
+    }
     if (isDemoMode) {
       list.push({
         id: 'demo',
@@ -1742,7 +1777,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       });
     }
     return list;
-  }, [isDemoMode, facilityData?.verificationStatus, ownerAccount, isPastDue]);
+  }, [isAdminPreview, isDemoMode, facilityData?.verificationStatus, facilityData?.name, ownerAccount, isPastDue]);
 
   const homeKpis = useMemo((): OwnerKpiItem[] => [
     {
@@ -2181,7 +2216,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
             if (!requireFeature('withdrawals')) return;
             setShowWithdrawals(true);
           }}
-          onAddFacility={!isDemoMode && !isReadOnly ? handleAddFacility : undefined}
+          onAddFacility={!isDemoMode && !isReadOnly && !isAdminPreview ? handleAddFacility : undefined}
           onPricingPolicy={() => {
             if (guardWrite()) setShowPricingPolicy(true);
           }}
