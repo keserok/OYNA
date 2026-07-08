@@ -17,6 +17,7 @@ import DeleteAccountModal from '../components/common/DeleteAccountModal';
 import SettingsSubPage from '../components/common/SettingsSubPage';
 import NotificationSettingsPage from '../components/settings/NotificationSettingsPage';
 import RegionPickerPage from '../components/settings/RegionPickerPage';
+import ProfileInfoPage from '../components/settings/ProfileInfoPage';
 import { APP_VERSION } from '../utils/appVersion';
 
 interface SettingsScreenProps {
@@ -26,7 +27,7 @@ interface SettingsScreenProps {
 
 const CONTACT_EMAIL = 'destek@oyna.app';
 
-type SubPage = null | 'notifications' | 'privacy' | 'region';
+type SubPage = null | 'notifications' | 'privacy' | 'region' | 'profile';
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) => {
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
@@ -244,7 +245,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Hesap</h3>
           <div className="flex flex-col">
-            <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" onClick={() => onNavigate('PROFILE')} />
+            <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" onClick={() => setSubPage('profile')} />
             <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
           </div>
         </section>
@@ -401,6 +402,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       </AnimatePresence>
 
       {/* Alt sayfalar — tam ekran, içeriye girilir */}
+      <ProfileInfoPage open={subPage === 'profile'} onClose={() => setSubPage(null)} />
       <NotificationSettingsPage open={subPage === 'notifications'} onClose={() => setSubPage(null)} />
       <RegionPickerPage open={subPage === 'region'} onClose={() => setSubPage(null)} />
       <SettingsSubPage open={subPage === 'privacy'} onClose={() => setSubPage(null)} title="Gizlilik" subtitle="Görünürlük ve engellenenler">
