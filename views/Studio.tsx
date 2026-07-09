@@ -1608,9 +1608,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
             {/* Pitch Area */}
             <div className="px-6 relative z-10 max-w-md mx-auto w-full overflow-hidden">
-                {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez) */}
+                {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez; alt navigasyonla çakışmaz) */}
                 {studioMode === 'EDIT' && (
-                    <div className="absolute right-8 bottom-4 z-40 flex flex-col gap-1.5">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-1.5">
                         <button onClick={zoomIn} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} aria-label="Yakınlaştır" title="Yakınlaştır"
                             className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-white flex items-center justify-center hover:bg-black/85 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shadow-lg">
                             <ZoomIn size={18} />
