@@ -151,6 +151,10 @@ BEGIN
     RETURN jsonb_build_object('ok', true, 'status', 'DECLINED');
   END IF;
 
+  -- Eşzamanlı ÇİFT-KABULÜ önle: maç+rol düzeyinde işlem-kilidi. İki sağlayıcı aynı anda
+  -- kabul ederse ikincisi bu kilidi bekler, ardından aşağıdaki "rol dolu" kontrolüne takılır.
+  PERFORM pg_advisory_xact_lock(hashtext('match_role:' || v_offer.match_id::text || ':' || v_offer.provider_type));
+
   -- KABUL: rol hâlâ boş mu? (başkası kabul etmiş olabilir)
   SELECT * INTO v_match FROM public.matches WHERE id = v_offer.match_id;
   IF v_match.status IN ('CANCELLED','COMPLETED') THEN RAISE EXCEPTION 'INVALID_MATCH_STATE: Maç kapandı.'; END IF;

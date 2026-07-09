@@ -38,7 +38,13 @@ END $$;
 COMMENT ON COLUMN public.matches.deposit_status IS
   'Kapora escrow durumu: NONE|BLOCKED(bloke, çekilmedi)|CAPTURED(tahsil)|VOIDED(serbest)|REFUNDED(iade).';
 COMMENT ON COLUMN public.matches.deferred_providers IS
-  'Maç oluştururken seçilen ve aktivasyonda talep gönderilecek sağlayıcılar: [{type:GK|REFEREE, providerId?:uuid}].';
+  'Aktivasyonda teklif gönderilecek sağlayıcılar: [{type:GK|REF, providerIds:[uuid], all:bool}].';
+
+-- payment_intents.related_entity_type CHECK'ine kapora escrow tipini ekle.
+-- (Aksi halde match_block_deposit INSERT'i CHECK ihlaliyle patlar → kapora akışı kırılır.)
+ALTER TABLE public.payment_intents DROP CONSTRAINT IF EXISTS payment_intents_related_entity_type_check;
+ALTER TABLE public.payment_intents ADD CONSTRAINT payment_intents_related_entity_type_check
+  CHECK (related_entity_type IN ('BOOKING','MATCH','GK_SERVICE','REF_SERVICE','MATCH_DEPOSIT'));
 
 -- ─── 2) Yardımcı: maçın toplam/dolu/eşik oyuncu sayısı ──────────────────────
 CREATE OR REPLACE FUNCTION public._match_player_counts(p_match_id uuid)
@@ -306,8 +312,8 @@ BEGIN
 
   -- Denetim izi (mevcut admin log altyapısı).
   BEGIN
-    PERFORM public.log_admin_action('MATCH_DEPOSIT_' || p_action, p_match_id::text,
-      jsonb_build_object('reason', p_reason, 'result', v_res));
+    PERFORM public.log_admin_action('MATCH_DEPOSIT_' || p_action, 'MATCH', p_match_id, p_match_id::text,
+      NULL, jsonb_build_object('reason', p_reason, 'result', v_res));
   EXCEPTION WHEN OTHERS THEN NULL; END;
 
   RETURN v_res;
