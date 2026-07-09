@@ -86,9 +86,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
 
                 {!showCard ? (
                     /* ── Sade görünüm ── */
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 xs:gap-4">
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-[27px] font-black italic uppercase leading-[1.05] tracking-tight text-white flex items-center gap-2">
+                            <h1 className="text-[22px] xs:text-[27px] font-black italic uppercase leading-[1.05] tracking-tight text-white flex items-center gap-2 min-w-0">
                                 <span className="truncate">{name}</span>
                                 {verified && (
                                     <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0" aria-label="Doğrulanmış">

@@ -36,7 +36,12 @@ const ROWS: { key: keyof Flags; icon: React.ReactNode; title: string; desc: stri
   },
 ];
 
-const PrivacySection: React.FC = () => {
+interface PrivacySectionProps {
+  /** true ise kendi başlığını gizler (tam ekran alt sayfada başlık zaten var). */
+  embedded?: boolean;
+}
+
+const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => {
   const userId = auth.currentUser?.uid || '';
   const [flags, setFlags] = useState<Flags | null>(null);
   const [blockedOpen, setBlockedOpen] = useState(false);
@@ -87,9 +92,11 @@ const PrivacySection: React.FC = () => {
 
   return (
     <section>
-      <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2 flex items-center gap-2">
-        <Lock size={12} className="text-[#39FF14]" /> Gizlilik
-      </h3>
+      {!embedded && (
+        <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2 flex items-center gap-2">
+          <Lock size={12} className="text-[#39FF14]" /> Gizlilik
+        </h3>
+      )}
       <div className="bg-[#161B22] border border-white/5 rounded-2xl divide-y divide-white/5">
         {ROWS.map(r => (
           <div key={r.key} className="flex items-center gap-3 p-4">

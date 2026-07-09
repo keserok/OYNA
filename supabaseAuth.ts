@@ -385,3 +385,57 @@ export const verifyPhoneOtp = async (phone: string, token: string) => {
   if (error) throw error;
   return data;
 };
+
+// ─── Hesap kimliği: kayıt/giriş yöntemi + şifre var mı ───────────────────────
+// Ayarlar → Profil Bilgileri için: kullanıcı Google/Apple/e-posta ile mi
+// kayıtlı, e-posta+şifre kimliği (yani parolası) var mı?
+export interface AuthIdentityInfo {
+  email: string | null;
+  /** Bağlı tüm sağlayıcılar (ör. ['email'], ['google'], ['apple','email']). */
+  providers: string[];
+  /** Birincil/görünen kayıt yöntemi. */
+  primaryProvider: 'email' | 'google' | 'apple' | 'phone' | 'unknown';
+  /** E-posta+şifre kimliği var mı? (yoksa şifre "oluştur" akışı gerekir) */
+  hasPassword: boolean;
+}
+
+export const getAuthIdentity = async (): Promise<AuthIdentityInfo> => {
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  const identities = (user?.identities ?? []) as { provider: string }[];
+  const providers = identities.map((i) => i.provider);
+  const metaProvider = (user?.app_metadata?.provider as string | undefined) ?? providers[0] ?? 'unknown';
+  const primaryProvider = (['email', 'google', 'apple', 'phone'] as const).includes(metaProvider as any)
+    ? (metaProvider as AuthIdentityInfo['primaryProvider'])
+    : 'unknown';
+  return {
+    email: user?.email ?? null,
+    providers,
+    primaryProvider,
+    // 'email' kimliği = e-posta+şifre ile oluşturulmuş → parolası var.
+    hasPassword: providers.includes('email'),
+  };
+};
+
+// ─── E-posta güncelle ────────────────────────────────────────────────────────
+// Proje ayarına göre iki davranış olabilir:
+//  • enable_confirmations=false → e-posta ANINDA değişir (link gitmez).
+//  • onay açık → yeni adrese doğrulama linki gider, onaylanınca değişir.
+// Yanıttan hangisinin olduğunu tespit edip çağırana bildiririz (config-agnostik).
+export const updateUserEmail = async (email: string): Promise<{ applied: boolean; email: string }> => {
+  const clean = email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.updateUser({ email: clean });
+  if (error) throw error;
+  const current = data.user?.email ?? null;
+  const applied = (current ?? '').toLowerCase() === clean; // anında değiştiyse eşittir
+  if (applied && auth.currentUser) auth.currentUser.email = current; // bellek-içi senkron
+  return { applied, email: current ?? clean };
+};
+
+// ─── Şifre güncelle / oluştur ────────────────────────────────────────────────
+// Oturum geçerliyse yeter. OAuth-only kullanıcıda parola OLUŞTURUR (böylece
+// e-posta+şifre girişi de kazanır).
+export const updateUserPassword = async (password: string): Promise<void> => {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+};

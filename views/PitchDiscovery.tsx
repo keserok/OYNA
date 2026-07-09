@@ -12,6 +12,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
 import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
+import { TURKEY_REGIONS } from '../data/turkeyRegions';
 import PitchDepositCheckout from '../components/PitchDepositCheckout';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
@@ -128,6 +129,7 @@ const mapDbPitchToUiPitch = (
   return {
     id: row.id,
     name: row.name,
+    city: row.city ?? undefined,
     district: row.district ?? row.city ?? '',
     location: row.address ?? [row.district, row.city].filter(Boolean).join(', '),
     distance: '',
@@ -518,6 +520,7 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode, onSelectTime, onNavigate }) => {
   const {
     userLocation,
+    selectedRegions,
     addUserNotification,
     setBookingPitch,
     setBookingCourt,
@@ -908,11 +911,24 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
   const districts = useMemo(() => ['Tümü', ...Array.from(new Set(sourcePitches.map(p => p.district).filter(Boolean)))], [sourcePitches]);
 
+  // Çoklu bölge üyeliği: seçili bölgelerden herhangi biri sahayı kapsıyor mu?
+  // ilçe seçiliyse ilçe eşleşir; il geneli seçiliyse il (ya da o ilin ilçeleri).
+  const pitchInSelectedRegions = useCallback((p: { city?: string; district: string }) => {
+    if (selectedRegions.length === 0) return true;
+    return selectedRegions.some(r => {
+      if (r.district) return p.district === r.district;
+      if (p.city) return p.city === r.city;
+      const cityDistricts = TURKEY_REGIONS.find(t => t.city === r.city)?.districts ?? [];
+      return cityDistricts.includes(p.district);
+    });
+  }, [selectedRegions]);
+
   const filteredPitches = useMemo(() => {
     let result = sourcePitches.filter(p => {
       if (p.isApproved === false) return false;
       if (favOnly && !favorites.has(p.id)) return false;
       if (onlyDiscounted && !p.flashDiscount) return false;
+      if (!pitchInSelectedRegions(p)) return false;
 
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.district.toLowerCase().includes(searchQuery.toLowerCase());
@@ -956,7 +972,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     result.sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
 
     return result;
-  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted]);
+  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions]);
 
   const locationLabel = filters.district !== 'Tümü'
     ? `${filters.district} çevresi`

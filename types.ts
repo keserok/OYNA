@@ -276,6 +276,10 @@ export interface MatchListing {
   confirmedAt?: string;       // T-8s quorum onay zamanı
   startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
   isDemo?: boolean;           // demo/seed maçı (panelde rozetle ayrıştırılır)
+  // Escrow kapora yaşam-döngüsü (20260716000001): NONE|BLOCKED|CAPTURED|VOIDED|REFUNDED
+  depositStatus?: 'NONE' | 'BLOCKED' | 'CAPTURED' | 'VOIDED' | 'REFUNDED';
+  depositAmount?: number;     // bloke edilen/tahsil edilen kapora
+  minPlayers?: number;        // maçın LIVE olması için gereken eşik (toplam − 2)
 }
 
 export interface PositionSlot {
@@ -542,10 +546,11 @@ export interface BusinessInsight {
 // Eski üç model (aşağıda) @deprecated; yeni akışlar ServiceRequest kullanır.
 // ═══════════════════════════════════════════════════════════════════════════
 export type ProviderType = 'GK' | 'REF';
+// 'APPLIED' = sağlayıcı-başlatan başvuru (kaleci/hakem maça başvurdu, kaptan onayı bekliyor).
 export type ServiceRequestStatus =
-  | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CAPTURED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+  | 'APPLIED' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CAPTURED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
 
-/** Tek talep modeli — kadro/kaptan bir kaleci/hakem talep eder. */
+/** Tek talep modeli — kaptan bir sağlayıcı talep eder (CAPTAIN) ya da sağlayıcı maça başvurur (PROVIDER). */
 export interface ServiceRequest {
   id: string;
   matchId: string;
@@ -557,6 +562,12 @@ export interface ServiceRequest {
   providerAmount: number;           // ücret − %10 komisyon (sağlayıcının eline geçen)
   requestKind: 'INDIVIDUAL' | 'SQUAD_VOTE';
   status: ServiceRequestStatus;
+  /** Talebi kim başlattı: kaptan (klasik kiralama) mı, sağlayıcı (maça başvuru) mu. */
+  initiatedBy?: 'CAPTAIN' | 'PROVIDER';
+  /** İki-taraflı maç sonu onayı (yalnız PROVIDER-başlatanda payout kapısı). */
+  providerConfirmed?: boolean;
+  captainConfirmed?: boolean;
+  appliedAt?: string;
   paymentIntentId?: string;
   payoutReleased: boolean;
   acceptedAt?: string;

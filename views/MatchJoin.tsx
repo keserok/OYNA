@@ -12,7 +12,8 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
-import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests } from '../services/serviceRequestService';
+import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
+import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -511,13 +512,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
 
-      await updateMatch({ 
-        ...match, 
-        slots: updatedSlots, 
-        awaySlots: updatedAwaySlots, 
-        status: nextStatus 
+      await updateMatch({
+        ...match,
+        slots: updatedSlots,
+        awaySlots: updatedAwaySlots,
+        status: nextStatus
       });
-      
+
+      // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
+      try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
+
       setSelectedSlotId(null);
       setNewMatchBadge(true);
       setLobbyTab('chat');
@@ -542,6 +546,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // Sunucudan TAZE durumu çek (eşzamanlı değişiklikleri ezmemek için — lost-update'i önler).
       const fresh = await getMatchDetails(match.id);
       if (fresh) await updateMatch({ ...match, ...(fresh as any) });
+
+      // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
+      try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
 
       setSelectedSlotIds([]);
       setSelectedSlotId(null);
@@ -866,6 +873,44 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Belirli tipte aktif (bekleyen/atanmış) talep var mı?
   const getActiveRequestForType = (type: ProviderType): ServiceRequest | undefined =>
     serviceRequests.find(r => r.providerType === type && ACTIVE_REQUEST_STATUSES.includes(r.status));
+
+  // ── Sağlayıcı-başlatan başvurular (kaleci/hakem maça başvurdu → kaptan yönetir) ──
+  const [reqActionId, setReqActionId] = useState<string | null>(null);
+  const providerApplications = serviceRequests.filter(r => r.status === 'APPLIED' && r.initiatedBy === 'PROVIDER');
+  const captainConfirmPending = serviceRequests.filter(
+    r => r.status === 'CAPTURED' && r.initiatedBy === 'PROVIDER' && !r.captainConfirmed && !r.payoutReleased
+  );
+
+  const handleAcceptApplication = async (requestId: string) => {
+    setReqActionId(requestId);
+    try {
+      await acceptProviderApplication(requestId);
+      await refreshServiceRequests(match.id);
+      showActionSuccess('Başvuru kabul edildi. Ücret bloke edildi.');
+    } catch (err: any) {
+      showActionError(err?.message || 'Başvuru kabul edilemedi.');
+    } finally { setReqActionId(null); }
+  };
+  const handleDeclineApplication = async (requestId: string) => {
+    setReqActionId(requestId);
+    try {
+      await declineProviderApplication(requestId);
+      await refreshServiceRequests(match.id);
+      showActionSuccess('Başvuru reddedildi.');
+    } catch (err: any) {
+      showActionError(err?.message || 'Başvuru reddedilemedi.');
+    } finally { setReqActionId(null); }
+  };
+  const handleCaptainConfirm = async (requestId: string) => {
+    setReqActionId(requestId);
+    try {
+      await captainConfirmService(requestId);
+      await refreshServiceRequests(match.id);
+      showActionSuccess('Onayladın. Sağlayıcı da onaylayınca ücret ödenir.');
+    } catch (err: any) {
+      showActionError(err?.message || 'Onay kaydedilemedi.');
+    } finally { setReqActionId(null); }
+  };
 
   const handleOpenProviderModal = async (type: ProviderType) => {
     // Aynı tipte aktif talep varsa ikinci talebe izin verme
@@ -2583,6 +2628,51 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 );
               })}
             </div>
+
+            {/* Gelen sağlayıcı başvuruları — kaptan kabul/reddeder (kabulde ücret bloke) */}
+            {providerApplications.length > 0 && (
+              <div className="space-y-2 mt-1">
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Gelen Başvurular</p>
+                {providerApplications.map((req) => {
+                  const applicant = (adminUsers || []).find(u => u?.id === req.providerId);
+                  const label = req.providerType === 'GK' ? 'Kaleci' : 'Hakem';
+                  return (
+                    <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-white/8 flex items-center gap-3">
+                      <img src={applicant?.avatar || `https://i.pravatar.cc/150?u=${req.providerId}`} alt="" className="w-9 h-9 rounded-xl object-cover border border-white/10" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-white truncate">{applicant?.name || label}</p>
+                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide">{label} · {req.fee}₺ blokaj</p>
+                      </div>
+                      <button onClick={() => handleDeclineApplication(req.id)} disabled={reqActionId === req.id}
+                        className="px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase text-gray-400 border border-white/10 disabled:opacity-50">Reddet</button>
+                      <button onClick={() => handleAcceptApplication(req.id)} disabled={reqActionId === req.id}
+                        className="px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase text-black bg-green-400 disabled:opacity-50">Kabul</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Maç sonu: sağlayıcı geldi mi? kaptan onayı (iki-taraflı payout) */}
+            {captainConfirmPending.length > 0 && (
+              <div className="space-y-2 mt-1">
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Sonu Onayı</p>
+                {captainConfirmPending.map((req) => {
+                  const applicant = (adminUsers || []).find(u => u?.id === req.providerId);
+                  const label = req.providerType === 'GK' ? 'Kaleci' : 'Hakem';
+                  return (
+                    <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-green-500/20 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-white truncate">{applicant?.name || label} geldi mi?</p>
+                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide">Onayınca ücret sağlayıcıya ödenir</p>
+                      </div>
+                      <button onClick={() => handleCaptainConfirm(req.id)} disabled={reqActionId === req.id}
+                        className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-black bg-green-400 disabled:opacity-50">Onayla</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </>

@@ -116,6 +116,66 @@ function persistActiveRegion(region: OynaLocation | null) {
   }
 }
 
+// ─── Arama yarıçapı kalıcılığı ────────────────────────────────────
+// activeRegion ile aynı desen: olmadan her açılışta sessizce 25km'ye dönüyordu.
+const SEARCH_RADIUS_KEY = 'oyna_search_radius';
+
+function loadSearchRadius(): number {
+  if (typeof window === 'undefined') return 25;
+  try {
+    const raw = localStorage.getItem(SEARCH_RADIUS_KEY);
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) && parsed >= 5 && parsed <= 50 ? parsed : 25;
+  } catch {
+    return 25;
+  }
+}
+
+function persistSearchRadius(radius: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SEARCH_RADIUS_KEY, String(radius));
+  } catch {
+    /* yoksay */
+  }
+}
+
+// ─── Çoklu bölge seçimi kalıcılığı ────────────────────────────────
+// Kullanıcı birden fazla il/ilçe seçebilir; keşif (maç + saha) bu bölgelerin
+// birleşimini gösterir. activeRegion "birincil" bölge olarak (etiket/GPS/harita
+// merkezi) senkron tutulur.
+const SELECTED_REGIONS_KEY = 'oyna_selected_regions';
+
+/** İki bölge aynı mı? (il + ilçe; ilçe null = il geneli) */
+export const sameRegion = (a: OynaLocation, b: OynaLocation): boolean =>
+  a.city === b.city && (a.district ?? null) === (b.district ?? null);
+
+function loadSelectedRegions(): OynaLocation[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(SELECTED_REGIONS_KEY);
+    if (!raw) {
+      // Geriye dönük: tek aktif bölge varsa onunla başla.
+      const active = loadActiveRegion();
+      return active ? [active] : [];
+    }
+    const parsed = JSON.parse(raw) as OynaLocation[];
+    return Array.isArray(parsed) ? parsed.filter(r => r && r.city) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSelectedRegions(regions: OynaLocation[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (regions.length) localStorage.setItem(SELECTED_REGIONS_KEY, JSON.stringify(regions));
+    else localStorage.removeItem(SELECTED_REGIONS_KEY);
+  } catch {
+    /* yoksay */
+  }
+}
+
 // Kullanıcılar Supabase'den hydrate edilir; mock veri yok.
 export const INITIAL_USERS: AdminUser[] = [];
 
@@ -186,9 +246,17 @@ interface AppState {
   searchRadius: number;
   setSearchRadius: (radius: number) => void;
 
-  // Aktif bölge — GPS ya da elle seçilen tek kapsam kaynağı (tüm uygulama buna göre listeler).
+  // Aktif bölge — birincil bölge (etiket/GPS/harita merkezi). Çoklu seçimde
+  // selectedRegions[0] ile eş tutulur.
   activeRegion: OynaLocation | null;
   setActiveRegion: (region: OynaLocation | null) => void;
+
+  // Çoklu bölge — kullanıcı birden fazla il/ilçe seçebilir; keşif bunların
+  // birleşimini gösterir. Boşsa uygulama tek activeRegion/GPS davranışına döner.
+  selectedRegions: OynaLocation[];
+  setSelectedRegions: (regions: OynaLocation[]) => void;
+  addSelectedRegion: (region: OynaLocation) => void;
+  removeSelectedRegion: (region: OynaLocation) => void;
 
   // Admin CRUD Data (live, reflected across whole app)
   adminPitches: Pitch[];
@@ -510,12 +578,57 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUserLocation: (userLocation) => set({ userLocation }),
   locationPermissionStatus: 'NOT_REQUESTED',
   setLocationPermissionStatus: (locationPermissionStatus) => set({ locationPermissionStatus }),
-  searchRadius: 25,
-  setSearchRadius: (searchRadius) => set({ searchRadius }),
+  searchRadius: loadSearchRadius(),
+  setSearchRadius: (searchRadius) => {
+    set({ searchRadius });
+    persistSearchRadius(searchRadius);
+  },
   activeRegion: loadActiveRegion(),
   setActiveRegion: (activeRegion) => {
-    set({ activeRegion });
-    persistActiveRegion(activeRegion);
+    set((state) => {
+      // GPS/tekil seçim: birincil bölgeyi güncelle ve seçili listede yoksa ekle
+      // (böylece "otomatik bul" konumu da keşif kapsamına girer).
+      let selectedRegions = state.selectedRegions;
+      if (activeRegion) {
+        const exists = selectedRegions.some((r) => sameRegion(r, activeRegion));
+        selectedRegions = exists
+          ? selectedRegions.map((r) => (sameRegion(r, activeRegion) ? activeRegion : r))
+          : [activeRegion, ...selectedRegions];
+        persistSelectedRegions(selectedRegions);
+      }
+      persistActiveRegion(activeRegion);
+      return { activeRegion, selectedRegions };
+    });
+  },
+
+  selectedRegions: loadSelectedRegions(),
+  setSelectedRegions: (regions) => {
+    persistSelectedRegions(regions);
+    const primary = regions[0] ?? null;
+    persistActiveRegion(primary);
+    set({ selectedRegions: regions, activeRegion: primary });
+  },
+  addSelectedRegion: (region) => {
+    set((state) => {
+      if (state.selectedRegions.some((r) => sameRegion(r, region))) return state;
+      const selectedRegions = [...state.selectedRegions, region];
+      persistSelectedRegions(selectedRegions);
+      persistActiveRegion(region); // en son eklenen birincil olur
+      return { selectedRegions, activeRegion: region };
+    });
+  },
+  removeSelectedRegion: (region) => {
+    set((state) => {
+      const selectedRegions = state.selectedRegions.filter((r) => !sameRegion(r, region));
+      persistSelectedRegions(selectedRegions);
+      // Birincil bölge çıkarıldıysa ilk kalana geç.
+      let activeRegion = state.activeRegion;
+      if (activeRegion && sameRegion(activeRegion, region)) {
+        activeRegion = selectedRegions[0] ?? null;
+        persistActiveRegion(activeRegion);
+      }
+      return { selectedRegions, activeRegion };
+    });
   },
   adminPitches: [],
   adminGoalkeepers: [],

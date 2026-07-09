@@ -1,7 +1,39 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Pitch, AppView, PositionSlot, Player, MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { getFullUserProfile } from '../services/userService';
+import { getTeamSquad } from '../services/teamSocialService';
+import { blockMatchDeposit, DeferredProvider } from '../services/matchLifecycleService';
+import { FORMATIONS, defaultFormation, type SquadSize } from '../utils/formations';
+import { roleShort } from '../shared/lobbyEnrichment';
+
+// ── Profil → maç seçeneği otomatik-işaretleme yardımcıları ──────────────────
+// Kullanıcının profil verisinden (doğum tarihi, mevki) maç oluşturma
+// varsayılanlarını türetir. Veri yoksa sessizce mevcut varsayılan korunur.
+const ageBucketFromBirthdate = (birthdate?: string | null): string | null => {
+  if (!birthdate) return null;
+  const year = new Date(birthdate).getFullYear();
+  if (!year || Number.isNaN(year)) return null;
+  const age = new Date().getFullYear() - year;
+  if (age <= 0 || age > 120) return null;
+  if (age < 14) return '10-14';
+  if (age < 16) return '14-16';
+  if (age < 18) return '16-18';
+  if (age < 23) return '18-22';
+  if (age < 28) return '23-27';
+  if (age <= 35) return '28-35';
+  return '35+';
+};
+
+// Sahadaki mevki metnini (ör. "Kaleci", "Orta Saha") slot rol koduna eşler.
+const roleFromPositionText = (pos?: string | null): 'KL' | 'SAV' | 'ORT' | 'HÜC' => {
+  const p = (pos || '').toLocaleLowerCase('tr-TR');
+  if (p.includes('kale')) return 'KL';
+  if (p.includes('stop') || p.includes('defans') || p.includes('bek') || p.includes('savun') || p.includes('libero')) return 'SAV';
+  if (p.includes('forvet') || p.includes('kanat') || p.includes('santr') || p.includes('hücum') || p.includes('huc')) return 'HÜC';
+  return 'ORT';
+};
 
 export const FORMATS = [
   { v: '3v3', label: '3v3', players: 6,  popular: false },
@@ -48,6 +80,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   // S38: Takım Maçı — kendi takımını seç, rakip tarafı (away) kodla davet edilir
   const [isTeamMatch, setIsTeamMatch] = useState(false);
   const [homeTeamId, setHomeTeamId] = useState<string | null>(null);
+  // Maç oluştururken seçilen kaleci/hakem — aktivasyonda talep gönderilir (escrow).
+  const [deferredProviders, setDeferredProviders] = useState<DeferredProvider[]>([]);
 
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
@@ -56,7 +90,10 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
   const [customPositions, setCustomPositions] = useState<Record<string, {x: number, y: number, role: string}>>({});
 
-  const { incrementUnreadNotifications, addUserNotification, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, matchCreateSeed, setMatchCreateSeed, setSelectedMatch, myTeams } = useAppStore();
+  const { incrementUnreadNotifications, addUserNotification, addMatch, adminMatches, activeDraftId, updateMatch, setActiveDraftId, matchCreateSeed, setMatchCreateSeed, setSelectedMatch, myTeams, adminUsers } = useAppStore();
+
+  // Kullanıcı profilinden tek-seferlik otomatik ön-doldurma yapıldı mı?
+  const [profilePrefilled, setProfilePrefilled] = useState(false);
 
   // FAZ 3: Rezervasyon → Maça Çevir tohumu (MyBookings'ten gelir) — saha + saat ön-doldur
   useEffect(() => {
@@ -105,36 +142,23 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const perTeam = useMemo(() => parseInt(format.v.split('v')[0]) || 7, [format.v]);
   const isReady = !!(selectedPitch && selectedTimeSlot);
 
-  // Symmetrical Defaults
+  // Kanonik formasyon (utils/formations SSOT) — HER boyut kendi mantıklı temel
+  // dizilişini alır (5v5 '1-2-1', 6v6 '2-2-1', 7v7 '2-3-1', 8v8 '3-3-1' ...).
+  // Rol kodları (GK/DEF/MID/FWD) create'in TR kısaltmalarına (KL/SAV/ORT/HÜC)
+  // eşlenir; lobi de aynı SSOT'u kullandığı için diziliş sahaya birebir yansır.
   const getSymmetricPositions = (pt: number, orient: 'vertical' | 'horizontal') => {
-    const verticalDefaults: Record<number, {x:number, y:number, role:string}[]> = {
-      3: [
-        { x: 50, y: 90, role: 'KL' }, { x: 30, y: 55, role: 'SAV' }, { x: 70, y: 55, role: 'SAV' }
-      ],
-      5: [
-        { x: 50, y: 90, role: 'KL' }, { x: 30, y: 75, role: 'SAV' }, { x: 70, y: 75, role: 'SAV' },
-        { x: 50, y: 50, role: 'ORT' }, { x: 50, y: 25, role: 'HÜC' }
-      ],
-      7: [
-        { x: 50, y: 90, role: 'KL' }, { x: 25, y: 75, role: 'SAV' }, { x: 75, y: 75, role: 'SAV' },
-        { x: 20, y: 50, role: 'ORT' }, { x: 50, y: 50, role: 'ORT' }, { x: 80, y: 50, role: 'ORT' },
-        { x: 50, y: 25, role: 'HÜC' }
-      ],
-      11: [
-        { x: 50, y: 90, role: 'KL' }, { x: 20, y: 75, role: 'SAV' }, { x: 40, y: 75, role: 'SAV' }, { x: 60, y: 75, role: 'SAV' }, { x: 80, y: 75, role: 'SAV' },
-        { x: 20, y: 50, role: 'ORT' }, { x: 40, y: 50, role: 'ORT' }, { x: 60, y: 50, role: 'ORT' }, { x: 80, y: 50, role: 'ORT' },
-        { x: 35, y: 25, role: 'HÜC' }, { x: 65, y: 25, role: 'HÜC' }
-      ]
-    };
-    
-    let base = verticalDefaults[pt] || verticalDefaults[11];
-    
-    if (orient === 'horizontal') {
-        return base.map(p => ({
-            role: p.role,
-            x: 100 - p.y,
-            y: p.x
+    const size = `${pt}v${pt}` as SquadSize;
+    const preset = FORMATIONS[size]?.[defaultFormation(size)];
+    const base = (preset && preset.length === pt)
+      ? preset.map(s => ({ x: s.x, y: s.y, role: roleShort(s.role) }))
+      : Array.from({ length: pt }).map((_, i) => ({
+          x: 50,
+          y: 90 - i * (65 / Math.max(pt - 1, 1)),
+          role: i === 0 ? 'KL' : 'ORT',
         }));
+
+    if (orient === 'horizontal') {
+      return base.map(p => ({ role: p.role, x: 100 - p.y, y: p.x }));
     }
     return base;
   };
@@ -198,11 +222,118 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       setOrientation(newOrient);
   };
 
+  // Kişi başı ücret KURUCU tarafından belirlenemez: sahanın toplam ücreti iki
+  // takımdaki toplam oyuncuya (perTeam×2) bölünür. Maç-oluşturma arayüzünden
+  // kurulan maçlarda kullanıcıya %5 fazla yansır (platform hizmet payı). Yukarı yuvarlanır.
+  const MATCH_CREATE_SURCHARGE = 1.05;
   const calculatedBudget = useMemo(() => {
-    return selectedPitch ? Math.round(selectedPitch.totalPrice / (perTeam * 2)) : 0;
+    // totalPrice yoksa (seed/taslak sahte Pitch'lerinde olmayabilir) NaN'a düşme.
+    if (!selectedPitch || !selectedPitch.totalPrice) return 0;
+    return Math.ceil((selectedPitch.totalPrice / (perTeam * 2)) * MATCH_CREATE_SURCHARGE);
   }, [selectedPitch, perTeam]);
 
-  const costPerPerson = (manualBudget !== null && manualBudget >= 0) ? manualBudget : calculatedBudget;
+  // Manuel override kaldırıldı — ücret her zaman otomatik hesaplanır.
+  const costPerPerson = calculatedBudget;
+
+  // ── Talep edilen kapora (owner'ın tarifesinden; yoksa toplam ücretin %20'si) ──
+  // Maç "Yayınla" anında bu tutar kaptanın kartında BLOKE edilir (çekilmez);
+  // maç kesinleşince (eşik) tahsil, dolmazsa serbest bırakılır.
+  const matchDeposit = useMemo(() => {
+    if (!selectedPitch) return 0;
+    const tariffs = (selectedPitch as unknown as { tariffs?: { deposit_amount?: number }[] }).tariffs;
+    const ownerDeposit = (tariffs || [])
+      .map(t => Number(t?.deposit_amount) || 0)
+      .find(d => d > 0);
+    if (ownerDeposit && ownerDeposit > 0) return Math.ceil(ownerDeposit);
+    return selectedPitch.totalPrice ? Math.ceil(selectedPitch.totalPrice * 0.2) : 0;
+  }, [selectedPitch]);
+
+  // ── UX: Profile göre otomatik ön-doldurma (tek sefer) ────────────────────
+  // Kurucu, maçı kurarken zaten oynayacak: onu kendi mevkisine göre sahaya
+  // dizeriz ve yaş grubu varsayılanını doğum tarihinden işaretleriz.
+  // Seed/taslak akışlarına dokunmaz (onlar zaten kendi verisini doldurur).
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || profilePrefilled) return;
+    if (matchCreateSeed || draftMatch) { setProfilePrefilled(true); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const profile = await getFullUserProfile(uid);
+        if (!alive || !profile) return;
+        // 1) Yaş grubu — doğum tarihinden (kullanıcı elle değiştirmediyse)
+        const bucket = ageBucketFromBirthdate(profile.birthdate);
+        if (bucket) {
+          setDna(prev => (prev.age && prev.age.length && prev.age[0] !== 'Tümü') ? prev : { ...prev, age: [bucket] });
+        }
+        // 2) Kurucuyu sahaya diz (kendi mevkisine) — kadro boşsa
+        setMyPlayers(prev => {
+          if (Object.keys(prev).length > 0) return prev;
+          const role = roleFromPositionText(profile.position);
+          const defaults = getSymmetricPositions(perTeam, orientation);
+          let idx = defaults.findIndex(d => d.role === role);
+          if (idx < 0) idx = defaults.findIndex(d => d.role !== 'KL');
+          if (idx < 0) idx = 0;
+          const storeUser = (adminUsers || []).find(u => u.id === uid);
+          return {
+            [`slot_${idx}`]: {
+              id: uid,
+              name: profile.full_name || storeUser?.name || 'Sen',
+              avatar: profile.avatar_url || storeUser?.avatar || '',
+              status: 'CONFIRMED' as const,
+            },
+          };
+        });
+      } catch {
+        /* prefill best-effort — profil çekilemezse sessizce varsayılan kalır */
+      } finally {
+        if (alive) setProfilePrefilled(true);
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profilePrefilled, matchCreateSeed, draftMatch]);
+
+  // ── Takım kadrosunu sahaya diz (yeni sosyal sistem: get_team_squad) ──────
+  // Legacy t.roster yeni takımlarda boş olduğu için kanonik get_team_squad
+  // RPC'sinden çeker; homeTeamId/homeTeamName'i de kaydeder (publish'te yazılır).
+  const loadSquadFromTeam = useCallback(async (teamId: string, teamName?: string) => {
+    try {
+      const squad = await getTeamSquad(teamId);
+      const next: Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }> = {};
+      squad.slice(0, perTeam).forEach((m, i) => {
+        next[`slot_${i}`] = {
+          id: m.user_id,
+          name: m.full_name || 'Oyuncu',
+          avatar: m.avatar_url || '',
+          status: 'CONFIRMED',
+        };
+      });
+      setMyPlayers(next);
+      setHomeTeamId(teamId);
+      if (teamName) setHomeTeamName(teamName);
+      return squad.length;
+    } catch (e) {
+      console.warn('[useMatchCreate] takım kadrosu yüklenemedi:', e);
+      return 0;
+    }
+  }, [perTeam]);
+
+  // ── Yayınlanabilirlik durumu (canlı checklist + engel sebebi) ────────────
+  // Kadro sayısı SAHADAKİ (görünür) oyunculardan türetilir — format küçültülünce
+  // görünmeyen (yetim) myPlayers girdileri sayıma dahil olmaz.
+  const squadCount = useMemo(() => pitchSlots.filter(s => s.player).length, [pitchSlots]);
+  const readiness = useMemo(() => {
+    const hasPitch = !!selectedPitch;
+    const hasTime = !!selectedTimeSlot;
+    const canPublish = hasPitch && hasTime;
+    let blockReason = '';
+    if (!hasPitch && !hasTime) blockReason = 'Önce saha ve saat seç';
+    else if (!hasPitch) blockReason = 'Saha seç';
+    else if (!hasTime) blockReason = 'Saat seç';
+    else if (isTeamMatch && !homeTeamId && squadCount === 0) blockReason = 'Ev sahibi takımı belirle';
+    return { hasPitch, hasTime, squadCount, perTeam, canPublish, blockReason };
+  }, [selectedPitch, selectedTimeSlot, squadCount, perTeam, isTeamMatch, homeTeamId]);
 
   const publishMatch = async () => {
     if (!isReady) {
@@ -211,7 +342,11 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     }
 
     // S38: Takım Maçı — kendi takımın (ev sahibi) + rakip tarafı (away) kodla davet.
-    const teamObj = isTeamMatch && homeTeamId ? myTeams.find(t => t.id === homeTeamId) : null;
+    // Ev sahibi takım kimliği state'ten doğrudan yazılır; store.myTeams (legacy)
+    // yeni sosyal takımları içermeyebilir — bu yüzden homeTeamId'ye güvenilir.
+    const teamObj = homeTeamId ? myTeams.find(t => t.id === homeTeamId) : null;
+    const resolvedHomeTeamName = homeTeamName.trim() || teamObj?.name || '';
+    const resolvedHomeTeamId = homeTeamId || teamObj?.id || undefined;
     // İki sütun modeli (MatchJoin ile uyumlu): ev sahibi → slots, rakip → awaySlots.
     const homeSlots: PositionSlot[] = pitchSlots.map((slot): PositionSlot => {
       const baseSlot: PositionSlot = {
@@ -237,26 +372,25 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       }
       return baseSlot;
     });
-    // Rakip tarafı (awaySlots): perTeam adet açık slot — rakip takım kodla katılıp öder.
-    const awaySlots: PositionSlot[] = isTeamMatch
-      ? pitchSlots.map((slot, i): PositionSlot => ({
-          id: `away_${i}`,
-          role: slot.role,
-          x: slot.x,
-          y: slot.y,
-          status: 'OPEN',
-          side: 'AWAY',
-        }))
-      : [];
+    // Rakip tarafı (awaySlots) HER ZAMAN üretilir — maç iki takımdır; eşik (toplam−2)
+    // ve kişi başı ücret (perTeam×2) bunun üzerinden hesaplanır. Takım maçında side:'AWAY'.
+    const awaySlots: PositionSlot[] = pitchSlots.map((slot, i): PositionSlot => ({
+      id: `away_${i}`,
+      role: slot.role,
+      x: slot.x,
+      y: slot.y,
+      status: 'OPEN',
+      ...(isTeamMatch ? { side: 'AWAY' as const } : {}),
+    }));
     // Takım maçı kodla davet edildiği için PRIVATE (paylaşılabilir kod üretilir).
     const effectiveVisibility = isTeamMatch ? 'PRIVATE' : visibility;
 
     const matchData = {
         id: 'm_' + Math.random().toString(36).substr(2, 9),
         creatorId: auth.currentUser?.uid,
-        title: matchTitle.trim() || (teamObj ? `${teamObj.name} Takım Maçı` : `${selectedPitch?.name || 'Saha'} Maçı`),
-        homeTeamName: teamObj ? teamObj.name : (homeTeamName.trim() || undefined),
-        homeTeamId: teamObj ? teamObj.id : undefined,   // S38: ev sahibi gerçek takım
+        title: matchTitle.trim() || (resolvedHomeTeamName ? `${resolvedHomeTeamName} Takım Maçı` : `${selectedPitch?.name || 'Saha'} Maçı`),
+        homeTeamName: resolvedHomeTeamName || undefined,
+        homeTeamId: resolvedHomeTeamId,   // S38: ev sahibi gerçek takım (state otoritesi)
         awayTeamName: awayTeamName.trim() || undefined,
         location: selectedPitch?.district || 'Belirtilmedi',
         pitchId: selectedPitch?.id,            // FAZ 3: owner kredisi + iade için saha bağı
@@ -277,7 +411,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             { role: 'ORT', count: 1 }
         ],
         slots: homeSlots,
-        ...(isTeamMatch ? { awaySlots } : {}),
+        awaySlots,
     };
 
     try {
@@ -286,11 +420,22 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         let targetId: string | undefined;
         if (isDraftMode && draftMatch) {
             // FAZ 3: taslağı maça çevirirken görünürlüğü de gönder (PRIVATE'a geçişte DB kod üretir)
-            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, ...(isTeamMatch ? { awaySlots } : {}), format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility: effectiveVisibility, ...(teamObj ? { homeTeamName: teamObj.name, homeTeamId: teamObj.id } : {}) });
+            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, awaySlots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility: effectiveVisibility, ...(resolvedHomeTeamId ? { homeTeamName: resolvedHomeTeamName || undefined, homeTeamId: resolvedHomeTeamId } : {}) });
             setActiveDraftId(null);
             targetId = draftMatch.id;
         } else {
             targetId = await addMatch(matchData);
+        }
+
+        // Escrow: kaporayı BLOKE et (çekilmez) → maç aktifleşir + ertelenmiş
+        // kaleci/hakem talepleri gönderilir. Eşik (toplam−2) dolunca capture edilir.
+        // Best-effort: blokaj başarısız olsa da maç oluşturulmuş kalır (kullanıcı lobide tekrar dener).
+        if (targetId && matchDeposit > 0) {
+          try {
+            await blockMatchDeposit(targetId, matchDeposit, deferredProviders);
+          } catch (e) {
+            console.warn('[useMatchCreate] kapora blokajı yapılamadı:', e);
+          }
         }
 
         // Add user notifications for pending players
@@ -352,6 +497,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     visibility, setVisibility,
     isTeamMatch, setIsTeamMatch,
     homeTeamId, setHomeTeamId,
+    deferredProviders, setDeferredProviders,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
@@ -360,7 +506,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     draftMatch, isDraftMode,
     perTeam, isReady,
     handleSlotMove, pitchSlots,
-    toggleOrientation, calculatedBudget, costPerPerson,
+    toggleOrientation, calculatedBudget, costPerPerson, matchDeposit,
+    loadSquadFromTeam, readiness, squadCount,
     publishMatch
   };
 };
