@@ -20,29 +20,54 @@
   - `matches`: `deposit_intent_id, deposit_status, deposit_amount, min_players, deferred_providers`.
   - RPC'ler: `match_block_deposit`, `match_capture_deposit`, `match_void_deposit`,
     `match_check_threshold`, `match_cancel_by_captain`, `admin_match_deposit_action`.
+- **Migration** `supabase/migrations/20260716000003_match_threshold_trigger.sql` ✔ **[TRIGGER-TODO]**
+  - `matches` üzerinde `AFTER UPDATE OF slots, "awaySlots"` tetikleyicisi (`_trg_match_threshold`):
+    kadro her değiştiğinde **sunucu tarafında** eşik kontrolü çalışır → kaporası BLOKE aktif maç
+    eşiğe ulaşınca istemciden bağımsız **LIVE + capture** olur. Kolon-kapsamlı olduğu için
+    özyineleme yok; sadece `deposit_status='BLOCKED'` maçları etkiler (escrow dışı maçlar
+    dokunulmaz).
 - **Servis** `services/matchLifecycleService.ts` — RPC sarmalayıcıları.
 - **Frontend**
   - `useMatchCreate.ts`: her zaman `awaySlots` üretir (iki takım), yayında `blockMatchDeposit`
     çağırır, `deferredProviders` (kaleci/hakem) saklar; kişi başı %5'li otomatik ücret.
   - `MatchCreate.tsx`: "Kaleci & Hakem" seçim ekranı (aktivasyonda talep gider), kapora bilgisi.
   - `MatchJoin.tsx`: katılım/satın alma sonrası `checkMatchThreshold` (eşik → LIVE + capture).
-- **Admin görünürlüğü**: `MatchListing.depositStatus/depositAmount/minPlayers` + `matchMapper` okuması.
+    Not: sunucu tetikleyicisi eklendikten sonra bu istemci çağrısı **yedek/idempotent**tir
+    (eşik zaten sunucuda yakalanır; çift çağrı zararsız — LIVE ise no-op).
+- **Admin panel** (TAM YETKİ, `88b3ad2`): `MatchDetailDrawer`'da **Kapora** rozeti +
+  `matchDepositActionAdmin` ile **CAPTURE / VOID / REFUND** butonları; `MatchListing.
+  depositStatus/depositAmount/minPlayers` + `matchMapper` okuması.
+
+## Ödeme mimarisi — istemci RPC vs. iyzico edge (mevcut kalıp)
+Bu depoda yerleşik desen (bkz. `admin_refund_intent`, `20260707000005_faz7_refund_wiring.sql`):
+- **İstemci → `SECURITY DEFINER` RPC**: DB durum geçişini yapar, **SIMULATION-güvenli**
+  (gerçek para yok). Escrow RPC'lerimiz (`match_capture_deposit`/`match_void_deposit`/
+  `admin_match_deposit_action`) tam olarak bu kalıbı izler.
+- **Gerçek iyzico kart işlemi → edge function** (`capture-payment` / `void-payment` /
+  `refund-payment`): `x-payment-secret` (`PAYMENT_EDGE_SECRET`) ile **yalnız sistem/cron/admin
+  bağlamından** çağrılır — **tarayıcıdan çağrılMAZ** (aksi halde secret sızar). Bu üç edge
+  function iyzico ön-provizyon-kapatma / iptal / **kademeli iade** (T-saat'e göre) ile
+  **zaten mevcut** ve SIMULATION destekli. `refund-payment` 24s kuralıyla uyumlu kademeli iade
+  yapar. Bu yüzden istemciye edge sarmalayıcı **eklenmedi** (bilinçli — go-live işi).
 
 ## ⚠️ FIXME — canlıya almadan önce
-1. **[IYZICO-TODO]** Gerçek iyzico entegrasyonu `supabase/functions/create-payment` edge
-   function'ında: `action:'block'` (ön provizyon), `'capture'` (provizyon kapatma),
-   `'void'` (iptal), `'refund'` (komisyon hariç iade). Şu an RPC'ler intent status'ünü
-   DB'de doğrudan değiştiriyor (SIMULATION). Migration içinde `[IYZICO-TODO]` ile işaretli.
-2. **[TRIGGER-TODO]** Eşik kontrolü şu an istemciden (`checkMatchThreshold`) çağrılıyor;
-   sunucu otoritesi için `matches` üzerinde AFTER UPDATE tetikleyicisine taşınmalı.
-3. **[PITCH-TODO]** `match_block_deposit` sahayı henüz `create_pitch_booking` ile rezerve
+1. **[IYZICO-TODO] (go-live wiring)** Edge function'lar hazır; kalan iş **RPC → edge** köprüsünü
+   sistem bağlamında bağlamak: escrow durumu değiştiğinde (block/capture/void/refund) ilgili
+   edge function'ı `PAYMENT_EDGE_SECRET` ile tetikle (cron/admin backend veya `pg_net`;
+   `admin_refund_intent`'in "karta iade = go-live'da refund-payment edge" notuyla aynı yol).
+   `payment_provider='SIMULATION'` iken hiçbir gerçek çağrı yapılmaz. **Staging'de uçtan uca
+   test şart** (branching Pro gerektirdiği için burada test edilemedi).
+2. **[PITCH-TODO]** `match_block_deposit` sahayı henüz `create_pitch_booking` ile rezerve
    ETMİYOR (owner takvimi). Kapora blokajıyla birlikte rezervasyon bağlanmalı; void'de iptal.
-4. **Sağlayıcı seçimi**: create'de tür (kaleci/hakem) seçiliyor; aktivasyonda
-   `find_providers_for_match` ile en uygun sağlayıcıya otomatik talep gider. İstenirse
-   create'de **belirli sağlayıcı** seçtiren bir UI eklenebilir (match-less öneri RPC gerekir).
-5. **Admin UI**: `admin_match_deposit_action` (CAPTURE/VOID/REFUND) RPC'si TAM YETKİ ile
-   hazır; `admin-panel` MatchDetailDrawer'a bu üç butonu + `depositStatus` rozetini eklemek
-   kalıyor (backend erişim tam, yalnız görsel buton eksik).
+   (Riskli — `court_id` boru hattı gerekir ve burada test edilemez; bilinçli ertelendi.)
+3. **Sağlayıcı seçimi (opsiyonel iyileştirme)**: create'de tür (kaleci/hakem) seçiliyor;
+   aktivasyonda `find_providers_for_match` ile en uygun sağlayıcıya otomatik talep gider.
+   İstenirse create'de **belirli sağlayıcı** seçtiren bir UI eklenebilir (match-less öneri
+   RPC gerekir).
+
+### Tamamlanan eski FIXME'ler
+- ~~**[TRIGGER-TODO]**~~ ✔ `20260716000003_match_threshold_trigger.sql` ile sunucu tarafına taşındı.
+- ~~**Admin UI butonları**~~ ✔ `MatchDetailDrawer` CAPTURE/VOID/REFUND + kapora rozeti (`88b3ad2`).
 
 ## Kaptan → çok sağlayıcı TEKLİF akışı (20260716000002)
 - `match_service_offers` tablosu + `send_match_service_offers` (kaptan çok sağlayıcıya/tümüne

@@ -8,9 +8,13 @@ import { supabase } from '../supabaseClient';
 //   cancelMatchByCaptain → 24s kuralı + no-show politikası.
 //   adminMatchDepositAction → admin panel TAM YETKİ (CAPTURE|VOID|REFUND).
 //
-// ⚠️ FIXME: Gerçek iyzico ön-provizyon/capture/void/iade `create-payment` edge
-//   function'ında bağlanmalı; şu an SIMULATION'da DB-tamamdır. Prod'a almadan
-//   staging/Pro-branch'te test edin (bkz. migration başlığı).
+// Eşik artık sunucu tetikleyicisiyle de yakalanır (20260716000003) — checkMatchThreshold
+//   istemci çağrısı yedek/idempotent'tir.
+// ⚠️ FIXME [IYZICO-TODO / go-live]: RPC'ler SIMULATION'da DB durumunu değiştirir. Gerçek
+//   iyzico kart işlemleri için `capture-payment` / `void-payment` / `refund-payment` edge
+//   function'ları HAZIR; yalnız sistem bağlamından (PAYMENT_EDGE_SECRET) çağrılmalı — bu
+//   sarmalayıcılar tarayıcıdan edge'i ÇAĞIRMAZ (secret sızmasın; admin_refund_intent kalıbı).
+//   Prod'a almadan staging/Pro-branch'te SIMULATION ile uçtan uca test edin.
 // ════════════════════════════════════════════════════════════════════════════
 
 export type ProviderKind = 'GK' | 'REF';
