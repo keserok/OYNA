@@ -8,7 +8,7 @@ import {
     Swords, Type, UserPlus, GripHorizontal, Settings2,
     MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Hash, Loader2,
-    ZoomIn, ZoomOut, Maximize2, RotateCcw, Lightbulb, Sparkles
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -24,6 +24,9 @@ import {
     setTacticShareLink, tacticShareUrl,
 } from '../services/tacticSocialService';
 import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
+// Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
+import { getFriends, getFriendLists } from '../services/socialService';
+import type { FriendRow, FriendList } from '../services/socialService';
 
 // Paylaşılan tipler ve sabitler (SSOT)
 import type {
@@ -63,7 +66,6 @@ const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444',
 
 // Faz 9 — kalıcılık & mobil deneyim anahtarları
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
-const COACH_KEY = 'oyna_studio_coach_v1';   // S48 ilk-açılış ipucu
 const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
@@ -126,14 +128,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [tool, setTool] = useState<StudioTool>('move');
     // Faz 8 — Düzenle / Oynat modu (S42)
     const [studioMode, setStudioMode] = useState<'EDIT' | 'PLAY'>('EDIT');
-    // Faz 9 — mobil deneyim: yakınlaştırma/pan (S46), coach-mark (S48), taslak (S49), reduced-motion (S50)
+    // Faz 9 — mobil deneyim: yakınlaştırma/pan (S46), taslak (S49), reduced-motion (S50)
     const reduceMotion = useReducedMotion();
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const panStartRef = useRef<{ px: number; py: number; ox: number; oy: number; moved: boolean } | null>(null);
     const pinchRef = useRef<{ startDist: number; startZoom: number } | null>(null);
     const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
-    const [showCoach, setShowCoach] = useState(false);
     const [resumeDraft, setResumeDraft] = useState<{ plans: TacticState[]; activePlanIndex: number; savedAt: number } | null>(null);
     const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const draftHydratedRef = useRef(false);
@@ -195,11 +196,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [heldSub, setHeldSub] = useState<string | null>(null);
     // S24 — birleşik oyuncu araması (arkadaş + takım kadrosu tek kutuda süzülür)
     const [playerSearch, setPlayerSearch] = useState('');
-    // Modal selection tabs & groups state (matching CommunityView)
+    // Modal selection tabs & groups state
     const [modalTab, setModalTab] = useState<'FRIENDS' | 'TEAMS' | 'CUSTOM'>('FRIENDS');
     const [selectedGroup, setSelectedGroup] = useState('Tümü');
-    const [groups, setGroups] = useState(['Favorilerim', 'Lise Tayfası', 'Üniversite', 'İş Arkadaşları', 'Tümü']);
     const [selectedTeamRosterId, setSelectedTeamRosterId] = useState<string | null>(null);
+    // Gerçek arkadaş verisi (get_friends RPC) + kişisel listeler (friend_lists)
+    const [studioFriends, setStudioFriends] = useState<FriendRow[]>([]);
+    const [studioFriendLists, setStudioFriendLists] = useState<FriendList[]>([]);
+    // Grup çipleri: Tümü + Favorilerim + kullanıcının gerçek listeleri
+    const friendGroups = ['Tümü', 'Favorilerim', ...studioFriendLists.map(l => l.name)];
+    // Seçili gruba + aramaya göre süzülmüş gerçek arkadaşlar
+    const selectedListId = studioFriendLists.find(l => l.name === selectedGroup)?.id;
+    const visibleFriends = studioFriends.filter(f => {
+        const q = playerSearch.trim().toLowerCase();
+        if (q && !f.full_name.toLowerCase().includes(q)) return false;
+        if (selectedGroup === 'Tümü') return true;
+        if (selectedGroup === 'Favorilerim') return f.is_favorite;
+        return selectedListId ? f.list_ids.includes(selectedListId) : true;
+    });
 
 
 
@@ -215,8 +229,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [saveTacticName, setSaveTacticName] = useState('');
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
 
-    // Global Store — arkadaşlar oyuncu-seçicide kullanılır
-    const { friends } = useAppStore();
+    // Global Store — stüdyo bağlamı
     const studioContext = useAppStore(s => s.studioContext);
     const setStudioContext = useAppStore(s => s.setStudioContext);
 
@@ -480,14 +493,19 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
     };
 
-    // ── S48 — ilk açılışta bir kez coach-mark ipucu ──
+    // ── Gerçek arkadaşlar + kişisel listeler (Sosyal ile aynı kaynak) ──
     useEffect(() => {
-        try { if (!localStorage.getItem(COACH_KEY)) setShowCoach(true); } catch { /* yok say */ }
+        if (!auth.currentUser) return;
+        void (async () => {
+            try {
+                const [fr, ls] = await Promise.all([getFriends(), getFriendLists()]);
+                setStudioFriends(fr);
+                setStudioFriendLists(ls);
+            } catch (e) {
+                console.error('[Studio] arkadaşlar yüklenemedi', e);
+            }
+        })();
     }, []);
-    const dismissCoach = () => {
-        setShowCoach(false);
-        try { localStorage.setItem(COACH_KEY, '1'); } catch { /* yok say */ }
-    };
 
     // ── S47 — yatay (landscape) sunum modu algısı ──
     useEffect(() => {
@@ -1339,16 +1357,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 className={`relative snap-center flex-shrink-0 flex flex-col justify-between h-[80px] w-[148px] rounded-[20px] p-3 transition-colors duration-300 border cursor-grab active:cursor-grabbing ${getGroupColorStyles(effColor, isActive)}`}
                             >
                                 <div className="flex justify-between items-start w-full">
-                                    {/* Sabit A–F harf kimliği */}
-                                    <span className="text-[11px] font-black text-white/90 bg-black/30 rounded-md px-1.5 py-0.5 leading-none font-mono">{planLetter(index)}</span>
+                                    {/* Renk pip'i (büyük) — sol-üst; planın görsel kimliği. Tek tıkla döngü (kesik=otomatik, dolu=elle) */}
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); cyclePlanColor(index); }}
+                                        title={isAutoColor ? 'Renk: mentaliteden (otomatik) — değiştirmek için dokun' : 'Renk: elle seçildi — değiştirmek için dokun'}
+                                        aria-label="Plan rengini değiştir"
+                                        className={`w-6 h-6 rounded-full cursor-pointer shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.4)] ${isAutoColor ? 'border-2 border-dashed border-white/70' : 'border-2 border-white/90'}`}
+                                        style={{ backgroundColor: PIP_HEX[effColor] }}
+                                    />
                                     <div className="flex items-center gap-1">
-                                        {/* Renk pip'i — her zaman görünür, tek tıkla döngü (kesik=otomatik, dolu=elle) */}
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); cyclePlanColor(index); }}
-                                            title={isAutoColor ? 'Renk: mentaliteden (otomatik) — değiştirmek için dokun' : 'Renk: elle seçildi — değiştirmek için dokun'}
-                                            className={`w-4 h-4 rounded-full cursor-pointer ${isAutoColor ? 'border border-dashed border-white/70' : 'border-2 border-white/90'}`}
-                                            style={{ backgroundColor: PIP_HEX[effColor] }}
-                                        />
                                         {isActive && editingPlanIndex !== index && (
                                             <>
                                                 <button onClick={(e) => { e.stopPropagation(); handleRenamePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="İsmi Değiştir"><PenTool size={12}/></button>
@@ -1586,28 +1603,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     </button>
                 </div>
 
-            {/* S48 — ilk açılış coach-mark ipucu (bir kez) */}
-            <AnimatePresence>
-                {showCoach && studioMode === 'EDIT' && (
-                    <motion.div
-                        initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
-                        className="px-6 pb-3"
-                    >
-                        <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30">
-                            <Lightbulb size={16} className="text-[#39FF14] shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-gray-200 leading-relaxed flex-1">
-                                <span className="text-[#39FF14] font-black">İpucu:</span> Oyuncuya <b>dokun</b> → seç · boş sahaya <b>uzun bas</b> → rakip · çizim araçlarıyla <b>koşu/pas</b> çiz · iki parmakla <b>yakınlaştır</b>.
-                            </p>
-                            <button onClick={dismissCoach} aria-label="İpucunu kapat" className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0">
-                                <X size={13} />
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* Pitch Area */}
             <div className="px-6 relative z-10 max-w-md mx-auto w-full overflow-hidden">
                 {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez; alt navigasyonla çakışmaz) */}
@@ -1645,16 +1640,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {zoom > 1 && (
                         <div className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/60 text-[#39FF14] text-[10px] font-black font-mono pointer-events-none">
                             {Math.round(zoom * 100)}%
-                        </div>
-                    )}
-                    {/* S48 — boş durum: hiç oyuncu diziliği yoksa yönlendir */}
-                    {filledCount === 0 && studioMode === 'EDIT' && (
-                        <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center gap-2 pointer-events-none px-6 text-center">
-                            <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center">
-                                <Users size={22} className="text-[#39FF14]" />
-                            </div>
-                            <p className="text-white/90 text-sm font-black">Kadronu diz</p>
-                            <p className="text-white/50 text-[11px] leading-relaxed max-w-[220px]">Aşağıdan bir takım seç ya da oyuncu dokunarak yerleştir. Formasyon otomatik dolar.</p>
                         </div>
                     )}
                     {/* Grass Stripes */}
@@ -1938,11 +1923,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         )}
 
                         <button
-                            onClick={() => setShowPlayerSelect({ type: 'any' })}
-                            className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center gap-2 text-white font-black text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                            onClick={() => { setModalTab('FRIENDS'); setShowPlayerSelect({ type: 'any' }); }}
+                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-black text-[10px] tracking-widest uppercase hover:bg-white/10 hover:border-[#39FF14]/40 active:scale-[0.98] transition-all"
                         >
-                            <Users size={16} className="text-yellow-400" />
-                            KAYITLI ARKADAŞLARI GÖSTER
+                            <UserPlus size={16} className="text-[#39FF14]" />
+                            ARKADAŞ / OYUNCU EKLE
                         </button>
                     </div>
                 </div>
@@ -2355,93 +2340,67 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             {/* TAB 1: FRIENDS */}
                             {modalTab === 'FRIENDS' && (
                                 <div className="space-y-4">
-                                    {/* Groups list switcher (from CommunityView) */}
-                                    <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar items-center">
-                                        {groups.map(group => (
-                                            <button 
-                                                key={group} 
-                                                onClick={() => setSelectedGroup(group)}
-                                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 ${selectedGroup === group ? (group === 'Favorilerim' ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-white text-black border-white shadow-lg') : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30'}`}
-                                            >
-                                                {group === 'Favorilerim' && <Star size={12} fill={selectedGroup === group ? "black" : "currentColor"} className={selectedGroup === group ? 'text-black' : 'text-gray-500'} />}
-                                                {group}
-                                            </button>
-                                        ))}
+                                    {/* Grup çipleri — Tümü + Favorilerim + gerçek listeler (getFriendLists) */}
+                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
+                                        {friendGroups.map(group => {
+                                            const emoji = studioFriendLists.find(l => l.name === group)?.emoji;
+                                            const sel = selectedGroup === group;
+                                            return (
+                                                <button
+                                                    key={group}
+                                                    onClick={() => setSelectedGroup(group)}
+                                                    className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                                >
+                                                    {group === 'Favorilerim' && <Star size={11} fill={sel ? 'black' : 'currentColor'} className={sel ? 'text-black' : 'text-[#FACC15]'} />}
+                                                    {emoji && <span className="text-[11px] leading-none">{emoji}</span>}
+                                                    {group}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
 
-                                    {/* Friends list (from CommunityView style) */}
-                                    <div className="grid gap-3">
-                                        {friends && friends.filter(f => {
-                                            if (playerSearch.trim() && !f.name.toLowerCase().includes(playerSearch.trim().toLowerCase())) return false;
-                                            if (selectedGroup === 'Tümü') return true;
-                                            if (selectedGroup === 'Favorilerim') return f.isFavorite;
-                                            return f.group === selectedGroup;
-                                        }).length === 0 ? (
-                                            <div className="text-center py-8 bg-[#161B22]/50 border border-white/5 rounded-2xl">
-                                                <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">Arkadaş Bulunamadı</p>
+                                    {/* Gerçek arkadaş listesi — stüdyo kart dili */}
+                                    <div className="grid gap-2.5">
+                                        {visibleFriends.length === 0 ? (
+                                            <div className="text-center py-10 bg-[#161B22]/60 border border-white/5 rounded-2xl flex flex-col items-center gap-2">
+                                                <Users size={22} className="text-gray-600" />
+                                                <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">
+                                                    {studioFriends.length === 0 ? 'Henüz arkadaşın yok' : 'Eşleşen arkadaş yok'}
+                                                </p>
+                                                <p className="text-gray-600 text-[10px]">Sosyal'den arkadaş ekle, burada görünsün.</p>
                                             </div>
                                         ) : (
-                                            friends && friends.filter(f => {
-                                                if (selectedGroup === 'Tümü') return true;
-                                                if (selectedGroup === 'Favorilerim') return f.isFavorite;
-                                                return f.group === selectedGroup;
-                                            }).map(friend => (
-                                                <button 
-                                                    key={friend.id} 
-                                                    onClick={() => {
-                                                        const p: Player = {
-                                                            id: friend.id,
-                                                            name: friend.name,
-                                                            role: friend.pos || 'CM',
-                                                            rating: friend.fp || 80,
-                                                            isCustom: false
-                                                        };
-                                                        handleSelectPlayer(p);
-                                                    }}
-                                                    className="w-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:border-[#39FF14]/50 transition-all text-left relative group overflow-hidden"
+                                            visibleFriends.map(friend => (
+                                                <button
+                                                    key={friend.friend_id}
+                                                    onClick={() => handleSelectPlayer({ id: friend.friend_id, name: friend.full_name, role: friend.pos || 'CM', rating: friend.fp ?? 70, isCustom: false })}
+                                                    className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between hover:border-[#39FF14]/50 hover:bg-[#39FF14]/[0.04] transition-all text-left group"
                                                 >
-                                                    <div className="flex items-center gap-4 pointer-events-none">
-                                                        <div className="relative">
-                                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-black text-lg border border-white/10 shadow-lg group-hover:bg-[#39FF14] group-hover:text-black transition-all">
-                                                                {friend.name.charAt(0)}
+                                                    <div className="flex items-center gap-3 min-w-0 pointer-events-none">
+                                                        {/* Avatar: baş harf altta; görsel yüklenirse üstüne biner, hata olursa harfe düşer */}
+                                                        <div className="relative w-11 h-11 shrink-0">
+                                                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
+                                                                {friend.full_name.charAt(0).toUpperCase()}
                                                             </div>
-                                                            {friend.online && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#39FF14] rounded-full border-[3px] border-[#0A0E14] shadow-[0_0_10px_rgba(57,255,20,0.5)]" />}
+                                                            {friend.avatar_url && (
+                                                                <img src={friend.avatar_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-11 h-11 rounded-2xl object-cover border border-white/10 shadow-lg" />
+                                                            )}
                                                         </div>
-                                                        <div>
-                                                            <h4 className="text-base font-black text-white tracking-tight flex items-center gap-2 group-hover:text-[#39FF14] transition-colors">
-                                                                {friend.name}
-                                                                {friend.isFavorite && <Star size={12} className="text-[#FACC15]" fill="#FACC15" />}
+                                                        <div className="min-w-0">
+                                                            <h4 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-[#39FF14] transition-colors">
+                                                                {friend.full_name}
+                                                                {friend.is_favorite && <Star size={12} className="text-[#FACC15] shrink-0" fill="#FACC15" />}
                                                             </h4>
-                                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                                <Hash size={10} className="text-gray-500" />
-                                                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{friend.group}</span>
-                                                                <span className="text-gray-700 text-[10px]">•</span>
-                                                                <span className="text-[10px] font-bold text-gray-500">{friend.pos}</span>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                {friend.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
+                                                                <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
+                                                                    <Users size={10} /> {friend.matches_together} maç birlikte
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-3 pointer-events-none">
-                                                        <div className="flex flex-col items-end gap-1">
-                                                            <div className="flex items-end gap-[3px] h-4">
-                                                                {[1, 2, 3, 4, 5].map(level => {
-                                                                    const matches = (friend.wins || 0) + (friend.losses || 0);
-                                                                    const activityLevel = Math.min(5, Math.max(1, Math.ceil(matches / 6)));
-                                                                    const isActive = level <= activityLevel;
-                                                                    const colors = ['bg-[#FACC15]', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500', 'bg-red-600'];
-                                                                    return (
-                                                                        <div 
-                                                                            key={level} 
-                                                                            className={`w-1.5 rounded-sm transition-colors duration-500 ${isActive ? colors[activityLevel - 1] : 'bg-white/10'}`} 
-                                                                            style={{ height: `${40 + level * 15}%` }} 
-                                                                        />
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                            <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">Aktiflik</span>
-                                                        </div>
-                                                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] transition-all ml-2">
-                                                            <Plus size={16} />
-                                                        </div>
+                                                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
+                                                        <Plus size={16} />
                                                     </div>
                                                 </button>
                                             ))
@@ -2464,18 +2423,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     <div
                                                         key={team.team_id}
                                                         onClick={() => { setSelectedTeamRosterId(team.team_id); void ensureSquad(team.team_id); }}
-                                                        className="bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-[#39FF14]/50 transition-all group"
+                                                        className="bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:border-[#39FF14]/50 hover:bg-[#39FF14]/[0.04] transition-all group"
                                                     >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-xl shadow-lg transition-transform group-hover:scale-105" style={{ backgroundColor: team.color1 || '#10B981' }}>
-                                                                {(team.short_name || team.name).charAt(0)}
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-black text-lg shadow-lg shrink-0 transition-transform group-hover:scale-105" style={{ backgroundColor: team.color1 || '#10B981' }}>
+                                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
                                                             </div>
-                                                            <div>
-                                                                <h3 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{team.name}</h3>
-                                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{team.member_count} Oyuncu{team.city ? ` • ${team.city}` : ''}</p>
+                                                            <div className="min-w-0">
+                                                                <h3 className="text-sm font-black text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{team.name}</h3>
+                                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1"><Users size={10} /> {team.member_count} oyuncu{team.city ? ` • ${team.city}` : ''}</p>
                                                             </div>
                                                         </div>
-                                                        <ChevronRight className="text-gray-500 group-hover:translate-x-1 transition-transform" />
+                                                        <ChevronRight size={18} className="text-gray-500 group-hover:text-[#39FF14] group-hover:translate-x-1 transition-all shrink-0" />
                                                     </div>
                                                 ))
                                             )}
@@ -2504,20 +2463,21 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     <button
                                                         key={m.user_id}
                                                         onClick={() => handleSelectPlayer(squadRowToPlayer(m))}
-                                                        className="w-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:border-[#39FF14]/50 transition-all text-left group"
+                                                        className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between hover:border-[#39FF14]/50 hover:bg-[#39FF14]/[0.04] transition-all text-left group"
                                                     >
-                                                        <div className="flex items-center gap-4 pointer-events-none">
-                                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-black text-lg border border-white/10 shadow-lg group-hover:bg-[#39FF14] group-hover:text-black transition-all">
-                                                                {m.full_name.charAt(0)}
+                                                        <div className="flex items-center gap-3 min-w-0 pointer-events-none">
+                                                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
+                                                                {m.full_name.charAt(0).toUpperCase()}
                                                             </div>
-                                                            <div>
-                                                                <h4 className="text-base font-black text-white tracking-tight group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
-                                                                <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">
-                                                                    {m.pos || 'OYUNCU'}{m.jersey_number != null ? ` • #${m.jersey_number}` : ''}
-                                                                </p>
+                                                            <div className="min-w-0">
+                                                                <h4 className="text-sm font-black text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    {m.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
+                                                                    {m.jersey_number != null && <span className="text-[10px] font-bold text-gray-500 font-mono">#{m.jersey_number}</span>}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] transition-all pointer-events-none">
+                                                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
                                                             <Plus size={16} />
                                                         </div>
                                                     </button>
