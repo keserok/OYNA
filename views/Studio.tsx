@@ -870,6 +870,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 ? "Taktik önerin takım yöneticilerine gönderildi!"
                 : "Taktik kaydedildi!");
             setShowSaveModal(false);
+            // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz
+            try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
         } catch (error) {
             console.error("Error saving tactic:", error);
             showToast((error as Error)?.message || "Taktik kaydedilirken bir hata oluştu.", 'error');
