@@ -118,6 +118,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     
     // Farazi Tools
     const [tool, setTool] = useState<StudioTool>('move');
+    // Faz 8 — Düzenle / Oynat modu (S42)
+    const [studioMode, setStudioMode] = useState<'EDIT' | 'PLAY'>('EDIT');
     // Faz 1 — Boyut/Formasyon seçici (butona yapışık dropdown) + özel formasyon
     const [openSelector, setOpenSelector] = useState<'size' | 'formation' | null>(null);
     const [customPattern, setCustomPattern] = useState('');
@@ -1041,6 +1043,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // S23: eksik kadroyla da kaydedilebilir — yeter ki bir kaleci olsun (plan ≠ maç 11'i).
     const canSave = hasGK;
     const confirmedTeam = studioTeams.find(t => t.team_id === (activeTactic.teamId || selectedTeamId));
+    // S40: bağlama göre birincil aksiyon (etiket + hedef).
+    const teamForSave = studioTeams.find(t => t.team_id === selectedTeamId);
+    const isTeamAdmin = teamForSave?.my_role === 'CAPTAIN' || teamForSave?.my_role === 'ADMIN';
+    const primaryLabel = !teamForSave ? 'KÜTÜPHANEME KAYDET' : (isTeamAdmin ? 'TAKIMA KAYDET' : 'TAKIMA ÖNER');
+    const primaryTarget = !teamForSave ? 'Kütüphanem' : (teamForSave.name || 'Takımım');
 
     // Get all players on the pitch (own team + opponents)
     const allPlayersOnPitch = [
@@ -1060,32 +1067,30 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         className="flex flex-col min-h-[calc(100vh-6rem)]"
                     >
                         {/* Header */}
-                        <header className="px-6 pt-safe pb-4 flex justify-between items-center sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
-                            <div className="flex items-center gap-3">
-                                <button id="studio-back-button" onClick={onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10">
+                        <header className="px-6 pt-safe pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <button id="studio-back-button" onClick={onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
                                     <ChevronLeft size={20} />
                                 </button>
-                                <div>
-                                    <h1 className="text-xl font-black text-white tracking-[0.2em] uppercase">TAKTİK STUDIO</h1>
-                                    <p className="text-[10px] text-[#39FF14] font-mono uppercase">Kadro & Diziliş</p>
+                                <div className="min-w-0">
+                                    {/* Düzenlenebilir taktik adı (S43) */}
+                                    <button onClick={() => handleRenamePlan(activePlanIndex)} className="flex items-center gap-1.5 group max-w-full">
+                                        <h1 className="text-lg font-black text-white truncate">{activeTactic.name}</h1>
+                                        <PenTool size={12} className="text-gray-500 group-hover:text-[#39FF14] transition-colors shrink-0" />
+                                    </button>
+                                    <p className="text-[10px] text-[#39FF14] font-mono uppercase truncate">{activeTactic.formation} · {activeTactic.size}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={() => {
-                                        setSaveTacticName(activeTactic.name || '');
-                                        setShowSaveModal(true);
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full text-xs font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.5)] hover:shadow-[0_0_25px_rgba(16,185,129,0.8)] transition-all"
-                                >
-                                    <Save size={14} /> KAYDET
-                                </button>
-                                <button 
-                                    onClick={() => setShowExportModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full text-xs font-bold text-white shadow-[0_0_15px_rgba(147,51,234,0.5)] hover:shadow-[0_0_25px_rgba(147,51,234,0.8)] transition-all"
-                                >
-                                    <Send size={14} /> PAYLAŞ
-                                </button>
+                            {/* DÜZENLE / OYNAT modu (S42) */}
+                            <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
+                                <button
+                                    onClick={() => setStudioMode('EDIT')}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${studioMode === 'EDIT' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                                >DÜZENLE</button>
+                                <button
+                                    onClick={() => setStudioMode('PLAY')}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${studioMode === 'PLAY' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                                >OYNAT</button>
                             </div>
                         </header>
 
@@ -1608,7 +1613,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             </div>
 
             {/* Team Selection & Auto Fill */}
-            {!isTeamConfirmed && (
+            {!isTeamConfirmed && studioMode === 'EDIT' && (
             <div className="px-6 pb-6 mt-4">
                 <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
                     <div className="flex items-center justify-between mb-4">
@@ -1720,7 +1725,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </div>
             )}
 
-            {/* Yedek tepsisi (S27) — kalıcı yatay şerit */}
+            {/* Yedek tepsisi (S27) — kalıcı yatay şerit (yalnız Düzenle modu) */}
+            {studioMode === 'EDIT' && (
             <div className="px-6 pb-4">
                 <div className="flex items-center gap-2 mb-2">
                     <List size={12} className="text-gray-500" />
@@ -1742,7 +1748,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     </button>
                 </div>
             </div>
+            )}
 
+            {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
+            {studioMode === 'EDIT' && (<>
             {/* Tactical Settings (Mentality & Tempo) Redesign */}
             <div className="px-6 pb-6 mt-8">
                 <div className="grid grid-cols-2 gap-4">
@@ -1873,44 +1882,44 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     </div>
                 </div>
             )}
+            </>)}
 
-            {/* Action Buttons */}
+            {/* Alt bar (S43/S40) — tek baskın bağlam-duyarlı aksiyon + iki küçük ikincil */}
             <div className="px-6 mt-6 pb-32">
-                <div className="flex gap-2 w-full">
-                    <button 
+                <div className="flex gap-2 w-full items-stretch">
+                    <button
                         onClick={() => setShowTacticsModal(true)}
-                        className="w-1/3 h-14 bg-[#161B22] border border-white/10 rounded-2xl flex flex-col items-center justify-center gap-1 text-white hover:bg-white/5 transition-all group"
+                        title="Taktiklerim"
+                        className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                     >
-                        <List size={18} className="text-gray-400 group-hover:text-white transition-colors" />
-                        <span className="font-black text-[9px] tracking-widest text-[#39FF14]">TAKTİKLER</span>
+                        <List size={18} />
+                        <span className="font-black text-[8px] tracking-widest">TAKTİKLER</span>
                     </button>
-                    
-                    <button 
-                        onClick={() => setShowResetConfirmModal(true)}
-                        className="w-1/3 h-14 bg-[#161B22] border border-white/10 rounded-2xl flex flex-col items-center justify-center gap-1 text-white hover:bg-white/5 transition-all group"
-                    >
-                        <Plus size={18} className="text-gray-400 group-hover:text-white transition-colors" />
-                        <span className="font-black text-[9px] tracking-widest text-[#39FF14]">YENİ TAKTİK</span>
-                    </button>
-                    
-                    <div className="w-1/3 relative group">
-                        <button 
+
+                    <div className="flex-1 relative group">
+                        <button
                             disabled={!canSave}
-                            onClick={() => {
-                                setSaveTacticName(activeTactic.name || '');
-                                setShowSaveModal(true);
-                            }}
-                            className="w-full h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-black font-black text-[9px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] transition-all bg-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]"
+                            onClick={() => { setSaveTacticName(activeTactic.name || ''); setShowSaveModal(true); }}
+                            className="w-full h-full min-h-[56px] rounded-2xl flex flex-col items-center justify-center text-black font-black disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.98] transition-all bg-[#39FF14] shadow-[0_0_24px_rgba(57,255,20,0.25)] px-2 text-center"
                         >
-                            <Save size={18} className="mb-0.5" />
-                            KAYDET
+                            <span className="text-[11px] tracking-widest leading-tight">{primaryLabel}</span>
+                            <span className="text-[8px] font-bold text-black/55 tracking-wide mt-0.5">→ {primaryTarget}</span>
                         </button>
                         {!canSave && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-red-500/90 text-white text-[10px] font-bold p-2 rounded-lg text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                Kadroyu tamamlayın ve kaleci seçin.
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 bg-red-500/90 text-white text-[10px] font-bold p-2 rounded-lg text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                Kaydetmek için en az bir kaleci ekleyin.
                             </div>
                         )}
                     </div>
+
+                    <button
+                        onClick={() => setShowExportModal(true)}
+                        title="Paylaş"
+                        className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                        <Send size={18} />
+                        <span className="font-black text-[8px] tracking-widest">PAYLAŞ</span>
+                    </button>
                 </div>
             </div>
 
