@@ -95,6 +95,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     visibility, setVisibility,
     isTeamMatch, setIsTeamMatch,
     homeTeamId,
+    deferredProviders, setDeferredProviders,
     setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,
@@ -138,6 +139,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     });
     setSelectedSlotForPicker(null);
   };
+
+  const hasProvider = (type: 'GK' | 'REFEREE') => deferredProviders.some(p => p.type === type);
+  const toggleProvider = (type: 'GK' | 'REFEREE') =>
+    setDeferredProviders(prev =>
+      prev.some(p => p.type === type) ? prev.filter(p => p.type !== type) : [...prev, { type }]);
 
   return (
     <PageLayout title="Maç Oluştur" onBack={onBack} scrollable className="bg-[#06080A]">
@@ -249,8 +255,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             sub={openSlotCount > 0 ? 'Arkadaş / takım çağır' : 'Kadro tamam ✓'}
             icon={<Users size={12} />} state={squadCount > 0 ? 'ok' : 'default'}
             onClick={() => { setSelectedSlotForPicker(null); setActiveSheet('PLAYER_PICKER'); }} />
-          <ActionCard label="Kaleci & Hakem" value="Pro destek çağır" sub="Eksik kaleyi / hakemi doldur"
-            icon={<Shield size={12} />} onClick={() => setActiveSheet('SUPPORT')} />
+          <ActionCard label="Kaleci & Hakem"
+            value={deferredProviders.length > 0 ? `${deferredProviders.length} hizmet seçildi` : 'Pro destek çağır'}
+            sub={deferredProviders.length > 0 ? 'Maç aktifleşince talep gider' : 'Eksik kaleyi / hakemi doldur'}
+            icon={<Shield size={12} />} state={deferredProviders.length > 0 ? 'ok' : 'default'}
+            onClick={() => setActiveSheet('SUPPORT')} />
           <ActionCard label="Gelişmiş" value="Yaş · Cinsiyet · Ücret" sub="Rakip daveti · takım adları"
             icon={<Activity size={12} />} onClick={() => setActiveSheet('RULES')} />
         </div>
@@ -317,19 +326,30 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end" onClick={() => setActiveSheet('NONE')}>
             <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} onClick={e => e.stopPropagation()} className="w-full bg-[#0D1117] border-t border-white/10 rounded-t-[32px] p-6 pb-10 pb-safe">
               <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6" />
-              <h2 className="text-lg font-black text-white italic uppercase tracking-tight mb-1">Pro Destek Merkezi</h2>
-              <p className="text-xs text-gray-500 mb-6">Maçın için profesyonel kaleci veya hakem çağır.</p>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <button onClick={() => { setActiveSheet('NONE'); onNavigate('MARKETPLACE_GK'); }} className="p-5 rounded-3xl bg-[#161B22]/80 border border-emerald-500/20 hover:border-emerald-500/50 transition-all flex flex-col items-center text-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center"><Shield size={24} /></div>
-                  <div><h3 className="text-sm font-black italic uppercase text-white">Kaleci Çağır</h3><p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wider">Eksik Kaleyi Doldur</p></div>
-                </button>
-                <button onClick={() => { setActiveSheet('NONE'); onNavigate('MARKETPLACE_REF'); }} className="p-5 rounded-3xl bg-[#161B22]/80 border border-blue-500/20 hover:border-blue-500/50 transition-all flex flex-col items-center text-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center"><Scale size={24} /></div>
-                  <div><h3 className="text-sm font-black italic uppercase text-white">Hakem Çağır</h3><p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wider">Profesyonel Yönetim</p></div>
-                </button>
+              <h2 className="text-lg font-black text-white italic uppercase tracking-tight mb-1">Kaleci &amp; Hakem</h2>
+              <p className="text-xs text-gray-500 mb-5">Seçtiklerin, maç <b className="text-[#39FF14]">aktifleştiğinde</b> (kapora sonrası) en uygun sağlayıcıya <b>talep</b> olarak gönderilir.</p>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {([
+                  { type: 'GK' as const, title: 'Kaleci', sub: 'Eksik kaleyi doldur', Icon: Shield },
+                  { type: 'REFEREE' as const, title: 'Hakem', sub: 'Profesyonel yönetim', Icon: Scale },
+                ]).map(({ type, title, sub, Icon }) => {
+                  const on = hasProvider(type);
+                  return (
+                    <button key={type} onClick={() => toggleProvider(type)}
+                      className={`relative p-5 rounded-3xl border transition-all flex flex-col items-center text-center gap-3 ${on ? 'bg-[#39FF14]/10 border-[#39FF14]/50' : 'bg-[#161B22]/80 border-white/10 hover:border-white/25'}`}>
+                      {on && <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#39FF14] text-[#0A0E14] flex items-center justify-center"><Check size={12} strokeWidth={3} /></div>}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${on ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]' : 'bg-white/5 border-white/10 text-white/70'}`}><Icon size={24} /></div>
+                      <div><h3 className="text-sm font-black italic uppercase text-white">{title}</h3><p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wider">{sub}</p></div>
+                    </button>
+                  );
+                })}
               </div>
-              <button onClick={() => setActiveSheet('NONE')} className="w-full h-12 bg-white/5 border border-white/10 text-white font-black uppercase text-xs rounded-2xl tracking-widest">Kapat</button>
+              {deferredProviders.length > 0 && (
+                <div className="mb-4 flex items-center gap-2 text-[11px] font-bold text-[#39FF14] bg-[#39FF14]/[0.06] border border-[#39FF14]/25 rounded-2xl px-3 py-2.5">
+                  <Radio size={12} /> {deferredProviders.length} hizmet · maç aktifleşince talep gönderilecek
+                </div>
+              )}
+              <button onClick={() => setActiveSheet('NONE')} className="w-full h-12 bg-[#39FF14] text-[#0A0E14] font-black uppercase text-xs rounded-2xl tracking-widest active:scale-95">Tamam</button>
             </motion.div>
           </motion.div>
         )}

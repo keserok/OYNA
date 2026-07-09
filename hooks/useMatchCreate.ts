@@ -4,6 +4,7 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { getTeamSquad } from '../services/teamSocialService';
+import { blockMatchDeposit, DeferredProvider } from '../services/matchLifecycleService';
 
 // ── Profil → maç seçeneği otomatik-işaretleme yardımcıları ──────────────────
 // Kullanıcının profil verisinden (doğum tarihi, mevki) maç oluşturma
@@ -77,6 +78,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   // S38: Takım Maçı — kendi takımını seç, rakip tarafı (away) kodla davet edilir
   const [isTeamMatch, setIsTeamMatch] = useState(false);
   const [homeTeamId, setHomeTeamId] = useState<string | null>(null);
+  // Maç oluştururken seçilen kaleci/hakem — aktivasyonda talep gönderilir (escrow).
+  const [deferredProviders, setDeferredProviders] = useState<DeferredProvider[]>([]);
 
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
@@ -380,17 +383,16 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       }
       return baseSlot;
     });
-    // Rakip tarafı (awaySlots): perTeam adet açık slot — rakip takım kodla katılıp öder.
-    const awaySlots: PositionSlot[] = isTeamMatch
-      ? pitchSlots.map((slot, i): PositionSlot => ({
-          id: `away_${i}`,
-          role: slot.role,
-          x: slot.x,
-          y: slot.y,
-          status: 'OPEN',
-          side: 'AWAY',
-        }))
-      : [];
+    // Rakip tarafı (awaySlots) HER ZAMAN üretilir — maç iki takımdır; eşik (toplam−2)
+    // ve kişi başı ücret (perTeam×2) bunun üzerinden hesaplanır. Takım maçında side:'AWAY'.
+    const awaySlots: PositionSlot[] = pitchSlots.map((slot, i): PositionSlot => ({
+      id: `away_${i}`,
+      role: slot.role,
+      x: slot.x,
+      y: slot.y,
+      status: 'OPEN',
+      ...(isTeamMatch ? { side: 'AWAY' as const } : {}),
+    }));
     // Takım maçı kodla davet edildiği için PRIVATE (paylaşılabilir kod üretilir).
     const effectiveVisibility = isTeamMatch ? 'PRIVATE' : visibility;
 
@@ -420,7 +422,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             { role: 'ORT', count: 1 }
         ],
         slots: homeSlots,
-        ...(isTeamMatch ? { awaySlots } : {}),
+        awaySlots,
     };
 
     try {
@@ -429,11 +431,22 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         let targetId: string | undefined;
         if (isDraftMode && draftMatch) {
             // FAZ 3: taslağı maça çevirirken görünürlüğü de gönder (PRIVATE'a geçişte DB kod üretir)
-            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, ...(isTeamMatch ? { awaySlots } : {}), format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility: effectiveVisibility, ...(resolvedHomeTeamId ? { homeTeamName: resolvedHomeTeamName || undefined, homeTeamId: resolvedHomeTeamId } : {}) });
+            await updateMatch({ ...draftMatch, status: 'ACTIVE', slots: matchData.slots, awaySlots, format: format.v, duration: dna.duration, gender: dna.gender, ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age, visibility: effectiveVisibility, ...(resolvedHomeTeamId ? { homeTeamName: resolvedHomeTeamName || undefined, homeTeamId: resolvedHomeTeamId } : {}) });
             setActiveDraftId(null);
             targetId = draftMatch.id;
         } else {
             targetId = await addMatch(matchData);
+        }
+
+        // Escrow: kaporayı BLOKE et (çekilmez) → maç aktifleşir + ertelenmiş
+        // kaleci/hakem talepleri gönderilir. Eşik (toplam−2) dolunca capture edilir.
+        // Best-effort: blokaj başarısız olsa da maç oluşturulmuş kalır (kullanıcı lobide tekrar dener).
+        if (targetId && matchDeposit > 0) {
+          try {
+            await blockMatchDeposit(targetId, matchDeposit, deferredProviders);
+          } catch (e) {
+            console.warn('[useMatchCreate] kapora blokajı yapılamadı:', e);
+          }
         }
 
         // Add user notifications for pending players
@@ -495,6 +508,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     visibility, setVisibility,
     isTeamMatch, setIsTeamMatch,
     homeTeamId, setHomeTeamId,
+    deferredProviders, setDeferredProviders,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
     selectedTimeSlot, setSelectedTimeSlot,

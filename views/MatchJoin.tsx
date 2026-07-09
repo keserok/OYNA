@@ -13,6 +13,7 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
+import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -511,13 +512,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
 
-      await updateMatch({ 
-        ...match, 
-        slots: updatedSlots, 
-        awaySlots: updatedAwaySlots, 
-        status: nextStatus 
+      await updateMatch({
+        ...match,
+        slots: updatedSlots,
+        awaySlots: updatedAwaySlots,
+        status: nextStatus
       });
-      
+
+      // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
+      try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
+
       setSelectedSlotId(null);
       setNewMatchBadge(true);
       setLobbyTab('chat');
@@ -542,6 +546,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // Sunucudan TAZE durumu çek (eşzamanlı değişiklikleri ezmemek için — lost-update'i önler).
       const fresh = await getMatchDetails(match.id);
       if (fresh) await updateMatch({ ...match, ...(fresh as any) });
+
+      // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
+      try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
 
       setSelectedSlotIds([]);
       setSelectedSlotId(null);

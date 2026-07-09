@@ -276,6 +276,10 @@ export interface MatchListing {
   confirmedAt?: string;       // T-8s quorum onay zamanı
   startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
   isDemo?: boolean;           // demo/seed maçı (panelde rozetle ayrıştırılır)
+  // Escrow kapora yaşam-döngüsü (20260716000001): NONE|BLOCKED|CAPTURED|VOIDED|REFUNDED
+  depositStatus?: 'NONE' | 'BLOCKED' | 'CAPTURED' | 'VOIDED' | 'REFUNDED';
+  depositAmount?: number;     // bloke edilen/tahsil edilen kapora
+  minPlayers?: number;        // maçın LIVE olması için gereken eşik (toplam − 2)
 }
 
 export interface PositionSlot {

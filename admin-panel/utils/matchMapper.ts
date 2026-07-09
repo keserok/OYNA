@@ -29,6 +29,9 @@ export interface AdminMatchRow {
   is_successful?: boolean | null;
   confirmed_at?: string | null;
   starts_at?: string | null;
+  deposit_status?: string | null;
+  deposit_amount?: number | null;
+  min_players?: number | null;
   total_count?: number;
 }
 
@@ -114,6 +117,9 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     isSuccessful: r.is_successful || undefined,
     confirmedAt: r.confirmed_at || undefined,
     startsAt: r.starts_at || undefined,
+    depositStatus: (r.deposit_status as MatchListing['depositStatus']) || 'NONE',
+    depositAmount: r.deposit_amount != null ? Number(r.deposit_amount) : undefined,
+    minPlayers: r.min_players != null ? Number(r.min_players) : undefined,
     ...(r.isDemo ? { isDemo: true } : {}),
   } as MatchListing & { isDemo?: boolean };
 }
