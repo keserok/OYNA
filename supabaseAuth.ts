@@ -417,11 +417,19 @@ export const getAuthIdentity = async (): Promise<AuthIdentityInfo> => {
   };
 };
 
-// ─── E-posta güncelle (onaylı) ───────────────────────────────────────────────
-// Supabase yeni e-postaya doğrulama linki gönderir; onaylanınca değişir.
-export const updateUserEmail = async (email: string): Promise<void> => {
-  const { error } = await supabase.auth.updateUser({ email: email.trim().toLowerCase() });
+// ─── E-posta güncelle ────────────────────────────────────────────────────────
+// Proje ayarına göre iki davranış olabilir:
+//  • enable_confirmations=false → e-posta ANINDA değişir (link gitmez).
+//  • onay açık → yeni adrese doğrulama linki gider, onaylanınca değişir.
+// Yanıttan hangisinin olduğunu tespit edip çağırana bildiririz (config-agnostik).
+export const updateUserEmail = async (email: string): Promise<{ applied: boolean; email: string }> => {
+  const clean = email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.updateUser({ email: clean });
   if (error) throw error;
+  const current = data.user?.email ?? null;
+  const applied = (current ?? '').toLowerCase() === clean; // anında değiştiyse eşittir
+  if (applied && auth.currentUser) auth.currentUser.email = current; // bellek-içi senkron
+  return { applied, email: current ?? clean };
 };
 
 // ─── Şifre güncelle / oluştur ────────────────────────────────────────────────
