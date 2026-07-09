@@ -16,6 +16,7 @@ import {
   forceCaptureIntentAdmin,
   forceVoidIntentAdmin,
   forceRefundIntentAdmin,
+  matchDepositActionAdmin,
   fetchMatchTimelineAdmin,
   fetchMatchServiceRequestsAdmin,
   toTurkishAdminError,
@@ -411,6 +412,12 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                 <p className="text-[9px] text-gray-500 uppercase">Durum</p>
                 <p className="font-bold text-[#39FF14]">{local.status || 'ACTIVE'}</p>
               </div>
+              <div className="bg-black/30 rounded-lg p-2 border border-white/5">
+                <p className="text-[9px] text-gray-500 uppercase">Kapora</p>
+                <span className={`inline-block mt-0.5 text-[10px] font-black px-1.5 py-0.5 rounded border ${intentBadge(local.depositStatus || 'NONE')}`}>
+                  {local.depositStatus || 'NONE'}{local.depositAmount ? ` · ${local.depositAmount}₺` : ''}
+                </span>
+              </div>
             </div>
 
             {/* ── KADRO & SLOT ── */}
@@ -448,6 +455,25 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     </button>
                   ))}
                 </div>
+
+                {(local.depositStatus === 'BLOCKED' || local.depositStatus === 'CAPTURED') && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase">Kapora (admin):</span>
+                    {local.depositStatus === 'BLOCKED' && (
+                      <>
+                        <button type="button" disabled={busy}
+                          onClick={() => void runMoney(async () => { await matchDepositActionAdmin(local.id, 'CAPTURE'); setLocal({ ...local, depositStatus: 'CAPTURED' }); }, 'Kapora tahsil edildi')}
+                          className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/15">CAPTURE</button>
+                        <button type="button" disabled={busy}
+                          onClick={() => void runMoney(async () => { await matchDepositActionAdmin(local.id, 'VOID', 'Admin void'); setLocal({ ...local, depositStatus: 'VOIDED' }); }, 'Kapora serbest bırakıldı')}
+                          className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-white/15 text-gray-300 hover:bg-white/10">VOID</button>
+                      </>
+                    )}
+                    <button type="button" disabled={busy}
+                      onClick={() => void runMoney(async () => { await matchDepositActionAdmin(local.id, 'REFUND', 'Admin refund'); setLocal({ ...local, depositStatus: 'REFUNDED' }); }, 'Kapora iade edildi')}
+                      className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-blue-500/40 text-blue-300 hover:bg-blue-500/15">REFUND</button>
+                  </div>
+                )}
 
                 {local.slots.length === 0 ? (
                   <p className="text-[11px] text-gray-600 py-6 text-center">Bu maçın kadro/slot tanımı yok.</p>

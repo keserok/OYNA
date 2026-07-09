@@ -1971,6 +1971,24 @@ export async function forceRefundIntentAdmin(intentId: string, notes?: string): 
   if (error) throw new Error(error.message);
 }
 
+/**
+ * ADMIN — maç kaporası (escrow) üzerinde TAM YETKİ: CAPTURE (tahsil) | VOID (serbest
+ * bırak) | REFUND (iade). migration 20260716000001 → admin_match_deposit_action.
+ */
+export async function matchDepositActionAdmin(
+  matchId: string,
+  action: 'CAPTURE' | 'VOID' | 'REFUND',
+  reason?: string,
+): Promise<{ ok?: boolean; deposit_status?: string }> {
+  const { data, error } = await supabase.rpc('admin_match_deposit_action', {
+    p_match_id: matchId,
+    p_action: action,
+    p_reason: reason ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? {}) as { ok?: boolean; deposit_status?: string };
+}
+
 export interface PaymentIntentRow {
   id: string;
   user_id: string | null;
