@@ -5,6 +5,8 @@ import { auth } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { getTeamSquad } from '../services/teamSocialService';
 import { blockMatchDeposit, DeferredProvider } from '../services/matchLifecycleService';
+import { FORMATIONS, defaultFormation, type SquadSize } from '../utils/formations';
+import { roleShort } from '../shared/lobbyEnrichment';
 
 // ── Profil → maç seçeneği otomatik-işaretleme yardımcıları ──────────────────
 // Kullanıcının profil verisinden (doğum tarihi, mevki) maç oluşturma
@@ -140,36 +142,23 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   const perTeam = useMemo(() => parseInt(format.v.split('v')[0]) || 7, [format.v]);
   const isReady = !!(selectedPitch && selectedTimeSlot);
 
-  // Symmetrical Defaults
+  // Kanonik formasyon (utils/formations SSOT) — HER boyut kendi mantıklı temel
+  // dizilişini alır (5v5 '1-2-1', 6v6 '2-2-1', 7v7 '2-3-1', 8v8 '3-3-1' ...).
+  // Rol kodları (GK/DEF/MID/FWD) create'in TR kısaltmalarına (KL/SAV/ORT/HÜC)
+  // eşlenir; lobi de aynı SSOT'u kullandığı için diziliş sahaya birebir yansır.
   const getSymmetricPositions = (pt: number, orient: 'vertical' | 'horizontal') => {
-    const verticalDefaults: Record<number, {x:number, y:number, role:string}[]> = {
-      3: [
-        { x: 50, y: 90, role: 'KL' }, { x: 30, y: 55, role: 'SAV' }, { x: 70, y: 55, role: 'SAV' }
-      ],
-      5: [
-        { x: 50, y: 90, role: 'KL' }, { x: 30, y: 75, role: 'SAV' }, { x: 70, y: 75, role: 'SAV' },
-        { x: 50, y: 50, role: 'ORT' }, { x: 50, y: 25, role: 'HÜC' }
-      ],
-      7: [
-        { x: 50, y: 90, role: 'KL' }, { x: 25, y: 75, role: 'SAV' }, { x: 75, y: 75, role: 'SAV' },
-        { x: 20, y: 50, role: 'ORT' }, { x: 50, y: 50, role: 'ORT' }, { x: 80, y: 50, role: 'ORT' },
-        { x: 50, y: 25, role: 'HÜC' }
-      ],
-      11: [
-        { x: 50, y: 90, role: 'KL' }, { x: 20, y: 75, role: 'SAV' }, { x: 40, y: 75, role: 'SAV' }, { x: 60, y: 75, role: 'SAV' }, { x: 80, y: 75, role: 'SAV' },
-        { x: 20, y: 50, role: 'ORT' }, { x: 40, y: 50, role: 'ORT' }, { x: 60, y: 50, role: 'ORT' }, { x: 80, y: 50, role: 'ORT' },
-        { x: 35, y: 25, role: 'HÜC' }, { x: 65, y: 25, role: 'HÜC' }
-      ]
-    };
-    
-    let base = verticalDefaults[pt] || verticalDefaults[11];
-    
-    if (orient === 'horizontal') {
-        return base.map(p => ({
-            role: p.role,
-            x: 100 - p.y,
-            y: p.x
+    const size = `${pt}v${pt}` as SquadSize;
+    const preset = FORMATIONS[size]?.[defaultFormation(size)];
+    const base = (preset && preset.length === pt)
+      ? preset.map(s => ({ x: s.x, y: s.y, role: roleShort(s.role) }))
+      : Array.from({ length: pt }).map((_, i) => ({
+          x: 50,
+          y: 90 - i * (65 / Math.max(pt - 1, 1)),
+          role: i === 0 ? 'KL' : 'ORT',
         }));
+
+    if (orient === 'horizontal') {
+      return base.map(p => ({ role: p.role, x: 100 - p.y, y: p.x }));
     }
     return base;
   };
