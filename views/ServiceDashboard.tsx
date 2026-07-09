@@ -13,6 +13,7 @@ import {
   withdrawProviderApplication,
   providerConfirmService,
 } from '../services/serviceRequestService';
+import { getMyMatchServiceOffers, respondMatchServiceOffer, MatchServiceOffer } from '../services/serviceOfferService';
 import {
   getWalletSummary,
   getPayoutMethods,
@@ -110,6 +111,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [requestsError, setRequestsError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [reportingId, setReportingId] = useState<string | null>(null);
+
+  // Kaptan çok-sağlayıcı TEKLİFLERİ (match_service_offers) — kabul/red (FCFS)
+  const [matchOffers, setMatchOffers] = useState<MatchServiceOffer[]>([]);
+  const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
 
   // FAZ 5 — TC kimlik doğrulama
   const [identityStatus, setIdentityStatus] = useState<'PENDING' | 'VERIFIED' | 'REJECTED' | null>(null);
@@ -375,6 +380,34 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
+  // Kaptan çok-sağlayıcı TEKLİFLERİ (match_service_offers) — bekleyenler
+  const fetchMatchOffers = async () => {
+    try {
+      setMatchOffers(await getMyMatchServiceOffers());
+    } catch (err) {
+      console.error('fetchMatchOffers:', err);
+    }
+  };
+
+  // Teklife yanıt (kabul → ücret bloke edilir; ilk kabul eden işi alır)
+  const handleRespondMatchOffer = async (offerId: string, accept: boolean) => {
+    setRespondingOfferId(offerId);
+    try {
+      const res = await respondMatchServiceOffer(offerId, accept);
+      if (accept && res?.reason === 'ROLE_ALREADY_FILLED') {
+        showActionError('Bu rol başka bir sağlayıcı tarafından üstlenildi.');
+      } else {
+        showActionSuccess(accept ? 'Teklifi kabul ettin — kadrodasın! ⚽' : 'Teklifi reddettin.');
+      }
+      await Promise.all([fetchMatchOffers(), fetchIncomingRequests(), fetchEarnings()]);
+    } catch (err: any) {
+      console.error('handleRespondMatchOffer:', err);
+      showActionError(err?.message || 'İşlem tamamlanamadı. Lütfen tekrar dene.');
+    } finally {
+      setRespondingOfferId(null);
+    }
+  };
+
   // FAZ 5/8A — Kazanç bakiyesi (TEK kaynak: get_wallet_summary)
   const fetchEarnings = async () => {
     try {
@@ -462,6 +495,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     fetchPayoutData();
     fetchWalletHistory();
     fetchIncomingRequests();
+    fetchMatchOffers();
     fetchEarnings();
     fetchIdentityStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -478,7 +512,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
         (payload: any) => {
           const key = String(payload?.new?.type_key || '');
-          if (key.startsWith('service_request')) {
+          if (key.startsWith('service_offer')) {
+            fetchMatchOffers();
+          } else if (key.startsWith('service_request')) {
             fetchIncomingRequests();
             fetchEarnings();
           } else if (key.startsWith('payout_')) {
@@ -1209,6 +1245,47 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div>
             {isRef ? renderRefereeIdentityCard() : renderGoalkeeperIdentityCard()}
           </div>
+
+          {/* Kaptan çok-sağlayıcı TEKLİFLERİ (FCFS — ilk kabul eden işi alır) */}
+          {matchOffers.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <Inbox size={16} className="text-[#39FF14]" />
+                <h3 className="text-sm font-black text-white uppercase tracking-wide">Gelen Teklifler</h3>
+                <span className="text-[10px] font-black text-[#0A0E14] bg-[#39FF14] rounded-full px-2 py-0.5">{matchOffers.length}</span>
+              </div>
+              <div className="space-y-3">
+                {matchOffers.map(o => {
+                  const busy = respondingOfferId === o.id;
+                  return (
+                    <div key={o.id} className="rounded-[24px] p-4 bg-gradient-to-br from-green-900/30 to-[#161B22] border border-green-500/30">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-white uppercase italic">{o.provider_type === 'GK' ? 'Kalecilik' : 'Hakemlik'} Teklifi</p>
+                          <p className="text-[11px] text-white/50 truncate mt-0.5">{o.location || o.match_title || 'Maç'}{o.date ? ` · ${o.date}` : ''}{o.time ? ` ${o.time}` : ''}</p>
+                          <p className="text-[10px] text-[#39FF14] font-bold mt-1">İlk kabul eden işi alır</p>
+                        </div>
+                        <div className="text-right shrink-0 pl-3">
+                          <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Bedel</p>
+                          <p className="text-lg font-black text-[#39FF14]">{o.fee}₺</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button disabled={busy} onClick={() => handleRespondMatchOffer(o.id, false)}
+                          className="flex-1 h-11 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40">
+                          <X size={14} /> Reddet
+                        </button>
+                        <button disabled={busy} onClick={() => handleRespondMatchOffer(o.id, true)}
+                          className="flex-[1.5] h-11 rounded-xl bg-[#39FF14] text-[#0A0E14] text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40">
+                          {busy ? <Activity size={14} className="animate-spin" /> : <Check size={14} />} Kabul Et
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* FAZ 5 — Gelen Talepler */}
           {renderIncomingRequestsSection()}

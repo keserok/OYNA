@@ -13,8 +13,9 @@ import { supabase } from '../supabaseClient';
 //   staging/Pro-branch'te test edin (bkz. migration başlığı).
 // ════════════════════════════════════════════════════════════════════════════
 
-export type ProviderKind = 'GK' | 'REFEREE';
-export interface DeferredProvider { type: ProviderKind; providerId?: string }
+export type ProviderKind = 'GK' | 'REF';
+/** Aktivasyonda gönderilecek teklif seçimi: belirli sağlayıcılar veya "tümüne". */
+export interface DeferredProvider { type: ProviderKind; providerIds: string[]; all: boolean }
 
 /** Kaptan kaporayı bloke eder (çekilmez) → maç ACTIVE + sağlayıcı talepleri gönderilir. */
 export const blockMatchDeposit = async (

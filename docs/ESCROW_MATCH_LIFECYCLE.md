@@ -44,6 +44,17 @@
    hazır; `admin-panel` MatchDetailDrawer'a bu üç butonu + `depositStatus` rozetini eklemek
    kalıyor (backend erişim tam, yalnız görsel buton eksik).
 
+## Kaptan → çok sağlayıcı TEKLİF akışı (20260716000002)
+- `match_service_offers` tablosu + `send_match_service_offers` (kaptan çok sağlayıcıya/tümüne
+  teklif; escrow YOK) + `respond_match_service_offer` (sağlayıcı kabul→escrow bloke + FCFS
+  ile diğerlerini kapat / red) + `get_my_match_service_offers` + `cancel_match_service_offers`.
+- `match_block_deposit` artık `deferred_providers` = `[{type:'GK'|'REF', providerIds:[], all}]`
+  için aktivasyonda `send_match_service_offers` çağırır (kapora sonrası teklif gider).
+- Frontend: `ProviderOfferPicker` (create'te çoklu seçim + tümüne gönder + "Kaporayı
+  Ödediğinde Teklif Gönder"), `serviceOfferService`, ServiceDashboard "Gelen Teklifler" (kabul/red).
+- ⚠️ FIXME: escrow blokajı kabulde SIMULATION'da DB; gerçek iyzico ön-provizyon edge'de bağlanmalı.
+  Legacy `service_offers` tablosu KULLANILMADI (ölü); yeni `match_service_offers` kullanılır.
+
 ## Nasıl test edilir (staging / SIMULATION)
 1. `app_config.payment_provider = 'SIMULATION'` olduğundan emin ol (gerçek para çekilmez).
 2. Migration'ı uygula: `npm run admin:deploy` (veya Supabase CLI).
