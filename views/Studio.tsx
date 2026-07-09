@@ -27,6 +27,8 @@ import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService'
 // Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
 import { getFriends, getFriendLists } from '../services/socialService';
 import type { FriendRow, FriendList } from '../services/socialService';
+// Kütüphanesiz taktik görseli (SVG→PNG) + indirme
+import { buildTacticSvg, svgToPngBlob, downloadBlob, tacticImageFilename } from './studio/shareImage';
 
 // Paylaşılan tipler ve sabitler (SSOT)
 import type {
@@ -126,8 +128,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     
     // Farazi Tools
     const [tool, setTool] = useState<StudioTool>('move');
-    // Faz 8 — Düzenle / Oynat modu (S42)
-    const [studioMode, setStudioMode] = useState<'EDIT' | 'PLAY'>('EDIT');
+    // Sunum modu — Paylaş'tan başlatılır: yalnız saha + sadece-hareket oynatımı
+    const [presentMode, setPresentMode] = useState(false);
     // Faz 9 — mobil deneyim: yakınlaştırma/pan (S46), taslak (S49), reduced-motion (S50)
     const reduceMotion = useReducedMotion();
     const [zoom, setZoom] = useState(1);
@@ -531,6 +533,67 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const zoomIn = () => { const i = ZOOM_STEPS.findIndex(s => s > zoom + 0.001); setZoomLevel(i === -1 ? ZOOM_STEPS[ZOOM_STEPS.length - 1] : ZOOM_STEPS[i]); };
     const zoomOut = () => { const cur = ZOOM_STEPS.filter(s => s < zoom - 0.001); setZoomLevel(cur.length ? cur[cur.length - 1] : 1); };
     const resetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+
+    // ── Sunum modu (OYNAT'ın halefi): yalnız saha + sadece-hareket oynatımı ──
+    const enterPresentMovement = async () => {
+        setShowExportModal(false);
+        resetZoom();
+        setPresentMode(true);
+        setHideLines(true);          // "sadece hareket" — çizgiler + sekans rozetleri gizli
+        await loadAdvancedAnimation();
+        setShowBall(true);
+        setIsSimulating(true);
+    };
+    const replayPresent = () => { setIsSimulating(false); requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true))); };
+    const exitPresent = () => { setIsSimulating(false); setPresentMode(false); };
+
+    // ── Paylaşım: taktik görseli (SVG→PNG) + link (Web Share API / fallback) ──
+    const buildShareBlob = async (): Promise<Blob> => {
+        const shareTeam = studioTeams.find(t => t.team_id === (activeTactic.teamId || selectedTeamId));
+        const svg = buildTacticSvg(activeTactic, { teamName: shareTeam?.name, accent: shareTeam?.color1, sizeLabel: formatLabel(activeTactic.size) });
+        return svgToPngBlob(svg);
+    };
+    const getSavedShareUrl = async (): Promise<string | null> => {
+        const savedId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id) ? activeTactic.id : null;
+        if (!savedId) return null;
+        try { const token = await setTacticShareLink(savedId, true); return token ? tacticShareUrl(token) : null; } catch { return null; }
+    };
+    const handleDownloadImage = async () => {
+        try {
+            const blob = await buildShareBlob();
+            downloadBlob(blob, tacticImageFilename(activeTactic));
+            showToast('Taktik görseli indirildi.');
+        } catch (e) { showToast((e as Error)?.message || 'Görsel üretilemedi.', 'error'); }
+    };
+    const handleCopyLink = async () => {
+        const url = await getSavedShareUrl();
+        if (!url) { showToast('Önce taktiği kaydet — link kayıtlı taktiği taşır.', 'error'); return; }
+        try { await navigator.clipboard.writeText(url); showToast('Paylaşım linki kopyalandı!'); }
+        catch { showToast('Link kopyalanamadı.', 'error'); }
+    };
+    // Tek "Paylaş": görsel + (varsa) link → cihazın paylaş menüsü; desteklenmiyorsa indir + kopyala
+    const handleShareTactic = async () => {
+        try {
+            const blob = await buildShareBlob();
+            const file = new File([blob], tacticImageFilename(activeTactic), { type: 'image/png' });
+            const url = await getSavedShareUrl();
+            const nav = navigator as unknown as { canShare?: (d: unknown) => boolean; share?: (d: unknown) => Promise<void> };
+            if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
+                await nav.share({
+                    files: [file],
+                    title: `${activeTactic.name} — OYNA Taktik`,
+                    text: `${activeTactic.formation} dizilişli taktiğim: ${activeTactic.name}`,
+                    ...(url ? { url } : {}),
+                });
+            } else {
+                downloadBlob(blob, tacticImageFilename(activeTactic));
+                if (url) { try { await navigator.clipboard.writeText(url); } catch { /* yok say */ } showToast('Görsel indirildi, link kopyalandı.'); }
+                else showToast('Görsel indirildi. Link için taktiği kaydet.');
+            }
+        } catch (e) {
+            if ((e as Error)?.name !== 'AbortError') showToast((e as Error)?.message || 'Paylaşılamadı.', 'error');
+        }
+    };
 
     // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
@@ -1270,35 +1333,53 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         {/* Header */}
                         <header className="px-6 pt-safe pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
                             <div className="flex items-center gap-3 min-w-0">
-                                <button id="studio-back-button" onClick={onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
+                                <button id="studio-back-button" onClick={presentMode ? exitPresent : onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
                                     <ChevronLeft size={20} />
                                 </button>
                                 <div className="min-w-0">
-                                    {/* Düzenlenebilir taktik adı (S43) */}
-                                    <button onClick={() => handleRenamePlan(activePlanIndex)} className="flex items-center gap-1.5 group max-w-full">
-                                        <h1 className="text-lg font-black text-white truncate">{activeTactic.name}</h1>
-                                        <PenTool size={12} className="text-gray-500 group-hover:text-[#39FF14] transition-colors shrink-0" />
-                                    </button>
-                                    <p className="text-[10px] text-[#39FF14] font-mono uppercase truncate">{activeTactic.formation} · {activeTactic.size}</p>
+                                    {presentMode ? (
+                                        <>
+                                            <h1 className="text-lg font-black text-white truncate">{activeTactic.name}</h1>
+                                            <p className="text-[10px] text-[#39FF14] font-mono uppercase truncate tracking-widest">Sunum · Sadece Hareket</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {/* Düzenlenebilir taktik adı (S43) */}
+                                            <button onClick={() => handleRenamePlan(activePlanIndex)} className="flex items-center gap-1.5 group max-w-full">
+                                                <h1 className="text-lg font-black text-white truncate">{activeTactic.name}</h1>
+                                                <PenTool size={12} className="text-gray-500 group-hover:text-[#39FF14] transition-colors shrink-0" />
+                                            </button>
+                                            <p className="text-[10px] text-[#39FF14] font-mono uppercase truncate">{activeTactic.formation} · {activeTactic.size}</p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                            {/* DÜZENLE / OYNAT modu (S42) */}
-                            <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
+                            {presentMode ? (
                                 <button
-                                    onClick={() => setStudioMode('EDIT')}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${studioMode === 'EDIT' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
-                                >DÜZENLE</button>
+                                    onClick={exitPresent}
+                                    aria-label="Sunumdan çık"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15 text-white font-black text-[11px] tracking-widest shrink-0 hover:bg-white/15 active:scale-95 transition-all"
+                                >
+                                    <X size={15} /> ÇIKIŞ
+                                </button>
+                            ) : (
+                                /* Paylaş — taktik görseli + link + sadece-hareket sunumu */
                                 <button
-                                    onClick={() => setStudioMode('PLAY')}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${studioMode === 'PLAY' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
-                                >OYNAT</button>
-                            </div>
+                                    onClick={() => setShowExportModal(true)}
+                                    aria-label="Paylaş"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest shrink-0 hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
+                                >
+                                    <Share2 size={15} /> PAYLAŞ
+                                </button>
+                            )}
                         </header>
 
+            {/* Düzenleme kromu — sunum modunda gizlenir (yalnız saha kalır) */}
+            {!presentMode && (<>
             {/* Plan Selector */}
             <div className="px-6 pb-6 pt-2">
-                <Reorder.Group 
-                    axis="x" 
+                <Reorder.Group
+                    axis="x"
                     values={plans} 
                     onReorder={handleReorderPlans}
                     className="flex gap-3 overflow-x-auto no-scrollbar items-center snap-x p-1"
@@ -1602,11 +1683,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <Trash2 size={14} /> TEMİZLE
                     </button>
                 </div>
+            </>)}
 
             {/* Pitch Area */}
             <div className="px-6 relative z-10 max-w-md mx-auto w-full overflow-hidden">
                 {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez; alt navigasyonla çakışmaz) */}
-                {studioMode === 'EDIT' && (
+                {!presentMode && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-1.5">
                         <button onClick={zoomIn} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} aria-label="Yakınlaştır" title="Yakınlaştır"
                             className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-white flex items-center justify-center hover:bg-black/85 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shadow-lg">
@@ -1623,6 +1705,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             </button>
                         )}
                     </div>
+                )}
+                {/* Sunum modu — Tekrar Oynat kontrolü (saha altında) */}
+                {presentMode && (
+                    <button
+                        onClick={replayPresent}
+                        aria-label="Tekrar oynat"
+                        className="absolute left-1/2 -translate-x-1/2 bottom-4 z-40 flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_6px_24px_rgba(57,255,20,0.35)]"
+                    >
+                        <RotateCcw size={15} /> TEKRAR OYNAT
+                    </button>
                 )}
                 <div
                     ref={canvasRef}
@@ -1844,7 +1936,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             </div>
 
             {/* Team Selection & Auto Fill */}
-            {!isTeamConfirmed && studioMode === 'EDIT' && (
+            {!isTeamConfirmed && !presentMode && (
             <div className="px-6 pb-6 mt-4">
                 <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
                     <div className="flex items-center justify-between mb-4">
@@ -1957,7 +2049,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             )}
 
             {/* Yedek tepsisi (S27) — kalıcı yatay şerit + sahaya yerleştir/takas (S26) */}
-            {studioMode === 'EDIT' && (
+            {!presentMode && (
             <div className="px-6 pb-4">
                 <div className="flex items-center gap-2 mb-2">
                     <List size={12} className="text-gray-500" />
@@ -1996,7 +2088,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             )}
 
             {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
-            {studioMode === 'EDIT' && (<>
+            {!presentMode && (<>
             {/* Tactical Settings (Mentality & Tempo) Redesign */}
             <div className="px-6 pb-6 mt-8">
                 <div className="grid grid-cols-2 gap-4">
@@ -2129,7 +2221,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             )}
             </>)}
 
-            {/* Alt bar (S43/S40) — tek baskın bağlam-duyarlı aksiyon + iki küçük ikincil */}
+            {/* Alt bar (S43/S40) — sunum modunda gizli */}
+            {!presentMode && (
             <div className="px-6 mt-6 pb-32">
                 <div className="flex gap-2 w-full items-stretch">
                     <button
@@ -2156,17 +2249,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             </div>
                         )}
                     </div>
-
-                    <button
-                        onClick={() => setShowExportModal(true)}
-                        title="Paylaş"
-                        className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                    >
-                        <Send size={18} />
-                        <span className="font-black text-[8px] tracking-widest">PAYLAŞ</span>
-                    </button>
                 </div>
             </div>
+            )}
 
             {/* Archetype Selection Modal */}
             <AnimatePresence>
@@ -2673,40 +2758,37 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             </div>
 
                             <div className="w-full max-w-sm mt-8 space-y-3">
-                                {/* Paylaşım GERÇEK link üretir (N92): salt-okunur oyna.app/t/{token}.
-                                    Kayıtsız taslak paylaşılamaz — dürüst kural. */}
+                                {/* BİRİNCİL: görsel (+ varsa link) → cihazın paylaş menüsü (WhatsApp/Instagram/…) */}
                                 <button
-                                    onClick={async () => {
-                                        const savedId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
-                                            ? activeTactic.id : null;
-                                        if (!savedId) {
-                                            showToast('Önce taktiği kaydet — linki kayıtlı taktik taşır.', 'error');
-                                            return;
-                                        }
-                                        try {
-                                            const token = await setTacticShareLink(savedId, true);
-                                            if (!token) throw new Error('Link üretilemedi.');
-                                            const url = tacticShareUrl(token);
-                                            if (navigator.share) {
-                                                await navigator.share({
-                                                    title: `${activeTactic.name} — OYNA Taktik`,
-                                                    text: `${activeTactic.formation} dizilişli taktiğim: ${activeTactic.name}`,
-                                                    url,
-                                                });
-                                            } else {
-                                                await navigator.clipboard.writeText(url);
-                                                showToast('Paylaşım linki kopyalandı!');
-                                            }
-                                        } catch (e) {
-                                            if ((e as Error)?.name !== 'AbortError') {
-                                                showToast((e as Error)?.message || 'Paylaşılamadı.', 'error');
-                                            }
-                                        }
-                                    }}
+                                    onClick={handleShareTactic}
                                     className="w-full py-5 bg-[#39FF14] text-black font-black rounded-[24px] text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(57,255,20,0.3)] flex items-center justify-center gap-3"
                                 >
-                                    <Share2 size={20} /> LİNKLE PAYLAŞ
+                                    <Share2 size={20} /> PAYLAŞ
                                 </button>
+
+                                {/* Sadece hareket sunumu (OYNAT'ın halefi) */}
+                                <button
+                                    onClick={enterPresentMovement}
+                                    className="w-full py-4 bg-white/8 border border-white/12 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Eye size={16} className="text-[#39FF14]" /> SADECE HAREKETLE OYNAT
+                                </button>
+
+                                {/* İkincil aksiyonlar: görseli indir + linki kopyala */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={handleDownloadImage}
+                                        className="py-4 bg-white/5 border border-white/10 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <SaveAll size={16} className="text-[#39FF14]" /> GÖRSELİ İNDİR
+                                    </button>
+                                    <button
+                                        onClick={handleCopyLink}
+                                        className="py-4 bg-white/5 border border-white/10 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Layers size={16} className="text-[#39FF14]" /> LİNKİ KOPYALA
+                                    </button>
+                                </div>
 
                                 {/* Takım sohbetine zengin kart olarak düşer (Küme 4) */}
                                 {(activeTactic.teamId || selectedTeamId) && (
