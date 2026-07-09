@@ -7,9 +7,10 @@ import {
     Search, MapPin, UserCheck, Calendar,
     Swords, Type, UserPlus, GripHorizontal, Settings2,
     MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
-    Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Hash, Loader2
+    Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Hash, Loader2,
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Lightbulb, Sparkles
 } from 'lucide-react';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
@@ -59,6 +60,11 @@ const mentalityColor = (m: TacticState['mentality']): PlanColor =>
 const resolvePlanColor = (plan: TacticState): PlanColor =>
     (!plan.groupColor || plan.groupColor === 'DEFAULT') ? mentalityColor(plan.mentality) : plan.groupColor;
 const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444', NAVY: '#6366f1', GREEN: '#10b981' };
+
+// Faz 9 — kalıcılık & mobil deneyim anahtarları
+const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
+const COACH_KEY = 'oyna_studio_coach_v1';   // S48 ilk-açılış ipucu
+const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
 const exampleForSize = (size: SquadSize): string => {
@@ -120,6 +126,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [tool, setTool] = useState<StudioTool>('move');
     // Faz 8 — Düzenle / Oynat modu (S42)
     const [studioMode, setStudioMode] = useState<'EDIT' | 'PLAY'>('EDIT');
+    // Faz 9 — mobil deneyim: yakınlaştırma/pan (S46), coach-mark (S48), taslak (S49), reduced-motion (S50)
+    const reduceMotion = useReducedMotion();
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const panStartRef = useRef<{ px: number; py: number; ox: number; oy: number; moved: boolean } | null>(null);
+    const pinchRef = useRef<{ startDist: number; startZoom: number } | null>(null);
+    const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const [showCoach, setShowCoach] = useState(false);
+    const [resumeDraft, setResumeDraft] = useState<{ plans: TacticState[]; activePlanIndex: number; savedAt: number } | null>(null);
+    const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const draftHydratedRef = useRef(false);
+    const [isLandscape, setIsLandscape] = useState(false);
     // Faz 1 — Boyut/Formasyon seçici (butona yapışık dropdown) + özel formasyon
     const [openSelector, setOpenSelector] = useState<'size' | 'formation' | null>(null);
     const [customPattern, setCustomPattern] = useState('');
@@ -173,6 +191,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [customPlayerName, setCustomPlayerName] = useState('');
     const [customPlayerRole, setCustomPlayerRole] = useState('-');
 
+    // S26 — yedek tepsisinden sahaya yerleştir/takas: "elde tutulan" yedek oyuncu id'si
+    const [heldSub, setHeldSub] = useState<string | null>(null);
+    // S24 — birleşik oyuncu araması (arkadaş + takım kadrosu tek kutuda süzülür)
+    const [playerSearch, setPlayerSearch] = useState('');
     // Modal selection tabs & groups state (matching CommunityView)
     const [modalTab, setModalTab] = useState<'FRIENDS' | 'TEAMS' | 'CUSTOM'>('FRIENDS');
     const [selectedGroup, setSelectedGroup] = useState('Tümü');
@@ -412,6 +434,85 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
     // Plan değişince geçmiş sıfırlanır (her planın kendi sahnesi vardır).
     useEffect(() => { setUndoStack([]); setRedoStack([]); setSelectedEl(null); }, [activePlanIndex]);
+    // Plan değişince yakınlaştırma sıfırla (her plan tam görünür başlasın).
+    useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, [activePlanIndex]);
+
+    // ── S49 — Otomatik taslak: açılışta yarım kalan çalışmayı bir kez teklif et ──
+    useEffect(() => {
+        if (draftHydratedRef.current) return;
+        draftHydratedRef.current = true;
+        if (studioContext) return; // bağlamla açıldıysa (takım/taktik) taslak sorma
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            const dp: TacticState[] = parsed?.plans;
+            if (!Array.isArray(dp) || dp.length === 0) return;
+            const hasContent = dp.some(p =>
+                (p.slots || []).some((s: Slot) => !!s.player) ||
+                (p.drawings || []).length > 0 ||
+                (p.opponents || []).length > 0 ||
+                (p.subs || []).length > 0
+            ) || dp.length > 1;
+            if (hasContent) setResumeDraft(parsed);
+        } catch { /* taslak okunamadı — sessiz geç */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ── S49 — çalışma 800ms debounce ile localStorage'a yazılır ──
+    useEffect(() => {
+        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+        draftTimerRef.current = setTimeout(() => {
+            try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ plans, activePlanIndex, savedAt: Date.now() })); } catch { /* kota dolu — sessiz */ }
+        }, 800);
+        return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+    }, [plans, activePlanIndex]);
+
+    const applyResumeDraft = () => {
+        if (!resumeDraft) return;
+        setPlans(resumeDraft.plans);
+        setActivePlanIndex(Math.min(resumeDraft.activePlanIndex || 0, resumeDraft.plans.length - 1));
+        setResumeDraft(null);
+        showToast('Taslak geri yüklendi.');
+    };
+    const discardResumeDraft = () => {
+        setResumeDraft(null);
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+    };
+
+    // ── S48 — ilk açılışta bir kez coach-mark ipucu ──
+    useEffect(() => {
+        try { if (!localStorage.getItem(COACH_KEY)) setShowCoach(true); } catch { /* yok say */ }
+    }, []);
+    const dismissCoach = () => {
+        setShowCoach(false);
+        try { localStorage.setItem(COACH_KEY, '1'); } catch { /* yok say */ }
+    };
+
+    // ── S47 — yatay (landscape) sunum modu algısı ──
+    useEffect(() => {
+        const check = () => setIsLandscape(window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches);
+        check();
+        window.addEventListener('resize', check);
+        window.addEventListener('orientationchange', check);
+        return () => { window.removeEventListener('resize', check); window.removeEventListener('orientationchange', check); };
+    }, []);
+
+    // ── S46 — yakınlaştırma yardımcıları (pan sınırlarını canvas ölçüsüne göre kısıtla) ──
+    const clampPan = (z: number, p: { x: number; y: number }) => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        const w = rect?.width ?? 320, h = rect?.height ?? 420;
+        const maxX = (z - 1) * w / 2, maxY = (z - 1) * h / 2;
+        return { x: Math.max(-maxX, Math.min(maxX, p.x)), y: Math.max(-maxY, Math.min(maxY, p.y)) };
+    };
+    const setZoomLevel = (z: number) => {
+        const nz = Math.max(1, Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], z));
+        setZoom(nz);
+        if (nz <= 1) setPan({ x: 0, y: 0 }); else setPan(p => clampPan(nz, p));
+    };
+    const zoomIn = () => { const i = ZOOM_STEPS.findIndex(s => s > zoom + 0.001); setZoomLevel(i === -1 ? ZOOM_STEPS[ZOOM_STEPS.length - 1] : ZOOM_STEPS[i]); };
+    const zoomOut = () => { const cur = ZOOM_STEPS.filter(s => s < zoom - 0.001); setZoomLevel(cur.length ? cur[cur.length - 1] : 1); };
+    const resetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
     // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
@@ -576,6 +677,28 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const handleRemoveSub = (playerId: string) => {
         setActiveTactic({ ...activeTactic, subs: activeTactic.subs.filter(p => p.id !== playerId) });
+        if (heldSub === playerId) setHeldSub(null);
+    };
+
+    // ── S26 — elde tutulan yedeği mevkiye yerleştir; doluysa oyuncuları TAKAS et ──
+    const placeHeldSub = (slotId: string) => {
+        if (!heldSub) return;
+        const incoming = activeTactic.subs.find(p => p.id === heldSub);
+        if (!incoming) { setHeldSub(null); return; }
+        pushHistory();
+        const targetSlot = activeTactic.slots.find(s => s.id === slotId);
+        const displaced = targetSlot?.player; // varsa yedeğe döner (takas)
+        const newSubs = activeTactic.subs.filter(p => p.id !== heldSub);
+        if (displaced) newSubs.push(displaced);
+        setActiveTactic({
+            ...activeTactic,
+            slots: activeTactic.slots.map(s => s.id === slotId ? { ...s, player: incoming, instruction: undefined } : s),
+            subs: newSubs,
+        });
+        setHeldSub(null);
+        setSelectedEl(null);
+        if (navigator.vibrate) navigator.vibrate(12);
+        showToast(displaced ? `${incoming.name} ↔ ${displaced.name} takas edildi` : `${incoming.name} sahaya yerleşti`);
     };
 
     const handleSetCaptain = (playerId: string) => {
@@ -802,7 +925,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const handlePointerDown = (e: React.PointerEvent) => {
         if (!canvasRef.current) return;
-        
+
+        // S46 — iki parmak → pinch yakınlaştırma; olası tek-parmak etkileşimlerini iptal et
+        pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointersRef.current.size === 2) {
+            const pts = Array.from(pointersRef.current.values());
+            pinchRef.current = { startDist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1, startZoom: zoom };
+            if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+            panStartRef.current = null;
+            if (isDrawing) { setIsDrawing(false); setCurrentLine(null); }
+            return;
+        }
+
         const rect = canvasRef.current.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -841,6 +975,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             // Boş sahaya dokunuş: seçimi kaldır. RAKİP modundayken uzun basınca (500ms)
             // o noktaya rakip bırak (BİZ modunda rakip eklenmez).
             setSelectedEl(null);
+            // S46 — yakınlaştırılmışken boş sahayı sürüklemek pan yapar
+            if (zoom > 1) panStartRef.current = { px: e.clientX, py: e.clientY, ox: pan.x, oy: pan.y, moved: false };
             if (drawSide === 'OPP') {
                 const px = x, py = y;
                 if (longPressRef.current) clearTimeout(longPressRef.current);
@@ -911,7 +1047,29 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const handlePointerMove = (e: React.PointerEvent) => {
         if (!canvasRef.current) return;
-        
+
+        // S46 — pinch yakınlaştırma (iki parmak arası mesafenin oranı)
+        if (pinchRef.current && pointersRef.current.has(e.pointerId)) {
+            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointersRef.current.size >= 2) {
+                const pts = Array.from(pointersRef.current.values());
+                const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                setZoomLevel(pinchRef.current.startZoom * (dist / pinchRef.current.startDist));
+            }
+            return;
+        }
+        // S46 — pan (yakınlaştırılmışken boş sahayı sürükle)
+        if (panStartRef.current && !draggedItem && !isDrawing) {
+            const dx = e.clientX - panStartRef.current.px;
+            const dy = e.clientY - panStartRef.current.py;
+            if (Math.hypot(dx, dy) > 4) {
+                panStartRef.current.moved = true;
+                if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+                setPan(clampPan(zoom, { x: panStartRef.current.ox + dx, y: panStartRef.current.oy + dy }));
+            }
+            return;
+        }
+
         const rect = canvasRef.current.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -958,10 +1116,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e?: React.PointerEvent) => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         // Uzun-basma iptali (500ms dolmadan bırakıldıysa rakip eklenmez).
         if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+
+        // S46 — dokunuş sayacı & pinch/pan temizliği
+        if (e) pointersRef.current.delete(e.pointerId);
+        if (pointersRef.current.size < 2) pinchRef.current = null;
+        panStartRef.current = null;
 
         if (isDrawing && currentLine) {
             const finalLine = { ...currentLine } as DrawingLine;
@@ -975,7 +1138,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 ? activeTactic.slots.find(s => s.id === draggedItem.id)
                 : activeTactic.opponents.find(o => o.id === draggedItem.id);
             const moved = !!cur && Math.hypot(cur.x - dragStartRef.current.x, cur.y - dragStartRef.current.y) > 0.4;
-            if (moved) {
+            if (moved && cur) {
+                // S45 — mıknatıslı hizalama: bırakışta yakın eksene otur (düzgün diziliş)
+                const SNAP = 2.4;
+                const others = (draggedItem.type === 'slot' ? activeTactic.slots : activeTactic.opponents).filter(o => o.id !== draggedItem.id);
+                let sx = cur.x, sy = cur.y, snapped = false;
+                if (Math.abs(sx - 50) < SNAP) { sx = 50; snapped = true; }   // dikey orta çizgi
+                for (const o of others) {
+                    if (Math.abs(sx - o.x) < SNAP) { sx = o.x; snapped = true; }
+                    if (Math.abs(sy - o.y) < SNAP) { sy = o.y; snapped = true; }
+                }
+                if (snapped) {
+                    sx = Math.round(sx * 10) / 10; sy = Math.round(sy * 10) / 10;
+                    if (draggedItem.type === 'slot')
+                        setActiveTactic({ ...activeTactic, slots: activeTactic.slots.map(s => s.id === draggedItem.id ? { ...s, x: sx, y: sy } : s) });
+                    else
+                        setActiveTactic({ ...activeTactic, opponents: activeTactic.opponents.map(o => o.id === draggedItem.id ? { ...o, x: sx, y: sy } : o) });
+                    if (navigator.vibrate) navigator.vibrate(8);
+                }
                 const snap = dragStartRef.current.snap;
                 setUndoStack(prev => [...prev.slice(-29), snap]);
                 setRedoStack([]);
@@ -1056,6 +1236,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     ];
 
     return (
+        <MotionConfig reducedMotion="user">
         <div className="min-h-screen flex flex-col font-sans selection:bg-[#39FF14] selection:text-black pb-10">
             <AnimatePresence mode="wait">
                 {(
@@ -1403,16 +1584,77 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     </button>
                 </div>
 
+            {/* S48 — ilk açılış coach-mark ipucu (bir kez) */}
+            <AnimatePresence>
+                {showCoach && studioMode === 'EDIT' && (
+                    <motion.div
+                        initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                        className="px-6 pb-3"
+                    >
+                        <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30">
+                            <Lightbulb size={16} className="text-[#39FF14] shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-gray-200 leading-relaxed flex-1">
+                                <span className="text-[#39FF14] font-black">İpucu:</span> Oyuncuya <b>dokun</b> → seç · boş sahaya <b>uzun bas</b> → rakip · çizim araçlarıyla <b>koşu/pas</b> çiz · iki parmakla <b>yakınlaştır</b>.
+                            </p>
+                            <button onClick={dismissCoach} aria-label="İpucunu kapat" className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0">
+                                <X size={13} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Pitch Area */}
-            <div className="px-6 relative z-10 max-w-md mx-auto w-full">
-                <div 
+            <div className="px-6 relative z-10 max-w-md mx-auto w-full overflow-hidden">
+                {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez) */}
+                {studioMode === 'EDIT' && (
+                    <div className="absolute right-8 bottom-4 z-40 flex flex-col gap-1.5">
+                        <button onClick={zoomIn} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} aria-label="Yakınlaştır" title="Yakınlaştır"
+                            className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-white flex items-center justify-center hover:bg-black/85 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shadow-lg">
+                            <ZoomIn size={18} />
+                        </button>
+                        <button onClick={zoomOut} disabled={zoom <= 1} aria-label="Uzaklaştır" title="Uzaklaştır"
+                            className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-white flex items-center justify-center hover:bg-black/85 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shadow-lg">
+                            <ZoomOut size={18} />
+                        </button>
+                        {zoom > 1 && (
+                            <button onClick={resetZoom} aria-label="Sıfırla" title="Görünümü sıfırla"
+                                className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-[#39FF14] flex items-center justify-center hover:bg-black/85 active:scale-95 transition shadow-lg">
+                                <Maximize2 size={16} />
+                            </button>
+                        )}
+                    </div>
+                )}
+                <div
                     ref={canvasRef}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerLeave={handlePointerUp}
-                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair touch-none' : ''} ${tool === 'opponent' ? 'cursor-copy touch-none' : ''}`}
+                    onPointerCancel={handlePointerUp}
+                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', touchAction: 'none', transition: (pinchRef.current || panStartRef.current) ? 'none' : 'transform 0.18s ease-out' }}
+                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
                 >
+                    {/* S44 — hafif kimlik vinyeti (WCAG: yalnız dekoratif, kontrastı bozmaz) */}
+                    <div className="absolute inset-0 pointer-events-none z-[1]" style={{ boxShadow: 'inset 0 0 90px rgba(0,0,0,0.55)' }} />
+                    {/* S46 — yakınlaştırma göstergesi */}
+                    {zoom > 1 && (
+                        <div className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/60 text-[#39FF14] text-[10px] font-black font-mono pointer-events-none">
+                            {Math.round(zoom * 100)}%
+                        </div>
+                    )}
+                    {/* S48 — boş durum: hiç oyuncu diziliği yoksa yönlendir */}
+                    {filledCount === 0 && studioMode === 'EDIT' && (
+                        <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center gap-2 pointer-events-none px-6 text-center">
+                            <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center">
+                                <Users size={22} className="text-[#39FF14]" />
+                            </div>
+                            <p className="text-white/90 text-sm font-black">Kadronu diz</p>
+                            <p className="text-white/50 text-[11px] leading-relaxed max-w-[220px]">Aşağıdan bir takım seç ya da oyuncu dokunarak yerleştir. Formasyon otomatik dolar.</p>
+                        </div>
+                    )}
                     {/* Grass Stripes */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.2) 10%, rgba(0,0,0,0.2) 20%)' }}></div>
                     
@@ -1535,11 +1777,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             }}
                             transition={anim ? anim.transition as any : (draggedItem?.id === slot.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
                             onPointerDown={(e) => {
+                                if (heldSub) return; // S26 — takas modunda sürükleme başlatma
                                 if (tool === 'move' && slot.player) {
                                     handleDragStart('slot', slot.id, e);
                                 }
                             }}
-                            className={`absolute w-12 h-12 z-20 ${tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${drawSide === 'OPP' ? 'opacity-40' : ''}`}
+                            onClick={() => { if (heldSub) placeHeldSub(slot.id); }}
+                            className={`absolute w-12 h-12 z-20 ${tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${drawSide === 'OPP' ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : 20 }}
                         >
                             {slot.player ? (
@@ -1566,7 +1810,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <motion.button 
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => setShowPlayerSelect({ type: 'slot', slotId: slot.id })}
+                                    onClick={() => heldSub ? placeHeldSub(slot.id) : setShowPlayerSelect({ type: 'slot', slotId: slot.id })}
                                     className={`relative w-full h-full rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors ${slot.role === 'GK' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-[#39FF14]/50 text-[#39FF14]/70 hover:border-[#39FF14] hover:text-[#39FF14]'}`}
                                 >
                                     <Plus size={20} />
@@ -1725,24 +1969,38 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </div>
             )}
 
-            {/* Yedek tepsisi (S27) — kalıcı yatay şerit (yalnız Düzenle modu) */}
+            {/* Yedek tepsisi (S27) — kalıcı yatay şerit + sahaya yerleştir/takas (S26) */}
             {studioMode === 'EDIT' && (
             <div className="px-6 pb-4">
                 <div className="flex items-center gap-2 mb-2">
                     <List size={12} className="text-gray-500" />
                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yedekler ({activeTactic.subs.length})</span>
+                    {heldSub && (
+                        <span className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                            · bir mevkiye dokun
+                            <button onClick={() => setHeldSub(null)} className="ml-1 text-gray-400 hover:text-white" aria-label="Vazgeç"><X size={11} /></button>
+                        </span>
+                    )}
                 </div>
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                    {activeTactic.subs.map(sub => (
-                        <div key={sub.id} className="flex-shrink-0 flex items-center gap-2 bg-white/5 border border-white/10 rounded-full pl-1 pr-2 py-1">
-                            <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-black text-white">{sub.name.charAt(0)}</span>
-                            <span className="text-[11px] font-bold text-white max-w-[90px] truncate">{sub.name}</span>
-                            <button onClick={() => handleRemoveSub(sub.id)} className="text-gray-500 hover:text-red-400 transition-colors"><X size={12} /></button>
+                    {activeTactic.subs.map(sub => {
+                        const held = heldSub === sub.id;
+                        return (
+                        <div key={sub.id} className={`flex-shrink-0 flex items-center gap-2 rounded-full pl-1 pr-2 py-1 border transition-all ${held ? 'bg-[#39FF14]/15 border-[#39FF14] ring-2 ring-[#39FF14]/40' : 'bg-white/5 border-white/10'}`}>
+                            <button
+                                onClick={() => setHeldSub(held ? null : sub.id)}
+                                title={held ? 'Bir mevkiye dokunarak yerleştir' : 'Sahaya yerleştir / takas et'}
+                                className="flex items-center gap-2 min-h-[36px]"
+                            >
+                                <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-black text-white">{sub.name.charAt(0)}</span>
+                                <span className={`text-[11px] font-bold max-w-[90px] truncate ${held ? 'text-[#39FF14]' : 'text-white'}`}>{sub.name}</span>
+                            </button>
+                            <button onClick={() => handleRemoveSub(sub.id)} className="text-gray-500 hover:text-red-400 transition-colors" aria-label={`${sub.name} yedeği sil`}><X size={12} /></button>
                         </div>
-                    ))}
+                    );})}
                     <button
                         onClick={() => setShowPlayerSelect({ type: 'sub' })}
-                        className="flex-shrink-0 flex items-center gap-1.5 bg-white/5 border border-dashed border-white/20 rounded-full px-3 py-1.5 text-[11px] font-bold text-gray-400 hover:text-white hover:border-white/40 transition-all"
+                        className="flex-shrink-0 flex items-center gap-1.5 bg-white/5 border border-dashed border-white/20 rounded-full px-3 py-1.5 text-[11px] font-bold text-gray-400 hover:text-white hover:border-white/40 transition-all min-h-[36px]"
                     >
                         <Plus size={12} /> Ekle
                     </button>
@@ -2038,10 +2296,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         Kayıtlı Arkadaşlar & Takımlar
                                     </p>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => {
                                         setShowPlayerSelect(null);
                                         setSelectedTeamRosterId(null);
+                                        setPlayerSearch('');
                                     }}
                                     className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
                                 >
@@ -2073,6 +2332,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 })}
                             </div>
 
+                            {/* S24 — birleşik arama (aktif kaynağı ada göre süzer) */}
+                            {modalTab !== 'CUSTOM' && (
+                                <div className="relative mb-4">
+                                    <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                    <input
+                                        value={playerSearch}
+                                        onChange={(e) => setPlayerSearch(e.target.value)}
+                                        placeholder="Oyuncu ara…"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-sm text-white placeholder:text-gray-600 focus:border-[#39FF14]/50 focus:outline-none"
+                                    />
+                                    {playerSearch && (
+                                        <button onClick={() => setPlayerSearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white">
+                                            <X size={13} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
                             {/* TAB 1: FRIENDS */}
                             {modalTab === 'FRIENDS' && (
                                 <div className="space-y-4">
@@ -2093,6 +2370,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     {/* Friends list (from CommunityView style) */}
                                     <div className="grid gap-3">
                                         {friends && friends.filter(f => {
+                                            if (playerSearch.trim() && !f.name.toLowerCase().includes(playerSearch.trim().toLowerCase())) return false;
                                             if (selectedGroup === 'Tümü') return true;
                                             if (selectedGroup === 'Favorilerim') return f.isFavorite;
                                             return f.group === selectedGroup;
@@ -2220,7 +2498,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     <Loader2 size={20} className="animate-spin text-white/40" />
                                                 </div>
                                             ) : (
-                                                squadsByTeam[selectedTeamRosterId].map(m => (
+                                                squadsByTeam[selectedTeamRosterId].filter(m => !playerSearch.trim() || m.full_name.toLowerCase().includes(playerSearch.trim().toLowerCase())).map(m => (
                                                     <button
                                                         key={m.user_id}
                                                         onClick={() => handleSelectPlayer(squadRowToPlayer(m))}
@@ -2838,6 +3116,50 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 )}
             </AnimatePresence>
 
+            {/* S49 — Otomatik taslak: yarım kalan çalışmayı geri yükle */}
+            <AnimatePresence>
+                {resumeDraft && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                            className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-white/10 p-6 shadow-2xl"
+                        >
+                            <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center mb-4">
+                                <RotateCcw size={22} className="text-[#39FF14]" />
+                            </div>
+                            <h3 className="text-white text-lg font-black mb-1">Kaldığın yerden devam?</h3>
+                            <p className="text-gray-400 text-[13px] leading-relaxed mb-5">
+                                Yarım kalan bir taktik taslağın var{resumeDraft.plans.length > 1 ? ` (${resumeDraft.plans.length} plan)` : ''}. Geri yüklemek ister misin?
+                            </p>
+                            <div className="flex gap-3">
+                                <button onClick={discardResumeDraft} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
+                                    Yeni Başla
+                                </button>
+                                <button onClick={applyResumeDraft} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                    <RotateCcw size={16} /> Devam Et
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* S47 — yatay sunum modu ipucu (küçük ekranlarda) */}
+            <AnimatePresence>
+                {isLandscape && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+                        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-4 py-2 rounded-full bg-black/80 backdrop-blur border border-[#39FF14]/30 flex items-center gap-2 pointer-events-none"
+                    >
+                        <Sparkles size={14} className="text-[#39FF14]" />
+                        <span className="text-[11px] text-white font-bold">Sunum modu — sahayı büyütmek için yakınlaştır</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
 {/* Toast Notification */}
             <AnimatePresence>
                 {toast && (
@@ -2858,6 +3180,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             </AnimatePresence>
 
         </div>
+        </MotionConfig>
     );
 };
 
