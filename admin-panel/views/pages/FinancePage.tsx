@@ -18,6 +18,30 @@ import type { AdminNavigateFn } from '../GodViewPanel';
 
 const PAGE_SIZE = 100;
 
+// Cüzdan v2 ledger tipleri — Türkçe etiketler (TOP_UP kovası + bakiye harcaması dahil)
+const LEDGER_TYPE_LABELS: Record<string, string> = {
+  TOP_UP: 'Para Yükleme',
+  WALLET_PAYMENT: 'Bakiye ile Ödeme',
+  DEPOSIT: 'İade Kredisi',
+  REFUND: 'İade',
+  MATCH_REFUND: 'Maç İadesi',
+  MATCH_FEE: 'Maç Katılım Ücreti',
+  MATCH_EARNING: 'Maç Kazancı',
+  BOOKING_EARNING: 'Kiralama Kazancı',
+  SERVICE_EARNING: 'Hizmet Kazancı',
+  REFERRAL_BONUS: 'Referans Bonusu',
+  WITHDRAWAL: 'IBAN Çekimi',
+};
+
+const INTENT_CONTEXT_LABELS: Record<string, string> = {
+  BOOKING: 'Rezervasyon',
+  MATCH: 'Maç',
+  MATCH_DEPOSIT: 'Maç Kaporası',
+  GK_SERVICE: 'Kaleci Hizmeti',
+  REF_SERVICE: 'Hakem Hizmeti',
+  TOP_UP: 'Cüzdan Yükleme',
+};
+
 export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavigate }) => {
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [ledger, setLedger] = useState<WalletLedgerRow[]>([]);
@@ -278,7 +302,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           columns={[
             { header: 'Tarih', render: (r: WalletLedgerRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
             { header: 'Kullanıcı', render: (r: WalletLedgerRow) => <span className="text-sm text-white">{nameMap[r.user_id] || r.user_id.slice(0, 8)}</span> },
-            { header: 'Tip', key: 'type' },
+            { header: 'Tip', render: (r: WalletLedgerRow) => <span className="text-[11px] font-bold text-gray-300">{LEDGER_TYPE_LABELS[r.type] ?? r.type}</span> },
             { header: 'Tutar', render: (r: WalletLedgerRow) => <span className={`font-bold ${r.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>₺{r.amount}</span> },
             { header: 'Açıklama', render: (r: WalletLedgerRow) => <span className="text-[11px] text-gray-500">{r.description || '—'}</span> },
           ]}
@@ -329,7 +353,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
             columns={[
               { header: 'Tarih', render: (r: PaymentIntentRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
               { header: 'Kullanıcı', render: (r: PaymentIntentRow) => <span className="text-sm text-white">{r.user_name || r.user_id?.slice(0, 8) || '—'}</span> },
-              { header: 'Bağlam', render: (r: PaymentIntentRow) => <span className="text-[11px] text-gray-400">{r.pitch_name || (r.match_id ? 'Maç' : r.related_entity_type || '—')}</span> },
+              { header: 'Bağlam', render: (r: PaymentIntentRow) => <span className="text-[11px] text-gray-400">{r.related_entity_type === 'TOP_UP' ? 'Cüzdan Yükleme' : r.pitch_name || (r.match_id ? 'Maç' : INTENT_CONTEXT_LABELS[r.related_entity_type ?? ''] ?? r.related_entity_type ?? '—')}</span> },
               { header: 'Tutar', render: (r: PaymentIntentRow) => <span className="text-green-400 font-bold">{fmtTry(r.amount)}</span> },
               { header: 'Komisyon', render: (r: PaymentIntentRow) => <span className="text-[11px] text-amber-300">{fmtTry(r.commission_amount)}</span> },
               { header: 'Durum', render: (r: PaymentIntentRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
