@@ -1441,7 +1441,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     {/* Renk pip'i (büyük) — sol-üst; planın görsel kimliği. Tek tıkla döngü (kesik=otomatik, dolu=elle) */}
                                     <button
                                         onClick={(e) => { e.stopPropagation(); cyclePlanColor(index); }}
-                                        title={isAutoColor ? 'Renk: mentaliteden (otomatik) — değiştirmek için dokun' : 'Renk: elle seçildi — değiştirmek için dokun'}
+                                        title={isAutoColor ? 'Renk: otomatik — değiştirmek için dokun' : 'Renk: elle seçildi — değiştirmek için dokun'}
                                         aria-label="Plan rengini değiştir"
                                         className={`w-6 h-6 rounded-full cursor-pointer shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.4)] ${isAutoColor ? 'border-2 border-dashed border-white/70' : 'border-2 border-white/90'}`}
                                         style={{ backgroundColor: PIP_HEX[effColor] }}
@@ -2089,51 +2089,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
             {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
             {!presentMode && (<>
-            {/* Tactical Settings (Mentality & Tempo) Redesign */}
+            {/* Tempo — tek ayar (mentalite kaldırıldı) */}
             <div className="px-6 pb-6 mt-8">
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Mentality */}
-                    <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
-                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
-                            <Shield size={14} className="text-yellow-400" /> MENTALİTE
-                        </h3>
-                        <div className="flex flex-col gap-2">
-                            {(['Defensive', 'Balanced', 'Attacking'] as const).map(m => (
-                                <button 
-                                    key={m}
-                                    onClick={() => setActiveTactic({ ...activeTactic, mentality: m })}
-                                    className={`w-full py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                                        activeTactic.mentality === m 
-                                            ? 'bg-yellow-400/10 border-yellow-400/50 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)]'
-                                            : 'bg-white/5 border-transparent text-white hover:bg-white/10'
-                                    }`}
-                                >
-                                    {m === 'Defensive' ? 'DEFANSİF' : m === 'Balanced' ? 'DENGELİ' : 'HÜCUMCU'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    
-                    {/* Tempo */}
-                    <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
-                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
-                            <Gauge size={14} className="text-blue-400" /> TEMPO
-                        </h3>
-                        <div className="flex flex-col gap-2">
-                            {(['Slow', 'Normal', 'Fast'] as const).map(t => (
-                                <button 
-                                    key={t}
-                                    onClick={() => setActiveTactic({ ...activeTactic, tempo: t })}
-                                    className={`w-full py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                                        activeTactic.tempo === t 
-                                            ? 'bg-blue-400/10 border-blue-400/50 text-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.2)]'
-                                            : 'bg-white/5 border-transparent text-white hover:bg-white/10'
-                                    }`}
-                                >
-                                    {t === 'Slow' ? 'YAVAŞ' : t === 'Normal' ? 'NORMAL' : 'HIZLI'}
-                                </button>
-                            ))}
-                        </div>
+                <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
+                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
+                        <Gauge size={14} className="text-blue-400" /> TEMPO
+                    </h3>
+                    <div className="grid grid-cols-3 gap-2">
+                        {(['Slow', 'Normal', 'Fast'] as const).map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setActiveTactic({ ...activeTactic, tempo: t })}
+                                className={`w-full py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                                    activeTactic.tempo === t
+                                        ? 'bg-blue-400/10 border-blue-400/50 text-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.2)]'
+                                        : 'bg-white/5 border-transparent text-white hover:bg-white/10'
+                                }`}
+                            >
+                                {t === 'Slow' ? 'YAVAŞ' : t === 'Normal' ? 'NORMAL' : 'HIZLI'}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
