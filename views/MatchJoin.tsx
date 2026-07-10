@@ -535,6 +535,33 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const handleBuySlots = async () => {
     if (selectedSlotIds.length === 0 || isProcessing) return;
+    const total = (match.price || 0) * selectedSlotIds.length;
+
+    // Ücretli slot → birleşik ödeme ekranı (bakiye + kart bölüşümü, tasarım 1b).
+    if (total > 0) {
+      const store = useAppStore.getState();
+      store.setPaymentContext({
+        kind: 'MATCH_JOIN',
+        badge: `MAÇA KATILIM · ${selectedSlotIds.length} SLOT`,
+        title: match.title || 'Maç',
+        subtitle: `${match.location || ''}${match.time ? ` · ${match.time}` : ''}`,
+        amount: total,
+        amountLabel: 'Ödenecek Tutar',
+        amountHint: `${selectedSlotIds.length} slot × ${(match.price || 0).toLocaleString('tr-TR')}₺ · rezerve ettiğin yerler`,
+        isDeposit: false,
+        allowBalance: true,
+        successTitle: 'Katılımın Onaylandı!',
+        successSubtitle: 'Yerin garanti',
+        matchId: match.id,
+        slotIds: [...selectedSlotIds],
+      });
+      setSelectedSlotIds([]);
+      setSelectedSlotId(null);
+      store.navigateTo('PAYMENT');
+      return;
+    }
+
+    // Ücretsiz maç: eski hızlı yol (ödeme ekranı gerekmez).
     setIsProcessing(true);
     try {
       const { error } = await supabase.rpc('player_buy_slots', {
