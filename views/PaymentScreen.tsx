@@ -342,7 +342,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
             <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
             <circle cx="50" cy="50" r="44" fill="none" stroke="#39FF14" strokeWidth="5" strokeLinecap="round"
               strokeDasharray="276.5" strokeDashoffset="90"
-              style={{ filter: 'drop-shadow(0 0 6px rgba(57,255,20,0.5))', animation: 'spin 1.1s linear infinite', transformOrigin: '50% 50%' }} />
+              style={{ filter: 'drop-shadow(0 0 6px rgba(57,255,20,0.5))', animation: 'oy-spin 1.1s linear infinite', transformOrigin: '50% 50%' }} />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="w-[54px] h-[38px] rounded-lg bg-gradient-to-br from-purple-700 to-blue-600 flex items-center justify-center mb-2 shadow-lg text-white">

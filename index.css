@@ -59,6 +59,9 @@
 /* Tutar / kart no / IBAN rakamları — tasarım tokenı (Space Grotesk index.html'de yüklü) */
 .font-numeric { font-family: "Space Grotesk", "Inter", ui-monospace, monospace; }
 
+/* Ödeme "işleniyor" halkası (PaymentScreen SVG inline animasyonu) */
+@keyframes oy-spin { to { transform: rotate(360deg); } }
+
 /* Yatay yöntem karuseli (ödeme ekranı) — scrollbar gizli */
 .oy-carousel { scrollbar-width: none; }
 .oy-carousel::-webkit-scrollbar { display: none; }
