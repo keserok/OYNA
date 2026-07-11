@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Spinner } from '../../components/ui/Spinner';
 import {
   ChevronLeft, Settings, Swords, UserPlus, ClipboardList, Calendar,
   MapPin, Loader2, Heart, Check, Shield, Link2, MessageCircle,
@@ -142,7 +143,7 @@ const ScoreSheet: React.FC<{
 
           {loading ? (
             <div className="py-10 flex justify-center">
-              <Loader2 size={20} className="animate-spin text-white/40" />
+              <Spinner size={20} color="rgba(255,255,255,0.4)" glow={false} />
             </div>
           ) : proposal ? (
             <div className="mt-4">

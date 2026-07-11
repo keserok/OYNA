@@ -1,19 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // OYNA — create-payment Edge Function
-// Kapora ödemesi başlatma: SIMULATION (test) veya iyzico Checkout Form v2.
-//
-// Akış:
-//   action 'create'      → payment_intent oluştur → iyzico checkout URL döndür
-//   action 'confirm-sim' → YALNIZ SIMULATION: ödemeyi uygula (canlıda KAPALI)
-//
-// iyzico aktifleştirme (Supabase → Settings → Edge Functions → Secrets):
-//   PAYMENT_PROVIDER=IYZICO
-//   IYZICO_API_KEY=sandbox_xxx          (iyzico Dashboard → API Keys)
-//   IYZICO_SECRET_KEY=sandbox_xxx
-//   IYZICO_BASE_URL=https://sandbox-api.iyzipay.com   (prod: https://api.iyzipay.com)
-//   IYZICO_CALLBACK_URL=https://<proje>.supabase.co/functions/v1/payment-webhook
-//
-// Deploy: supabase functions deploy create-payment
+// Kapora ödemesi başlatma: SIMULATION (test) veya iyzico Checkout Form.
+// iyzico kimlik doğrulama: IYZWSv2 (HMAC-SHA256) — resmi Node SDK ile birebir.
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -33,81 +21,106 @@ function json(body: unknown, status = 200) {
   })
 }
 
-// ── iyzico Checkout Form v2 ───────────────────────────────────────────────────
-// Docs: https://dev.iyzipay.com/tr/api/odeme-formu
+// ── iyzico IYZWSv2 imza (HMAC-SHA256, hex) ────────────────────────────────────
+async function hmacSha256Hex(secret: string, data: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data))
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
 
-async function iyzicoCheckout(
-  intent: { id: string; amount: number; currency: string },
-  callbackUrl: string,
-): Promise<{ checkoutUrl: string; token: string }> {
+// uriPath: yalnız yol (ör. /payment/iyzipos/checkoutform/initialize/auth/ecom)
+async function iyzicoPost(uriPath: string, bodyObj: unknown): Promise<any> {
   const apiKey    = Deno.env.get('IYZICO_API_KEY')!
   const secretKey = Deno.env.get('IYZICO_SECRET_KEY')!
   const baseUrl   = Deno.env.get('IYZICO_BASE_URL') ?? 'https://api.iyzipay.com'
 
-  const randomString = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+  const bodyStr   = JSON.stringify(bodyObj)
+  const randomKey = `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`
+  const signature = await hmacSha256Hex(secretKey, randomKey + uriPath + bodyStr)
+  const authStr   = `apiKey:${apiKey}&randomKey:${randomKey}&signature:${signature}`
+  const authHeader = 'IYZWSv2 ' + btoa(authStr)
+
+  const res = await fetch(baseUrl + uriPath, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authHeader,
+      'x-iyzi-rnd': randomKey,
+    },
+    body: bodyStr,
+  })
+  return await res.json()
+}
+
+interface Buyer {
+  name: string; surname: string; email: string;
+  identityNumber: string; gsmNumber: string;
+}
+
+// Checkout Form başlat → ödeme sayfası URL'i.
+async function iyzicoCheckout(
+  intent: { id: string; amount: number; currency: string },
+  callbackUrl: string,
+  buyer: Buyer,
+): Promise<{ checkoutUrl: string; token: string }> {
+  const contactName = `${buyer.name} ${buyer.surname}`.trim() || 'OYNA Kullanici'
+  const price = Number(intent.amount).toFixed(2)
 
   const body = {
     locale: 'tr',
     conversationId: intent.id,
-    price: Number(intent.amount).toFixed(2),
-    paidPrice: Number(intent.amount).toFixed(2),
-    currency: intent.currency,
+    price,
+    paidPrice: price,
+    currency: intent.currency || 'TRY',
     basketId: intent.id,
     paymentGroup: 'PRODUCT',
     callbackUrl,
-    enabledInstallments: [1, 2, 3],
+    enabledInstallments: [1, 2, 3, 6],
     buyer: {
       id: intent.id,
-      name: 'OYNA', surname: 'Kullanici',
-      email: 'oyuncu@oyna.app',
-      identityNumber: '11111111110',
-      registrationAddress: 'TR', city: 'Istanbul', country: 'Turkey',
-      gsmNumber: '+905000000000',
+      name: buyer.name, surname: buyer.surname,
+      email: buyer.email,
+      identityNumber: buyer.identityNumber,
+      registrationAddress: 'Istanbul, Turkiye',
+      city: 'Istanbul', country: 'Turkey',
+      ip: '85.34.78.112',
+      gsmNumber: buyer.gsmNumber,
     },
-    shippingAddress: { contactName: 'OYNA', city: 'Istanbul', country: 'Turkey', address: 'TR' },
-    billingAddress:  { contactName: 'OYNA', city: 'Istanbul', country: 'Turkey', address: 'TR' },
+    shippingAddress: { contactName, city: 'Istanbul', country: 'Turkey', address: 'Istanbul, Turkiye' },
+    billingAddress:  { contactName, city: 'Istanbul', country: 'Turkey', address: 'Istanbul, Turkiye' },
     basketItems: [{
-      id: `booking-${intent.id}`,
+      id: `svc-${intent.id}`,
       name: 'Saha Kapora',
-      category1: 'Spor',
+      category1: 'Spor Hizmeti',
       itemType: 'VIRTUAL',
-      price: Number(intent.amount).toFixed(2),
+      price,
     }],
   }
 
-  const bodyStr  = JSON.stringify(body)
-  const enc      = new TextEncoder()
-
-  const bodyHashBuf = await crypto.subtle.digest('SHA-256', enc.encode(bodyStr))
-  const bodyHash    = btoa(String.fromCharCode(...new Uint8Array(bodyHashBuf)))
-
-  const rawSig      = randomString + apiKey + bodyHash
-  const sigHashBuf  = await crypto.subtle.digest('SHA-256', enc.encode(secretKey + rawSig))
-  const sigHash     = btoa(String.fromCharCode(...new Uint8Array(sigHashBuf)))
-
-  const res = await fetch(`${baseUrl}/payment/iyzipos/checkoutform/initialize`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `IYZWS apiKey:${apiKey}:${sigHash}`,
-      'x-iyzi-rnd': randomString,
-    },
-    body: bodyStr,
-  })
-
-  const data = await res.json() as {
-    status: string; paymentPageUrl: string; token: string; errorMessage?: string
-  }
-  if (data.status !== 'success') {
-    throw new Error(`iyzico: ${data.errorMessage ?? 'checkout başlatılamadı'}`)
+  const data = await iyzicoPost('/payment/iyzipos/checkoutform/initialize/auth/ecom', body)
+  if (data?.status !== 'success' || !data?.paymentPageUrl) {
+    const detail = data?.errorMessage || data?.errorCode || 'checkout başlatılamadı'
+    console.error('[create-payment] iyzico initialize başarısız:', JSON.stringify(data))
+    throw new Error(`iyzico: ${detail}`)
   }
   return { checkoutUrl: data.paymentPageUrl, token: data.token }
 }
 
-// ── Ana adaptör ───────────────────────────────────────────────────────────────
+// Türkçe ad → iyzico name/surname (son boşluktan böl). Boşsa güvenli varsayılan.
+function splitName(full?: string | null): { name: string; surname: string } {
+  const clean = (full ?? '').trim().replace(/\s+/g, ' ')
+  if (!clean) return { name: 'OYNA', surname: 'Kullanici' }
+  const parts = clean.split(' ')
+  if (parts.length === 1) return { name: parts[0], surname: parts[0] }
+  return { name: parts.slice(0, -1).join(' '), surname: parts[parts.length - 1] }
+}
 
 async function createProviderCheckout(
   intent: { id: string; amount: number; currency: string },
+  buyer: Buyer,
 ): Promise<{ provider: string; checkoutUrl: string | null; token: string }> {
   if (PROVIDER === 'SIMULATION') {
     return { provider: 'SIMULATION', checkoutUrl: null, token: intent.id }
@@ -115,13 +128,11 @@ async function createProviderCheckout(
   if (PROVIDER === 'IYZICO') {
     const callbackUrl = Deno.env.get('IYZICO_CALLBACK_URL')
       ?? `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook`
-    const result = await iyzicoCheckout(intent, callbackUrl)
+    const result = await iyzicoCheckout(intent, callbackUrl, buyer)
     return { provider: 'IYZICO', ...result }
   }
-  throw new Error(`PROVIDER_NOT_CONFIGURED: Geçersiz PAYMENT_PROVIDER="${PROVIDER}". SIMULATION veya IYZICO olmalı.`)
+  throw new Error(`PROVIDER_NOT_CONFIGURED: Geçersiz PAYMENT_PROVIDER="${PROVIDER}".`)
 }
-
-// ── Request handler ───────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -154,7 +165,23 @@ Deno.serve(async (req: Request) => {
       })
       if (error) return json({ error: error.message }, 400)
 
-      const checkout = await createProviderCheckout(intent)
+      // Gerçek kullanıcı bilgisiyle alıcı oluştur (iyzico ad/kimlik bekler).
+      const { data: { user } } = await userClient.auth.getUser()
+      const { data: profile } = await userClient
+        .from('profiles')
+        .select('full_name, name, email, phone')
+        .eq('id', user?.id ?? '')
+        .maybeSingle()
+      const nm = splitName(profile?.full_name ?? profile?.name)
+      const digits = (profile?.phone ?? '').replace(/\D/g, '')
+      const buyer = {
+        name: nm.name, surname: nm.surname,
+        email: profile?.email || user?.email || 'oyuncu@oyna.app',
+        identityNumber: '74300864791',
+        gsmNumber: digits ? `+90${digits.slice(-10)}` : '+905000000000',
+      }
+
+      const checkout = await createProviderCheckout(intent, buyer)
       return json({
         intentId: intent.id,
         amount: intent.amount,
@@ -189,6 +216,8 @@ Deno.serve(async (req: Request) => {
 
     return json({ error: 'UNKNOWN_ACTION' }, 400)
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : 'INTERNAL' }, 500)
+    const msg = e instanceof Error ? e.message : 'INTERNAL'
+    console.error('[create-payment] hata:', msg)
+    return json({ error: msg }, 500)
   }
 })

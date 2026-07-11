@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, AlertTriangle, KeyRound, Copy, Check, ArrowLeft } from 'lucide-react';
+import { Spinner } from '../../components/ui/Spinner';
 import {
   enrollAdminTotp,
   verifyAdminTotp,
@@ -154,7 +155,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
             <div className="flex flex-col items-center gap-4">
               {enrolling && (
                 <div className="w-48 h-48 rounded-2xl bg-black/40 border-2 border-white/10 flex items-center justify-center">
-                  <span className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Spinner size={24} color="#ffffff" glow={false} />
                 </div>
               )}
               {!enrolling && qrCode && (
@@ -221,7 +222,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Spinner size={16} color="#ffffff" glow={false} />
                 Doğrulanıyor...
               </>
             ) : (

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, Check, CheckCircle2, CreditCard, Info,
-  Lock, Phone, Plus, Shield, User, Users, Wallet, X,
+  AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, Info,
+  LayoutGrid, Lock, MapPin, Plus, RefreshCw, Shield, ShieldCheck, Users, Wallet, X,
 } from 'lucide-react';
+import CardBrandMark from '../components/payment/CardBrandMark';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
@@ -35,7 +36,7 @@ interface PaymentScreenProps {
   onViewTicket: () => void;
 }
 
-type Screen = 'PAY' | 'MINOR_CONSENT' | 'ADD_CARD' | 'PROCESSING' | 'SUCCESS';
+type Screen = 'PAY' | 'ADD_CARD' | 'PROCESSING' | 'SUCCESS';
 
 interface PayResult {
   balanceApplied: number;
@@ -48,6 +49,46 @@ const fmt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2 
 const stripRpcPrefix = (msg: string) => msg.replace(/^[A-Z_]+:\s*/, '');
 
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+// Supabase RPC/edge hataları Error DEĞİL — PostgrestError/FunctionsError düz
+// nesnedir. Her şekilden ham mesajı çıkar (aksi halde "Beklenmeyen hata"ya düşer).
+const rawErrorMessage = (err: unknown): string => {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  const e = err as { message?: string; error?: string; details?: string; hint?: string };
+  return e.message || e.error || e.details || e.hint || '';
+};
+
+// Ham hata → kullanıcı dostu Türkçe + gerektiğinde banka/kart yönlendirmesi.
+const humanizePaymentError = (err: unknown): string => {
+  const raw = rawErrorMessage(err);
+  const up = raw.toUpperCase();
+  const has = (...keys: string[]) => keys.some(k => up.includes(k));
+
+  if (has('SLOT_TAKEN', 'SLOT_UNAVAILABLE', 'ZATEN REZERVE', 'DOLU'))
+    return 'Bu saat dilimi az önce dolmuş. Lütfen geri dönüp başka bir saat seç.';
+  if (has('ALREADY_PAID', 'ZATEN'))
+    return 'Bu rezervasyonun kaporası zaten ödenmiş.';
+  if (has('AMOUNT_EXCEEDS_PRICE'))
+    return 'Ödeme tutarı saha ücretini aşıyor. Lütfen tutarı kontrol et.';
+  if (has('NO_TARIFF'))
+    return 'Bu saha için fiyat tanımlı değil; şimdilik uygulamadan ödeme alınamıyor.';
+  if (has('CARD_NOT_FOUND'))
+    return 'Seçtiğin kart bulunamadı. Lütfen kartı yeniden seç veya yeni kart ekle.';
+  if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
+    return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
+  if (has('UNAUTHORIZED', 'GIRIŞ'))
+    return 'Bu işlem için giriş yapman gerekiyor.';
+  // iyzico / banka kaynaklı kart hataları
+  if (has('IYZICO', 'LIMIT', 'DECLINE', 'DO_NOT_HONOUR', 'INSUFFICIENT_FUNDS',
+          'INVALID', 'FRAUD', '3D', 'CARD', 'KART', 'BANKA'))
+    return `${stripRpcPrefix(raw) || 'Kart ödemesi tamamlanamadı.'} — Farklı bir kart deneyebilir veya kartının internetten ödemeye açık olup olmadığını bankandan öğrenebilirsin.`;
+  if (has('PROVIDER_FLOW_REQUIRED', 'PROVIDER_NOT_CONFIGURED'))
+    return 'Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.';
+
+  const clean = stripRpcPrefix(raw).trim();
+  return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
+};
 
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) => {
   const {
@@ -86,13 +127,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const [tempCard, setTempCard] = useState<EphemeralCard | null>(null);
   const [inlineError, setInlineError] = useState('');
   const [result, setResult] = useState<PayResult | null>(null);
-  const [isMinor, setIsMinor] = useState(false);
-  const [minorDone, setMinorDone] = useState(false);
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [consentChecked, setConsentChecked] = useState(false);
+  // Saha vitrini kaporasında rezervasyon yalnız bir kez oluşturulur; tekrar
+  // denemede aynı slot yeniden rezerve edilmesin (SLOT_TAKEN önlenir).
+  const pitchBookingIdRef = useRef<string | null>(null);
 
-  // Cüzdan özeti + kayıtlı kartlar + 18 yaş kontrolü
+  // Cüzdan özeti + kayıtlı kartlar
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -104,15 +143,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         const def = cards.find(c => c.isDefault) ?? cards[0];
         setSelectedCardId(prev => prev ?? def?.id ?? null);
       } catch { /* misafir olabilir — ödeme anında kapı var */ }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && alive) {
-        const { data: profile } = await supabase
-          .from('profiles').select('birthdate').eq('id', user.id).maybeSingle();
-        if (profile?.birthdate && alive) {
-          const age = (Date.now() - new Date(profile.birthdate as string).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-          setIsMinor(age < 18);
-        }
-      }
     })();
     return () => { alive = false; };
   }, [setSavedCards]);
@@ -148,18 +178,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
     if (!ctx) throw new Error('Ödeme bağlamı eksik. Lütfen geri dönüp tekrar deneyin.');
     const cardId = selectedCardId === 'temp' ? null : selectedCardId;
 
-    // 18 yaş altı veli onayı — yasal kayıt, ödemeden hemen önce yazılır
-    if (isMinor) {
-      const { error: consentErr } = await supabase.rpc('record_minor_consent', {
-        p_payment_intent_id: null,
-        p_guardian_name: guardianName,
-        p_guardian_phone: guardianPhone,
-        p_guardian_card_last4: selectedCard?.last4 ?? null,
-        p_consent_text: 'Velisi olduğum kişinin OYNA üzerinden ödeme yapmasına açıkça onay veriyorum.',
-      });
-      if (consentErr) throw consentErr;
-    }
-
     switch (ctx.kind) {
       case 'MATCH_JOIN': {
         const { data, error } = await supabase.rpc('player_buy_slots_v2', {
@@ -190,18 +208,24 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         if (!bookingPitch || !bookingCourt || !bookingDate || !bookingSlot) {
           throw new Error('Rezervasyon bilgileri eksik. Lütfen geri dönüp tekrar deneyin.');
         }
-        const { startTime, endTime } = parseSlotLabel(bookingSlot);
-        const { data: booking, error: bookingErr } = await supabase.rpc('create_pitch_booking', {
-          p_pitch_id: bookingPitch.id,
-          p_court_id: bookingCourt.id,
-          p_booking_date: bookingDate,
-          p_start_time: `${startTime}:00`,
-          p_end_time: `${endTime}:00`,
-          p_source: 'APP_BOOKING',
-          p_title: 'Kullanıcı',
-        });
-        if (bookingErr) throw bookingErr;
-        const bookingId = booking as unknown as string;
+        // Rezervasyonu YALNIZ bir kez oluştur — tekrar denemede aynı slotu yeniden
+        // rezerve etmeye çalışıp SLOT_TAKEN almamak için booking id'yi sakla.
+        let bookingId = pitchBookingIdRef.current;
+        if (!bookingId) {
+          const { startTime, endTime } = parseSlotLabel(bookingSlot);
+          const { data: booking, error: bookingErr } = await supabase.rpc('create_pitch_booking', {
+            p_pitch_id: bookingPitch.id,
+            p_court_id: bookingCourt.id,
+            p_booking_date: bookingDate,
+            p_start_time: `${startTime}:00`,
+            p_end_time: `${endTime}:00`,
+            p_source: 'APP_BOOKING',
+            p_title: 'Kullanıcı',
+          });
+          if (bookingErr) throw bookingErr;
+          bookingId = booking as unknown as string;
+          pitchBookingIdRef.current = bookingId;
+        }
         try {
           const { data, error } = await supabase.rpc('record_app_deposit_payment', {
             p_booking_id: bookingId,
@@ -219,7 +243,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         } catch (e) {
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir;
           // rezervasyon oluştu, tahsilat iyzico sayfasında tamamlanır.
-          if (e instanceof Error && e.message.includes('PROVIDER_FLOW_REQUIRED')) {
+          if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED')) {
             await payBookingDeposit(bookingId);
             return { balanceApplied: 0, cardAmount: amount, intentId: null };
           }
@@ -243,7 +267,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           };
         } catch (e) {
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir
-          if (e instanceof Error && e.message.includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
+          if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
             await payBookingDeposit(ctx.bookingId);
             return { balanceApplied: 0, cardAmount: amount, intentId: null };
           }
@@ -264,17 +288,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       useAppStore.getState().setIsSignupGateOpen(true);
       return;
     }
-    if (isMinor && !minorDone) { setScreen('MINOR_CONSENT'); return; }
     setInlineError('');
     setScreen('PROCESSING');
     try {
-      const [res] = await Promise.all([executePayment(), delay(1800)]);
+      // Sahte gecikme yok — yalnız spinner'ın "flaş" gibi görünmesini önleyen
+      // küçük bir taban (kartlı akış çoğu zaman zaten iyzico'ya yönlenir).
+      const [res] = await Promise.all([executePayment(), delay(needsCard ? 500 : 650)]);
       setResult(res);
       setLastPaymentError(null);
       setScreen('SUCCESS');
     } catch (err) {
-      const raw = err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu.';
-      const msg = stripRpcPrefix(raw);
+      const msg = humanizePaymentError(err);
       setInlineError(msg);
       if (ctx) {
         setLastPaymentError({
@@ -356,7 +380,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="w-[54px] h-[38px] rounded-lg bg-gradient-to-br from-purple-700 to-blue-600 flex items-center justify-center mb-2 shadow-lg text-white">
-              <CreditCard size={22} />
+              {selectedCard && needsCard
+                ? <CardBrandMark brand={selectedCard.brand} size={18} />
+                : <Wallet size={22} />}
             </div>
             <p className="text-[10px] font-numeric text-gray-400">
               {selectedCard && needsCard ? `•••• ${selectedCard.last4}` : 'OYNA Bakiyesi'}
@@ -367,7 +393,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           {ctx.isDeposit ? 'Kapora İşleniyor' : 'Ödeme İşleniyor'}
         </p>
         <p className="text-[13px] text-gray-500 mt-2.5 flex items-center gap-1.5">
-          <Shield size={13} className="text-[#39FF14] animate-pulse" /> iyzico ile güvenli bağlantı
+          <Shield size={13} className="text-[#39FF14] animate-pulse" />
+          {needsCard ? 'Güvenli ödeme sayfasına bağlanılıyor…' : 'OYNA bakiyenden ödeme alınıyor…'}
         </p>
       </div>
     );
@@ -431,67 +458,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
     );
   }
 
-  if (screen === 'MINOR_CONSENT') {
-    return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
-        <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5">
-          <button onClick={() => setScreen('PAY')}
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all">
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-[17px] font-black text-white uppercase">Veli Onayı</h1>
-            <p className="text-[11px] text-gray-500 font-semibold">18 yaş altı zorunlu adım</p>
-          </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="bg-orange-900/20 border border-orange-500/30 rounded-3xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                <Shield size={20} className="text-orange-400" />
-              </div>
-              <p className="text-white font-black text-sm">Veli / Vasi Onayı</p>
-            </div>
-            <p className="text-gray-300 text-xs leading-relaxed">
-              Kanun gereği 18 yaş altı kullanıcılar yalnızca veli/vasi onayıyla ödeme yapabilir.
-            </p>
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <User size={13} /> Veli / Vasi Adı Soyadı <span className="text-red-400">*</span>
-            </label>
-            <input value={guardianName} onChange={e => setGuardianName(e.target.value)} placeholder="Ad Soyad"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600" />
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <Phone size={13} /> Veli / Vasi Telefonu <span className="text-red-400">*</span>
-            </label>
-            <input value={guardianPhone} onChange={e => setGuardianPhone(e.target.value)} placeholder="05XX XXX XX XX" type="tel"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600" />
-          </div>
-          <label className="flex gap-3 items-start bg-[#161B22] border border-white/8 rounded-2xl p-4 cursor-pointer">
-            <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)}
-              className="mt-1 accent-[#39FF14] w-4 h-4 shrink-0" />
-            <p className="text-[11px] text-gray-300 leading-relaxed">
-              Velisi / vasisi olduğum kişinin OYNA platformu üzerinden gerçekleştireceği ödemeye açık rızamı
-              verdiğimi ve ödeme tutarından haberdar olduğumu kabul ediyorum. Kişisel verilerimin KVKK
-              kapsamında işleneceğini okudum, anladım.
-            </p>
-          </label>
-        </main>
-        <div className="p-5 pb-safe border-t border-white/5">
-          <button
-            disabled={!consentChecked || !guardianName.trim() || !guardianPhone.trim()}
-            onClick={() => { setMinorDone(true); setScreen('PAY'); }}
-            className="w-full py-4 bg-orange-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-black text-base rounded-2xl active:scale-[0.98] transition-all">
-            ONAYLADIM, DEVAM ET
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // ─── Ana ödeme ekranı (1b) ─────────────────────────────────────────────────
   return (
     <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
@@ -511,7 +477,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       </header>
 
       <main className="flex-1 overflow-y-auto py-5 space-y-[18px] pb-40">
-        {/* Inline hata şeridi (hibrit hata UX'inin ekran-içi yarısı) */}
+        {/* Inline hata şeridi + tek dokunuşla tekrar dene (hibrit hata UX'i) */}
         {inlineError && (
           <div className="mx-5 bg-red-500/10 border border-red-500/30 rounded-2xl p-3.5 flex gap-3">
             <div className="w-8 h-8 rounded-xl bg-red-500/15 flex items-center justify-center text-red-400 shrink-0">
@@ -522,31 +488,50 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                 {ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
               </p>
               <p className="text-[11.5px] text-gray-300 mt-0.5 leading-relaxed">{inlineError}</p>
+              <button
+                onClick={handlePay}
+                disabled={!canPay}
+                className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
+                <RefreshCw size={12} /> Tekrar Dene
+              </button>
             </div>
             <button onClick={() => setInlineError('')} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
           </div>
         )}
 
-        {/* Bağlam özet kartı */}
-        <div className={`mx-5 rounded-[20px] p-4 flex items-center gap-3.5 border ${
+        {/* Bağlam özet kartı — dikey ve belirgin (saha kiralamada pin ikonu) */}
+        <div className={`mx-5 rounded-[22px] p-5 border ${
           ctx.isDeposit
             ? 'bg-gradient-to-br from-yellow-400/10 to-[#161B22] border-yellow-400/20'
             : 'bg-gradient-to-br from-green-900/25 to-[#161B22] border-[#39FF14]/20'
         }`}>
-          <div className={`w-[50px] h-[50px] rounded-[14px] flex items-center justify-center shrink-0 border ${
-            ctx.isDeposit ? 'bg-yellow-400/10 border-yellow-400/15 text-[#FACC15]' : 'bg-[#39FF14]/10 border-[#39FF14]/15 text-[#39FF14]'
-          }`}>
-            <Users size={22} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-md mb-1 ${
+          <div className="flex items-center gap-3 mb-3.5">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+              ctx.isDeposit ? 'bg-yellow-400/10 border-yellow-400/20 text-[#FACC15]' : 'bg-[#39FF14]/10 border-[#39FF14]/20 text-[#39FF14]'
+            }`}>
+              {ctx.kind === 'MATCH_JOIN' ? <Users size={24} /> : <MapPin size={24} />}
+            </div>
+            <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-[0.12em] px-2.5 py-1 rounded-lg ${
               ctx.isDeposit ? 'text-[#FACC15] bg-yellow-400/12' : 'text-[#39FF14] bg-[#39FF14]/12'
             }`}>
               {ctx.badge}
             </span>
-            <p className="text-[15px] font-extrabold text-white truncate">{ctx.title}</p>
-            <p className="text-[11px] text-gray-400 font-semibold mt-0.5 truncate">{ctx.subtitle}</p>
           </div>
+          <p className="text-[21px] font-black text-white leading-tight">{ctx.title}</p>
+          {ctx.details && ctx.details.length > 0 ? (
+            <div className="mt-3.5 flex flex-col gap-2.5">
+              {ctx.details.map((d, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <span className={`shrink-0 ${ctx.isDeposit ? 'text-[#FACC15]/80' : 'text-[#39FF14]/80'}`}>
+                    {detailIcon(d.icon)}
+                  </span>
+                  <span className="text-[13.5px] text-gray-100 font-semibold">{d.text}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[12px] text-gray-400 font-semibold mt-2">{ctx.subtitle}</p>
+          )}
         </div>
 
         {/* Tutar */}
@@ -609,7 +594,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                     </span>
                   )}
                   <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-purple-700 to-blue-600'} flex items-center justify-center mb-10`}>
-                    <span className="text-[8px] font-black text-white italic">{card.brand}</span>
+                    <CardBrandMark brand={card.brand} size={13} />
                   </span>
                   <p className="text-xs font-extrabold text-white font-numeric">•••• {card.last4}</p>
                   <p className="text-[9.5px] text-gray-500 mt-1">
@@ -635,7 +620,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                   </span>
                 )}
                 <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${tempCard.gradient} flex items-center justify-center mb-10`}>
-                  <span className="text-[8px] font-black text-white italic">{tempCard.brand}</span>
+                  <CardBrandMark brand={tempCard.brand} size={13} />
                 </span>
                 <p className="text-xs font-extrabold text-white font-numeric">•••• {tempCard.last4}</p>
                 <p className="text-[9.5px] text-gray-500 mt-1">Tek seferlik · kaydedilmedi</p>
@@ -667,6 +652,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           <div className="mx-5 flex gap-2.5 items-start px-1">
             <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
             <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
+          </div>
+        )}
+
+        {/* 3D Secure + taksit güven notu (kart gerektiğinde) */}
+        {needsCard && (
+          <div className="mx-5 flex items-center gap-2 px-1">
+            <ShieldCheck size={14} className="text-[#39FF14] shrink-0" />
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              <span className="text-gray-200 font-semibold">3D Secure</span> ile güvenli doğrulama · taksit seçenekleri ödeme adımında sunulur
+            </p>
           </div>
         )}
 
@@ -708,6 +703,18 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
 };
 
 // ─── Yardımcılar ──────────────────────────────────────────────────────────────
+
+// Bağlam kartı dikey satır ikonu
+const detailIcon = (kind: 'pin' | 'court' | 'calendar' | 'clock' | 'users') => {
+  const p = { size: 15 };
+  switch (kind) {
+    case 'pin': return <MapPin {...p} />;
+    case 'court': return <LayoutGrid {...p} />;
+    case 'calendar': return <Calendar {...p} />;
+    case 'clock': return <Clock {...p} />;
+    case 'users': return <Users {...p} />;
+  }
+};
 
 const SummaryRow = ({ label, value, dim, mono }: { label: string; value: string; dim?: boolean; mono?: boolean }) => (
   <div className="flex justify-between items-center gap-4 text-[13px]">

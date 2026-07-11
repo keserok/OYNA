@@ -440,6 +440,11 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             badge: 'MAÇ OLUŞTUR',
             title: matchData.title,
             subtitle: `${selectedPitch?.name || 'Saha'} · ${selectedTimeSlot?.date || ''} ${selectedTimeSlot?.time || ''}`.trim(),
+            details: [
+              { icon: 'pin' as const, text: selectedPitch?.name || 'Saha' },
+              ...(selectedTimeSlot?.date ? [{ icon: 'calendar' as const, text: selectedTimeSlot.date }] : []),
+              ...(selectedTimeSlot?.time ? [{ icon: 'clock' as const, text: selectedTimeSlot.time }] : []),
+            ],
             amount: matchDeposit,
             amountLabel: 'Ödenecek Kapora',
             amountHint: 'Kapora ile saha sana kilitlenir; oyuncular katıldıkça payını geri alırsın.',

@@ -1052,11 +1052,20 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     if (!selectedSlot || !selectedCourtId || !selectedPitch || !selectedCourt || !selectedSlotQuote) return;
     persistBookingSelection();
     setIsDetailOpen(false);
+    const prettyDate = (() => {
+      try { return new Date(`${selectedDateISO}T12:00:00`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+      catch { return selectedDateISO; }
+    })();
     setPaymentContext({
       kind: 'PITCH_DEPOSIT',
       badge: 'SAHA KİRALAMA',
       title: selectedPitch.name,
       subtitle: `${selectedCourt.name} · ${selectedDateISO} · ${selectedSlot}`,
+      details: [
+        { icon: 'court', text: selectedCourt.name },
+        { icon: 'calendar', text: prettyDate },
+        { icon: 'clock', text: selectedSlot },
+      ],
       amount: selectedSlotQuote.deposit,
       amountLabel: 'Ödenecek Kapora',
       amountHint: `Saha ücreti ${selectedSlotQuote.price.toLocaleString('tr-TR')}₺ · kalan tesiste ödenir`,

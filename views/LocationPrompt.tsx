@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { MapPin, Navigation, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { fbUpdateUserLocation } from '../supabaseMutations';
@@ -85,7 +86,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
               {/* Center Icon */}
               <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)] border-4 transition-all duration-500 z-20 ${status === 'FOUND' ? 'bg-green-500 border-green-400 scale-110' : 'bg-[#161B22] border-white/10'}`}>
                   {status === 'SCANNING' ? (
-                      <Loader2 size={32} className="text-green-500 animate-spin" />
+                      <Spinner size={32} color="#22C55E" />
                   ) : status === 'FOUND' ? (
                       <CheckCircle2 size={32} className="text-black" />
                   ) : (

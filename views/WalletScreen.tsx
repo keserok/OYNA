@@ -13,6 +13,7 @@ import {
   topUpWallet, WalletSummary, SavedCard,
 } from '../services/walletService';
 import AddCardScreen from '../components/payment/AddCardScreen';
+import CardBrandMark from '../components/payment/CardBrandMark';
 
 /**
  * CÜZDAN — role göre iki yapı (tasarım 2a + kaleci/hakem):
@@ -312,7 +313,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                         active ? 'bg-[#161B22] border-2 border-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.12)]' : 'bg-[#161B22] border border-white/8'
                       }`}>
                       <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-purple-700 to-blue-600'} flex items-center justify-center shrink-0`}>
-                        <span className="text-[8px] font-black text-white italic">{card.brand}</span>
+                        <CardBrandMark brand={card.brand} size={13} />
                       </span>
                       <span className="flex-1">
                         <span className="block text-sm font-extrabold text-white font-numeric">•••• {card.last4}</span>
@@ -387,7 +388,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                   {(defaultCard.holderName ?? 'OYNA KULLANICI').toLocaleUpperCase('tr-TR')}
                   {defaultCard.expMonth && defaultCard.expYear ? ` · ${String(defaultCard.expMonth).padStart(2, '0')}/${String(defaultCard.expYear).slice(-2)}` : ''}
                 </span>
-                <span className="text-[11px] font-black italic text-white">{defaultCard.brand}</span>
+                <CardBrandMark brand={defaultCard.brand} size={16} />
               </div>
             </div>
           )}
@@ -395,7 +396,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             <div key={card.id} className="bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3.5 min-w-0">
                 <span className={`w-[46px] h-[31px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-emerald-600 to-teal-700'} flex items-center justify-center shrink-0`}>
-                  <span className="text-[7px] font-black text-white">{card.brand}</span>
+                  <CardBrandMark brand={card.brand} size={11} />
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm text-white font-numeric">•••• {card.last4}</p>
@@ -772,7 +773,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                     className={`shrink-0 w-[200px] h-[120px] rounded-[18px] p-4 bg-gradient-to-br ${card.gradient ?? 'from-purple-800 to-blue-600'} flex flex-col justify-between`}>
                     <div className="flex justify-between items-center">
                       <span className="w-[34px] h-6 rounded bg-gradient-to-br from-yellow-400 to-yellow-700" />
-                      <span className="text-[10px] font-black italic text-white">{card.brand}</span>
+                      <CardBrandMark brand={card.brand} size={15} />
                     </div>
                     <div>
                       <p className="text-sm font-bold tracking-[0.1em] text-white font-numeric">•••• {card.last4}</p>
