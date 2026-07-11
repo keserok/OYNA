@@ -202,19 +202,29 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         });
         if (bookingErr) throw bookingErr;
         const bookingId = booking as unknown as string;
-        const { data, error } = await supabase.rpc('record_app_deposit_payment', {
-          p_booking_id: bookingId,
-          p_amount: amount,
-          p_use_balance: allowBalance && useBalance,
-          p_card_id: needsCard ? cardId : null,
-        });
-        if (error) throw error;
-        const d = data as any;
-        return {
-          balanceApplied: Number(d?.balance_applied) || 0,
-          cardAmount: Number(d?.card_amount) || 0,
-          intentId: d?.intent_id ?? null,
-        };
+        try {
+          const { data, error } = await supabase.rpc('record_app_deposit_payment', {
+            p_booking_id: bookingId,
+            p_amount: amount,
+            p_use_balance: allowBalance && useBalance,
+            p_card_id: needsCard ? cardId : null,
+          });
+          if (error) throw error;
+          const d = data as any;
+          return {
+            balanceApplied: Number(d?.balance_applied) || 0,
+            cardAmount: Number(d?.card_amount) || 0,
+            intentId: d?.intent_id ?? null,
+          };
+        } catch (e) {
+          // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir;
+          // rezervasyon oluştu, tahsilat iyzico sayfasında tamamlanır.
+          if (e instanceof Error && e.message.includes('PROVIDER_FLOW_REQUIRED')) {
+            await payBookingDeposit(bookingId);
+            return { balanceApplied: 0, cardAmount: amount, intentId: null };
+          }
+          throw e;
+        }
       }
       case 'BOOKING_DEPOSIT': {
         try {

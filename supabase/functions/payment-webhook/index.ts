@@ -55,6 +55,26 @@ async function verifyIyzico(params: URLSearchParams): Promise<boolean> {
   return data.status === 'success' && data.paymentStatus === 'SUCCESS'
 }
 
+// ── Kullanıcıya gösterilen sonuç sayfası ─────────────────────────────────────
+// iyzico Checkout Form, ödeme sonrası KULLANICININ TARAYICISINI bu adrese
+// form-POST ile yönlendirir — yani yanıt gövdesini kullanıcı görür. Düz "OK"
+// yerine uygulama temasında kısa bir Türkçe sonuç sayfası döndürülür.
+function resultPage(ok: boolean, title: string, body: string, status = 200) {
+  const color = ok ? '#39FF14' : '#F87171'
+  const icon  = ok ? '✓' : '✕'
+  const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OYNA — Ödeme</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0A0E14;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;text-align:center;padding:24px">
+<div>
+  <div style="width:96px;height:96px;border-radius:9999px;background:${color};color:#0A0E14;font-size:48px;font-weight:900;line-height:96px;margin:0 auto 24px;box-shadow:0 0 60px ${color}55">${icon}</div>
+  <h1 style="font-size:24px;font-weight:900;margin:0">${title}</h1>
+  <p style="font-size:14px;color:#9CA3AF;margin:12px auto 0;max-width:320px;line-height:1.6">${body}</p>
+  <p style="font-size:12px;color:#4B5563;margin-top:28px">Bu sayfayı kapatıp OYNA uygulamasına dönebilirsin.</p>
+</div></body></html>`
+  return new Response(html, { status, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -71,10 +91,16 @@ Deno.serve(async (req: Request) => {
       return new Response('Not available in simulation mode', { status: 400 })
     }
   } else if (PROVIDER === 'IYZICO') {
+    // Kullanıcı ödemeyi iptal etti / kart reddedildi → doğrulamaya gerek yok.
+    if (params.get('status') !== 'success') {
+      return resultPage(false, 'Ödeme Tamamlanamadı',
+        'Ödeme iptal edildi veya kart onaylanmadı. Uygulamadan tekrar deneyebilirsin; hesabından para çekilmedi.')
+    }
     const valid = await verifyIyzico(params)
     if (!valid) {
       console.error('[payment-webhook] iyzico token doğrulaması başarısız.')
-      return new Response('Invalid signature', { status: 401 })
+      return resultPage(false, 'Ödeme Doğrulanamadı',
+        'Ödeme sağlayıcısından geçerli bir onay alınamadı. Paran çekildiyse otomatik iade edilir; uygulamadan durumu kontrol edebilirsin.', 401)
     }
   } else {
     return new Response('Unknown provider', { status: 400 })
@@ -82,7 +108,7 @@ Deno.serve(async (req: Request) => {
 
   // conversationId = payment_intents.id (create-payment'te bu şekilde set edildi)
   const intentId = params.get('conversationId')
-  if (!intentId) return new Response('No conversationId', { status: 400 })
+  if (!intentId) return resultPage(false, 'Eksik Bilgi', 'Ödeme referansı bulunamadı. Uygulamadan durumu kontrol edebilirsin.', 400)
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -99,8 +125,10 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     console.error('[payment-webhook] apply_booking_payment hatası:', error.message)
-    return new Response('Apply failed', { status: 500 })
+    return resultPage(false, 'Bir Sorun Oluştu',
+      'Ödemen alındı ancak sisteme işlenirken bir sorun oluştu. Ekibimiz durumu görebiliyor; rezervasyonun kısa süre içinde güncellenir.', 500)
   }
 
-  return new Response('OK', { status: 200 })
+  return resultPage(true, 'Ödemen Alındı!',
+    'Kapora ödemen başarıyla tamamlandı. Rezervasyonun güvence altında — uygulamada Rezervasyonlarım ekranından görebilirsin.')
 })
