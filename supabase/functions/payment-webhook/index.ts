@@ -14,45 +14,56 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'SIMULATION'
 
-// ── iyzico server-side token doğrulama ────────────────────────────────────────
-// Checkout Form v2 callback: form POST; token + status + conversationId gelir.
-// Token'ı /payment/iyzipos/checkoutform/auth ile iyzico sunucusunda doğrularız.
-async function verifyIyzico(params: URLSearchParams): Promise<boolean> {
+// ── iyzico IYZWSv2 imza (HMAC-SHA256, hex) ────────────────────────────────────
+async function hmacSha256Hex(secret: string, data: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data))
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// ── iyzico server-side sonuç doğrulama (Checkout Form retrieve) ───────────────
+// Callback form-POST'unda gelen token'ı iyzico'da sorgulayıp ödemeyi doğrularız.
+async function verifyIyzico(params: URLSearchParams): Promise<{ ok: boolean; intentId?: string; paymentId?: string }> {
   const token  = params.get('token')
-  const status = params.get('status')
-  if (!token || status !== 'success') return false
+  if (!token) return { ok: false }
 
   const apiKey    = Deno.env.get('IYZICO_API_KEY')
   const secretKey = Deno.env.get('IYZICO_SECRET_KEY')
   const baseUrl   = Deno.env.get('IYZICO_BASE_URL') ?? 'https://api.iyzipay.com'
   if (!apiKey || !secretKey) {
     console.error('[payment-webhook] IYZICO_API_KEY veya IYZICO_SECRET_KEY eksik')
-    return false
+    return { ok: false }
   }
 
-  const enc          = new TextEncoder()
-  const randomString = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
-  const reqBody      = JSON.stringify({ locale: 'tr', token })
+  const uriPath   = '/payment/iyzipos/checkoutform/auth/ecom/detail'
+  const bodyStr   = JSON.stringify({ locale: 'tr', token })
+  const randomKey = `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`
+  const signature = await hmacSha256Hex(secretKey, randomKey + uriPath + bodyStr)
+  const authHeader = 'IYZWSv2 ' + btoa(`apiKey:${apiKey}&randomKey:${randomKey}&signature:${signature}`)
 
-  const bodyHashBuf = await crypto.subtle.digest('SHA-256', enc.encode(reqBody))
-  const bodyHash    = btoa(String.fromCharCode(...new Uint8Array(bodyHashBuf)))
-
-  const rawSig     = randomString + apiKey + bodyHash
-  const sigHashBuf = await crypto.subtle.digest('SHA-256', enc.encode(secretKey + rawSig))
-  const sigHash    = btoa(String.fromCharCode(...new Uint8Array(sigHashBuf)))
-
-  const res = await fetch(`${baseUrl}/payment/iyzipos/checkoutform/auth`, {
+  const res = await fetch(`${baseUrl}${uriPath}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `IYZWS apiKey:${apiKey}:${sigHash}`,
-      'x-iyzi-rnd': randomString,
+      'Authorization': authHeader,
+      'x-iyzi-rnd': randomKey,
     },
-    body: reqBody,
+    body: bodyStr,
   })
 
-  const data = await res.json() as { status: string; paymentStatus: string }
-  return data.status === 'success' && data.paymentStatus === 'SUCCESS'
+  const data = await res.json() as {
+    status?: string; paymentStatus?: string; errorMessage?: string;
+    conversationId?: string; paymentId?: string;
+  }
+  if (data.status !== 'success' || data.paymentStatus !== 'SUCCESS') {
+    console.error('[payment-webhook] iyzico doğrulama başarısız:', JSON.stringify(data))
+    return { ok: false }
+  }
+  // conversationId = payment_intents.id (create-payment'te böyle set edildi)
+  return { ok: true, intentId: data.conversationId, paymentId: data.paymentId }
 }
 
 // ── Kullanıcıya gösterilen sonuç sayfası ─────────────────────────────────────
@@ -83,31 +94,30 @@ Deno.serve(async (req: Request) => {
   const rawBody = await req.text()
   const params  = new URLSearchParams(rawBody)
 
-  if (PROVIDER === 'SIMULATION') {
+  let intentId: string | undefined
+  let providerRef: string | null = null
+
+  if (PROVIDER === 'IYZICO') {
+    // Retrieve ile ödemeyi doğrula; intent id (conversationId) yanıttan gelir.
+    const result = await verifyIyzico(params)
+    if (!result.ok) {
+      return resultPage(false, 'Ödeme Tamamlanamadı',
+        'Ödeme iptal edildi, kart onaylanmadı veya doğrulanamadı. Uygulamadan tekrar deneyebilirsin; onaylanmayan tutar kartına yansımaz.', 402)
+    }
+    intentId = result.intentId
+    providerRef = result.paymentId ?? null
+  } else if (PROVIDER === 'SIMULATION') {
     // SIMULATION modunda bu webhook gerçek parada kullanılır.
-    // Test ortamında SIMULATION_WEBHOOK_ALLOW=true ile geçici kabul edilebilir.
     if (!Deno.env.get('SIMULATION_WEBHOOK_ALLOW')) {
       console.warn('[payment-webhook] SIMULATION modunda — bu uç yalnız iyzico canlı ortamında çalışır.')
       return new Response('Not available in simulation mode', { status: 400 })
     }
-  } else if (PROVIDER === 'IYZICO') {
-    // Kullanıcı ödemeyi iptal etti / kart reddedildi → doğrulamaya gerek yok.
-    if (params.get('status') !== 'success') {
-      return resultPage(false, 'Ödeme Tamamlanamadı',
-        'Ödeme iptal edildi veya kart onaylanmadı. Uygulamadan tekrar deneyebilirsin; hesabından para çekilmedi.')
-    }
-    const valid = await verifyIyzico(params)
-    if (!valid) {
-      console.error('[payment-webhook] iyzico token doğrulaması başarısız.')
-      return resultPage(false, 'Ödeme Doğrulanamadı',
-        'Ödeme sağlayıcısından geçerli bir onay alınamadı. Paran çekildiyse otomatik iade edilir; uygulamadan durumu kontrol edebilirsin.', 401)
-    }
+    intentId = params.get('conversationId') ?? undefined
+    providerRef = params.get('paymentId')
   } else {
     return new Response('Unknown provider', { status: 400 })
   }
 
-  // conversationId = payment_intents.id (create-payment'te bu şekilde set edildi)
-  const intentId = params.get('conversationId')
   if (!intentId) return resultPage(false, 'Eksik Bilgi', 'Ödeme referansı bulunamadı. Uygulamadan durumu kontrol edebilirsin.', 400)
 
   const admin = createClient(
@@ -119,7 +129,7 @@ Deno.serve(async (req: Request) => {
   // İdempotent: apply_booking_payment zaten PAID ise tekrar uygulamaz.
   const { error } = await admin.rpc('apply_booking_payment', {
     p_intent_id: intentId,
-    p_provider_ref: params.get('paymentId') ?? null,
+    p_provider_ref: providerRef,
     p_raw: Object.fromEntries(params.entries()),
   })
 

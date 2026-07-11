@@ -41,24 +41,35 @@ export function toPaymentErrorMessage(error: unknown): string {
   return 'Ödeme sırasında bir sorun oluştu. Lütfen tekrar dene.';
 }
 
+// Edge function non-2xx döndürünce supabase-js jenerik "non-2xx" hatası verir;
+// asıl gövde error.context (Response) içindedir. Gerçek mesajı oradan çıkar.
+async function invokeEdge(action: string, body: Record<string, unknown>): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('create-payment', {
+    body: { action, ...body },
+  });
+  if (error) {
+    let detail = '';
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        const parsed = await ctx.json();
+        detail = parsed?.error || '';
+      }
+    } catch { /* gövde okunamadı — jenerik mesaja düş */ }
+    throw new Error(detail || error.message || 'Ödeme başlatılamadı.');
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 /** Rezervasyon kaporası için ödeme başlatır. */
 export async function startBookingPayment(bookingId: string): Promise<CreatePaymentResponse> {
-  const { data, error } = await supabase.functions.invoke('create-payment', {
-    body: { action: 'create', bookingId },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data as CreatePaymentResponse;
+  return await invokeEdge('create', { bookingId }) as CreatePaymentResponse;
 }
 
 /** SIMULATION modunda ödemeyi onaylar (gerçek sağlayıcıda webhook yapar). */
 export async function confirmSimPayment(intentId: string): Promise<PaymentResult> {
-  const { data, error } = await supabase.functions.invoke('create-payment', {
-    body: { action: 'confirm-sim', intentId },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data as PaymentResult;
+  return await invokeEdge('confirm-sim', { intentId }) as PaymentResult;
 }
 
 /**
