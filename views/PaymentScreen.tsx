@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, Check, CheckCircle2, CreditCard, Info,
-  Lock, Phone, Plus, Shield, User, Users, Wallet, X,
+  Lock, Plus, Shield, Users, Wallet, X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store';
@@ -35,7 +35,7 @@ interface PaymentScreenProps {
   onViewTicket: () => void;
 }
 
-type Screen = 'PAY' | 'MINOR_CONSENT' | 'ADD_CARD' | 'PROCESSING' | 'SUCCESS';
+type Screen = 'PAY' | 'ADD_CARD' | 'PROCESSING' | 'SUCCESS';
 
 interface PayResult {
   balanceApplied: number;
@@ -86,13 +86,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const [tempCard, setTempCard] = useState<EphemeralCard | null>(null);
   const [inlineError, setInlineError] = useState('');
   const [result, setResult] = useState<PayResult | null>(null);
-  const [isMinor, setIsMinor] = useState(false);
-  const [minorDone, setMinorDone] = useState(false);
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [consentChecked, setConsentChecked] = useState(false);
 
-  // Cüzdan özeti + kayıtlı kartlar + 18 yaş kontrolü
+  // Cüzdan özeti + kayıtlı kartlar
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -104,15 +99,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         const def = cards.find(c => c.isDefault) ?? cards[0];
         setSelectedCardId(prev => prev ?? def?.id ?? null);
       } catch { /* misafir olabilir — ödeme anında kapı var */ }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && alive) {
-        const { data: profile } = await supabase
-          .from('profiles').select('birthdate').eq('id', user.id).maybeSingle();
-        if (profile?.birthdate && alive) {
-          const age = (Date.now() - new Date(profile.birthdate as string).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-          setIsMinor(age < 18);
-        }
-      }
     })();
     return () => { alive = false; };
   }, [setSavedCards]);
@@ -147,18 +133,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const executePayment = async (): Promise<PayResult> => {
     if (!ctx) throw new Error('Ödeme bağlamı eksik. Lütfen geri dönüp tekrar deneyin.');
     const cardId = selectedCardId === 'temp' ? null : selectedCardId;
-
-    // 18 yaş altı veli onayı — yasal kayıt, ödemeden hemen önce yazılır
-    if (isMinor) {
-      const { error: consentErr } = await supabase.rpc('record_minor_consent', {
-        p_payment_intent_id: null,
-        p_guardian_name: guardianName,
-        p_guardian_phone: guardianPhone,
-        p_guardian_card_last4: selectedCard?.last4 ?? null,
-        p_consent_text: 'Velisi olduğum kişinin OYNA üzerinden ödeme yapmasına açıkça onay veriyorum.',
-      });
-      if (consentErr) throw consentErr;
-    }
 
     switch (ctx.kind) {
       case 'MATCH_JOIN': {
@@ -264,7 +238,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       useAppStore.getState().setIsSignupGateOpen(true);
       return;
     }
-    if (isMinor && !minorDone) { setScreen('MINOR_CONSENT'); return; }
     setInlineError('');
     setScreen('PROCESSING');
     try {
@@ -425,67 +398,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           <button onClick={handleSuccessSecondary}
             className="w-full py-3 text-gray-500 font-bold text-sm">
             Ana sayfaya dön
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (screen === 'MINOR_CONSENT') {
-    return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
-        <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5">
-          <button onClick={() => setScreen('PAY')}
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all">
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-[17px] font-black text-white uppercase">Veli Onayı</h1>
-            <p className="text-[11px] text-gray-500 font-semibold">18 yaş altı zorunlu adım</p>
-          </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="bg-orange-900/20 border border-orange-500/30 rounded-3xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                <Shield size={20} className="text-orange-400" />
-              </div>
-              <p className="text-white font-black text-sm">Veli / Vasi Onayı</p>
-            </div>
-            <p className="text-gray-300 text-xs leading-relaxed">
-              Kanun gereği 18 yaş altı kullanıcılar yalnızca veli/vasi onayıyla ödeme yapabilir.
-            </p>
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <User size={13} /> Veli / Vasi Adı Soyadı <span className="text-red-400">*</span>
-            </label>
-            <input value={guardianName} onChange={e => setGuardianName(e.target.value)} placeholder="Ad Soyad"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600" />
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <Phone size={13} /> Veli / Vasi Telefonu <span className="text-red-400">*</span>
-            </label>
-            <input value={guardianPhone} onChange={e => setGuardianPhone(e.target.value)} placeholder="05XX XXX XX XX" type="tel"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600" />
-          </div>
-          <label className="flex gap-3 items-start bg-[#161B22] border border-white/8 rounded-2xl p-4 cursor-pointer">
-            <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)}
-              className="mt-1 accent-[#39FF14] w-4 h-4 shrink-0" />
-            <p className="text-[11px] text-gray-300 leading-relaxed">
-              Velisi / vasisi olduğum kişinin OYNA platformu üzerinden gerçekleştireceği ödemeye açık rızamı
-              verdiğimi ve ödeme tutarından haberdar olduğumu kabul ediyorum. Kişisel verilerimin KVKK
-              kapsamında işleneceğini okudum, anladım.
-            </p>
-          </label>
-        </main>
-        <div className="p-5 pb-safe border-t border-white/5">
-          <button
-            disabled={!consentChecked || !guardianName.trim() || !guardianPhone.trim()}
-            onClick={() => { setMinorDone(true); setScreen('PAY'); }}
-            className="w-full py-4 bg-orange-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-black text-base rounded-2xl active:scale-[0.98] transition-all">
-            ONAYLADIM, DEVAM ET
           </button>
         </div>
       </div>
