@@ -104,12 +104,20 @@ export type PaymentContextKind =
   | 'BOOKING_DEPOSIT'       // mevcut rezervasyonun kaporası (Rezervasyonlarım)
   | 'MATCH_CREATE_DEPOSIT'; // maç oluşturma → kapora (karta BLOKE edilir)
 
+/** Bağlam özet kartındaki dikey satır — küçük ikon + metin (saha/tarih/saat). */
+export interface PaymentContextDetail {
+  icon: 'pin' | 'court' | 'calendar' | 'clock' | 'users';
+  text: string;
+}
+
 export interface PaymentContext {
   kind: PaymentContextKind;
   /** Bağlam rozeti: 'MAÇA KATILIM · 2 SLOT' / 'SAHA KİRALAMA' / 'MAÇ OLUŞTUR' */
   badge: string;
   title: string;
   subtitle: string;
+  /** Dikey ayrıntı satırları (varsa subtitle yerine bunlar gösterilir). */
+  details?: PaymentContextDetail[];
   amount: number;
   /** 'Ödenecek Tutar' | 'Ödenecek Kapora' */
   amountLabel: string;

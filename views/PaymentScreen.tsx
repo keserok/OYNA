@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, Check, CheckCircle2, CreditCard, Info,
-  Lock, Plus, Shield, Users, Wallet, X,
+  AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, CreditCard, Info,
+  LayoutGrid, Lock, MapPin, Plus, Shield, Users, Wallet, X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store';
@@ -49,6 +49,46 @@ const stripRpcPrefix = (msg: string) => msg.replace(/^[A-Z_]+:\s*/, '');
 
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
+// Supabase RPC/edge hataları Error DEĞİL — PostgrestError/FunctionsError düz
+// nesnedir. Her şekilden ham mesajı çıkar (aksi halde "Beklenmeyen hata"ya düşer).
+const rawErrorMessage = (err: unknown): string => {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  const e = err as { message?: string; error?: string; details?: string; hint?: string };
+  return e.message || e.error || e.details || e.hint || '';
+};
+
+// Ham hata → kullanıcı dostu Türkçe + gerektiğinde banka/kart yönlendirmesi.
+const humanizePaymentError = (err: unknown): string => {
+  const raw = rawErrorMessage(err);
+  const up = raw.toUpperCase();
+  const has = (...keys: string[]) => keys.some(k => up.includes(k));
+
+  if (has('SLOT_TAKEN', 'SLOT_UNAVAILABLE', 'ZATEN REZERVE', 'DOLU'))
+    return 'Bu saat dilimi az önce dolmuş. Lütfen geri dönüp başka bir saat seç.';
+  if (has('ALREADY_PAID', 'ZATEN'))
+    return 'Bu rezervasyonun kaporası zaten ödenmiş.';
+  if (has('AMOUNT_EXCEEDS_PRICE'))
+    return 'Ödeme tutarı saha ücretini aşıyor. Lütfen tutarı kontrol et.';
+  if (has('NO_TARIFF'))
+    return 'Bu saha için fiyat tanımlı değil; şimdilik uygulamadan ödeme alınamıyor.';
+  if (has('CARD_NOT_FOUND'))
+    return 'Seçtiğin kart bulunamadı. Lütfen kartı yeniden seç veya yeni kart ekle.';
+  if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
+    return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
+  if (has('UNAUTHORIZED', 'GIRIŞ'))
+    return 'Bu işlem için giriş yapman gerekiyor.';
+  // iyzico / banka kaynaklı kart hataları
+  if (has('IYZICO', 'LIMIT', 'DECLINE', 'DO_NOT_HONOUR', 'INSUFFICIENT_FUNDS',
+          'INVALID', 'FRAUD', '3D', 'CARD', 'KART', 'BANKA'))
+    return `${stripRpcPrefix(raw) || 'Kart ödemesi tamamlanamadı.'} — Farklı bir kart deneyebilir veya kartının internetten ödemeye açık olup olmadığını bankandan öğrenebilirsin.`;
+  if (has('PROVIDER_FLOW_REQUIRED', 'PROVIDER_NOT_CONFIGURED'))
+    return 'Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.';
+
+  const clean = stripRpcPrefix(raw).trim();
+  return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
+};
+
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) => {
   const {
     paymentContext, setPaymentContext, setLastPaymentError,
@@ -86,6 +126,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const [tempCard, setTempCard] = useState<EphemeralCard | null>(null);
   const [inlineError, setInlineError] = useState('');
   const [result, setResult] = useState<PayResult | null>(null);
+  // Saha vitrini kaporasında rezervasyon yalnız bir kez oluşturulur; tekrar
+  // denemede aynı slot yeniden rezerve edilmesin (SLOT_TAKEN önlenir).
+  const pitchBookingIdRef = useRef<string | null>(null);
 
   // Cüzdan özeti + kayıtlı kartlar
   useEffect(() => {
@@ -164,18 +207,24 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         if (!bookingPitch || !bookingCourt || !bookingDate || !bookingSlot) {
           throw new Error('Rezervasyon bilgileri eksik. Lütfen geri dönüp tekrar deneyin.');
         }
-        const { startTime, endTime } = parseSlotLabel(bookingSlot);
-        const { data: booking, error: bookingErr } = await supabase.rpc('create_pitch_booking', {
-          p_pitch_id: bookingPitch.id,
-          p_court_id: bookingCourt.id,
-          p_booking_date: bookingDate,
-          p_start_time: `${startTime}:00`,
-          p_end_time: `${endTime}:00`,
-          p_source: 'APP_BOOKING',
-          p_title: 'Kullanıcı',
-        });
-        if (bookingErr) throw bookingErr;
-        const bookingId = booking as unknown as string;
+        // Rezervasyonu YALNIZ bir kez oluştur — tekrar denemede aynı slotu yeniden
+        // rezerve etmeye çalışıp SLOT_TAKEN almamak için booking id'yi sakla.
+        let bookingId = pitchBookingIdRef.current;
+        if (!bookingId) {
+          const { startTime, endTime } = parseSlotLabel(bookingSlot);
+          const { data: booking, error: bookingErr } = await supabase.rpc('create_pitch_booking', {
+            p_pitch_id: bookingPitch.id,
+            p_court_id: bookingCourt.id,
+            p_booking_date: bookingDate,
+            p_start_time: `${startTime}:00`,
+            p_end_time: `${endTime}:00`,
+            p_source: 'APP_BOOKING',
+            p_title: 'Kullanıcı',
+          });
+          if (bookingErr) throw bookingErr;
+          bookingId = booking as unknown as string;
+          pitchBookingIdRef.current = bookingId;
+        }
         try {
           const { data, error } = await supabase.rpc('record_app_deposit_payment', {
             p_booking_id: bookingId,
@@ -193,7 +242,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         } catch (e) {
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir;
           // rezervasyon oluştu, tahsilat iyzico sayfasında tamamlanır.
-          if (e instanceof Error && e.message.includes('PROVIDER_FLOW_REQUIRED')) {
+          if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED')) {
             await payBookingDeposit(bookingId);
             return { balanceApplied: 0, cardAmount: amount, intentId: null };
           }
@@ -217,7 +266,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           };
         } catch (e) {
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir
-          if (e instanceof Error && e.message.includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
+          if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
             await payBookingDeposit(ctx.bookingId);
             return { balanceApplied: 0, cardAmount: amount, intentId: null };
           }
@@ -246,8 +295,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       setLastPaymentError(null);
       setScreen('SUCCESS');
     } catch (err) {
-      const raw = err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu.';
-      const msg = stripRpcPrefix(raw);
+      const msg = humanizePaymentError(err);
       setInlineError(msg);
       if (ctx) {
         setLastPaymentError({
@@ -439,26 +487,39 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           </div>
         )}
 
-        {/* Bağlam özet kartı */}
-        <div className={`mx-5 rounded-[20px] p-4 flex items-center gap-3.5 border ${
+        {/* Bağlam özet kartı — dikey ve belirgin (saha kiralamada pin ikonu) */}
+        <div className={`mx-5 rounded-[22px] p-5 border ${
           ctx.isDeposit
             ? 'bg-gradient-to-br from-yellow-400/10 to-[#161B22] border-yellow-400/20'
             : 'bg-gradient-to-br from-green-900/25 to-[#161B22] border-[#39FF14]/20'
         }`}>
-          <div className={`w-[50px] h-[50px] rounded-[14px] flex items-center justify-center shrink-0 border ${
-            ctx.isDeposit ? 'bg-yellow-400/10 border-yellow-400/15 text-[#FACC15]' : 'bg-[#39FF14]/10 border-[#39FF14]/15 text-[#39FF14]'
-          }`}>
-            <Users size={22} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-md mb-1 ${
+          <div className="flex items-center gap-3 mb-3.5">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+              ctx.isDeposit ? 'bg-yellow-400/10 border-yellow-400/20 text-[#FACC15]' : 'bg-[#39FF14]/10 border-[#39FF14]/20 text-[#39FF14]'
+            }`}>
+              {ctx.kind === 'MATCH_JOIN' ? <Users size={24} /> : <MapPin size={24} />}
+            </div>
+            <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-[0.12em] px-2.5 py-1 rounded-lg ${
               ctx.isDeposit ? 'text-[#FACC15] bg-yellow-400/12' : 'text-[#39FF14] bg-[#39FF14]/12'
             }`}>
               {ctx.badge}
             </span>
-            <p className="text-[15px] font-extrabold text-white truncate">{ctx.title}</p>
-            <p className="text-[11px] text-gray-400 font-semibold mt-0.5 truncate">{ctx.subtitle}</p>
           </div>
+          <p className="text-[21px] font-black text-white leading-tight">{ctx.title}</p>
+          {ctx.details && ctx.details.length > 0 ? (
+            <div className="mt-3.5 flex flex-col gap-2.5">
+              {ctx.details.map((d, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <span className={`shrink-0 ${ctx.isDeposit ? 'text-[#FACC15]/80' : 'text-[#39FF14]/80'}`}>
+                    {detailIcon(d.icon)}
+                  </span>
+                  <span className="text-[13.5px] text-gray-100 font-semibold">{d.text}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[12px] text-gray-400 font-semibold mt-2">{ctx.subtitle}</p>
+          )}
         </div>
 
         {/* Tutar */}
@@ -620,6 +681,18 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
 };
 
 // ─── Yardımcılar ──────────────────────────────────────────────────────────────
+
+// Bağlam kartı dikey satır ikonu
+const detailIcon = (kind: 'pin' | 'court' | 'calendar' | 'clock' | 'users') => {
+  const p = { size: 15 };
+  switch (kind) {
+    case 'pin': return <MapPin {...p} />;
+    case 'court': return <LayoutGrid {...p} />;
+    case 'calendar': return <Calendar {...p} />;
+    case 'clock': return <Clock {...p} />;
+    case 'users': return <Users {...p} />;
+  }
+};
 
 const SummaryRow = ({ label, value, dim, mono }: { label: string; value: string; dim?: boolean; mono?: boolean }) => (
   <div className="flex justify-between items-center gap-4 text-[13px]">

@@ -36,15 +36,24 @@ function json(body: unknown, status = 200) {
 // ── iyzico Checkout Form v2 ───────────────────────────────────────────────────
 // Docs: https://dev.iyzipay.com/tr/api/odeme-formu
 
+// iyzico'ya gönderilecek alıcı bilgisi — gerçek kullanıcıdan türetilir.
+// (iyzico ad/soyad ve geçerli formatta kimlik no bekler; eksikse ödeme reddedilebilir.)
+interface Buyer {
+  name: string; surname: string; email: string;
+  identityNumber: string; gsmNumber: string;
+}
+
 async function iyzicoCheckout(
   intent: { id: string; amount: number; currency: string },
   callbackUrl: string,
+  buyer: Buyer,
 ): Promise<{ checkoutUrl: string; token: string }> {
   const apiKey    = Deno.env.get('IYZICO_API_KEY')!
   const secretKey = Deno.env.get('IYZICO_SECRET_KEY')!
   const baseUrl   = Deno.env.get('IYZICO_BASE_URL') ?? 'https://api.iyzipay.com'
 
   const randomString = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+  const contactName = `${buyer.name} ${buyer.surname}`.trim() || 'OYNA Kullanici'
 
   const body = {
     locale: 'tr',
@@ -58,14 +67,14 @@ async function iyzicoCheckout(
     enabledInstallments: [1, 2, 3],
     buyer: {
       id: intent.id,
-      name: 'OYNA', surname: 'Kullanici',
-      email: 'oyuncu@oyna.app',
-      identityNumber: '11111111110',
-      registrationAddress: 'TR', city: 'Istanbul', country: 'Turkey',
-      gsmNumber: '+905000000000',
+      name: buyer.name, surname: buyer.surname,
+      email: buyer.email,
+      identityNumber: buyer.identityNumber,
+      registrationAddress: 'Turkiye', city: 'Istanbul', country: 'Turkey',
+      gsmNumber: buyer.gsmNumber,
     },
-    shippingAddress: { contactName: 'OYNA', city: 'Istanbul', country: 'Turkey', address: 'TR' },
-    billingAddress:  { contactName: 'OYNA', city: 'Istanbul', country: 'Turkey', address: 'TR' },
+    shippingAddress: { contactName, city: 'Istanbul', country: 'Turkey', address: 'Turkiye' },
+    billingAddress:  { contactName, city: 'Istanbul', country: 'Turkey', address: 'Turkiye' },
     basketItems: [{
       id: `booking-${intent.id}`,
       name: 'Saha Kapora',
@@ -106,8 +115,18 @@ async function iyzicoCheckout(
 
 // ── Ana adaptör ───────────────────────────────────────────────────────────────
 
+// Türkçe ad → iyzico name/surname (son boşluktan böl). Boşsa güvenli varsayılan.
+function splitName(full?: string | null): { name: string; surname: string } {
+  const clean = (full ?? '').trim().replace(/\s+/g, ' ')
+  if (!clean) return { name: 'OYNA', surname: 'Kullanici' }
+  const parts = clean.split(' ')
+  if (parts.length === 1) return { name: parts[0], surname: parts[0] }
+  return { name: parts.slice(0, -1).join(' '), surname: parts[parts.length - 1] }
+}
+
 async function createProviderCheckout(
   intent: { id: string; amount: number; currency: string },
+  buyer: Buyer,
 ): Promise<{ provider: string; checkoutUrl: string | null; token: string }> {
   if (PROVIDER === 'SIMULATION') {
     return { provider: 'SIMULATION', checkoutUrl: null, token: intent.id }
@@ -115,7 +134,7 @@ async function createProviderCheckout(
   if (PROVIDER === 'IYZICO') {
     const callbackUrl = Deno.env.get('IYZICO_CALLBACK_URL')
       ?? `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook`
-    const result = await iyzicoCheckout(intent, callbackUrl)
+    const result = await iyzicoCheckout(intent, callbackUrl, buyer)
     return { provider: 'IYZICO', ...result }
   }
   throw new Error(`PROVIDER_NOT_CONFIGURED: Geçersiz PAYMENT_PROVIDER="${PROVIDER}". SIMULATION veya IYZICO olmalı.`)
@@ -154,7 +173,24 @@ Deno.serve(async (req: Request) => {
       })
       if (error) return json({ error: error.message }, 400)
 
-      const checkout = await createProviderCheckout(intent)
+      // Gerçek kullanıcı bilgisiyle alıcı oluştur (iyzico ad/kimlik bekler).
+      const { data: { user } } = await userClient.auth.getUser()
+      const { data: profile } = await userClient
+        .from('profiles')
+        .select('full_name, name, email, phone')
+        .eq('id', user?.id ?? '')
+        .maybeSingle()
+      const { name, surname } = splitName(profile?.full_name ?? profile?.name)
+      const digits = (profile?.phone ?? '').replace(/\D/g, '')
+      const buyer = {
+        name, surname,
+        email: profile?.email || user?.email || 'oyuncu@oyna.app',
+        // Uygulamada TC toplanmıyor → iyzico'nun geçerli test kimlik no'su (sandbox kabul eder).
+        identityNumber: '74300864791',
+        gsmNumber: digits ? `+90${digits.slice(-10)}` : '+905000000000',
+      }
+
+      const checkout = await createProviderCheckout(intent, buyer)
       return json({
         intentId: intent.id,
         amount: intent.amount,
