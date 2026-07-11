@@ -272,13 +272,6 @@ export async function rejectBooking(bookingId: string, reason: string): Promise<
   try {
     const uid = await getCurrentUserId();
 
-    const { data: booking, error: fetchErr } = await supabase
-      .from('pitch_bookings')
-      .select('user_id, pitch_id')
-      .eq('id', bookingId)
-      .single();
-    if (fetchErr) throw fetchErr;
-
     const { error } = await supabase
       .from('pitch_bookings')
       .update({
@@ -290,15 +283,9 @@ export async function rejectBooking(bookingId: string, reason: string): Promise<
       .eq('id', bookingId);
     if (error) throw error;
 
-    const targetUser = (booking as { user_id: string | null } | null)?.user_id;
-    if (targetUser) {
-      await supabase.from('notifications').insert({
-        user_id: targetUser,
-        title: 'Rezervasyonunuz Onaylanmadı',
-        body: reason || 'Tesis sahibi rezervasyonunuzu onaylamadı.',
-        type_key: 'BOOKING_REJECTED',
-      });
-    }
+    // Oyuncuya ret bildirimi DB trigger'ından gelir (notify_booking_events,
+    // PENDING→CANCELLED dalı); notifications INSERT politikası client'ın başka
+    // kullanıcıya yazmasına artık izin vermez.
   } catch (error) {
     console.error('rejectBooking:', error);
     throw new Error(toTurkishError(error));
