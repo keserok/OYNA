@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, SavedPaymentCard, WalletTab, Court, OynaLocation } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
+import type { SavedCard } from './services/walletService';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
 import { auth } from './supabaseAuth';
@@ -70,24 +71,8 @@ export interface AppSettings {
 // (supabaseClient prod fallback'i ile gerçek backend'e bağlıyken mock moda geçmek tehlikeli).
 export const IS_LOCAL_DEV = import.meta.env.VITE_DEV_MODE === 'true';
 
-const SAVED_CARDS_KEY = 'oyna_saved_cards';
-
-function loadSavedCards(): SavedPaymentCard[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(SAVED_CARDS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as SavedPaymentCard[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistSavedCards(cards: SavedPaymentCard[]) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(SAVED_CARDS_KEY, JSON.stringify(cards));
-}
+// Kayıtlı kartlar artık DB-backed (user_saved_cards, RLS) — localStorage mock
+// kaldırıldı; ekranlar walletService.listSavedCards ile doldurur.
 
 // ─── Aktif bölge (konum) kalıcılığı ──────────────────────────────
 // Uygulama açılınca son bölgeyi hemen gösterir (kaynak 'restored' = tahmini),
@@ -339,13 +324,18 @@ interface AppState {
   setBookingPrice: (price: number | null) => void;
   setBookingDeposit: (deposit: number | null) => void;
 
-  savedCards: SavedPaymentCard[];
+  savedCards: SavedCard[];
   walletInitialTab: WalletTab;
   walletPendingDeposit: boolean;
-  addSavedCard: (card: Omit<SavedPaymentCard, 'id'>) => void;
-  removeSavedCard: (id: string) => void;
+  setSavedCards: (cards: SavedCard[]) => void;
   setWalletInitialTab: (tab: WalletTab) => void;
   setWalletPendingDeposit: (pending: boolean) => void;
+
+  // ─── Birleşik ödeme ekranı bağlamı + son ödeme hatası (cüzdan banner'ı) ──
+  paymentContext: PaymentContext | null;
+  setPaymentContext: (ctx: PaymentContext | null) => void;
+  lastPaymentError: PaymentErrorInfo | null;
+  setLastPaymentError: (err: PaymentErrorInfo | null) => void;
 
   // ─── Direct Setters for Firebase Listeners ─────────────────────
   setAdminPitches: (pitches: Pitch[]) => void;
@@ -546,9 +536,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   bookingSlot: null,
   bookingPrice: null,
   bookingDeposit: null,
-  savedCards: loadSavedCards(),
+  savedCards: [],
   walletInitialTab: 'MAIN',
   walletPendingDeposit: false,
+  paymentContext: null,
+  lastPaymentError: null,
   reliabilityScore: 100,
   banExpiresAt: null,
   setReliabilityScore: (score) => set({ reliabilityScore: score }),
@@ -799,23 +791,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setBookingSlot: (bookingSlot) => set({ bookingSlot }),
   setBookingPrice: (bookingPrice) => set({ bookingPrice }),
   setBookingDeposit: (bookingDeposit) => set({ bookingDeposit }),
-  addSavedCard: (card) => {
-    const next: SavedPaymentCard = { ...card, id: `card-${Date.now()}` };
-    set((s) => {
-      const savedCards = [...s.savedCards, next];
-      persistSavedCards(savedCards);
-      return { savedCards };
-    });
-  },
-  removeSavedCard: (id) => {
-    set((s) => {
-      const savedCards = s.savedCards.filter((c) => c.id !== id);
-      persistSavedCards(savedCards);
-      return { savedCards };
-    });
-  },
+  setSavedCards: (savedCards) => set({ savedCards }),
   setWalletInitialTab: (walletInitialTab) => set({ walletInitialTab }),
   setWalletPendingDeposit: (walletPendingDeposit) => set({ walletPendingDeposit }),
+  setPaymentContext: (paymentContext) => set({ paymentContext }),
+  setLastPaymentError: (lastPaymentError) => set({ lastPaymentError }),
 
   // Direct Firebase Listener Setters
   initialLoadComplete: false,

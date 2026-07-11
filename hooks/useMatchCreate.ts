@@ -4,7 +4,7 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { getTeamSquad } from '../services/teamSocialService';
-import { blockMatchDeposit, DeferredProvider } from '../services/matchLifecycleService';
+import { DeferredProvider } from '../services/matchLifecycleService';
 import { FORMATIONS, defaultFormation, type SquadSize } from '../utils/formations';
 import { roleShort } from '../shared/lobbyEnrichment';
 
@@ -427,15 +427,30 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             targetId = await addMatch(matchData);
         }
 
-        // Escrow: kaporayı BLOKE et (çekilmez) → maç aktifleşir + ertelenmiş
-        // kaleci/hakem talepleri gönderilir. Eşik (toplam−2) dolunca capture edilir.
-        // Best-effort: blokaj başarısız olsa da maç oluşturulmuş kalır (kullanıcı lobide tekrar dener).
-        if (targetId && matchDeposit > 0) {
-          try {
-            await blockMatchDeposit(targetId, matchDeposit, deferredProviders);
-          } catch (e) {
-            console.warn('[useMatchCreate] kapora blokajı yapılamadı:', e);
-          }
+        // Escrow: kapora artık birleşik ödeme ekranında BLOKE edilir (tasarım 1b,
+        // bağlam: MAÇ OLUŞTUR → KAPORA). Blokaj karta yapılır — bakiye kullanılamaz;
+        // maç dolmazsa blokaj otomatik kalkar. deferredProviders blokajla gönderilir.
+        const goesToPayment = !!targetId && matchDeposit > 0;
+        if (goesToPayment && targetId) {
+          const store = useAppStore.getState();
+          const baseMatch = (isDraftMode && draftMatch ? draftMatch : matchData) as unknown as MatchListing;
+          setSelectedMatch({ ...baseMatch, id: targetId, ...(isPrivate ? { visibility: 'PRIVATE' as const } : {}) });
+          store.setPaymentContext({
+            kind: 'MATCH_CREATE_DEPOSIT',
+            badge: 'MAÇ OLUŞTUR',
+            title: matchData.title,
+            subtitle: `${selectedPitch?.name || 'Saha'} · ${selectedTimeSlot?.date || ''} ${selectedTimeSlot?.time || ''}`.trim(),
+            amount: matchDeposit,
+            amountLabel: 'Ödenecek Kapora',
+            amountHint: 'Kapora ile saha sana kilitlenir; oyuncular katıldıkça payını geri alırsın.',
+            isDeposit: true,
+            allowBalance: false,
+            successTitle: 'Kapora Onaylandı!',
+            successSubtitle: 'Saha sana kilitlendi',
+            infoNote: 'Kapora kartına bloke edilir, hemen çekilmez. Maç dolunca tahsil edilir; dolmazsa otomatik serbest bırakılır.',
+            matchId: targetId,
+            deferredProviders,
+          });
         }
 
         // Add user notifications for pending players
@@ -455,8 +470,11 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             }
         });
 
-        // FAZ 3: Özel maçta kullanıcıyı doğrudan lobiye götür ki katılım kodunu görüp paylaşsın.
-        if (isPrivate && targetId) {
+        // Kapora gerekiyorsa ödeme ekranına; yoksa eski akış (özel maç → lobi).
+        if (goesToPayment) {
+            onNavigate('PAYMENT');
+        } else if (isPrivate && targetId) {
+            // FAZ 3: Özel maçta kullanıcıyı doğrudan lobiye götür ki katılım kodunu görüp paylaşsın.
             const baseMatch = (isDraftMode && draftMatch ? draftMatch : matchData) as unknown as MatchListing;
             setSelectedMatch({ ...baseMatch, id: targetId, visibility: 'PRIVATE' });
             onNavigate('MATCH_JOIN');

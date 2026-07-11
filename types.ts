@@ -94,7 +94,46 @@ export interface SavedPaymentCard {
   holder: string;
 }
 
-export type WalletTab = 'MAIN' | 'CARD_SETTINGS';
+export type WalletTab = 'MAIN' | 'CARD_SETTINGS' | 'TOPUP' | 'HISTORY';
+
+// ─── Birleşik ödeme ekranı (tek ekran, üç bağlam) ────────────────────────────
+// Bağlam yalnız başlık/rozet/tutar etiketini değiştirir; düzen sabittir.
+export type PaymentContextKind =
+  | 'MATCH_JOIN'            // maça katılım (slot satın alma)
+  | 'PITCH_DEPOSIT'         // saha vitrini → kapora (rezervasyon + kapora birlikte)
+  | 'BOOKING_DEPOSIT'       // mevcut rezervasyonun kaporası (Rezervasyonlarım)
+  | 'MATCH_CREATE_DEPOSIT'; // maç oluşturma → kapora (karta BLOKE edilir)
+
+export interface PaymentContext {
+  kind: PaymentContextKind;
+  /** Bağlam rozeti: 'MAÇA KATILIM · 2 SLOT' / 'SAHA KİRALAMA' / 'MAÇ OLUŞTUR' */
+  badge: string;
+  title: string;
+  subtitle: string;
+  amount: number;
+  /** 'Ödenecek Tutar' | 'Ödenecek Kapora' */
+  amountLabel: string;
+  amountHint?: string;
+  /** Kapora dili: buton 'KAPORA ÖDE', işleme 'KAPORA İŞLENİYOR' */
+  isDeposit: boolean;
+  /** OYNA bakiyesi bu bağlamda kullanılabilir mi (escrow blokajda false) */
+  allowBalance: boolean;
+  successTitle: string;
+  successSubtitle: string;
+  /** Kapora güven notu vb. (ör. 'Maç dolmazsa otomatik iade edilir.') */
+  infoNote?: string;
+  matchId?: string;
+  slotIds?: string[];
+  bookingId?: string;
+  deferredProviders?: unknown[];
+}
+
+export interface PaymentErrorInfo {
+  message: string;
+  contextKind: PaymentContextKind | 'TOP_UP';
+  title: string;
+  at: number;
+}
 
 export interface PlayerStat {
   value: number;
