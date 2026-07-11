@@ -11,7 +11,6 @@ import {
   type MyBooking,
   type CancelResult,
 } from '../services/playerBookingService';
-import { payBookingDeposit, toPaymentErrorMessage } from '../services/paymentService';
 import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
@@ -77,23 +76,28 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
   const [payOkId, setPayOkId] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
 
-  const handlePayDeposit = async (b: MyBooking) => {
-    setPayingId(b.id);
-    setPayError(null);
-    try {
-      const res = await payBookingDeposit(b.id);
-      if (!res.redirected) {
-        setPayOkId(b.id);
-        await load();
-        setTimeout(() => setPayOkId(null), 2500);
-      }
-    } catch (err) {
-      console.error('Kapora ödeme hatası:', err);
-      setPayError(toPaymentErrorMessage(err));
-      setTimeout(() => setPayError(null), 5000);
-    } finally {
-      setPayingId(null);
-    }
+  // Kapora ödemesi → birleşik ödeme ekranı (bakiye + kart bölüşümü).
+  // Canlı (IYZICO) modda ekran, tahsilatı otomatik olarak hosted checkout'a yönlendirir.
+  const handlePayDeposit = (b: MyBooking) => {
+    const remaining = Math.max((b.deposit_amount || 0) - (b.paid_amount || 0), 0);
+    if (remaining <= 0) return;
+    const store = useAppStore.getState();
+    store.setPaymentContext({
+      kind: 'BOOKING_DEPOSIT',
+      badge: 'SAHA KİRALAMA',
+      title: b.pitches?.name || 'Saha Rezervasyonu',
+      subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${b.booking_date} · ${b.start_time?.slice(0, 5) ?? ''}`,
+      amount: remaining,
+      amountLabel: 'Ödenecek Kapora',
+      amountHint: b.price ? `Saha ücreti ₺${b.price.toLocaleString('tr-TR')} · kalan tesiste ödenir` : undefined,
+      isDeposit: true,
+      allowBalance: true,
+      successTitle: 'Kapora Onaylandı!',
+      successSubtitle: 'Rezervasyon güvende',
+      infoNote: 'Kapora rezervasyonunu güvenceye alır. İptal koşulları tesis politikasına göre uygulanır.',
+      bookingId: b.id,
+    });
+    navigateTo('PAYMENT');
   };
 
   const load = useCallback(async () => {

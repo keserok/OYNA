@@ -84,6 +84,9 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               .insert({
                   owner_id: ownerId,
                   name: facilityName.trim(),
+                  // address NOT NULL — kullanıcının yazdığı ham konum en doğru kaynak;
+                  // eksik bırakılırsa tesis kaydı daha ilk adımda patlıyordu.
+                  address: cityRaw.trim() || [district, city].filter(Boolean).join(', '),
                   city,
                   district,
                   price_per_match: basePrice,
@@ -127,18 +130,9 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               { pitch_id: pitchId, name: 'Hafta Sonu', tariff_type: 'WEEKEND', applies_to_days: [6, 7], start_time: '08:00', end_time: '00:00', price_per_hour: Math.round(basePrice * 1.2), deposit_amount: Math.round(basePrice * 0.4), sort_order: 2 },
           ]);
 
-          // 4. Adminlere bildirim
-          const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'ADMIN');
-          if (admins && admins.length > 0) {
-              await supabase.from('notifications').insert(
-                  (admins as { id: string }[]).map((a) => ({
-                      user_id: a.id,
-                      title: 'Yeni Tesis Onay Bekliyor',
-                      body: `${facilityName.trim()} tesisi onayınızı bekliyor.`,
-                      type_key: 'PITCH_VERIFICATION_REQUEST',
-                  })),
-              );
-          }
+          // 4. Adminlere bildirim: DB trigger'ı üretir
+          // (trg_notify_admins_pitch_verification_request — pending insert'te
+          // tetiklenir; client bağlantıyı kaybetse bile bildirim garantidir).
 
           setLoadingStep(2);
 

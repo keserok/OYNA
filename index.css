@@ -56,6 +56,16 @@
 .pt-safe     { padding-top:    calc(var(--safe-top) + 1rem); }
 .pb-safe-nav { padding-bottom: calc(var(--safe-bottom) + 7.5rem); }
 
+/* Tutar / kart no / IBAN rakamları — tasarım tokenı (Space Grotesk index.html'de yüklü) */
+.font-numeric { font-family: "Space Grotesk", "Inter", ui-monospace, monospace; }
+
+/* Ödeme "işleniyor" halkası (PaymentScreen SVG inline animasyonu) */
+@keyframes oy-spin { to { transform: rotate(360deg); } }
+
+/* Yatay yöntem karuseli (ödeme ekranı) — scrollbar gizli */
+.oy-carousel { scrollbar-width: none; }
+.oy-carousel::-webkit-scrollbar { display: none; }
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

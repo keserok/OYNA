@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.js"></script>
+<style>
+  html, body { margin: 0; background: #05070b; }
+  a { color: #39FF14; text-decoration: none; }
+  a:hover { color: #70ff56; }
+  .lucide { stroke-width: 2; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+  .oy-carousel::-webkit-scrollbar { height: 0; }
+</style>
+</helmet>
+<div lang="tr" style="min-height:100vh;background:radial-gradient(1200px 600px at 15% -5%, rgba(57,255,20,0.05), transparent), radial-gradient(1000px 600px at 100% 8%, rgba(250,204,21,0.05), transparent), #05070b;color:#fff;font-family:Inter,sans-serif;padding:56px 64px 160px;box-sizing:border-box">
+
+  <header style="max-width:940px;margin-bottom:56px">
+    <span style="display:inline-block;font-family:'Space Grotesk',monospace;font-size:12px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#0A0E14;background:#39FF14;padding:6px 12px;border-radius:8px;margin-bottom:20px">Cüzdan · Role Göre İki Yapı</span>
+    <h1 style="font-size:46px;line-height:1.04;font-weight:900;letter-spacing:-0.02em;margin:0 0 16px">OYNA Cüzdan<br><span style="color:#8B949E">oyuncu yükler, kaleci &amp; hakem kazanır</span></h1>
+    <p style="font-size:16px;line-height:1.6;color:#8B949E;max-width:720px;margin:0">Profildeki cüzdan butonundan açılır. <span style="color:#39FF14;font-weight:600">Oyuncuda</span> para yükleme var, kazanç yok. <span style="color:#FACC15;font-weight:600">Kaleci &amp; hakemde</span> kazanç ve IBAN'a çekim var, para yükleme yok. Oyuncu ekranının <span style="color:#fff">2 varyasyonu</span> aşağıda.</p>
+  </header>
+
+  <!-- ═══════════ SECTION: PLAYER WALLET (2 VARIATIONS) ═══════════ -->
+  <section style="margin-bottom:88px">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:20px">
+      <span style="font-family:'Space Grotesk',monospace;font-size:22px;font-weight:700;color:#39FF14">01</span>
+      <div><h2 style="font-size:26px;font-weight:900;margin:0 0 4px">Cüzdan — Oyuncu</h2><p style="font-size:14px;color:#8B949E;margin:0;font-family:'Space Grotesk',monospace">para yükle + iade kredisi · kazanç yok · 2 varyasyon</p></div>
+    </div>
+    <div style="display:flex;gap:56px;flex-wrap:wrap;margin-top:32px">
+
+      <!-- ───── 2a: PREMIUM HERO ───── -->
+      <div id="2a" style="display:flex;flex-direction:column;gap:16px;scroll-margin:80px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-family:'Space Grotesk',monospace;font-size:13px;font-weight:700;color:#0A0E14;background:#39FF14;padding:4px 12px;border-radius:8px">2a</span>
+          <div><p style="font-size:16px;font-weight:800;margin:0">Tek Bakiye Kartı · Premium</p><p style="font-size:13px;color:#8B949E;margin:2px 0 0">Fintech dili: büyük bakiye kartı, sade eylem hapları.</p></div>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden">
+            <header style="display:flex;justify-content:space-between;align-items:center;padding:56px 20px 14px;flex-shrink:0">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <h1 style="font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:0.16em;margin:0">Cüzdan</h1>
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="clock" width="18" height="18"></i></div>
+            </header>
+            <main style="flex:1;overflow:auto;padding:8px 20px 20px">
+              <!-- hero balance card -->
+              <div style="border-radius:26px;padding:22px;background:linear-gradient(140deg,#0f3d24,#0a1712 75%);border:1px solid rgba(57,255,20,0.25);position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+                <div style="position:absolute;top:-40px;right:-30px;width:180px;height:180px;background:rgba(57,255,20,0.14);filter:blur(60px);border-radius:9999px"></div>
+                <div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start">
+                  <div>
+                    <p style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:#8fe87a;margin:0">Yüklenen Bakiye</p>
+                    <p style="font-size:40px;font-weight:900;line-height:1;margin:12px 0 0;font-family:'Space Grotesk',monospace">450,00₺</p>
+                  </div>
+                  <span style="font-family:'Space Grotesk',monospace;font-weight:700;font-size:13px;letter-spacing:0.08em;color:#39FF14;border:1px solid rgba(57,255,20,0.4);border-radius:8px;padding:4px 8px">OYNA</span>
+                </div>
+                <div style="position:relative;margin-top:20px;display:flex;align-items:center;gap:8px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.25);border-radius:12px;padding:9px 12px;width:fit-content">
+                  <i data-lucide="gift" width="14" height="14" style="color:#60A5FA"></i>
+                  <span style="font-size:12px;font-weight:700;color:#93c5fd">İade Kredisi <span style="color:#fff">300,00₺</span></span>
+                </div>
+              </div>
+
+              <!-- action pills -->
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button style="flex:1;padding:14px 8px;background:#39FF14;color:#0A0E14;border:none;border-radius:16px;font-weight:900;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;box-shadow:0 0 24px rgba(57,255,20,0.22)"><i data-lucide="plus" width="20" height="20"></i> Para Yükle</button>
+                <button style="flex:1;padding:14px 8px;background:#161B22;color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:16px;font-weight:800;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer"><i data-lucide="credit-card" width="20" height="20"></i> Kart Yönet</button>
+                <button style="flex:1;padding:14px 8px;background:#161B22;color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:16px;font-weight:800;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer"><i data-lucide="list" width="20" height="20"></i> Geçmiş</button>
+              </div>
+
+              <!-- saved cards mini carousel -->
+              <div style="margin-top:22px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#6B7280;margin:0">Kayıtlı Kartlar</p><span style="font-size:11px;color:#39FF14;font-weight:700">Tümü</span></div>
+                <div class="oy-carousel" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px">
+                  <div style="flex-shrink:0;width:200px;height:120px;border-radius:18px;padding:16px;background:linear-gradient(135deg,#4c1d95,#2563eb);position:relative;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 10px 24px rgba(37,99,235,0.3)">
+                    <div style="display:flex;justify-content:space-between;align-items:center"><div style="width:34px;height:24px;border-radius:5px;background:linear-gradient(135deg,#facc15,#ca8a04)"></div><span style="font-size:10px;font-weight:900;font-style:italic;color:#fff">VISA</span></div>
+                    <div><p style="font-size:14px;font-weight:700;font-family:'Space Grotesk',monospace;letter-spacing:0.1em;margin:0">•••• 4242</p><p style="font-size:9px;color:rgba(255,255,255,0.7);margin:4px 0 0;text-transform:uppercase">Varsayılan · 08/28</p></div>
+                  </div>
+                  <div style="flex-shrink:0;width:200px;height:120px;border-radius:18px;padding:16px;background:linear-gradient(135deg,#065f46,#0f766e);display:flex;flex-direction:column;justify-content:space-between">
+                    <div style="display:flex;justify-content:space-between;align-items:center"><div style="width:34px;height:24px;border-radius:5px;background:linear-gradient(135deg,#facc15,#ca8a04)"></div><span style="font-size:9px;font-weight:900;color:#fff">mastercard</span></div>
+                    <div><p style="font-size:14px;font-weight:700;font-family:'Space Grotesk',monospace;letter-spacing:0.1em;margin:0">•••• 8888</p><p style="font-size:9px;color:rgba(255,255,255,0.7);margin:4px 0 0;text-transform:uppercase">04/27</p></div>
+                  </div>
+                  <div style="flex-shrink:0;width:80px;height:120px;border-radius:18px;border:1.5px dashed rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;color:#9CA3AF"><i data-lucide="plus" width="22" height="22"></i></div>
+                </div>
+              </div>
+
+              <!-- transactions -->
+              <div style="margin-top:22px">
+                <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#6B7280;margin:0 0 12px">Son İşlemler</p>
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(57,255,20,0.1);display:flex;align-items:center;justify-content:center;color:#39FF14"><i data-lucide="plus" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Para yükleme</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">09.07 · 14:20 · •••• 4242</p></div></div>
+                    <p style="font-weight:900;font-size:14px;color:#39FF14;margin:0">+500₺</p>
+                  </div>
+                  <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;color:#94A3B8"><i data-lucide="users" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Maça katılım</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">08.07 · 21:00 · Cuma Halısaha</p></div></div>
+                    <p style="font-weight:900;font-size:14px;color:#fff;margin:0">−300₺</p>
+                  </div>
+                  <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(96,165,250,0.12);display:flex;align-items:center;justify-content:center;color:#60A5FA"><i data-lucide="rotate-ccw" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">İade kredisi</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">06.07 · Maç iptali</p></div></div>
+                    <p style="font-weight:900;font-size:14px;color:#60A5FA;margin:0">+300₺</p>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- ───── 2b: DASHBOARD ───── -->
+      <div id="2b" style="display:flex;flex-direction:column;gap:16px;scroll-margin:80px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-family:'Space Grotesk',monospace;font-size:13px;font-weight:700;color:#0A0E14;background:#FACC15;padding:4px 12px;border-radius:8px">2b</span>
+          <div><p style="font-size:16px;font-weight:800;margin:0">İki Bakiye Panosu · Yapısal</p><p style="font-size:13px;color:#8B949E;margin:2px 0 0">Mevcut app diline yakın; yüklenen + iade ayrı görünür.</p></div>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden;position:relative">
+            <div style="position:absolute;top:-40px;left:-40px;width:200px;height:200px;background:rgba(57,255,20,0.08);filter:blur(120px);border-radius:9999px;pointer-events:none"></div>
+            <header style="display:flex;justify-content:space-between;align-items:center;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;position:relative;z-index:2">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <h1 style="font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:0.16em;display:flex;align-items:center;gap:8px;margin:0"><span style="color:#39FF14"><i data-lucide="wallet" width="17" height="17"></i></span> Cüzdan</h1>
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="refresh-cw" width="17" height="17"></i></div>
+            </header>
+            <main style="flex:1;overflow:auto;padding:20px;position:relative;z-index:1">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div style="background:linear-gradient(135deg,rgba(20,83,45,0.4),#161B22);border:1px solid rgba(57,255,20,0.25);border-radius:20px;padding:16px;box-shadow:0 0 20px rgba(57,255,20,0.08)">
+                  <div style="display:flex;align-items:center;gap:6px;color:#39FF14;margin-bottom:10px"><i data-lucide="wallet" width="15" height="15"></i><span style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em">Yüklenen</span></div>
+                  <p style="font-size:23px;font-weight:900;margin:0;font-family:'Space Grotesk',monospace;line-height:1">450,00₺</p>
+                  <p style="font-size:10px;color:#4B5563;margin:6px 0 0">Ödemelerde kullanılır</p>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(30,58,138,0.35),#161B22);border:1px solid rgba(59,130,246,0.25);border-radius:20px;padding:16px">
+                  <div style="display:flex;align-items:center;gap:6px;color:#60A5FA;margin-bottom:10px"><i data-lucide="gift" width="15" height="15"></i><span style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em">İade Kredisi</span></div>
+                  <p style="font-size:23px;font-weight:900;margin:0;font-family:'Space Grotesk',monospace;line-height:1">300,00₺</p>
+                  <p style="font-size:10px;color:#4B5563;margin:6px 0 0">Yalnızca OYNA içi</p>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;margin-top:14px">
+                <button style="flex:1;padding:13px 8px;background:#39FF14;color:#0A0E14;border:none;border-radius:14px;font-weight:900;font-size:12.5px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer"><i data-lucide="plus" width="18" height="18"></i> Para Yükle</button>
+                <button style="flex:1;padding:13px 8px;background:#161B22;color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:14px;font-weight:800;font-size:12.5px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer"><i data-lucide="credit-card" width="18" height="18"></i> Kart Yönet</button>
+                <button style="flex:1;padding:13px 8px;background:#161B22;color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:14px;font-weight:800;font-size:12.5px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer"><i data-lucide="list" width="18" height="18"></i> Geçmiş</button>
+              </div>
+
+              <div style="margin-top:20px;display:flex;background:#161B22;padding:4px;border-radius:14px;border:1px solid rgba(255,255,255,0.05);gap:4px">
+                <button style="flex:1;padding:9px;border-radius:11px;font-size:12px;font-weight:900;background:#0A0E14;color:#fff;border:1px solid rgba(255,255,255,0.1);cursor:pointer">İşlemler</button>
+                <button style="flex:1;padding:9px;border-radius:11px;font-size:12px;font-weight:800;background:none;color:#6B7280;border:none;cursor:pointer">Kartlarım</button>
+              </div>
+
+              <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(57,255,20,0.1);display:flex;align-items:center;justify-content:center;color:#39FF14"><i data-lucide="plus" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Para yükleme</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">09.07 · 14:20</p></div></div><p style="font-weight:900;font-size:14px;color:#39FF14;margin:0">+500₺</p></div>
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;color:#94A3B8"><i data-lucide="users" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Maça katılım</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">08.07 · Cuma Halısaha</p></div></div><p style="font-weight:900;font-size:14px;color:#fff;margin:0">−300₺</p></div>
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(96,165,250,0.12);display:flex;align-items:center;justify-content:center;color:#60A5FA"><i data-lucide="rotate-ccw" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">İade kredisi</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">06.07 · Maç iptali</p></div></div><p style="font-weight:900;font-size:14px;color:#60A5FA;margin:0">+300₺</p></div>
+              </div>
+            </main>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════ SECTION: KEEPER / REFEREE WALLET ═══════════ -->
+  <section style="margin-bottom:88px">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:20px">
+      <span style="font-family:'Space Grotesk',monospace;font-size:22px;font-weight:700;color:#FACC15">02</span>
+      <div><h2 style="font-size:26px;font-weight:900;margin:0 0 4px">Cüzdan — Kaleci &amp; Hakem</h2><p style="font-size:14px;color:#8B949E;margin:0;font-family:'Space Grotesk',monospace">kazanç + IBAN'a çek · para yükleme yok</p></div>
+    </div>
+    <div style="display:flex;gap:56px;flex-wrap:wrap;margin-top:32px">
+
+      <!-- keeper wallet -->
+      <div style="display:flex;flex-direction:column;gap:14px;align-items:center">
+        <span style="font-family:'Space Grotesk',monospace;font-size:11px;font-weight:600;color:#FACC15;text-transform:uppercase;letter-spacing:0.16em">Kazanç Cüzdanı</span>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden">
+            <header style="display:flex;justify-content:space-between;align-items:center;padding:56px 20px 14px;flex-shrink:0">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <div style="display:flex;flex-direction:column;align-items:center"><h1 style="font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:0.16em;margin:0">Cüzdan</h1><span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#FACC15;background:rgba(250,204,21,0.12);padding:2px 8px;border-radius:6px;margin-top:4px">Kaleci</span></div>
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="clock" width="18" height="18"></i></div>
+            </header>
+            <main style="flex:1;overflow:auto;padding:8px 20px 20px">
+              <!-- earnings hero -->
+              <div style="border-radius:26px;padding:22px;background:linear-gradient(140deg,#3d3400,#0a1712 75%);border:1px solid rgba(250,204,21,0.28);position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+                <div style="position:absolute;top:-40px;right:-30px;width:180px;height:180px;background:rgba(250,204,21,0.14);filter:blur(60px);border-radius:9999px"></div>
+                <div style="position:relative">
+                  <p style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:#e8d27a;margin:0">Çekilebilir Kazanç</p>
+                  <p style="font-size:40px;font-weight:900;line-height:1;margin:12px 0 0;font-family:'Space Grotesk',monospace">1.250,00₺</p>
+                  <div style="display:flex;gap:8px;margin-top:16px">
+                    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:8px 12px"><p style="font-size:9px;color:#9CA3AF;margin:0;text-transform:uppercase;letter-spacing:0.08em">Bu ay</p><p style="font-size:13px;font-weight:800;margin:2px 0 0">8 maç</p></div>
+                    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:8px 12px"><p style="font-size:9px;color:#9CA3AF;margin:0;text-transform:uppercase;letter-spacing:0.08em">Kazanç</p><p style="font-size:13px;font-weight:800;margin:2px 0 0;color:#FACC15">+1.250₺</p></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- actions: NO top-up -->
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button style="flex:2;padding:15px 8px;background:#39FF14;color:#0A0E14;border:none;border-radius:16px;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 0 24px rgba(57,255,20,0.22)"><i data-lucide="arrow-up-right" width="19" height="19"></i> IBAN'a Çek</button>
+                <button style="flex:1;padding:15px 8px;background:#161B22;color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:16px;font-weight:800;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer"><i data-lucide="list" width="19" height="19"></i> Geçmiş</button>
+              </div>
+
+              <!-- IBAN saved -->
+              <div style="margin-top:16px;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:15px;display:flex;align-items:center;gap:12px">
+                <div style="width:38px;height:38px;border-radius:11px;background:rgba(57,255,20,0.1);display:flex;align-items:center;justify-content:center;color:#39FF14;flex-shrink:0"><i data-lucide="landmark" width="18" height="18"></i></div>
+                <div style="flex:1;min-width:0"><p style="font-size:12px;font-weight:800;margin:0">Kayıtlı IBAN</p><p style="font-size:11px;color:#6B7280;margin:2px 0 0;font-family:'Space Grotesk',monospace">TR•• •••• •••• 3487</p></div>
+                <span style="font-size:11px;color:#39FF14;font-weight:700">Değiştir</span>
+              </div>
+
+              <!-- transactions -->
+              <div style="margin-top:22px">
+                <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#6B7280;margin:0 0 12px">Kazanç Geçmişi</p>
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(250,204,21,0.12);display:flex;align-items:center;justify-content:center;color:#FACC15"><i data-lucide="shield" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Maç kalecisi</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">09.07 · 20:00 · Yıldız Saha</p></div></div><p style="font-weight:900;font-size:14px;color:#FACC15;margin:0">+180₺</p></div>
+                  <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;color:#F87171"><i data-lucide="arrow-up-right" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">IBAN çekimi</p><div style="display:flex;align-items:center;gap:6px;margin-top:2px"><p style="color:#4B5563;font-size:10px;margin:0">08.07 · 11:30</p><span style="font-size:8.5px;color:#FACC15;background:rgba(250,204,21,0.12);padding:1px 6px;border-radius:9999px;font-weight:700">Beklemede</span></div></div></div><p style="font-weight:900;font-size:14px;color:#F87171;margin:0">−800₺</p></div>
+                  <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(250,204,21,0.12);display:flex;align-items:center;justify-content:center;color:#FACC15"><i data-lucide="shield" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Maç kalecisi</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">07.07 · 22:00 · Arena</p></div></div><p style="font-weight:900;font-size:14px;color:#FACC15;margin:0">+200₺</p></div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- IBAN withdraw sheet -->
+      <div style="display:flex;flex-direction:column;gap:14px;align-items:center">
+        <span style="font-family:'Space Grotesk',monospace;font-size:11px;font-weight:600;color:#8B949E;text-transform:uppercase;letter-spacing:0.16em">IBAN'a Çek</span>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden">
+            <header style="display:flex;align-items:center;gap:14px;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <div><h1 style="font-size:17px;font-weight:900;margin:0">IBAN'A ÇEK</h1><p style="font-size:11px;color:#6B7280;font-weight:600;margin:2px 0 0">Kazancını hesabına aktar</p></div>
+            </header>
+            <main style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:18px">
+              <div style="text-align:center;padding:8px 0">
+                <p style="font-size:11px;color:#9CA3AF;font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.1em">Çekilebilir Kazanç</p>
+                <p style="font-size:40px;font-weight:900;line-height:1;margin:0;font-family:'Space Grotesk',monospace">1.250,00₺</p>
+              </div>
+              <div>
+                <label style="font-size:10px;color:#6B7280;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:8px">Çekilecek Tutar</label>
+                <div style="background:#161B22;border:1px solid rgba(57,255,20,0.3);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:26px;font-weight:900;font-family:'Space Grotesk',monospace">1.250</span><span style="font-size:20px;font-weight:800;color:#6B7280">₺</span></div>
+                <div style="display:flex;gap:8px;margin-top:10px"><button style="flex:1;padding:8px;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#D1D5DB;font-size:12px;font-weight:700;cursor:pointer">500₺</button><button style="flex:1;padding:8px;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#D1D5DB;font-size:12px;font-weight:700;cursor:pointer">1.000₺</button><button style="flex:1;padding:8px;background:rgba(57,255,20,0.12);border:1px solid rgba(57,255,20,0.4);border-radius:10px;color:#39FF14;font-size:12px;font-weight:800;cursor:pointer">Tümü</button></div>
+              </div>
+              <div>
+                <label style="font-size:10px;color:#6B7280;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:8px">Hedef IBAN</label>
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:15px;display:flex;align-items:center;gap:12px"><div style="width:34px;height:34px;border-radius:10px;background:rgba(57,255,20,0.1);display:flex;align-items:center;justify-content:center;color:#39FF14;flex-shrink:0"><i data-lucide="landmark" width="16" height="16"></i></div><div style="flex:1"><p style="font-size:13px;font-weight:800;margin:0;font-family:'Space Grotesk',monospace">TR•• •••• •••• 3487</p><p style="font-size:10px;color:#6B7280;margin:2px 0 0">Ziraat Bankası · Kaleci Adı</p></div><i data-lucide="chevron-down" width="16" height="16" style="color:#4B5563"></i></div>
+              </div>
+              <div style="background:#0f1419;border:1px solid rgba(96,165,250,0.2);border-radius:14px;padding:14px;display:flex;gap:10px"><span style="color:#60A5FA;flex-shrink:0"><i data-lucide="info" width="15" height="15"></i></span><p style="font-size:11.5px;color:#9CA3AF;line-height:1.55;margin:0">Talepler <span style="color:#fff;font-weight:600">1–2 iş günü</span> içinde işleme alınır. İşlem ücreti yoktur.</p></div>
+            </main>
+            <div style="flex-shrink:0;padding:14px 20px 30px;border-top:1px solid rgba(255,255,255,0.05)"><button style="width:100%;padding:16px;background:#39FF14;color:#0A0E14;font-weight:900;font-size:16px;border:none;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><i data-lucide="arrow-up-right" width="18" height="18"></i> 1.250₺ ÇEKİM TALEP ET</button></div>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════ SECTION: FLOWS (TOP-UP / CARD MGMT / HISTORY) ═══════════ -->
+  <section>
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:20px">
+      <span style="font-family:'Space Grotesk',monospace;font-size:22px;font-weight:700;color:#39FF14">03</span>
+      <div><h2 style="font-size:26px;font-weight:900;margin:0 0 4px">Cüzdan Akışları</h2><p style="font-size:14px;color:#8B949E;margin:0;font-family:'Space Grotesk',monospace">para yükle · kart yönetimi · işlem geçmişi</p></div>
+    </div>
+    <div style="display:flex;gap:44px;flex-wrap:wrap;margin-top:32px">
+
+      <!-- TOP-UP -->
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+        <span style="font-family:'Space Grotesk',monospace;font-size:11px;font-weight:600;color:#39FF14;text-transform:uppercase;letter-spacing:0.16em">Para Yükle</span>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden">
+            <header style="display:flex;align-items:center;gap:14px;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <div><h1 style="font-size:17px;font-weight:900;margin:0">PARA YÜKLE</h1><p style="font-size:11px;color:#6B7280;font-weight:600;margin:2px 0 0">OYNA bakiyene ekle</p></div>
+            </header>
+            <main style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:20px">
+              <div style="text-align:center;padding:4px 0">
+                <p style="font-size:11px;color:#9CA3AF;font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.1em">Yüklenecek Tutar</p>
+                <p style="font-size:46px;font-weight:900;line-height:1;margin:0;font-family:'Space Grotesk',monospace">500₺</p>
+                <p style="font-size:11px;color:#39FF14;margin:8px 0 0;font-weight:600">Yeni bakiye: 950,00₺</p>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div style="padding:16px 8px;border-radius:14px;background:#161B22;border:1px solid rgba(255,255,255,0.08);text-align:center;font-weight:800;font-size:15px;font-family:'Space Grotesk',monospace">300₺</div>
+                <div style="padding:16px 8px;border-radius:14px;background:rgba(57,255,20,0.12);border:2px solid #39FF14;text-align:center;font-weight:900;font-size:15px;font-family:'Space Grotesk',monospace;color:#39FF14;box-shadow:0 0 18px rgba(57,255,20,0.15)">500₺</div>
+                <div style="padding:16px 8px;border-radius:14px;background:#161B22;border:1px solid rgba(255,255,255,0.08);text-align:center;font-weight:800;font-size:15px;font-family:'Space Grotesk',monospace">750₺</div>
+                <div style="padding:16px 8px;border-radius:14px;background:#161B22;border:1px solid rgba(255,255,255,0.08);text-align:center;font-weight:800;font-size:15px;font-family:'Space Grotesk',monospace">1.000₺</div>
+                <div style="padding:16px 8px;border-radius:14px;background:#161B22;border:1px solid rgba(255,255,255,0.08);text-align:center;font-weight:800;font-size:15px;font-family:'Space Grotesk',monospace">1.500₺</div>
+                <div style="padding:16px 8px;border-radius:14px;background:#161B22;border:1px dashed rgba(255,255,255,0.16);text-align:center;font-weight:800;font-size:13px;color:#9CA3AF;display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="pencil" width="13" height="13"></i> Özel</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;padding:0 2px"><span style="color:#6B7280"><i data-lucide="info" width="13" height="13"></i></span><p style="font-size:11px;color:#6B7280;margin:0">Minimum yükleme tutarı 300₺'dir.</p></div>
+              <div>
+                <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#6B7280;margin:0 0 12px">Ödeme Yöntemi</p>
+                <div style="display:flex;align-items:center;gap:13px;background:#161B22;border:2px solid #39FF14;border-radius:16px;padding:14px;box-shadow:0 0 18px rgba(57,255,20,0.12)">
+                  <div style="width:44px;height:30px;border-radius:6px;background:linear-gradient(135deg,#7c3aed,#2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:8px;font-weight:900;color:#fff;font-style:italic">VISA</span></div>
+                  <div style="flex:1"><p style="font-size:14px;font-weight:800;margin:0;font-family:'Space Grotesk',monospace">•••• 4242</p><p style="font-size:10px;color:#6B7280;margin:2px 0 0">Varsayılan kart</p></div>
+                  <i data-lucide="chevron-down" width="18" height="18" style="color:#4B5563"></i>
+                </div>
+              </div>
+            </main>
+            <div style="flex-shrink:0;padding:14px 20px 30px;border-top:1px solid rgba(255,255,255,0.05)"><button style="width:100%;padding:16px;background:#39FF14;color:#0A0E14;font-weight:900;font-size:16px;border:none;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><i data-lucide="lock" width="17" height="17"></i> 500₺ YÜKLE</button></div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- CARD MANAGEMENT -->
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+        <span style="font-family:'Space Grotesk',monospace;font-size:11px;font-weight:600;color:#8B949E;text-transform:uppercase;letter-spacing:0.16em">Kart Yönetimi</span>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden">
+            <header style="display:flex;align-items:center;gap:14px;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <div><h1 style="font-size:17px;font-weight:900;margin:0">KARTLARIM</h1><p style="font-size:11px;color:#6B7280;font-weight:600;margin:2px 0 0">Kayıtlı ödeme yöntemleri</p></div>
+            </header>
+            <main style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px">
+              <!-- default card -->
+              <div style="border-radius:18px;padding:16px 18px;background:linear-gradient(135deg,#4c1d95,#2563eb);position:relative;box-shadow:0 10px 24px rgba(37,99,235,0.3)">
+                <span style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#0A0E14;background:#39FF14;padding:3px 8px;border-radius:6px">Varsayılan</span>
+                <div style="width:36px;height:26px;border-radius:5px;background:linear-gradient(135deg,#facc15,#ca8a04);margin-bottom:20px"></div>
+                <p style="font-size:17px;font-weight:700;font-family:'Space Grotesk',monospace;letter-spacing:0.1em;margin:0">•••• •••• •••• 4242</p>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px"><span style="font-size:11px;color:rgba(255,255,255,0.85);font-family:'Space Grotesk',monospace">OYNA KULLANICI · 08/28</span><span style="font-size:11px;font-weight:900;font-style:italic;color:#fff">VISA</span></div>
+              </div>
+              <!-- other card -->
+              <div style="background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:15px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:14px"><div style="width:46px;height:31px;border-radius:6px;background:linear-gradient(135deg,#065f46,#0f766e);display:flex;align-items:center;justify-content:center"><span style="font-size:6.5px;font-weight:900;color:#fff">mastercard</span></div><div><p style="font-weight:800;font-size:14px;margin:0;font-family:'Space Grotesk',monospace">•••• 8888</p><p style="color:#6B7280;font-size:10px;margin:2px 0 0">04/27</p></div></div>
+                <div style="display:flex;gap:6px"><button style="padding:8px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#9CA3AF;font-size:10px;font-weight:700;cursor:pointer">Varsayılan yap</button><button style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#F87171;cursor:pointer"><i data-lucide="trash-2" width="15" height="15"></i></button></div>
+              </div>
+              <div style="flex:1"></div>
+            </main>
+            <div style="flex-shrink:0;padding:14px 20px 30px;border-top:1px solid rgba(255,255,255,0.05)"><button style="width:100%;padding:16px;background:#39FF14;color:#0A0E14;font-weight:900;font-size:16px;border:none;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><i data-lucide="plus" width="18" height="18"></i> YENİ KART EKLE</button></div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- HISTORY -->
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+        <span style="font-family:'Space Grotesk',monospace;font-size:11px;font-weight:600;color:#8B949E;text-transform:uppercase;letter-spacing:0.16em">İşlem Geçmişi</span>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+          <div lang="tr" style="height:100%;display:flex;flex-direction:column;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden">
+            <header style="display:flex;align-items:center;gap:14px;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+              <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06)"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+              <div><h1 style="font-size:17px;font-weight:900;margin:0">İŞLEM GEÇMİŞİ</h1><p style="font-size:11px;color:#6B7280;font-weight:600;margin:2px 0 0">Tüm hareketler</p></div>
+            </header>
+            <div style="flex-shrink:0;padding:14px 20px 0"><div class="oy-carousel" style="display:flex;gap:8px;overflow-x:auto"><span style="flex-shrink:0;font-size:12px;font-weight:800;color:#0A0E14;background:#39FF14;padding:7px 14px;border-radius:9999px">Tümü</span><span style="flex-shrink:0;font-size:12px;font-weight:700;color:#9CA3AF;background:#161B22;border:1px solid rgba(255,255,255,0.08);padding:7px 14px;border-radius:9999px">Yükleme</span><span style="flex-shrink:0;font-size:12px;font-weight:700;color:#9CA3AF;background:#161B22;border:1px solid rgba(255,255,255,0.08);padding:7px 14px;border-radius:9999px">Ödeme</span><span style="flex-shrink:0;font-size:12px;font-weight:700;color:#9CA3AF;background:#161B22;border:1px solid rgba(255,255,255,0.08);padding:7px 14px;border-radius:9999px">İade</span></div></div>
+            <main style="flex:1;overflow:auto;padding:16px 20px 20px">
+              <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#4B5563;margin:0 0 10px">9 Temmuz</p>
+              <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:20px">
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(57,255,20,0.1);display:flex;align-items:center;justify-content:center;color:#39FF14"><i data-lucide="plus" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Para yükleme</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">14:20 · •••• 4242</p></div></div><p style="font-weight:900;font-size:14px;color:#39FF14;margin:0">+500₺</p></div>
+              </div>
+              <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#4B5563;margin:0 0 10px">8 Temmuz</p>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;color:#94A3B8"><i data-lucide="users" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Maça katılım</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">21:00 · Cuma Halısaha</p></div></div><p style="font-weight:900;font-size:14px;color:#fff;margin:0">−300₺</p></div>
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(250,204,21,0.12);display:flex;align-items:center;justify-content:center;color:#FACC15"><i data-lucide="store" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">Saha kaporası</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">18:05 · Yıldız Saha</p></div></div><p style="font-weight:900;font-size:14px;color:#fff;margin:0">−1.150₺</p></div>
+              </div>
+              <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#4B5563;margin:20px 0 10px">6 Temmuz</p>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="background:#161B22;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:11px"><div style="width:34px;height:34px;border-radius:11px;background:rgba(96,165,250,0.12);display:flex;align-items:center;justify-content:center;color:#60A5FA"><i data-lucide="rotate-ccw" width="16" height="16"></i></div><div><p style="font-weight:700;font-size:13px;margin:0">İade kredisi</p><p style="color:#4B5563;font-size:10px;margin:2px 0 0">Maç iptali · Yağmur</p></div></div><p style="font-weight:900;font-size:14px;color:#60A5FA;margin:0">+300₺</p></div>
+              </div>
+            </main>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this._n = 0;
+    const tick = () => {
+      try { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (e) {}
+      this._n += 1;
+      if (this._n < 20) this._t = setTimeout(tick, 220);
+    };
+    tick();
+  }
+  componentWillUnmount() { if (this._t) clearTimeout(this._t); }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

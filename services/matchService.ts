@@ -168,6 +168,43 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
   }
 };
 
+/**
+ * Saha koordinatı — tek otorite pitch_id (FK). Koordinat girilmemişse null
+ * döner; asla varsayılan şehir merkezine düşülmez (MatchJoin haritayı gizler).
+ * pitch_id olmayan eski maçlar için ada göre eşleşme ikincil yoldur.
+ */
+export const getPitchCoordinates = async (
+  pitchId?: string | null,
+  pitchName?: string | null,
+): Promise<[number, number] | null> => {
+  try {
+    let row: { latitude: number | null; longitude: number | null } | null = null;
+    if (pitchId) {
+      const { data } = await supabase
+        .from('pitches')
+        .select('latitude, longitude')
+        .eq('id', pitchId)
+        .maybeSingle();
+      row = data;
+    }
+    if (!row && pitchName?.trim()) {
+      const { data } = await supabase
+        .from('pitches')
+        .select('latitude, longitude')
+        .ilike('name', `%${pitchName.trim()}%`)
+        .limit(1)
+        .maybeSingle();
+      row = data;
+    }
+    if (row && typeof row.latitude === 'number' && typeof row.longitude === 'number') {
+      return [row.latitude, row.longitude];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 /** Maç Raporu — oyuncunun bu maça özel kişisel notunu döndürür (yoksa boş string). */
 export const getMatchNote = async (matchId: string): Promise<string> => {
   try {

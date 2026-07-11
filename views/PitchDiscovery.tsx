@@ -13,7 +13,6 @@ import 'leaflet/dist/leaflet.css';
 import { getHaversineDistance } from '../utils/geo';
 import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
 import { TURKEY_REGIONS } from '../data/turkeyRegions';
-import PitchDepositCheckout from '../components/PitchDepositCheckout';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
@@ -529,10 +528,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setBookingPrice,
     setBookingDeposit,
     navigateTo,
-    savedCards,
-    setWalletInitialTab,
-    setWalletPendingDeposit,
-    walletPendingDeposit,
+    setPaymentContext,
   } = useAppStore();
 
   // Canlı saha verisi (onaylı + açık + yayında). Mock'a düşme — vitrin yalnızca gerçek veriyi gösterir.
@@ -647,7 +643,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const [calendarMonth, setCalendarMonth] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
   const [timeFilter, setTimeFilter] = useState<'ALL' | 'GUNDUZ' | 'GECE'>('ALL');
   const [bookings, setBookings] = useState<PitchBookingRow[]>([]);
-  const [depositCheckoutOpen, setDepositCheckoutOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedPitch) {
@@ -830,63 +825,28 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setBookingDeposit(selectedSlotQuote.deposit);
   };
 
+  // Kapora ödemesi → birleşik ödeme ekranı (tasarım 1b, bağlam: SAHA KİRALAMA).
+  // Kart zorunluluğu ön kapısı kalktı: kart ekleme artık ödeme ekranının içinde.
   const handlePayDeposit = () => {
     if (!selectedSlot || !selectedCourtId || !selectedPitch || !selectedCourt || !selectedSlotQuote) return;
     persistBookingSelection();
-
-    if (savedCards.length === 0) {
-      setWalletInitialTab('CARD_SETTINGS');
-      setWalletPendingDeposit(true);
-      navigateTo('WALLET');
-      return;
-    }
-
-    setDepositCheckoutOpen(true);
-  };
-
-  const handleDepositSuccess = () => {
-    setDepositCheckoutOpen(false);
     setIsDetailOpen(false);
-    addUserNotification({
-      id: `rent-${Date.now()}`,
-      title: 'Saha Kiralandı!',
-      desc: `${selectedPitch?.name} — ${selectedSlot} rezervasyonu alındı.`,
-      time: 'Şimdi',
-      type: 'success',
-      iconName: 'CheckCircle',
-      color: 'bg-[#39FF14]',
-      textColor: 'text-[#39FF14]',
+    setPaymentContext({
+      kind: 'PITCH_DEPOSIT',
+      badge: 'SAHA KİRALAMA',
+      title: selectedPitch.name,
+      subtitle: `${selectedCourt.name} · ${selectedDateISO} · ${selectedSlot}`,
+      amount: selectedSlotQuote.deposit,
+      amountLabel: 'Ödenecek Kapora',
+      amountHint: `Saha ücreti ${selectedSlotQuote.price.toLocaleString('tr-TR')}₺ · kalan tesiste ödenir`,
+      isDeposit: true,
+      allowBalance: true,
+      successTitle: 'Kapora Onaylandı!',
+      successSubtitle: 'Rezervasyon güvende',
+      infoNote: 'Kapora rezervasyonunu güvenceye alır. İptal koşulları tesis politikasına göre uygulanır.',
     });
-    if (onNavigate) {
-      onNavigate('MY_BOOKINGS');
-    } else {
-      navigateTo('MATCH_TICKET');
-    }
+    navigateTo('PAYMENT');
   };
-
-  useEffect(() => {
-    if (
-      walletPendingDeposit &&
-      savedCards.length > 0 &&
-      selectedSlot &&
-      selectedSlotQuote &&
-      selectedPitch &&
-      selectedCourt &&
-      !depositCheckoutOpen
-    ) {
-      setWalletPendingDeposit(false);
-      setDepositCheckoutOpen(true);
-    }
-  }, [
-    savedCards.length,
-    walletPendingDeposit,
-    selectedSlot,
-    selectedSlotQuote,
-    selectedPitch,
-    selectedCourt,
-    depositCheckoutOpen,
-    setWalletPendingDeposit,
-  ]);
 
   const handleReportContent = async () => {
     if (!selectedPitch) return;
@@ -1711,21 +1671,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           </motion.div>
         )}
       </AnimatePresence>
-
-      {depositCheckoutOpen && selectedPitch && selectedCourt && selectedSlot && selectedSlotQuote && savedCards[0] && (
-        <PitchDepositCheckout
-          open={depositCheckoutOpen}
-          onClose={() => setDepositCheckoutOpen(false)}
-          pitch={selectedPitch}
-          court={selectedCourt}
-          bookingDateISO={selectedDateISO}
-          slotLabel={selectedSlot}
-          price={selectedSlotQuote.price}
-          deposit={selectedSlotQuote.deposit}
-          card={savedCards[0]}
-          onSuccess={handleDepositSuccess}
-        />
-      )}
 
       <AnimatePresence>
         {actionError && <Toast message={actionError} variant="error" />}

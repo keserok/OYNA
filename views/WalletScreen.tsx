@@ -1,28 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft, Wallet, Zap, CheckCircle2, Settings, CreditCard,
-  Plus, Trash2, AlertCircle, ArrowUpRight, Gift, RefreshCw,
-  TrendingUp, Clock, X
+  AlertTriangle, ArrowLeft, ArrowUpRight, Check, CheckCircle2, Clock,
+  CreditCard, Gift, History, Info, Landmark, List, Pencil, Plus,
+  RefreshCw, RotateCcw, Shield, Trash2, TrendingUp, Users, Wallet, X, Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
+import { UserRole } from '../types';
+import {
+  getWalletSummary, listSavedCards, deleteSavedCard, setDefaultSavedCard,
+  topUpWallet, WalletSummary, SavedCard,
+} from '../services/walletService';
+import AddCardScreen from '../components/payment/AddCardScreen';
+
+/**
+ * CÜZDAN — role göre iki yapı (tasarım 2a + kaleci/hakem):
+ *   • Oyuncu: Yüklenen Bakiye (hero) + İade Kredisi chip'i, Para Yükle /
+ *     Kart Yönet / Geçmiş, kayıtlı kart karuseli, son işlemler. Kazanç
+ *     bakiyesi > 0 ise (ör. referral) koşullu küçük kazanç satırı görünür —
+ *     para mahsur kalmaz.
+ *   • Kaleci & Hakem & Tesis: Çekilebilir Kazanç (altın hero) + IBAN'a Çek.
+ *     Para yükleme YOKTUR.
+ * Hata: başarısız ödeme cüzdanda kırmızı banner + 'Tekrar dene' olarak görünür.
+ *
+ * STORE UYUMU: bakiye yalnız OYNA içindeki fiziksel hizmetlere harcanır;
+ * dijital ürün satışı yoktur. Yüklemede bonus/teşvik yoktur.
+ */
 
 interface WalletScreenProps {
   onBack: () => void;
-}
-
-interface WalletSummary {
-  earnings_balance: number;
-  reserved_balance?: number;
-  refund_credit_balance: number;
 }
 
 interface WalletTx {
   id: string;
   amount: number;
   type: string;
-  balance_type: 'EARNINGS' | 'REFUND_CREDIT';
+  balance_type: 'EARNINGS' | 'REFUND_CREDIT' | 'TOP_UP';
   status: string;
   description: string | null;
   created_at: string;
@@ -37,435 +51,826 @@ interface PayoutRequest {
   created_at: string;
 }
 
-type Tab = 'TXN' | 'PAYOUT';
-type CardView = 'MAIN' | 'PAYOUT_FORM' | 'ADD_CARD';
+type View = 'MAIN' | 'TOPUP' | 'CARDS' | 'ADD_CARD' | 'HISTORY' | 'PAYOUT_FORM';
+type HistoryFilter = 'ALL' | 'TOPUP' | 'PAYMENT' | 'REFUND' | 'EARNING';
+
+const fmt = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtInt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+
+const INCOME_TYPES = new Set(['TOP_UP', 'DEPOSIT', 'REFUND', 'MATCH_REFUND', 'MATCH_EARNING', 'BOOKING_EARNING', 'SERVICE_EARNING', 'REFERRAL_BONUS']);
+const TOPUP_PRESETS = [300, 500, 750, 1000, 1500];
+const TOPUP_MIN = 300;
 
 const formatIBAN = (raw: string): string => {
   const clean = raw.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 26);
   return clean.replace(/(.{4})/g, '$1 ').trim();
 };
-
 const validateIBAN = (raw: string): boolean => {
   const clean = raw.replace(/\s/g, '');
   return clean.length === 26 && clean.startsWith('TR');
 };
 
-const INCOME_TYPES = new Set(['DEPOSIT', 'MATCH_EARNING', 'REFERRAL_BONUS']);
+const txMeta = (tx: WalletTx): { icon: React.ReactNode; bg: string; color: string; income: boolean } => {
+  switch (tx.type) {
+    case 'TOP_UP':
+      return { icon: <Plus size={16} />, bg: 'bg-[#39FF14]/10', color: 'text-[#39FF14]', income: true };
+    case 'DEPOSIT':
+    case 'REFUND':
+    case 'MATCH_REFUND':
+      return { icon: <RotateCcw size={16} />, bg: 'bg-blue-400/12', color: 'text-blue-400', income: true };
+    case 'MATCH_EARNING':
+    case 'BOOKING_EARNING':
+    case 'SERVICE_EARNING':
+      return { icon: <Zap size={16} />, bg: 'bg-yellow-400/12', color: 'text-[#FACC15]', income: true };
+    case 'REFERRAL_BONUS':
+      return { icon: <Gift size={16} />, bg: 'bg-[#39FF14]/10', color: 'text-[#39FF14]', income: true };
+    case 'WITHDRAWAL':
+      return { icon: <ArrowUpRight size={16} />, bg: 'bg-red-500/10', color: 'text-red-400', income: false };
+    default: // WALLET_PAYMENT, MATCH_FEE ve diğer harcamalar
+      return { icon: <Users size={16} />, bg: 'bg-slate-400/12', color: 'text-slate-400', income: false };
+  }
+};
 
 const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
-  const { savedCards, addSavedCard, removeSavedCard, walletInitialTab } = useAppStore();
+  const {
+    role, savedCards, setSavedCards, walletInitialTab, setWalletInitialTab,
+    lastPaymentError, setLastPaymentError, paymentContext,
+  } = useAppStore();
 
-  const [tab, setTab]               = useState<Tab>('TXN');
-  const [cardView, setCardView]     = useState<CardView>('MAIN');
-  const [summary, setSummary]       = useState<WalletSummary | null>(null);
-  const [txList, setTxList]         = useState<WalletTx[]>([]);
-  const [payouts, setPayouts]       = useState<PayoutRequest[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const isEarningsRole = role === UserRole.GOALKEEPER || role === UserRole.REFEREE || role === UserRole.OWNER;
+  const roleBadge = role === UserRole.GOALKEEPER ? 'Kaleci' : role === UserRole.REFEREE ? 'Hakem' : role === UserRole.OWNER ? 'Tesis' : null;
+
+  const [view, setView] = useState<View>('MAIN');
+  const [summary, setSummary] = useState<WalletSummary | null>(null);
+  const [txList, setTxList] = useState<WalletTx[]>([]);
+  const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Payout form state
-  const [payoutAmount, setPayoutAmount]   = useState('');
-  const [payoutIban, setPayoutIban]       = useState('');
-  const [payoutHolder, setPayoutHolder]   = useState('');
-  const [payoutLoading, setPayoutLoading] = useState(false);
-  const [payoutError, setPayoutError]     = useState('');
-  const [payoutSuccess, setPayoutSuccess] = useState(false);
+  // Para yükleme
+  const [topupAmount, setTopupAmount] = useState<number>(500);
+  const [customAmount, setCustomAmount] = useState('');
+  const [isCustom, setIsCustom] = useState(false);
+  const [topupCardId, setTopupCardId] = useState<string | null>(null);
+  const [topupBusy, setTopupBusy] = useState(false);
+  const [topupError, setTopupError] = useState('');
+  const [topupDone, setTopupDone] = useState(false);
+
+  // Çekim formu
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutIban, setPayoutIban] = useState('');
+  const [payoutHolder, setPayoutHolder] = useState('');
+  const [payoutBusy, setPayoutBusy] = useState(false);
+  const [payoutError, setPayoutError] = useState('');
+  const [payoutDone, setPayoutDone] = useState(false);
+
+  // Geçmiş filtresi
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('ALL');
 
   const fetchData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [summaryRes, txRes, payoutRes] = await Promise.all([
-        supabase.rpc('get_wallet_summary'),
-        supabase
-          .from('wallet_transactions')
+      const [sum, cards, txRes, payoutRes] = await Promise.all([
+        getWalletSummary().catch(() => null),
+        listSavedCards(),
+        supabase.from('wallet_transactions')
           .select('id,amount,type,balance_type,status,description,created_at')
-          .order('created_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('payout_requests')
+          .order('created_at', { ascending: false }).limit(100),
+        supabase.from('payout_requests')
           .select('id,amount,iban,iban_holder_name,status,created_at')
-          .order('created_at', { ascending: false })
-          .limit(20),
+          .order('created_at', { ascending: false }).limit(20),
       ]);
-
-      if (summaryRes.data) setSummary(summaryRes.data as WalletSummary);
+      if (sum) setSummary(sum);
+      setSavedCards(cards);
+      setTopupCardId(prev => prev ?? (cards.find(c => c.isDefault) ?? cards[0])?.id ?? null);
       if (txRes.data) setTxList(txRes.data as WalletTx[]);
       if (payoutRes.data) setPayouts(payoutRes.data as PayoutRequest[]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [setSavedCards]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Deep-link: profil/diğer ekranlardan gelen başlangıç sekmesi
   useEffect(() => {
-    if (walletInitialTab === 'CARD_SETTINGS') setCardView('ADD_CARD');
-  }, [walletInitialTab]);
+    if (walletInitialTab === 'CARD_SETTINGS') setView('CARDS');
+    else if (walletInitialTab === 'TOPUP') setView('TOPUP');
+    else if (walletInitialTab === 'HISTORY') setView('HISTORY');
+    if (walletInitialTab !== 'MAIN') setWalletInitialTab('MAIN');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const topupBalance = summary?.topupBalance ?? 0;
+  const refundBalance = summary?.refundCreditBalance ?? 0;
+  const earningsBalance = summary?.earningsBalance ?? 0;
+  const reservedBalance = summary?.reservedBalance ?? 0;
+
+  const effectiveTopup = isCustom ? Number(customAmount) || 0 : topupAmount;
+
+  const pendingPayout = payouts.find(p => p.status === 'PENDING' || p.status === 'PROCESSING') ?? null;
+
+  // Bu ay kazanç istatistikleri (kaleci/hakem hero'su)
+  const monthStats = useMemo(() => {
+    const now = new Date();
+    const rows = txList.filter(t =>
+      ['SERVICE_EARNING', 'MATCH_EARNING', 'BOOKING_EARNING'].includes(t.type) &&
+      new Date(t.created_at).getMonth() === now.getMonth() &&
+      new Date(t.created_at).getFullYear() === now.getFullYear());
+    return { count: rows.length, total: rows.reduce((s, r) => s + Math.abs(r.amount), 0) };
+  }, [txList]);
+
+  const handleTopup = async () => {
+    if (topupBusy) return;
+    setTopupError('');
+    if (effectiveTopup < TOPUP_MIN) {
+      setTopupError(`Minimum yükleme tutarı ${TOPUP_MIN}₺'dir.`);
+      return;
+    }
+    setTopupBusy(true);
+    try {
+      await topUpWallet(effectiveTopup, topupCardId);
+      setTopupDone(true);
+      await fetchData();
+      setTimeout(() => { setTopupDone(false); setView('MAIN'); }, 1800);
+    } catch (e) {
+      setTopupError(e instanceof Error ? e.message : 'Para yükleme başarısız.');
+    } finally {
+      setTopupBusy(false);
+    }
+  };
 
   const handleRequestPayout = async () => {
     setPayoutError('');
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) { setPayoutError('Geçerli bir tutar girin.'); return; }
-    if (!payoutIban.trim() || payoutIban.length < 10) { setPayoutError('Geçerli bir IBAN girin.'); return; }
+    if (!validateIBAN(payoutIban)) { setPayoutError('Geçerli bir IBAN girin (TR + 24 hane).'); return; }
     if (!payoutHolder.trim()) { setPayoutError('IBAN sahibi adı zorunludur.'); return; }
-
-    setPayoutLoading(true);
+    setPayoutBusy(true);
     const { error } = await supabase.rpc('request_payout', {
-      p_amount:           amount,
-      p_iban:             payoutIban.replace(/\s/g, ''),
+      p_amount: amount,
+      p_iban: payoutIban.replace(/\s/g, ''),
       p_iban_holder_name: payoutHolder,
-      p_payout_type:      'MANUAL',
+      p_payout_type: 'MANUAL',
     });
-    setPayoutLoading(false);
-
+    setPayoutBusy(false);
     if (error) {
       setPayoutError(error.message.replace(/^[A-Z_]+: /, ''));
     } else {
-      setPayoutSuccess(true);
+      setPayoutDone(true);
       fetchData();
-      setTimeout(() => { setPayoutSuccess(false); setCardView('MAIN'); }, 2000);
+      setTimeout(() => { setPayoutDone(false); setView('MAIN'); }, 1800);
     }
   };
 
-  const handleAddCard = () => {
-    const brands = ['Visa', 'Mastercard', 'Troy'] as const;
-    const colors = ['from-purple-600 to-blue-600', 'from-emerald-500 to-teal-700', 'from-orange-600 to-red-600'];
-    addSavedCard({
-      last4:  Math.floor(1000 + Math.random() * 9000).toString(),
-      brand:  brands[Math.floor(Math.random() * brands.length)],
-      color:  colors[Math.floor(Math.random() * colors.length)],
-      holder: 'OYNA KULLANICI',
-    });
-    setCardView('MAIN');
+  const retryPayment = () => {
+    setLastPaymentError(null);
+    if (paymentContext) useAppStore.getState().navigateTo('PAYMENT');
   };
 
-  const earningsBalance = summary?.earnings_balance ?? 0;
-  const refundBalance   = summary?.refund_credit_balance ?? 0;
-
-  const allTx = txList;
-  const earningsTx  = txList.filter(t => t.balance_type === 'EARNINGS');
-  const refundTx    = txList.filter(t => t.balance_type === 'REFUND_CREDIT');
-
-  // ─── Sub-views ────────────────────────────────────────────────────────────
-
-  if (cardView === 'PAYOUT_FORM') {
+  // ─── ALT EKRAN: Kart ekle (paylaşılan bileşen) ────────────────────────────
+  if (view === 'ADD_CARD') {
     return (
-      <div className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
-        <header className="px-6 py-5 flex items-center gap-4 border-b border-white/5">
-          <button onClick={() => { setCardView('MAIN'); setPayoutError(''); }}
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-black text-white">ÖDEME TALEBİ</h1>
-        </header>
-        <div className="flex-1 p-6 space-y-5">
-          <div className="bg-[#161B22] border border-white/8 rounded-[28px] p-5">
-            <p className="text-gray-400 text-[11px] font-black uppercase tracking-widest mb-4">Kullanılabilir Kazanç</p>
-            <p className="text-4xl font-black text-white">{earningsBalance.toFixed(2)}₺</p>
-            {(summary?.reserved_balance ?? 0) > 0 && (
-              <p className="text-[11px] text-yellow-400 mt-2 flex items-center gap-1">
-                <Clock size={11} /> {(summary?.reserved_balance ?? 0).toFixed(2)}₺ bekleyen çekimde rezerve
+      <AddCardScreen
+        onBack={() => setView('CARDS')}
+        onSaved={async () => { setSavedCards(await listSavedCards()); setView('CARDS'); }}
+      />
+    );
+  }
+
+  // ─── ALT EKRAN: Para Yükle ────────────────────────────────────────────────
+  if (view === 'TOPUP') {
+    const selectedCard = savedCards.find(c => c.id === topupCardId) ?? null;
+    return (
+      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+        <SubHeader title="Para Yükle" subtitle="OYNA bakiyene ekle" onBack={() => setView('MAIN')} />
+        <main className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="text-center py-1">
+            <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Yüklenecek Tutar</p>
+            <p className="text-[46px] font-black leading-none text-white font-numeric">{fmtInt(effectiveTopup)}₺</p>
+            {effectiveTopup >= TOPUP_MIN && (
+              <p className="text-[11px] text-[#39FF14] mt-2 font-semibold">
+                Yeni bakiye: {fmt(topupBalance + refundBalance + effectiveTopup)}₺
               </p>
             )}
           </div>
 
-          <div className="space-y-4">
-            <InputField label="Talep Tutarı (₺)" required>
-              <input value={payoutAmount} onChange={e => setPayoutAmount(e.target.value)}
-                type="number" placeholder="0.00"
-                className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600" />
-            </InputField>
-            <InputField label="IBAN" required hint={validateIBAN(payoutIban) ? '✓ Geçerli IBAN' : payoutIban.replace(/\s/g,'').length > 0 ? `${payoutIban.replace(/\s/g,'').length}/26 karakter` : 'TR ile başlamalı, 26 karakter'} hintColor={validateIBAN(payoutIban) ? 'text-[#39FF14]' : 'text-gray-600'}>
-              <input
-                value={payoutIban}
-                onChange={e => setPayoutIban(formatIBAN(e.target.value))}
-                placeholder="TR00 0000 0000 0000 0000 0000 00"
-                inputMode="text"
-                autoCapitalize="characters"
-                className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600 font-mono text-sm tracking-wider" />
-            </InputField>
-            <InputField label="IBAN Sahibi Adı" required>
-              <input value={payoutHolder} onChange={e => setPayoutHolder(e.target.value.toUpperCase())}
-                placeholder="AD SOYAD"
-                className="w-full bg-transparent text-white font-bold outline-none placeholder:text-gray-600" />
-            </InputField>
+          <div className="grid grid-cols-3 gap-2.5">
+            {TOPUP_PRESETS.map(v => {
+              const active = !isCustom && topupAmount === v;
+              return (
+                <button key={v} onClick={() => { setIsCustom(false); setTopupAmount(v); }}
+                  className={`py-4 rounded-[14px] text-center font-extrabold text-[15px] font-numeric transition-all ${
+                    active
+                      ? 'bg-[#39FF14]/12 border-2 border-[#39FF14] text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.15)]'
+                      : 'bg-[#161B22] border border-white/8 text-white'
+                  }`}>
+                  {fmtInt(v)}₺
+                </button>
+              );
+            })}
+            <button onClick={() => setIsCustom(true)}
+              className={`py-4 rounded-[14px] text-center font-extrabold text-[13px] flex items-center justify-center gap-1 transition-all ${
+                isCustom ? 'bg-[#39FF14]/12 border-2 border-[#39FF14] text-[#39FF14]' : 'bg-[#161B22] border border-dashed border-white/16 text-gray-400'
+              }`}>
+              <Pencil size={13} /> Özel
+            </button>
           </div>
 
-          {payoutError && (
+          {isCustom && (
+            <input
+              value={customAmount}
+              onChange={e => setCustomAmount(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              placeholder={`En az ${TOPUP_MIN}`}
+              inputMode="numeric"
+              autoFocus
+              className="w-full bg-[#161B22] border border-[#39FF14]/30 rounded-[14px] px-4 py-4 text-white font-black text-2xl font-numeric outline-none placeholder:text-gray-600 text-center"
+            />
+          )}
+
+          <div className="flex gap-2 items-center px-0.5">
+            <Info size={13} className="text-gray-500 shrink-0" />
+            <p className="text-[11px] text-gray-500">Minimum yükleme tutarı {TOPUP_MIN}₺'dir.</p>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500 mb-3">Ödeme Yöntemi</p>
+            {savedCards.length === 0 ? (
+              <button onClick={() => setView('ADD_CARD')}
+                className="w-full flex items-center gap-3 border-[1.5px] border-dashed border-white/16 rounded-2xl p-4 text-gray-300">
+                <span className="w-11 h-[30px] rounded-md bg-white/5 flex items-center justify-center text-gray-400"><Plus size={18} /></span>
+                <span className="text-[13px] font-bold">Yeni kart ekle</span>
+              </button>
+            ) : (
+              <div className="space-y-2.5">
+                {savedCards.map(card => {
+                  const active = topupCardId === card.id;
+                  return (
+                    <button key={card.id} onClick={() => setTopupCardId(card.id)}
+                      className={`w-full flex items-center gap-3 rounded-2xl p-3.5 text-left transition-all ${
+                        active ? 'bg-[#161B22] border-2 border-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.12)]' : 'bg-[#161B22] border border-white/8'
+                      }`}>
+                      <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-purple-700 to-blue-600'} flex items-center justify-center shrink-0`}>
+                        <span className="text-[8px] font-black text-white italic">{card.brand}</span>
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-sm font-extrabold text-white font-numeric">•••• {card.last4}</span>
+                        <span className="block text-[10px] text-gray-500 mt-0.5">{card.isDefault ? 'Varsayılan kart' : ''}</span>
+                      </span>
+                      {active && (
+                        <span className="w-[22px] h-[22px] rounded-full bg-[#39FF14] flex items-center justify-center shrink-0">
+                          <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {topupError && (
             <div className="bg-red-900/20 border border-red-500/30 rounded-2xl p-3 flex gap-2">
-              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-red-300 text-sm">{payoutError}</p>
+              <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm">{topupError}</p>
             </div>
           )}
-
-          {payoutSuccess && (
+          {topupDone && (
             <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-3 flex gap-2">
-              <CheckCircle2 size={16} className="text-green-400 shrink-0" />
-              <p className="text-green-300 text-sm">Talep oluşturuldu! İşleme alınacak.</p>
+              <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" />
+              <p className="text-green-300 text-sm">Yükleme tamamlandı!</p>
             </div>
           )}
 
-          <button disabled={payoutLoading || !validateIBAN(payoutIban)}
-            onClick={handleRequestPayout}
-            className="w-full py-4 bg-[#39FF14] text-black font-black text-base rounded-2xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-            {payoutLoading ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
-            {payoutLoading ? 'GÖNDERILIYOR...' : 'ÖDEME TALEP ET'}
-          </button>
-          <p className="text-[11px] text-gray-600 text-center">
-            Talepler 1–2 iş günü içinde işleme alınır. İşlem ücreti yoktur.
+          <p className="text-[10px] text-gray-600 leading-relaxed px-0.5">
+            Bakiye yalnızca OYNA içindeki saha, maç ve kaleci/hakem hizmet ödemelerinde kullanılır;
+            dijital ürün satın alımında kullanılamaz. Yüklemelerde bonus verilmez.
           </p>
+        </main>
+        <div className="p-5 pb-safe border-t border-white/5">
+          <button
+            disabled={topupBusy || effectiveTopup < TOPUP_MIN || savedCards.length === 0}
+            onClick={handleTopup}
+            className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+              !topupBusy && effectiveTopup >= TOPUP_MIN && savedCards.length > 0
+                ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+            }`}>
+            {topupBusy ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} />}
+            {topupBusy ? 'YÜKLENİYOR...' : `${fmtInt(effectiveTopup)}₺ YÜKLE`}
+          </button>
+          {savedCards.length === 0 && !selectedCard && (
+            <p className="text-center text-[10px] text-gray-500 mt-2">Yükleme için önce bir kart ekle.</p>
+          )}
         </div>
       </div>
     );
   }
 
-  if (cardView === 'ADD_CARD') {
+  // ─── ALT EKRAN: Kart yönetimi ─────────────────────────────────────────────
+  if (view === 'CARDS') {
+    const defaultCard = savedCards.find(c => c.isDefault) ?? savedCards[0] ?? null;
+    const others = savedCards.filter(c => c.id !== defaultCard?.id);
     return (
-      <div className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
-        <header className="px-6 py-5 flex items-center gap-4 border-b border-white/5">
-          <button onClick={() => setCardView('MAIN')}
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-black text-white">KARTLARIM</h1>
-        </header>
-        <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-          {savedCards.map(card => (
-            <div key={card.id} className="bg-[#161B22] border border-white/8 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-8 rounded bg-gradient-to-br ${card.color} flex items-center justify-center border border-white/20`}>
-                  <span className="text-[8px] font-black text-white">{card.brand}</span>
-                </div>
-                <div>
-                  <p className="text-white font-bold text-sm">•••• {card.last4}</p>
-                  <p className="text-gray-500 text-[10px] uppercase">{card.holder}</p>
+      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+        <SubHeader title="Kartlarım" subtitle="Kayıtlı ödeme yöntemleri" onBack={() => setView('MAIN')} />
+        <main className="flex-1 overflow-y-auto p-5 space-y-3.5">
+          {defaultCard && (
+            <div className={`rounded-[18px] p-5 bg-gradient-to-br ${defaultCard.gradient ?? 'from-purple-800 to-blue-600'} relative`}>
+              <span className="absolute top-3.5 right-3.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#0A0E14] bg-[#39FF14] px-2 py-1 rounded-md">
+                Varsayılan
+              </span>
+              <div className="w-9 h-[26px] rounded bg-gradient-to-br from-yellow-400 to-yellow-700 mb-5" />
+              <p className="text-[17px] font-bold tracking-[0.1em] text-white font-numeric">•••• •••• •••• {defaultCard.last4}</p>
+              <div className="flex justify-between items-end mt-3">
+                <span className="text-[11px] text-white/85 font-numeric">
+                  {(defaultCard.holderName ?? 'OYNA KULLANICI').toLocaleUpperCase('tr-TR')}
+                  {defaultCard.expMonth && defaultCard.expYear ? ` · ${String(defaultCard.expMonth).padStart(2, '0')}/${String(defaultCard.expYear).slice(-2)}` : ''}
+                </span>
+                <span className="text-[11px] font-black italic text-white">{defaultCard.brand}</span>
+              </div>
+            </div>
+          )}
+          {others.map(card => (
+            <div key={card.id} className="bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <span className={`w-[46px] h-[31px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-emerald-600 to-teal-700'} flex items-center justify-center shrink-0`}>
+                  <span className="text-[7px] font-black text-white">{card.brand}</span>
+                </span>
+                <div className="min-w-0">
+                  <p className="font-extrabold text-sm text-white font-numeric">•••• {card.last4}</p>
+                  <p className="text-gray-500 text-[10px] mt-0.5">
+                    {card.expMonth && card.expYear ? `${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}` : ''}
+                  </p>
                 </div>
               </div>
-              <button onClick={() => removeSavedCard(card.id)}
-                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
-                <Trash2 size={18} />
-              </button>
+              <div className="flex gap-1.5 shrink-0">
+                <button
+                  onClick={async () => { await setDefaultSavedCard(card.id).catch(() => {}); setSavedCards(await listSavedCards()); }}
+                  className="px-2.5 py-2 bg-white/5 border border-white/8 rounded-[10px] text-gray-400 text-[10px] font-bold">
+                  Varsayılan yap
+                </button>
+                <button
+                  onClick={async () => { await deleteSavedCard(card.id).catch(() => {}); setSavedCards(await listSavedCards()); }}
+                  className="w-[34px] h-[34px] flex items-center justify-center bg-red-500/10 border border-red-500/20 rounded-[10px] text-red-400">
+                  <Trash2 size={15} />
+                </button>
+              </div>
             </div>
           ))}
           {savedCards.length === 0 && (
-            <p className="text-center text-gray-600 py-10 text-sm">Kayıtlı kartınız yok.</p>
+            <div className="py-16 text-center">
+              <CreditCard size={32} className="text-gray-700 mx-auto mb-3" />
+              <p className="text-gray-600 text-sm">Kayıtlı kartın yok.</p>
+            </div>
           )}
-        </div>
-        <div className="p-6 border-t border-white/5">
-          <button onClick={handleAddCard}
-            className="w-full h-14 bg-[#FACC15] text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-            <Plus size={20} /> YENİ KART EKLE
+          {savedCards.length > 0 && defaultCard && (
+            <div className="flex gap-2 items-center px-1 pt-1">
+              <Shield size={12} className="text-gray-600 shrink-0" />
+              <p className="text-[10px] text-gray-600">Kart numarası ve CVV OYNA'da saklanmaz; yalnız maskeli bilgi tutulur.</p>
+            </div>
+          )}
+        </main>
+        <div className="p-5 pb-safe border-t border-white/5">
+          <button onClick={() => setView('ADD_CARD')}
+            className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-black text-base rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+            <Plus size={18} /> YENİ KART EKLE
           </button>
         </div>
       </div>
     );
   }
 
-  // ─── Main view ───────────────────────────────────────────────────────────
-
-  return (
-    <div className="min-h-screen bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-[#39FF14]/8 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-[#FACC15]/8 blur-[120px] rounded-full" />
-      </div>
-
-      <header className="px-6 py-5 flex justify-between items-center sticky top-0 z-20 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
-        <button onClick={onBack}
-          className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-black text-white tracking-widest uppercase flex items-center gap-2">
-          <Wallet size={18} className="text-[#FACC15]" /> OYNA CÜZDAN
-        </h1>
-        <button onClick={() => { setRefreshing(true); fetchData(); }}
-          className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
-          <RefreshCw size={18} className={refreshing ? 'animate-spin text-[#39FF14]' : ''} />
-        </button>
-      </header>
-
-      <div className="flex-1 overflow-y-auto custom-scrollbar z-10 pb-24">
-        {/* Balance Cards */}
-        <div className="p-6 grid grid-cols-2 gap-4">
-          <BalanceCard
-            label="Kazanç"
-            sublabel="IBAN'a çekilebilir"
-            balance={earningsBalance}
-            icon={<TrendingUp size={16} />}
-            color="green"
-            loading={loading}
-            onAction={() => setCardView('PAYOUT_FORM')}
-            actionLabel="Çek"
-          />
-          <BalanceCard
-            label="İade Kredisi"
-            sublabel="Yalnızca OYNA içi"
-            balance={refundBalance}
-            icon={<Gift size={16} />}
-            color="blue"
-            loading={loading}
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className="px-6 mb-4">
-          <div className="flex bg-[#161B22] p-1 rounded-2xl border border-white/5 gap-1">
-            {([['TXN','İşlemler'],['PAYOUT','Ödemeler']] as [Tab, string][]).map(([t, label]) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all ${
-                  tab === t ? 'bg-[#0A0E14] text-white border border-white/10 shadow-lg' : 'text-gray-500'
+  // ─── ALT EKRAN: İşlem geçmişi ─────────────────────────────────────────────
+  if (view === 'HISTORY') {
+    const matchesFilter = (tx: WalletTx): boolean => {
+      switch (historyFilter) {
+        case 'TOPUP': return tx.type === 'TOP_UP';
+        case 'PAYMENT': return tx.type === 'WALLET_PAYMENT' || tx.type === 'MATCH_FEE' || tx.type === 'WITHDRAWAL';
+        case 'REFUND': return ['DEPOSIT', 'REFUND', 'MATCH_REFUND'].includes(tx.type);
+        case 'EARNING': return ['MATCH_EARNING', 'BOOKING_EARNING', 'SERVICE_EARNING', 'REFERRAL_BONUS'].includes(tx.type);
+        default: return true;
+      }
+    };
+    const filtered = txList.filter(matchesFilter);
+    const groups: { label: string; rows: WalletTx[] }[] = [];
+    for (const tx of filtered) {
+      const d = new Date(tx.created_at);
+      const label = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) last.rows.push(tx);
+      else groups.push({ label, rows: [tx] });
+    }
+    const chips: [HistoryFilter, string][] = [
+      ['ALL', 'Tümü'], ['TOPUP', 'Yükleme'], ['PAYMENT', 'Ödeme'], ['REFUND', 'İade'], ['EARNING', 'Kazanç'],
+    ];
+    return (
+      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+        <SubHeader title="İşlem Geçmişi" subtitle="Tüm hareketler" onBack={() => setView('MAIN')} />
+        <div className="shrink-0 px-5 pt-3.5">
+          <div className="oy-carousel flex gap-2 overflow-x-auto">
+            {chips.map(([key, label]) => (
+              <button key={key} onClick={() => setHistoryFilter(key)}
+                className={`shrink-0 text-xs font-extrabold px-3.5 py-[7px] rounded-full transition-all ${
+                  historyFilter === key
+                    ? 'bg-[#39FF14] text-[#0A0E14]'
+                    : 'bg-[#161B22] border border-white/8 text-gray-400'
                 }`}>
                 {label}
               </button>
             ))}
           </div>
         </div>
-
-        {/* Content */}
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="px-6 space-y-2">
-            {tab === 'TXN' && (
-              allTx.length === 0
-                ? <EmptyTx label="Henüz işlem geçmişiniz yok." />
-                : allTx.map(tx => <TxRow key={tx.id} tx={tx} />)
-            )}
-            {tab === 'PAYOUT' && (
-              payouts.length === 0
-                ? <EmptyTx label="Henüz ödeme talebiniz yok." />
-                : payouts.map(p => <PayoutRow key={p.id} payout={p} />)
-            )}
-          </motion.div>
-        </AnimatePresence>
+        <main className="flex-1 overflow-y-auto px-5 py-4 pb-safe">
+          {groups.length === 0 && (
+            <div className="py-16 text-center">
+              <History size={32} className="text-gray-700 mx-auto mb-3" />
+              <p className="text-gray-600 text-sm">Bu filtrede işlem yok.</p>
+            </div>
+          )}
+          {groups.map(g => (
+            <div key={g.label} className="mb-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-600 mb-2.5">{g.label}</p>
+              <div className="space-y-2">
+                {g.rows.map(tx => <TxRow key={tx.id} tx={tx} />)}
+              </div>
+            </div>
+          ))}
+        </main>
       </div>
+    );
+  }
 
-      {/* Bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 px-6 pb-8 pt-4 bg-gradient-to-t from-[#0A0E14] to-transparent max-w-lg md:max-w-2xl mx-auto">
-        <div className="flex gap-3">
-          <button onClick={() => setCardView('PAYOUT_FORM')}
-            className="flex-1 py-3.5 bg-[#39FF14] text-black font-black rounded-2xl text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(57,255,20,0.2)]">
-            <ArrowUpRight size={16} /> IBAN'A ÇEK
-          </button>
-          <button onClick={() => setCardView('ADD_CARD')}
-            className="w-14 h-14 bg-[#161B22] border border-white/8 rounded-2xl flex items-center justify-center text-gray-400 hover:text-white active:scale-95 transition-all">
-            <Settings size={20} />
+  // ─── ALT EKRAN: IBAN'a çek ────────────────────────────────────────────────
+  if (view === 'PAYOUT_FORM') {
+    const quick = [500, 1000];
+    return (
+      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+        <SubHeader title="IBAN'a Çek" subtitle="Kazancını hesabına aktar" onBack={() => { setView('MAIN'); setPayoutError(''); }} />
+        <main className="flex-1 overflow-y-auto p-5 space-y-[18px]">
+          <div className="text-center py-2">
+            <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir Kazanç</p>
+            <p className="text-[40px] font-black leading-none text-white font-numeric">{fmt(earningsBalance)}₺</p>
+            {reservedBalance > 0 && (
+              <p className="text-[11px] text-yellow-400 mt-2 flex items-center justify-center gap-1">
+                <Clock size={11} /> {fmt(reservedBalance)}₺ bekleyen çekimde rezerve
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Çekilecek Tutar</label>
+            <div className="bg-[#161B22] border border-[#39FF14]/30 rounded-[14px] px-4 py-4 flex items-center justify-between">
+              <input value={payoutAmount} onChange={e => setPayoutAmount(e.target.value.replace(/[^\d.,]/g, ''))}
+                inputMode="decimal" placeholder="0"
+                className="bg-transparent text-white font-black text-[26px] font-numeric outline-none w-full placeholder:text-gray-600" />
+              <span className="text-xl font-extrabold text-gray-500">₺</span>
+            </div>
+            <div className="flex gap-2 mt-2.5">
+              {quick.map(q => (
+                <button key={q} onClick={() => setPayoutAmount(String(Math.min(q, earningsBalance)))}
+                  className="flex-1 py-2 bg-[#161B22] border border-white/8 rounded-[10px] text-gray-300 text-xs font-bold">
+                  {fmtInt(q)}₺
+                </button>
+              ))}
+              <button onClick={() => setPayoutAmount(String(earningsBalance))}
+                className="flex-1 py-2 bg-[#39FF14]/12 border border-[#39FF14]/40 rounded-[10px] text-[#39FF14] text-xs font-extrabold">
+                Tümü
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Hedef IBAN</label>
+            <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-3.5 flex items-center gap-3">
+              <span className="w-[34px] h-[34px] rounded-[10px] bg-[#39FF14]/10 flex items-center justify-center text-[#39FF14] shrink-0">
+                <Landmark size={16} />
+              </span>
+              <input
+                value={payoutIban}
+                onChange={e => setPayoutIban(formatIBAN(e.target.value))}
+                placeholder="TR00 0000 0000 0000 0000 0000 00"
+                autoCapitalize="characters"
+                className="flex-1 bg-transparent text-white font-bold font-numeric text-[13px] tracking-wider outline-none placeholder:text-gray-600 min-w-0" />
+              {validateIBAN(payoutIban) && <Check size={16} className="text-[#39FF14] shrink-0" />}
+            </div>
+            <input value={payoutHolder} onChange={e => setPayoutHolder(e.target.value.toLocaleUpperCase('tr-TR'))}
+              placeholder="IBAN SAHİBİ AD SOYAD"
+              className="mt-2.5 w-full bg-[#161B22] border border-white/8 rounded-[14px] px-4 py-3.5 text-white font-bold text-sm outline-none placeholder:text-gray-600" />
+          </div>
+          <div className="bg-[#0f1419] border border-blue-400/20 rounded-[14px] p-3.5 flex gap-2.5">
+            <Info size={15} className="text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-[11.5px] text-gray-400 leading-relaxed">
+              Talepler <span className="text-white font-semibold">1–2 iş günü</span> içinde işleme alınır. İşlem ücreti yoktur.
+            </p>
+          </div>
+          {payoutError && (
+            <div className="bg-red-900/20 border border-red-500/30 rounded-2xl p-3 flex gap-2">
+              <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm">{payoutError}</p>
+            </div>
+          )}
+          {payoutDone && (
+            <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-3 flex gap-2">
+              <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" />
+              <p className="text-green-300 text-sm">Çekim talebi oluşturuldu! Onay sonrası hesabına geçer.</p>
+            </div>
+          )}
+        </main>
+        <div className="p-5 pb-safe border-t border-white/5">
+          <button
+            disabled={payoutBusy || !validateIBAN(payoutIban) || !parseFloat(payoutAmount)}
+            onClick={handleRequestPayout}
+            className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+              !payoutBusy && validateIBAN(payoutIban) && parseFloat(payoutAmount) > 0
+                ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+            }`}>
+            {payoutBusy ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
+            {payoutBusy ? 'GÖNDERİLİYOR...' : `${payoutAmount ? fmtInt(Number(payoutAmount)) : '0'}₺ ÇEKİM TALEP ET`}
           </button>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
 
-// ─── Helper components ────────────────────────────────────────────────────────
+  // ─── ANA EKRAN ────────────────────────────────────────────────────────────
+  const recentTx = txList.slice(0, 6);
 
-const INCOME_TYPES_SET = new Set(['DEPOSIT', 'MATCH_EARNING', 'REFERRAL_BONUS']);
-
-const BalanceCard = ({ label, sublabel, balance, icon, color, loading, onAction, actionLabel }: {
-  label: string; sublabel: string; balance: number; icon: React.ReactNode;
-  color: 'green' | 'blue'; loading: boolean; onAction?: () => void; actionLabel?: string;
-}) => {
-  const colorMap = {
-    green: { bg: 'from-green-900/30 to-[#161B22]', border: 'border-green-500/20', text: 'text-[#39FF14]', glow: 'shadow-[0_0_20px_rgba(57,255,20,0.1)]' },
-    blue:  { bg: 'from-blue-900/30 to-[#161B22]',  border: 'border-blue-500/20',  text: 'text-blue-400',  glow: '' },
-  };
-  const c = colorMap[color];
   return (
-    <div className={`bg-gradient-to-br ${c.bg} border ${c.border} rounded-[24px] p-4 ${c.glow} flex flex-col gap-2`}>
-      <div className={`flex items-center gap-1.5 ${c.text}`}>
-        {icon}
-        <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
+    <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] blur-[120px] rounded-full ${isEarningsRole ? 'bg-[#FACC15]/8' : 'bg-[#39FF14]/8'}`} />
       </div>
-      {loading ? (
-        <div className="h-7 bg-white/5 rounded-lg animate-pulse" />
-      ) : (
-        <p className="text-2xl font-black text-white leading-none">{balance.toFixed(2)}₺</p>
-      )}
-      <p className="text-[10px] text-gray-600">{sublabel}</p>
-      {onAction && (
-        <button onClick={onAction}
-          className={`mt-1 text-[10px] font-black uppercase ${c.text} flex items-center gap-1 hover:opacity-80 transition-opacity`}>
-          {actionLabel} <ArrowUpRight size={10} />
+
+      <header className="px-5 pt-safe py-4 flex justify-between items-center sticky top-0 z-20 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
+        <button onClick={onBack}
+          className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all">
+          <ArrowLeft size={20} />
         </button>
-      )}
+        <div className="flex flex-col items-center">
+          <h1 className="text-base font-black text-white tracking-[0.16em] uppercase">Cüzdan</h1>
+          {roleBadge && (
+            <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#FACC15] bg-yellow-400/12 px-2 py-0.5 rounded-md mt-1">
+              {roleBadge}
+            </span>
+          )}
+        </div>
+        <button onClick={() => fetchData()}
+          className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all">
+          <RefreshCw size={17} className={refreshing ? 'animate-spin text-[#39FF14]' : ''} />
+        </button>
+      </header>
+
+      <main className="flex-1 overflow-y-auto custom-scrollbar z-10 px-5 pt-2 pb-safe-nav space-y-[18px]">
+        {/* Hata banner'ı — başarısız ödeme buraya düşer (hibrit UX'in cüzdan yarısı) */}
+        {lastPaymentError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3.5 flex gap-3">
+            <div className="w-[34px] h-[34px] rounded-[10px] bg-red-500/15 flex items-center justify-center text-red-400 shrink-0">
+              <AlertTriangle size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold text-red-400">{lastPaymentError.title}</p>
+              <p className="text-[11.5px] text-gray-300 mt-1 leading-relaxed">{lastPaymentError.message}</p>
+              {paymentContext && (
+                <button onClick={retryPayment}
+                  className="mt-2.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 rounded-[9px] px-3 py-[7px]">
+                  Tekrar dene
+                </button>
+              )}
+            </div>
+            <button onClick={() => setLastPaymentError(null)} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
+          </div>
+        )}
+
+        {isEarningsRole ? (
+          <>
+            {/* ── Kaleci / Hakem / Tesis: kazanç hero (altın) ── */}
+            <div className="rounded-[26px] p-6 relative overflow-hidden border border-yellow-400/25 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+              style={{ background: 'linear-gradient(140deg,#3d3400,#0a1712 75%)' }}>
+              <div className="absolute -top-10 -right-8 w-44 h-44 bg-yellow-400/14 blur-[60px] rounded-full" />
+              <div className="relative">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-yellow-200/80">Çekilebilir Kazanç</p>
+                {loading ? (
+                  <div className="h-10 w-40 bg-white/5 rounded-lg animate-pulse mt-3" />
+                ) : (
+                  <p className="text-[40px] font-black leading-none mt-3 text-white font-numeric">{fmt(earningsBalance)}₺</p>
+                )}
+                <div className="flex gap-2 mt-4">
+                  <div className="bg-black/30 border border-white/6 rounded-xl px-3 py-2">
+                    <p className="text-[9px] text-gray-400 uppercase tracking-[0.08em]">Bu ay</p>
+                    <p className="text-[13px] font-extrabold text-white mt-0.5">{monthStats.count} maç</p>
+                  </div>
+                  <div className="bg-black/30 border border-white/6 rounded-xl px-3 py-2">
+                    <p className="text-[9px] text-gray-400 uppercase tracking-[0.08em]">Kazanç</p>
+                    <p className="text-[13px] font-extrabold text-[#FACC15] mt-0.5">+{fmtInt(monthStats.total)}₺</p>
+                  </div>
+                  {reservedBalance > 0 && (
+                    <div className="bg-black/30 border border-yellow-400/20 rounded-xl px-3 py-2">
+                      <p className="text-[9px] text-yellow-400/80 uppercase tracking-[0.08em]">Bekleyen çekim</p>
+                      <p className="text-[13px] font-extrabold text-yellow-300 mt-0.5">{fmtInt(reservedBalance)}₺</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Eylemler: IBAN'a Çek (geniş) + Geçmiş — Para Yükle YOK */}
+            <div className="flex gap-2.5">
+              <button onClick={() => setView('PAYOUT_FORM')}
+                className="flex-[2] py-[15px] bg-[#39FF14] text-[#0A0E14] font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-all">
+                <ArrowUpRight size={19} /> IBAN'A ÇEK
+              </button>
+              <button onClick={() => setView('HISTORY')}
+                className="flex-1 py-[15px] bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1 active:scale-[0.98] transition-all">
+                <List size={18} /> Geçmiş
+              </button>
+            </div>
+
+            {/* Bekleyen çekim satırı */}
+            {pendingPayout && (
+              <div className="bg-[#161B22] border border-yellow-400/20 rounded-2xl p-3.5 flex items-center gap-3">
+                <span className="w-[34px] h-[34px] rounded-[10px] bg-yellow-400/12 flex items-center justify-center text-[#FACC15] shrink-0">
+                  <Clock size={16} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-extrabold text-white">Bekleyen çekim talebi</p>
+                  <p className="text-[10px] text-gray-500 font-numeric mt-0.5">
+                    {pendingPayout.iban.slice(0, 4)}•• •••• {pendingPayout.iban.slice(-4)}
+                  </p>
+                </div>
+                <span className="text-sm font-black text-[#FACC15] font-numeric shrink-0">{fmt(pendingPayout.amount)}₺</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* ── Oyuncu: yüklenen bakiye hero (yeşil, tasarım 2a) ── */}
+            <div className="rounded-[26px] p-6 relative overflow-hidden border border-[#39FF14]/25 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+              style={{ background: 'linear-gradient(140deg,#0f3d24,#0a1712 75%)' }}>
+              <div className="absolute -top-10 -right-8 w-44 h-44 bg-[#39FF14]/14 blur-[60px] rounded-full" />
+              <div className="relative flex justify-between items-start">
+                <div>
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe87a]">Yüklenen Bakiye</p>
+                  {loading ? (
+                    <div className="h-10 w-40 bg-white/5 rounded-lg animate-pulse mt-3" />
+                  ) : (
+                    <p className="text-[40px] font-black leading-none mt-3 text-white font-numeric">{fmt(topupBalance)}₺</p>
+                  )}
+                </div>
+                <span className="font-numeric font-bold text-[13px] tracking-[0.08em] text-[#39FF14] border border-[#39FF14]/40 rounded-lg px-2 py-1">
+                  OYNA
+                </span>
+              </div>
+              <div className="relative mt-5 inline-flex items-center gap-2 bg-blue-400/12 border border-blue-400/25 rounded-xl px-3 py-2">
+                <Gift size={14} className="text-blue-400" />
+                <span className="text-xs font-bold text-blue-300">
+                  İade Kredisi <span className="text-white">{fmt(refundBalance)}₺</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Eylem hapları: Para Yükle · Kart Yönet · Geçmiş */}
+            <div className="flex gap-2.5">
+              <button onClick={() => setView('TOPUP')}
+                className="flex-1 py-3.5 bg-[#39FF14] text-[#0A0E14] rounded-2xl font-black text-[13px] flex flex-col items-center gap-1.5 shadow-[0_0_24px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-all">
+                <Plus size={20} /> Para Yükle
+              </button>
+              <button onClick={() => setView('CARDS')}
+                className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
+                <CreditCard size={20} /> Kart Yönet
+              </button>
+              <button onClick={() => setView('HISTORY')}
+                className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
+                <List size={20} /> Geçmiş
+              </button>
+            </div>
+
+            {/* Koşullu kazanç satırı — tasarım geliştirmesi: referral vb. kazanç
+                varsa gizlenmez, yoksa hiç görünmez (oyuncuda kazanç yok kuralı) */}
+            {earningsBalance > 0 && (
+              <div className="bg-[#161B22] border border-yellow-400/20 rounded-2xl p-3.5 flex items-center gap-3">
+                <span className="w-[34px] h-[34px] rounded-[10px] bg-yellow-400/12 flex items-center justify-center text-[#FACC15] shrink-0">
+                  <TrendingUp size={16} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-extrabold text-white">Kazanç bakiyen var</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">IBAN'a çekilebilir</p>
+                </div>
+                <span className="text-sm font-black text-[#FACC15] font-numeric">{fmt(earningsBalance)}₺</span>
+                <button onClick={() => setView('PAYOUT_FORM')}
+                  className="text-[11px] font-extrabold text-[#39FF14] shrink-0">Çek</button>
+              </div>
+            )}
+
+            {/* Kayıtlı kartlar mini karuseli */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kayıtlı Kartlar</p>
+                <button onClick={() => setView('CARDS')} className="text-[11px] text-[#39FF14] font-bold">Tümü</button>
+              </div>
+              <div className="oy-carousel flex gap-3 overflow-x-auto pb-1">
+                {savedCards.map(card => (
+                  <div key={card.id}
+                    className={`shrink-0 w-[200px] h-[120px] rounded-[18px] p-4 bg-gradient-to-br ${card.gradient ?? 'from-purple-800 to-blue-600'} flex flex-col justify-between`}>
+                    <div className="flex justify-between items-center">
+                      <span className="w-[34px] h-6 rounded bg-gradient-to-br from-yellow-400 to-yellow-700" />
+                      <span className="text-[10px] font-black italic text-white">{card.brand}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold tracking-[0.1em] text-white font-numeric">•••• {card.last4}</p>
+                      <p className="text-[9px] text-white/70 uppercase mt-1">
+                        {card.isDefault ? 'Varsayılan' : ''}
+                        {card.expMonth && card.expYear ? `${card.isDefault ? ' · ' : ''}${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                <button onClick={() => setView('ADD_CARD')}
+                  className="shrink-0 w-20 h-[120px] rounded-[18px] border-[1.5px] border-dashed border-white/16 flex items-center justify-center text-gray-400">
+                  <Plus size={22} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Son işlemler / Kazanç geçmişi */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">
+              {isEarningsRole ? 'Kazanç Geçmişi' : 'Son İşlemler'}
+            </p>
+            <button onClick={() => setView('HISTORY')} className="text-[11px] text-[#39FF14] font-bold">Tümü</button>
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.div key={isEarningsRole ? 'earn' : 'player'}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+              {recentTx.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Wallet size={32} className="text-gray-700 mx-auto mb-3" />
+                  <p className="text-gray-600 text-sm">Henüz işlem geçmişin yok.</p>
+                </div>
+              ) : recentTx.map(tx => <TxRow key={tx.id} tx={tx} />)}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Store uyum mikro-notu */}
+        <p className="text-[10px] text-gray-600 leading-relaxed px-0.5 pb-2">
+          {isEarningsRole
+            ? 'Kazançlar hizmet tamamlandıkça birikir ve IBAN talebiyle hesabına aktarılır.'
+            : 'Bakiye yalnızca OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır; dijital ürün satın alımında kullanılamaz.'}
+        </p>
+      </main>
     </div>
   );
 };
 
-const TxRow = ({ tx }: { tx: WalletTx }) => {
-  const isIncome = INCOME_TYPES_SET.has(tx.type);
-  const isPending = tx.status === 'PENDING';
-  const date = new Date(tx.created_at);
-  const dateStr = `${date.getDate().toString().padStart(2,'0')}.${(date.getMonth()+1).toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+// ─── Yardımcı bileşenler ─────────────────────────────────────────────────────
 
+const SubHeader = ({ title, subtitle, onBack }: { title: string; subtitle: string; onBack: () => void }) => (
+  <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+    <button onClick={onBack}
+      className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">
+      <ArrowLeft size={20} />
+    </button>
+    <div>
+      <h1 className="text-[17px] font-black text-white uppercase">{title}</h1>
+      <p className="text-[11px] text-gray-500 font-semibold">{subtitle}</p>
+    </div>
+  </header>
+);
+
+const TxRow = ({ tx }: { tx: { id: string; amount: number; type: string; status: string; description: string | null; created_at: string; balance_type?: string } }) => {
+  const meta = txMeta(tx as WalletTx);
+  const isPending = tx.status === 'PENDING';
+  const isFailed = tx.status === 'FAILED' || tx.status === 'CANCELLED';
+  const d = new Date(tx.created_at);
+  const dateStr = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   return (
-    <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isIncome ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-          {isIncome ? <Zap size={16} className="text-[#39FF14]" /> : <ArrowUpRight size={16} className="text-red-400" />}
-        </div>
-        <div>
-          <p className="text-white font-bold text-sm leading-tight">{tx.description ?? tx.type}</p>
-          <div className="flex items-center gap-2 mt-0.5">
+    <div className={`bg-[#161B22] border rounded-[14px] p-3.5 flex items-center justify-between gap-3 ${isFailed ? 'border-red-500/25' : 'border-white/5'}`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <span className={`w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0 ${meta.bg} ${meta.color}`}>
+          {meta.icon}
+        </span>
+        <div className="min-w-0">
+          <p className="font-bold text-[13px] text-white truncate">{tx.description ?? tx.type}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
             <p className="text-gray-600 text-[10px]">{dateStr}</p>
             {isPending && (
-              <span className="text-[9px] text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                <Clock size={8} /> Beklemede
+              <span className="text-[8.5px] text-[#FACC15] bg-yellow-400/12 px-1.5 py-px rounded-full font-bold">Beklemede</span>
+            )}
+            {isFailed && (
+              <span className="text-[8.5px] text-red-400 bg-red-400/10 px-1.5 py-px rounded-full font-bold">
+                {tx.status === 'FAILED' ? 'Başarısız' : 'İptal'}
               </span>
             )}
           </div>
         </div>
       </div>
-      <p className={`font-black text-base shrink-0 ${isIncome ? 'text-[#39FF14]' : 'text-red-400'}`}>
-        {isIncome ? '+' : '-'}{Math.abs(tx.amount).toFixed(2)}₺
+      <p className={`font-black text-sm shrink-0 font-numeric ${isFailed ? 'text-gray-600 line-through' : meta.income ? meta.color : 'text-white'}`}>
+        {meta.income ? '+' : '−'}{Math.abs(tx.amount).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}₺
       </p>
     </div>
   );
 };
-
-const PayoutRow = ({ payout }: { payout: PayoutRequest }) => {
-  const statusMap: Record<string, { label: string; color: string }> = {
-    PENDING:    { label: 'Beklemede', color: 'text-yellow-400 bg-yellow-400/10' },
-    PROCESSING: { label: 'İşleniyor', color: 'text-blue-400 bg-blue-400/10' },
-    COMPLETED:  { label: 'Tamamlandı', color: 'text-green-400 bg-green-400/10' },
-    FAILED:     { label: 'Başarısız', color: 'text-red-400 bg-red-400/10' },
-    CANCELLED:  { label: 'İptal', color: 'text-gray-400 bg-gray-400/10' },
-  };
-  const s = statusMap[payout.status] ?? { label: payout.status, color: 'text-gray-400 bg-gray-400/10' };
-  const date = new Date(payout.created_at);
-  const dateStr = `${date.getDate().toString().padStart(2,'0')}.${(date.getMonth()+1).toString().padStart(2,'0')}.${date.getFullYear()}`;
-
-  return (
-    <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-white font-black text-base">{payout.amount.toFixed(2)}₺</p>
-        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
-      </div>
-      <p className="text-gray-500 text-[11px] font-mono">{payout.iban.slice(0, 6)}••••••••••••••{payout.iban.slice(-4)}</p>
-      <p className="text-gray-600 text-[10px]">{payout.iban_holder_name} · {dateStr}</p>
-    </div>
-  );
-};
-
-const EmptyTx = ({ label }: { label: string }) => (
-  <div className="py-16 text-center">
-    <Wallet size={32} className="text-gray-700 mx-auto mb-3" />
-    <p className="text-gray-600 text-sm">{label}</p>
-  </div>
-);
-
-const InputField = ({ label, required, hint, hintColor, children }: { label: string; required?: boolean; hint?: string; hintColor?: string; children: React.ReactNode }) => (
-  <div>
-    <div className="flex items-center justify-between mb-2">
-      <label className="text-[11px] text-gray-500 font-bold uppercase tracking-wider flex gap-1">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      {hint && <span className={`text-[10px] font-bold ${hintColor ?? 'text-gray-600'}`}>{hint}</span>}
-    </div>
-    <div className="bg-[#0A0E14] border border-white/8 rounded-xl px-4 py-3 focus-within:border-[#39FF14]/40 transition-colors">
-      {children}
-    </div>
-  </div>
-);
 
 export default WalletScreen;

@@ -205,6 +205,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
+  // Misafir/demo modu: finansal aksiyonlar (çekim, kart, kimlik, başvuru/teklif)
+  // kilitli. RLS zaten oturum ister; kullanıcı kriptik RPC hatası yerine net bir
+  // "Giriş yap" yönlendirmesi görür. Demo cüzdan verisi salt-okunur kalır.
+  const isGuest = !auth.currentUser?.uid;
+  const [showGuestGate, setShowGuestGate] = useState(false);
+  const guardGuest = (): boolean => {
+      if (!isGuest) return true;
+      setShowGuestGate(true);
+      return false;
+  };
+
   // FAZ 5 — Gelen taleplerin durum bazlı gruplanması
   const newRequests = useMemo(
       () => incomingRequests.filter(r => r.status === 'PENDING'),
@@ -232,7 +243,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         // fakat id/uid'yi auth.currentUser.uid'e sabitle ki cüzdan/transfer/teklif
         // işlemleri yanlış (demo) kullanıcıya gitmesin.
         const authUid = auth.currentUser?.uid;
-        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (authUid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
+        // Misafirde mock 'u1' kimliğine düşülmez: demo profil yalnız görsel,
+        // finansal aksiyonlar guardGuest ile kilitli.
+        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === authUid) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
 
         if (active && me) {
             setUserProfile({
@@ -461,6 +474,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   // FAZ 5 — TC kimlik doğrulama gönder
   const handleSubmitIdentity = async () => {
+    if (!guardGuest()) return;
     setIdentityFormError(null);
     const tc = identityTc.trim();
     if (!/^\d{11}$/.test(tc)) {
@@ -592,6 +606,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // bakiye kontrolü ve tek-bekleyen-talep kuralı backend'de zorlanır; admin
   // FİNANS kuyruğu (admin_process_payout) talebi sonuçlandırınca bildirim düşer.
   const handleTransfer = async () => {
+      if (!guardGuest()) return;
       const method = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0];
       if (!method) { setShowCardOptions(true); return; }
       if (earningsBalance <= 0) { showActionError('Çekilebilir bakiyen bulunmuyor.'); return; }
@@ -675,6 +690,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   };
 
   const submitBid = async () => {
+      if (!guardGuest()) return;
       const uid = auth.currentUser?.uid;
 
       if (selectedOffer) {
@@ -992,7 +1008,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
                   {identityStatus !== 'PENDING' && (
                       <button
-                          onClick={() => { setIdentityName(userProfile?.fullName || ''); setIdentityFormError(null); setShowIdentityModal(true); }}
+                          onClick={() => { if (!guardGuest()) return; setIdentityName(userProfile?.fullName || ''); setIdentityFormError(null); setShowIdentityModal(true); }}
                           className="w-full mt-3 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black uppercase tracking-wider transition-colors"
                       >
                           Kimlik Doğrula
@@ -1627,7 +1643,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       return (
                           <div className="flex gap-2">
                               <button
-                                  onClick={() => setShowCardOptions(true)}
+                                  onClick={() => { if (!guardGuest()) return; setShowCardOptions(true); }}
                                   className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
                               >
                                   <CreditCard size={18} /> {methodLabel}
@@ -2450,6 +2466,53 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         .rotate-y-180 { transform: rotateY(180deg); }
       `}</style>
       </>)}
+
+      {/* ── Misafir Kapısı: finansal aksiyon kilidi + giriş CTA ── */}
+      <AnimatePresence>
+        {showGuestGate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+            onClick={() => setShowGuestGate(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="w-full max-w-sm bg-[#0A0E14] border border-[#FACC15]/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full pointer-events-none" />
+              <div className="relative z-10 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
+                  <p className="text-[11px] font-black uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Para çekme, ödeme yöntemi ekleme, kimlik doğrulama ve maç başvuruları için
+                  hesabınla giriş yapmalısın. Demo veriler yalnızca görüntüleme amaçlıdır.
+                </p>
+                <div className="flex gap-2.5 mt-1">
+                  <button
+                    onClick={() => onNavigate('AUTH')}
+                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
+                  >
+                    Giriş Yap
+                  </button>
+                  <button
+                    onClick={() => setShowGuestGate(false)}
+                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
+                  >
+                    Vazgeç
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {actionError && <Toast message={actionError} variant="error" />}

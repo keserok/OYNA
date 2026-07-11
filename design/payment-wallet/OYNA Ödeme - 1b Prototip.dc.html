@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.js"></script>
+<style>
+  html, body { margin: 0; background: #05070b; }
+  a { color: #39FF14; text-decoration: none; }
+  a:hover { color: #70ff56; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes oynaPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes oynaPop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes oynaRise { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .lucide { stroke-width: 2; }
+  .oy-carousel::-webkit-scrollbar { height: 0; }
+  input { font-family: inherit; }
+  input::placeholder { color: #4B5563; }
+</style>
+</helmet>
+<div style="min-height:100vh;background:radial-gradient(1100px 560px at 20% -5%, rgba(57,255,20,0.05), transparent), radial-gradient(900px 560px at 100% 8%, rgba(250,204,21,0.05), transparent), #05070b;color:#fff;font-family:Inter,sans-serif;display:flex;flex-direction:column;align-items:center;padding:44px 24px 72px;box-sizing:border-box">
+
+  <div style="text-align:center;margin-bottom:28px">
+    <span style="display:inline-block;font-family:'Space Grotesk',monospace;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#0A0E14;background:#39FF14;padding:5px 12px;border-radius:8px;margin-bottom:14px">Çalışan Prototip · 1b</span>
+    <h1 style="font-size:26px;font-weight:900;letter-spacing:-0.01em;margin:0">Dokunarak dene</h1>
+    <p style="font-size:13px;color:#8B949E;margin:8px 0 0;max-width:440px;line-height:1.5">Bakiye anahtarını aç/kapat, kart seç, yeni kart ekle, öde. Bakiye + kart hesabı canlı güncellenir.</p>
+  </div>
+
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="true" hint-size="402px,874px">
+    <div lang="tr" style="height:100%;background:#0A0E14;color:#fff;font-family:Inter,sans-serif;overflow:hidden;position:relative">
+
+      <!-- ══════════ PAY ══════════ -->
+      <sc-if value="{{ isPay }}" hint-placeholder-val="{{ true }}">
+        <div style="height:100%;display:flex;flex-direction:column">
+          <header style="display:flex;align-items:center;gap:14px;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+            <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06);flex-shrink:0"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+            <div><h1 style="font-size:17px;font-weight:900;margin:0;letter-spacing:0.01em">ÖDEME</h1><p style="font-size:11px;color:#6B7280;font-weight:600;margin:2px 0 0">Maça katılımını tamamla</p></div>
+          </header>
+          <main style="flex:1;overflow:auto;padding:20px 0 12px;display:flex;flex-direction:column;gap:18px">
+
+            <div style="margin:0 20px;border-radius:20px;padding:16px 18px;background:linear-gradient(150deg,rgba(20,83,45,0.28),#161B22 65%);border:1px solid rgba(57,255,20,0.2);display:flex;align-items:center;gap:14px">
+              <div style="width:50px;height:50px;border-radius:14px;background:repeating-linear-gradient(135deg,#0d2018 0 8px,#0a1712 8px 16px);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(57,255,20,0.15)"><i data-lucide="users" width="22" height="22" style="color:#39FF14"></i></div>
+              <div style="flex:1;min-width:0">
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#39FF14;background:rgba(57,255,20,0.12);padding:3px 7px;border-radius:6px;margin-bottom:5px">Maça Katılım · 2 slot</span>
+                <p style="font-size:15px;font-weight:800;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Cuma Akşamı Halısaha</p>
+                <p style="font-size:11px;color:#9CA3AF;margin:2px 0 0;font-weight:600">Ataşehir · Bugün 21:00</p>
+              </div>
+            </div>
+
+            <div style="text-align:center;padding:2px 20px">
+              <p style="font-size:11px;color:#9CA3AF;font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.1em">Ödenecek Tutar</p>
+              <p style="font-size:44px;font-weight:900;line-height:1;margin:0;font-family:'Space Grotesk',monospace">{{ amountText }}₺</p>
+              <p style="font-size:11px;color:#6B7280;margin:8px 0 0">2 slot × 150₺ · rezerve ettiğin yerler</p>
+            </div>
+
+            <div>
+              <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.14em;color:#6B7280;margin:0 0 12px;padding:0 20px">Ödeme Yöntemi</p>
+              <div class="oy-carousel" style="display:flex;gap:12px;overflow-x:auto;padding:0 20px 6px;scroll-snap-type:x mandatory">
+
+                <!-- balance toggle card -->
+                <div onClick="{{ balCard.toggle }}" style="scroll-snap-align:start;flex-shrink:0;width:158px;border-radius:20px;padding:16px;background:linear-gradient(150deg,rgba(20,83,45,0.4),#161B22);cursor:pointer;position:relative;transition:border .15s,box-shadow .15s;border:{{ balCard.ring }};box-shadow:{{ balCard.glow }}">
+                  <sc-if value="{{ balCard.applied }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:9999px;background:#39FF14;display:flex;align-items:center;justify-content:center"><i data-lucide="check" width="14" height="14" stroke-width="3" style="color:#0A0E14"></i></div>
+                  </sc-if>
+                  <div style="width:40px;height:40px;border-radius:12px;background:rgba(57,255,20,0.14);display:flex;align-items:center;justify-content:center;color:#39FF14;margin-bottom:34px"><i data-lucide="wallet" width="20" height="20"></i></div>
+                  <p style="font-size:12px;font-weight:800;margin:0">OYNA Bakiyesi</p>
+                  <p style="font-size:20px;font-weight:900;margin:4px 0 0;color:#39FF14;font-family:'Space Grotesk',monospace">150₺</p>
+                  <p style="font-size:9.5px;color:#6B7280;margin:3px 0 0">{{ balCard.sub }}</p>
+                </div>
+
+                <!-- saved cards -->
+                <sc-for list="{{ cardViews }}" as="card" hint-placeholder-count="2">
+                  <div onClick="{{ card.onSelect }}" style="scroll-snap-align:start;flex-shrink:0;width:158px;border-radius:20px;padding:16px;background:#161B22;cursor:pointer;position:relative;transition:border .15s,box-shadow .15s;border:{{ card.ring }};box-shadow:{{ card.glow }}">
+                    <sc-if value="{{ card.selected }}" hint-placeholder-val="{{ true }}">
+                      <div style="position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:9999px;background:#39FF14;display:flex;align-items:center;justify-content:center"><i data-lucide="check" width="14" height="14" stroke-width="3" style="color:#0A0E14"></i></div>
+                    </sc-if>
+                    <div style="width:44px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:44px;background:{{ card.grad }}"><span style="font-weight:900;color:#fff;font-size:{{ card.fs }};font-style:{{ card.italic }}">{{ card.brand }}</span></div>
+                    <p style="font-size:12px;font-weight:800;margin:0;font-family:'Space Grotesk',monospace">•••• {{ card.last4 }}</p>
+                    <p style="font-size:9.5px;color:#6B7280;margin:4px 0 0">Son kullanma {{ card.exp }}</p>
+                  </div>
+                </sc-for>
+
+                <!-- add -->
+                <div onClick="{{ openAdd }}" style="scroll-snap-align:start;flex-shrink:0;width:120px;border-radius:20px;padding:16px;border:1.5px dashed rgba(255,255,255,0.16);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#9CA3AF;cursor:pointer">
+                  <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center"><i data-lucide="plus" width="20" height="20"></i></div>
+                  <p style="font-size:11px;font-weight:700;margin:0;text-align:center">Yeni<br>kart ekle</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:0 20px;display:flex;gap:10px;align-items:flex-start;background:rgba(57,255,20,0.06);border:1px solid rgba(57,255,20,0.16);border-radius:16px;padding:14px"><span style="color:#39FF14;flex-shrink:0;margin-top:1px"><i data-lucide="info" width="15" height="15"></i></span><p style="font-size:11.5px;color:#D1D5DB;line-height:1.55;margin:0">{{ noteText }}</p></div>
+            <div style="height:4px"></div>
+          </main>
+
+          <div style="flex-shrink:0;padding:14px 20px 30px;background:linear-gradient(to top,#0A0E14 70%,transparent);border-top:1px solid rgba(255,255,255,0.05)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px">
+              <span style="font-size:11px;color:#6B7280;font-weight:600">{{ breakdown }}</span>
+              <span style="font-size:13px;font-weight:800;color:#fff">Toplam <span style="color:#39FF14">{{ amountText }}₺</span></span>
+            </div>
+            <button onClick="{{ pay }}" style="width:100%;padding:16px;background:#39FF14;color:#0A0E14;font-weight:900;font-size:16px;border:none;border-radius:16px;box-shadow:0 0 30px rgba(57,255,20,0.28);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><i data-lucide="lock" width="17" height="17"></i> {{ payLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ ADD CARD ══════════ -->
+      <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;display:flex;flex-direction:column">
+          <header style="display:flex;align-items:center;gap:14px;padding:56px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+            <div onClick="{{ closeAdd }}" style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#161B22;border-radius:9999px;border:1px solid rgba(255,255,255,0.06);cursor:pointer"><i data-lucide="arrow-left" width="20" height="20"></i></div>
+            <div><h1 style="font-size:17px;font-weight:900;margin:0">YENİ KART EKLE</h1><p style="font-size:11px;color:#6B7280;font-weight:600;margin:2px 0 0">Kart bilgilerini gir</p></div>
+          </header>
+          <main style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:18px">
+            <div style="border-radius:20px;padding:20px;background:linear-gradient(135deg,#1f2937,#0f172a);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;min-height:150px;display:flex;flex-direction:column;justify-content:space-between">
+              <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:rgba(57,255,20,0.08);filter:blur(50px);border-radius:9999px"></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative">
+                <div style="width:40px;height:30px;border-radius:6px;background:linear-gradient(135deg,#facc15,#ca8a04)"></div>
+                <i data-lucide="wifi" width="22" height="22" style="color:rgba(255,255,255,0.5);transform:rotate(90deg)"></i>
+              </div>
+              <div style="position:relative">
+                <p style="font-size:19px;font-weight:700;letter-spacing:0.12em;margin:0;font-family:'Space Grotesk',monospace">{{ previewNum }}</p>
+                <div style="display:flex;justify-content:space-between;margin-top:12px"><span style="font-size:11px;color:#9CA3AF;font-family:'Space Grotesk',monospace">{{ previewName }}</span><span style="font-size:11px;color:#9CA3AF;font-family:'Space Grotesk',monospace">{{ previewExp }}</span></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <label style="font-size:10px;color:#6B7280;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:7px">Kart Numarası</label>
+                <input value="{{ fNum }}" onInput="{{ onNum }}" inputmode="numeric" placeholder="1234 5678 9012 3456" style="width:100%;box-sizing:border-box;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:13px 15px;color:#fff;font-weight:700;letter-spacing:0.08em;font-family:'Space Grotesk',monospace;font-size:15px;outline:none">
+              </div>
+              <div>
+                <label style="font-size:10px;color:#6B7280;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:7px">Kart Sahibi</label>
+                <input value="{{ fName }}" onInput="{{ onName }}" placeholder="AD SOYAD" style="width:100%;box-sizing:border-box;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:13px 15px;color:#fff;font-weight:700;letter-spacing:0.03em;font-size:15px;outline:none">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div><label style="font-size:10px;color:#6B7280;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:7px">Son Kullanma</label><input value="{{ fExp }}" onInput="{{ onExp }}" inputmode="numeric" placeholder="AA/YY" style="width:100%;box-sizing:border-box;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:13px 15px;color:#fff;font-weight:700;font-family:'Space Grotesk',monospace;font-size:15px;outline:none"></div>
+                <div><label style="font-size:10px;color:#6B7280;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:7px">CVV</label><input value="{{ fCvv }}" onInput="{{ onCvv }}" inputmode="numeric" placeholder="•••" style="width:100%;box-sizing:border-box;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:13px 15px;color:#fff;font-weight:700;font-family:'Space Grotesk',monospace;font-size:15px;outline:none"></div>
+              </div>
+            </div>
+            <div onClick="{{ toggleSave }}" style="display:flex;gap:10px;align-items:center;padding:0 2px;cursor:pointer">
+              <div style="width:20px;height:20px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ saveChkBg }};border:{{ saveChkBorder }}"><i data-lucide="check" width="13" height="13" stroke-width="3" style="color:#0A0E14;opacity:{{ saveChkOpacity }}"></i></div>
+              <span style="font-size:12px;color:#D1D5DB;font-weight:600">Bu kartı sonraki ödemeler için kaydet</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 2px"><span style="color:#39FF14"><i data-lucide="shield" width="14" height="14"></i></span><p style="font-size:11px;color:#6B7280;margin:0">iyzico güvencesi · Kart verisi cihazda saklanmaz</p></div>
+          </main>
+          <div style="flex-shrink:0;padding:14px 20px 30px;border-top:1px solid rgba(255,255,255,0.05)"><button onClick="{{ saveCard }}" style="width:100%;padding:16px;font-weight:900;font-size:16px;border:none;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:{{ saveBtnBg }};color:{{ saveBtnColor }}"><i data-lucide="plus" width="18" height="18"></i> KARTI KAYDET</button></div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ PROCESSING ══════════ -->
+      <sc-if value="{{ isProc }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px">
+          <div style="position:relative;width:170px;height:170px;margin-bottom:40px">
+            <svg width="170" height="170" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"></circle>
+              <circle cx="50" cy="50" r="44" fill="none" stroke="#39FF14" stroke-width="5" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="90" style="filter:drop-shadow(0 0 6px rgba(57,255,20,0.5));animation:spin 1.1s linear infinite;transform-origin:50% 50%"></circle>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="width:54px;height:38px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#2563eb);display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);color:#fff"><i data-lucide="credit-card" width="22" height="22"></i></div>
+              <p style="font-size:10px;font-family:'Space Grotesk',monospace;color:#9CA3AF;margin:0">Ödeme</p>
+            </div>
+          </div>
+          <p style="font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:0.16em;margin:0">Ödeme İşleniyor</p>
+          <p style="font-size:13px;color:#6B7280;margin:10px 0 0;display:flex;align-items:center;gap:6px"><span style="color:#39FF14;animation:oynaPulse 1.4s ease-in-out infinite"><i data-lucide="shield" width="13" height="13"></i></span> iyzico ile güvenli bağlantı</p>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ SUCCESS ══════════ -->
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;display:flex;flex-direction:column;position:relative">
+          <div style="position:absolute;top:0;left:0;right:0;height:340px;background:radial-gradient(circle at 50% 30%, rgba(57,255,20,0.16), transparent 65%);pointer-events:none"></div>
+          <main style="flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:70px 24px 24px;position:relative">
+            <div style="width:104px;height:104px;border-radius:9999px;background:#39FF14;display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(57,255,20,0.5);margin-bottom:28px;color:#0A0E14;animation:oynaPop .5s cubic-bezier(.2,.9,.3,1.2) both"><i data-lucide="check" width="52" height="52" stroke-width="3"></i></div>
+            <h2 style="font-size:27px;font-weight:900;margin:0;text-align:center;letter-spacing:-0.01em;animation:oynaRise .4s .12s ease both">Katılımın Onaylandı!</h2>
+            <p style="font-size:13px;color:#39FF14;font-weight:700;margin:8px 0 0;text-transform:uppercase;letter-spacing:0.14em;animation:oynaRise .4s .18s ease both">{{ amountText }}₺ · Yerin garanti</p>
+            <div style="width:100%;background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:20px;margin-top:32px;display:flex;flex-direction:column;gap:13px;animation:oynaRise .4s .24s ease both">
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Maç</span><span style="font-weight:700">Cuma Akşamı Halısaha</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Yer & Saat</span><span style="font-weight:700">Ataşehir · 21:00</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Ödeme</span><span style="font-weight:700">{{ breakdown }}</span></div>
+              <div style="height:1px;background:rgba(255,255,255,0.08)"></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">İşlem No</span><span style="font-weight:700;color:#4B5563;font-family:'Space Grotesk',monospace;font-size:11px">A1B2C3D4</span></div>
+            </div>
+          </main>
+          <div style="flex-shrink:0;padding:14px 20px 30px;display:flex;flex-direction:column;gap:10px">
+            <button style="width:100%;padding:16px;background:#39FF14;color:#0A0E14;font-weight:900;font-size:15px;border:none;border-radius:16px;cursor:pointer">MAÇ DETAYINI GÖR</button>
+            <button onClick="{{ reset }}" style="width:100%;padding:12px;background:none;color:#6B7280;font-weight:700;font-size:14px;border:none;cursor:pointer">Prototipi baştan dene</button>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'pay',
+    useBalance: true,
+    selectedCard: 'visa',
+    cards: [
+      { id:'visa', brand:'VISA', last4:'4242', exp:'08/28', grad:'linear-gradient(135deg,#7c3aed,#2563eb)', fs:'8px', italic:'italic' },
+      { id:'mc', brand:'MC', last4:'8888', exp:'04/27', grad:'linear-gradient(135deg,#059669,#0f766e)', fs:'6.5px', italic:'normal' },
+    ],
+    fNum:'', fName:'', fExp:'', fCvv:'', fSave:true,
+  };
+
+  amount = 300;
+  balance = 150;
+
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  componentWillUnmount(){ clearTimeout(this._t); clearTimeout(this._pt); }
+  _icons(){
+    const run = () => { try { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch(e){} };
+    run();
+    clearTimeout(this._t); this._t = setTimeout(run, 180);
+  }
+  _fmt(n){ return n.toLocaleString('tr-TR'); }
+
+  renderVals(){
+    const s = this.state;
+    const balApplied = s.useBalance ? Math.min(this.balance, this.amount) : 0;
+    const remaining = this.amount - balApplied;
+    const needsCard = remaining > 0;
+    const sel = s.cards.find(c => c.id === s.selectedCard) || null;
+
+    const cardViews = s.cards.map(c => {
+      const selected = needsCard && s.selectedCard === c.id;
+      return Object.assign({}, c, {
+        selected,
+        ring: selected ? '2px solid #39FF14' : '1px solid rgba(255,255,255,0.08)',
+        glow: selected ? '0 0 22px rgba(57,255,20,0.18)' : 'none',
+        onSelect: () => this.setState({ selectedCard: c.id }),
+      });
+    });
+
+    const balCard = {
+      applied: s.useBalance,
+      ring: s.useBalance ? '2px solid #39FF14' : '1px solid rgba(255,255,255,0.08)',
+      glow: s.useBalance ? '0 0 22px rgba(57,255,20,0.18)' : 'none',
+      sub: this.balance >= this.amount ? 'Tamamını karşılar' : 'Kısmen karşılar',
+      toggle: () => this.setState({ useBalance: !s.useBalance }),
+    };
+
+    let breakdown, noteText;
+    if (balApplied > 0 && needsCard) {
+      breakdown = this._fmt(balApplied) + '₺ bakiye + ' + this._fmt(remaining) + '₺ kart';
+      noteText = 'Bakiyen tutarın bir kısmını karşılıyor; kalan ' + this._fmt(remaining) + '₺ seçtiğin karttan tahsil edilir.';
+    } else if (balApplied > 0 && !needsCard) {
+      breakdown = 'Tamamı OYNA bakiyenden';
+      noteText = 'Tamamı OYNA bakiyenden karşılanıyor — kart gerekmez.';
+    } else {
+      breakdown = 'Tamamı karttan';
+      noteText = 'Bakiye kullanılmıyor; tutarın tamamı seçtiğin karttan tahsil edilir.';
+    }
+
+    const cleanNum = s.fNum.replace(/\s/g, '');
+    const saveDisabled = !(cleanNum.length >= 12 && s.fExp.length >= 4 && s.fCvv.length >= 3 && s.fName.trim().length > 1);
+
+    return {
+      isPay: s.screen === 'pay',
+      isAdd: s.screen === 'add',
+      isProc: s.screen === 'processing',
+      isDone: s.screen === 'success',
+
+      cardViews, balCard, needsCard,
+      amountText: this._fmt(this.amount),
+      breakdown, noteText,
+      payLabel: this._fmt(this.amount) + '₺ ÖDE',
+
+      openAdd: () => this.setState({ screen: 'add' }),
+      closeAdd: () => this.setState({ screen: 'pay' }),
+      pay: () => {
+        this.setState({ screen: 'processing' });
+        clearTimeout(this._pt);
+        this._pt = setTimeout(() => this.setState({ screen: 'success' }), 2200);
+      },
+      reset: () => this.setState({ screen: 'pay', useBalance: true, selectedCard: 'visa' }),
+
+      fNum: s.fNum, fName: s.fName, fExp: s.fExp, fCvv: s.fCvv,
+      previewNum: s.fNum || '•••• •••• •••• ••••',
+      previewName: s.fName || 'AD SOYAD',
+      previewExp: s.fExp || 'AA/YY',
+      onNum: (e) => { let v = e.target.value.replace(/[^0-9]/g,'').slice(0,16); v = v.replace(/(.{4})/g,'$1 ').trim(); this.setState({ fNum: v }); },
+      onName: (e) => this.setState({ fName: e.target.value.toUpperCase() }),
+      onExp: (e) => { let v = e.target.value.replace(/[^0-9]/g,'').slice(0,4); if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2); this.setState({ fExp: v }); },
+      onCvv: (e) => this.setState({ fCvv: e.target.value.replace(/[^0-9]/g,'').slice(0,3) }),
+      toggleSave: () => this.setState({ fSave: !s.fSave }),
+      saveChkBg: s.fSave ? '#39FF14' : 'transparent',
+      saveChkBorder: s.fSave ? '2px solid #39FF14' : '2px solid rgba(255,255,255,0.2)',
+      saveChkOpacity: s.fSave ? '1' : '0',
+      saveCard: () => {
+        if (saveDisabled) return;
+        const last4 = cleanNum.slice(-4) || '0000';
+        const id = 'c' + Date.now();
+        const nc = { id, brand:'VISA', last4, exp: s.fExp || '--/--', grad:'linear-gradient(135deg,#0ea5e9,#6366f1)', fs:'8px', italic:'italic' };
+        this.setState({ cards: [...s.cards, nc], selectedCard: id, screen: 'pay', fNum:'', fName:'', fExp:'', fCvv:'' });
+      },
+      saveBtnBg: saveDisabled ? '#1f2937' : '#39FF14',
+      saveBtnColor: saveDisabled ? '#6B7280' : '#0A0E14',
+    };
+  }
+}
+</script>
+</body>
+</html>
