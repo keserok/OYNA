@@ -318,6 +318,11 @@ export const signInWithEmailPassword = async (email: string, password: string) =
 // doğrulama bekletir; UI bu durumu (session yoksa) "e-postanı doğrula" olarak
 // ele almalıdır.
 export const signUpWithPassword = async (email: string, password: string, fullName: string) => {
+  // Panelden "Kayıt Kapalı" yapıldıysa sunucudan doğrula (fail-open: RPC hatası kaydı engellemez)
+  const gate = await supabase.rpc('is_registration_open').then(r => r, () => ({ data: null, error: true } as const));
+  if (!gate.error && gate.data === false) {
+    throw new Error('Yeni üye kaydı şu an geçici olarak kapalıdır. Lütfen daha sonra tekrar deneyin.');
+  }
   const { data, error } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
     password,

@@ -16,6 +16,7 @@ import { PAGE_TRANSITION } from './components/common/motion';
 import OfflineBanner from './components/OfflineBanner';
 import { GlobalToast, showToast } from './components/common/GlobalToast';
 import SignupGate from './components/common/SignupGate';
+import MaintenanceGate from './components/common/MaintenanceGate';
 
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
@@ -41,7 +42,8 @@ const WalletScreen = lazy(() => import('./views/WalletScreen'));
 // MatchLobby kaldırıldı — MatchJoin artık tek ekran
 // OpponentFinder (Rakip Bul haritası) kaldırıldı — rakip yalnız maç oluştur'dan davet edilir
 const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
-const AdminPanel = lazy(() => import('./views/AdminPanel'));
+// Ayrıştırma (Faz B): panel ana pakete gömülmez; ayrı domain'e yönlendirilir.
+const AdminPanel = lazy(() => import('./views/AdminRedirect'));
 const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
 const SocialView = lazy(() => import('./views/SocialView'));
 const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
@@ -607,6 +609,8 @@ const App: React.FC = () => {
       <OfflineBanner />
       <GlobalToast />
       <SignupGate />
+      {/* Bakım perdesi — sunucudaki is_maintenance_active() aktifse adminler hariç kilitler */}
+      <MaintenanceGate />
       {/* Mesh Gradient Background */}
       <div className="mesh-bg">
         <div className="mesh-blob mesh-blob-1"></div>

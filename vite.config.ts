@@ -7,6 +7,17 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 const ADMIN_DEV = process.env.ADMIN_DEV === '1';
+// Faz B (ayrıştırma): APP_TARGET ile tek build hedefi seçilir.
+//   'app'   → yalnız index.html (mobil/Capacitor ve ana web domain'i; admin kodu SIFIR)
+//   'admin' → yalnız admin-panel/admin.html (ayrı yönetim domain'i)
+//   (tanımsız) → ikisi birden (geçiş dönemi / tek Vercel projesi)
+const APP_TARGET = process.env.APP_TARGET as 'app' | 'admin' | undefined;
+const MAIN_INPUT = path.resolve(__dirname, 'index.html');
+const ADMIN_INPUT = path.resolve(__dirname, 'admin-panel/admin.html');
+const BUILD_INPUT =
+  APP_TARGET === 'app' ? { main: MAIN_INPUT }
+  : APP_TARGET === 'admin' ? { admin: ADMIN_INPUT }
+  : { main: MAIN_INPUT, admin: ADMIN_INPUT };
 // Tek kaynak: tüm ekranlardaki sürüm rozetleri buradan (import.meta.env.VITE_APP_VERSION) okunur.
 const APP_VERSION = (JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')) as { version: string }).version;
 
@@ -63,10 +74,7 @@ export default defineConfig({
   plugins: [adminDevRedirect(), react(), tailwindcss()],
   build: {
     rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-        admin: path.resolve(__dirname, 'admin-panel/admin.html'),
-      },
+      input: BUILD_INPUT,
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],

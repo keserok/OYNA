@@ -1,12 +1,14 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:app",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/admin", "destination": "https://oynaturkiyepotansiyeli.com", "permanent": false },
+    { "source": "/admin.html", "destination": "https://oynaturkiyepotansiyeli.com", "permanent": false },
+    { "source": "/admin/(.*)", "destination": "https://oynaturkiyepotansiyeli.com", "permanent": false }
+  ],
   "rewrites": [
-    { "source": "/admin", "destination": "/admin-panel/admin" },
-    { "source": "/admin.html", "destination": "/admin-panel/admin" },
-    { "source": "/admin/(.*)", "destination": "/admin-panel/admin" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -17,18 +19,6 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "geolocation=(self), camera=(self)" }
-      ]
-    },
-    {
-      "source": "/admin",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/admin-panel/admin",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
       ]
     },
     {
