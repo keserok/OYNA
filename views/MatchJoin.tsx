@@ -11,14 +11,13 @@ import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, Provi
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates } from '../services/matchService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
 import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
 import { normalizeRole, inferSquadSize, applyCanonicalCoords } from '../shared/lobbyEnrichment';
-import { ORDU_CENTER } from '../utils/orduData';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -204,16 +203,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setNewMatchBadge
   } = useAppStore();
 
+  // Saha konumu: pitch_id (FK) tek otorite; store'daki isim eşleşmesi varsayılan
+  // koordinat bastığı için kullanılmaz. Çözülemezse null kalır → harita gizlenir.
   useEffect(() => {
-    if (match?.location) {
-        const foundPitch = adminPitches?.find(p => (p.name || '').toLowerCase().includes(match.location.toLowerCase()) || match.location.toLowerCase().includes((p.name || '').toLowerCase()));
-        if (foundPitch && foundPitch.coordinates) {
-            setPitchCoordinates([foundPitch.coordinates.lat, foundPitch.coordinates.lng]);
-        } else {
-            setPitchCoordinates([ORDU_CENTER.lat, ORDU_CENTER.lng]);
-        }
-    }
-  }, [match, adminPitches]);
+    let alive = true;
+    const pid = (match as { pitchId?: string } | undefined)?.pitchId;
+    if (!pid && !match?.location) { setPitchCoordinates(null); return; }
+    getPitchCoordinates(pid, match?.location).then((coords) => {
+      if (alive) setPitchCoordinates(coords);
+    });
+    return () => { alive = false; };
+  }, [(match as { pitchId?: string } | undefined)?.pitchId, match?.location]);
 
   // ── İlk hidrasyon: DB'deki yetkili satırı çek (private_code dahil) ──────
   useEffect(() => {
@@ -2879,7 +2879,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       {/* ── MAP MODAL (SAHA KONUMU) ── */}
       <AnimatePresence>
-        {showMapModal && pitchCoordinates && (
+        {showMapModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2903,7 +2903,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </div>
               <div className="h-64 relative">
                 <style>{AIRBNB_MAP_CSS}</style>
-                {pitchCoordinates && (
+                {pitchCoordinates ? (
                   <MapContainer center={pitchCoordinates} zoom={15} className="w-full h-full" zoomControl={false}>
                       <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="" />
                       <ChangeView center={pitchCoordinates} />
@@ -2916,6 +2916,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           </Popup>
                       </Marker>
                   </MapContainer>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-6 text-center bg-black/20">
+                    <MapPin size={28} className="text-white/20" />
+                    <p className="text-white/70 text-xs font-black uppercase tracking-wide">Konum bilgisi henüz eklenmemiş</p>
+                    <p className="text-white/40 text-[10px] leading-relaxed">Saha sahibi konum bilgisini ekleyince harita ve yol tarifi burada görünecek.</p>
+                  </div>
                 )}
               </div>
             </motion.div>
