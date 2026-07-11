@@ -22,7 +22,11 @@ export function mapAdminPitchRowToUi(row: AdminPitchRow): Pitch {
     lockerRoomQuality: 80,
     goalQuality: 80,
     occupancy: 0,
-    coordinates: { lat: row.latitude ?? 40.9839, lng: row.longitude ?? 37.8764 },
+    // Koordinat yoksa sahte Ordu-merkez varsayılanı basma → undefined (yalancı pin yok).
+    coordinates:
+      row.latitude != null && row.longitude != null
+        ? { lat: row.latitude, lng: row.longitude }
+        : undefined,
     slots: [],
     isApproved: row.verification_status === 'approved',
     ...(row.isDemo ? { isDemo: true } as { isDemo?: boolean } : {}),

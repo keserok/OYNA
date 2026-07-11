@@ -27,6 +27,7 @@ import PhotoManager from '../../../components/pitch-editor/PhotoManager';
 import ShowcaseScoreCard from '../../../components/pitch-editor/ShowcaseScoreCard';
 import ShowcasePreview from '../../../components/pitch-editor/ShowcasePreview';
 import { ORDU_CENTER } from '../../../utils/orduData';
+import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../../../components/map/mapBase';
 
 interface Props {
   onClose: () => void;
@@ -439,8 +440,9 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               {requiresApproval && <span className="text-blue-300"> Onaylı tesiste pin değişikliği admin onayına gider.</span>}
             </p>
             <div className="h-72 rounded-2xl overflow-hidden border border-white/10">
-              <MapContainer center={mapCenter} zoom={latLng ? 16 : 12} className="w-full h-full">
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="" />
+              <style>{OYNA_MAP_CSS}</style>
+              <MapContainer center={mapCenter} zoom={latLng ? 16 : 12} className="w-full h-full" {...oynaMapProps}>
+                <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
                 <DraggablePin
                   pos={mapCenter}
                   onMove={(lat, lng) => setLatLng([Number(lat.toFixed(6)), Number(lng.toFixed(6))])}

@@ -390,7 +390,9 @@ export interface Pitch {
   lightingGrade?: 'A' | 'B' | 'C';
   grassGrade?: 'A' | 'B' | 'C';
   lockerRoomGrade?: 'A' | 'B' | 'C';
-  coordinates: { lat: number; lng: number };
+  // Koordinat girilmemiş saha için undefined — sahte varsayılan (Ordu merkezi)
+  // BASILMAZ; haritada yalancı pin yerine hiç gösterilmez (dürüstlük ilkesi).
+  coordinates?: { lat: number; lng: number };
   slots: { time: string; status: 'available' | 'booked' | 'selected' }[];
   courts?: Court[]; // Multiple courts in one facility
   isCluster?: boolean;

@@ -26,6 +26,7 @@ import { PitchManager } from '../PitchManager';
 import { useAdminToast } from '../context/AdminToastContext';
 import { DEFAULT_WORKING_DAYS, type OwnerWorkingDay } from '../../../views/owner/menu/ownerMenuTypes';
 import { ORDU_CENTER } from '../../../utils/orduData';
+import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../../../components/map/mapBase';
 import type { PitchCourt } from '../../../types';
 
 interface PitchStudioProps {
@@ -526,8 +527,9 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                   <div className="pt-2">
                     <label className={`${labelCls} flex items-center gap-1.5`}><MapPin size={12} /> Konum Pini — vitrindeki mesafeler bu pinden hesaplanır</label>
                     <div className="h-72 rounded-2xl overflow-hidden border border-white/10">
-                      <MapContainer center={mapCenter} zoom={latLng ? 16 : 12} className="w-full h-full">
-                        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="" />
+                      <style>{OYNA_MAP_CSS}</style>
+                      <MapContainer center={mapCenter} zoom={latLng ? 16 : 12} className="w-full h-full" {...oynaMapProps}>
+                        <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
                         <DraggablePin pos={mapCenter} onMove={(lat, lng) => setLatLng([Number(lat.toFixed(6)), Number(lng.toFixed(6))])} />
                       </MapContainer>
                     </div>
