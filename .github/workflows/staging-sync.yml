@@ -1,0 +1,53 @@
+# OYNA — canlı şemayı staging'e aktar (elle tetiklenir)
+#
+# Neden var: repo migration geçmişi "yaratılıştan" başlamıyor (taban şema Mayıs
+# 2026'da SQL Editor'den elle kuruldu). Boş bir projeye 240 migration replay
+# edilemez; staging bu workflow ile canlının ŞEMA dökümünden (baseline) kurulur.
+# Aynı yöntem Frankfurt taşınmasında da kullanılacak (orada + veri dökümü).
+#
+# Gerekli secret'lar (repo → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL         canlı proje Session pooler URI'si
+#     postgresql://postgres.iikvzgyccvgcybzdfwlv:<ŞİFRE>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres
+#   STAGING_DB_URL          staging proje Session pooler URI'si
+#     postgresql://postgres.ebpqfmoabiqeosbeldmw:<ŞİFRE>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+#   (Şifreler: Dashboard → Project Settings → Database → Reset database password)
+#
+# Ne aktarır: public şemasının TAMAMI (tablolar, fonksiyonlar, politikalar,
+# trigger'lar, indeksler) — VERİ AKTARMAZ. Config/seed verileri ve cron işleri
+# sonradan MCP ile kopyalanır (Claude oturumu yapar).
+name: staging-sync
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  sync-schema:
+    runs-on: ubuntu-latest
+    container: postgres:17
+    steps:
+      - name: Canlıdan şema dökümü al
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          test -n "$DB_URL" || { echo "::error::SUPABASE_DB_URL secret eksik"; exit 1; }
+          pg_dump "$DB_URL" --schema-only --no-owner --no-privileges \
+            --schema=public -f schema_public.sql
+          wc -l schema_public.sql
+
+      - name: Staging'e yükle
+        env:
+          DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          test -n "$DB_URL" || { echo "::error::STAGING_DB_URL secret eksik"; exit 1; }
+          # ON_ERROR_STOP=0: uzantı/şema gibi zaten-var nesne hataları es geçilir;
+          # sonuç adımda tablo sayısıyla doğrulanır.
+          psql "$DB_URL" -v ON_ERROR_STOP=0 -f schema_public.sql 2>&1 | tail -40
+          echo "--- staging tablo sayısı ---"
+          psql "$DB_URL" -tAc "select count(*) from pg_tables where schemaname='public'"
+
+      - name: Şema dökümünü artifact olarak sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-baseline
+          path: schema_public.sql
+          retention-days: 30

@@ -1,0 +1,47 @@
+# OYNA — günlük veritabanı yedeği (PITR'sız güvence katmanı, bkz. docs/SUPABASE_YAPILACAKLAR.md A3)
+#
+# Gerekli secret: SUPABASE_DB_URL
+#   Dashboard → Project Settings → Database → Connection string → URI
+#   ⚠️ "Session pooler" bağlantısını seçin (GitHub runner'ları IPv6 desteklemez;
+#   doğrudan db.<ref>.supabase.co adresi IPv6-only olduğu için BAĞLANAMAZ).
+#   Biçim: postgresql://postgres.<ref>:<ŞİFRE>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres
+#
+# Yedek nereye gider: GitHub Actions artifact'ı olarak saklanır (30 gün).
+# İndirme: repo → Actions → ilgili koşum → Artifacts.
+# İleride S3/Backblaze'e da kopyalamak istersek buraya bir adım eklenir.
+name: db-backup
+
+on:
+  schedule:
+    - cron: '30 1 * * *' # her gece 01:30 UTC (TR 04:30)
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    container: postgres:17
+    steps:
+      - name: pg_dump al
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret'ı tanımlı değil (dosya başındaki nota bakın)."
+            exit 1
+          fi
+          STAMP=$(date -u +%Y%m%d_%H%M)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          # public + auth + storage şemaları: uygulama verisi, kullanıcılar ve dosya meta'sı.
+          # (Storage'daki dosyaların KENDİSİ DB'de değildir; onlar için ayrı senkron gerekir.)
+          pg_dump "$DB_URL" -Fc --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage \
+            -f "oyna_${STAMP}.dump"
+          ls -lh oyna_*.dump
+
+      - name: Artifact olarak sakla (30 gün)
+        uses: actions/upload-artifact@v4
+        with:
+          name: oyna-db-backup-${{ env.STAMP }}
+          path: oyna_*.dump
+          retention-days: 30
+          if-no-files-found: error

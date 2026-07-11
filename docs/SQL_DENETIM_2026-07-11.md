@@ -156,11 +156,11 @@ teams okunuyor, user_reports kapalı, hata yok) + danışman yeniden çalıştı
 | # | İş | Etki | Risk |
 |---|---|---|---|
 | 1 | ~~`role_switch_landing_backfill` kararı~~ ✅ **Yapıldı (2026-07-11):** onay-şartlı sürümüyle uygulandı (`20260711072525`). Kaleci/hakem rolü artık yalnız admin onayıyla kazanılıyor; onay kalkınca trigger rolü otomatik geri alıyor; başvuru rol vermiyor; `claim_owner_role` tesis sahiplerine OWNER veriyor. | Rol geçişi güvenli ve tüm kullanıcılar için tutarlı | — |
-| 2 | Kalan public-rollü politikaları `TO authenticated`'a çekmek (envanter §2.6/2) | Misafir akışlarında gizemli 42501'ler biter | Düşük — tablo tablo, guest akışı doğrulanarak |
+| 2 | ~~Kalan public-rollü politikalar~~ ✅ **Yapıldı (2026-07-11):** 27 tablodaki politika rol bazına çekildi, kalan 15 çakışan permissive politika da aynı migration'da birleştirildi (`20260711084057`). Anon duman testi temiz. | Misafir 42501'leri bitti, danışman çakışma uyarıları kapandı | — |
 | 3 | ~~`teams_select_public` ürün kararı~~ ✅ **Yapıldı (2026-07-11):** karar — gizli takımın adı/arması/üye sayısı/kaptanı görünür ve maç daveti atılabilir; kadro yalnız üyelere (`20260711072635`). Keşifte "Gizli" rozetiyle listelenir, katılma isteği kapalı. | Gizlilik beklentisi netleşti ve uygulandı | — |
-| 4 | `is_super_admin` overload birleştirme (bağımlılık dökümüyle) | Gelecek SQL'ler kırılmaz, RBAC tutarlı | Orta |
+| 4 | ~~`is_super_admin` overload~~ ✅ **Yapıldı (2026-07-11):** eski parametresiz sürüm düşürüldü, bağımlı 4 politika (owner_withdrawal_requests) güncel uuid imzasına taşındı (`20260711084205`). `is_super_admin()` artık tek adaya çözülür ve admin_team_members SUPER_ADMIN'lerini tanır. | Gelecek SQL'ler kırılmaz, RBAC tutarlı | — |
 | 5 | Dashboard: sızdırılmış parola koruması + MFA seçeneklerini açmak | Hesap güvenliği | Yok |
-| 6 | `texts_legacy`, `match_tactics_legacy` DROP | Şema temizliği | Düşük (boş, referanssız) |
+| 6 | ~~`texts_legacy`, `match_tactics_legacy` DROP~~ ✅ **Yapıldı (2026-07-11)** (`20260711084205`). NOT: `teams` tablosundaki prototip kolonları (`roster`, `players`, `captains`, `teamValue`...) DÜŞÜRÜLMEDİ — `friendService.ts` ve UI hâlâ SELECT ediyor; önce frontend refactor gerek. | Şema temizliği | — |
 | 7 | `cube`/`earthdistance`/`btree_gist` uzantılarını `extensions` şemasına taşımak | Danışman uyarısı kapanır | Orta — konum RPC'leri yeniden derlenmeli |
 | 8 | Trafik büyüyünce kullanılmayan indeks temizliği | Yazma maliyeti düşer | Düşük |
 | 9 | CI'da migration disiplin kontrolü (dosya adı ↔ DB version formatı lint'i) | Kopukluk bir daha oluşmaz | Yok |
