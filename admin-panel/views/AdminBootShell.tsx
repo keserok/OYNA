@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { AdminBootPhase } from '../services/adminBootstrap';
+import { Spinner } from '../../components/ui/Spinner';
 
 const STEPS = ['Oturum', 'Envanter', 'Operasyonel', 'Hazır'];
 
@@ -38,7 +39,7 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
       {mode === 'loading' ? (
         <>
           <div className="relative">
-            <div className="w-14 h-14 border-4 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+            <Spinner size={56} thickness={4} color="#EF4444" />
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[10px] font-black text-red-400">OS</span>
             </div>
@@ -67,8 +68,10 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
                     'border-white/5 text-gray-600'
                   }`}
                 >
-                  {done ? <CheckCircle2 size={14} /> : (
-                    <span className={`w-3.5 h-3.5 rounded-full border-2 ${current ? 'border-red-500 border-t-transparent animate-spin' : 'border-gray-700'}`} />
+                  {done ? <CheckCircle2 size={14} /> : current ? (
+                    <Spinner size={14} thickness={2} color="#EF4444" glow={false} />
+                  ) : (
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-gray-700" />
                   )}
                   {label}
                 </li>

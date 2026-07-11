@@ -16,6 +16,7 @@ import { PAGE_TRANSITION } from './components/common/motion';
 import OfflineBanner from './components/OfflineBanner';
 import { GlobalToast, showToast } from './components/common/GlobalToast';
 import SignupGate from './components/common/SignupGate';
+import { Spinner } from './components/ui/Spinner';
 
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
@@ -63,7 +64,7 @@ const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 // Loading fallback component
 const ViewLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-[#0A0E14]">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#39FF14]"></div>
+    <Spinner size={48} thickness={4} />
   </div>
 );
 

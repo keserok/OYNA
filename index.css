@@ -62,6 +62,43 @@
 /* Ödeme "işleniyor" halkası (PaymentScreen SVG inline animasyonu) */
 @keyframes oy-spin { to { transform: rotate(360deg); } }
 
+/* ──────────────────────────────────────────────────────────────
+   OYNA yükleme halkası — pürüzsüz konik degrade "kuyruklu" spinner
+   (components/ui/Spinner.tsx). Sert kenarlı border-halka yerine
+   yumuşak sönümlenen kuyruk + soluk track + hafif neon parıltı.
+   ────────────────────────────────────────────────────────────── */
+@keyframes oy-spinner-rotate { to { transform: rotate(360deg); } }
+
+.oy-spinner {
+  --oy-spinner-size: 28px;
+  --oy-spinner-color: #39FF14;
+  --oy-spinner-thickness: 3px;
+  --oy-spinner-track: rgba(255, 255, 255, 0.09);
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--oy-spinner-size);
+  height: var(--oy-spinner-size);
+  border-radius: 50%;
+  /* Üstte parlayan konik yay (transparanttan renge sönümlenir),
+     altta soluk tam halka — mask ile diske değil halkaya kırpılır. */
+  background:
+    conic-gradient(from 0deg, transparent 0%, var(--oy-spinner-color) 100%),
+    var(--oy-spinner-track);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--oy-spinner-thickness)), #000 calc(100% - var(--oy-spinner-thickness)));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--oy-spinner-thickness)), #000 calc(100% - var(--oy-spinner-thickness)));
+  animation: oy-spinner-rotate 0.72s linear infinite;
+  will-change: transform;
+}
+
+.oy-spinner-glow {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--oy-spinner-color) 55%, transparent));
+}
+
+/* Erişilebilirlik — hareket hassasiyeti: dönmeyi durdur (S50 ile uyumlu) */
+@media (prefers-reduced-motion: reduce) {
+  .oy-spinner { animation: none !important; }
+}
+
 /* Yatay yöntem karuseli (ödeme ekranı) — scrollbar gizli */
 .oy-carousel { scrollbar-width: none; }
 .oy-carousel::-webkit-scrollbar { display: none; }

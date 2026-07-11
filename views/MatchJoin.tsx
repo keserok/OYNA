@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Spinner } from '../components/ui/Spinner';
 import {
   ArrowLeft, MapPin, Clock, Calendar, Zap, Hand, Scale,
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
@@ -1745,7 +1746,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
                     {providersLoading ? (
                       <div className="flex flex-col items-center justify-center py-14 gap-3">
-                        <Loader2 size={28} className="animate-spin" style={{ color: accent }} />
+                        <Spinner size={28} color={accent} />
                         <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Uygun {isGK ? 'kaleci' : 'hakem'}ler aranıyor…</p>
                       </div>
                     ) : providerSuggestions.length === 0 ? (

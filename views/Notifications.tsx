@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { X, Bell, Clock, Star, CheckCircle, AlertTriangle, Calendar, ChevronRight, ArrowLeft, MapPin, CreditCard, MessageCircle, Users, Shield, DollarSign, MapPinned, Megaphone, Loader2 } from 'lucide-react';
+import { X, Bell, Clock, Star, CheckCircle, AlertTriangle, Calendar, ChevronRight, ArrowLeft, MapPin, CreditCard, MessageCircle, Users, Shield, DollarSign, MapPinned, Megaphone } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole, AppView } from '../types';
 import { useAppStore } from '../store';
@@ -313,7 +314,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
         <div className="flex-1 px-4 py-4 pb-28 overflow-y-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
-              <Loader2 size={32} className="animate-spin mb-4" style={{ color: accentColor }} />
+              <Spinner size={32} color={accentColor} className="mb-4" />
               <p className="text-sm text-gray-500">Bildirimler yükleniyor…</p>
             </div>
           ) : error ? (
