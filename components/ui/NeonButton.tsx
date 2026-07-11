@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Spinner } from './Spinner';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 type Size = 'sm' | 'md' | 'lg';
@@ -57,7 +58,7 @@ const NeonButton: React.FC<NeonButtonProps> = ({
   >
     {loading ? (
       <span className="flex items-center justify-center gap-2">
-        <span className="w-3.5 h-3.5 rounded-full border-2 border-current/30 border-t-current animate-spin" />
+        <Spinner size={15} color="currentColor" glow={false} />
         {children}
       </span>
     ) : children}

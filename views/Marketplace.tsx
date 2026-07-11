@@ -4,8 +4,9 @@ import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
 import React, { useState, useMemo } from 'react';
 import {
-    ChevronLeft, ChevronRight, X, Minus, Plus, Zap, Activity, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
+    ChevronLeft, ChevronRight, X, Minus, Plus, Zap, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
 } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
@@ -347,7 +348,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24 relative z-10">
                                     {isHiring ? (
                                         <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                            <Activity className="animate-spin text-[#FACC15]" size={32} />
+                                            <Spinner size={32} color="#FACC15" />
                                             <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
                                                 İşlem gerçekleştiriliyor...
                                             </p>

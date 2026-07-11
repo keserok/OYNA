@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { Spinner } from '../../components/ui/Spinner';
 import {
   ArrowLeft, Search, Copy, Share2, QrCode, BookUser, UserPlus,
   Check, ChevronRight, Loader2, Clock, Users,
@@ -348,7 +349,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                 className="rounded-2xl bg-white/4 border border-white/8 p-4 text-left active:scale-[0.98]"
               >
                 {contactsBusy
-                  ? <Loader2 size={20} className="text-[#39FF14] animate-spin" />
+                  ? <Spinner size={20} />
                   : <BookUser size={20} className="text-[#39FF14]" />}
                 <div className="text-sm font-bold mt-2">Rehberini Bağla</div>
                 <div className="text-[11px] text-white/40 mt-0.5">

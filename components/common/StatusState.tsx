@@ -1,28 +1,22 @@
 import React from 'react';
-import { Loader2, AlertCircle, Inbox, RefreshCw } from 'lucide-react';
+import { AlertCircle, Inbox, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Spinner } from '../ui/Spinner';
 
 interface LoadingStateProps {
   message?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export const LoadingState: React.FC<LoadingStateProps> = ({ 
-  message = 'Yükleniyor...', 
-  size = 'md' 
+export const LoadingState: React.FC<LoadingStateProps> = ({
+  message = 'Yükleniyor...',
+  size = 'md'
 }) => {
-  const sizeClasses = {
-    sm: 'w-6 h-6 border-2',
-    md: 'w-12 h-12 border-2',
-    lg: 'w-16 h-16 border-3'
-  };
+  const spinnerSize = { sm: 24, md: 44, lg: 60 }[size];
 
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center min-h-[200px]">
-      <Loader2 
-        className={`animate-spin text-[#39FF14] mb-3 ${sizeClasses[size]}`} 
-        strokeWidth={1.5}
-      />
+      <Spinner size={spinnerSize} className="mb-3" />
       <p className="text-sm font-bold text-gray-400 select-none animate-pulse">
         {message}
       </p>

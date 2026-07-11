@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Lock, Search, Phone, Eye, Ban, Loader2 } from 'lucide-react';
+import { Lock, Search, Phone, Eye, Ban } from 'lucide-react';
+import { Spinner } from '../ui/Spinner';
 import { supabase } from '../../supabaseClient';
 import { auth } from '../../supabaseAuth';
 import Avatar from '../ui/Avatar';
@@ -134,7 +135,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
         <div className="pb-4">
           <h3 className="text-base font-black mb-4">Engellenenler</h3>
           {blocked === null ? (
-            <div className="py-8 flex justify-center"><Loader2 size={20} className="animate-spin text-white/40" /></div>
+            <div className="py-8 flex justify-center"><Spinner size={20} color="rgba(255,255,255,0.4)" glow={false} /></div>
           ) : blocked.length === 0 ? (
             <p className="text-sm text-white/40 py-6 text-center">Engellediğin kimse yok.</p>
           ) : (

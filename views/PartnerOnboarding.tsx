@@ -4,6 +4,7 @@ import { ArrowRight, ChevronLeft, Check, Crown, Gift, Share2, Phone, X, Award, S
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { UserRole } from '../types';
+import { Spinner } from '../components/ui/Spinner';
 
 interface PartnerOnboardingProps {
   onComplete: () => void;
@@ -381,7 +382,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
               {!onboardError ? (
                   <div className="relative z-10 text-center w-full max-w-sm">
-                      <div className="w-24 h-24 border-4 border-[#FACC15] border-t-transparent rounded-full animate-spin mx-auto mb-8 shadow-[0_0_50px_rgba(250,204,21,0.3)]"></div>
+                      <Spinner size={96} thickness={5} color="#FACC15" className="mx-auto mb-8" style={{ filter: 'drop-shadow(0 0 24px rgba(250,204,21,0.35))' }} />
                       <h2 className="text-2xl font-black text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
                       <div className="space-y-3 text-left">
                           {LOADING_STEPS.map((label, idx) => {

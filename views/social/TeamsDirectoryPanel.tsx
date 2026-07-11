@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Spinner } from '../../components/ui/Spinner';
 import {
   Search, MapPin, Zap, Loader2, Users, Swords, Send, Check, Clock,
 } from 'lucide-react';
@@ -203,7 +204,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
       >
         {profileLoading || !profile ? (
           <div className="py-12 flex justify-center">
-            <Loader2 size={22} className="animate-spin text-white/40" />
+            <Spinner size={22} color="rgba(255,255,255,0.4)" glow={false} />
           </div>
         ) : (
           <div className="pb-4">
