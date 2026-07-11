@@ -42,6 +42,9 @@ interface PayResult {
   balanceApplied: number;
   cardAmount: number;
   intentId: string | null;
+  /** true ise tarayıcı güvenli ödeme sayfasına yönleniyor — başarı ekranı gösterilmez
+   *  (ödeme iyzico'da tamamlanınca webhook onaylar). */
+  redirected?: boolean;
 }
 
 const fmt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
@@ -244,8 +247,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir;
           // rezervasyon oluştu, tahsilat iyzico sayfasında tamamlanır.
           if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED')) {
-            await payBookingDeposit(bookingId);
-            return { balanceApplied: 0, cardAmount: amount, intentId: null };
+            const r = await payBookingDeposit(bookingId);
+            return { balanceApplied: 0, cardAmount: amount, intentId: r.result?.intent_id ?? null, redirected: r.redirected };
           }
           throw e;
         }
@@ -268,8 +271,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         } catch (e) {
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir
           if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
-            await payBookingDeposit(ctx.bookingId);
-            return { balanceApplied: 0, cardAmount: amount, intentId: null };
+            const r = await payBookingDeposit(ctx.bookingId);
+            return { balanceApplied: 0, cardAmount: amount, intentId: r.result?.intent_id ?? null, redirected: r.redirected };
           }
           throw e;
         }
@@ -291,9 +294,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
     setInlineError('');
     setScreen('PROCESSING');
     try {
-      // Sahte gecikme yok — yalnız spinner'ın "flaş" gibi görünmesini önleyen
-      // küçük bir taban (kartlı akış çoğu zaman zaten iyzico'ya yönlenir).
-      const [res] = await Promise.all([executePayment(), delay(needsCard ? 500 : 650)]);
+      const res = await executePayment();
+      // Güvenli ödeme sayfasına yönleniyorsa BAŞARI EKRANI GÖSTERME — ödeme
+      // henüz tamamlanmadı; iyzico'da tamamlanınca webhook onaylar. Tarayıcı
+      // yönlenene kadar "işleniyor" ekranında kalınır.
+      if (res.redirected) return;
+      // Sahte gecikme yok — yalnız spinner'ın "flaş"lamasını önleyen küçük taban.
+      await delay(needsCard ? 400 : 650);
       setResult(res);
       setLastPaymentError(null);
       setScreen('SUCCESS');
