@@ -64,6 +64,9 @@ export interface AppSettings {
   announcementBanner: string;
   showAnnouncementBanner: boolean;
   payoutMode?: string;
+  /** Zamanlanmış bakım penceresi (ISO 8601). Null/undefined → planlı bakım yok. */
+  maintenanceStartsAt?: string | null;
+  maintenanceEndsAt?: string | null;
 }
 // ─────────────────────────────────────────────────────────────────────
 

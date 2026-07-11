@@ -1,6 +1,7 @@
-import React from 'react';
-import { ExternalLink, HelpCircle, Mail, MessageSquare } from 'lucide-react';
+import React, { useState } from 'react';
+import { ExternalLink, HelpCircle, Mail, MessageSquare, Inbox } from 'lucide-react';
 import { OwnerCenteredModal } from './OwnerModalFrame';
+import { SupportCenterModal } from '../../../components/common/SupportCenterModal';
 
 interface Props {
   onClose: () => void;
@@ -8,13 +9,35 @@ interface Props {
 
 const SUPPORT_EMAIL = 'destek@oyna.app';
 
-export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => (
+export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
+  const [showInbox, setShowInbox] = useState(false);
+
+  if (showInbox) {
+    return <SupportCenterModal channel="OWNER" onClose={onClose} />;
+  }
+
+  return (
   <OwnerCenteredModal title="Destek Merkezi" onClose={onClose}>
     <div className="space-y-4">
       <p className="text-sm text-gray-400 leading-relaxed">
         Tesis paneli, ödeme entegrasyonu veya plan yükseltme konularında ekibimiz size yardımcı
         olur.
       </p>
+
+      <button
+        type="button"
+        onClick={() => setShowInbox(true)}
+        className="w-full flex items-center gap-4 p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl hover:border-emerald-500/40 transition-colors text-left"
+      >
+        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+          <Inbox size={20} />
+        </div>
+        <div className="flex-1">
+          <h4 className="text-sm font-bold text-white">Panel İçi Mesaj</h4>
+          <p className="text-xs text-gray-500">OYNA ekibine doğrudan yazın, yanıtları burada görün</p>
+        </div>
+        <ExternalLink size={16} className="text-gray-500" />
+      </button>
 
       <a
         href={`mailto:${SUPPORT_EMAIL}?subject=OYNA%20İşletme%20Paneli%20Destek`}
@@ -63,4 +86,5 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => (
       </button>
     </div>
   </OwnerCenteredModal>
-);
+  );
+};

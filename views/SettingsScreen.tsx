@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, MapPin, Bell, Lock, AlertCircle, Download, Trash2, Repeat,
+  Mail as MailIcon,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
@@ -19,6 +20,7 @@ import NotificationSettingsPage from '../components/settings/NotificationSetting
 import RegionPickerPage from '../components/settings/RegionPickerPage';
 import ProfileInfoPage from '../components/settings/ProfileInfoPage';
 import FieldRolePage from '../components/settings/FieldRolePage';
+import { SupportCenterModal } from '../components/common/SupportCenterModal';
 import { APP_VERSION } from '../utils/appVersion';
 
 interface SettingsScreenProps {
@@ -38,6 +40,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [exportError, setExportError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [subPage, setSubPage] = useState<SubPage>(null);
+  const [showSupport, setShowSupport] = useState(false);
 
   const showToast = (message: string) => {
     setToastMsg(message);
@@ -378,7 +381,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <div className="flex flex-col">
             <SettingItem
               icon={<HelpCircle size={20} />}
-              title="Yardım Merkezi"
+              title="Destek Talepleri"
+              value="Talep aç / takip et"
+              onClick={() => setShowSupport(true)}
+            />
+            <SettingItem
+              icon={<MailIcon size={20} />}
+              title="E-posta ile Yaz"
               value=""
               onClick={() => { window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('OYNA — Yardım Talebi')}`; }}
             />
@@ -396,6 +405,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         </div>
 
       </main>
+
+      {/* Destek Merkezi — uygulama içi talep aç/takip et (Eksiklik #1) */}
+      {showSupport && <SupportCenterModal channel="PLAYER" onClose={() => setShowSupport(false)} />}
 
       {/* Aksiyon hatası toast */}
       <AnimatePresence>

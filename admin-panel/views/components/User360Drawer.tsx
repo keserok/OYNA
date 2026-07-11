@@ -9,10 +9,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Ban, ShieldCheck, PlayCircle, Edit3, Eye, Wallet, ScrollText,
-  BadgeCheck, Loader2, Mail, Phone, Star,
+  BadgeCheck, Loader2, Mail, Phone, Star, Coins, Plus, Minus,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-import { toTurkishAdminError } from '../../services/adminService';
+import { toTurkishAdminError, adjustWalletBalance } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { StatusBadge } from './StatusBadge';
 import { maskEmail, maskPhone } from '../../utils/pii';
@@ -46,11 +46,17 @@ interface AuditRow {
 const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')}₺`;
 
 export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onEdit }) => {
-  const { error: toastError } = useAdminToast();
+  const { success, error: toastError } = useAdminToast();
   const [wallet, setWallet] = useState<WalletRow[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(false);
+  // Bakiye Ayarla (Karar: Eksiklik #6) — bonus yükle / fazla tutarı geri al, audit'li
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustDir, setAdjustDir] = useState<'credit' | 'debit'>('credit');
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjusting, setAdjusting] = useState(false);
   // PII yalnızca audit'li "göster" tıklamasından sonra açılır (Karar #39).
   // Gerçek değer istemcide tutulmaz; admin_reveal_pii sunucuda okur + loglar.
   const [revealed, setRevealed] = useState<{ email: string | null; phone: string | null }>({ email: null, phone: null });
@@ -95,8 +101,38 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
     setWallet([]);
     setAudit([]);
     setWalletBalance(null);
+    setAdjustOpen(false);
+    setAdjustAmount('');
+    setAdjustReason('');
+    setAdjustDir('credit');
     if (userId) void load();
   }, [userId, load]);
+
+  const submitAdjust = async () => {
+    if (!userId) return;
+    const raw = Number(adjustAmount.replace(',', '.'));
+    if (!Number.isFinite(raw) || raw <= 0) { toastError('Geçerli bir tutar girin (₺).'); return; }
+    if (adjustReason.trim().length < 3) { toastError('Sebep zorunludur (en az 3 karakter).'); return; }
+    const signed = adjustDir === 'debit' ? -raw : raw;
+    setAdjusting(true);
+    try {
+      const res = await adjustWalletBalance(userId, signed, adjustReason.trim());
+      setWalletBalance(res.balanceAfter);
+      success(
+        adjustDir === 'debit'
+          ? `₺${raw.toLocaleString('tr-TR')} düşüldü · yeni bakiye ₺${res.balanceAfter.toLocaleString('tr-TR')}`
+          : `₺${raw.toLocaleString('tr-TR')} yüklendi · yeni bakiye ₺${res.balanceAfter.toLocaleString('tr-TR')}`,
+      );
+      setAdjustOpen(false);
+      setAdjustAmount('');
+      setAdjustReason('');
+      await load();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setAdjusting(false);
+    }
+  };
 
   const revealPii = async (field: 'email' | 'phone') => {
     if (!userId) return;
@@ -204,9 +240,19 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Wallet size={12} /> Cüzdan
                 </p>
-                <span className="text-sm font-black font-mono text-[#39FF14]">
-                  {walletBalance !== null ? fmtMoney(walletBalance) : '—'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black font-mono text-[#39FF14]">
+                    {walletBalance !== null ? fmtMoney(walletBalance) : '—'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAdjustOpen(true)}
+                    className="flex items-center gap-1 text-[10px] font-bold text-yellow-300 border border-yellow-500/30 rounded-lg px-2 py-1 hover:bg-yellow-500/10"
+                    title="Bonus kredi yükle veya fazla tutarı geri al"
+                  >
+                    <Coins size={11} /> Bakiye Ayarla
+                  </button>
+                </div>
               </div>
               {loading ? (
                 <p className="text-[11px] text-gray-600 py-3 text-center flex items-center justify-center gap-2"><Loader2 size={12} className="animate-spin" /> Yükleniyor…</p>
@@ -269,6 +315,83 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
               <PlayCircle size={14} /> Ghost
             </button>
           </div>
+
+          {/* Bakiye Ayarla modalı — bonus/tazminat yükle veya fazla tutarı geri al */}
+          {adjustOpen && (
+            <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-[#161B22] border border-yellow-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase flex items-center gap-2">
+                    <Coins size={15} className="text-yellow-400" /> Bakiye Ayarla
+                  </h3>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {user.name} için cüzdan bakiyesini düzenle. İşlem denetim günlüğüne yazılır.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdjustDir('credit')}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-black uppercase border ${adjustDir === 'credit' ? 'bg-green-500/15 border-green-500/40 text-green-300' : 'border-white/10 text-gray-500 hover:text-white'}`}
+                  >
+                    <Plus size={13} /> Yükle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdjustDir('debit')}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-black uppercase border ${adjustDir === 'debit' ? 'bg-red-500/15 border-red-500/40 text-red-300' : 'border-white/10 text-gray-500 hover:text-white'}`}
+                  >
+                    <Minus size={13} /> Geri Al
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Tutar (₺)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    value={adjustAmount}
+                    onChange={(e) => setAdjustAmount(e.target.value)}
+                    placeholder="Örn. 150"
+                    className="w-full h-10 bg-black/40 border border-white/15 rounded-lg px-3 text-sm text-white focus:border-yellow-500/40 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Sebep (zorunlu)</label>
+                  <textarea
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                    placeholder="Örn. Promosyon bonusu / hata tazminatı / fazla çekim iadesi"
+                    rows={2}
+                    className="w-full bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-500/40 focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdjustOpen(false)}
+                    disabled={adjusting}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-bold disabled:opacity-40"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void submitAdjust()}
+                    disabled={adjusting || !adjustAmount || adjustReason.trim().length < 3}
+                    className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black disabled:opacity-40 ${adjustDir === 'debit' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-500'}`}
+                  >
+                    {adjusting ? 'İşleniyor…' : adjustDir === 'debit' ? 'Bakiyeden Düş' : 'Bakiye Yükle'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </AnimatePresence>,

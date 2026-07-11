@@ -36,6 +36,7 @@ const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage
 const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplatesPage').then(m => ({ default: m.NotificationTemplatesPage })));
 const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
 const DeletionQueuePage = lazy(() => import('./pages/DeletionQueuePage').then(m => ({ default: m.DeletionQueuePage })));
+const SupportInboxPage = lazy(() => import('./pages/SupportInboxPage').then(m => ({ default: m.SupportInboxPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
@@ -43,7 +44,8 @@ export type GodViewSubRoute =
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
   | 'SERVICE_DISPUTES' | 'MODERATION' | 'DELETION_QUEUE'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
-  | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES';
+  | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES'
+  | 'SUPPORT_TICKETS' | 'OWNER_MESSAGES';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -186,6 +188,10 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <ModerationPage />;
             case 'DELETION_QUEUE':
                 return <DeletionQueuePage onRefresh={onRefreshData} />;
+            case 'SUPPORT_TICKETS':
+                return <SupportInboxPage channel="PLAYER" />;
+            case 'OWNER_MESSAGES':
+                return <SupportInboxPage channel="OWNER" />;
             case 'AUDIT_LOG':
                 return <AuditLogPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             default:

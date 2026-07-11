@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
   Radio, Swords, Lock, Globe, Trophy, ScrollText, ShieldCheck, AlertOctagon,
-  SlidersHorizontal, MessageSquare, Building2, BadgeCheck, UserX,
+  SlidersHorizontal, MessageSquare, Building2, BadgeCheck, UserX, LifeBuoy, Inbox,
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 
@@ -12,7 +12,7 @@ export type AdminAccent = 'red' | 'green' | 'yellow' | 'blue' | 'purple' | 'pink
 export type AdminBadgeKey =
   | 'live' | 'pitches' | 'users' | 'matches' | 'goalkeepers' | 'referees'
   | 'pendingPitches' | 'openDisputes' | 'verification' | 'activePromos' | 'communities'
-  | 'deletionRequests';
+  | 'deletionRequests' | 'supportTickets' | 'ownerMessages';
 
 export interface AdminRouteDef {
   route: GodViewSubRoute;
@@ -56,6 +56,8 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
   { route: 'VERIFICATION', title: 'Doğrulama Merkezi', label: 'Doğrulama', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: ShieldCheck, inPalette: true, badge: 'verification', activeAlso: ['PENDING_VERIFICATIONS', 'PROVIDER_IDENTITIES'] },
   { route: 'MODERATION', title: 'Tesis Onayları', label: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Shield, inPalette: true, badge: 'pendingPitches' },
   { route: 'DELETION_QUEUE', title: 'Silme Kuyruğu', label: 'Silme Kuyruğu', description: 'Bekleyen hesap silme talepleri (KVKK).', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: UserX, inPalette: true, badge: 'deletionRequests' },
+  { route: 'SUPPORT_TICKETS', title: 'Destek Talepleri', label: 'Destek Talepleri', description: 'Uygulama içi kullanıcı şikayet ve destek talepleri kuyruğu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'cyan', icon: LifeBuoy, inPalette: true, badge: 'supportTickets' },
+  { route: 'OWNER_MESSAGES', title: 'Tesis Sahibi Mesajları', label: 'Tesis Sahibi Mesajları', description: 'Saha sahiplerinden gelen panel-içi mesajlar.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: Inbox, inPalette: true, badge: 'ownerMessages' },
   { route: 'MATCHES', title: 'Maçlar', label: 'Maçlar', description: 'Maç kokpiti: kadro, skor, ödeme ve müdahale.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: Swords, inPalette: true, badge: 'matches' },
   { route: 'KALECİLER', title: 'Kaleciler', label: 'Kaleciler', description: 'Kaleci profilleri, yetenekler ve ücretler.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: Shield, inPalette: true, badge: 'goalkeepers' },
   { route: 'HAKEMLER', title: 'Hakemler', label: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Scale, inPalette: true, badge: 'referees' },

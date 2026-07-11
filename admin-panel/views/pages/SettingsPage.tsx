@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../../../store';
-import { Settings, Type, Database, Save } from 'lucide-react';
+import { Settings, Type, Database, Save, CalendarClock } from 'lucide-react';
 import { updateCmsTexts, toTurkishAdminError } from '../../services/adminService';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
@@ -17,6 +17,59 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
     const { success, error: toastError } = useAdminToast();
     const [saving, setSaving] = useState(false);
     const [confirmOptions, setConfirmOptions] = useState<ActionConfirmOptions | null>(null);
+
+    // Zamanlanmış bakım (Eksiklik #4) — datetime-local ↔ ISO dönüşümü
+    const [schedStart, setSchedStart] = useState('');
+    const [schedEnd, setSchedEnd] = useState('');
+    const [schedSaving, setSchedSaving] = useState(false);
+
+    const toLocalInput = (iso: string | null | undefined): string => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    const fromLocalInput = (v: string): string | null => {
+        if (!v) return null;
+        const d = new Date(v);
+        return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    };
+
+    useEffect(() => {
+        setSchedStart(toLocalInput(appSettings.maintenanceStartsAt));
+        setSchedEnd(toLocalInput(appSettings.maintenanceEndsAt));
+    }, [appSettings.maintenanceStartsAt, appSettings.maintenanceEndsAt]);
+
+    const saveSchedule = async () => {
+        const startIso = fromLocalInput(schedStart);
+        const endIso = fromLocalInput(schedEnd);
+        if (!startIso || !endIso) { toastError('Başlangıç ve bitiş zamanı gerekli.'); return; }
+        if (new Date(endIso).getTime() <= new Date(startIso).getTime()) { toastError('Bitiş zamanı başlangıçtan sonra olmalı.'); return; }
+        setSchedSaving(true);
+        try {
+            await updateAppSettings({ maintenanceStartsAt: startIso, maintenanceEndsAt: endIso });
+            success('Bakım penceresi planlandı');
+        } catch (err) {
+            toastError(toTurkishAdminError(err));
+        } finally {
+            setSchedSaving(false);
+        }
+    };
+
+    const clearSchedule = async () => {
+        setSchedSaving(true);
+        try {
+            await updateAppSettings({ maintenanceStartsAt: null, maintenanceEndsAt: null });
+            setSchedStart('');
+            setSchedEnd('');
+            success('Planlı bakım kaldırıldı');
+        } catch (err) {
+            toastError(toTurkishAdminError(err));
+        } finally {
+            setSchedSaving(false);
+        }
+    };
 
     const requestMaintenanceToggle = () => {
         const enabling = !appSettings.maintenanceMode;
@@ -100,6 +153,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
     }
 
     if (subRoute === 'SETTINGS') {
+        const now = Date.now();
+        const startMs = appSettings.maintenanceStartsAt ? new Date(appSettings.maintenanceStartsAt).getTime() : null;
+        const endMs = appSettings.maintenanceEndsAt ? new Date(appSettings.maintenanceEndsAt).getTime() : null;
+        const scheduledActive = startMs !== null && endMs !== null && now >= startMs && now < endMs;
+        const scheduledUpcoming = startMs !== null && endMs !== null && now < startMs;
+        const hasSchedule = startMs !== null && endMs !== null;
         return (
             <PageShell route="SETTINGS" icon={<Settings size={20} />}>
                 <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
@@ -233,6 +292,64 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                             >
                                 {appSettings.maintenanceMode ? 'Sistemi Aç' : 'Sistemi Kapat'}
                             </button>
+                        </div>
+
+                        {/* Zamanlanmış Bakım Modu (Eksiklik #4) */}
+                        <div className={`bg-black/30 border rounded-xl p-5 md:col-span-2 ${scheduledActive ? 'border-red-500/40' : 'border-white/[0.06]'}`}>
+                            <label className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                                <CalendarClock size={12} /> Zamanlanmış Bakım
+                                {scheduledActive && <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 text-[9px]">ŞU AN AKTİF</span>}
+                                {scheduledUpcoming && <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[9px]">PLANLANDI</span>}
+                            </label>
+                            <p className="text-[11px] text-gray-500 mb-4">
+                                Bir başlangıç ve bitiş saati verin; sistem o pencerede otomatik bakım moduna girer
+                                (örn. gece 01:00–03:00). Gece uyanık kalmanıza gerek yok.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-bold text-gray-500 uppercase block mb-1">Başlangıç</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={schedStart}
+                                        onChange={(e) => setSchedStart(e.target.value)}
+                                        disabled={schedSaving}
+                                        className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-cyan-500/40 focus:outline-none [color-scheme:dark]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-bold text-gray-500 uppercase block mb-1">Bitiş</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={schedEnd}
+                                        onChange={(e) => setSchedEnd(e.target.value)}
+                                        disabled={schedSaving}
+                                        className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-cyan-500/40 focus:outline-none [color-scheme:dark]"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => void saveSchedule()}
+                                    disabled={schedSaving || !schedStart || !schedEnd}
+                                    className="px-4 py-2 rounded-xl text-xs font-black bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 disabled:opacity-40"
+                                >
+                                    {schedSaving ? 'Kaydediliyor…' : 'Pencereyi Planla'}
+                                </button>
+                                {hasSchedule && (
+                                    <button
+                                        type="button"
+                                        onClick={() => void clearSchedule()}
+                                        disabled={schedSaving}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 border border-white/10 hover:text-white disabled:opacity-40"
+                                    >
+                                        Planı Kaldır
+                                    </button>
+                                )}
+                                {hasSchedule && !scheduledActive && !scheduledUpcoming && (
+                                    <span className="text-[10px] text-gray-500">Pencere geçmişte kaldı — güncelleyin veya kaldırın.</span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

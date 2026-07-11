@@ -212,6 +212,42 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     ]));
   };
 
+  const exportPayouts = () => {
+    downloadCsv('oyna-payouts.csv', ['Tarih', 'Talep Eden', 'Tip', 'IBAN Sahibi', 'IBAN', 'Tutar', 'Durum', 'Referans'], payouts.map((r) => [
+      new Date(r.created_at).toLocaleString('tr-TR'),
+      nameMap[r.user_id] || r.user_id,
+      r.payout_type === 'OWNER_BIWEEKLY' ? 'Saha Sahibi' : r.payout_type === 'PROVIDER_INSTANT' ? 'Kaleci/Hakem' : r.payout_type,
+      r.iban_holder_name || '',
+      r.iban || '',
+      String(r.amount),
+      r.status,
+      r.iyzico_payout_ref || '',
+    ]));
+  };
+
+  const exportIntents = () => {
+    downloadCsv('oyna-odemeler.csv', ['Tarih', 'Kullanıcı', 'Bağlam', 'Tutar', 'Komisyon', 'Durum'], intents.map((r) => [
+      new Date(r.created_at).toLocaleString('tr-TR'),
+      r.user_name || r.user_id || '',
+      r.related_entity_type === 'TOP_UP' ? 'Cüzdan Yükleme' : r.pitch_name || (r.match_id ? 'Maç' : INTENT_CONTEXT_LABELS[r.related_entity_type ?? ''] ?? r.related_entity_type ?? ''),
+      String(r.amount ?? 0),
+      String(r.commission_amount ?? 0),
+      r.status,
+    ]));
+  };
+
+  // Her sekmenin kendi CSV dışa aktarımı — muhasebeye vermek için (Karar: finans şeffaflığı)
+  const handleExport = () => {
+    switch (tab) {
+      case 'ledger': return exportLedger();
+      case 'payments': return exportPayments();
+      case 'intents': return exportIntents();
+      case 'payouts': return exportPayouts();
+      case 'billing': return exportBilling();
+      default: return;
+    }
+  };
+
   const tabs = useMemo(() => ([
     { id: 'ledger' as const, label: 'Cüzdan Ledger' },
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
@@ -232,11 +268,12 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         <div className="flex gap-2 flex-wrap">
           <button
             type="button"
-            onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'intents' || tab === 'payouts'}
+            onClick={handleExport}
+            disabled={loading || tab === 'golive' || activeData.length === 0}
+            title={tab === 'golive' ? 'Bu sekmede tablo verisi yok' : 'Görünen kayıtları CSV olarak indir'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
-            <Download size={14} /> CSV
+            <Download size={14} /> CSV İndir
           </button>
           <button type="button" onClick={() => void load()} disabled={loading} className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-50">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Yenile

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare } from 'lucide-react';
+import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare, Siren } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import {
   assignMatchRefereeAdmin,
@@ -8,6 +8,7 @@ import {
   assignToSlotAdmin,
   swapSlotsAdmin,
   cancelMatchAdmin,
+  emergencyCancelMatchAdmin,
   kickFromSlotAdmin,
   setMatchStatusAdmin,
   overrideMatchScoreAdmin,
@@ -77,6 +78,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelRefund, setCancelRefund] = useState(true);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [emergencyReason, setEmergencyReason] = useState('');
   const [busy, setBusy] = useState(false);
 
   const [intents, setIntents] = useState<MatchIntentRow[]>([]);
@@ -91,7 +94,12 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const [notifyBody, setNotifyBody] = useState('');
   const [confirm, setConfirm] = useState<ActionConfirmOptions | null>(null);
 
-  useEffect(() => { setLocal(match); setTab('kadro'); }, [match]);
+  useEffect(() => {
+    setLocal(match);
+    setTab('kadro');
+    setEmergencyOpen(false);
+    setEmergencyReason('');
+  }, [match]);
 
   const matchId = local?.id;
 
@@ -263,6 +271,24 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       success(cancelRefund ? 'Maç iptal edildi; iadeler politikaya göre işlenir' : 'Maç iptal edildi (iadesiz)');
       setCancelOpen(false);
       setCancelReason('');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Acil İptal (Eksiklik #5): tek işlemde iptal + iade kuyruğu + kadro bildirimi
+  const confirmEmergencyCancel = async () => {
+    if (!local) return;
+    setBusy(true);
+    try {
+      const recipients = await emergencyCancelMatchAdmin(local.id, emergencyReason.trim() || undefined);
+      setLocal({ ...local, status: 'CANCELLED' });
+      success(`Maç iptal edildi · iade süreci başlatıldı · ${recipients} oyuncu bilgilendirildi`);
+      setEmergencyOpen(false);
+      setEmergencyReason('');
       onUpdated();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -723,10 +749,61 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                 <Scale size={12} /> İhtilaflar
               </button>
             )}
-            <button type="button" disabled={busy || local.status === 'CANCELLED'} onClick={() => setCancelOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-bold text-red-400 border border-red-500/30 rounded-lg ml-auto">
-              <Trash2 size={12} /> Maçı İptal Et
+            <button
+              type="button"
+              disabled={busy || local.status === 'CANCELLED'}
+              onClick={() => setEmergencyOpen(true)}
+              title="Tek tıkla: iptal + iade + kadro bildirimi"
+              className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white bg-red-600 hover:bg-red-500 rounded-lg ml-auto disabled:opacity-40 shadow-[0_0_12px_rgba(239,68,68,0.25)]"
+            >
+              <Siren size={12} /> Acil İptal
+            </button>
+            <button type="button" disabled={busy || local.status === 'CANCELLED'} onClick={() => setCancelOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-bold text-red-400 border border-red-500/30 rounded-lg">
+              <Trash2 size={12} /> Detaylı İptal
             </button>
           </div>
+
+          {emergencyOpen && (
+            <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-[#161B22] border border-red-500/40 rounded-2xl w-full max-w-sm p-5 space-y-4">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase flex items-center gap-2">
+                    <Siren size={15} className="text-red-500" /> Acil İptal
+                  </h3>
+                  <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                    "{local.title}" için tek işlemde: <b className="text-red-300">maç iptal edilir</b>,
+                    ödemeler <b className="text-red-300">iade kuyruğuna</b> alınır ve <b className="text-red-300">kadro bilgilendirilir</b>.
+                    İşlem denetim günlüğüne yazılır.
+                  </p>
+                </div>
+                <textarea
+                  value={emergencyReason}
+                  onChange={(e) => setEmergencyReason(e.target.value)}
+                  placeholder="İptal sebebi (opsiyonel — bildirimde ve denetimde görünür)…"
+                  rows={2}
+                  className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-red-500/40 focus:outline-none resize-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEmergencyOpen(false)}
+                    disabled={busy}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-bold disabled:opacity-40"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void confirmEmergencyCancel()}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  >
+                    <Siren size={13} /> {busy ? 'İşleniyor…' : 'Acil İptal Et'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {cancelOpen && (
             <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">

@@ -64,6 +64,8 @@ export interface AdminDashboardStats {
   open_disputes?: number;
   total_communities?: number;
   active_promo_codes?: number;
+  open_support_tickets?: number;
+  open_owner_messages?: number;
 }
 
 export interface DbAuditLogRow {
@@ -90,6 +92,9 @@ export interface AppSettingsDb {
   announcementBanner: string;
   showAnnouncementBanner: boolean;
   payoutMode?: 'cash' | 'online' | 'deposit';
+  /** Zamanlanmış bakım penceresi (ISO 8601, timestamptz). Null → planlı yok. */
+  maintenanceStartsAt?: string | null;
+  maintenanceEndsAt?: string | null;
 }
 
 const mapProfileRow = (row: Record<string, unknown>): AdminUser => {
@@ -128,6 +133,8 @@ const mapSettingsRow = (row: Record<string, unknown>): AppSettingsDb => ({
   announcementBanner: (row.announcement_banner as string) || (row.announcementBanner as string) || '',
   showAnnouncementBanner: (row.show_announcement_banner ?? row.showAnnouncementBanner) !== false,
   payoutMode: ((row.payoutMode as string) || 'cash') as 'cash' | 'online' | 'deposit',
+  maintenanceStartsAt: (row.maintenanceStartsAt as string) ?? (row.maintenance_starts_at as string) ?? null,
+  maintenanceEndsAt: (row.maintenanceEndsAt as string) ?? (row.maintenance_ends_at as string) ?? null,
 });
 
 const mapAuditRow = (row: DbAuditLogRow): AdminLog => ({
@@ -740,6 +747,9 @@ export function settingsToDbPayload(settings: Partial<AppSettingsDb>): Record<st
   if (settings.announcementBanner !== undefined) payload.announcement_banner = settings.announcementBanner;
   if (settings.showAnnouncementBanner !== undefined) payload.show_announcement_banner = settings.showAnnouncementBanner;
   if (settings.payoutMode !== undefined) payload.payout_mode = settings.payoutMode;
+  // Planlı bakım penceresi — null göndermek pencereyi TEMİZLER (RPC anahtar-varsa-yaz deseni)
+  if (settings.maintenanceStartsAt !== undefined) payload.maintenance_starts_at = settings.maintenanceStartsAt;
+  if (settings.maintenanceEndsAt !== undefined) payload.maintenance_ends_at = settings.maintenanceEndsAt;
   return payload;
 }
 
@@ -2718,4 +2728,136 @@ export async function updateProviderOpsAdmin(
     p_payload: payload,
   });
   if (error) throw new Error(isRpcMissing(error) ? 'admin_update_provider_ops RPC deploy edilmedi' : toTurkishAdminError(error));
+}
+
+// ─── Destek Merkezi (Eksiklik #1/#2): destek talepleri + tesis sahibi mesajları ─
+export type SupportChannel = 'PLAYER' | 'OWNER';
+export type SupportStatus = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
+
+export interface SupportTicketRow {
+  id: string;
+  user_id: string;
+  channel: SupportChannel;
+  subject: string;
+  category: string;
+  status: SupportStatus;
+  priority: string;
+  last_sender_role: 'USER' | 'ADMIN';
+  unread_for_admin: boolean;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  resolved_at: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  message_count: number;
+  last_preview: string | null;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  sender_role: 'USER' | 'ADMIN';
+  sender_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface SupportTicketThread {
+  id: string;
+  user_id: string;
+  channel: SupportChannel;
+  subject: string;
+  category: string;
+  status: SupportStatus;
+  priority: string;
+  created_at: string;
+  last_message_at: string;
+  user_name: string | null;
+  user_email: string | null;
+  messages: SupportTicketMessage[];
+}
+
+const SUPPORT_RPC_MISSING = 'Destek Merkezi RPC henüz deploy edilmedi — npm run admin:deploy';
+
+/** Kanal bazlı destek kuyruğunu getirir (PLAYER = oyuncu talepleri, OWNER = tesis sahibi mesajları). */
+export async function fetchSupportTickets(
+  channel: SupportChannel,
+  opts: { status?: SupportStatus | null; search?: string; limit?: number } = {},
+): Promise<SupportTicketRow[]> {
+  const { data, error } = await supabase.rpc('admin_support_tickets_list', {
+    p_channel: channel,
+    p_status: opts.status ?? null,
+    p_search: opts.search?.trim() || null,
+    p_limit: opts.limit ?? 100,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? SUPPORT_RPC_MISSING : error.message);
+  return (Array.isArray(data) ? data : []) as SupportTicketRow[];
+}
+
+/** Tek talebin tam yazışması; açılınca admin-okundu işaretlenir. */
+export async function fetchSupportTicketThread(ticketId: string): Promise<SupportTicketThread> {
+  const { data, error } = await supabase.rpc('admin_support_ticket_thread', { p_ticket_id: ticketId });
+  if (error) throw new Error(isRpcMissing(error) ? SUPPORT_RPC_MISSING : error.message);
+  return data as SupportTicketThread;
+}
+
+/** Admin yanıtı (+ opsiyonel durum değişimi). Kullanıcıya bildirim düşer, audit'e yazılır. */
+export async function replySupportTicket(
+  ticketId: string,
+  body: string,
+  newStatus?: SupportStatus | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_support_ticket_reply', {
+    p_ticket_id: ticketId,
+    p_body: body,
+    p_new_status: newStatus ?? null,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? SUPPORT_RPC_MISSING : error.message);
+}
+
+/** Yanıtsız durum değişimi (kapat / yeniden aç). */
+export async function setSupportTicketStatus(ticketId: string, status: SupportStatus): Promise<void> {
+  const { error } = await supabase.rpc('admin_support_ticket_set_status', {
+    p_ticket_id: ticketId,
+    p_status: status,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? SUPPORT_RPC_MISSING : error.message);
+}
+
+// ─── Kullanıcı bakiye düzeltme (Eksiklik #6) ─────────────────────────────────
+export interface WalletAdjustResult {
+  balanceBefore: number;
+  balanceAfter: number;
+  amount: number;
+}
+
+/** Oyuncuya bonus kredi yükler (pozitif) veya fazla tutarı geri alır (negatif). FİNANS yetkisi, audit'li. */
+export async function adjustWalletBalance(
+  userId: string,
+  amount: number,
+  reason: string,
+): Promise<WalletAdjustResult> {
+  const { data, error } = await supabase.rpc('admin_adjust_wallet_balance', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_reason: reason,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_adjust_wallet_balance RPC deploy edilmedi — npm run admin:deploy' : error.message);
+  const d = data as { balance_before?: number; balance_after?: number; amount?: number } | null;
+  return {
+    balanceBefore: Number(d?.balance_before ?? 0),
+    balanceAfter: Number(d?.balance_after ?? 0),
+    amount: Number(d?.amount ?? amount),
+  };
+}
+
+// ─── Maç acil iptal (Eksiklik #5): iptal + iade kuyruğu + kadro bildirimi ─────
+export async function emergencyCancelMatchAdmin(matchId: string, reason?: string): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_emergency_cancel_match', {
+    p_match_id: matchId,
+    p_reason: reason ?? null,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_emergency_cancel_match RPC deploy edilmedi — npm run admin:deploy' : error.message);
+  const d = data as { recipients?: number } | null;
+  return Number(d?.recipients ?? 0);
 }
