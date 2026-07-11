@@ -4,14 +4,20 @@ import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
+  LocateFixed, Loader2,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import {
+  OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS, OYNA_PITCH_PIN_CSS,
+  createPitchPin, createUserLocationIcon,
+} from '../components/map/mapBase';
+import { requestDeviceLocation } from '../services/locationService';
 import { getHaversineDistance } from '../utils/geo';
-import { ORDU_CENTER, ORDU_DISTRICTS } from '../utils/orduData';
+import { ORDU_DISTRICTS } from '../utils/orduData';
 import { TURKEY_REGIONS } from '../data/turkeyRegions';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
@@ -94,8 +100,6 @@ const gradeToScore = (g?: string | null): number => {
   return 0;
 };
 
-const FALLBACK_CENTER: { lat: number; lng: number } = ORDU_CENTER;
-
 const mapDbPitchToUiPitch = (
   row: DbPitchRow,
   flash?: { id: string; discount: number },
@@ -149,10 +153,11 @@ const mapDbPitchToUiPitch = (
     occupancy: row.rating
       ? Math.min(95, Math.max(40, Math.round(row.rating * 16 + ((row.google_review_count ?? 0) % 20))))
       : 75,
-    coordinates: {
-      lat: row.latitude ?? FALLBACK_CENTER.lat,
-      lng: row.longitude ?? FALLBACK_CENTER.lng,
-    },
+    // Koordinat yoksa sahte varsayılan basma — undefined bırak (haritada gizlenir).
+    coordinates:
+      row.latitude != null && row.longitude != null
+        ? { lat: row.latitude, lng: row.longitude }
+        : undefined,
     slots: [],
     courts,
     isApproved: true,
@@ -184,72 +189,14 @@ L.Icon.Default.mergeOptions({
 });
 
 
-const AIRBNB_MAP_CSS = `
-  .leaflet-popup-content-wrapper { background: transparent !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
-  .leaflet-popup-tip-container { display: none !important; }
-  .leaflet-popup-content { margin: 0 !important; }
-  .leaflet-container { background: #060B12 !important; font-family: inherit; }
-  .leaflet-control-attribution { display: none !important; }
-  .leaflet-control-zoom { display: none !important; }
-  .oyna-pitch-pin { cursor: pointer; }
-  .oyna-pitch-pin .pin-bubble {
-    display: flex; align-items: center; gap: 4px;
-    background: #0D111A;
-    border: 1.5px solid rgba(57,255,20,0.3);
-    color: #39FF14;
-    font-size: 10px; font-weight: 900; font-family: inherit;
-    padding: 6px 10px; border-radius: 100px;
-    white-space: nowrap;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 12px rgba(57,255,20,0.15);
-    transform: translate(-50%, -100%) translateY(-8px);
-    transition: all 0.2s ease;
-  }
-  .oyna-pitch-pin .pin-bubble.selected {
-    background: #39FF14; color: #000;
-    border-color: #39FF14;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 24px rgba(57,255,20,0.6);
-    transform: translate(-50%, -100%) translateY(-8px) scale(1.15);
-  }
-  .oyna-pitch-pin .pin-nub {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #39FF14;
-    position: absolute; bottom: -4px; left: 50%;
-    transform: translateX(-50%);
-    box-shadow: 0 0 10px rgba(57,255,20,0.8);
-    transition: all 0.2s ease;
-  }
-  .oyna-pitch-pin .pin-nub.selected { background: #000; box-shadow: 0 0 15px rgba(57,255,20,1); }
-  .leaflet-tile-pane { filter: brightness(0.9) saturate(0.6); }
-`;
-
-const createPitchPin = (pitch: Pitch, isSelected: boolean) => {
-  const priceLabel = pitch.totalPrice ? `~${pitch.totalPrice}₺` : pitch.name.split(' ')[0];
-  const originalLabel = pitch.originalPrice ? `<span style="text-decoration:line-through;color:#888;font-size:8px;margin-right:2px;">₺${pitch.originalPrice}</span>` : '';
-  const flashBadge = pitch.flashDiscount
-    ? `<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FF3B30;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:100px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,59,48,0.5);">🔥 %${pitch.flashDiscount}</div>`
-    : '';
-  return L.divIcon({
-    className: 'oyna-pitch-pin',
-    html: `
-      <div style="position:relative;display:inline-block;">
-        ${flashBadge}
-        <div class="pin-bubble ${isSelected ? 'selected' : ''}">
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="${isSelected ? '#000' : '#39FF14'}"><circle cx="4" cy="4" r="4"/></svg>
-          ${originalLabel}${priceLabel}
-        </div>
-        <div class="pin-nub ${isSelected ? 'selected' : ''}"></div>
-      </div>
-    `,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
-  });
-};
-
 interface MapViewProps {
   pitches: Pitch[];
   selectedPitch: Pitch | null;
   onPitchSelect: (p: Pitch) => void;
   center: [number, number];
+  userLocation: { lat: number; lng: number } | null;
+  onLocate: () => Promise<{ lat: number; lng: number }>;
+  onLocateError: (msg: string) => void;
 }
 
 const PitchMapResizer = () => {
@@ -261,68 +208,82 @@ const PitchMapResizer = () => {
   return null;
 };
 
-// React component to dynamically set map center
+// Merkez değişince YUMUŞAK uçuş (setView zıplamıyordu). İlk oturuşta anında.
 const ChangeView = ({ center }: { center: [number, number] }) => {
   const map = useMap();
+  const didInit = React.useRef(false);
   useEffect(() => {
-    map.setView(center, map.getZoom());
+    if (!didInit.current) {
+      map.setView(center, map.getZoom());
+      didInit.current = true;
+    } else {
+      map.flyTo(center, map.getZoom(), { duration: 0.7 });
+    }
   }, [center, map]);
   return null;
 };
 
-const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center }: MapViewProps) => {
+// Harita instance'ını dışarı (FAB) taşımak için köprü.
+const MapRefBridge = ({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null> }) => {
+  const map = useMap();
+  useEffect(() => { mapRef.current = map; }, [map, mapRef]);
+  return null;
+};
+
+const userLocationIcon = createUserLocationIcon();
+
+const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center, userLocation, onLocate, onLocateError }: MapViewProps) => {
+  const mapRef = React.useRef<L.Map | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  // Pin ikonlarını memoize et: yalnız sahalar veya seçim değişince yeniden üret.
+  // Aksi halde her render'da yeni L.divIcon → marker DOM rebuild → pin "zıplar".
+  const pinIcons = useMemo(() => {
+    const m = new Map<string, L.DivIcon>();
+    pitches.forEach((p) => m.set(p.id, createPitchPin(p, selectedPitch?.id === p.id)));
+    return m;
+  }, [pitches, selectedPitch?.id]);
+
+  const handleLocate = async () => {
+    if (locating) return;
+    setLocating(true);
+    try {
+      const coords = await onLocate();
+      mapRef.current?.flyTo([coords.lat, coords.lng], 15, { duration: 0.8 });
+    } catch (e) {
+      onLocateError((e as { message?: string })?.message || 'Konum alınamadı. Konum iznini kontrol et.');
+    } finally {
+      setLocating(false);
+    }
+  };
+
   return (
     <div className="absolute inset-0 z-0">
-      <style>{AIRBNB_MAP_CSS}</style>
-      <MapContainer center={center} zoom={13} className="w-full h-full" zoomControl={false}>
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution=""
-        />
+      <style>{OYNA_MAP_CSS + OYNA_PITCH_PIN_CSS}</style>
+      <MapContainer ref={mapRef} center={center} zoom={13} className="w-full h-full" {...oynaMapProps}>
+        <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
         <PitchMapResizer />
+        <MapRefBridge mapRef={mapRef} />
         <ChangeView center={center} />
 
-        <Circle
-          center={center}
-          radius={3000}
-          pathOptions={{
-            color: '#39FF14',
-            fillColor: '#39FF14',
-            fillOpacity: 0.03,
-            weight: 1.5,
-            dashArray: '5, 8'
-          }}
-        />
-
-        <Circle
-          center={center}
-          radius={120}
-          pathOptions={{
-            color: '#00D8FF',
-            fillColor: '#00D8FF',
-            fillOpacity: 0.15,
-            weight: 2
-          }}
-        />
-        <Circle
-          center={center}
-          radius={20}
-          pathOptions={{
-            color: '#ffffff',
-            fillColor: '#00D8FF',
-            fillOpacity: 0.9,
-            weight: 2
-          }}
-        />
+        {/* Mavi nokta YALNIZ gerçek kullanıcı konumunda — harita merkezinde değil */}
+        {userLocation && (
+          <Marker
+            position={[userLocation.lat, userLocation.lng]}
+            icon={userLocationIcon}
+            interactive={false}
+            keyboard={false}
+            zIndexOffset={-1000}
+          />
+        )}
 
         {pitches.map(pitch => {
           if (!pitch.coordinates?.lat || !pitch.coordinates?.lng) return null;
-          const isSel = selectedPitch?.id === pitch.id;
           return (
             <Marker
               key={pitch.id}
               position={[pitch.coordinates.lat, pitch.coordinates.lng]}
-              icon={createPitchPin(pitch, isSel)}
+              icon={pinIcons.get(pitch.id)!}
               eventHandlers={{ click: () => onPitchSelect(pitch) }}
             >
               <Popup closeButton={false} offset={[0, -30]}>
@@ -379,6 +340,15 @@ const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center }: Map
           );
         })}
       </MapContainer>
+
+      {/* Konumuma dön FAB — gerçek konuma uçar; izin yoksa nazik uyarı */}
+      <button
+        onClick={handleLocate}
+        aria-label="Konumuma dön"
+        className="absolute bottom-4 right-4 z-[500] w-12 h-12 rounded-full bg-[#0D111A]/90 border border-white/10 backdrop-blur-md flex items-center justify-center text-[#00D8FF] shadow-[0_6px_24px_rgba(0,0,0,0.6)] active:scale-90 transition-transform"
+      >
+        {locating ? <Loader2 size={20} className="animate-spin" /> : <LocateFixed size={20} />}
+      </button>
     </div>
   );
 };
@@ -519,6 +489,8 @@ const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode, onSelectTime, onNavigate }) => {
   const {
     userLocation,
+    setUserLocation,
+    activeRegion,
     selectedRegions,
     addUserNotification,
     setBookingPitch,
@@ -712,13 +684,22 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     }
   };
 
-  // User Proximity Center Coordinates (kullanıcı konumu yoksa Ordu merkez)
-  const [mapCenter, setMapCenter] = useState<[number, number]>(userLocation ? [userLocation.lat, userLocation.lng] : [ORDU_CENTER.lat, ORDU_CENTER.lng]);
+  // Harita merkezi fallback zinciri (ORDU_CENTER sabiti KALDIRILDI):
+  // gerçek konum → seçili ilçe → activeRegion şehir merkezi → sonuçtaki ilk
+  // koordinatlı saha → (son çare) ülke merkezi. Yanlış şehir gösterilmez.
+  const regionFallbackCenter = useCallback((): [number, number] => {
+    if (activeRegion?.coordinates) return [activeRegion.coordinates.lat, activeRegion.coordinates.lng];
+    const firstWithCoords = sourcePitches.find((p) => p.coordinates?.lat && p.coordinates?.lng);
+    if (firstWithCoords?.coordinates) return [firstWithCoords.coordinates.lat, firstWithCoords.coordinates.lng];
+    return [39.0, 35.0]; // Türkiye geneli — nadir son çare
+  }, [activeRegion, sourcePitches]);
+
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    userLocation ? [userLocation.lat, userLocation.lng] : regionFallbackCenter(),
+  );
 
   useEffect(() => {
-    if (userLocation) {
-      setMapCenter([userLocation.lat, userLocation.lng]);
-    }
+    if (userLocation) setMapCenter([userLocation.lat, userLocation.lng]);
   }, [userLocation]);
 
   useEffect(() => {
@@ -727,9 +708,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     } else if (userLocation) {
       setMapCenter([userLocation.lat, userLocation.lng]);
     } else {
-      setMapCenter([ORDU_CENTER.lat, ORDU_CENTER.lng]);
+      setMapCenter(regionFallbackCenter());
     }
-  }, [filters.district, userLocation]);
+  }, [filters.district, userLocation, regionFallbackCenter]);
+
+  // FAB: cihaz konumunu iste, store'a yaz, koordinatı döndür (harita uçar).
+  const handleLocate = useCallback(async () => {
+    const coords = await requestDeviceLocation();
+    setUserLocation({ lat: coords.lat, lng: coords.lng });
+    return { lat: coords.lat, lng: coords.lng };
+  }, [setUserLocation]);
 
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
@@ -1171,7 +1159,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           </div>
         ) : (
           <div className="w-full h-[calc(100vh-320px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
-            <MapViewComponent pitches={filteredPitches} selectedPitch={selectedPitch} onPitchSelect={(p) => handleOpenDetail(p)} center={mapCenter} />
+            <MapViewComponent
+              pitches={filteredPitches}
+              selectedPitch={selectedPitch}
+              onPitchSelect={(p) => handleOpenDetail(p)}
+              center={mapCenter}
+              userLocation={userLocation}
+              onLocate={handleLocate}
+              onLocateError={showActionError}
+            />
           </div>
         )}
       </main>

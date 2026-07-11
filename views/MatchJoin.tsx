@@ -21,6 +21,7 @@ import { normalizeRole, inferSquadSize, applyCanonicalCoords } from '../shared/l
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
 
 // Fix leaflet default icon path issues
@@ -33,15 +34,8 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const AIRBNB_MAP_CSS = `
-  .leaflet-popup-content-wrapper { background: transparent !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
-  .leaflet-popup-tip-container { display: none !important; }
-  .leaflet-popup-content { margin: 0 !important; }
-  .leaflet-container { background: #060B12 !important; font-family: inherit; }
-  .leaflet-control-attribution { display: none !important; }
-  .leaflet-control-zoom { display: none !important; }
-  .leaflet-tile-pane { filter: brightness(0.9) saturate(0.6); }
-`;
+// Ortak harita temeli: atıf GÖRÜNÜR + zoom'da pin dondurma + kalite ayarları.
+const AIRBNB_MAP_CSS = OYNA_MAP_CSS;
 
 const ChangeView = ({ center }: { center: [number, number] | null }) => {
   const map = useMap();
@@ -2904,8 +2898,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <div className="h-64 relative">
                 <style>{AIRBNB_MAP_CSS}</style>
                 {pitchCoordinates ? (
-                  <MapContainer center={pitchCoordinates} zoom={15} className="w-full h-full" zoomControl={false}>
-                      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="" />
+                  <MapContainer center={pitchCoordinates} zoom={15} className="w-full h-full" {...oynaMapProps}>
+                      <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
                       <ChangeView center={pitchCoordinates} />
                       <Marker position={pitchCoordinates}>
                           <Popup closeButton={false}>
