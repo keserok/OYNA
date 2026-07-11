@@ -59,6 +59,9 @@ export interface PublicTeamRow {
   draws: number;
   losses: number;
   my_state: 'NONE' | 'MEMBER' | 'REQUEST_PENDING';
+  /** Gizli (PRIVATE) takım dizinde isim+arma+sayıyla listelenir; kadrosu ve
+      katılma isteği kapalıdır (üyeler yalnız davetle alınır). */
+  visibility: TeamVisibility;
 }
 
 export interface TeamSquadRow {
@@ -83,6 +86,7 @@ export interface TeamPublicProfile {
   format: TeamFormat | null;
   city: string | null;
   play_style: string | null;
+  visibility: TeamVisibility;
   is_recruiting: boolean;
   wins: number;
   draws: number;

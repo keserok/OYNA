@@ -37,5 +37,6 @@ Bu projede şema değişiklikleri **MCP `apply_migration`** aracıyla (Claude/AI
 - Başında `-- [DB GEÇMİŞİNDEN KURTARILDI ...]` notu olan dosyalar: repoda hiç dosyası
   olmayan ama canlıya uygulanmış migration'lar; SQL'leri DB'deki
   `schema_migrations.statements` kolonundan geri çıkarıldı.
-- `20260714000002_role_switch_landing_backfill.sql`: **BEKLEMEDE** — repoda var ama canlıya
-  henüz uygulanmadı (bkz. denetim raporu, "Bekleyen migration" bölümü).
+- ~~`20260714000002_role_switch_landing_backfill.sql`~~: Bekleyen bu dosya 2026-07-11'de
+  onay-şartlı sürümüyle (`20260711072525_role_switch_verified_backfill_and_guards`)
+  değiştirilerek canlıya uygulandı; eski dosya kaldırıldı.

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Search, MapPin, Zap, Loader2, Users, Swords, Send, Check, Clock,
+  Search, MapPin, Zap, Loader2, Users, Swords, Send, Check, Clock, Lock,
 } from 'lucide-react';
 import TeamCrest from '../../components/social/TeamCrest';
 import StatPill from '../../components/social/StatPill';
@@ -154,13 +154,20 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                         {t.city}
                       </span>
                     )}
+                    {t.visibility === 'PRIVATE' && (
+                      <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300/90 uppercase flex items-center gap-0.5">
+                        <Lock size={8} /> Gizli
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-white/45 mt-0.5">
                     {formatLabel(t.format)} · {t.member_count}/{t.roster_max} oyuncu
                     · {t.wins}G {t.draws}B {t.losses}M
                   </div>
                   <div className="text-[11px] mt-0.5">
-                    {full ? (
+                    {t.visibility === 'PRIVATE' ? (
+                      <span className="text-white/35">Gizli takım · davetle katılım</span>
+                    ) : full ? (
                       <span className="text-white/35">Kadro dolu · {t.member_count}/{t.roster_max}</span>
                     ) : t.is_recruiting ? (
                       <span className="text-[#39FF14] font-bold flex items-center gap-1">
@@ -226,6 +233,11 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                   {profile.city && (<span className="flex items-center gap-0.5"><MapPin size={11} /> {profile.city}</span>)}
                   <span>{formatLabel(profile.format)}</span>
                   {profile.play_style && <span>· ⚔️ {profile.play_style}</span>}
+                  {profile.visibility === 'PRIVATE' && (
+                    <span className="text-amber-300/90 font-bold flex items-center gap-0.5">
+                      <Lock size={10} /> Gizli takım
+                    </span>
+                  )}
                 </div>
                 <div className="text-[11px] text-white/40 mt-1 flex items-center gap-1">
                   <Users size={11} /> {profile.member_count}/{profile.roster_max} oyuncu
@@ -266,6 +278,10 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
             ) : profile.member_count >= profile.roster_max ? (
               <div className="mt-5 w-full min-h-[50px] rounded-2xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm flex items-center justify-center">
                 Kadro dolu · {profile.member_count}/{profile.roster_max}
+              </div>
+            ) : profile.visibility === 'PRIVATE' ? (
+              <div className="mt-5 w-full min-h-[50px] rounded-2xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm flex items-center justify-center gap-2">
+                <Lock size={14} /> Gizli takım — katılım yalnız davetle
               </div>
             ) : !profile.is_recruiting ? (
               <div className="mt-5 w-full min-h-[50px] rounded-2xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm flex items-center justify-center">
