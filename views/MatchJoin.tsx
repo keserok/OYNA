@@ -545,6 +545,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         badge: `MAÇA KATILIM · ${selectedSlotIds.length} SLOT`,
         title: match.title || 'Maç',
         subtitle: `${match.location || ''}${match.time ? ` · ${match.time}` : ''}`,
+        details: [
+          ...(match.location ? [{ icon: 'pin' as const, text: match.location }] : []),
+          ...(match.date ? [{ icon: 'calendar' as const, text: match.date }] : []),
+          ...(match.time ? [{ icon: 'clock' as const, text: match.time }] : []),
+        ],
         amount: total,
         amountLabel: 'Ödenecek Tutar',
         amountHint: `${selectedSlotIds.length} slot × ${(match.price || 0).toLocaleString('tr-TR')}₺ · rezerve ettiğin yerler`,

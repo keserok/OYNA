@@ -82,11 +82,21 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
     const remaining = Math.max((b.deposit_amount || 0) - (b.paid_amount || 0), 0);
     if (remaining <= 0) return;
     const store = useAppStore.getState();
+    const prettyDate = (() => {
+      try { return new Date(`${b.booking_date}T12:00:00`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+      catch { return b.booking_date; }
+    })();
+    const timeText = `${b.start_time?.slice(0, 5) ?? ''}${b.end_time ? ` - ${b.end_time.slice(0, 5)}` : ''}`.trim();
     store.setPaymentContext({
       kind: 'BOOKING_DEPOSIT',
       badge: 'SAHA KİRALAMA',
       title: b.pitches?.name || 'Saha Rezervasyonu',
       subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${b.booking_date} · ${b.start_time?.slice(0, 5) ?? ''}`,
+      details: [
+        ...(b.courts?.name ? [{ icon: 'court' as const, text: b.courts.name }] : []),
+        { icon: 'calendar' as const, text: prettyDate },
+        ...(timeText ? [{ icon: 'clock' as const, text: timeText }] : []),
+      ],
       amount: remaining,
       amountLabel: 'Ödenecek Kapora',
       amountHint: b.price ? `Saha ücreti ₺${b.price.toLocaleString('tr-TR')} · kalan tesiste ödenir` : undefined,
