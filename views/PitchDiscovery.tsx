@@ -4,11 +4,11 @@ import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
-  LocateFixed, Loader2,
+  LocateFixed, Loader2, Navigation2,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -16,6 +16,7 @@ import {
   createPitchPin, createUserLocationIcon,
 } from '../components/map/mapBase';
 import { requestDeviceLocation } from '../services/locationService';
+import { openDirections, isIOSPlatform, appleMapsDirectionsUrl, googleMapsDirectionsUrl } from '../utils/directions';
 import { getHaversineDistance } from '../utils/geo';
 import { ORDU_DISTRICTS } from '../utils/orduData';
 import { TURKEY_REGIONS } from '../data/turkeyRegions';
@@ -192,11 +193,15 @@ L.Icon.Default.mergeOptions({
 interface MapViewProps {
   pitches: Pitch[];
   selectedPitch: Pitch | null;
-  onPitchSelect: (p: Pitch) => void;
+  onPitchSelect: (p: Pitch | null) => void;
+  onOpenDetail: (p: Pitch) => void;
   center: [number, number];
   userLocation: { lat: number; lng: number } | null;
   onLocate: () => Promise<{ lat: number; lng: number }>;
   onLocateError: (msg: string) => void;
+  onAreaSearch: (lat: number, lng: number, radiusKm: number) => Promise<number>;
+  areaSearchActive: boolean;
+  onClearAreaSearch: () => void;
 }
 
 const PitchMapResizer = () => {
@@ -209,7 +214,8 @@ const PitchMapResizer = () => {
 };
 
 // Merkez değişince YUMUŞAK uçuş (setView zıplamıyordu). İlk oturuşta anında.
-const ChangeView = ({ center }: { center: [number, number] }) => {
+// isFlyingRef: programatik uçuş "Bu alanda ara" chip'ini tetiklemesin.
+const ChangeView = ({ center, isFlyingRef }: { center: [number, number]; isFlyingRef?: React.MutableRefObject<boolean> }) => {
   const map = useMap();
   const didInit = React.useRef(false);
   useEffect(() => {
@@ -217,9 +223,10 @@ const ChangeView = ({ center }: { center: [number, number] }) => {
       map.setView(center, map.getZoom());
       didInit.current = true;
     } else {
+      if (isFlyingRef) isFlyingRef.current = true;
       map.flyTo(center, map.getZoom(), { duration: 0.7 });
     }
-  }, [center, map]);
+  }, [center, map, isFlyingRef]);
   return null;
 };
 
@@ -232,23 +239,109 @@ const MapRefBridge = ({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null>
 
 const userLocationIcon = createUserLocationIcon();
 
-const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center, userLocation, onLocate, onLocateError }: MapViewProps) => {
+// Kullanıcı jesti (sürükleme/zoom) sonrası "Bu alanda ara" chip'ini tetikler;
+// programatik uçuşlar (flyTo) chip'i AÇMAZ — isFlyingRef bunun için.
+const MapGestureWatcher = ({
+  isFlyingRef, onUserMoved, onMapTap,
+}: {
+  isFlyingRef: React.MutableRefObject<boolean>;
+  onUserMoved: () => void;
+  onMapTap: () => void;
+}) => {
+  useMapEvents({
+    moveend: () => {
+      if (isFlyingRef.current) { isFlyingRef.current = false; return; }
+      onUserMoved();
+    },
+    click: () => onMapTap(),
+  });
+  return null;
+};
+
+const MapViewComponent = ({
+  pitches, selectedPitch, onPitchSelect, onOpenDetail, center, userLocation,
+  onLocate, onLocateError, onAreaSearch, areaSearchActive, onClearAreaSearch,
+}: MapViewProps) => {
   const mapRef = React.useRef<L.Map | null>(null);
+  const isFlyingRef = React.useRef(false);
+  const carouselRef = React.useRef<HTMLDivElement | null>(null);
+  const programmaticScrollRef = React.useRef(false);
   const [locating, setLocating] = useState(false);
+  const [areaSearching, setAreaSearching] = useState(false);
+  const [showAreaChip, setShowAreaChip] = useState(false);
+  // iOS: Apple/Google seçici; Android/Web doğrudan Google.
+  const [directionsFor, setDirectionsFor] = useState<Pitch | null>(null);
+
+  const handleDirections = (p: Pitch) => {
+    if (!p.coordinates) return;
+    if (isIOSPlatform()) setDirectionsFor(p);
+    else openDirections(p.coordinates.lat, p.coordinates.lng);
+  };
+
+  // Karuselde yalnız koordinatlı sahalar (haritadaki pinlerle birebir aynı sıra).
+  const mapPitches = useMemo(
+    () => pitches.filter((p) => p.coordinates?.lat && p.coordinates?.lng),
+    [pitches],
+  );
 
   // Pin ikonlarını memoize et: yalnız sahalar veya seçim değişince yeniden üret.
   // Aksi halde her render'da yeni L.divIcon → marker DOM rebuild → pin "zıplar".
   const pinIcons = useMemo(() => {
     const m = new Map<string, L.DivIcon>();
-    pitches.forEach((p) => m.set(p.id, createPitchPin(p, selectedPitch?.id === p.id)));
+    mapPitches.forEach((p) => m.set(p.id, createPitchPin(p, selectedPitch?.id === p.id)));
     return m;
-  }, [pitches, selectedPitch?.id]);
+  }, [mapPitches, selectedPitch?.id]);
+
+  const flyToPitch = (p: Pitch) => {
+    if (!p.coordinates || !mapRef.current) return;
+    isFlyingRef.current = true;
+    const z = Math.max(mapRef.current.getZoom(), 15);
+    mapRef.current.flyTo([p.coordinates.lat, p.coordinates.lng], z, { duration: 0.7 });
+  };
+
+  // Pin tap → seçim + uçuş + karuseli o karta kaydır (Airbnb çift yönlü senkron).
+  const selectFromPin = (p: Pitch) => {
+    onPitchSelect(p);
+    flyToPitch(p);
+    const idx = mapPitches.findIndex((x) => x.id === p.id);
+    if (idx >= 0 && carouselRef.current) {
+      programmaticScrollRef.current = true;
+      const el = carouselRef.current.children[idx] as HTMLElement | undefined;
+      el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      setTimeout(() => { programmaticScrollRef.current = false; }, 650);
+    }
+  };
+
+  // Karusel kaydırıldı → merkezdeki kart seçilir + harita ona uçar.
+  const scrollDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCarouselScroll = () => {
+    if (programmaticScrollRef.current) return;
+    if (scrollDebounce.current) clearTimeout(scrollDebounce.current);
+    scrollDebounce.current = setTimeout(() => {
+      const c = carouselRef.current;
+      if (!c) return;
+      const mid = c.scrollLeft + c.clientWidth / 2;
+      let best = 0; let bestDist = Infinity;
+      Array.from(c.children).forEach((child, i) => {
+        const el = child as HTMLElement;
+        const elMid = el.offsetLeft + el.offsetWidth / 2;
+        const d = Math.abs(elMid - mid);
+        if (d < bestDist) { bestDist = d; best = i; }
+      });
+      const p = mapPitches[best];
+      if (p && p.id !== selectedPitch?.id) {
+        onPitchSelect(p);
+        flyToPitch(p);
+      }
+    }, 140);
+  };
 
   const handleLocate = async () => {
     if (locating) return;
     setLocating(true);
     try {
       const coords = await onLocate();
+      isFlyingRef.current = true;
       mapRef.current?.flyTo([coords.lat, coords.lng], 15, { duration: 0.8 });
     } catch (e) {
       onLocateError((e as { message?: string })?.message || 'Konum alınamadı. Konum iznini kontrol et.');
@@ -257,6 +350,33 @@ const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center, userL
     }
   };
 
+  // "Bu alanda ara": görünür alanın yarıçapı (köşe→merkez) ile RPC sorgusu.
+  const handleAreaSearch = async () => {
+    const map = mapRef.current;
+    if (!map || areaSearching) return;
+    setAreaSearching(true);
+    try {
+      const c = map.getCenter();
+      const corner = map.getBounds().getNorthEast();
+      const radiusKm = Math.max(1, Math.min(50, getHaversineDistance(c.lat, c.lng, corner.lat, corner.lng)));
+      const count = await onAreaSearch(c.lat, c.lng, radiusKm);
+      setShowAreaChip(false);
+      if (count === 0) onLocateError('Bu bölgede henüz saha yok. Alanı genişletmeyi dene.');
+    } catch {
+      onLocateError('Alan araması yapılamadı. Lütfen tekrar dene.');
+    } finally {
+      setAreaSearching(false);
+    }
+  };
+
+  const distanceLabel = (p: Pitch): string | null => {
+    if (!userLocation || !p.coordinates) return null;
+    const km = getHaversineDistance(userLocation.lat, userLocation.lng, p.coordinates.lat, p.coordinates.lng);
+    return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+  };
+
+  const showCarousel = !!selectedPitch && mapPitches.length > 0;
+
   return (
     <div className="absolute inset-0 z-0">
       <style>{OYNA_MAP_CSS + OYNA_PITCH_PIN_CSS}</style>
@@ -264,7 +384,12 @@ const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center, userL
         <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
         <PitchMapResizer />
         <MapRefBridge mapRef={mapRef} />
-        <ChangeView center={center} />
+        <ChangeView center={center} isFlyingRef={isFlyingRef} />
+        <MapGestureWatcher
+          isFlyingRef={isFlyingRef}
+          onUserMoved={() => setShowAreaChip(true)}
+          onMapTap={() => onPitchSelect(null)}
+        />
 
         {/* Mavi nokta YALNIZ gerçek kullanıcı konumunda — harita merkezinde değil */}
         {userLocation && (
@@ -277,78 +402,174 @@ const MapViewComponent = ({ pitches, selectedPitch, onPitchSelect, center, userL
           />
         )}
 
-        {pitches.map(pitch => {
-          if (!pitch.coordinates?.lat || !pitch.coordinates?.lng) return null;
-          return (
-            <Marker
-              key={pitch.id}
-              position={[pitch.coordinates.lat, pitch.coordinates.lng]}
-              icon={pinIcons.get(pitch.id)!}
-              eventHandlers={{ click: () => onPitchSelect(pitch) }}
-            >
-              <Popup closeButton={false} offset={[0, -30]}>
-                <div
-                  onClick={() => onPitchSelect(pitch)}
-                  style={{
-                    width: 200,
-                    background: 'rgba(13,17,26,0.96)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(57,255,20,0.2)',
-                    borderRadius: 20,
-                    overflow: 'hidden',
-                    boxShadow: '0 16px 48px rgba(0,0,0,0.8)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ position: 'relative', height: 100, background: 'linear-gradient(160deg,#143a22 0%,#0b1f14 55%,#05080c 100%)' }}>
-                    {pitch.image && (
-                      <img src={transformedImageUrl(pitch.image, 'thumb')} alt={pitch.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    )}
-                    <div style={{
-                       position: 'absolute', inset: 0,
-                       background: 'linear-gradient(to bottom, transparent 40%, rgba(13,17,26,0.95))',
-                    }} />
-                    <div style={{
-                      position: 'absolute', top: 8, right: 8,
-                      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
-                      borderRadius: 100, padding: '3px 8px',
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 10, fontWeight: 900, color: '#FACC15',
-                    }}>
-                      ★ {pitch.rating}
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 12px 12px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 }}>{pitch.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{pitch.district}</div>
-                      <div style={{ fontSize: 12, fontWeight: 900, color: '#39FF14' }}>~{pitch.totalPrice}₺</div>
-                    </div>
-                    <div style={{
-                      marginTop: 8, padding: '6px 10px',
-                      background: 'rgba(57,255,20,0.12)', borderRadius: 10,
-                      border: '1px solid rgba(57,255,20,0.2)',
-                      textAlign: 'center', fontSize: 9, fontWeight: 900,
-                      color: '#39FF14', textTransform: 'uppercase', letterSpacing: 1,
-                    }}>
-                      İncele →
-                    </div>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {mapPitches.map((pitch) => (
+          <Marker
+            key={pitch.id}
+            position={[pitch.coordinates!.lat, pitch.coordinates!.lng]}
+            icon={pinIcons.get(pitch.id)!}
+            eventHandlers={{ click: () => selectFromPin(pitch) }}
+          />
+        ))}
       </MapContainer>
 
-      {/* Konumuma dön FAB — gerçek konuma uçar; izin yoksa nazik uyarı */}
+      {/* "Bu alanda ara" — yalnız kullanıcı haritayı oynatınca belirir (Airbnb) */}
+      <AnimatePresence>
+        {showAreaChip && !areaSearchActive && (
+          <motion.button
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            onClick={handleAreaSearch}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#0D111A]/92 border border-[#39FF14]/40 backdrop-blur-md text-[#39FF14] text-[11px] font-black uppercase tracking-widest shadow-[0_6px_24px_rgba(0,0,0,0.6),0_0_14px_rgba(57,255,20,0.15)] active:scale-95 transition-transform"
+          >
+            {areaSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            Bu alanda ara
+          </motion.button>
+        )}
+        {areaSearchActive && (
+          <motion.button
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            onClick={() => { onClearAreaSearch(); setShowAreaChip(false); }}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#39FF14] text-black text-[11px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(57,255,20,0.4)] active:scale-95 transition-transform"
+          >
+            <X size={14} /> Alan araması aktif — temizle
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Konumuma dön FAB — karusel açıkken üstüne çıkar */}
       <button
         onClick={handleLocate}
         aria-label="Konumuma dön"
-        className="absolute bottom-4 right-4 z-[500] w-12 h-12 rounded-full bg-[#0D111A]/90 border border-white/10 backdrop-blur-md flex items-center justify-center text-[#00D8FF] shadow-[0_6px_24px_rgba(0,0,0,0.6)] active:scale-90 transition-transform"
+        className={`absolute right-4 z-[500] w-12 h-12 rounded-full bg-[#0D111A]/90 border border-white/10 backdrop-blur-md flex items-center justify-center text-[#00D8FF] shadow-[0_6px_24px_rgba(0,0,0,0.6)] active:scale-90 transition-all duration-300 ${showCarousel ? 'bottom-[9.5rem]' : 'bottom-4'}`}
       >
         {locating ? <Loader2 size={20} className="animate-spin" /> : <LocateFixed size={20} />}
       </button>
+
+      {/* ── Alt kart karuseli: pin ↔ kart çift yönlü senkron (Airbnb) ── */}
+      <AnimatePresence>
+        {showCarousel && (
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+            className="absolute bottom-3 left-0 right-0 z-[490]"
+          >
+            <div
+              ref={carouselRef}
+              onScroll={onCarouselScroll}
+              className="oyna-map-carousel flex gap-3 overflow-x-auto px-4 pb-1 snap-x snap-mandatory"
+            >
+              {mapPitches.map((p) => {
+                const isSel = selectedPitch?.id === p.id;
+                const dist = distanceLabel(p);
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => (isSel ? onOpenDetail(p) : selectFromPin(p))}
+                    className={`shrink-0 w-[76%] max-w-[320px] snap-center rounded-3xl overflow-hidden cursor-pointer bg-[#0D111A]/95 backdrop-blur-xl border transition-all duration-200 ${
+                      isSel
+                        ? 'border-[#39FF14]/60 shadow-[0_10px_36px_rgba(0,0,0,0.7),0_0_20px_rgba(57,255,20,0.18)]'
+                        : 'border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.6)] opacity-80'
+                    }`}
+                  >
+                    <div className="flex gap-3 p-3 pb-2">
+                      <div className="w-[64px] h-[64px] rounded-2xl overflow-hidden shrink-0 relative">
+                        <SafeImage src={p.image} alt={p.name} variant="thumb" className="w-full h-full object-cover" />
+                        {p.flashDiscount ? (
+                          <div className="absolute top-1 left-1 bg-[#FF3B30] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">🔥 %{p.flashDiscount}</div>
+                        ) : null}
+                      </div>
+                      <div className="flex-1 min-w-0 py-0.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-[12px] font-black italic uppercase text-white truncate">{p.name}</h4>
+                          <span className="flex items-center gap-0.5 text-[10px] font-black text-[#FACC15] shrink-0">★ {p.rating}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-white/50">
+                          <span className="truncate">{p.district}</span>
+                          {dist && (
+                            <span className="flex items-center gap-0.5 shrink-0 text-[#00D8FF]">
+                              <MapPin size={9} /> {dist}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Aksiyon satırı kartın TAM genişliğinde — kırpılma yok */}
+                    <div className="flex items-center justify-between gap-2 px-3 pb-3">
+                      {p.totalPrice > 0 ? (
+                        <span className="text-[14px] font-black text-[#39FF14] shrink-0">~{p.totalPrice}₺</span>
+                      ) : (
+                        <span className="text-[9px] font-bold text-white/35 shrink-0">Fiyat bilgisi yok</span>
+                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDirections(p); }}
+                          aria-label="Yol tarifi"
+                          className="w-7 h-7 rounded-xl bg-white/5 border border-white/15 text-white/70 flex items-center justify-center active:scale-95"
+                        >
+                          <Navigation2 size={12} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onOpenDetail(p); }}
+                          className="px-3 h-7 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[9px] font-black uppercase tracking-wide flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                        >
+                          İncele <ChevronRight size={10} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="shrink-0 w-3" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* iOS yol tarifi seçici: Apple Maps / Google Maps */}
+      <AnimatePresence>
+        {directionsFor && directionsFor.coordinates && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[600] flex items-end justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setDirectionsFor(null)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="w-full bg-[#0D111A] border-t border-white/10 rounded-t-3xl p-5 pb-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/50 mb-3">Yol Tarifi — {directionsFor.name}</p>
+              <a
+                href={appleMapsDirectionsUrl(directionsFor.coordinates.lat, directionsFor.coordinates.lng, directionsFor.name)}
+                target="_blank" rel="noreferrer"
+                onClick={() => setDirectionsFor(null)}
+                className="flex items-center gap-3 h-13 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-[12px] font-black mb-2 active:scale-[0.98]"
+              >
+                 Apple Haritalar
+              </a>
+              <a
+                href={googleMapsDirectionsUrl(directionsFor.coordinates.lat, directionsFor.coordinates.lng)}
+                target="_blank" rel="noreferrer"
+                onClick={() => setDirectionsFor(null)}
+                className="flex items-center gap-3 h-13 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-[12px] font-black active:scale-[0.98]"
+              >
+                <MapIcon size={16} className="text-[#39FF14]" /> Google Haritalar
+              </a>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -719,6 +940,18 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return { lat: coords.lat, lng: coords.lng };
   }, [setUserLocation]);
 
+  // ── "Bu alanda ara": get_nearby_pitches RPC (id + distance_km) → id filtresi ──
+  const [areaSearch, setAreaSearch] = useState<Set<string> | null>(null);
+  const handleAreaSearch = useCallback(async (lat: number, lng: number, radiusKm: number): Promise<number> => {
+    const { data, error } = await supabase.rpc('get_nearby_pitches', {
+      p_lat: lat, p_lon: lng, p_radius_km: radiusKm,
+    });
+    if (error) throw error;
+    const ids = new Set(((data ?? []) as { id: string }[]).map((r) => r.id));
+    setAreaSearch(ids);
+    return ids.size;
+  }, []);
+
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
     setIsDetailOpen(true);
@@ -876,7 +1109,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       if (p.isApproved === false) return false;
       if (favOnly && !favorites.has(p.id)) return false;
       if (onlyDiscounted && !p.flashDiscount) return false;
-      if (!pitchInSelectedRegions(p)) return false;
+      // Alan araması aktifken bölge filtresi yerine harita alanı geçerlidir
+      if (areaSearch) { if (!areaSearch.has(p.id)) return false; }
+      else if (!pitchInSelectedRegions(p)) return false;
 
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.district.toLowerCase().includes(searchQuery.toLowerCase());
@@ -920,7 +1155,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     result.sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
 
     return result;
-  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions]);
+  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions, areaSearch]);
 
   const locationLabel = filters.district !== 'Tümü'
     ? `${filters.district} çevresi`
@@ -1162,11 +1397,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             <MapViewComponent
               pitches={filteredPitches}
               selectedPitch={selectedPitch}
-              onPitchSelect={(p) => handleOpenDetail(p)}
+              onPitchSelect={setSelectedPitch}
+              onOpenDetail={handleOpenDetail}
               center={mapCenter}
               userLocation={userLocation}
               onLocate={handleLocate}
               onLocateError={showActionError}
+              onAreaSearch={handleAreaSearch}
+              areaSearchActive={!!areaSearch}
+              onClearAreaSearch={() => setAreaSearch(null)}
             />
           </div>
         )}

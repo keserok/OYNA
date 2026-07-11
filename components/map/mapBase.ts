@@ -68,6 +68,9 @@ export const OYNA_MAP_CSS = `
   .leaflet-zoom-anim .leaflet-marker-icon,
   .leaflet-zoom-anim .oyna-pin-root,
   .leaflet-zoom-anim .oyna-pin-root * { transition: none !important; }
+  /* Karusel: scrollbar gizle (WebKit dahil) */
+  .oyna-map-carousel { scrollbar-width: none; -ms-overflow-style: none; }
+  .oyna-map-carousel::-webkit-scrollbar { display: none; }
 `;
 
 // ── Fiyat baloncuklu saha pini (SABİT anchor) ─────────────────────────────
