@@ -1,102 +1,151 @@
 # Yönetim Panelini Ayrı Domain'e Taşıma — Kurulum Rehberi
 
-Bu belge, OYNA yönetim panelini (OYNA OS) ana uygulamadan ve mobil paketten
-ayırıp **oynaturkiyepotansiyeli.com** adresinde çalıştırmayı anlatır.
-**Veritabanı ortak kalır** — ayrılan yalnızca kod paketi ve dağıtımdır.
+Bu rehber, OYNA yönetim panelini (OYNA OS) ana uygulamadan ve mobil paketten
+ayırıp **oynaturkiyepotansiyeli.com** adresinde çalıştırmayı **adım adım** anlatır.
 
-> ⚠️ **Sıralama önemli.** Aşağıdaki adımları **sırayla** yapın. Admin projesini
-> canlıya almadan ana projeyi yeniden dağıtmayın; aksi halde eski `/admin`
-> bağlantısı henüz hazır olmayan yeni adrese yönlenir ve panel geçici olarak
-> erişilemez olur.
-
----
-
-## Ne değişti?
-
-- Uygulama içindeki gömülü admin ekranı kaldırıldı; yerine **yönlendirme ekranı**
-  (`AdminRedirect`) kondu. Böylece App Store / Google Play paketinde panelin
-  arayüz kodu **hiç bulunmaz** (güvenlik + inceleme riski sıfırlanır).
-- `APP_TARGET` ile iki ayrı build hedefi var:
-  - `npm run build:app` → yalnız uygulama (mobil + ana web)
-  - `npm run build:admin` → yalnız yönetim paneli (ayrı domain)
-- `npm run verify:no-admin` build sonrası pakette panel kodu kalmadığını kanıtlar
-  (mobil build'de otomatik çalışır: `npm run build:mobile`).
+- **Veritabanı ortak kalır.** Ayrılan yalnızca kod paketi ve dağıtımdır; tüm
+  veriler (kullanıcılar, maçlar, cüzdan) aynı Supabase'de durmaya devam eder.
+- **Kod hazır.** Bu depodaki değişiklikler ayrımı otomatik yapar; senin yapacağın
+  şey yalnızca Vercel + DNS + Supabase panellerinde birkaç ayar.
 
 ---
 
-## Adım 1 — Yeni Vercel projesi (yönetim paneli)
+## 0) Başlamadan — 2 dakikalık ön kontrol
 
-1. Vercel → **Add New → Project** → **aynı GitHub reposu** (`keserok/OYNA`) seçilir.
-2. Proje adı: `oyna-admin` (örnek).
-3. **Build & Development Settings:**
-   - Build Command: `npm run build:admin`
-   - Output Directory: `dist`
-   - Install Command: (varsayılan) `npm install`
-4. **Environment Variables:** ana projedeki Supabase değişkenlerinin **aynısını**
-   ekleyin (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` vb.). Veritabanı ortaktır.
-5. Depoda hazır olan **`vercel.admin.json`** içeriğini bu projenin ayarlarına
-   yansıtın: en pratiği, Vercel'de bu projeye özel `vercel.json` gerekmez —
-   Build Command'i (adım 3) ve aşağıdaki güvenlik başlıklarını Project Settings'ten
-   verin. Alternatif: admin projesi için depodaki `vercel.admin.json`'u
-   `vercel.json` olarak kullanacak ayrı bir dal tutabilirsiniz (ileri seviye).
-6. Deploy edin. Önce `*.vercel.app` ön-izleme adresinde panelin açıldığını
-   ve **admin girişi + MFA** istediğini doğrulayın.
+| Kontrol | Nerede |
+|---|---|
+| GitHub reposuna erişimin var mı? | `keserok/OYNA` |
+| Vercel hesabın repoya bağlı mı? | vercel.com → Dashboard |
+| `oynaturkiyepotansiyeli.com` alan adının DNS paneline girebiliyor musun? | Alan adı sağlayıcın |
+| Ana projedeki Supabase env değerlerini biliyor musun? | Vercel → ana proje → Settings → Environment Variables |
 
-## Adım 2 — Domain bağlama
+> 🔴 **EN ÖNEMLİ KURAL — SIRA:** Önce **admin projesini** kur ve çalıştığını gör
+> (Adım 1–4), **en son** ana projeyi yeniden dağıt (Adım 5). Tersini yaparsan
+> eski `/admin` linki henüz hazır olmayan adrese gider ve panele geçici olarak
+> giremezsin. Adımları atlamadan, sırayla ilerle.
 
-1. `oynaturkiyepotansiyeli.com` alan adını **oyna-admin** projesine ekleyin
-   (Vercel → Project → Settings → Domains).
-2. Alan sağlayıcınızda Vercel'in verdiği DNS kayıtlarını girin (A / CNAME).
-3. SSL sertifikası otomatik gelir; `https://oynaturkiyepotansiyeli.com` açılıp
-   panel giriş ekranını gösterene kadar bekleyin.
+---
 
-## Adım 3 — Supabase Auth izinli adresler
+## Adım 1 — Admin için yeni Vercel projesi oluştur
 
-Supabase → **Authentication → URL Configuration**:
-- **Redirect URLs** listesine `https://oynaturkiyepotansiyeli.com/**` ekleyin.
-- Ana uygulama adresini (ör. `https://oyna.app/**`) **silmeyin**; ikisi de kalır.
+1. vercel.com → **Add New ▸ Project**.
+2. **Import Git Repository** listesinden **aynı** repoyu seç: `keserok/OYNA`.
+3. Karşına çıkan ekranda **Project Name:** `oyna-admin` yaz.
+4. **Framework Preset:** `Vite` (otomatik gelir, dokunma).
+5. **Build and Output Settings** bölümünü aç ve şunları gir:
+   - **Build Command:** `npm run build:admin`   ← (Override'ı açıp yaz)
+   - **Output Directory:** `dist`
+   - **Install Command:** boş bırak (varsayılan).
+6. Henüz **Deploy'a basma** — önce Adım 2 (env değişkenleri).
 
-## Adım 4 — Ana projeyi yeniden dağıt (en son)
+## Adım 2 — Admin projesine env değişkenlerini gir
 
-Depodaki `vercel.json` artık:
-- `npm run build:app` ile **yalnız uygulamayı** üretir (panel kodu içermez),
+Aynı ekranda **Environment Variables** bölümüne, ana projedeki Supabase
+değerlerinin **birebir aynısını** ekle (isimleri değiştirmeden):
+
+| İsim | Değer |
+|---|---|
+| `VITE_SUPABASE_URL` | (ana projedekiyle aynı) |
+| `VITE_SUPABASE_ANON_KEY` | (ana projedekiyle aynı) |
+
+> Ana projede başka `VITE_...` değişkeni varsa onları da aynen ekle. Veritabanı
+> ortak olduğu için değerler aynıdır.
+
+Şimdi **Deploy**'a bas.
+
+## Adım 3 — Admin panelini geçici adreste test et
+
+1. Deploy bitince Vercel sana `https://oyna-admin-xxxx.vercel.app` gibi bir
+   adres verir. Aç.
+2. Panel **giriş ekranını** göstermeli.
+3. Admin e-posta/şifrenle gir → **MFA (2FA) doğrulaması** istemeli.
+   - İlk girişte faktörün yoksa QR kod çıkar; telefonundaki Authenticator ile
+     okut, üretilen 6 haneli kodu gir.
+4. Panel açılıp **Genel Bakış** ekranını gösteriyorsa bu adım tamam.
+
+> ✅ Buraya kadar çalıştıysa panel yeni yerinde yaşıyor demektir. Ana uygulamaya
+> henüz dokunmadık; her şey güvende.
+
+## Adım 4 — `oynaturkiyepotansiyeli.com` alan adını bağla
+
+1. Vercel → **oyna-admin** projesi → **Settings ▸ Domains**.
+2. **Add** → `oynaturkiyepotansiyeli.com` yaz → **Add**.
+3. Vercel sana DNS kayıtlarını gösterir (genelde bir **A** kaydı `76.76.21.21`
+   veya bir **CNAME** `cname.vercel-dns.com`). Bu kayıtları **alan adı
+   sağlayıcının** DNS paneline gir.
+4. `www.` yönlendirmesini de istersen Vercel önerdiği şekilde ekle.
+5. DNS yayılmasını bekle (birkaç dakika–birkaç saat). Vercel domain'in yanında
+   yeşil ✓ gösterince `https://oynaturkiyepotansiyeli.com` panel giriş ekranını
+   açmalı.
+
+## Adım 5 — Supabase'e yeni adresi tanıt
+
+1. Supabase → projen → **Authentication ▸ URL Configuration**.
+2. **Redirect URLs** listesine ekle: `https://oynaturkiyepotansiyeli.com/**`
+3. Ana uygulamanın adresini (ör. `https://oyna.app/**`) **SİLME** — ikisi de
+   listede kalacak.
+4. **Save**.
+
+## Adım 6 — Ana projeyi yeniden dağıt (EN SON)
+
+Bu dal (`claude/admin-panel-missing-features-eecvyx`) main'e birleşince ana
+Vercel projesi otomatik olarak:
+
+- `npm run build:app` ile **yalnız uygulamayı** üretir (panel arayüzü içermez),
 - eski `/admin`, `/admin.html`, `/admin/*` isteklerini
   `https://oynaturkiyepotansiyeli.com` adresine **yönlendirir**.
 
-Adım 1–3 tamamlandıktan **sonra** ana projeyi deploy edin (bu dal main'e
-birleşince otomatik olur). Doğrulama:
-- `https://<ana-domain>/admin` → yeni panele yönleniyor mu?
-- Uygulama normal açılıyor mu?
+**Yapılacak:** Adım 1–5 bittikten ve `oynaturkiyepotansiyeli.com` çalıştıktan
+**sonra** bu dalı main'e merge et (veya PR'ı onayla). Ana proje deploy'u tamamlanınca:
 
-## Adım 5 — Mobil (App Store / Google Play)
+- `https://<ana-domain>/admin` yaz → yeni panele yönlenmeli.
+- Uygulama normal açılmalı, kullanıcı akışları etkilenmemeli.
 
-Mobil paketi her üretişte panel kodunun sızmadığını garanti eder:
+---
+
+## Adım 7 — Mobil paket (App Store / Google Play)
+
+Mobil sürüm çıkarırken panel kodunun pakete sızmadığını garanti et:
 
 ```bash
 npm run build:mobile   # APP_TARGET=app build + "admin kodu yok" kontrolü
 npx cap sync
 ```
 
-`build:mobile` başarısız olursa (pakete panel kodu sızmışsa) build kırılır;
-mağazaya asla panel kodu gitmez.
+- `build:mobile` başarısız olursa (pakete panel kodu sızmışsa) build **kırılır**;
+  mağazaya asla panel arayüzü gitmez. Bu kontrol otomatiktir, ekstra iş yok.
 
 ---
 
-## Güvenlik notları
+## Sık sorulanlar / güvenlik
 
-- **Gerçek yetki sunucudadır.** Tüm admin RPC'leri Supabase'de
-  `is_platform_admin()` + alt-rol (`require_admin_role`) ile korunur. Panel
-  adresini bilen ama veritabanında admin rolü olmayan biri hiçbir şey yapamaz.
-- **Panel MFA'sı zorunlu** (`admin_mfa_required=true`). Faktörü olmayan admin
-  ilk girişte QR ile kurar; kimse kilitlenmez.
-- Admin domain'i arama motorlarına kapalıdır (`X-Robots-Tag: noindex`).
-- İstenirse ek katman: Vercel → oyna-admin → Settings → **Deployment Protection**
-  (Vercel Authentication) açılırsa, panel adresini bilen yabancı giriş ekranını
-  bile göremez.
+- **"Panel adresini biri bulursa girer mi?"** Hayır. Tüm admin işlemleri
+  Supabase'de `is_platform_admin()` + rol kontrolüyle korunur. Adresi bilen ama
+  veritabanında admin olmayan biri hiçbir şey yapamaz; üstüne panel **MFA**
+  zorunlu.
+- **Ekstra kilit istersen:** Vercel → oyna-admin → Settings ▸ **Deployment
+  Protection ▸ Vercel Authentication** aç. O zaman adresi bilen yabancı giriş
+  ekranını bile göremez (sadece Vercel ekibindekiler açar).
+- **Arama motorları:** Admin domain'i `noindex` ile işaretli; Google'a düşmez.
 
-## Geri alma (rollback)
+## Bir şey ters giderse (geri alma)
 
-Ana projeyi eski haline döndürmek gerekirse `vercel.json`'daki `buildCommand`'i
-`npm run build` yapıp `/admin` yönlendirmelerini eski `rewrites` bloğuyla
-değiştirmek yeterli — panel yeniden ana pakete gömülür. (Önerilmez; yalnız acil
-durum içindir.)
+Acil durumda paneli tekrar ana pakete gömmek için `vercel.json`'da:
+- `"buildCommand": "npm run build:app"` → `"npm run build"` yap,
+- `redirects` bloğunu silip eski `rewrites` (`/admin` → `/admin-panel/admin`)
+  bloğunu geri koy.
+
+Bu, ayrımı iptal eder (önerilmez; yalnız acil durum içindir).
+
+---
+
+### Özet akış
+
+```
+Adım 1-2  Vercel'de oyna-admin projesi (build:admin) + env
+Adım 3    *.vercel.app adresinde panel + MFA testi
+Adım 4    oynaturkiyepotansiyeli.com domain bağla + DNS
+Adım 5    Supabase Redirect URL ekle
+Adım 6    (EN SON) dalı main'e merge → ana proje app-only + /admin yönlendirme
+Adım 7    Mobil: npm run build:mobile && npx cap sync
+```

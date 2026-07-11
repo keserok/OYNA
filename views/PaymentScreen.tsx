@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, CreditCard, Info,
-  LayoutGrid, Lock, MapPin, Plus, Shield, Users, Wallet, X,
+  AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, Info,
+  LayoutGrid, Lock, MapPin, Plus, RefreshCw, Shield, ShieldCheck, Users, Wallet, X,
 } from 'lucide-react';
+import CardBrandMark from '../components/payment/CardBrandMark';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
@@ -41,6 +42,9 @@ interface PayResult {
   balanceApplied: number;
   cardAmount: number;
   intentId: string | null;
+  /** true ise tarayıcı güvenli ödeme sayfasına yönleniyor — başarı ekranı gösterilmez
+   *  (ödeme iyzico'da tamamlanınca webhook onaylar). */
+  redirected?: boolean;
 }
 
 const fmt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
@@ -243,8 +247,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir;
           // rezervasyon oluştu, tahsilat iyzico sayfasında tamamlanır.
           if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED')) {
-            await payBookingDeposit(bookingId);
-            return { balanceApplied: 0, cardAmount: amount, intentId: null };
+            const r = await payBookingDeposit(bookingId);
+            return { balanceApplied: 0, cardAmount: amount, intentId: r.result?.intent_id ?? null, redirected: r.redirected };
           }
           throw e;
         }
@@ -267,8 +271,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         } catch (e) {
           // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir
           if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
-            await payBookingDeposit(ctx.bookingId);
-            return { balanceApplied: 0, cardAmount: amount, intentId: null };
+            const r = await payBookingDeposit(ctx.bookingId);
+            return { balanceApplied: 0, cardAmount: amount, intentId: r.result?.intent_id ?? null, redirected: r.redirected };
           }
           throw e;
         }
@@ -290,7 +294,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
     setInlineError('');
     setScreen('PROCESSING');
     try {
-      const [res] = await Promise.all([executePayment(), delay(1800)]);
+      const res = await executePayment();
+      // Güvenli ödeme sayfasına yönleniyorsa BAŞARI EKRANI GÖSTERME — ödeme
+      // henüz tamamlanmadı; iyzico'da tamamlanınca webhook onaylar. Tarayıcı
+      // yönlenene kadar "işleniyor" ekranında kalınır.
+      if (res.redirected) return;
+      // Sahte gecikme yok — yalnız spinner'ın "flaş"lamasını önleyen küçük taban.
+      await delay(needsCard ? 400 : 650);
       setResult(res);
       setLastPaymentError(null);
       setScreen('SUCCESS');
@@ -377,7 +387,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="w-[54px] h-[38px] rounded-lg bg-gradient-to-br from-purple-700 to-blue-600 flex items-center justify-center mb-2 shadow-lg text-white">
-              <CreditCard size={22} />
+              {selectedCard && needsCard
+                ? <CardBrandMark brand={selectedCard.brand} size={18} />
+                : <Wallet size={22} />}
             </div>
             <p className="text-[10px] font-numeric text-gray-400">
               {selectedCard && needsCard ? `•••• ${selectedCard.last4}` : 'OYNA Bakiyesi'}
@@ -388,7 +400,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           {ctx.isDeposit ? 'Kapora İşleniyor' : 'Ödeme İşleniyor'}
         </p>
         <p className="text-[13px] text-gray-500 mt-2.5 flex items-center gap-1.5">
-          <Shield size={13} className="text-[#39FF14] animate-pulse" /> iyzico ile güvenli bağlantı
+          <Shield size={13} className="text-[#39FF14] animate-pulse" />
+          {needsCard ? 'Güvenli ödeme sayfasına bağlanılıyor…' : 'OYNA bakiyenden ödeme alınıyor…'}
         </p>
       </div>
     );
@@ -471,7 +484,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       </header>
 
       <main className="flex-1 overflow-y-auto py-5 space-y-[18px] pb-40">
-        {/* Inline hata şeridi (hibrit hata UX'inin ekran-içi yarısı) */}
+        {/* Inline hata şeridi + tek dokunuşla tekrar dene (hibrit hata UX'i) */}
         {inlineError && (
           <div className="mx-5 bg-red-500/10 border border-red-500/30 rounded-2xl p-3.5 flex gap-3">
             <div className="w-8 h-8 rounded-xl bg-red-500/15 flex items-center justify-center text-red-400 shrink-0">
@@ -482,6 +495,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                 {ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
               </p>
               <p className="text-[11.5px] text-gray-300 mt-0.5 leading-relaxed">{inlineError}</p>
+              <button
+                onClick={handlePay}
+                disabled={!canPay}
+                className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
+                <RefreshCw size={12} /> Tekrar Dene
+              </button>
             </div>
             <button onClick={() => setInlineError('')} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
           </div>
@@ -582,7 +601,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                     </span>
                   )}
                   <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-purple-700 to-blue-600'} flex items-center justify-center mb-10`}>
-                    <span className="text-[8px] font-black text-white italic">{card.brand}</span>
+                    <CardBrandMark brand={card.brand} size={13} />
                   </span>
                   <p className="text-xs font-extrabold text-white font-numeric">•••• {card.last4}</p>
                   <p className="text-[9.5px] text-gray-500 mt-1">
@@ -608,7 +627,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                   </span>
                 )}
                 <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${tempCard.gradient} flex items-center justify-center mb-10`}>
-                  <span className="text-[8px] font-black text-white italic">{tempCard.brand}</span>
+                  <CardBrandMark brand={tempCard.brand} size={13} />
                 </span>
                 <p className="text-xs font-extrabold text-white font-numeric">•••• {tempCard.last4}</p>
                 <p className="text-[9.5px] text-gray-500 mt-1">Tek seferlik · kaydedilmedi</p>
@@ -640,6 +659,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           <div className="mx-5 flex gap-2.5 items-start px-1">
             <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
             <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
+          </div>
+        )}
+
+        {/* 3D Secure + taksit güven notu (kart gerektiğinde) */}
+        {needsCard && (
+          <div className="mx-5 flex items-center gap-2 px-1">
+            <ShieldCheck size={14} className="text-[#39FF14] shrink-0" />
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              <span className="text-gray-200 font-semibold">3D Secure</span> ile güvenli doğrulama · taksit seçenekleri ödeme adımında sunulur
+            </p>
           </div>
         )}
 

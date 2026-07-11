@@ -14,12 +14,12 @@ interface ServiceProfileProps {
 }
 
 import { useAppStore } from '../store';
-import { ORDU_CENTER } from '../utils/orduData';
 import { auth } from '../supabaseAuth';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from 'react-leaflet';
+import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 
 // Fix leaflet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -51,7 +51,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
   const photoPool = isRef ? REFEREE_PHOTOS : GOALKEEPER_PHOTOS;
 
-  const { adminGoalkeepers, adminReferees, updateOwnProvider } = useAppStore();
+  const { adminGoalkeepers, adminReferees, updateOwnProvider, activeRegion } = useAppStore();
   const currentUser = auth.currentUser;
   
   const userProfile = React.useMemo(() => {
@@ -78,7 +78,11 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const [tempBio, setTempBio] = useState(bio);
   const [selectedStyle, setSelectedStyle] = useState(defaultStyle);
   
-  const defaultCenter: [number, number] = [ORDU_CENTER.lat, ORDU_CENTER.lng];
+  // Hizmet bölgesi editörü: gerçek profil konumu → activeRegion şehri → ülke merkezi.
+  // Sabit ORDU_CENTER kaldırıldı (Ordu dışı sağlayıcı yanlış merkez görmesin).
+  const defaultCenter: [number, number] = activeRegion?.coordinates
+    ? [activeRegion.coordinates.lat, activeRegion.coordinates.lng]
+    : [39.0, 35.0];
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     userProfile?.coordinates ? [userProfile.coordinates.lat, userProfile.coordinates.lng] : defaultCenter
   );
@@ -483,11 +487,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           </div>
 
           <div className="h-[200px] w-full rounded-2xl overflow-hidden border border-white/5 relative z-0">
-            <MapContainer center={mapCenter} zoom={10} style={{ height: '100%', width: '100%', zIndex: 0 }}>
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-              />
+            <style>{OYNA_MAP_CSS}</style>
+            <MapContainer center={mapCenter} zoom={10} style={{ height: '100%', width: '100%', zIndex: 0 }} {...oynaMapProps}>
+              <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
               <MapEventsComponent />
               <Marker position={mapCenter} />
               <Circle 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../../store';
+import { Spinner } from '../../../components/ui/Spinner';
 import { StatCard } from '../components/StatCard';
 import { DataTable } from '../components/DataTable';
 import { PageShell } from '../components/PageShell';
@@ -187,7 +188,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                     </div>
                     {financeLoading ? (
                         <div className="h-64 flex items-center justify-center">
-                            <div className="w-8 h-8 border-2 border-[#39FF14]/30 border-t-[#39FF14] rounded-full animate-spin" />
+                            <Spinner size={32} />
                         </div>
                     ) : trendMissing || chartData.length === 0 ? (
                         <div className="h-64 flex flex-col items-center justify-center gap-3 text-center px-4">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Spinner } from '../components/ui/Spinner';
 import {
   ArrowLeft, Send, MoreVertical, Ban, Flag, Loader2,
   MessageCircle, Check, CheckCheck, BellOff, Bell, Shield, ClipboardList, ChevronRight,
@@ -116,7 +117,7 @@ const InboxList: React.FC<{
 }> = ({ items, loading, onSelect }) => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
-      <Loader2 className="animate-spin text-emerald-400" size={28} />
+      <Spinner size={28} color="#34D399" />
     </div>
   );
 
@@ -379,7 +380,7 @@ const ChatView: React.FC<{
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="animate-spin text-emerald-400" size={24} />
+            <Spinner size={24} color="#34D399" />
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-16 text-gray-500 text-sm">
@@ -644,7 +645,7 @@ const TeamChatView: React.FC<{
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="animate-spin text-emerald-400" size={24} />
+            <Spinner size={24} color="#34D399" />
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-16 text-gray-500 text-sm">

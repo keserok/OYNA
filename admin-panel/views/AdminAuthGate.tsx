@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Terminal, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Spinner } from '../../components/ui/Spinner';
 import {
   signInAdmin,
   signOutAdmin,
@@ -186,7 +187,7 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Spinner size={16} color="#ffffff" glow={false} />
                 Doğrulanıyor...
               </>
             ) : (

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
+import { Spinner } from '../components/ui/Spinner';
 import {
     ChevronLeft, Users, Save, Plus, Trash2, Minus,
     Shield, Target, Info, Brain, Activity,
@@ -2516,7 +2517,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             {/* GERÇEK kadro (get_team_squad) — hayalet roster öldü */}
                                             {!squadsByTeam[selectedTeamRosterId] ? (
                                                 <div className="py-8 flex justify-center">
-                                                    <Loader2 size={20} className="animate-spin text-white/40" />
+                                                    <Spinner size={20} color="rgba(255,255,255,0.4)" glow={false} />
                                                 </div>
                                             ) : (
                                                 squadsByTeam[selectedTeamRosterId].filter(m => !playerSearch.trim() || m.full_name.toLowerCase().includes(playerSearch.trim().toLowerCase())).map(m => (
