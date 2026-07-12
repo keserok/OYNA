@@ -8,9 +8,10 @@ import {
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
-import MapGL, { Marker as MapMarker, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
+import MapGL, { Marker as MapMarker, Source as MapSource, Layer as MapLayer, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { OYNA_MAPLIBRE_STYLE, OYNA_MAPLIBRE_CSS, isWebglAvailable } from '../components/map/mapBase';
+import { fetchActiveCoverage, type RegionCoverage } from '../services/regionCoverageService';
 import { requestDeviceLocation } from '../services/locationService';
 import { openDirections, isIOSPlatform, appleMapsDirectionsUrl, googleMapsDirectionsUrl } from '../utils/directions';
 import { getHaversineDistance } from '../utils/geo';
@@ -186,9 +187,8 @@ interface MapViewProps {
   userLocation: { lat: number; lng: number } | null;
   onLocate: () => Promise<{ lat: number; lng: number }>;
   onLocateError: (msg: string) => void;
-  onAreaSearch: (lat: number, lng: number, radiusKm: number) => Promise<number>;
-  areaSearchActive: boolean;
-  onClearAreaSearch: () => void;
+  /** Seçili bölgelerin idari sınırları (sarı çizgi). Boşsa çizim yok. */
+  regionBoundaries: GeoJSON.FeatureCollection | null;
 }
 
 // Fiyat pini — react-map-gl Marker (anchor="bottom" → tip TAM koordinatta).
@@ -212,7 +212,7 @@ const PricePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; sele
 
 const MapViewComponent = ({
   pitches, selectedPitch, onPitchSelect, onOpenDetail, center, userLocation,
-  onLocate, onLocateError, onAreaSearch, areaSearchActive, onClearAreaSearch,
+  onLocate, onLocateError, regionBoundaries,
 }: MapViewProps) => {
   const mapRef = React.useRef<MapRef | null>(null);
   const isFlyingRef = React.useRef(false);
@@ -220,9 +220,6 @@ const MapViewComponent = ({
   const programmaticScrollRef = React.useRef(false);
   const webglOk = useMemo(() => isWebglAvailable(), []);
   const [locating, setLocating] = useState(false);
-  const [areaSearching, setAreaSearching] = useState(false);
-  const [showAreaChip, setShowAreaChip] = useState(false);
-  const [areaCount, setAreaCount] = useState<number | null>(null);
   // iOS: Apple/Google seçici; Android/Web doğrudan Google.
   const [directionsFor, setDirectionsFor] = useState<Pitch | null>(null);
 
@@ -297,56 +294,38 @@ const MapViewComponent = ({
     }
   };
 
-  // "Bu alanda ara": görünür alanın yarıçapı (köşe→merkez) ile RPC sorgusu.
-  const handleAreaSearch = async () => {
-    const map = mapRef.current;
-    if (!map || areaSearching) return;
-    setAreaSearching(true);
-    try {
-      const c = map.getCenter();
-      const b = map.getBounds();
-      const ne = b.getNorthEast();
-      const radiusKm = Math.max(1, Math.min(50, getHaversineDistance(c.lat, c.lng, ne.lat, ne.lng)));
-      const count = await onAreaSearch(c.lat, c.lng, radiusKm);
-      setShowAreaChip(false);
-      if (count === 0) {
-        setAreaCount(0);
-        onLocateError('Bu bölgede henüz saha yok. Alanı genişletmeyi dene.');
-      } else {
-        setAreaCount(count);
-        setTimeout(() => setAreaCount(null), 2600);
-      }
-    } catch {
-      onLocateError('Alan araması yapılamadı. Lütfen tekrar dene.');
-    } finally {
-      setAreaSearching(false);
-    }
-  };
+  // Seçili bölge sınırları geldiğinde haritayı o sınırların kapsamına sığdır
+  // (kullanıcının seçtiği ilçe/ilçeler kadraja gelir). Sınır imzası değişince bir kez.
+  const boundsSig = useMemo(() => {
+    if (!regionBoundaries?.features?.length) return '';
+    return regionBoundaries.features.map((f) => (f.properties?.key as string) ?? '').sort().join('|');
+  }, [regionBoundaries]);
 
-  // Alan araması sonrası bulunan sahaları haritaya sığdır (Google "bu alanda ara"
-  // hissi: sonuçlar kadraja gelir). Yalnız arama AKTİFLEŞİRKEN bir kez.
-  const didAreaFit = React.useRef(false);
-  useEffect(() => {
-    if (!areaSearchActive) { didAreaFit.current = false; return; }
-    if (didAreaFit.current) return;
-    const pts = mapPitches.filter((p) => p.coordinates);
+  const mapReadyRef = React.useRef(false);
+  // Seçili bölge sınırlarını kadraja sığdır (kenar boşluğuyla → sarı sınır İÇERİDE).
+  const fitToBoundaries = useCallback(() => {
     const map = mapRef.current;
-    if (pts.length > 0 && map) {
-      didAreaFit.current = true;
+    if (!map || !regionBoundaries?.features?.length) return;
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    const scan = (c: unknown): void => {
+      if (typeof (c as number[])[0] === 'number') {
+        const [lng, lat] = c as number[];
+        if (lng < minLng) minLng = lng; if (lat < minLat) minLat = lat;
+        if (lng > maxLng) maxLng = lng; if (lat > maxLat) maxLat = lat;
+      } else { (c as unknown[]).forEach(scan); }
+    };
+    regionBoundaries.features.forEach((f) => f.geometry && scan((f.geometry as { coordinates: unknown }).coordinates));
+    if (minLng !== Infinity) {
       isFlyingRef.current = true;
-      if (pts.length === 1) {
-        map.flyTo({ center: [pts[0].coordinates!.lng, pts[0].coordinates!.lat], zoom: 15, duration: 600 });
-      } else {
-        let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
-        pts.forEach((p) => {
-          const { lat, lng } = p.coordinates!;
-          if (lng < minLng) minLng = lng; if (lat < minLat) minLat = lat;
-          if (lng > maxLng) maxLng = lng; if (lat > maxLat) maxLat = lat;
-        });
-        map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 56, maxZoom: 15, duration: 600 });
-      }
+      map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 13, duration: 700 });
     }
-  }, [areaSearchActive, mapPitches]);
+  }, [regionBoundaries]);
+
+  // Sınır imzası değişince VE harita hazırsa sığdır (yarış koşulu yok).
+  useEffect(() => {
+    if (boundsSig && mapReadyRef.current) fitToBoundaries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundsSig]);
 
   // Merkez prop'u değişince (ilçe filtresi / bölge) yumuşak uçuş. İlk değeri
   // initialViewState koyar; bu efekt yalnız SONRAKİ değişimlerde uçar.
@@ -392,9 +371,18 @@ const MapViewComponent = ({
         touchZoomRotate={true}
         style={{ width: '100%', height: '100%' }}
         onClick={() => onPitchSelect(null)}
-        onMoveEnd={(e) => { if (e.originalEvent) setShowAreaChip(true); }}
+        onLoad={() => { mapReadyRef.current = true; fitToBoundaries(); }}
       >
         <AttributionControl compact position="bottom-right" />
+
+        {/* Seçili bölgelerin idari sınırı — belirgin sarı çizgi (glow'lu) + çok hafif dolgu */}
+        {regionBoundaries && regionBoundaries.features.length > 0 && (
+          <MapSource id="oyna-regions" type="geojson" data={regionBoundaries}>
+            <MapLayer id="oyna-regions-fill" type="fill" paint={{ 'fill-color': '#FFE100', 'fill-opacity': 0.035 }} />
+            <MapLayer id="oyna-regions-glow" type="line" layout={{ 'line-join': 'round' }} paint={{ 'line-color': '#FFE100', 'line-width': 9, 'line-opacity': 0.18, 'line-blur': 6 }} />
+            <MapLayer id="oyna-regions-line" type="line" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#FFE100', 'line-width': 3, 'line-opacity': 1 }} />
+          </MapSource>
+        )}
 
         {/* Mavi nokta YALNIZ gerçek kullanıcı konumunda — harita merkezinde değil */}
         {userLocation && (
@@ -407,47 +395,6 @@ const MapViewComponent = ({
           <PricePin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onSelect={selectFromPin} />
         ))}
       </MapGL>
-
-      {/* "Bu alanda ara" — yalnız kullanıcı haritayı oynatınca belirir (Airbnb) */}
-      <AnimatePresence>
-        {showAreaChip && !areaSearchActive && (
-          <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={handleAreaSearch}
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#0D111A]/92 border border-[#39FF14]/40 backdrop-blur-md text-[#39FF14] text-[11px] font-black uppercase tracking-widest whitespace-nowrap shadow-[0_6px_24px_rgba(0,0,0,0.6),0_0_14px_rgba(57,255,20,0.15)] active:scale-95 transition-transform"
-          >
-            {areaSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-            Bu alanda ara
-          </motion.button>
-        )}
-        {areaSearchActive && (
-          <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={() => { onClearAreaSearch(); setShowAreaChip(false); }}
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#39FF14] text-black text-[11px] font-black uppercase tracking-widest whitespace-nowrap shadow-[0_0_18px_rgba(57,255,20,0.4)] active:scale-95 transition-transform"
-          >
-            <X size={14} /> Aramayı temizle
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Sonuç sayısı — aramadan sonra kısa süre görünen geri bildirim */}
-      <AnimatePresence>
-        {areaCount !== null && areaCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="absolute top-16 left-1/2 -translate-x-1/2 z-[499] px-3 h-8 flex items-center rounded-full bg-black/70 backdrop-blur-md text-white text-[11px] font-black tracking-wide shadow-lg"
-          >
-            Bu alanda <span className="text-[#39FF14] mx-1">{areaCount}</span> saha bulundu
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Konumuma dön FAB — karusel açıkken üstüne çıkar */}
       <button
@@ -950,17 +897,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return { lat: coords.lat, lng: coords.lng };
   }, [setUserLocation]);
 
-  // ── "Bu alanda ara": get_nearby_pitches RPC (id + distance_km) → id filtresi ──
-  const [areaSearch, setAreaSearch] = useState<Set<string> | null>(null);
-  const handleAreaSearch = useCallback(async (lat: number, lng: number, radiusKm: number): Promise<number> => {
-    const { data, error } = await supabase.rpc('get_nearby_pitches', {
-      p_lat: lat, p_lon: lng, p_radius_km: radiusKm,
-    });
-    if (error) throw error;
-    const ids = new Set(((data ?? []) as { id: string }[]).map((r) => r.id));
-    setAreaSearch(ids);
-    return ids.size;
-  }, []);
+  // ── Bölge kapsama + idari sınırlar (region_coverage) ──────────────────────
+  const [coverage, setCoverage] = useState<RegionCoverage[]>([]);
+  useEffect(() => { fetchActiveCoverage().then(setCoverage).catch(() => setCoverage([])); }, []);
+
+  // Seçili bölgelerin sınır GeoJSON'u (sarı çizgi). İl seçilmişse o ilin tüm
+  // aktif ilçe sınırları; ilçe seçilmişse yalnız o ilçe.
+  const regionBoundaries = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    if (selectedRegions.length === 0 || coverage.length === 0) return null;
+    const wanted = coverage.filter((c) => c.boundary && selectedRegions.some((r) =>
+      r.district ? (c.city === r.city && c.district === r.district) : (c.city === r.city),
+    ));
+    if (wanted.length === 0) return null;
+    return {
+      type: 'FeatureCollection',
+      features: wanted.map((c) => ({
+        type: 'Feature',
+        properties: { key: `${c.city}/${c.district ?? ''}` },
+        geometry: c.boundary as unknown as GeoJSON.Geometry,
+      })),
+    };
+  }, [selectedRegions, coverage]);
 
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
@@ -1128,9 +1085,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       if (p.isApproved === false) return false;
       if (favOnly && !favorites.has(p.id)) return false;
       if (onlyDiscounted && !p.flashDiscount) return false;
-      // Alan araması aktifken bölge filtresi yerine harita alanı geçerlidir
-      if (areaSearch) { if (!areaSearch.has(p.id)) return false; }
-      else if (!pitchInSelectedRegions(p)) return false;
+      if (!pitchInSelectedRegions(p)) return false;
 
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.district.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1174,7 +1129,20 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     result.sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
 
     return result;
-  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions, areaSearch]);
+  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions]);
+
+  // Haritanın pin kaynağı: bölge seçiliyse bölge-filtreli sahalar; bölge yoksa
+  // GÜNCEL KONUM çevresi (30 km); konum da yoksa mevcut liste (kullanıcı kararı).
+  const mapPins = useMemo(() => {
+    const withCoords = filteredPitches.filter((p) => p.coordinates?.lat && p.coordinates?.lng);
+    if (selectedRegions.length > 0) return withCoords;
+    if (userLocation) {
+      return withCoords.filter((p) =>
+        getHaversineDistance(userLocation.lat, userLocation.lng, p.coordinates!.lat, p.coordinates!.lng) <= 30,
+      );
+    }
+    return withCoords;
+  }, [filteredPitches, selectedRegions, userLocation]);
 
   const locationLabel = filters.district !== 'Tümü'
     ? `${filters.district} çevresi`
@@ -1414,7 +1382,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         ) : (
           <div className="w-full h-[calc(100vh-320px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
             <MapViewComponent
-              pitches={filteredPitches}
+              pitches={mapPins}
               selectedPitch={selectedPitch}
               onPitchSelect={setSelectedPitch}
               onOpenDetail={handleOpenDetail}
@@ -1422,9 +1390,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               userLocation={userLocation}
               onLocate={handleLocate}
               onLocateError={showActionError}
-              onAreaSearch={handleAreaSearch}
-              areaSearchActive={!!areaSearch}
-              onClearAreaSearch={() => setAreaSearch(null)}
+              regionBoundaries={regionBoundaries}
             />
           </div>
         )}
