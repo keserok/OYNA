@@ -12,11 +12,27 @@ import { parseSlotLabel } from '../services/availabilityService';
 import {
   getWalletSummary, listSavedCards, WalletSummary, SavedCard,
 } from '../services/walletService';
-import { payBookingDeposit } from '../services/paymentService';
+import { startInAppCardPayment, InAppPayInput } from '../services/paymentService';
 import { blockMatchDeposit } from '../services/matchLifecycleService';
 import { getMatchDetails } from '../services/matchService';
-import AddCardScreen, { EphemeralCard } from '../components/payment/AddCardScreen';
+import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScreen';
+import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
+
+// C1 — idempotency anahtarı üretici. crypto.randomUUID modern webview'de var;
+// eski WebView'ler için güvenli yedek (RFC4122 v4 benzeri).
+const safeUuid = (): string => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch { /* fallback below */ }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 /**
  * TEK ÖDEME EKRANI — üç bağlam (tasarım 1b):
@@ -42,9 +58,9 @@ interface PayResult {
   balanceApplied: number;
   cardAmount: number;
   intentId: string | null;
-  /** true ise tarayıcı güvenli ödeme sayfasına yönleniyor — başarı ekranı gösterilmez
-   *  (ödeme iyzico'da tamamlanınca webhook onaylar). */
-  redirected?: boolean;
+  /** true ise banka doğrulaması (3DS) uygulama içinde açıldı — sonuç
+   *  ThreeDSSheet'ten gelir; başarı ekranı henüz gösterilmez. */
+  pendingThreeDS?: boolean;
 }
 
 const fmt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
@@ -78,6 +94,14 @@ const humanizePaymentError = (err: unknown): string => {
     return 'Bu saha için fiyat tanımlı değil; şimdilik uygulamadan ödeme alınamıyor.';
   if (has('CARD_NOT_FOUND'))
     return 'Seçtiğin kart bulunamadı. Lütfen kartı yeniden seç veya yeni kart ekle.';
+  if (has('CARD_NEEDS_REVALIDATION'))
+    return 'Bu kart eski sistemden kalma; güvenlik için kart bilgilerini bir kez daha girmen gerekiyor. "Yeni kart ekle" ile aynı kartı girip kaydedebilirsin.';
+  if (has('NO_CARD_AMOUNT'))
+    return 'Bakiyen bu tutarın tamamını karşılıyor — kart gerekmiyor. OYNA Bakiyesi seçiliyken tekrar dene.';
+  if (has('SLOT_TAKEN_REFUNDED'))
+    return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
+  if (has('BOOKING_CLOSED_REFUNDED'))
+    return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
   if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
     return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
   if (has('UNAUTHORIZED', 'GIRIŞ'))
@@ -127,12 +151,22 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const [summary, setSummary] = useState<WalletSummary | null>(null);
   const [useBalance, setUseBalance] = useState(true);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [tempCard, setTempCard] = useState<EphemeralCard | null>(null);
+  const [tempCard, setTempCard] = useState<CollectedCard | null>(null);
   const [inlineError, setInlineError] = useState('');
   const [result, setResult] = useState<PayResult | null>(null);
+  // Uygulama-içi 3DS (banka SMS) sayfası — açıkken tam ekran sheet gösterilir
+  const [threeDS, setThreeDS] = useState<{
+    html: string; intentId: string; balanceApplied: number; cardAmount: number;
+  } | null>(null);
   // Saha vitrini kaporasında rezervasyon yalnız bir kez oluşturulur; tekrar
   // denemede aynı slot yeniden rezerve edilmesin (SLOT_TAKEN önlenir).
   const pitchBookingIdRef = useRef<string | null>(null);
+  // H1 — Uçuş-halinde kilit: yavaş bağlantıda çift-tık = çift intent = çift çekim.
+  const payBusyRef = useRef(false);
+  // C1 — Aynı ödeme denemesinin retry'larında TEK idempotency anahtarı. Geç gelen
+  // 3DS sonrası "tekrar dene" ikinci bir kart çekimi yaratmasın; sunucu aynı
+  // anahtarlı niyeti yeniden kullanır. Başarıda sıfırlanır (yeni ödeme = yeni anahtar).
+  const idemKeyRef = useRef<string | null>(null);
 
   // Cüzdan özeti + kayıtlı kartlar
   useEffect(() => {
@@ -176,36 +210,92 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         ? 'Tamamı OYNA bakiyenden karşılanıyor — kart gerekmez.'
         : 'Bakiye kullanılmıyor; tutarın tamamı seçtiğin karttan tahsil edilir.';
 
+  // Lobi state'ini tazele (lost-update önleme — sunucu SSOT)
+  const refreshMatch = async (matchId?: string) => {
+    if (!matchId) return;
+    try {
+      const fresh = await getMatchDetails(matchId);
+      const current = useAppStore.getState().selectedMatch;
+      if (fresh && current && current.id === matchId) {
+        await updateMatch({ ...current, ...(fresh as any) });
+      }
+    } catch { /* kritik değil */ }
+  };
+
+  // Kart kısmı olan ödeme: uygulama-içi kart akışı (edge 'pay').
+  // Yeni kart tüm bilgisiyle bellekten gider; kayıtlı kartta yalnız id gider.
+  const payWithCard = async (input: Omit<InAppPayInput, 'card' | 'savedCardId'>): Promise<PayResult> => {
+    const payInput: InAppPayInput = { ...input };
+    // C1 — tüm kart tahsilatları bu tek noktadan geçer; idempotency anahtarını
+    // buraya iliştirince her akış (maça katılım/kapora) çift-çekime karşı korunur.
+    if (idemKeyRef.current) payInput.idempotencyKey = idemKeyRef.current;
+    if (selectedCardId === 'temp' && tempCard) {
+      payInput.card = {
+        holderName: tempCard.holderName,
+        number: tempCard.number,
+        expireMonth: tempCard.expMonth,
+        expireYear: tempCard.expYear,
+        cvc: tempCard.cvc,
+        save: tempCard.save,
+      };
+    } else if (selectedCardId) {
+      payInput.savedCardId = selectedCardId;
+    } else {
+      throw new Error('CARD_REQUIRED: Kart seç veya yeni kart ekle.');
+    }
+
+    const res = await startInAppCardPayment(payInput);
+
+    if (res.requiresThreeDS && res.threeDSHtml) {
+      // Banka SMS doğrulaması — sheet açılır; sonuç handleThreeDSDone'a gelir
+      setThreeDS({
+        html: res.threeDSHtml,
+        intentId: res.intentId,
+        balanceApplied: res.balanceApplied,
+        cardAmount: res.cardAmount,
+      });
+      return {
+        balanceApplied: res.balanceApplied, cardAmount: res.cardAmount,
+        intentId: res.intentId, pendingThreeDS: true,
+      };
+    }
+
+    // SIMULATION: anında uygulandı — iade-krediye dönüş varsa hata gibi göster
+    const reason = res.result && res.result.ok === false ? String(res.result.reason ?? '') : '';
+    if (reason) throw new Error(reason);
+    if (input.flow === 'MATCH_JOIN') await refreshMatch(input.matchId);
+    return { balanceApplied: res.balanceApplied, cardAmount: res.cardAmount, intentId: res.intentId };
+  };
+
   // ─── Ödeme yürütme ─────────────────────────────────────────────────────────
   const executePayment = async (): Promise<PayResult> => {
     if (!ctx) throw new Error('Ödeme bağlamı eksik. Lütfen geri dönüp tekrar deneyin.');
-    const cardId = selectedCardId === 'temp' ? null : selectedCardId;
 
     switch (ctx.kind) {
       case 'MATCH_JOIN': {
-        const { data, error } = await supabase.rpc('player_buy_slots_v2', {
-          p_match_id: ctx.matchId,
-          p_slot_ids: ctx.slotIds ?? [],
-          p_use_balance: allowBalance && useBalance,
-          p_card_id: needsCard ? cardId : null,
-        });
-        if (error) throw error;
-        const d = data as any;
-        // Lobi state'ini tazele (lost-update önleme — sunucu SSOT)
-        if (ctx.matchId) {
-          try {
-            const fresh = await getMatchDetails(ctx.matchId);
-            const current = useAppStore.getState().selectedMatch;
-            if (fresh && current && current.id === ctx.matchId) {
-              await updateMatch({ ...current, ...(fresh as any) });
-            }
-          } catch { /* kritik değil */ }
+        // Bakiye tamamını karşılıyorsa kartsız yol (mevcut RPC)
+        if (!needsCard) {
+          const { data, error } = await supabase.rpc('player_buy_slots_v2', {
+            p_match_id: ctx.matchId,
+            p_slot_ids: ctx.slotIds ?? [],
+            p_use_balance: true,
+            p_card_id: null,
+          });
+          if (error) throw error;
+          const d = data as any;
+          await refreshMatch(ctx.matchId);
+          return {
+            balanceApplied: Number(d?.balance_applied) || 0,
+            cardAmount: Number(d?.card_amount) || 0,
+            intentId: d?.intent_id ?? null,
+          };
         }
-        return {
-          balanceApplied: Number(d?.balance_applied) || 0,
-          cardAmount: Number(d?.card_amount) || 0,
-          intentId: d?.intent_id ?? null,
-        };
+        return await payWithCard({
+          flow: 'MATCH_JOIN',
+          matchId: ctx.matchId,
+          slotIds: ctx.slotIds ?? [],
+          useBalance: allowBalance && useBalance,
+        });
       }
       case 'PITCH_DEPOSIT': {
         if (!bookingPitch || !bookingCourt || !bookingDate || !bookingSlot) {
@@ -229,12 +319,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           bookingId = booking as unknown as string;
           pitchBookingIdRef.current = bookingId;
         }
-        try {
+        if (!needsCard) {
           const { data, error } = await supabase.rpc('record_app_deposit_payment', {
             p_booking_id: bookingId,
             p_amount: amount,
-            p_use_balance: allowBalance && useBalance,
-            p_card_id: needsCard ? cardId : null,
+            p_use_balance: true,
+            p_card_id: null,
           });
           if (error) throw error;
           const d = data as any;
@@ -243,23 +333,21 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
             cardAmount: Number(d?.card_amount) || 0,
             intentId: d?.intent_id ?? null,
           };
-        } catch (e) {
-          // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir;
-          // rezervasyon oluştu, tahsilat iyzico sayfasında tamamlanır.
-          if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED')) {
-            const r = await payBookingDeposit(bookingId);
-            return { balanceApplied: 0, cardAmount: amount, intentId: r.result?.intent_id ?? null, redirected: r.redirected };
-          }
-          throw e;
         }
+        return await payWithCard({
+          flow: 'BOOKING_DEPOSIT',
+          bookingId,
+          amount,
+          useBalance: allowBalance && useBalance,
+        });
       }
       case 'BOOKING_DEPOSIT': {
-        try {
+        if (!needsCard) {
           const { data, error } = await supabase.rpc('record_app_deposit_payment', {
             p_booking_id: ctx.bookingId,
             p_amount: amount,
-            p_use_balance: allowBalance && useBalance,
-            p_card_id: needsCard ? cardId : null,
+            p_use_balance: true,
+            p_card_id: null,
           });
           if (error) throw error;
           const d = data as any;
@@ -268,14 +356,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
             cardAmount: Number(d?.card_amount) || 0,
             intentId: d?.intent_id ?? null,
           };
-        } catch (e) {
-          // Canlı (IYZICO) modda kart tahsilatı hosted checkout'a yönlenir
-          if (rawErrorMessage(e).includes('PROVIDER_FLOW_REQUIRED') && ctx.bookingId) {
-            const r = await payBookingDeposit(ctx.bookingId);
-            return { balanceApplied: 0, cardAmount: amount, intentId: r.result?.intent_id ?? null, redirected: r.redirected };
-          }
-          throw e;
         }
+        return await payWithCard({
+          flow: 'BOOKING_DEPOSIT',
+          bookingId: ctx.bookingId,
+          amount,
+          useBalance: allowBalance && useBalance,
+        });
       }
       case 'MATCH_CREATE_DEPOSIT': {
         if (!ctx.matchId) throw new Error('Maç bilgisi eksik.');
@@ -287,22 +374,29 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
 
   const handlePay = async () => {
     if (!canPay) return;
+    // H1 — çift-tık/çift-gönderim kilidi. Ekran PROCESSING'e geçse de React
+    // commit'inden önceki senkron ikinci tık bu ref ile engellenir.
+    if (payBusyRef.current) return;
+    payBusyRef.current = true;
     if (!auth.currentUser) {
       useAppStore.getState().setIsSignupGateOpen(true);
+      payBusyRef.current = false;
       return;
     }
+    // C1 — bu ödeme denemesi için stabil idempotency anahtarı (retry'da aynı kalır).
+    if (!idemKeyRef.current) idemKeyRef.current = safeUuid();
     setInlineError('');
     setScreen('PROCESSING');
     try {
       const res = await executePayment();
-      // Güvenli ödeme sayfasına yönleniyorsa BAŞARI EKRANI GÖSTERME — ödeme
-      // henüz tamamlanmadı; iyzico'da tamamlanınca webhook onaylar. Tarayıcı
-      // yönlenene kadar "işleniyor" ekranında kalınır.
-      if (res.redirected) return;
+      // Banka doğrulaması (3DS) açıldıysa BAŞARI EKRANI GÖSTERME — sonuç
+      // ThreeDSSheet üzerinden handleThreeDSDone'a gelecek.
+      if (res.pendingThreeDS) return;
       // Sahte gecikme yok — yalnız spinner'ın "flaş"lamasını önleyen küçük taban.
       await delay(needsCard ? 400 : 650);
       setResult(res);
       setLastPaymentError(null);
+      idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
       setScreen('SUCCESS');
     } catch (err) {
       const msg = humanizePaymentError(err);
@@ -316,7 +410,50 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         });
       }
       setScreen('PAY');
+    } finally {
+      // 3DS sheet'i açıkken de kilidi bırak: pay butonu o ekranda görünmüyor,
+      // sonucu handleThreeDSDone yönetiyor. Böylece 3DS'ten dönüşte tekrar denenebilir.
+      payBusyRef.current = false;
     }
+  };
+
+  // ─── 3DS sonucu (banka SMS onayı) ─────────────────────────────────────────
+  const handleThreeDSDone = async (outcome: ThreeDSOutcome) => {
+    const ds = threeDS;
+    setThreeDS(null);
+    if (!ds) return;
+
+    if (outcome.ok && !outcome.reason) {
+      // Tahsilat tamam — OYNA'nın kendi başarı ekranı
+      if (ctx?.kind === 'MATCH_JOIN') await refreshMatch(ctx.matchId);
+      setResult({ balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount, intentId: ds.intentId });
+      setLastPaymentError(null);
+      setScreen('SUCCESS');
+      return;
+    }
+
+    // İade-krediye dönüş (yer doldu / rezervasyon kapandı) veya doğrulama hatası
+    const msg = outcome.ok
+      ? humanizePaymentError(outcome.reason ?? '')
+      : outcome.reason === 'TIMEOUT'
+        ? 'Banka doğrulaması zaman aşımına uğradı. Ödeme alınmadıysa tekrar deneyebilirsin; alındıysa bakiyen birazdan güncellenir.'
+        : 'Banka doğrulaması tamamlanamadı. Onaylanmayan tutar kartına yansımaz — tekrar deneyebilir veya bankanla iletişime geçebilirsin.';
+    setInlineError(msg);
+    if (ctx) {
+      setLastPaymentError({
+        message: msg,
+        contextKind: ctx.kind,
+        title: ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme tamamlanamadı',
+        at: Date.now(),
+      });
+    }
+    setScreen('PAY');
+  };
+
+  const handleThreeDSCancel = () => {
+    setThreeDS(null);
+    setInlineError('Banka doğrulaması yarıda kaldı — ödeme alınmadı. Hazır olduğunda tekrar deneyebilirsin.');
+    setScreen('PAY');
   };
 
   const handleSuccessPrimary = () => {
@@ -358,15 +495,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   if (screen === 'ADD_CARD') {
     return (
       <AddCardScreen
-        allowEphemeral
+        collectMode
         onBack={() => setScreen('PAY')}
-        onSaved={async (card) => {
-          setSavedCards(await listSavedCards());
-          setSelectedCardId(card.id);
-          setTempCard(null);
-          setScreen('PAY');
-        }}
-        onEphemeral={(card) => {
+        onCollect={(card) => {
+          // Kart yalnız bellekte tutulur; ödeme anında edge'e gider.
+          // save=true ise 3DS onayıyla birlikte iyzico deposuna kaydedilir.
           setTempCard(card);
           setSelectedCardId('temp');
           setScreen('PAY');
@@ -401,8 +534,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         </p>
         <p className="text-[13px] text-gray-500 mt-2.5 flex items-center gap-1.5">
           <Shield size={13} className="text-[#39FF14] animate-pulse" />
-          {needsCard ? 'Güvenli ödeme sayfasına bağlanılıyor…' : 'OYNA bakiyenden ödeme alınıyor…'}
+          {needsCard ? 'Banka doğrulaması hazırlanıyor…' : 'OYNA bakiyenden ödeme alınıyor…'}
         </p>
+        {/* Banka SMS doğrulaması — uygulama içinde tam ekran (Uber standardı) */}
+        {threeDS && (
+          <ThreeDSSheet
+            htmlBase64={threeDS.html}
+            intentId={threeDS.intentId}
+            onDone={handleThreeDSDone}
+            onCancel={handleThreeDSCancel}
+          />
+        )}
       </div>
     );
   }
@@ -630,7 +772,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                   <CardBrandMark brand={tempCard.brand} size={13} />
                 </span>
                 <p className="text-xs font-extrabold text-white font-numeric">•••• {tempCard.last4}</p>
-                <p className="text-[9.5px] text-gray-500 mt-1">Tek seferlik · kaydedilmedi</p>
+                <p className="text-[9.5px] text-gray-500 mt-1">
+                  {tempCard.save ? 'Ödemeyle birlikte kaydedilecek' : 'Tek seferlik · kaydedilmez'}
+                </p>
               </button>
             )}
 
@@ -667,7 +811,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           <div className="mx-5 flex items-center gap-2 px-1">
             <ShieldCheck size={14} className="text-[#39FF14] shrink-0" />
             <p className="text-[11px] text-gray-400 leading-relaxed">
-              <span className="text-gray-200 font-semibold">3D Secure</span> ile güvenli doğrulama · taksit seçenekleri ödeme adımında sunulur
+              <span className="text-gray-200 font-semibold">3D Secure</span> ile güvenli doğrulama · banka SMS onayı uygulama içinde açılır
             </p>
           </div>
         )}

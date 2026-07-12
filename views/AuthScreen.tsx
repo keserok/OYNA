@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Mail, ArrowRight, KeyRound, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Check, Mail, ArrowRight, KeyRound, Lock, User, Eye, EyeOff, Users, ChevronDown } from 'lucide-react';
 import { UserRole } from '../types';
 import {
   loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, demoLogin,
-  isDemoLoginEnabled, isDemoLoginInput,
+  isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
   signInWithEmailPassword, signUpWithPassword, requestPasswordReset, confirmPasswordReset,
 } from '../supabaseAuth';
+import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
 import { setRememberMe } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
 import { useAppStore } from '../store';
@@ -183,9 +184,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [info, setInfo] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [openModal, setOpenModal] = useState<'kvkk' | 'sozlesme' | null>(null);
+  // Demo hesap seçici (main'de aktif): açık/kapalı + o an giriş yapılan hesap
+  const [demoPickerOpen, setDemoPickerOpen] = useState(false);
+  const [demoLoggingIn, setDemoLoggingIn] = useState<string | null>(null);
 
   // Dev/demo modunda "mirackerem" gibi @ içermeyen kısayollar da geçerli sayılır
   const demoMode = isDemoLoginEnabled();
+  const showDemoPicker = isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
   const contactValid = isValidEmail(email) || isDemoLoginInput(email);
   const contactLabel = email.trim();
 
@@ -413,6 +418,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
       setError(err?.message || 'Apple ile giriş başarısız.');
     } finally {
       setIsLoading(null);
+    }
+  };
+
+  // ─── Demo hesabıyla tek-dokunuşla giriş ────────────────────────────────────
+  // Navigasyonu (Google/e-posta girişinde olduğu gibi) App'teki
+  // onAuthStateChanged dinleyicisine bırakırız: profildeki GERÇEK role göre
+  // doğru panele (oyuncu/tesis/kaleci/hakem) yönlendirir.
+  const handleDemoAccountLogin = async (emailAddr: string, password: string) => {
+    if (isLoading || demoLoggingIn) return;
+    if (!agreed) {
+      setError('Devam etmek için KVKK ve Kullanıcı Sözleşmesi\'ni onayla.');
+      return;
+    }
+    setError(null);
+    setInfo(null);
+    setDemoLoggingIn(emailAddr);
+    try {
+      setRememberMe(remember);
+      await loginDemoAccount(emailAddr, password);
+      // navigasyon auth dinleyicisinde
+    } catch (err: any) {
+      console.error('[Auth] Demo hesap girişi hatası:', err);
+      setError(err?.message || 'Demo hesabıyla giriş başarısız.');
+      setDemoLoggingIn(null);
     }
   };
 
@@ -751,6 +780,88 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     </AnimatedButton>
                   )}
                 </div>
+
+                {/* ─── Demo hesap seçici (main'de aktif) ─── */}
+                {showDemoPicker && !isRegister && (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setDemoPickerOpen((v) => !v)}
+                      className="w-full flex items-center justify-between gap-2 px-4 h-12 rounded-2xl border border-[#39FF14]/30 bg-[#39FF14]/5 text-[#39FF14] outline-none active:scale-[0.99] transition-all"
+                    >
+                      <span className="flex items-center gap-2 font-black text-xs uppercase tracking-wider">
+                        <Users size={16} /> Demo Hesabıyla Gir
+                      </span>
+                      <ChevronDown size={18} className={`transition-transform ${demoPickerOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {demoPickerOpen && (
+                        <motion.div
+                          key="demo-picker"
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="mt-3 max-h-80 overflow-y-auto pr-1 space-y-4">
+                            {!agreed && (
+                              <p className="text-[10px] text-yellow-400/90 font-bold px-1">
+                                Giriş için önce aşağıdaki KVKK/Sözleşme kutusunu onayla.
+                              </p>
+                            )}
+                            {DEMO_ACCOUNT_GROUPS.map((group) => (
+                              <div key={group.role}>
+                                <div className="flex items-center gap-2 px-1 mb-2">
+                                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: group.color }} />
+                                  <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: group.color }}>
+                                    {group.label}
+                                  </span>
+                                  <span className="text-[10px] text-gray-600 font-bold">{group.accounts.length}</span>
+                                </div>
+                                <div className="space-y-1.5">
+                                  {group.accounts.map((acc) => {
+                                    const busy = demoLoggingIn === acc.email;
+                                    return (
+                                      <button
+                                        key={acc.email}
+                                        type="button"
+                                        disabled={demoLoggingIn !== null || isLoading !== null}
+                                        onClick={() => handleDemoAccountLogin(acc.email, acc.password)}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0A0E14] border border-gray-800 hover:border-white/30 disabled:opacity-50 text-left outline-none transition-colors"
+                                      >
+                                        <span
+                                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-black text-xs text-black uppercase"
+                                          style={{ background: group.color }}
+                                        >
+                                          {acc.name.charAt(0)}
+                                        </span>
+                                        <span className="flex-1 min-w-0">
+                                          <span className="block text-xs font-black text-white truncate">{acc.name}</span>
+                                          <span className="block text-[10px] text-gray-500 truncate">
+                                            {acc.email}{acc.note ? ` · ${acc.note}` : ''}
+                                          </span>
+                                        </span>
+                                        {busy ? (
+                                          <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin shrink-0" />
+                                        ) : (
+                                          <ArrowRight size={15} className="text-gray-600 shrink-0" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                            <p className="text-[10px] text-gray-600 px-1 leading-relaxed">
+                              Tüm demo hesapların şifresi ortaktır; bir hesaba dokununca otomatik giriş yapılır.
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </motion.div>
             )}
             {stage === 'otp' && (

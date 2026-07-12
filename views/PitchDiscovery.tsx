@@ -8,13 +8,10 @@ import {
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import {
-  OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS, OYNA_PITCH_PIN_CSS,
-  createPitchPin, createUserLocationIcon,
-} from '../components/map/mapBase';
+import MapGL, { Marker as MapMarker, Source as MapSource, Layer as MapLayer, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { OYNA_MAPLIBRE_STYLE, OYNA_MAPLIBRE_CSS, isWebglAvailable } from '../components/map/mapBase';
+import { fetchActiveCoverage, type RegionCoverage } from '../services/regionCoverageService';
 import { requestDeviceLocation } from '../services/locationService';
 import { openDirections, isIOSPlatform, appleMapsDirectionsUrl, googleMapsDirectionsUrl } from '../utils/directions';
 import { getHaversineDistance } from '../utils/geo';
@@ -181,15 +178,6 @@ const mapDbPitchToUiPitch = (
   };
 };
 
-// Fix leafet default icon path issues
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-
 interface MapViewProps {
   pitches: Pitch[];
   selectedPitch: Pitch | null;
@@ -199,76 +187,39 @@ interface MapViewProps {
   userLocation: { lat: number; lng: number } | null;
   onLocate: () => Promise<{ lat: number; lng: number }>;
   onLocateError: (msg: string) => void;
-  onAreaSearch: (lat: number, lng: number, radiusKm: number) => Promise<number>;
-  areaSearchActive: boolean;
-  onClearAreaSearch: () => void;
+  /** Seçili bölgelerin idari sınırları (sarı çizgi). Boşsa çizim yok. */
+  regionBoundaries: GeoJSON.FeatureCollection | null;
 }
 
-const PitchMapResizer = () => {
-  const map = useMap();
-  useEffect(() => {
-    const t = setTimeout(() => { map.invalidateSize(); }, 200);
-    return () => clearTimeout(t);
-  }, [map]);
-  return null;
-};
-
-// Merkez değişince YUMUŞAK uçuş (setView zıplamıyordu). İlk oturuşta anında.
-// isFlyingRef: programatik uçuş "Bu alanda ara" chip'ini tetiklemesin.
-const ChangeView = ({ center, isFlyingRef }: { center: [number, number]; isFlyingRef?: React.MutableRefObject<boolean> }) => {
-  const map = useMap();
-  const didInit = React.useRef(false);
-  useEffect(() => {
-    if (!didInit.current) {
-      map.setView(center, map.getZoom());
-      didInit.current = true;
-    } else {
-      if (isFlyingRef) isFlyingRef.current = true;
-      map.flyTo(center, map.getZoom(), { duration: 0.7 });
-    }
-  }, [center, map, isFlyingRef]);
-  return null;
-};
-
-// Harita instance'ını dışarı (FAB) taşımak için köprü.
-const MapRefBridge = ({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null> }) => {
-  const map = useMap();
-  useEffect(() => { mapRef.current = map; }, [map, mapRef]);
-  return null;
-};
-
-const userLocationIcon = createUserLocationIcon();
-
-// Kullanıcı jesti (sürükleme/zoom) sonrası "Bu alanda ara" chip'ini tetikler;
-// programatik uçuşlar (flyTo) chip'i AÇMAZ — isFlyingRef bunun için.
-const MapGestureWatcher = ({
-  isFlyingRef, onUserMoved, onMapTap,
-}: {
-  isFlyingRef: React.MutableRefObject<boolean>;
-  onUserMoved: () => void;
-  onMapTap: () => void;
-}) => {
-  useMapEvents({
-    moveend: () => {
-      if (isFlyingRef.current) { isFlyingRef.current = false; return; }
-      onUserMoved();
-    },
-    click: () => onMapTap(),
-  });
-  return null;
-};
+// Fiyat pini — react-map-gl Marker (anchor="bottom" → tip TAM koordinatta).
+// Maplibre pini GPU'da konumlar; zoom/pan'de native sabit (kayma yok).
+const PricePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; selected: boolean; onSelect: (p: Pitch) => void }) => {
+  const priceLabel = pitch.totalPrice ? `~${pitch.totalPrice}₺` : (pitch.name.split(' ')[0] || 'Saha');
+  return (
+    <MapMarker longitude={pitch.coordinates!.lng} latitude={pitch.coordinates!.lat} anchor="bottom">
+      <div className="oyna-mlpin" onClick={(e) => { e.stopPropagation(); onSelect(pitch); }}>
+        {pitch.flashDiscount ? <div className="pin-flash">🔥 %{pitch.flashDiscount}</div> : null}
+        <div className={`pin-bubble${selected ? ' selected' : ''}`}>
+          <svg width="8" height="8" viewBox="0 0 8 8" fill={selected ? '#000' : '#39FF14'}><circle cx="4" cy="4" r="4" /></svg>
+          {pitch.originalPrice ? <span style={{ textDecoration: 'line-through', color: '#888', fontSize: 8, marginRight: 2 }}>₺{pitch.originalPrice}</span> : null}
+          {priceLabel}
+        </div>
+        <div className={`pin-nub${selected ? ' selected' : ''}`} />
+      </div>
+    </MapMarker>
+  );
+});
 
 const MapViewComponent = ({
   pitches, selectedPitch, onPitchSelect, onOpenDetail, center, userLocation,
-  onLocate, onLocateError, onAreaSearch, areaSearchActive, onClearAreaSearch,
+  onLocate, onLocateError, regionBoundaries,
 }: MapViewProps) => {
-  const mapRef = React.useRef<L.Map | null>(null);
+  const mapRef = React.useRef<MapRef | null>(null);
   const isFlyingRef = React.useRef(false);
   const carouselRef = React.useRef<HTMLDivElement | null>(null);
   const programmaticScrollRef = React.useRef(false);
+  const webglOk = useMemo(() => isWebglAvailable(), []);
   const [locating, setLocating] = useState(false);
-  const [areaSearching, setAreaSearching] = useState(false);
-  const [showAreaChip, setShowAreaChip] = useState(false);
   // iOS: Apple/Google seçici; Android/Web doğrudan Google.
   const [directionsFor, setDirectionsFor] = useState<Pitch | null>(null);
 
@@ -284,19 +235,12 @@ const MapViewComponent = ({
     [pitches],
   );
 
-  // Pin ikonlarını memoize et: yalnız sahalar veya seçim değişince yeniden üret.
-  // Aksi halde her render'da yeni L.divIcon → marker DOM rebuild → pin "zıplar".
-  const pinIcons = useMemo(() => {
-    const m = new Map<string, L.DivIcon>();
-    mapPitches.forEach((p) => m.set(p.id, createPitchPin(p, selectedPitch?.id === p.id)));
-    return m;
-  }, [mapPitches, selectedPitch?.id]);
-
   const flyToPitch = (p: Pitch) => {
-    if (!p.coordinates || !mapRef.current) return;
+    const map = mapRef.current;
+    if (!p.coordinates || !map) return;
     isFlyingRef.current = true;
-    const z = Math.max(mapRef.current.getZoom(), 15);
-    mapRef.current.flyTo([p.coordinates.lat, p.coordinates.lng], z, { duration: 0.7 });
+    const z = Math.max(map.getZoom(), 15);
+    map.flyTo({ center: [p.coordinates.lng, p.coordinates.lat], zoom: z, duration: 700 });
   };
 
   // Pin tap → seçim + uçuş + karuseli o karta kaydır (Airbnb çift yönlü senkron).
@@ -342,7 +286,7 @@ const MapViewComponent = ({
     try {
       const coords = await onLocate();
       isFlyingRef.current = true;
-      mapRef.current?.flyTo([coords.lat, coords.lng], 15, { duration: 0.8 });
+      mapRef.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 15, duration: 800 });
     } catch (e) {
       onLocateError((e as { message?: string })?.message || 'Konum alınamadı. Konum iznini kontrol et.');
     } finally {
@@ -350,24 +294,50 @@ const MapViewComponent = ({
     }
   };
 
-  // "Bu alanda ara": görünür alanın yarıçapı (köşe→merkez) ile RPC sorgusu.
-  const handleAreaSearch = async () => {
+  // Seçili bölge sınırları geldiğinde haritayı o sınırların kapsamına sığdır
+  // (kullanıcının seçtiği ilçe/ilçeler kadraja gelir). Sınır imzası değişince bir kez.
+  const boundsSig = useMemo(() => {
+    if (!regionBoundaries?.features?.length) return '';
+    return regionBoundaries.features.map((f) => (f.properties?.key as string) ?? '').sort().join('|');
+  }, [regionBoundaries]);
+
+  const mapReadyRef = React.useRef(false);
+  // Seçili bölge sınırlarını kadraja sığdır (kenar boşluğuyla → sarı sınır İÇERİDE).
+  const fitToBoundaries = useCallback(() => {
     const map = mapRef.current;
-    if (!map || areaSearching) return;
-    setAreaSearching(true);
-    try {
-      const c = map.getCenter();
-      const corner = map.getBounds().getNorthEast();
-      const radiusKm = Math.max(1, Math.min(50, getHaversineDistance(c.lat, c.lng, corner.lat, corner.lng)));
-      const count = await onAreaSearch(c.lat, c.lng, radiusKm);
-      setShowAreaChip(false);
-      if (count === 0) onLocateError('Bu bölgede henüz saha yok. Alanı genişletmeyi dene.');
-    } catch {
-      onLocateError('Alan araması yapılamadı. Lütfen tekrar dene.');
-    } finally {
-      setAreaSearching(false);
+    if (!map || !regionBoundaries?.features?.length) return;
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    const scan = (c: unknown): void => {
+      if (typeof (c as number[])[0] === 'number') {
+        const [lng, lat] = c as number[];
+        if (lng < minLng) minLng = lng; if (lat < minLat) minLat = lat;
+        if (lng > maxLng) maxLng = lng; if (lat > maxLat) maxLat = lat;
+      } else { (c as unknown[]).forEach(scan); }
+    };
+    regionBoundaries.features.forEach((f) => f.geometry && scan((f.geometry as { coordinates: unknown }).coordinates));
+    if (minLng !== Infinity) {
+      isFlyingRef.current = true;
+      map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 13, duration: 700 });
     }
-  };
+  }, [regionBoundaries]);
+
+  // Sınır imzası değişince VE harita hazırsa sığdır (yarış koşulu yok).
+  useEffect(() => {
+    if (boundsSig && mapReadyRef.current) fitToBoundaries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundsSig]);
+
+  // Merkez prop'u değişince (ilçe filtresi / bölge) yumuşak uçuş. İlk değeri
+  // initialViewState koyar; bu efekt yalnız SONRAKİ değişimlerde uçar.
+  const didInitCenter = React.useRef(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!didInitCenter.current) { didInitCenter.current = true; return; }
+    isFlyingRef.current = true;
+    map.flyTo({ center: [center[1], center[0]], zoom: map.getZoom(), duration: 700 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center]);
 
   const distanceLabel = (p: Pitch): string | null => {
     if (!userLocation || !p.coordinates) return null;
@@ -377,67 +347,54 @@ const MapViewComponent = ({
 
   const showCarousel = !!selectedPitch && mapPitches.length > 0;
 
+  // WebGL yoksa (çok eski/zayıf cihaz) nazik fallback — harita çökmesin.
+  if (!webglOk) {
+    return (
+      <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-3 px-8 text-center bg-[#0A0E14]">
+        <MapPin size={30} className="text-white/20" />
+        <p className="text-white/70 text-xs font-black uppercase tracking-wide">Harita bu cihazda desteklenmiyor</p>
+        <p className="text-white/40 text-[11px] leading-relaxed">Sahaları liste görünümünde inceleyebilirsin.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 z-0">
-      <style>{OYNA_MAP_CSS + OYNA_PITCH_PIN_CSS}</style>
-      <MapContainer ref={mapRef} center={center} zoom={13} className="w-full h-full" {...oynaMapProps}>
-        <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
-        <PitchMapResizer />
-        <MapRefBridge mapRef={mapRef} />
-        <ChangeView center={center} isFlyingRef={isFlyingRef} />
-        <MapGestureWatcher
-          isFlyingRef={isFlyingRef}
-          onUserMoved={() => setShowAreaChip(true)}
-          onMapTap={() => onPitchSelect(null)}
-        />
+      <style>{OYNA_MAPLIBRE_CSS}</style>
+      <MapGL
+        ref={mapRef}
+        initialViewState={{ longitude: center[1], latitude: center[0], zoom: 13 }}
+        mapStyle={OYNA_MAPLIBRE_STYLE}
+        attributionControl={false}
+        dragRotate={false}
+        pitchWithRotate={false}
+        touchZoomRotate={true}
+        style={{ width: '100%', height: '100%' }}
+        onClick={() => onPitchSelect(null)}
+        onLoad={() => { mapReadyRef.current = true; fitToBoundaries(); }}
+      >
+        <AttributionControl compact position="bottom-right" />
+
+        {/* Seçili bölgelerin idari sınırı — belirgin sarı çizgi (glow'lu) + çok hafif dolgu */}
+        {regionBoundaries && regionBoundaries.features.length > 0 && (
+          <MapSource id="oyna-regions" type="geojson" data={regionBoundaries}>
+            <MapLayer id="oyna-regions-fill" type="fill" paint={{ 'fill-color': '#FFE100', 'fill-opacity': 0.035 }} />
+            <MapLayer id="oyna-regions-glow" type="line" layout={{ 'line-join': 'round' }} paint={{ 'line-color': '#FFE100', 'line-width': 9, 'line-opacity': 0.18, 'line-blur': 6 }} />
+            <MapLayer id="oyna-regions-line" type="line" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#FFE100', 'line-width': 3, 'line-opacity': 1 }} />
+          </MapSource>
+        )}
 
         {/* Mavi nokta YALNIZ gerçek kullanıcı konumunda — harita merkezinde değil */}
         {userLocation && (
-          <Marker
-            position={[userLocation.lat, userLocation.lng]}
-            icon={userLocationIcon}
-            interactive={false}
-            keyboard={false}
-            zIndexOffset={-1000}
-          />
+          <MapMarker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
+            <div className="oyna-mluser"><div className="pulse" /><div className="dot" /></div>
+          </MapMarker>
         )}
 
         {mapPitches.map((pitch) => (
-          <Marker
-            key={pitch.id}
-            position={[pitch.coordinates!.lat, pitch.coordinates!.lng]}
-            icon={pinIcons.get(pitch.id)!}
-            eventHandlers={{ click: () => selectFromPin(pitch) }}
-          />
+          <PricePin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onSelect={selectFromPin} />
         ))}
-      </MapContainer>
-
-      {/* "Bu alanda ara" — yalnız kullanıcı haritayı oynatınca belirir (Airbnb) */}
-      <AnimatePresence>
-        {showAreaChip && !areaSearchActive && (
-          <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={handleAreaSearch}
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#0D111A]/92 border border-[#39FF14]/40 backdrop-blur-md text-[#39FF14] text-[11px] font-black uppercase tracking-widest shadow-[0_6px_24px_rgba(0,0,0,0.6),0_0_14px_rgba(57,255,20,0.15)] active:scale-95 transition-transform"
-          >
-            {areaSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-            Bu alanda ara
-          </motion.button>
-        )}
-        {areaSearchActive && (
-          <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={() => { onClearAreaSearch(); setShowAreaChip(false); }}
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#39FF14] text-black text-[11px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(57,255,20,0.4)] active:scale-95 transition-transform"
-          >
-            <X size={14} /> Alan araması aktif — temizle
-          </motion.button>
-        )}
-      </AnimatePresence>
+      </MapGL>
 
       {/* Konumuma dön FAB — karusel açıkken üstüne çıkar */}
       <button
@@ -940,17 +897,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return { lat: coords.lat, lng: coords.lng };
   }, [setUserLocation]);
 
-  // ── "Bu alanda ara": get_nearby_pitches RPC (id + distance_km) → id filtresi ──
-  const [areaSearch, setAreaSearch] = useState<Set<string> | null>(null);
-  const handleAreaSearch = useCallback(async (lat: number, lng: number, radiusKm: number): Promise<number> => {
-    const { data, error } = await supabase.rpc('get_nearby_pitches', {
-      p_lat: lat, p_lon: lng, p_radius_km: radiusKm,
-    });
-    if (error) throw error;
-    const ids = new Set(((data ?? []) as { id: string }[]).map((r) => r.id));
-    setAreaSearch(ids);
-    return ids.size;
-  }, []);
+  // ── Bölge kapsama + idari sınırlar (region_coverage) ──────────────────────
+  const [coverage, setCoverage] = useState<RegionCoverage[]>([]);
+  useEffect(() => { fetchActiveCoverage().then(setCoverage).catch(() => setCoverage([])); }, []);
+
+  // Seçili bölgelerin sınır GeoJSON'u (sarı çizgi). İl seçilmişse o ilin tüm
+  // aktif ilçe sınırları; ilçe seçilmişse yalnız o ilçe.
+  const regionBoundaries = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    if (selectedRegions.length === 0 || coverage.length === 0) return null;
+    const wanted = coverage.filter((c) => c.boundary && selectedRegions.some((r) =>
+      r.district ? (c.city === r.city && c.district === r.district) : (c.city === r.city),
+    ));
+    if (wanted.length === 0) return null;
+    return {
+      type: 'FeatureCollection',
+      features: wanted.map((c) => ({
+        type: 'Feature',
+        properties: { key: `${c.city}/${c.district ?? ''}` },
+        geometry: c.boundary as unknown as GeoJSON.Geometry,
+      })),
+    };
+  }, [selectedRegions, coverage]);
 
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
@@ -1118,9 +1085,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       if (p.isApproved === false) return false;
       if (favOnly && !favorites.has(p.id)) return false;
       if (onlyDiscounted && !p.flashDiscount) return false;
-      // Alan araması aktifken bölge filtresi yerine harita alanı geçerlidir
-      if (areaSearch) { if (!areaSearch.has(p.id)) return false; }
-      else if (!pitchInSelectedRegions(p)) return false;
+      if (!pitchInSelectedRegions(p)) return false;
 
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.district.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1164,7 +1129,20 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     result.sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
 
     return result;
-  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions, areaSearch]);
+  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions]);
+
+  // Haritanın pin kaynağı: bölge seçiliyse bölge-filtreli sahalar; bölge yoksa
+  // GÜNCEL KONUM çevresi (30 km); konum da yoksa mevcut liste (kullanıcı kararı).
+  const mapPins = useMemo(() => {
+    const withCoords = filteredPitches.filter((p) => p.coordinates?.lat && p.coordinates?.lng);
+    if (selectedRegions.length > 0) return withCoords;
+    if (userLocation) {
+      return withCoords.filter((p) =>
+        getHaversineDistance(userLocation.lat, userLocation.lng, p.coordinates!.lat, p.coordinates!.lng) <= 30,
+      );
+    }
+    return withCoords;
+  }, [filteredPitches, selectedRegions, userLocation]);
 
   const locationLabel = filters.district !== 'Tümü'
     ? `${filters.district} çevresi`
@@ -1404,7 +1382,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         ) : (
           <div className="w-full h-[calc(100vh-320px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
             <MapViewComponent
-              pitches={filteredPitches}
+              pitches={mapPins}
               selectedPitch={selectedPitch}
               onPitchSelect={setSelectedPitch}
               onOpenDetail={handleOpenDetail}
@@ -1412,9 +1390,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               userLocation={userLocation}
               onLocate={handleLocate}
               onLocateError={showActionError}
-              onAreaSearch={handleAreaSearch}
-              areaSearchActive={!!areaSearch}
-              onClearAreaSearch={() => setAreaSearch(null)}
+              regionBoundaries={regionBoundaries}
             />
           </div>
         )}

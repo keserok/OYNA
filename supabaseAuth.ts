@@ -280,6 +280,29 @@ export const demoLogin = async (raw: string) => {
   return data;
 };
 
+// ─── Demo hesap seçici (main'de aktif) ───────────────────────────────────────
+// Giriş ekranındaki tek-dokunuşla "Demo hesapla gir" listesi. Kaynak liste
+// `OYNA_DEMO_HESAPLARI.md` → `data/demoAccounts.ts`. Yukarıdaki dev-mode kapılı
+// `demoLogin`'in aksine bu, standart e-posta+şifre girişini kullanır; demo
+// hesapları üretim Supabase'inde gerçek hesap olarak var olduğundan `main`
+// domain'inde de çalışır. Yalnız @oyna.app demo hesaplarını kabul eder.
+// KILL-SWITCH: build ortamında `VITE_DEMO_ACCOUNTS='false'` → seçici tümüyle
+// kapanır (kod değişikliği gerekmeden lansman öncesi kapatma).
+export const isDemoAccountPickerEnabled = (): boolean => {
+  return import.meta.env.VITE_DEMO_ACCOUNTS !== 'false';
+};
+
+export const loginDemoAccount = async (email: string, password: string = DEMO_PASSWORD) => {
+  const key = email.trim().toLowerCase();
+  if (!key.endsWith(DEMO_DOMAIN)) {
+    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna.app) geçerlidir.');
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email: key, password });
+  if (error) throw error;
+  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
+  return data;
+};
+
 // ─── E-posta OTP ─────────────────────────────────────────────────────────────
 // shouldCreateUser: true → hesap yoksa otomatik oluşturur (kayıt + giriş tek akış)
 export const sendEmailOtp = async (email: string) => {

@@ -118,40 +118,12 @@ const App: React.FC = () => {
 
   const initApp = useAppStore(s => s.initApp);
   const isHydrated = useAppStore(s => s.isHydrated);
+  const loadDegraded = useAppStore(s => s.loadDegraded);
 
   useEffect(() => {
     initApp();
   }, [initApp]);
 
-  // Godview standalone → consumer app ghost deep-link (?ghost=userId&name=...)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ghostId = params.get('ghost');
-    if (!ghostId) return;
-
-    const ghostName = params.get('name') || 'Kullanıcı';
-
-    void (async () => {
-      const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
-      try { await logImpersonation(ghostId); } catch { /* audit optional if not admin session */ }
-      const profile = await fetchProfileById(ghostId);
-      setOriginalRole(role);
-      setImpersonatedUser(profile ?? {
-        id: ghostId,
-        name: ghostName,
-        email: '',
-        avatar: '',
-        role: UserRole.PLAYER,
-        rating: 5,
-        isVerified: false,
-        isBanned: false,
-        joinDate: new Date().toISOString(),
-        matchCount: 0,
-      });
-      resetNavigation('DASHBOARD');
-      window.history.replaceState({}, '', window.location.pathname);
-    })();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -244,6 +216,49 @@ const App: React.FC = () => {
             // Oturum kalıcı → tekrar giriş YOK. Yalnız girişte yönlendir; oturum
             // içindeki token yenilemesi kullanıcıyı bulunduğu ekrandan KOPARMAZ.
             if (isEntering) {
+              // ─── GHOST MODE DEEP-LINK YETKİLENDİRME KONTROLÜ ─────────────────
+              // Sadece profiles.is_admin=true veya SUPER_ADMIN yetkisine sahip kullanıcılar
+              // başka kullanıcıları taklit edebilir. Yetkisiz girişler engellenir.
+              const params = new URLSearchParams(window.location.search);
+              const ghostId = params.get('ghost');
+              if (ghostId) {
+                const isAdmin = profile.is_admin === true ||
+                                primaryRole === UserRole.SUPER_ADMIN ||
+                                (Array.isArray(profile.roles) && profile.roles.includes(UserRole.SUPER_ADMIN));
+                if (isAdmin) {
+                  const ghostName = params.get('name') || 'Kullanıcı';
+                  void (async () => {
+                    const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
+                    try {
+                      await logImpersonation(ghostId);
+                    } catch (e) {
+                      console.error('[Ghost Mode] Impersonation audit log failed:', e);
+                    }
+                    const ghostProfile = await fetchProfileById(ghostId);
+                    setOriginalRole(landingRole);
+                    setImpersonatedUser(ghostProfile ?? {
+                      id: ghostId,
+                      name: ghostName,
+                      email: '',
+                      avatar: '',
+                      role: UserRole.PLAYER,
+                      rating: 5,
+                      isVerified: false,
+                      isBanned: false,
+                      joinDate: new Date().toISOString(),
+                      matchCount: 0,
+                    });
+                    resetNavigation('DASHBOARD');
+                    window.history.replaceState({}, '', window.location.pathname);
+                  })();
+                  return; // Normal yönlendirme zincirini atla
+                } else {
+                  console.warn('[Security Warning] Normal user tried to access ghost mode:', user.uid);
+                  showToast('Ghost Mode için admin yetkiniz bulunmamaktadır.');
+                  window.history.replaceState({}, '', window.location.pathname);
+                }
+              }
+
               resetNavigation(navigateBasedOnRole(landingRole));
             }
           }
@@ -273,6 +288,7 @@ const App: React.FC = () => {
   // ─── Push Notification Entegrasyonu ────────────────────────────────────────
   useEffect(() => {
     let unsubscribeRealtime: (() => void) | undefined;
+    let setupForUid: string | null = null;
 
     const setupPush = async (uid: string) => {
       // 1. Kullanıcı tercihlerini Supabase'den çek
@@ -332,10 +348,16 @@ const App: React.FC = () => {
     const unsubscribeAuth = onAuthStateChanged(auth,
       (user: any) => {
         if (user?.uid) {
+          // Per-uid kurulum yalnız BİR kez — TOKEN_REFRESHED / tab-focus'ta
+          // initPushNotifications + realtime kanalı tekrar kurulmasın (leak).
+          if (setupForUid === user.uid) return;
+          setupForUid = user.uid;
+          if (unsubscribeRealtime) unsubscribeRealtime(); // varsa eski kanalı kapat
           setupPush(user.uid);
           useAppStore.getState().loadMyTeams();
         } else {
           // Çıkış yapılınca token’ı temizle
+          setupForUid = null;
           if (unsubscribeRealtime) unsubscribeRealtime();
         }
       }
@@ -608,6 +630,17 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
+      {loadDegraded && (
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 flex items-center justify-between gap-3">
+          <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
+          <button
+            onClick={() => useAppStore.getState().retryInitialLoad()}
+            className="shrink-0 bg-[#0A0E14]/85 text-white rounded-md px-2.5 py-1 font-extrabold active:scale-95 transition-transform"
+          >
+            Yeniden dene
+          </button>
+        </div>
+      )}
       <GlobalToast />
       <SignupGate />
       {/* Bakım perdesi — sunucudaki is_maintenance_active() aktifse adminler hariç kilitler */}

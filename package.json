@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:admin": "node admin-panel/scripts/start-admin-local.mjs",
-    "test:unit": "vitest run tests/unit",
+    "test:unit": "vitest run tests/unit --config vitest.config.ts",
     "test:admin": "playwright test tests/admin.spec.ts",
     "admin:verify": "node admin-panel/scripts/admin-panel-verify.mjs",
     "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",
@@ -46,10 +46,12 @@
     "leaflet": "^1.9.4",
     "lightningcss": "^1.32.0",
     "lucide-react": "^0.563.0",
+    "maplibre-gl": "^4.7.1",
     "pdfkit": "^0.18.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-leaflet": "^5.0.0",
+    "react-map-gl": "^7.1.9",
     "recharts": "^3.8.0",
     "tailwindcss": "^4.2.1",
     "zustand": "^5.0.11"
@@ -68,6 +70,10 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "jsdom": "^26.0.0",
+    "@testing-library/user-event": "^14.6.1"
   }
 }

@@ -10,10 +10,12 @@ import { useAppStore } from '../store';
 import { UserRole } from '../types';
 import {
   getWalletSummary, listSavedCards, deleteSavedCard, setDefaultSavedCard,
-  topUpWallet, WalletSummary, SavedCard,
+  WalletSummary, SavedCard,
 } from '../services/walletService';
+import { startInAppCardPayment } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
 import CardBrandMark from '../components/payment/CardBrandMark';
+import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 
 /**
  * CÜZDAN — role göre iki yapı (tasarım 2a + kaleci/hakem):
@@ -107,6 +109,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Para yükleme
   const [topupAmount, setTopupAmount] = useState<number>(500);
@@ -116,6 +119,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [topupBusy, setTopupBusy] = useState(false);
   const [topupError, setTopupError] = useState('');
   const [topupDone, setTopupDone] = useState(false);
+  // Uygulama-içi 3DS (banka SMS) sayfası — para yüklemede
+  const [topupThreeDS, setTopupThreeDS] = useState<{ html: string; intentId: string } | null>(null);
+  // Kart ekleme hangi ekrandan açıldı — bitince oraya dön
+  const [addCardReturn, setAddCardReturn] = useState<'CARDS' | 'TOPUP'>('CARDS');
 
   // Çekim formu
   const [payoutAmount, setPayoutAmount] = useState('');
@@ -130,6 +137,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   const fetchData = useCallback(async () => {
     setRefreshing(true);
+    setLoadError(false);
     try {
       const [sum, cards, txRes, payoutRes] = await Promise.all([
         getWalletSummary().catch(() => null),
@@ -141,7 +149,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           .select('id,amount,iban,iban_holder_name,status,created_at')
           .order('created_at', { ascending: false }).limit(20),
       ]);
+      // Finansal veri çekilemezse ₺0'ı gerçek gibi gösterme — kesintiyi maskeleme.
       if (sum) setSummary(sum);
+      else setLoadError(true);
+      if (txRes.error) setLoadError(true);
       setSavedCards(cards);
       setTopupCardId(prev => prev ?? (cards.find(c => c.isDefault) ?? cards[0])?.id ?? null);
       if (txRes.data) setTxList(txRes.data as WalletTx[]);
@@ -182,6 +193,9 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     return { count: rows.length, total: rows.reduce((s, r) => s + Math.abs(r.amount), 0) };
   }, [txList]);
 
+  // Para yükleme — uygulama-içi kart akışı (edge 'pay', flow TOP_UP).
+  // Canlıda banka SMS doğrulaması (3DS) uygulama içinde açılır; simülasyonda
+  // anında uygulanır. Kart verisi FE'de tutulmaz — yalnız kayıtlı kart id gider.
   const handleTopup = async () => {
     if (topupBusy) return;
     setTopupError('');
@@ -189,17 +203,51 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       setTopupError(`Minimum yükleme tutarı ${TOPUP_MIN}₺'dir.`);
       return;
     }
+    if (!topupCardId) {
+      setTopupError('Yükleme için bir kart seç veya yeni kart ekle.');
+      return;
+    }
     setTopupBusy(true);
     try {
-      await topUpWallet(effectiveTopup, topupCardId);
+      const res = await startInAppCardPayment({
+        flow: 'TOP_UP',
+        amount: effectiveTopup,
+        savedCardId: topupCardId,
+      });
+      if (res.requiresThreeDS && res.threeDSHtml) {
+        // Banka SMS doğrulaması — sonuç handleTopupThreeDSDone'a gelir
+        setTopupThreeDS({ html: res.threeDSHtml, intentId: res.intentId });
+        return; // busy açık kalır; sheet kapanınca sıfırlanır
+      }
       setTopupDone(true);
       await fetchData();
       setTimeout(() => { setTopupDone(false); setView('MAIN'); }, 1800);
+      setTopupBusy(false);
     } catch (e) {
-      setTopupError(e instanceof Error ? e.message : 'Para yükleme başarısız.');
-    } finally {
+      const raw = e instanceof Error ? e.message : 'Para yükleme başarısız.';
+      setTopupError(raw.replace(/^[A-Z_]+:\s*/, '') || 'Para yükleme başarısız.');
       setTopupBusy(false);
     }
+  };
+
+  const handleTopupThreeDSDone = async (outcome: ThreeDSOutcome) => {
+    setTopupThreeDS(null);
+    setTopupBusy(false);
+    if (outcome.ok) {
+      setTopupDone(true);
+      await fetchData();
+      setTimeout(() => { setTopupDone(false); setView('MAIN'); }, 1800);
+    } else {
+      setTopupError(outcome.reason === 'TIMEOUT'
+        ? 'Banka doğrulaması zaman aşımına uğradı. Yükleme alınmadıysa tekrar deneyebilirsin.'
+        : 'Banka doğrulaması tamamlanamadı. Onaylanmayan tutar kartına yansımaz — tekrar deneyebilirsin.');
+    }
+  };
+
+  const handleTopupThreeDSCancel = () => {
+    setTopupThreeDS(null);
+    setTopupBusy(false);
+    setTopupError('Banka doğrulaması yarıda kaldı — yükleme alınmadı.');
   };
 
   const handleRequestPayout = async () => {
@@ -230,12 +278,17 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     if (paymentContext) useAppStore.getState().navigateTo('PAYMENT');
   };
 
-  // ─── ALT EKRAN: Kart ekle (paylaşılan bileşen) ────────────────────────────
+  // ─── ALT EKRAN: Kart ekle (paylaşılan bileşen — edge üzerinden kayıt) ─────
   if (view === 'ADD_CARD') {
     return (
       <AddCardScreen
-        onBack={() => setView('CARDS')}
-        onSaved={async () => { setSavedCards(await listSavedCards()); setView('CARDS'); }}
+        onBack={() => setView(addCardReturn)}
+        onSaved={async (card) => {
+          const cards = await listSavedCards();
+          setSavedCards(cards);
+          if (card && addCardReturn === 'TOPUP') setTopupCardId(card.id);
+          setView(addCardReturn);
+        }}
       />
     );
   }
@@ -298,7 +351,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500 mb-3">Ödeme Yöntemi</p>
             {savedCards.length === 0 ? (
-              <button onClick={() => setView('ADD_CARD')}
+              <button onClick={() => { setAddCardReturn('TOPUP'); setView('ADD_CARD'); }}
                 className="w-full flex items-center gap-3 border-[1.5px] border-dashed border-white/16 rounded-2xl p-4 text-gray-300">
                 <span className="w-11 h-[30px] rounded-md bg-white/5 flex items-center justify-center text-gray-400"><Plus size={18} /></span>
                 <span className="text-[13px] font-bold">Yeni kart ekle</span>
@@ -364,6 +417,15 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             <p className="text-center text-[10px] text-gray-500 mt-2">Yükleme için önce bir kart ekle.</p>
           )}
         </div>
+        {/* Banka SMS doğrulaması — uygulama içinde tam ekran */}
+        {topupThreeDS && (
+          <ThreeDSSheet
+            htmlBase64={topupThreeDS.html}
+            intentId={topupThreeDS.intentId}
+            onDone={handleTopupThreeDSDone}
+            onCancel={handleTopupThreeDSCancel}
+          />
+        )}
       </div>
     );
   }
@@ -433,7 +495,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           )}
         </main>
         <div className="p-5 pb-safe border-t border-white/5">
-          <button onClick={() => setView('ADD_CARD')}
+          <button onClick={() => { setAddCardReturn('CARDS'); setView('ADD_CARD'); }}
             className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-black text-base rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
             <Plus size={18} /> YENİ KART EKLE
           </button>
@@ -641,6 +703,25 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           </div>
         )}
 
+        {/* Finansal veri yüklenemedi — ₺0 yerine dürüst hata + tekrar dene */}
+        {loadError && !summary && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex gap-3">
+            <div className="w-[34px] h-[34px] rounded-[10px] bg-amber-500/15 flex items-center justify-center text-amber-400 shrink-0">
+              <AlertTriangle size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold text-amber-400">Bakiye yüklenemedi</p>
+              <p className="text-[11.5px] text-gray-300 mt-1 leading-relaxed">
+                Bağlantı sorunu nedeniyle bakiyen alınamadı. Gösterilen tutar güncel olmayabilir.
+              </p>
+              <button onClick={() => fetchData()} disabled={refreshing}
+                className="mt-2.5 text-[11px] font-extrabold text-[#0A0E14] bg-amber-400 rounded-[9px] px-3 py-[7px] disabled:opacity-60">
+                Tekrar dene
+              </button>
+            </div>
+          </div>
+        )}
+
         {isEarningsRole ? (
           <>
             {/* ── Kaleci / Hakem / Tesis: kazanç hero (altın) ── */}
@@ -784,7 +865,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                     </div>
                   </div>
                 ))}
-                <button onClick={() => setView('ADD_CARD')}
+                <button onClick={() => { setAddCardReturn('CARDS'); setView('ADD_CARD'); }}
                   className="shrink-0 w-20 h-[120px] rounded-[18px] border-[1.5px] border-dashed border-white/16 flex items-center justify-center text-gray-400">
                   <Plus size={22} />
                 </button>

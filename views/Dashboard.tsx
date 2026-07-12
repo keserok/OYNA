@@ -10,7 +10,6 @@ import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { useAppStore } from '../store';
-import { check90MinAutoCancel } from '../utils/gameRules';
 import { useMyMatches } from '../hooks/useMyMatches';
 
 interface DashboardProps {
@@ -286,9 +285,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     adminMatches, 
     myTeams,
     setActiveDraftId,
-    setSelectedMatch, 
-    updateMatch,
-    addUserNotification,
+    setSelectedMatch,
     adminUsers,
     setNewMatchBadge,
     setIsNotificationsOpen
@@ -335,34 +332,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
     return 'Kadro ve maç lobileri merkezi';
   }, [closestMatch, userMatches.length]);
 
-  useEffect(() => {
-    // ⚽ B2B SaaS Game Engine - 90-minute auto-cancel evaluation scan
-    const scanAndAutoCancel = async () => {
-      for (const m of adminMatches) {
-        if (m.status !== 'CANCELLED' && m.status !== 'COMPLETED') {
-          const shouldCancel = check90MinAutoCancel(m);
-          if (shouldCancel) {
-            const updated = { ...m, status: 'CANCELLED' as const };
-            await updateMatch(updated);
-            
-            // Send premium user notification to alert the participant
-            addUserNotification({
-              id: `autocancel-${m.id}-${Date.now()}`,
-              title: 'Maç İptal Edildi!',
-              desc: `Yeterli oyuncu toplanamadığı için ${m.title} maçı otomatik iptal edildi. Ücretler iade edildi.`,
-              time: 'Şimdi',
-              type: 'error',
-              iconName: 'AlertTriangle',
-              color: 'bg-red-500',
-              textColor: 'text-red-500'
-            });
-          }
-        }
-      }
-    };
-
-    scanAndAutoCancel();
-  }, [adminMatches, updateMatch, addUserNotification]);
+  // [C4] 90 dakikalık otomatik maç iptali ARTIK SUNUCUDA çalışır.
+  // Eski client-side `scanAndAutoCancel` useEffect'i buradan KALDIRILDI:
+  // her Dashboard açan istemcide çalışıp aynı maçı iptal etmek için yarışıyor
+  // (write storm), mükerrer bildirim gönderiyor ve updateMatch → adminMatches
+  // mutasyonu effect'i yeniden tetikleyip render osilasyonu yaratıyordu.
+  // İptal + iade artık tek otoriter sunucu görevi:
+  //   supabase/functions/auto-cancel-matches (pg_cron ile ~5 dakikada bir).
+  // Bkz. supabase/migrations/20260719000001_c4_auto_cancel_cron.sql
 
   useEffect(() => {
     if (initialLoadComplete) {

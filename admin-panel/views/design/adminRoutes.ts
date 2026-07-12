@@ -62,6 +62,7 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
   { route: 'KALECİLER', title: 'Kaleciler', label: 'Kaleciler', description: 'Kaleci profilleri, yetenekler ve ücretler.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: Shield, inPalette: true, badge: 'goalkeepers' },
   { route: 'HAKEMLER', title: 'Hakemler', label: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Scale, inPalette: true, badge: 'referees' },
   { route: 'TAKIMLAR', title: 'Takımlar', label: 'Takımlar', description: 'Platform takım kayıtları ve kaptan bilgileri.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true },
+  { route: 'REGION_COVERAGE', title: 'Bölge Kapsama', label: 'Bölge Kapsama', description: 'Hizmet kapsamındaki il/ilçeler ve harita sınırları.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Globe, inPalette: true },
 
   // Doğrulama Merkezi'nin alt sekmeleri — sidebar'da yok, palette'ten erişilir.
   { route: 'PENDING_VERIFICATIONS', title: 'Onay Bekleyenler', label: 'Onay Bekleyenler', description: 'Kaleci ve hakem doğrulama talepleri.', group: 'Operasyon', sidebarGroup: null, accent: 'yellow', icon: BadgeCheck, inPalette: true },

@@ -10,6 +10,11 @@
 import L from 'leaflet';
 import type { Pitch } from '../../types';
 
+// "Leaflet" ön-ekini TÜM haritalardan kaldır — bu kütüphane kredisidir, yasal
+// zorunluluk değildir. Yasal OSM+CARTO veri atıfı görünür kalır. Tek yerden,
+// tüm ekranlar için (mapBase her harita ekranınca import edilir).
+L.Control.Attribution.prototype.options.prefix = false;
+
 // ── Tile sağlayıcı + ZORUNLU atıf ─────────────────────────────────────────
 // {r} → retina (@2x) karoları otomatik; koyu bazemap markayla uyumlu.
 export const OYNA_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -22,8 +27,9 @@ export const OYNA_TILE_ATTRIBUTION =
 export const oynaTileProps = {
   attribution: OYNA_TILE_ATTRIBUTION,
   crossOrigin: true as const,      // tainted-canvas önler (WebView'da tile hataları)
-  keepBuffer: 6,                    // hızlı pan'de gri boşluk olmasın
+  keepBuffer: 8,                    // pan'de gri boşluk / yeniden yükleme olmasın
   updateWhenIdle: false,            // pan sırasında karolar canlı yüklensin
+  updateWhenZooming: false,         // zoom animasyonu bitene kadar karo yükleme (jank↓)
   maxZoom: 20,
   maxNativeZoom: 20,
 };
@@ -32,12 +38,14 @@ export const oynaTileProps = {
 // zoomSnap=1 → tam-sayı zoom = karo netliği (kalite önceliği); pinch yine akıcı.
 export const oynaMapProps = {
   zoomControl: false,
-  attributionControl: true,         // atıf kontrolü AÇIK (yasal)
+  attributionControl: true,         // atıf kontrolü AÇIK (yasal) — "Leaflet" ön-eki kapalı
   zoomSnap: 1,
   zoomDelta: 1,
   wheelDebounceTime: 40,
   wheelPxPerZoomLevel: 100,
   bounceAtZoomLimits: false,
+  fadeAnimation: false,             // karoların TEK TEK "fade" ile gelmesini kapatır
+                                    // → "parça parça akma" biter, karolar anında oturur
   tap: true,                        // iOS/Android dokunma
   tapTolerance: 18,                 // parmak dokunuşu toleransı (mobil)
   maxZoom: 19,
@@ -50,7 +58,12 @@ export const oynaMapProps = {
 // → pinler zoom'da kaymaz/titremez.
 export const OYNA_MAP_CSS = `
   .leaflet-container { background: #060B12 !important; font-family: inherit; -webkit-tap-highlight-color: transparent; }
-  .leaflet-tile-pane { filter: brightness(0.92) saturate(0.62); }
+  /* NOT: tile-pane'e CSS 'filter' UYGULANMAZ — hareket eden katmana filter,
+     mobil WebView'da her karede yeniden boyama (jank) demektir. dark_all
+     basemap zaten koyu; ekstra filtre gereksiz ve pahalıydı → kaldırıldı.
+     Karo geçiş animasyonu da kapatıldı (anında otursun, akıcı hissetsin). */
+  .leaflet-tile { transition: none !important; }
+  .leaflet-fade-anim .leaflet-tile { will-change: auto; }
   .leaflet-control-zoom { display: none !important; }
   .leaflet-popup-content-wrapper { background: transparent !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
   .leaflet-popup-tip-container { display: none !important; }
@@ -69,6 +82,81 @@ export const OYNA_MAP_CSS = `
   .leaflet-zoom-anim .oyna-pin-root,
   .leaflet-zoom-anim .oyna-pin-root * { transition: none !important; }
   /* Karusel: scrollbar gizle (WebKit dahil) */
+  .oyna-map-carousel { scrollbar-width: none; -ms-overflow-style: none; }
+  .oyna-map-carousel::-webkit-scrollbar { display: none; }
+`;
+
+// ════════════════════════════════════════════════════════════════════════
+// MAPLIBRE (VEKTÖR) — keşif haritası. GPU'da pürüzsüz zoom/pan; pinler HTML
+// marker olduğundan koordinata NATIVE sabit (divIcon anchor hilesi gerekmez).
+// Karo kaynağı: OpenFreeMap (ücretsiz, anahtarsız). Diğer ekranlar hâlâ
+// Leaflet kullanır (yukarıdaki export'lar); bu bölüm yalnız PitchDiscovery.
+// ════════════════════════════════════════════════════════════════════════
+
+// OpenFreeMap koyu vektör stili (anahtarsız). Atıf stil içinde gömülü gelir.
+export const OYNA_MAPLIBRE_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+
+/** WebGL desteği (MapLibre zorunlu). Yoksa çağıran taraf nazik fallback gösterir. */
+export function isWebglAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(
+      (window as unknown as { WebGLRenderingContext?: unknown }).WebGLRenderingContext &&
+      (canvas.getContext('webgl2') || canvas.getContext('webgl'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+// MapLibre keşif haritası CSS: marka koyu zemin, atıf (minimal ⓘ), fiyat pini
+// (anchor="bottom" → tip koordinatta), kullanıcı mavi noktası, karusel gizli
+// scrollbar. Pinler maplibre tarafından GPU'da konumlanır → zoom'da kaymaz.
+export const OYNA_MAPLIBRE_CSS = `
+  .maplibregl-map { background: #060B12; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  .maplibregl-ctrl-attrib {
+    background: rgba(10,14,20,0.55) !important;
+    color: rgba(255,255,255,0.38) !important;
+    font-size: 9px !important; border-radius: 8px 0 0 0 !important;
+    backdrop-filter: blur(4px);
+  }
+  .maplibregl-ctrl-attrib a { color: rgba(57,255,20,0.55) !important; }
+  .maplibregl-ctrl-attrib-button { background-color: rgba(255,255,255,0.3) !important; }
+  .oyna-mlpin { position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+  .oyna-mlpin .pin-bubble {
+    display: flex; align-items: center; gap: 4px;
+    background: #0D111A; border: 1.5px solid rgba(57,255,20,0.35);
+    color: #39FF14; font-size: 10px; font-weight: 900; line-height: 1;
+    padding: 6px 10px; border-radius: 100px; white-space: nowrap;
+    box-shadow: 0 4px 22px rgba(0,0,0,0.7), 0 0 12px rgba(57,255,20,0.15);
+    transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+  .oyna-mlpin .pin-bubble.selected {
+    background: #39FF14; color: #000; border-color: #39FF14;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 26px rgba(57,255,20,0.6);
+    transform: scale(1.14);
+  }
+  .oyna-mlpin .pin-nub {
+    width: 9px; height: 9px; border-radius: 50%; background: #39FF14; margin-top: -2px;
+    box-shadow: 0 0 10px rgba(57,255,20,0.85);
+  }
+  .oyna-mlpin .pin-nub.selected { background: #000; box-shadow: 0 0 15px rgba(57,255,20,1); }
+  .oyna-mlpin .pin-flash {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: #FF3B30; color: #fff; font-size: 9px; font-weight: 900;
+    padding: 2px 6px; border-radius: 100px; white-space: nowrap; box-shadow: 0 2px 8px rgba(255,59,48,0.5);
+  }
+  .oyna-mluser { position: relative; width: 16px; height: 16px; }
+  .oyna-mluser .dot {
+    position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;
+    background: #00D8FF; border: 2.5px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0,216,255,0.35), 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .oyna-mluser .pulse {
+    position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(0,216,255,0.4); animation: oynaUserPulse 2s ease-out infinite;
+  }
+  @keyframes oynaUserPulse { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(4); opacity: 0; } }
   .oyna-map-carousel { scrollbar-width: none; -ms-overflow-style: none; }
   .oyna-map-carousel::-webkit-scrollbar { display: none; }
 `;

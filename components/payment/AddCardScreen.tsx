@@ -1,33 +1,42 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Plus, Shield, Wifi } from 'lucide-react';
-import {
-  addSavedCard, detectCardBrand, pickCardGradient, SavedCard,
-} from '../../services/walletService';
+import { detectCardBrand, pickCardGradient, SavedCard, listSavedCards } from '../../services/walletService';
+import { registerCardInApp } from '../../services/paymentService';
 
 /**
  * YENİ KART EKLE — tam ekran (tasarım: canlı kart önizlemesi + form).
- * PAN/CVV yalnız bu formda yaşar; kayıtta sadece maskeli meta DB'ye gider
- * (marka + son 4 + SKT). SIMULATION'da kart numarası hiçbir yere gönderilmez;
- * canlı modda tokenizasyon iyzico hosted akışında yapılır.
+ * %100 OYNA markalı form; iyzico kullanıcıya hiç görünmez.
  *
- * allowEphemeral: "kaydet" işareti kapalıyken kart yalnız bu ödeme için
- * kullanılır (DB'ye yazılmaz) — ödeme ekranı bağlamında geçerli.
+ * İki mod:
+ *   • collectMode (ödeme ekranı): kart verisi YALNIZ bellekte yukarı döner
+ *     (onCollect) — ödeme anında edge'e gider, 3DS onayıyla tahsil edilir.
+ *     "Kaydet" işaretliyse ödeme onaylanınca kart iyzico deposuna yazılır.
+ *   • kayıt modu (cüzdan): edge 'register-card' → iyzico kart deposu →
+ *     DB'ye yalnız maskeli meta (marka + son 4 + SKT) yazılır.
+ * PAN/CVV hiçbir zaman DB'ye veya log'a yazılmaz.
  */
 
-export interface EphemeralCard {
-  brand: string;
-  last4: string;
+/** Ödeme anı için toplanan kart — yalnız bellekte yaşar. */
+export interface CollectedCard {
+  holderName: string;
+  number: string;
   expMonth: number;
   expYear: number;
-  holderName: string;
+  cvc: string;
+  save: boolean;
+  // görsel alanlar (karusel kartında gösterim)
+  brand: string;
+  last4: string;
   gradient: string;
 }
 
 interface AddCardScreenProps {
   onBack: () => void;
-  onSaved: (card: SavedCard) => void;
-  onEphemeral?: (card: EphemeralCard) => void;
-  allowEphemeral?: boolean;
+  /** Kayıt modunda başarılı kayıttan sonra çağrılır. */
+  onSaved?: (card: SavedCard | null) => void;
+  /** collectMode: form verisini yukarı döndür (ağ çağrısı yok). */
+  collectMode?: boolean;
+  onCollect?: (card: CollectedCard) => void;
 }
 
 const luhnValid = (num: string) => {
@@ -52,7 +61,7 @@ const expiryValid = (v: string) => {
   return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1);
 };
 
-const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, onEphemeral, allowEphemeral = false }) => {
+const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectMode = false, onCollect }) => {
   const [num, setNum] = useState('');
   const [holder, setHolder] = useState('');
   const [exp, setExp] = useState('');
@@ -69,28 +78,43 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, onEpheme
   const holderOk = holder.trim().length >= 3;
   const valid = numberOk && expOk && cvvOk && holderOk;
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     if (!valid || busy) return;
     setError('');
     const [mm, yy] = exp.split('/');
-    const meta = {
-      brand,
-      last4: clean.slice(-4),
-      expMonth: Number(mm),
-      expYear: 2000 + Number(yy),
-      holderName: holder.trim(),
-      gradient: pickCardGradient(clean.slice(-4)),
-    };
-    if (!save && allowEphemeral && onEphemeral) {
-      onEphemeral(meta);
+    const expMonth = Number(mm);
+    const expYear = 2000 + Number(yy);
+
+    if (collectMode && onCollect) {
+      onCollect({
+        holderName: holder.trim(),
+        number: clean,
+        expMonth, expYear,
+        cvc: cvv,
+        save,
+        brand,
+        last4: clean.slice(-4),
+        gradient: pickCardGradient(clean.slice(-4)),
+      });
       return;
     }
+
     setBusy(true);
     try {
-      const card = await addSavedCard({ ...meta, makeDefault: false });
-      onSaved(card);
+      await registerCardInApp({
+        holderName: holder.trim(),
+        number: clean,
+        expireMonth: expMonth,
+        expireYear: expYear,
+        cvc: cvv,
+      });
+      // Edge maskeli kartı DB'ye yazdı — güncel listeden yeni kartı bul
+      const cards = await listSavedCards();
+      const created = cards.find(c => c.last4 === clean.slice(-4)) ?? cards[0] ?? null;
+      onSaved?.(created);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kart kaydedilemedi.');
+      const raw = e instanceof Error ? e.message : 'Kart kaydedilemedi.';
+      setError(raw.replace(/^[A-Z_]+:\s*/, '') || 'Kart kaydedilemedi.');
     } finally {
       setBusy(false);
     }
@@ -187,7 +211,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, onEpheme
           )}
         </div>
 
-        {allowEphemeral && (
+        {collectMode && (
           <button onClick={() => setSave(s => !s)} className="flex gap-2.5 items-center px-0.5">
             <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-colors ${save ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20 bg-transparent'}`}>
               <Check size={13} strokeWidth={3} className={`text-[#0A0E14] ${save ? 'opacity-100' : 'opacity-0'}`} />
@@ -198,7 +222,11 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, onEpheme
 
         <div className="flex items-center gap-2 px-0.5">
           <Shield size={14} className="text-[#39FF14]" />
-          <p className="text-[11px] text-gray-500">iyzico güvencesi · Kart verisi cihazda ve OYNA'da saklanmaz</p>
+          <p className="text-[11px] text-gray-500">
+            {collectMode
+              ? 'Kart bilgilerin şifreli iletilir; banka doğrulaması (3D Secure) ile tahsil edilir.'
+              : 'Kart güvenli ödeme altyapısında saklanır; OYNA yalnız son 4 haneyi görür.'}
+          </p>
         </div>
 
         {error && (
@@ -211,12 +239,15 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, onEpheme
       <div className="p-5 pb-safe border-t border-white/5">
         <button
           disabled={!valid || busy}
-          onClick={handleSave}
+          onClick={handleSubmit}
           className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
             valid && !busy ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
           }`}
         >
-          <Plus size={18} /> {busy ? 'KAYDEDİLİYOR...' : (save || !allowEphemeral) ? 'KARTI KAYDET' : 'BU ÖDEMEDE KULLAN'}
+          <Plus size={18} />
+          {busy ? 'KAYDEDİLİYOR...'
+            : collectMode ? (save ? 'KULLAN VE KAYDET' : 'BU ÖDEMEDE KULLAN')
+            : 'KARTI KAYDET'}
         </button>
       </div>
     </div>
