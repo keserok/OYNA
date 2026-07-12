@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import path from 'path';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync, copyFileSync } from 'fs';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -20,6 +20,28 @@ const BUILD_INPUT =
   : { main: MAIN_INPUT, admin: ADMIN_INPUT };
 // Tek kaynak: tüm ekranlardaki sürüm rozetleri buradan (import.meta.env.VITE_APP_VERSION) okunur.
 const APP_VERSION = (JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')) as { version: string }).version;
+
+// Faz B: admin hedefi derlenince, ayrık Vercel projesinin generic rewrite'ı
+// (/(.*) → /index.html) çalışsın diye admin girişini kök index.html'e kopyala.
+// Böylece Vercel'de Build Command'e dokunmaya gerek YOK — yalnız APP_TARGET=admin
+// env değişkeni yeterli (default `vite build` bu plugin sayesinde finalize eder).
+function adminIndexAlias(): Plugin {
+  return {
+    name: 'admin-index-alias',
+    apply: 'build',
+    closeBundle() {
+      if (APP_TARGET !== 'admin') return;
+      const dist = path.resolve(__dirname, 'dist');
+      const src = path.join(dist, 'admin-panel', 'admin.html');
+      const dest = path.join(dist, 'index.html');
+      if (existsSync(src)) {
+        copyFileSync(src, dest);
+        // eslint-disable-next-line no-console
+        console.log('\n✓ Admin girişi kök index.html olarak yayınlandı (dist/index.html).');
+      }
+    },
+  };
+}
 
 function adminDevRedirect(): Plugin {
   return {
@@ -71,7 +93,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(APP_VERSION),
   },
-  plugins: [adminDevRedirect(), react(), tailwindcss()],
+  plugins: [adminIndexAlias(), adminDevRedirect(), react(), tailwindcss()],
   build: {
     rollupOptions: {
       input: BUILD_INPUT,

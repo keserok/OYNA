@@ -31,31 +31,30 @@ ayırıp **oynaturkiyepotansiyeli.com** adresinde çalıştırmayı **adım adı
 1. vercel.com → **Add New ▸ Project**.
 2. **Import Git Repository** listesinden **aynı** repoyu seç: `keserok/OYNA`.
 3. Karşına çıkan ekranda **Project Name:** `oyna-admin` yaz.
-4. **Framework Preset:** `Vite` (otomatik gelir, dokunma).
-5. **Build and Output Settings** bölümünü aç ve şunları gir:
-   - **Build Command:** `Override` düğmesini aç → `npm run build:admin`
-   - **Output Directory:** `dist`
-   - **Install Command:** boş bırak (varsayılan).
+4. **Framework Preset:** `Vite` (otomatik gelir, **dokunma**).
+5. **Build and Output Settings**'e **DOKUNMA** — Build Command'i değiştirmene
+   gerek yok. (Vercel bu alanı bazen kilitli/salt-okunur gösterir; sorun değil,
+   olduğu gibi bırak.) Hedef seçimi bir **env değişkeniyle** yapılır → Adım 2.
 6. Henüz **Deploy'a basma** — önce Adım 2 (env değişkenleri).
 
-> ℹ️ Depodaki tek `vercel.json`, hem ana hem admin projesine hizmet eder (yönlendirme
-> + güvenlik başlıkları). İçinde **build komutu YOKTUR** — bilerek. İki proje de kendi
-> Build Command'ini yukarıdaki gibi kendi ayarından verir. `build:admin` derleme
-> bitince admin girişini otomatik olarak `dist/index.html` yapar; böylece aynı
-> `vercel.json` iki projede de sorunsuz çalışır.
+> ℹ️ Nasıl çalışıyor: Build Command'i **değiştirmek zorunda değilsin**. Hangi
+> tarafın (uygulama/panel) derleneceğini `APP_TARGET` env değişkeni belirler ve
+> admin derlemesi bittiğinde panel girişi otomatik olarak `dist/index.html`
+> yapılır (`vite.config.ts` bunu kendisi halleder). Depodaki tek `vercel.json`
+> (yönlendirme + güvenlik başlıkları) her iki projeye de hizmet eder.
 
-## Adım 2 — Admin projesine env değişkenlerini gir
+## Adım 2 — Admin projesine env değişkenlerini gir  ⭐ (kritik adım)
 
-Aynı ekranda **Environment Variables** bölümüne, ana projedeki Supabase
-değerlerinin **birebir aynısını** ekle (isimleri değiştirmeden):
+Aynı ekranda **Environment Variables** bölümüne şunları ekle:
 
-| İsim | Değer |
-|---|---|
-| `VITE_SUPABASE_URL` | (ana projedekiyle aynı) |
-| `VITE_SUPABASE_ANON_KEY` | (ana projedekiyle aynı) |
+| İsim | Değer | Not |
+|---|---|---|
+| `APP_TARGET` | `admin` | **Bu satır paneli seçer — atlanırsa panel derlenmez.** |
+| `VITE_SUPABASE_URL` | (ana projedekiyle aynı) | Veritabanı ortak |
+| `VITE_SUPABASE_ANON_KEY` | (ana projedekiyle aynı) | Veritabanı ortak |
 
-> Ana projede başka `VITE_...` değişkeni varsa onları da aynen ekle. Veritabanı
-> ortak olduğu için değerler aynıdır.
+> Ana projede başka `VITE_...` değişkeni varsa onları da aynen ekle. Supabase
+> değerleri ortaktır (aynı veritabanı).
 
 Şimdi **Deploy**'a bas.
 
@@ -94,17 +93,28 @@ değerlerinin **birebir aynısını** ekle (isimleri değiştirmeden):
    listede kalacak.
 4. **Save**.
 
-## Adım 6 — Ana projeyi yeniden dağıt (EN SON)
+## Adım 6 — Ana projeye `APP_TARGET=app` ekle + yeniden dağıt (EN SON)
 
-Bu dal (`claude/admin-panel-missing-features-eecvyx`) main'e birleşince ana
-Vercel projesi otomatik olarak:
+**Önce** mevcut ana Vercel projesine bir env değişkeni ekle (panelin ana
+uygulama paketine sızmaması için):
 
-- `npm run build:app` ile **yalnız uygulamayı** üretir (panel arayüzü içermez),
+| İsim | Değer |
+|---|---|
+| `APP_TARGET` | `app` |
+
+> Bu satır olmazsa ana proje hem uygulamayı hem paneli derler; `APP_TARGET=app`
+> ile ana domain **yalnız uygulamayı** üretir (panel kodu sıfır).
+
+Ardından bu dal (`claude/admin-panel-missing-features-eecvyx`) main'e birleşince
+ana proje otomatik olarak:
+
+- **yalnız uygulamayı** üretir (panel arayüzü içermez),
 - eski `/admin`, `/admin.html`, `/admin/*` isteklerini
   `https://oynaturkiyepotansiyeli.com` adresine **yönlendirir**.
 
 **Yapılacak:** Adım 1–5 bittikten ve `oynaturkiyepotansiyeli.com` çalıştıktan
-**sonra** bu dalı main'e merge et (veya PR'ı onayla). Ana proje deploy'u tamamlanınca:
+**sonra** ana projeye `APP_TARGET=app`'ı ekle ve bu dalı main'e merge et. Ana
+proje deploy'u tamamlanınca:
 
 - `https://<ana-domain>/admin` yaz → yeni panele yönlenmeli.
 - Uygulama normal açılmalı, kullanıcı akışları etkilenmemeli.
@@ -138,22 +148,22 @@ npx cap sync
 
 ## Bir şey ters giderse (geri alma)
 
-Acil durumda paneli tekrar ana pakete gömmek için `vercel.json`'da:
-- `"buildCommand": "npm run build:app"` → `"npm run build"` yap,
-- `redirects` bloğunu silip eski `rewrites` (`/admin` → `/admin-panel/admin`)
-  bloğunu geri koy.
-
-Bu, ayrımı iptal eder (önerilmez; yalnız acil durum içindir).
+Acil durumda paneli tekrar ana pakete gömmek için: ana projedeki `APP_TARGET`
+env değişkenini **sil** (o zaman ana proje hem uygulamayı hem paneli derler) ve
+`vercel.json`'daki `redirects` bloğunu silip eski `rewrites` (`/admin` →
+`/admin-panel/admin`) bloğunu geri koy. Bu, ayrımı iptal eder (önerilmez; yalnız
+acil durum içindir).
 
 ---
 
 ### Özet akış
 
 ```
-Adım 1-2  Vercel'de oyna-admin projesi (build:admin) + env
+Adım 1    Vercel'de oyna-admin projesi (Build Command'e dokunma)
+Adım 2    ⭐ Env: APP_TARGET=admin + Supabase anahtarları → Deploy
 Adım 3    *.vercel.app adresinde panel + MFA testi
 Adım 4    oynaturkiyepotansiyeli.com domain bağla + DNS
 Adım 5    Supabase Redirect URL ekle
-Adım 6    (EN SON) dalı main'e merge → ana proje app-only + /admin yönlendirme
+Adım 6    ⭐ Ana projeye APP_TARGET=app ekle → dalı main'e merge (EN SON)
 Adım 7    Mobil: npm run build:mobile && npx cap sync
 ```

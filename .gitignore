@@ -17,6 +17,7 @@ scripts/*
 !scripts/owner-demo.mjs
 !scripts/owner-menu-live-test.mjs
 !scripts/regenerate-migrations-from-ledger.mjs
+!scripts/verify-no-admin-in-app.mjs
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs
