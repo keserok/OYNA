@@ -27,6 +27,7 @@ Bu klasör iki bölümden oluşur:
 | [LANSMAN_ENGELLERI_VE_ASMA_PLANI.md](master/LANSMAN_ENGELLERI_VE_ASMA_PLANI.md) | Lansman & kitlesel benimsenme engelleri ve aşma planı (04.07) |
 | [KATMAN2_SAHA_SAHIBI_COZUM_PLANI.md](master/KATMAN2_SAHA_SAHIBI_COZUM_PLANI.md) | Saha sahibi problemleri — kesin çözüm & uygulama planı (04.07) |
 | [KALECI_HAKEM_PAZARYERI_PLANI.md](master/KALECI_HAKEM_PAZARYERI_PLANI.md) | Faz 8 — Kaleci & Hakem pazaryeri + sosyal vitrin uygulama planı (07.07, onay bekliyor) |
+| [OYNA_PAZAR_HAKIMIYETI_PLANI.md](master/OYNA_PAZAR_HAKIMIYETI_PLANI.md) | **Pazar hakimiyeti master planı** — kod↔doküman drift + rekabet + fazlı lansman planı |
 | [ADMIN_PANEL_KARARLAR.md](master/ADMIN_PANEL_KARARLAR.md) | Admin panel 100 soru → alınan kararlar + Wave eşlemesi |
 | [WAVE_DEPLOY_PLANI.md](master/WAVE_DEPLOY_PLANI.md) | 14 wave / 5 parti veritabanı deploy stratejisi |
 | [RPC_YETKI_ENVANTERI.md](master/RPC_YETKI_ENVANTERI.md) | Admin RPC sunucu-taraflı yetki envanteri (Wave 8, 46 RPC) |
