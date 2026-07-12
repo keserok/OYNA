@@ -80,3 +80,6 @@ test-results/
 # Yerel render önizleme harness'leri (gerçek bileşen render'ı için; commit edilmez)
 preview-*.html
 preview-*.tsx
+
+# Yerel doğrulama/sürüş harness'i (Playwright scriptleri, sb-shim, screenshot'lar; commit edilmez)
+scratchpad/
