@@ -2,15 +2,14 @@
 # iOS Release — App Store'a gönderilecek .ipa üretimi (+ opsiyonel TestFlight yüklemesi)
 #
 # Bu ortamda (Linux) Xcode çalışmadığı için iOS paketi CI'daki macOS koşucusunda
-# üretilir. Gerekli secrets (repo Settings → Secrets and variables → Actions):
+# üretilir. Sadece 3 secret gerekir (repo Settings → Secrets and variables → Actions):
 #
 #   ASC_KEY_ID        App Store Connect API anahtarı Key ID
 #   ASC_ISSUER_ID     App Store Connect API Issuer ID
 #   ASC_API_KEY_P8    .p8 dosyasının İÇERİĞİ (BEGIN/END satırları dahil)
 #
-# Opsiyonel (cloud-managed imzalama yerine kendi sertifikanızla imzalamak için):
-#   IOS_DIST_CERT_P12        Apple Distribution sertifikası (.p12) base64
-#   IOS_DIST_CERT_PASSWORD   .p12 parolası
+# İmzalama sertifikası/profil ELLE oluşturulmaz: xcodebuild bu API anahtarıyla
+# (-allowProvisioningUpdates) sertifikayı ve provisioning profilini otomatik üretir.
 #
 # Not: Apple, 28 Nisan 2026'dan beri gönderimlerin Xcode 26 / iOS 26 SDK ile
 # derlenmesini şart koşuyor → macos-26 imajı kullanılır.
@@ -54,23 +53,6 @@ jobs:
         run: |
           mkdir -p ~/private_keys
           printf '%s' "$ASC_API_KEY_P8" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
-
-      - name: (Opsiyonel) Distribution sertifikasını keychain'e yükle
-        if: ${{ secrets.IOS_DIST_CERT_P12 != '' }}
-        env:
-          IOS_DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
-          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
-        run: |
-          KEYCHAIN=build.keychain
-          KEYCHAIN_PASS=$(uuidgen)
-          security create-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN
-          security default-keychain -s $KEYCHAIN
-          security unlock-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN
-          security set-keychain-settings -t 3600 -u $KEYCHAIN
-          printf '%s' "$IOS_DIST_CERT_P12" | base64 -d > /tmp/dist.p12
-          security import /tmp/dist.p12 -k $KEYCHAIN -P "$IOS_DIST_CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASS" $KEYCHAIN
-          rm /tmp/dist.p12
 
       - name: Archive
         working-directory: ios/App
