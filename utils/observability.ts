@@ -66,6 +66,43 @@ function initSentry(): void {
       release: RELEASE,
       tracesSampleRate: Number.isFinite(TRACE_SAMPLE) ? TRACE_SAMPLE : 0.1,
       sendDefaultPii: false,
+      beforeSend: (event: any) => {
+        try {
+          if (event.request?.headers) {
+            const sensitiveHeaders = ['authorization', 'apikey', 'x-client-info'];
+            for (const key of Object.keys(event.request.headers)) {
+              if (sensitiveHeaders.includes(key.toLowerCase())) {
+                event.request.headers[key] = '[SCRUBBED]';
+              }
+            }
+          }
+          const keysToScrub = ['email', 'phone', 'password', 'token', 'jwt', 'auth', 'wallet_balance'];
+          const scrubObj = (obj: any): any => {
+            if (!obj || typeof obj !== 'object') return obj;
+            if (Array.isArray(obj)) return obj.map(item => scrubObj(item));
+            const copy = { ...obj };
+            for (const key of Object.keys(copy)) {
+              if (keysToScrub.some(k => key.toLowerCase().includes(k))) {
+                copy[key] = '[SCRUBBED]';
+              } else if (typeof copy[key] === 'object') {
+                copy[key] = scrubObj(copy[key]);
+              }
+            }
+            return copy;
+          };
+          if (event.extra) event.extra = scrubObj(event.extra);
+          if (event.breadcrumbs) {
+            event.breadcrumbs = event.breadcrumbs.map((breadcrumb: any) => {
+              if (breadcrumb.data) breadcrumb.data = scrubObj(breadcrumb.data);
+              return breadcrumb;
+            });
+          }
+        } catch (e) {
+          // Dev modundaysa uyar
+          debug('Sentry scrubbing error:', e);
+        }
+        return event;
+      },
     });
     const tryBoot = () => {
       if (window.Sentry?.onLoad) { window.Sentry.onLoad(boot); }
