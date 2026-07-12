@@ -120,6 +120,17 @@ export interface DeepLinkActions {
   setTeamInitialTab?: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
 }
 
+// ─── UUID v4 format doğrulayıcı ──────────────────────────────────────────────
+// Derin bağlantılardan gelen ID'lerin geçerli UUID formatında olduğunu kontrol eder.
+// Bu sayede injection ve path traversal saldırıları engellenir.
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isValidUuid(value: string | undefined): boolean {
+  return !!value && UUID_V4_REGEX.test(value);
+}
+
+// İzin verilen kaynak türleri (whitelist) — bilinmeyen kaynaklar DASHBOARD'a düşer.
+const ALLOWED_RESOURCES = new Set(['match', 'profile', 'team', 'messages', 'tactic', 'social']);
+
 export const handleDeepLink = (
   deepLink: string,
   setView: (v: string) => void,
@@ -127,14 +138,37 @@ export const handleDeepLink = (
 ) => {
   if (!deepLink) return;
 
-  // Format: oyna://match/UUID | oyna://team/UUID[/chat|members] |
-  //         oyna://tactic/UUID | oyna://social/{tab}/{subTab} | oyna://profile/UUID
-  const url = new URL(deepLink.replace('oyna://', 'https://oyna.app/'));
+  // ─── Scheme Doğrulaması ─────────────────────────────────────────────────────
+  // Yalnızca 'oyna://' scheme'ine izin ver. 'javascript:', 'file://' vb.
+  // kötü niyetli scheme'ler işlenmez. Saldırganlar custom URL ile uygulama
+  // içinde keyfi navigasyon tetiklemeye çalışabilir.
+  const ALLOWED_SCHEME = 'oyna://';
+  if (!deepLink.startsWith(ALLOWED_SCHEME)) {
+    console.warn('[DeepLink] Bilinmeyen/izinsiz scheme engellendi:', deepLink.split('://')[0]);
+    return;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(deepLink.replace(ALLOWED_SCHEME, 'https://oyna.app/'));
+  } catch {
+    console.warn('[DeepLink] Geçersiz URL formatı engellendi:', deepLink);
+    return;
+  }
+
   const [resource, id, sub] = url.pathname.split('/').filter(Boolean);
+
+  // ─── Kaynak Tipi Whitelist Kontrolü ────────────────────────────────────────
+  if (resource && !ALLOWED_RESOURCES.has(resource)) {
+    console.warn('[DeepLink] İzin verilmeyen kaynak tipi engellendi:', resource);
+    setView('DASHBOARD');
+    return;
+  }
 
   switch (resource) {
     case 'match':
-      if (actions.setSelectedMatch && id) {
+      // UUID doğrulaması: geçersiz formatlı ID'ler Supabase sorgusuna gönderilmez.
+      if (actions.setSelectedMatch && isValidUuid(id)) {
         // Maç verisini Supabase'den çek ve MATCH_JOIN'e git
         supabase.from('matches').select('*').eq('id', id).single().then(({ data }) => {
           if (data) {
@@ -148,11 +182,11 @@ export const handleDeepLink = (
       setView('PROFILE');
       break;
     case 'team':
-      if (id && sub === 'chat' && actions.setSelectedTeamChatId) {
-        actions.setSelectedTeamChatId(id); // birleşik kutu → takım sohbeti
+      if (isValidUuid(id) && sub === 'chat' && actions.setSelectedTeamChatId) {
+        actions.setSelectedTeamChatId(id!); // birleşik kutu → takım sohbeti
         setView('MESSAGES');
-      } else if (id && actions.setSelectedTeamId) {
-        actions.setSelectedTeamId(id); // kimlik açıkça taşınır (A4/G42)
+      } else if (isValidUuid(id) && actions.setSelectedTeamId) {
+        actions.setSelectedTeamId(id!); // kimlik açıkça taşınır (A4/G42)
         if (sub === 'members' && actions.setTeamInitialTab) {
           actions.setTeamInitialTab('KADRO'); // Kadro → Bekleyenler
         }
@@ -162,21 +196,25 @@ export const handleDeepLink = (
       }
       break;
     case 'messages':
-      if (id && actions.setSelectedConversationId) {
-        actions.setSelectedConversationId(id); // DM push'u → doğrudan sohbet
+      if (isValidUuid(id) && actions.setSelectedConversationId) {
+        actions.setSelectedConversationId(id!); // DM push'u → doğrudan sohbet
       }
       setView('MESSAGES');
       break;
     case 'tactic':
-      if (id && actions.setStudioContext) {
-        actions.setStudioContext({ tacticId: id }); // Stüdyo tam hidre açılır
+      if (isValidUuid(id) && actions.setStudioContext) {
+        actions.setStudioContext({ tacticId: id! }); // Stüdyo tam hidre açılır
       }
       setView('STUDIO');
       break;
     case 'social':
       if (actions.setSocialTarget) {
+        // Tab değerini whitelist ile sınırla — XSS / injection'a karşı
+        const allowedTabs = ['TEAMS', 'FRIENDS'] as const;
+        const tabRaw = (id || '').toUpperCase();
+        const tab = allowedTabs.includes(tabRaw as any) ? (tabRaw as 'TEAMS' | 'FRIENDS') : 'FRIENDS';
         actions.setSocialTarget({
-          tab: (id || '').toUpperCase() === 'TEAMS' ? 'TEAMS' : 'FRIENDS',
+          tab,
           subTab: sub ? sub.toUpperCase() : undefined,
         });
       }

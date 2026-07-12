@@ -121,35 +121,6 @@ const App: React.FC = () => {
     initApp();
   }, [initApp]);
 
-  // Godview standalone → consumer app ghost deep-link (?ghost=userId&name=...)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ghostId = params.get('ghost');
-    if (!ghostId) return;
-
-    const ghostName = params.get('name') || 'Kullanıcı';
-
-    void (async () => {
-      const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
-      try { await logImpersonation(ghostId); } catch { /* audit optional if not admin session */ }
-      const profile = await fetchProfileById(ghostId);
-      setOriginalRole(role);
-      setImpersonatedUser(profile ?? {
-        id: ghostId,
-        name: ghostName,
-        email: '',
-        avatar: '',
-        role: UserRole.PLAYER,
-        rating: 5,
-        isVerified: false,
-        isBanned: false,
-        joinDate: new Date().toISOString(),
-        matchCount: 0,
-      });
-      resetNavigation('DASHBOARD');
-      window.history.replaceState({}, '', window.location.pathname);
-    })();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -242,6 +213,49 @@ const App: React.FC = () => {
             // Oturum kalıcı → tekrar giriş YOK. Yalnız girişte yönlendir; oturum
             // içindeki token yenilemesi kullanıcıyı bulunduğu ekrandan KOPARMAZ.
             if (isEntering) {
+              // ─── GHOST MODE DEEP-LINK YETKİLENDİRME KONTROLÜ ─────────────────
+              // Sadece profiles.is_admin=true veya SUPER_ADMIN yetkisine sahip kullanıcılar
+              // başka kullanıcıları taklit edebilir. Yetkisiz girişler engellenir.
+              const params = new URLSearchParams(window.location.search);
+              const ghostId = params.get('ghost');
+              if (ghostId) {
+                const isAdmin = profile.is_admin === true ||
+                                primaryRole === UserRole.SUPER_ADMIN ||
+                                (Array.isArray(profile.roles) && profile.roles.includes(UserRole.SUPER_ADMIN));
+                if (isAdmin) {
+                  const ghostName = params.get('name') || 'Kullanıcı';
+                  void (async () => {
+                    const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
+                    try {
+                      await logImpersonation(ghostId);
+                    } catch (e) {
+                      console.error('[Ghost Mode] Impersonation audit log failed:', e);
+                    }
+                    const ghostProfile = await fetchProfileById(ghostId);
+                    setOriginalRole(landingRole);
+                    setImpersonatedUser(ghostProfile ?? {
+                      id: ghostId,
+                      name: ghostName,
+                      email: '',
+                      avatar: '',
+                      role: UserRole.PLAYER,
+                      rating: 5,
+                      isVerified: false,
+                      isBanned: false,
+                      joinDate: new Date().toISOString(),
+                      matchCount: 0,
+                    });
+                    resetNavigation('DASHBOARD');
+                    window.history.replaceState({}, '', window.location.pathname);
+                  })();
+                  return; // Normal yönlendirme zincirini atla
+                } else {
+                  console.warn('[Security Warning] Normal user tried to access ghost mode:', user.uid);
+                  showToast('Ghost Mode için admin yetkiniz bulunmamaktadır.');
+                  window.history.replaceState({}, '', window.location.pathname);
+                }
+              }
+
               resetNavigation(navigateBasedOnRole(landingRole));
             }
           }
