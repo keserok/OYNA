@@ -170,12 +170,19 @@ export const handleDeepLink = (
       // UUID doğrulaması: geçersiz formatlı ID'ler Supabase sorgusuna gönderilmez.
       if (actions.setSelectedMatch && isValidUuid(id)) {
         // Maç verisini Supabase'den çek ve MATCH_JOIN'e git
-        supabase.from('matches').select('*').eq('id', id).single().then(({ data }) => {
-          if (data) {
+        supabase.from('matches').select('*').eq('id', id).maybeSingle().then(
+          ({ data, error }) => {
+            if (error || !data) {
+              console.warn('[DeepLink] Maç bulunamadı veya çekilemedi:', error?.message ?? id);
+              return;
+            }
             actions.setSelectedMatch!(data);
             setView('MATCH_JOIN');
-          }
-        });
+          },
+          (e: unknown) => {
+            console.warn('[DeepLink] Maç sorgusu başarısız:', e);
+          },
+        );
       }
       break;
     case 'profile':

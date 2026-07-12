@@ -50,11 +50,23 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
     };
 
     // 1) Sonuç sayfasından postMessage
-    const onMessage = (e: MessageEvent) => {
+    // GÜVENLİK (C2): postMessage'ın origin'i doğrulanamaz (iframe'e banka HTML'i
+    // basılıyor, opak origin). Sahte bir {source:'oyna-payment', ok:true} mesajı
+    // ödeme alınmadan "başarı" gösterebilir. Bu yüzden başarıyı postMessage TEK
+    // BAŞINA İLAN ETMEZ — sunucudan intent durumunu (getIntentStatus) teyit ederiz.
+    // Otorite tektir: payment_intents.status. (poll yedeği de aynı kaynağı okur.)
+    const onMessage = async (e: MessageEvent) => {
       const d = e.data as { source?: string; ok?: boolean; reason?: string | null } | null;
       if (!d || d.source !== 'oyna-payment') return;
       if (d.ok) {
-        finish({ ok: true, reason: d.reason ?? null });
+        try {
+          const s = await getIntentStatus(intentId);
+          if (s?.status === 'PAID') finish({ ok: true, reason: s.resultReason ?? d.reason ?? null });
+          else if (s?.status === 'FAILED') setFailed(s.failReason ?? d.reason ?? 'MD_FAILED');
+          // PENDING/belirsiz → başarı GÖSTERME; yoklama (poll) yedeği sonucu belirler.
+        } catch {
+          // Teyit edilemedi (ağ) → başarı gösterme; poll bir sonraki turda dener.
+        }
       } else {
         // Hata: sayfa görünür kalsın, kullanıcı mesajı okuyup "Kapat" desin
         setFailed(d.reason ?? 'MD_FAILED');

@@ -337,7 +337,15 @@ async function sendFcmHttpV1(
   }
 }
 
+// OAuth token'ı modül kapsamında cache'le — her push'ta yeniden mint etme.
+let cachedGoogleToken: { token: string; exp: number } | null = null
+
 async function getGoogleAccessToken(serviceAccountJson: string): Promise<string> {
+  const nowSec = Math.floor(Date.now() / 1000)
+  if (cachedGoogleToken && cachedGoogleToken.exp - 60 > nowSec) {
+    return cachedGoogleToken.token
+  }
+
   const serviceAccount = JSON.parse(serviceAccountJson)
   const scopes = ['https://www.googleapis.com/auth/firebase.messaging']
 
@@ -384,7 +392,17 @@ async function getGoogleAccessToken(serviceAccountJson: string): Promise<string>
     }),
   })
 
+  if (!tokenResponse.ok) {
+    const errBody = await tokenResponse.text().catch(() => '')
+    throw new Error(`OAuth token isteği başarısız (${tokenResponse.status}): ${errBody}`)
+  }
+
   const tokenData = await tokenResponse.json()
+  if (!tokenData.access_token) {
+    throw new Error('OAuth yanıtında access_token yok')
+  }
+
+  cachedGoogleToken = { token: tokenData.access_token, exp: nowSec + (tokenData.expires_in ?? 3600) }
   return tokenData.access_token
 }
 

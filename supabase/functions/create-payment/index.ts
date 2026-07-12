@@ -37,20 +37,46 @@ async function hmacSha256Hex(secret: string, data: string): Promise<string> {
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+// H2 — Ödeme sağlayıcısına yapılan çağrı timeout'suz/retry'sız kalmasın: iyzico
+// gecikirse istemci sonsuza dek spinner'da asılır, niyet PENDING'te kalır. 20 sn
+// timeout + ağ/timeout hatasında TEK retry. NOT: retry yalnız istek KURULAMADIĞINDA
+// (ağ/timeout) yapılır — iyzico'dan gelen iş-hatası (status!=success) retry edilmez,
+// çünkü bir tahsilat başlamış olabilir (çift-çekim riski).
+const IYZICO_TIMEOUT_MS = 20_000
+
 async function iyzicoPost(uriPath: string, bodyObj: unknown): Promise<any> {
   const apiKey    = Deno.env.get('IYZICO_API_KEY')!
   const secretKey = Deno.env.get('IYZICO_SECRET_KEY')!
   const baseUrl   = Deno.env.get('IYZICO_BASE_URL') ?? 'https://api.iyzipay.com'
   const bodyStr   = JSON.stringify(bodyObj)
-  const randomKey = `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`
-  const signature = await hmacSha256Hex(secretKey, randomKey + uriPath + bodyStr)
-  const authHeader = 'IYZWSv2 ' + btoa(`apiKey:${apiKey}&randomKey:${randomKey}&signature:${signature}`)
-  const res = await fetch(baseUrl + uriPath, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'x-iyzi-rnd': randomKey },
-    body: bodyStr,
-  })
-  return await res.json()
+
+  const attempt = async (): Promise<any> => {
+    // Her denemede taze randomKey/signature — iyzico nonce tekrarını reddeder.
+    const randomKey = `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`
+    const signature = await hmacSha256Hex(secretKey, randomKey + uriPath + bodyStr)
+    const authHeader = 'IYZWSv2 ' + btoa(`apiKey:${apiKey}&randomKey:${randomKey}&signature:${signature}`)
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), IYZICO_TIMEOUT_MS)
+    try {
+      const res = await fetch(baseUrl + uriPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'x-iyzi-rnd': randomKey },
+        body: bodyStr,
+        signal: ctrl.signal,
+      })
+      return await res.json()
+    } finally {
+      clearTimeout(t)
+    }
+  }
+
+  try {
+    return await attempt()
+  } catch (e) {
+    // Ağ/timeout — bağlantı kurulamadı, tahsilat başlamadı: bir kez daha dene.
+    console.warn('[create-payment] iyzico çağrısı başarısız, 1 kez daha denenecek:', String(e))
+    return await attempt()
+  }
 }
 
 interface Buyer { name: string; surname: string; email: string; identityNumber: string; gsmNumber: string; }
@@ -155,6 +181,7 @@ interface Payload {
   useBalance?: boolean
   card?: CardInput
   savedCardId?: string
+  idempotencyKey?: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -225,6 +252,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Niyet oluştur (bakiye kısmı henüz HARCANMAZ — 3DS onayında düşülür)
+      // C1: idempotency_key ile aynı denemenin retry'ı var olan niyeti geri getirir.
       const { data: prep, error: prepErr } = await admin.rpc('prepare_card_payment', {
         p_user_id: user.id,
         p_flow: flow,
@@ -233,12 +261,26 @@ Deno.serve(async (req: Request) => {
         p_match_id: payload.matchId ?? null,
         p_slot_ids: payload.slotIds ?? null,
         p_use_balance: payload.useBalance === true,
+        p_idempotency_key: payload.idempotencyKey ?? null,
       })
       if (prepErr) return json({ error: prepErr.message }, 400)
 
       const intentId = prep.intent_id as string
       const cardAmount = Number(prep.card_amount)
       const balanceApplied = Number(prep.balance_applied)
+
+      // C1 — Çift-çekim koruması: aynı idempotency anahtarlı niyet ZATEN ÖDENMİŞSE
+      // (ör. istemci timeout'undan sonra 3DS geç geçti ve kullanıcı "tekrar dene"
+      // dedi) iyzico'yu HİÇ ÇAĞIRMA; başarıyı doğrudan döndür. Böylece ikinci bir
+      // gerçek kart çekimi oluşmaz.
+      if (prep.reused === true && prep.status === 'PAID') {
+        return json({
+          provider: PROVIDER === 'SIMULATION' ? 'SIMULATION' : 'IYZICO',
+          requiresThreeDS: false,
+          intentId, cardAmount, balanceApplied,
+          result: { ok: true, idempotent: true },
+        })
+      }
 
       // Simülasyon: 3DS yok → direkt uygula (geliştirme/test modu)
       if (PROVIDER === 'SIMULATION') {

@@ -6,6 +6,7 @@ import * as TeamService from './services/teamService';
 import { auth } from './supabaseAuth';
 
 import { supabase } from './supabaseClient';
+import { trackEvent, captureException } from './utils/observability';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
 import type { AdminSession } from './admin-panel/services/adminService';
@@ -179,7 +180,12 @@ const INITIAL_SETTINGS: AppSettings = {
 
 interface AppState {
   isHydrated: boolean;
+  /** H4: initApp'te kritik yük (maçlar/sahalar) zaman aşımıyla boş döndüyse true.
+   *  UI bunu görüp "bağlantı zayıf, yeniden dene" afişi gösterebilir. */
+  loadDegraded: boolean;
   initApp: () => Promise<void>;
+  /** Zayıf-bağlantı afişinden tetiklenir: kritik verileri yeniden yükler. */
+  retryInitialLoad: () => Promise<void>;
   view: AppView;
   navigationStack: AppView[];
   role: UserRole | null;
@@ -448,7 +454,10 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   isHydrated: true,
-  initApp: async () => {
+  loadDegraded: false,
+  // H4: Kritik veri yüklemesini tek yerde topla; hem initApp hem "yeniden dene"
+  // afişi bunu çağırır. Zaman aşımıyla boş dönen kritik yükleri degraded işaretler.
+  retryInitialLoad: async () => {
     const withTimeout = <T,>(promise: Promise<T>, ms = 3000): Promise<T | null> =>
       Promise.race([
         promise,
@@ -482,11 +491,24 @@ export const useAppStore = create<AppState>((set, get) => ({
           set((state) => ({ globalTexts: { ...state.globalTexts, ...map } }));
         }
       }
+
+      // H4: maçlar VEYA sahalar zaman aşımıyla null döndüyse "boş ama yüklendi"
+      // gösterme — degraded işaretle; UI yeniden-dene afişi çıkarabilir.
+      const matchesEmpty = !(matchesRes.status === 'fulfilled' && matchesRes.value);
+      const pitchesEmpty = !(pitchesRes.status === 'fulfilled' && pitchesRes.value);
+      const degraded = matchesEmpty || pitchesEmpty;
+      set({ loadDegraded: degraded });
+      if (degraded) trackEvent('initial_load_degraded', { matchesEmpty, pitchesEmpty });
     } catch (e) {
       console.error('Hydration error:', e);
+      captureException(e, { where: 'retryInitialLoad' });
+      set({ loadDegraded: true });
     } finally {
       set({ isHydrated: true, initialLoadComplete: true });
     }
+  },
+  initApp: async () => {
+    await get().retryInitialLoad();
 
     // Maç listesini canlı tut: admin panelden veya başka bir oyuncudan gelen
     // ekleme/güncelleme/silme işlemleri sayfa yenilenmeden burada görünsün.
@@ -505,7 +527,11 @@ export const useAppStore = create<AppState>((set, get) => ({
           set((state) => ({ adminMatches: state.adminMatches.filter(m => m.id !== oldId) }));
           return;
         }
-        const row = payload.new as unknown as MatchListing;
+        // H3: İlk yükleme mapFromSnakeCase'ten geçiyor; realtime satırı da AYNI
+        // dönüşümden geçmeli. Aksi halde ham snake_case (away_slots, home_team_id…)
+        // camelCase store'a karışır ve awaySlots/homeTeamId gibi alanlar undefined'a
+        // düşer → kart/lobi canlı güncellemeden sonra boş görünür.
+        const row = FB.mapFromSnakeCase(payload.new) as unknown as MatchListing;
         if (!row?.id) return;
         set((state) => {
           const exists = state.adminMatches.some(m => m.id === row.id);
