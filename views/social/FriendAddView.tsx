@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Spinner } from '../../components/ui/Spinner';
 import {
   ArrowLeft, Search, Copy, Share2, QrCode, BookUser, UserPlus,
-  Check, ChevronRight, Loader2, Clock, Users,
+  Check, ChevronRight, Loader2, Clock, Users, X,
 } from 'lucide-react';
 import { AppView } from '../../types';
 import { auth } from '../../supabaseAuth';
@@ -141,6 +141,10 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   const [toast, setToast] = useState<string | null>(null);
   const [contactResults, setContactResults] = useState<ContactSyncResult | null>(null);
   const [contactsBusy, setContactsBusy] = useState(false);
+  // KVKK açık rıza: OS izin diyaloğundan ÖNCE ne olacağını anlatan uygulama-içi
+  // onay adımı — OS "Allow Contacts?" diyaloğu tek başına aydınlatılmış açık
+  // rıza yerine geçmez (bkz. KVKK Açık Rıza Metni).
+  const [showContactsConsent, setShowContactsConsent] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -258,7 +262,14 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
     }
   }, [myOynaId, showToast]);
 
-  const handleContacts = useCallback(async () => {
+  // Buton buna bağlı: senkron başlatmadan önce açık rıza sheet'ini açar.
+  const handleContacts = useCallback(() => {
+    setShowContactsConsent(true);
+  }, []);
+
+  // Kullanıcı sheet'te "İzin Ver"e bastıktan SONRA gerçek senkron burada başlar.
+  const runContactsSync = useCallback(async () => {
+    setShowContactsConsent(false);
     setContactsBusy(true);
     try {
       const res = await syncContactsAndMatch();
@@ -447,6 +458,55 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
         <div className="fixed bottom-24 inset-x-5 z-50 flex justify-center pointer-events-none">
           <div className="px-4 py-2.5 rounded-2xl bg-[#161B22] border border-white/10 text-sm font-semibold shadow-xl">
             {toast}
+          </div>
+        </div>
+      )}
+
+      {/* Rehber eşleştirme — KVKK açık rıza sheet'i (OS izin diyaloğundan önce) */}
+      {showContactsConsent && (
+        <div
+          className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-6"
+          onClick={() => setShowContactsConsent(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-[28px] p-6"
+            style={{
+              background: 'linear-gradient(180deg, #161B22 0%, #0A0E14 100%)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <BookUser size={18} className="text-[#39FF14]" />
+                <h3 className="font-black text-white text-base">Rehberini Bağla</h3>
+              </div>
+              <button onClick={() => setShowContactsConsent(false)} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-gray-300 mb-3 leading-relaxed">
+              Devam edersen cihazının işletim sistemi rehber erişimi için izin isteyecek. İzin verirsen:
+            </p>
+            <ul className="text-xs text-gray-400 space-y-2 mb-4 list-disc list-inside">
+              <li>Rehberindeki numaralar <strong className="text-gray-300">cihazında</strong> şifrelenir (hash) — sunucumuza yalnızca bu şifreli hâli gider.</li>
+              <li>OYNA'da hesabı olmayan kişilerin numarası cihazından hiçbir şekilde çıkmaz.</li>
+              <li>Bu izni istediğin an Ayarlar → Gizlilik'ten geri alabilirsin.</li>
+            </ul>
+            <div className="space-y-3">
+              <button
+                onClick={runContactsSync}
+                className="w-full h-12 rounded-2xl font-black text-sm bg-[#39FF14] text-black active:scale-95 transition-all"
+              >
+                İzin Ver ve Devam Et
+              </button>
+              <button
+                onClick={() => setShowContactsConsent(false)}
+                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
+              >
+                Vazgeç
+              </button>
+            </div>
           </div>
         </div>
       )}
