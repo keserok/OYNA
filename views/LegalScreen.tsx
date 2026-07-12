@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowLeft, FileText, Shield, Lock, RefreshCw, ChevronRight } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, ChevronRight } from 'lucide-react';
 
 interface LegalScreenProps {
   onBack: () => void;
   initialDoc?: LegalDocKey;
 }
 
-type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'SALES';
+type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'SALES';
 
-// NOT: Bu metinler avukat incelemesi öncesi çalışma taslağıdır. Yayına almadan
-// önce bir avukata gözden geçirtilmesi ve COMPANY/TAX_INFO/ADDRESS
-// sabitlerinin gerçek bilgilerle doldurulması GEREKİR. Yer tutucular
-// [KÖŞELİ PARANTEZ] ile işaretlendi. (Son taslak güncellemesi: 12.07.2026)
+// NOT: Şirket bilgileri (COMPANY/TAX_INFO/ADDRESS) dolduruldu; avukat
+// incelemesi hâlâ önerilir, özellikle KVKK ve mesafeli satış maddeleri için.
+// (Son taslak güncellemesi: 12.07.2026)
 
 const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
 const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
@@ -120,6 +119,25 @@ Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler, teknoloj
 7. HAKLARINIZ
 KVKK m.11 kapsamındaki haklarınızı (bilgi talep etme, düzeltme, silme, itiraz ve zararın giderilmesini isteme dahil) ${CONTACT_EMAIL} adresine yazılı başvuruda bulunarak kullanabilirsiniz.`,
   },
+  RIZA: {
+    title: 'KVKK Açık Rıza Metni',
+    icon: ShieldCheck,
+    body: `Son güncelleme: ${UPDATED}
+
+6698 sayılı KVKK uyarınca bazı veri işleme faaliyetlerimiz için "açık rızanız" gerekir — yalnızca sizin özgür iradenizle, aşağıdaki bilgilendirmeye dayanarak verdiğiniz onay. Her biri ayrı ayrı verilir ve geri alınabilir; birini reddetmeniz OYNA'nın temel hizmetlerini (saha keşfi, rezervasyon, maç) kullanmanızı engellemez.
+
+1. REHBER EŞLEŞTİRME İZNİ
+"Rehberini Bağla" özelliğini kullanmayı seçerseniz: cihazınızdaki rehber okunur, numaralar cihazda şifrelenir (SHA-256) ve yalnızca bu şifreli hâli, OYNA'da arkadaşlarınızı bulmak amacıyla sunucumuza gönderilir. OYNA'da hesabı olmayan kişilerin ham telefon numarası cihazınızdan hiçbir şekilde çıkmaz. Bu izni Ayarlar → Gizlilik'ten istediğiniz zaman geri alabilirsiniz.
+
+2. KONUM VERİSİ İZNİ
+Yakınınızdaki sahaları ve maçları gösterebilmemiz için konumunuzu işleriz. Bu izni cihaz ayarlarından istediğiniz zaman kapatabilirsiniz; kapattığınızda yalnızca konum temelli özellikler çalışmaz, diğer tüm özellikler etkilenmez.
+
+3. TİCARİ ELEKTRONİK İLETİ (KAMPANYA/DUYURU) İZNİ — OPSİYONEL
+Fırsat, kampanya ve duyuruları e-posta veya push bildirimi yoluyla almak isterseniz ayrıca onayınız istenir. Bu onay olmasa da hesabınızla ilgili işlem ve güvenlik bildirimlerini almaya devam edersiniz. Vazgeçmek için iletideki bağlantıyı kullanabilir veya Ayarlar → Bildirimler'den kapatabilirsiniz.
+
+4. RIZANIN GERİ ALINMASI
+Yukarıdaki izinlerin tamamını veya bir kısmını Ayarlar → Gizlilik ekranından ya da ${CONTACT_EMAIL} adresine yazarak istediğiniz an geri alabilirsiniz. Geri alma, geri alma tarihinden önceki işlemlerin hukuka uygunluğunu etkilemez.`,
+  },
   SALES: {
     title: 'Mesafeli Satış ve İptal/İade',
     icon: RefreshCw,
@@ -148,7 +166,7 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
   },
 };
 
-const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'SALES'];
+const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'SALES'];
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
   const [doc, setDoc] = useState<LegalDocKey | null>(initialDoc ?? null);
