@@ -116,6 +116,7 @@ const App: React.FC = () => {
 
   const initApp = useAppStore(s => s.initApp);
   const isHydrated = useAppStore(s => s.isHydrated);
+  const loadDegraded = useAppStore(s => s.loadDegraded);
 
   useEffect(() => {
     initApp();
@@ -285,6 +286,7 @@ const App: React.FC = () => {
   // ─── Push Notification Entegrasyonu ────────────────────────────────────────
   useEffect(() => {
     let unsubscribeRealtime: (() => void) | undefined;
+    let setupForUid: string | null = null;
 
     const setupPush = async (uid: string) => {
       // 1. Kullanıcı tercihlerini Supabase'den çek
@@ -344,10 +346,16 @@ const App: React.FC = () => {
     const unsubscribeAuth = onAuthStateChanged(auth,
       (user: any) => {
         if (user?.uid) {
+          // Per-uid kurulum yalnız BİR kez — TOKEN_REFRESHED / tab-focus'ta
+          // initPushNotifications + realtime kanalı tekrar kurulmasın (leak).
+          if (setupForUid === user.uid) return;
+          setupForUid = user.uid;
+          if (unsubscribeRealtime) unsubscribeRealtime(); // varsa eski kanalı kapat
           setupPush(user.uid);
           useAppStore.getState().loadMyTeams();
         } else {
           // Çıkış yapılınca token’ı temizle
+          setupForUid = null;
           if (unsubscribeRealtime) unsubscribeRealtime();
         }
       }
@@ -620,6 +628,17 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
+      {loadDegraded && (
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 flex items-center justify-between gap-3">
+          <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
+          <button
+            onClick={() => useAppStore.getState().retryInitialLoad()}
+            className="shrink-0 bg-[#0A0E14]/85 text-white rounded-md px-2.5 py-1 font-extrabold active:scale-95 transition-transform"
+          >
+            Yeniden dene
+          </button>
+        </div>
+      )}
       <GlobalToast />
       <SignupGate />
       {/* Mesh Gradient Background */}

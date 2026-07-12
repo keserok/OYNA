@@ -1,0 +1,172 @@
+// ═══════════════════════════════════════════════════════════════
+// OYNA APP — Supabase Edge Function: auto-cancel-matches
+//
+// [C4] 90 dakikalık OTOMATİK MAÇ İPTALİ — sunucu tarafı otorite.
+//
+// Eskiden bu tarama her Dashboard açan istemcide (views/Dashboard.tsx
+// scanAndAutoCancel useEffect'i) çalışıyordu: birçok istemci aynı maçı
+// iptal etmek için yarışıyor (write storm), mükerrer bildirim gönderiyor
+// ve yeniden render osilasyonu yaratıyordu. Maç iptali + iade bir SUNUCU
+// sorumluluğudur; bu fonksiyon tek otoriter yerdir.
+//
+// Kural (utils/gameRules.ts → check90MinAutoCancel ile aynı):
+//   • Maç başlangıcına 90 dk veya daha az kaldıysa (henüz başlamamışsa) VE
+//   • dolu (TAKEN) slot sayısı toplam slotun %70'inin (ceil) altındaysa
+//   → maç otomatik iptal edilir.
+//
+// Para hareketi YENİDEN İCAT EDİLMEZ: iptal + kapora iade/void işi, test
+// edilmiş mevcut RPC `process_match_at_deadline(uuid)` ile yapılır. Bu RPC:
+//   • idempotenttir (CONFIRMED/CANCELLED/COMPLETED/LIVE ise no-op),
+//   • quorum tutmuyorsa status=CANCELLED + BLOCKED/PENDING intent'leri VOID +
+//     refund_status=DONE yapar,
+//   • service_role'e GRANT'lidir (auth.uid() gerektirmez).
+//
+// Kurulum:
+//   supabase functions deploy auto-cancel-matches
+//   supabase secrets set WEBHOOK_SECRET=...   (send-push ile aynı sır)
+//
+// Zamanlama: supabase/migrations/20260719000001_c4_auto_cancel_cron.sql
+//   (pg_cron + pg_net → bu fonksiyonu ~5 dakikada bir Bearer WEBHOOK_SECRET
+//    ile çağırır).
+// ═══════════════════════════════════════════════════════════════
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  { auth: { persistSession: false } },
+)
+
+// utils/gameRules.ts ile birebir aynı eşik: kadro %70'in altındaysa iptal aday.
+const FILL_THRESHOLD = 0.7
+// 90 dakika penceresi (utils/gameRules.ts: diffMinutes > 0 && diffMinutes <= 90).
+const WINDOW_MINUTES = 90
+
+interface MatchRow {
+  id: string
+  title: string | null
+  status: string
+  starts_at: string | null
+  slots: unknown
+  awaySlots: unknown
+  captain_id: string | null
+  creatorId: string | null
+}
+
+interface Slot {
+  status?: string
+  player?: { id?: string } | null
+}
+
+// check90MinAutoCancel kadro sayımının SQL/JS karşılığı: TAKEN slotları say,
+// toplam slotu al, eşiği ceil(total * 0.7) olarak uygula.
+function isUnderFilled(row: MatchRow): boolean {
+  const home = Array.isArray(row.slots) ? (row.slots as Slot[]) : []
+  const away = Array.isArray(row.awaySlots) ? (row.awaySlots as Slot[]) : []
+  const all = [...home, ...away]
+  const totalSlots = all.length || 14
+  const filled = all.filter((s) => s?.status === 'TAKEN').length
+  return filled < Math.ceil(totalSlots * FILL_THRESHOLD)
+}
+
+// Bir maçın tüm katılımcı user_id'lerini topla (kaptan/kurucu + TAKEN oyuncular).
+function participantIds(row: MatchRow): string[] {
+  const ids = new Set<string>()
+  if (row.captain_id) ids.add(row.captain_id)
+  if (row.creatorId) ids.add(row.creatorId)
+  const home = Array.isArray(row.slots) ? (row.slots as Slot[]) : []
+  const away = Array.isArray(row.awaySlots) ? (row.awaySlots as Slot[]) : []
+  for (const s of [...home, ...away]) {
+    if (s?.status === 'TAKEN' && s.player?.id) ids.add(s.player.id)
+  }
+  return [...ids]
+}
+
+Deno.serve(async (req: Request) => {
+  // Auth: send-push ile aynı desen — yalnız Bearer WEBHOOK_SECRET.
+  const authHeader = req.headers.get('Authorization')
+  const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
+  if (!webhookSecret) {
+    console.error('[auto-cancel-matches] WEBHOOK_SECRET env variable is not set!')
+    return new Response('Server misconfigured', { status: 500 })
+  }
+  if (authHeader !== `Bearer ${webhookSecret}`) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  try {
+    const nowIso = new Date().toISOString()
+    const windowIso = new Date(Date.now() + WINDOW_MINUTES * 60_000).toISOString()
+
+    // Aday maçlar: henüz başlamamış, 90 dk penceresine girmiş, hâlâ açık maçlar.
+    // (CANCELLED/COMPLETED/LIVE/CONFIRMED zaten süreç dışı — idempotency 1. katman.)
+    const { data: candidates, error: fetchError } = await supabaseAdmin
+      .from('matches')
+      .select('id, title, status, starts_at, slots, "awaySlots", captain_id, "creatorId"')
+      .in('status', ['OPEN', 'ACTIVE'])
+      .not('starts_at', 'is', null)
+      .gt('starts_at', nowIso)
+      .lte('starts_at', windowIso)
+
+    if (fetchError) {
+      console.error('[auto-cancel-matches] fetch error:', fetchError.message)
+      return new Response('Fetch failed', { status: 500 })
+    }
+
+    const rows = (candidates ?? []) as MatchRow[]
+    let cancelled = 0
+
+    for (const row of rows) {
+      // Kural: yalnız kadrosu %70'in altında olan maçlar iptal adayı.
+      if (!isUnderFilled(row)) continue
+
+      // İptal + kapora void/iade: test edilmiş, service_role'e açık RPC ile.
+      // İdempotenttir; zaten iptal edilmişse 'idempotent: true' döner ve
+      // biz o durumda TEKRAR bildirim GÖNDERMEYİZ (idempotency 2. katman).
+      const { data: result, error: rpcError } = await supabaseAdmin
+        .rpc('process_match_at_deadline', { p_match_id: row.id })
+
+      if (rpcError) {
+        console.error(`[auto-cancel-matches] rpc error (match ${row.id}):`, rpcError.message)
+        continue
+      }
+
+      const res = (result ?? {}) as { status?: string; idempotent?: boolean }
+
+      // Bu çalıştırmada gerçekten YENİ iptal olduysa bildir. Quorum beklenmedik
+      // şekilde tutuyorsa RPC maçı CONFIRMED yapar → yanlış iptal olmaz.
+      if (res.status === 'CANCELLED' && res.idempotent !== true) {
+        cancelled += 1
+
+        const recipients = participantIds(row)
+        if (recipients.length > 0) {
+          const title = row.title ?? 'Maçın'
+          const notifications = recipients.map((uid) => ({
+            user_id: uid,
+            title: 'Maç İptal Edildi',
+            body: `Yeterli oyuncu toplanamadığı için "${title}" maçı otomatik iptal edildi. Bloke edilen kaporan serbest bırakıldı / iade edildi.`,
+            type_key: 'match_cancelled',
+            payload: { match_id: row.id, reason: 'AUTO_CANCEL_90MIN' },
+          }))
+
+          // Katılımcı başına TAM BİR bildirim (bu maç bu çalıştırmada bir kez
+          // iptal olduğu için mükerrerlik yok).
+          const { error: notifyError } = await supabaseAdmin
+            .from('notifications')
+            .insert(notifications)
+          if (notifyError) {
+            console.error(`[auto-cancel-matches] notify error (match ${row.id}):`, notifyError.message)
+          }
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ cancelled }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    console.error('[auto-cancel-matches] Kritik hata:', error)
+    return new Response('Internal Error', { status: 500 })
+  }
+})
