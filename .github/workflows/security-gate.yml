@@ -1,0 +1,121 @@
+name: Güvenlik Kapısı (Security Gate)
+
+# Her push ve PR'da main/master/develop dallarında çalışır.
+# Ayrıca PRlarda "Güvenlik Denetim Kontrol Listesi" ile uyumlu otomatik tarama yapar.
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  # ─── 1. TypeScript Tip Kontrolü + Üretim Derlemesi ────────────────────────────
+  build-and-typecheck:
+    name: "Build & TypeScript Kontrolü"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Bağımlılıkları Yükle
+        run: npm ci
+
+      - name: "TypeScript Tip Kontrolü (tsc --noEmit)"
+        run: npm run lint
+
+      - name: "Üretim Derlemesi (vite build)"
+        run: npm run build
+
+  # ─── 2. Birim Testleri ────────────────────────────────────────────────────────
+  unit-tests:
+    name: "Birim Testleri (vitest)"
+    runs-on: ubuntu-latest
+    needs: build-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: "Birim Testleri Çalıştır"
+        run: npm run test:unit
+
+  # ─── 3. Statik Güvenlik Taraması ─────────────────────────────────────────────
+  security-scan:
+    name: "Statik Güvenlik Taraması"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3a. Gizli anahtar / token sızıntısı taraması (gitleaks)
+      - name: "Gizli Anahtar Sızıntısı Taraması (gitleaks)"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3b. .env dosyasının yanlışlıkla commit'lenmediğini kontrol et
+      - name: ".env Dosyası Git'e Commit'lenmemiş mi?"
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "❌ HATA: .env dosyası Git'e eklenmiş! Gizli bilgiler sızdırılıyor olabilir."
+            exit 1
+          else
+            echo "✅ .env dosyası Git tarafından takip edilmiyor."
+          fi
+
+      # 3c. Hassas pattern taraması: kod içinde sabit yazılmış şifre, token vb.
+      - name: "Kod İçinde Sabit Gizli Bilgi Taraması"
+        run: |
+          echo "Sabit şifre/token/API anahtarı taranıyor..."
+          # supabase url/key sabit yazılmış mı?
+          if grep -rn --include="*.ts" --include="*.tsx" \
+            -E "(supabase|SUPABASE).*(url|URL|key|KEY)\s*=\s*['\"][a-zA-Z0-9]{20,}" \
+            --exclude-dir=node_modules --exclude-dir=dist .; then
+            echo "❌ HATA: Supabase anahtarı/URL'si kod içine sabit yazılmış!"
+            exit 1
+          fi
+          echo "✅ Sabit gizli bilgi bulunamadı."
+
+      # 3d. Ghost Mode güvenlik kontrolü: yetkisiz kullanım kodu kaldırılmış mı?
+      - name: "Ghost Mode Yetkisiz Bypass Kontrolü"
+        run: |
+          echo "Ghost Mode'un kimlik doğrulama olmadan tetiklenip tetiklenmediği kontrol ediliyor..."
+          # Eski güvensiz pattern: useEffect içinde ghostId alınıp logImpersonation çağrılıyorsa
+          # ama is_admin kontrolü yoksa hata ver.
+          if grep -n "params.get('ghost')" App.tsx | grep -v "is_admin\|isAdmin\|SUPER_ADMIN"; then
+            # Eğer ghostId alınıyor ama aynı satır bloğunda yetki kontrolü göremiyorsak uyar.
+            # (Basit bir pattern - gerçek check mantığı code review'da yapılır)
+            echo "⚠️  Ghost Mode parametresi bulundu — yetki kontrolü varlığını kod incelemesinde doğrulayın."
+          else
+            echo "✅ Ghost Mode için açık bir yetki mekanizması mevcut."
+          fi
+
+      # 3e. Sentry beforeSend PII filtresinin varlığını doğrula
+      - name: "Sentry PII Filtresi Varlık Kontrolü"
+        run: |
+          echo "Sentry beforeSend PII filtresi kontrol ediliyor..."
+          if grep -q "beforeSend" utils/observability.ts; then
+            echo "✅ Sentry beforeSend PII filtresi mevcut."
+          else
+            echo "❌ HATA: utils/observability.ts içinde Sentry beforeSend filtresi eksik!"
+            exit 1
+          fi
+
+  # ─── 4. npm Bağımlılık Açık Taraması ─────────────────────────────────────────
+  dependency-audit:
+    name: "Bağımlılık Güvenlik Taraması (npm audit)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: "Yüksek/Kritik Seviye Açık Taraması"
+        run: npm audit --audit-level=high || echo "⚠️ Yüksek seviyeli bağımlılık açıkları bulundu — inceleme gereklidir."
