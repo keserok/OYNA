@@ -269,6 +269,7 @@ const MapViewComponent = ({
   const [locating, setLocating] = useState(false);
   const [areaSearching, setAreaSearching] = useState(false);
   const [showAreaChip, setShowAreaChip] = useState(false);
+  const [areaCount, setAreaCount] = useState<number | null>(null);
   // iOS: Apple/Google seçici; Android/Web doğrudan Google.
   const [directionsFor, setDirectionsFor] = useState<Pitch | null>(null);
 
@@ -361,13 +362,38 @@ const MapViewComponent = ({
       const radiusKm = Math.max(1, Math.min(50, getHaversineDistance(c.lat, c.lng, corner.lat, corner.lng)));
       const count = await onAreaSearch(c.lat, c.lng, radiusKm);
       setShowAreaChip(false);
-      if (count === 0) onLocateError('Bu bölgede henüz saha yok. Alanı genişletmeyi dene.');
+      if (count === 0) {
+        setAreaCount(0);
+        onLocateError('Bu bölgede henüz saha yok. Alanı genişletmeyi dene.');
+      } else {
+        setAreaCount(count);
+        setTimeout(() => setAreaCount(null), 2600);
+      }
     } catch {
       onLocateError('Alan araması yapılamadı. Lütfen tekrar dene.');
     } finally {
       setAreaSearching(false);
     }
   };
+
+  // Alan araması sonrası bulunan sahaları haritaya sığdır (Google "bu alanda ara"
+  // hissi: sonuçlar kadraja gelir). Yalnız arama AKTİFLEŞİRKEN bir kez.
+  const didAreaFit = React.useRef(false);
+  useEffect(() => {
+    if (!areaSearchActive) { didAreaFit.current = false; return; }
+    if (didAreaFit.current) return;
+    const pts = mapPitches.filter((p) => p.coordinates);
+    if (pts.length > 0 && mapRef.current) {
+      didAreaFit.current = true;
+      isFlyingRef.current = true;
+      if (pts.length === 1) {
+        mapRef.current.flyTo([pts[0].coordinates!.lat, pts[0].coordinates!.lng], 15, { duration: 0.6 });
+      } else {
+        const bounds = L.latLngBounds(pts.map((p) => [p.coordinates!.lat, p.coordinates!.lng] as [number, number]));
+        mapRef.current.fitBounds(bounds, { padding: [56, 56], maxZoom: 15, animate: true, duration: 0.6 });
+      }
+    }
+  }, [areaSearchActive, mapPitches]);
 
   const distanceLabel = (p: Pitch): string | null => {
     if (!userLocation || !p.coordinates) return null;
@@ -434,8 +460,22 @@ const MapViewComponent = ({
             onClick={() => { onClearAreaSearch(); setShowAreaChip(false); }}
             className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 px-4 h-10 rounded-full bg-[#39FF14] text-black text-[11px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(57,255,20,0.4)] active:scale-95 transition-transform"
           >
-            <X size={14} /> Alan araması aktif — temizle
+            <X size={14} /> Aramayı temizle
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Sonuç sayısı — aramadan sonra kısa süre görünen geri bildirim */}
+      <AnimatePresence>
+        {areaCount !== null && areaCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="absolute top-16 left-1/2 -translate-x-1/2 z-[499] px-3 h-8 flex items-center rounded-full bg-black/70 backdrop-blur-md text-white text-[11px] font-black tracking-wide shadow-lg"
+          >
+            Bu alanda <span className="text-[#39FF14] mx-1">{areaCount}</span> saha bulundu
+          </motion.div>
         )}
       </AnimatePresence>
 

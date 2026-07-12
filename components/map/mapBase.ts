@@ -10,6 +10,11 @@
 import L from 'leaflet';
 import type { Pitch } from '../../types';
 
+// "Leaflet" ön-ekini TÜM haritalardan kaldır — bu kütüphane kredisidir, yasal
+// zorunluluk değildir. Yasal OSM+CARTO veri atıfı görünür kalır. Tek yerden,
+// tüm ekranlar için (mapBase her harita ekranınca import edilir).
+L.Control.Attribution.prototype.options.prefix = false;
+
 // ── Tile sağlayıcı + ZORUNLU atıf ─────────────────────────────────────────
 // {r} → retina (@2x) karoları otomatik; koyu bazemap markayla uyumlu.
 export const OYNA_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -22,8 +27,9 @@ export const OYNA_TILE_ATTRIBUTION =
 export const oynaTileProps = {
   attribution: OYNA_TILE_ATTRIBUTION,
   crossOrigin: true as const,      // tainted-canvas önler (WebView'da tile hataları)
-  keepBuffer: 6,                    // hızlı pan'de gri boşluk olmasın
+  keepBuffer: 8,                    // pan'de gri boşluk / yeniden yükleme olmasın
   updateWhenIdle: false,            // pan sırasında karolar canlı yüklensin
+  updateWhenZooming: false,         // zoom animasyonu bitene kadar karo yükleme (jank↓)
   maxZoom: 20,
   maxNativeZoom: 20,
 };
@@ -32,12 +38,14 @@ export const oynaTileProps = {
 // zoomSnap=1 → tam-sayı zoom = karo netliği (kalite önceliği); pinch yine akıcı.
 export const oynaMapProps = {
   zoomControl: false,
-  attributionControl: true,         // atıf kontrolü AÇIK (yasal)
+  attributionControl: true,         // atıf kontrolü AÇIK (yasal) — "Leaflet" ön-eki kapalı
   zoomSnap: 1,
   zoomDelta: 1,
   wheelDebounceTime: 40,
   wheelPxPerZoomLevel: 100,
   bounceAtZoomLimits: false,
+  fadeAnimation: false,             // karoların TEK TEK "fade" ile gelmesini kapatır
+                                    // → "parça parça akma" biter, karolar anında oturur
   tap: true,                        // iOS/Android dokunma
   tapTolerance: 18,                 // parmak dokunuşu toleransı (mobil)
   maxZoom: 19,
@@ -50,7 +58,12 @@ export const oynaMapProps = {
 // → pinler zoom'da kaymaz/titremez.
 export const OYNA_MAP_CSS = `
   .leaflet-container { background: #060B12 !important; font-family: inherit; -webkit-tap-highlight-color: transparent; }
-  .leaflet-tile-pane { filter: brightness(0.92) saturate(0.62); }
+  /* NOT: tile-pane'e CSS 'filter' UYGULANMAZ — hareket eden katmana filter,
+     mobil WebView'da her karede yeniden boyama (jank) demektir. dark_all
+     basemap zaten koyu; ekstra filtre gereksiz ve pahalıydı → kaldırıldı.
+     Karo geçiş animasyonu da kapatıldı (anında otursun, akıcı hissetsin). */
+  .leaflet-tile { transition: none !important; }
+  .leaflet-fade-anim .leaflet-tile { will-change: auto; }
   .leaflet-control-zoom { display: none !important; }
   .leaflet-popup-content-wrapper { background: transparent !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
   .leaflet-popup-tip-container { display: none !important; }
