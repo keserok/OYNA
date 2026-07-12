@@ -533,7 +533,7 @@ const TeamChatView: React.FC<{
       let sender = senderCacheRef.current.get(raw.senderId);
       if (!sender) {
         const { data } = await supabase
-          .from('profiles').select('full_name, avatar_url').eq('id', raw.senderId).maybeSingle();
+          .from('public_profiles').select('full_name, avatar_url').eq('id', raw.senderId).maybeSingle();
         sender = { name: data?.full_name || 'Oyuncu', avatar: data?.avatar_url ?? null };
         senderCacheRef.current.set(raw.senderId, sender);
       }

@@ -243,7 +243,7 @@ export const getTeamJoinRequests = async (teamId: string): Promise<TeamJoinReque
   const rows = (data || []) as TeamJoinRequestRow[];
   if (rows.length === 0) return rows;
   const { data: profiles } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('id, full_name, avatar_url, oyna_id')
     .in('id', rows.map(r => r.user_id));
   const byId = new Map((profiles || []).map(p => [p.id, p]));
@@ -289,7 +289,7 @@ export const getMyTeamInvites = async (userId: string): Promise<TeamInviteRow[]>
   if (rows.length === 0) return rows;
   const [{ data: teams }, { data: profiles }] = await Promise.all([
     supabase.from('teams').select('id, name').in('id', rows.map(r => r.team_id)),
-    supabase.from('profiles').select('id, full_name, avatar_url').in('id', rows.map(r => r.inviter_id)),
+    supabase.from('public_profiles').select('id, full_name, avatar_url').in('id', rows.map(r => r.inviter_id)),
   ]);
   const teamById = new Map((teams || []).map(t => [t.id, t]));
   const profById = new Map((profiles || []).map(p => [p.id, p]));
@@ -313,7 +313,7 @@ export const getTeamOutgoingInvites = async (teamId: string): Promise<TeamInvite
   const rows = (data || []) as TeamInviteRow[];
   if (rows.length === 0) return rows;
   const { data: profiles } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('id, full_name, avatar_url')
     .in('id', rows.map(r => r.invited_id));
   const byId = new Map((profiles || []).map(p => [p.id, p]));

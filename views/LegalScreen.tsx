@@ -8,13 +8,16 @@ interface LegalScreenProps {
 
 type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'SALES';
 
-// NOT: Bu metinler lansman için temel/şablon içeriktir. Yayına almadan önce
-// bir avukata gözden geçirtilmesi ve şirket/ünvan/iletişim bilgilerinin
-// doldurulması GEREKİR. Yer tutucular [KÖŞELİ PARANTEZ] ile işaretlendi.
+// NOT: Bu metinler avukat incelemesi öncesi çalışma taslağıdır. Yayına almadan
+// önce bir avukata gözden geçirtilmesi ve COMPANY/TAX_INFO/ADDRESS
+// sabitlerinin gerçek bilgilerle doldurulması GEREKİR. Yer tutucular
+// [KÖŞELİ PARANTEZ] ile işaretlendi. (Son taslak güncellemesi: 12.07.2026)
 
-const COMPANY = '[ŞİRKET ÜNVANI]';
+const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
+const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
+const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Maltepe/İstanbul';
 const CONTACT_EMAIL = 'destek@oyna.app';
-const UPDATED = '15.06.2026';
+const UPDATED = '12.07.2026';
 
 const DOCS: Record<LegalDocKey, { title: string; icon: React.ElementType; body: string }> = {
   TERMS: {
@@ -35,7 +38,7 @@ Kullanıcı, hesap bilgilerinin gizliliğinden kendisi sorumludur. 18 yaşından
 Saha rezervasyonlarında, tesis tarafından belirlenen kapora tutarı uygulama üzerinden tahsil edilebilir. Rezervasyon onayı, tesisin belirlediği otomatik/manuel onay kurallarına tabidir.
 
 5. İPTAL VE İADE
-Oyuncu, rezervasyon saatine 48 saatten fazla varsa rezervasyonunu iptal edebilir ve ödediği kaporanın %90'ı iade edilir. 48 saatten az kalan rezervasyonlar uygulama üzerinden iptal edilemez; tesisle iletişime geçilmelidir. Ayrıntılar için Mesafeli Satış ve İptal/İade Koşulları'na bakınız.
+Rezervasyon/maç saatine 24 saatten fazla süre kala yapılan iptallerde ödenen tutarın tamamına yakını (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç) iade edilir; 6-24 saat kala yapılan iptallerde %50'si iade edilir; 6 saatten az kala iade yapılmaz. Ayrıntılar için Mesafeli Satış ve İptal/İade Koşulları'na bakınız.
 
 6. KULLANICI YÜKÜMLÜLÜKLERI
 Kullanıcı; yanlış bilgi vermemeyi, başkalarının haklarını ihlal etmemeyi, platformu hukuka aykırı amaçlarla kullanmamayı kabul eder.
@@ -56,26 +59,31 @@ Sorularınız için: ${CONTACT_EMAIL}`,
 
 1. TOPLANAN VERİLER
 - Kimlik/iletişim: ad, e-posta, telefon
-- Konum: yakındaki sahaları göstermek için (izninizle)
+- Konum: yakındaki sahaları göstermek için, yalnızca uygulamayı kullanırken ve izninizle
+- Rehber eşleştirme: açık izninizle, arkadaş bulma amacıyla; numaralar cihazda şifrelenir (hash), sunucuya yalnızca şifreli hâli gider — Ayarlar'dan kapatılabilir
 - Kullanım: rezervasyon, maç ve uygulama içi etkinlik verileri
 - Cihaz: bildirim için cihaz token'ı
+- Ödeme: kart bilgileri OYNA sunucularında saklanmaz, doğrudan ödeme kuruluşunda işlenir
 
 2. VERİLERİN KULLANIM AMACI
 Hizmetin sunulması, rezervasyon ve ödeme süreçleri, bildirimler, güvenlik ve dolandırıcılık önleme, hizmet iyileştirme.
 
 3. VERİLERİN PAYLAŞIMI
-Verileriniz; rezervasyon yaptığınız tesis ile (gerekli ölçüde), ödeme kuruluşu ile (ödeme işlemleri için) ve yasal yükümlülükler kapsamında yetkili mercilerle paylaşılabilir. Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz.
+Verileriniz; rezervasyon yaptığınız tesis ile (gerekli ölçüde), ödeme kuruluşu ile (ödeme işlemleri için), teknoloji/altyapı tedarikçilerimiz ile ve yasal yükümlülükler kapsamında yetkili mercilerle paylaşılabilir. Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz.
 
-4. ÇEREZLER VE BENZER TEKNOLOJİLER
+4. YURT DIŞINA AKTARIM
+Bazı teknoloji tedarikçilerimizin sunucuları yurt dışında olabilir; bu hâlde aktarım, 6698 sayılı Kanun'un 9. maddesi ve ilgili mevzuata uygun güvenceler dahilinde yapılır.
+
+5. ÇEREZLER VE BENZER TEKNOLOJİLER
 Oturum yönetimi ve tercihleriniz için gerekli teknolojiler kullanılır.
 
-5. VERİ GÜVENLİĞİ
+6. VERİ GÜVENLİĞİ
 Veriler şifreli bağlantı (HTTPS) üzerinden iletilir ve erişim yetkilendirmesi (RLS) ile korunur.
 
-6. HAKLARINIZ (KVKK m.11)
+7. HAKLARINIZ (KVKK m.11)
 Verilerinize erişme, düzeltme, silme ve işlemeye itiraz haklarınız için: ${CONTACT_EMAIL}
 
-7. SAKLAMA SÜRESİ
+8. SAKLAMA SÜRESİ
 Veriler, hizmetin gerektirdiği ve mevzuatın öngördüğü süre boyunca saklanır.`,
   },
   KVKK: {
@@ -87,24 +95,30 @@ Veriler, hizmetin gerektirdiği ve mevzuatın öngördüğü süre boyunca sakla
 
 1. VERİ SORUMLUSU
 ${COMPANY}
+Vergi Dairesi/No: ${TAX_INFO}
+Adres: ${ADDRESS}
 
 2. İŞLENEN KİŞİSEL VERİLER
-Kimlik, iletişim, konum, işlem ve kullanım verileri.
+Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri.
 
 3. İŞLEME AMAÇLARI
 - Üyelik ve hesap yönetimi
 - Saha rezervasyonu ve kapora tahsilatının gerçekleştirilmesi
+- Maç/takım eşleştirme ve arkadaş bulma
 - Müşteri ilişkileri ve destek
 - Yasal yükümlülüklerin yerine getirilmesi
 
 4. HUKUKİ SEBEPLER
-Sözleşmenin kurulması/ifası, hukuki yükümlülük, meşru menfaat ve açık rıza (gerekli hallerde).
+Sözleşmenin kurulması/ifası, hukuki yükümlülük, meşru menfaat ve açık rıza (rehber eşleştirme ve konum gibi gerekli hallerde).
 
-5. AKTARIM
-Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler ve yetkili kamu kurumlarına mevzuata uygun olarak aktarılabilir.
+5. TOPLAMA YÖNTEMİ
+Verileriniz, uygulamayı kullanımınız sırasında elektronik ortamda, doğrudan sizden veya cihazınızdan (izninizle) elde edilir.
 
-6. HAKLARINIZ
-KVKK m.11 kapsamındaki haklarınızı ${CONTACT_EMAIL} adresine başvurarak kullanabilirsiniz.`,
+6. AKTARIM
+Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler, teknoloji/altyapı tedarikçilerimiz (gerekirse yurt dışında yerleşik) ve yetkili kamu kurumlarına mevzuata uygun olarak aktarılabilir.
+
+7. HAKLARINIZ
+KVKK m.11 kapsamındaki haklarınızı (bilgi talep etme, düzeltme, silme, itiraz ve zararın giderilmesini isteme dahil) ${CONTACT_EMAIL} adresine yazılı başvuruda bulunarak kullanabilirsiniz.`,
   },
   SALES: {
     title: 'Mesafeli Satış ve İptal/İade',
@@ -121,12 +135,13 @@ Hizmet, seçtiğiniz tesis ve saatteki saha kiralamasıdır. Kapora tutarı ve t
 Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan tutarın ödeme şekli tesise göre değişebilir.
 
 4. İPTAL VE İADE KOŞULLARI
-- Rezervasyon saatine 48 saatten FAZLA varsa: oyuncu uygulamadan iptal edebilir, ödenen kaporanın %90'ı iade edilir (%10 hizmet/işlem kesintisi).
-- Rezervasyon saatine 48 saatten AZ kalmışsa: uygulama üzerinden iptal yapılamaz; tesisle iletişime geçilmelidir.
-- İade, ödemenin yapıldığı yönteme banka süreçlerine göre yansıtılır.
+- Rezervasyon/maç saatine 24 SAATTEN FAZLA süre kala yapılan iptallerde: ödenen tutarın tamamına yakını iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç).
+- Rezervasyon/maç saatine 6-24 SAAT kala yapılan iptallerde: ödenen tutarın %50'si iade edilir.
+- Rezervasyon/maç saatine 6 SAATTEN AZ kala yapılan iptallerde: iade yapılmaz.
+- İade, ödemenin yapıldığı karta yansıtılır; bankanıza yansıma süresi bankanızın işlem sürelerine tabidir.
 
 5. CAYMA HAKKI İSTİSNASI
-Belirli tarih/saat için yapılan rezervasyonlar (boş zamanın değerlendirilmesine ilişkin hizmetler), mevzuat gereği cayma hakkı istisnası kapsamında olabilir; iptal koşulları yukarıdaki kurallara tabidir.
+Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yönetmeliği m.15/1-ğ kapsamında "boş zamanın değerlendirilmesine ilişkin hizmetler" istisnasına tabidir; bu nedenle 14 günlük cayma hakkı uygulanmaz, iptal koşulları yukarıdaki kurallara tabidir.
 
 6. UYUŞMAZLIK
 Şikayetlerinizde ${CONTACT_EMAIL} ile iletişime geçebilir, çözülemeyen uyuşmazlıklarda Tüketici Hakem Heyetleri'ne başvurabilirsiniz.`,
@@ -153,8 +168,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
             <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300 leading-relaxed">{d.body}</pre>
           </div>
           <p className="text-[10px] text-gray-600 text-center mt-6 leading-relaxed">
-            Bu metin lansman için hazırlanmış temel şablondur. Yayın öncesi bir hukuk danışmanı tarafından
-            gözden geçirilmeli ve şirket bilgileri doldurulmalıdır.
+            Bu belgeler hakkında sorularınız için {CONTACT_EMAIL} adresinden bize ulaşabilirsiniz.
           </p>
         </main>
       </div>
