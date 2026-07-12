@@ -1,0 +1,128 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# iOS Release — App Store'a gönderilecek .ipa üretimi (+ opsiyonel TestFlight yüklemesi)
+#
+# Bu ortamda (Linux) Xcode çalışmadığı için iOS paketi CI'daki macOS koşucusunda
+# üretilir. Gerekli secrets (repo Settings → Secrets and variables → Actions):
+#
+#   ASC_KEY_ID        App Store Connect API anahtarı Key ID
+#   ASC_ISSUER_ID     App Store Connect API Issuer ID
+#   ASC_API_KEY_P8    .p8 dosyasının İÇERİĞİ (BEGIN/END satırları dahil)
+#
+# Opsiyonel (cloud-managed imzalama yerine kendi sertifikanızla imzalamak için):
+#   IOS_DIST_CERT_P12        Apple Distribution sertifikası (.p12) base64
+#   IOS_DIST_CERT_PASSWORD   .p12 parolası
+#
+# Not: Apple, 28 Nisan 2026'dan beri gönderimlerin Xcode 26 / iOS 26 SDK ile
+# derlenmesini şart koşuyor → macos-26 imajı kullanılır.
+# ─────────────────────────────────────────────────────────────────────────────
+name: iOS Release (App Store)
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: "TestFlight'a otomatik yükle"
+        type: boolean
+        default: false
+
+jobs:
+  build-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Web build + Capacitor sync
+        run: |
+          npm ci
+          npm run build
+          npx cap sync ios
+
+      - name: CocoaPods install
+        working-directory: ios/App
+        run: pod install
+
+      - name: App Store Connect API anahtarını hazırla
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          printf '%s' "$ASC_API_KEY_P8" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+      - name: (Opsiyonel) Distribution sertifikasını keychain'e yükle
+        if: ${{ secrets.IOS_DIST_CERT_P12 != '' }}
+        env:
+          IOS_DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN=build.keychain
+          KEYCHAIN_PASS=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN
+          security default-keychain -s $KEYCHAIN
+          security unlock-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN
+          security set-keychain-settings -t 3600 -u $KEYCHAIN
+          printf '%s' "$IOS_DIST_CERT_P12" | base64 -d > /tmp/dist.p12
+          security import /tmp/dist.p12 -k $KEYCHAIN -P "$IOS_DIST_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASS" $KEYCHAIN
+          rm /tmp/dist.p12
+
+      - name: Archive
+        working-directory: ios/App
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Export .ipa
+        working-directory: ios/App
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          UPLOAD: ${{ inputs.upload_to_testflight && 'upload' || 'export' }}
+        run: |
+          cat > ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>${UPLOAD}</string>
+            <key>manageAppVersionAndBuildNumber</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: IPA artefaktını yayınla
+        if: ${{ !inputs.upload_to_testflight }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: OYNA-iOS-ipa
+          path: ios/App/build/export/*.ipa
+          retention-days: 14

@@ -55,5 +55,9 @@
 	<string>OYNA, profil fotoğrafınızı değiştirmek için fotoğraf kütüphanenize erişmek istiyor.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>OYNA, maç istatistiklerini ve taktik görsellerini kaydetmek istiyor.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>OYNA, rehberinizdeki arkadaşlarınızı bulmak için kişilerinize erişmek istiyor. Numaralar cihazdan çıkmadan şifrelenir (SHA-256); ham numara asla sunucuya gönderilmez.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

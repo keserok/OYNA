@@ -236,6 +236,11 @@ if (typeof window !== 'undefined') {
 export const isDemoLoginEnabled = (): boolean => {
   // 1) Açık bayrak (Vercel'de env ile de açılabilir)
   if (import.meta.env.VITE_DEV_MODE === 'true') return true;
+  // MAĞAZA GÜVENLİĞİ: Capacitor WebView uygulamayı HER ZAMAN localhost'tan
+  // servis eder (https://localhost / oyna://localhost) — aşağıdaki tarayıcı
+  // kısayolları native pakette geçerli olsaydı store uygulamasında demo giriş
+  // herkese açık kalırdı. Native'de tek anahtar VITE_DEV_MODE'dur.
+  if (Capacitor.isNativePlatform()) return false;
   if (typeof window !== 'undefined') {
     // 2) URL anahtarı ?demo=1 → bu oturum boyunca (herhangi bir domain'de test)
     try { if (sessionStorage.getItem('oyna_demo') === '1') return true; } catch { /* yok say */ }

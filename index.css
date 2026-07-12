@@ -1,3 +1,28 @@
+/* ─── Yerel (self-hosted) fontlar ───────────────────────────────────────────
+   Store paketinde Google Fonts CDN'e bağımlılık olmaz: çevrimdışı/yavaş ağda
+   ilk açılışta yazı tipi bozulmaz (App Review uçak modunda test eder).
+   latin-ext = Türkçe karakterler (ğ, ş, ı, İ, ö, ü, ç). */
+@import "@fontsource/inter/latin-300.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/inter/latin-800.css";
+@import "@fontsource/inter/latin-ext-300.css";
+@import "@fontsource/inter/latin-ext-400.css";
+@import "@fontsource/inter/latin-ext-500.css";
+@import "@fontsource/inter/latin-ext-600.css";
+@import "@fontsource/inter/latin-ext-700.css";
+@import "@fontsource/inter/latin-ext-800.css";
+@import "@fontsource/space-grotesk/latin-400.css";
+@import "@fontsource/space-grotesk/latin-500.css";
+@import "@fontsource/space-grotesk/latin-600.css";
+@import "@fontsource/space-grotesk/latin-700.css";
+@import "@fontsource/space-grotesk/latin-ext-400.css";
+@import "@fontsource/space-grotesk/latin-ext-500.css";
+@import "@fontsource/space-grotesk/latin-ext-600.css";
+@import "@fontsource/space-grotesk/latin-ext-700.css";
+
 @import "tailwindcss" source(none);
 @source "./components/**/*.{ts,tsx}";
 @source "./views/**/*.{ts,tsx}";
@@ -138,12 +163,37 @@
 }
 
 /* Base styles */
+html {
+  /* iOS yatay dönüşte / büyük metin ayarında otomatik font şişmesini engelle */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html, body {
+  /* Native WebView'de kenar aşımı sekmesini (bounce/pull-to-refresh) kapat —
+     uygulama içi scroll alanları kendi kaydırmasını korur */
+  overscroll-behavior-y: none;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: #0A0E14;
   color: white;
   margin: 0;
   overflow-x: hidden;
+  /* iOS uzun basışta "kopyala/paylaş" balonunu kapat (butonlar/görseller);
+     metin girişleri aşağıda geri açılır */
+  -webkit-touch-callout: none;
+}
+
+input, textarea {
+  -webkit-touch-callout: default;
+  user-select: text;
+}
+
+img {
+  /* WebView'de görsel sürükleme hayaletini engelle */
+  -webkit-user-drag: none;
 }
 
 /* Mesh Gradient Background */
@@ -348,6 +398,8 @@ body {
 button, a {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  /* Çift dokunma yakınlaştırmasını ve 300ms dokunma gecikmesini kaldır */
+  touch-action: manipulation;
 }
 
 /* Input base polish */
