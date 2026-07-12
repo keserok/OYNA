@@ -367,7 +367,7 @@ export const getFriendsWithStats = async (userId: string): Promise<(Player & { o
   if (friendIds.length === 0) return [];
 
   const { data: profiles, error: pErr } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('id, full_name, avatar_url, stats')
     .in('id', friendIds);
 
