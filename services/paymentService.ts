@@ -121,6 +121,10 @@ export interface InAppPayInput {
   useBalance?: boolean;
   card?: NewCardInput;
   savedCardId?: string;
+  /** C1 — idempotency anahtarı. Aynı ödeme denemesinin retry'ları aynı anahtarı
+   *  taşır; sunucu var olan niyeti yeniden kullanır → geç-3DS + retry çift çekimi
+   *  önlenir. FE her yeni ödeme için taze bir UUID üretir. */
+  idempotencyKey?: string;
 }
 
 export interface InAppPayStart {

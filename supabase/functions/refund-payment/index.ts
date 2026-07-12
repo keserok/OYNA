@@ -38,7 +38,16 @@ async function iyziHeaders(body: string) {
 async function iyzicoRefund(conversationId: string, paymentTxnId: string, price: string) {
   const baseUrl = Deno.env.get('IYZICO_BASE_URL') ?? 'https://api.iyzipay.com'
   const body = JSON.stringify({ locale: 'tr', conversationId, paymentTransactionId: paymentTxnId, price, ip: '85.34.78.112' })
-  const res = await fetch(`${baseUrl}/payment/refund`, { method: 'POST', headers: await iyziHeaders(body), body })
+  // H2 — iade isteğine timeout (sonsuz asılı kalma önlenir). RETRY YOK: iade
+  // iyzico'ya ulaşıp yanıtı kaybolduysa kör retry çift-iade yapabilir.
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 20_000)
+  let res: Response
+  try {
+    res = await fetch(`${baseUrl}/payment/refund`, { method: 'POST', headers: await iyziHeaders(body), body, signal: ctrl.signal })
+  } finally {
+    clearTimeout(t)
+  }
   const data = await res.json() as { status: string; errorMessage?: string }
   if (data.status !== 'success') {
     const msg = data.errorMessage ?? ''

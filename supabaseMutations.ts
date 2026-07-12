@@ -280,7 +280,7 @@ export const fbGetAdminProfiles = async () => {
   return data || [];
 };
 
-const mapFromSnakeCase = (obj: any) => {
+export const mapFromSnakeCase = (obj: any) => {
   if (!obj) return obj;
   const mapped: any = {};
   for (const key of Object.keys(obj)) {
@@ -328,20 +328,33 @@ export const fbGetReferees = async () => {
   return (data || []).map(mapFromSnakeCase);
 };
 
+// NOT (C3 — ölçek koruması): Bu üç fonksiyon uygulama açılışında (store.initApp)
+// her kullanıcı için çağrılıyor. Sınırsız `select('*')` tabloyu büyüdükçe komple
+// indirir (full table scan + çok-MB payload). Kalıcı çözüm ekran-bazlı scoped
+// sorgulardır (ör. get_nearby_matches RPC'si); buradaki limit'ler katastrofik
+// büyümeyi durduran güvenli üst sınırlardır ve mevcut davranışı bozmaz.
+const PITCHES_MAX = 2000;
+const MATCHES_MAX = 500;
+const TEAMS_MAX = 2000;
+
 export const fbGetPitches = async () => {
-  const { data, error } = await supabase.from('pitches').select('*');
+  const { data, error } = await supabase.from('pitches').select('*').limit(PITCHES_MAX);
   if (error) throw new Error(`Sahalar yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
 
 export const fbGetMatches = async () => {
-  const { data, error } = await supabase.from('matches').select('*');
+  const { data, error } = await supabase
+    .from('matches')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(MATCHES_MAX);
   if (error) throw new Error(`Maçlar yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
 
 export const fbGetTeams = async () => {
-  const { data, error } = await supabase.from('teams').select('*');
+  const { data, error } = await supabase.from('teams').select('*').limit(TEAMS_MAX);
   if (error) throw new Error(`Takımlar yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };

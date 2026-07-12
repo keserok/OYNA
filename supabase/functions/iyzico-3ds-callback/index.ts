@@ -19,6 +19,12 @@ async function hmacSha256Hex(secret: string, data: string): Promise<string> {
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+// H2 — Bu iyzicoPost tahsilat (3dsecure/auth) için kullanılır. Timeout EKLENİR
+// (sonsuz asılı kalma önlenir) ama RETRY YOK: tahsilat isteği iyzico'ya ulaşıp
+// yanıtı kaybolduysa, kör bir retry çift-çekim yapabilir. Timeout'ta niyet
+// PENDING kalır; FE poll'u ve iyzico webhook'u nihai durumu belirler.
+const IYZICO_TIMEOUT_MS = 20_000
+
 async function iyzicoPost(uriPath: string, bodyObj: unknown): Promise<any> {
   const apiKey    = Deno.env.get('IYZICO_API_KEY')!
   const secretKey = Deno.env.get('IYZICO_SECRET_KEY')!
@@ -27,12 +33,19 @@ async function iyzicoPost(uriPath: string, bodyObj: unknown): Promise<any> {
   const randomKey = `${Date.now()}${Math.floor(Math.random() * 1_000_000)}`
   const signature = await hmacSha256Hex(secretKey, randomKey + uriPath + bodyStr)
   const authHeader = 'IYZWSv2 ' + btoa(`apiKey:${apiKey}&randomKey:${randomKey}&signature:${signature}`)
-  const res = await fetch(baseUrl + uriPath, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'x-iyzi-rnd': randomKey },
-    body: bodyStr,
-  })
-  return await res.json()
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), IYZICO_TIMEOUT_MS)
+  try {
+    const res = await fetch(baseUrl + uriPath, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader, 'x-iyzi-rnd': randomKey },
+      body: bodyStr,
+      signal: ctrl.signal,
+    })
+    return await res.json()
+  } finally {
+    clearTimeout(t)
+  }
 }
 
 // mdStatus → kullanıcı diline çeviri (iyzico 3DS sonuç kodları)
