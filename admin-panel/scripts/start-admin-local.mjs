@@ -80,9 +80,14 @@ async function main() {
   console.log(`   Panel: ${ADMIN_URL}`);
   console.log(`   Durdurmak için: Ctrl+C\n`);
 
+  // ADMIN_SOLO=1 → yalnız bu bilgisayardan erişilir (localhost); yerel ağa açılmaz.
+  // Tek-tık başlatıcı (OYNA-Panel-Baslat.command) bunu kullanır → "bana özel".
+  const solo = process.env.ADMIN_SOLO === '1';
+  const viteArgs = solo ? ['vite', '--strictPort'] : ['vite', '--host', '--strictPort'];
+
   const child = spawn(
     'npx',
-    ['vite', '--host', '--strictPort'],
+    viteArgs,
     {
       cwd: ROOT,
       stdio: 'inherit',
