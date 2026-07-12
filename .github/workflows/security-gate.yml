@@ -51,6 +51,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks commit aralığını tarar; sığ (shallow) klonda ebeveyn commit
+          # bulunamayıp "unknown revision" hatasıyla düşüyordu. Tam geçmiş şart.
+          fetch-depth: 0
 
       # 3a. Gizli anahtar / token sızıntısı taraması (gitleaks)
       - name: "Gizli Anahtar Sızıntısı Taraması (gitleaks)"
