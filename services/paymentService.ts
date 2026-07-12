@@ -94,3 +94,82 @@ export async function payBookingDeposit(bookingId: string): Promise<{ redirected
   // checkoutUrl yok ve confirm gerekmiyorsa (beklenmedik) — niyet beklemede kalır
   return { redirected: false };
 }
+
+// ═══ UYGULAMA-İÇİ KART ÖDEMESİ (Uber standardı — iyzico görünmez) ═══════════
+// OYNA'nın kendi kart formu → edge 'pay' → 3DS (banka SMS) uygulama içinde.
+// Kart verisi YALNIZ bellekte yaşar ve doğrudan edge'e gider; ne DB'ye ne
+// log'a yazılır. Kayıtlı kartla ödemede yalnız kart id gönderilir (token
+// eşlemesi sunucuda yapılır).
+
+/** Yeni kart bilgisi — yalnız ödeme anında bellekte taşınır. */
+export interface NewCardInput {
+  holderName: string;
+  number: string;
+  expireMonth: number;
+  expireYear: number;
+  cvc: string;
+  /** true → ödeme onaylanınca kart iyzico deposuna kaydedilir (tek dokunuş). */
+  save?: boolean;
+}
+
+export interface InAppPayInput {
+  flow: 'BOOKING_DEPOSIT' | 'TOP_UP' | 'MATCH_JOIN';
+  amount?: number;
+  bookingId?: string;
+  matchId?: string;
+  slotIds?: string[];
+  useBalance?: boolean;
+  card?: NewCardInput;
+  savedCardId?: string;
+}
+
+export interface InAppPayStart {
+  provider: 'IYZICO' | 'SIMULATION';
+  requiresThreeDS: boolean;
+  intentId: string;
+  cardAmount: number;
+  balanceApplied: number;
+  /** base64 — banka 3DS sayfası; decodeBase64Utf8 ile çözülüp iframe'e basılır. */
+  threeDSHtml?: string;
+  /** SIMULATION modunda ödeme anında uygulanır; sonuç burada döner. */
+  result?: { ok: boolean; reason?: string; [k: string]: unknown };
+}
+
+/** Uygulama-içi kart ödemesi başlat (3 akış: kapora / cüzdan / maça katılım). */
+export async function startInAppCardPayment(input: InAppPayInput): Promise<InAppPayStart> {
+  return await invokeEdge('pay', input as unknown as Record<string, unknown>) as InAppPayStart;
+}
+
+/** Cüzdandan bağımsız kart kaydet (iyzico kart deposu üzerinden). */
+export async function registerCardInApp(card: NewCardInput): Promise<{ ok: boolean; card?: unknown }> {
+  return await invokeEdge('register-card', { card }) as { ok: boolean; card?: unknown };
+}
+
+export interface IntentStatus {
+  status: 'PENDING' | 'PAID' | 'FAILED' | string;
+  /** İade-krediye dönüş nedeni (SLOT_TAKEN_REFUNDED vb.) — raw.result_reason */
+  resultReason: string | null;
+  failReason: string | null;
+}
+
+/** 3DS yoklama yedeği: postMessage kaçarsa niyet durumundan sonucu oku (RLS: sahibi). */
+export async function getIntentStatus(intentId: string): Promise<IntentStatus | null> {
+  const { data, error } = await supabase
+    .from('payment_intents')
+    .select('status, raw')
+    .eq('id', intentId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const raw = (data.raw ?? {}) as Record<string, unknown>;
+  return {
+    status: data.status as string,
+    resultReason: (raw.result_reason as string) ?? null,
+    failReason: (raw.fail_reason as string) ?? null,
+  };
+}
+
+/** base64 → UTF-8 metin (iyzico threeDSHtmlContent çözümü). */
+export function decodeBase64Utf8(b64: string): string {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
