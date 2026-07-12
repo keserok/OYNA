@@ -70,19 +70,6 @@ function isUnderFilled(row: MatchRow): boolean {
   return filled < Math.ceil(totalSlots * FILL_THRESHOLD)
 }
 
-// Bir maçın tüm katılımcı user_id'lerini topla (kaptan/kurucu + TAKEN oyuncular).
-function participantIds(row: MatchRow): string[] {
-  const ids = new Set<string>()
-  if (row.captain_id) ids.add(row.captain_id)
-  if (row.creatorId) ids.add(row.creatorId)
-  const home = Array.isArray(row.slots) ? (row.slots as Slot[]) : []
-  const away = Array.isArray(row.awaySlots) ? (row.awaySlots as Slot[]) : []
-  for (const s of [...home, ...away]) {
-    if (s?.status === 'TAKEN' && s.player?.id) ids.add(s.player.id)
-  }
-  return [...ids]
-}
-
 Deno.serve(async (req: Request) => {
   // Auth: send-push ile aynı desen — yalnız Bearer WEBHOOK_SECRET.
   const authHeader = req.headers.get('Authorization')
@@ -134,31 +121,15 @@ Deno.serve(async (req: Request) => {
 
       const res = (result ?? {}) as { status?: string; idempotent?: boolean }
 
-      // Bu çalıştırmada gerçekten YENİ iptal olduysa bildir. Quorum beklenmedik
+      // Bu çalıştırmada gerçekten YENİ iptal olduysa say. Quorum beklenmedik
       // şekilde tutuyorsa RPC maçı CONFIRMED yapar → yanlış iptal olmaz.
+      //
+      // BİLDİRİM burada GÖNDERİLMEZ: matches.status → 'CANCELLED' UPDATE'i, DB
+      // trigger'ı on_match_cancelled (notify_match_cancelled) içinde katılımcılara
+      // + kurucuya 'match_cancelled' bildirimini ZATEN ekler. Burada tekrar
+      // eklersek mükerrer bildirim olur. Tek kaynak: DB trigger'ı.
       if (res.status === 'CANCELLED' && res.idempotent !== true) {
         cancelled += 1
-
-        const recipients = participantIds(row)
-        if (recipients.length > 0) {
-          const title = row.title ?? 'Maçın'
-          const notifications = recipients.map((uid) => ({
-            user_id: uid,
-            title: 'Maç İptal Edildi',
-            body: `Yeterli oyuncu toplanamadığı için "${title}" maçı otomatik iptal edildi. Bloke edilen kaporan serbest bırakıldı / iade edildi.`,
-            type_key: 'match_cancelled',
-            payload: { match_id: row.id, reason: 'AUTO_CANCEL_90MIN' },
-          }))
-
-          // Katılımcı başına TAM BİR bildirim (bu maç bu çalıştırmada bir kez
-          // iptal olduğu için mükerrerlik yok).
-          const { error: notifyError } = await supabaseAdmin
-            .from('notifications')
-            .insert(notifications)
-          if (notifyError) {
-            console.error(`[auto-cancel-matches] notify error (match ${row.id}):`, notifyError.message)
-          }
-        }
       }
     }
 

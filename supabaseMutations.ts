@@ -328,13 +328,12 @@ export const fbGetReferees = async () => {
   return (data || []).map(mapFromSnakeCase);
 };
 
-// NOT (C3 — ölçek koruması): Bu üç fonksiyon uygulama açılışında (store.initApp)
+// NOT (C3 — ölçek koruması): Bu fonksiyonlar uygulama açılışında (store.initApp)
 // her kullanıcı için çağrılıyor. Sınırsız `select('*')` tabloyu büyüdükçe komple
-// indirir (full table scan + çok-MB payload). Kalıcı çözüm ekran-bazlı scoped
-// sorgulardır (ör. get_nearby_matches RPC'si); buradaki limit'ler katastrofik
-// büyümeyi durduran güvenli üst sınırlardır ve mevcut davranışı bozmaz.
+// indirir. Sahalar ve takımlar için güvenli üst sınır konur — çünkü kullanıcının
+// KENDİ sahaları/takımları AYRI scoped sorgulardan gelir (fbGetOwnerPitches /
+// TeamService.fetchMyTeams), dolayısıyla limit kullanıcı verisini gizlemez.
 const PITCHES_MAX = 2000;
-const MATCHES_MAX = 500;
 const TEAMS_MAX = 2000;
 
 export const fbGetPitches = async () => {
@@ -343,12 +342,15 @@ export const fbGetPitches = async () => {
   return (data || []).map(mapFromSnakeCase);
 };
 
+// DİKKAT: matches'e GLOBAL limit KONULMAZ. Kullanıcının kendi maçları (useMyMatches)
+// ayrı bir scoped sorgudan değil, bu global adminMatches listesinin CLIENT-SIDE
+// filtrelenmesinden türetiliyor. created_at'e göre limit'lersek, tablo büyüdüğünde
+// kullanıcının haftalar önce oluşturduğu ama HÂLÂ yaklaşan/OPEN maçı listeden düşer
+// ve panelinde kaybolur (doğruluk regresyonu). Kalıcı çözüm: keşif için
+// get_nearby_matches, "benim maçlarım" için ayrı bir scoped RPC — o refactor
+// yapılana kadar matches sınırsız kalır (ölçek < doğruluk).
 export const fbGetMatches = async () => {
-  const { data, error } = await supabase
-    .from('matches')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(MATCHES_MAX);
+  const { data, error } = await supabase.from('matches').select('*');
   if (error) throw new Error(`Maçlar yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
