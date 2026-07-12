@@ -1,4 +1,4 @@
-import { supabase } from '../../supabaseClient';
+import { supabase, SUPABASE_URL } from '../../supabaseClient';
 import { AdminUser, UserRole, AdminLog, MatchListing, PositionSlot, Goalkeeper, Referee, Pitch, Team } from '../../types';
 import { mapAdminMatchRowToListing, listingToMatchPayload, type AdminMatchRow } from '../utils/matchMapper';
 import { mapAdminPitchRowToUi } from '../utils/pitchMapper';
@@ -1436,7 +1436,7 @@ async function createAuthAccountViaEdge(input: {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Oturum gerekli');
 
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
+  const url = `${SUPABASE_URL}/functions/v1/admin-create-user`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {

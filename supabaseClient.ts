@@ -12,7 +12,21 @@ const PROD_SUPABASE_URL = 'https://iikvzgyccvgcybzdfwlv.supabase.co';
 const PROD_SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa3Z6Z3ljY3ZnY3liemRmd2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NjM0NDAsImV4cCI6MjA5NTAzOTQ0MH0.T7P_7lYp07zcXrioKkMqZENoYoi-D9aPmjhNAfihMvM';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || PROD_SUPABASE_URL;
+// ─── Taban URL sağlamlaştırma ────────────────────────────────────────────────
+// Sorun: VITE_SUPABASE_URL yanlışlıkla bir yol ekiyle (ör. ".../rest/v1" veya
+// sondaki "/") tanımlanırsa, supabase-js kendi "/auth/v1", "/rest/v1",
+// "/functions/v1" eklerini bu tabana koyduğu için istekler ".../rest/v1/auth/v1/token"
+// gibi İKİLENİR ve 404'e düşer → GİRİŞ DAHİL her şey kırılır.
+// Çözüm: env ne verirse versin tabanı yalnız origin'e (scheme+host) sadeleştir.
+const sanitizeSupabaseUrl = (raw: string): string => {
+  try {
+    return new URL(raw).origin; // https://<proje>.supabase.co — yol/query/hash temizlenir
+  } catch {
+    return raw.replace(/\/+$/, '');
+  }
+};
+
+export const SUPABASE_URL = sanitizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || PROD_SUPABASE_URL);
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || PROD_SUPABASE_ANON_KEY;
 
 if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
