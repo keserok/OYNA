@@ -12,7 +12,7 @@ import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, Provi
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, type LobbyParticipant } from '../services/matchService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
 import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
@@ -111,6 +111,61 @@ const getInitials = (name?: string): string => {
   return raw.toLocaleUpperCase('tr-TR');
 };
 
+// "Gerçek foto" mu? ui-avatars.com / pravatar dış üreteçleri gerçek foto sayılmaz →
+// sahada dış fetch yerine yerel baş harf gösterilir (kullanıcının niyeti).
+const isRealPhoto = (url?: string): boolean =>
+  !!url && !/ui-avatars\.com|pravatar\.cc/i.test(url);
+
+// DOLU (TAKEN) slotları tarafın GERÇEK katılımcılarıyla (public_profiles) doldurur.
+// Slot'ta zaten kimlikli oyuncu varsa korunur (ad/avatar public_profiles'tan tazelenir);
+// oyuncusuz (seed) TAKEN slotlar, sahada olmayan katılımcılarla sırayla eşlenir.
+const enrichSideSlots = (
+  slots: PositionSlot[],
+  sideParticipants: LobbyParticipant[],
+  defaultPay: 'PAID' | 'UNPAID',
+): PositionSlot[] => {
+  const canonical = applyCanonicalCoords(slots || []);
+  const byId = new Map(sideParticipants.map(p => [p.userId, p]));
+  const onField = new Set(
+    canonical.filter(s => s && s.status === 'TAKEN' && s.player?.id).map(s => s.player!.id)
+  );
+  const queue = sideParticipants.filter(p => !onField.has(p.userId));
+  let qi = 0;
+  return canonical.map(slot => {
+    if (!slot || slot.status !== 'TAKEN') return slot;
+    let src: { id: string; name: string; avatar: string; rating: number } | null = null;
+    const orig: any = slot.player;
+    if (orig?.id) {
+      const prof = byId.get(orig.id);
+      src = {
+        id: orig.id,
+        name: prof?.name || orig.name || 'Oyuncu',
+        avatar: (prof ? prof.avatarUrl : orig.avatar) || '',
+        rating: prof?.rating || orig.rating || 4.5,
+      };
+    } else if (orig?.name) {
+      src = { id: orig.id || '', name: orig.name, avatar: orig.avatar || '', rating: orig.rating || 4.5 };
+    } else {
+      const part = queue[qi++];
+      if (part) src = { id: part.userId, name: part.name, avatar: part.avatarUrl || '', rating: part.rating };
+    }
+    if (!src) return slot; // katılımcı yoksa olduğu gibi bırak
+    return {
+      ...slot,
+      player: {
+        id: src.id,
+        name: src.name || 'Oyuncu',
+        avatar: src.avatar || '',
+        rating: src.rating || 4.5,
+        position: slot.role || 'OYUNCU',
+        x: slot.x,
+        y: slot.y,
+        paymentStatus: orig?.paymentStatus || defaultPay,
+      } as Player,
+    };
+  });
+};
+
 
 const generateDefaultSlots = (size: string, prefixId: string): PositionSlot[] => {
   const formationsForSize = FORMATIONS[size];
@@ -168,6 +223,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [scoreEntry, setScoreEntry] = useState({ home: 0, away: 0 });
   const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
   const [hasAutoSelectedSide, setHasAutoSelectedSide] = useState(false);
+  // Sahadaki dolu slotları gerçek oyuncularla doldurmak için (RLS-güvenli public_profiles).
+  const [lobbyParticipants, setLobbyParticipants] = useState<LobbyParticipant[]>([]);
 
   // Dolu slot — VIP Diamond kart
   const [activePlayerSlotId, setActivePlayerSlotId] = useState<string | null>(null);
@@ -270,6 +327,21 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     refreshServiceRequests(originalMatch.id);
   }, [originalMatch?.id]);
 
+  // ── Sahadaki dolu slotları gerçek oyuncularla doldur (public_profiles) ────
+  // TAKEN sayısı değişince (katılım/ayrılma, realtime dahil) yeniden çekilir.
+  const takenSignature =
+    ((match?.slots as PositionSlot[] | undefined) || []).filter(s => s?.status === 'TAKEN').length + ':' +
+    ((match?.awaySlots as PositionSlot[] | undefined) || []).filter(s => s?.status === 'TAKEN').length;
+  useEffect(() => {
+    if (!originalMatch?.id) return;
+    let alive = true;
+    getMatchLobbyParticipants(originalMatch.id, match?.homeTeamId, match?.awayTeamId)
+      .then(list => { if (alive) setLobbyParticipants(list); })
+      .catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originalMatch?.id, takenSignature, match?.homeTeamId, match?.awayTeamId]);
+
   // ── İlk açılışta oyuncu sayısı az olan tarafı otomatik göster ─────────────
   // Eşitlik/0 → ev sahibi. hasAutoSelectedSide ile yalnız bir kez tetiklenir;
   // kullanıcı üst butonlarla değiştirince kilitlenir (manuel seçim korunur).
@@ -330,61 +402,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const isHomeCaptain = match.creatorId === currentUserProfile.id || homeTeam?.captain === currentUserProfile.id || homeTeam?.captains?.includes(currentUserProfile.id);
   const isAwayCaptain = !!awayTeam && (awayTeam.captain === currentUserProfile.id || awayTeam.captains?.includes(currentUserProfile.id));
 
-  // ── Kanonik Simetrik Slotlar (Studio ile aynı koordinatlar) ───────────────
-  const canonicalSlots = applyCanonicalCoords(match.slots || []);
-
-  // Profil fotoğrafını DB'den çek (Ev Sahibi Roster)
-  const enrichedSlots = canonicalSlots.map((slot, idx) => {
-    if (!slot) return slot;
-    if (slot.status !== 'TAKEN') return slot;
-    const orig = slot.player;
-    const dbUser = orig
-      ? (adminUsers || []).find(u => u?.id === orig.id || (orig.name && u?.name && u.name.toLowerCase() === orig.name.toLowerCase()))
-      : (adminUsers && adminUsers[idx % Math.max(adminUsers.length, 1)]);
-    if (dbUser) {
-      return {
-        ...slot,
-        player: {
-          id: dbUser.id,
-          name: dbUser.name || 'Oyuncu',
-          avatar: dbUser.avatar || '',
-          rating: dbUser.rating || 4.5,
-          position: slot.role || 'OYUNCU',
-          x: slot.x,
-          y: slot.y,
-          paymentStatus: orig?.paymentStatus || 'UNPAID',
-        } as Player,
-      };
-    }
-    return slot;
-  });
-
-  // Deplasman Roster Zenginleştirme
-  const canonicalAwaySlots = applyCanonicalCoords(match.awaySlots || []);
-  const enrichedAwaySlots = canonicalAwaySlots.map((slot, idx) => {
-    if (!slot) return slot;
-    if (slot.status !== 'TAKEN') return slot;
-    const orig = slot.player;
-    const dbUser = orig
-      ? (adminUsers || []).find(u => u?.id === orig.id || (orig.name && u?.name && u.name.toLowerCase() === orig.name.toLowerCase()))
-      : (adminUsers && adminUsers[idx % Math.max(adminUsers.length, 1)]);
-    if (dbUser) {
-      return {
-        ...slot,
-        player: {
-          id: dbUser.id,
-          name: dbUser.name || 'Oyuncu',
-          avatar: dbUser.avatar || '',
-          rating: dbUser.rating || 4.5,
-          position: slot.role || 'OYUNCU',
-          x: slot.x,
-          y: slot.y,
-          paymentStatus: orig?.paymentStatus || 'PAID',
-        } as Player,
-      };
-    }
-    return slot;
-  });
+  // ── Sahadaki dolu slotları GERÇEK katılımcılarla zenginleştir ─────────────
+  // Kaynak: match_participants ⋈ public_profiles (RLS-güvenli). Eski `adminUsers`
+  // (hiç yüklenmeyen) index-hack'inin yerine gerçek oyuncu ad/avatarı gelir.
+  const homeParticipants = lobbyParticipants.filter(p => p.side === 'home');
+  const awayParticipants = lobbyParticipants.filter(p => p.side === 'away');
+  const enrichedSlots = enrichSideSlots(match.slots || [], homeParticipants, 'UNPAID');
+  const enrichedAwaySlots = enrichSideSlots(match.awaySlots || [], awayParticipants, 'PAID');
 
   // ── Derived State ─────────────────────────────────────────────────────────
   const isAlreadyJoinedHome = (match.slots || []).some(
@@ -1982,7 +2006,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               ? 'border-orange-400 hover:shadow-[0_0_14px_rgba(249,115,22,0.6)]'
                               : 'border-white/25 hover:border-[#00f2fe] hover:shadow-[0_0_14px_rgba(0,242,254,0.5)]'
                         }`}>
-                          {player.avatar ? (
+                          {isRealPhoto(player.avatar) ? (
                             <img
                               src={player.avatar}
                               alt={player.name || 'Oyuncu'}
