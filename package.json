@@ -13,7 +13,7 @@
     "admin:deploy:interactive": "bash admin-panel/scripts/supabase-interactive-deploy.sh",
     "build": "vite build",
     "build:app": "APP_TARGET=app vite build",
-    "build:admin": "APP_TARGET=admin vite build",
+    "build:admin": "APP_TARGET=admin vite build && node scripts/finalize-admin-build.mjs",
     "build:mobile": "APP_TARGET=app vite build && node scripts/verify-no-admin-in-app.mjs",
     "verify:no-admin": "node scripts/verify-no-admin-in-app.mjs",
     "preview": "vite preview",

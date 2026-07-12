@@ -1,7 +1,7 @@
 {
+  "$comment": "Tek vercel.json iki Vercel projesine de hizmet eder. Fark yalnız her projenin Dashboard'daki Build Command'idir: ana proje 'npm run build:app', admin projesi 'npm run build:admin'. buildCommand'i BURAYA yazmayın — vercel.json dashboard'u ezer ve iki proje de aynı komutu çalıştırır.",
   "cleanUrls": true,
   "trailingSlash": false,
-  "buildCommand": "npm run build:app",
   "outputDirectory": "dist",
   "redirects": [
     { "source": "/admin", "destination": "https://oynaturkiyepotansiyeli.com", "permanent": false },

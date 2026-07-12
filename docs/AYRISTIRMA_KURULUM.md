@@ -33,10 +33,16 @@ ayırıp **oynaturkiyepotansiyeli.com** adresinde çalıştırmayı **adım adı
 3. Karşına çıkan ekranda **Project Name:** `oyna-admin` yaz.
 4. **Framework Preset:** `Vite` (otomatik gelir, dokunma).
 5. **Build and Output Settings** bölümünü aç ve şunları gir:
-   - **Build Command:** `npm run build:admin`   ← (Override'ı açıp yaz)
+   - **Build Command:** `Override` düğmesini aç → `npm run build:admin`
    - **Output Directory:** `dist`
    - **Install Command:** boş bırak (varsayılan).
 6. Henüz **Deploy'a basma** — önce Adım 2 (env değişkenleri).
+
+> ℹ️ Depodaki tek `vercel.json`, hem ana hem admin projesine hizmet eder (yönlendirme
+> + güvenlik başlıkları). İçinde **build komutu YOKTUR** — bilerek. İki proje de kendi
+> Build Command'ini yukarıdaki gibi kendi ayarından verir. `build:admin` derleme
+> bitince admin girişini otomatik olarak `dist/index.html` yapar; böylece aynı
+> `vercel.json` iki projede de sorunsuz çalışır.
 
 ## Adım 2 — Admin projesine env değişkenlerini gir
 
@@ -70,9 +76,11 @@ değerlerinin **birebir aynısını** ekle (isimleri değiştirmeden):
 
 1. Vercel → **oyna-admin** projesi → **Settings ▸ Domains**.
 2. **Add** → `oynaturkiyepotansiyeli.com` yaz → **Add**.
-3. Vercel sana DNS kayıtlarını gösterir (genelde bir **A** kaydı `76.76.21.21`
-   veya bir **CNAME** `cname.vercel-dns.com`). Bu kayıtları **alan adı
-   sağlayıcının** DNS paneline gir.
+3. Vercel sana o an geçerli **DNS kayıtlarını ekranda gösterir** (bir **A**
+   kaydı veya bir **CNAME**). **Ekranda ne yazıyorsa** onu — Vercel'in verdiği
+   birebir değeri — **alan adı sağlayıcının** DNS paneline gir. (Bu değerler
+   Vercel tarafında zamanla değişebilir; buraya sabit IP yazmıyoruz — daima
+   ekrandakini esas al.)
 4. `www.` yönlendirmesini de istersen Vercel önerdiği şekilde ekle.
 5. DNS yayılmasını bekle (birkaç dakika–birkaç saat). Vercel domain'in yanında
    yeşil ✓ gösterince `https://oynaturkiyepotansiyeli.com` panel giriş ekranını
