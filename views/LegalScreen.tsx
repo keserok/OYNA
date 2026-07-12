@@ -13,9 +13,9 @@ type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'SALES';
 // sabitlerinin gerçek bilgilerle doldurulması GEREKİR. Yer tutucular
 // [KÖŞELİ PARANTEZ] ile işaretlendi. (Son taslak güncellemesi: 12.07.2026)
 
-const COMPANY = '[ŞİRKET/İŞLETME UNVANI]';
-const TAX_INFO = '[VERGİ DAİRESİ VE VERGİ KİMLİK NUMARASI]';
-const ADDRESS = '[AÇIK İŞYERİ ADRESİ]';
+const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
+const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
+const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Maltepe/İstanbul';
 const CONTACT_EMAIL = 'destek@oyna.app';
 const UPDATED = '12.07.2026';
 
