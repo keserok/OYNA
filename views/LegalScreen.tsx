@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, ChevronRight } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight } from 'lucide-react';
 
 interface LegalScreenProps {
   onBack: () => void;
   initialDoc?: LegalDocKey;
 }
 
-type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'SALES';
+type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'CEREZ' | 'SALES';
 
 // NOT: Şirket bilgileri (COMPANY/TAX_INFO/ADDRESS) dolduruldu; avukat
 // incelemesi hâlâ önerilir, özellikle KVKK ve mesafeli satış maddeleri için.
@@ -138,6 +138,25 @@ Fırsat, kampanya ve duyuruları e-posta veya push bildirimi yoluyla almak ister
 4. RIZANIN GERİ ALINMASI
 Yukarıdaki izinlerin tamamını veya bir kısmını Ayarlar → Gizlilik ekranından ya da ${CONTACT_EMAIL} adresine yazarak istediğiniz an geri alabilirsiniz. Geri alma, geri alma tarihinden önceki işlemlerin hukuka uygunluğunu etkilemez.`,
   },
+  CEREZ: {
+    title: 'Çerez Politikası',
+    icon: Cookie,
+    body: `Son güncelleme: ${UPDATED}
+
+Bu politika, OYNA'nın web yüzeylerinde (oyna.app ve alt sayfaları, web uygulaması) kullanılan çerezleri ve tarayıcı depolama teknolojilerini açıklar. Mobil uygulamada çerez kullanılmaz; cihaz izinleri Gizlilik Politikası'nda ayrıca açıklanmıştır.
+
+1. ZORUNLU ÇEREZLER / DEPOLAMA
+Oturumunuzu açık tutmak ve güvenliğinizi sağlamak için gereklidir; devre dışı bırakılamaz ve rıza gerektirmez. (Supabase oturum belirteci — "Beni Hatırla" açıksa kalıcı, kapalıysa oturum sonuna kadar localStorage/sessionStorage'da tutulur.)
+
+2. PERFORMANS VE ANALİTİK ÇEREZLERİ
+Yalnızca ilgili ölçüm servisi etkinleştirilmişse kullanılır: PostHog (kullanım analitiği, localStorage + çerez) ve Sentry (hata/çökme takibi, kimliklendirici alanlar temizlenerek). Bu tedarikçilerin sunucuları yurt dışında olabilir; aktarım koşulları Gizlilik Politikası'nın "Yurt Dışına Aktarım" bölümünde açıklanmıştır.
+
+3. YÖNETİM VE TERCİHLERİNİZ
+Tarayıcınızın ayarlarından çerezleri ve site verilerini istediğiniz zaman silebilir veya engelleyebilirsiniz; bu, zorunlu çerezler için oturumunuzun sonlanmasına neden olabilir. Analitik amaçlı depolamayı reddetmeniz, hizmeti kullanmanızı engellemez.
+
+4. İLETİŞİM
+Sorularınız için: ${CONTACT_EMAIL}`,
+  },
   SALES: {
     title: 'Mesafeli Satış ve İptal/İade',
     icon: RefreshCw,
@@ -166,7 +185,7 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
   },
 };
 
-const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'SALES'];
+const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'CEREZ', 'SALES'];
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
   const [doc, setDoc] = useState<LegalDocKey | null>(initialDoc ?? null);
