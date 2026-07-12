@@ -11,15 +11,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '../..');
 
 function loadEnv() {
+  // Önce .env dosyası; yoksa process.env (CI / ayrık admin projesi ortamı) yedeği.
+  const env = { ...process.env };
   const envPath = resolve(root, '.env');
-  if (!existsSync(envPath)) return {};
-  const env = {};
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    env[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+  if (existsSync(envPath)) {
+    for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      env[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+    }
   }
   return env;
 }
@@ -47,6 +49,13 @@ const RPC_CHECKS = [
   { name: 'admin_get_my_role', body: {} },
   { name: 'admin_fetch_goalkeepers', body: { p_limit: 1 } },
   { name: 'admin_fetch_pending_verifications', body: {} },
+  // ── Eksiklik #1-6 + sertleştirme RPC'leri (yeni özelliklerin bağlantısı) ──
+  { name: 'admin_support_tickets_list', body: { p_channel: 'PLAYER' } },
+  { name: 'admin_support_ticket_reply', body: { p_ticket_id: '00000000-0000-0000-0000-000000000001', p_body: 'x' } },
+  { name: 'admin_adjust_wallet_balance', body: { p_user_id: '00000000-0000-0000-0000-000000000001', p_amount: 1, p_reason: 'verify' } },
+  { name: 'admin_emergency_cancel_match', body: { p_match_id: '00000000-0000-0000-0000-000000000001' } },
+  { name: 'is_maintenance_active', body: {} },
+  { name: 'is_registration_open', body: {} },
 ];
 
 const env = loadEnv();
