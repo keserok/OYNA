@@ -44,6 +44,7 @@ Uygulamanın veritabanı (Supabase) katmanı ile olan iletişimini ve yerel şem
 *   **`supabaseAuth.ts`**: Supabase kimlik doğrulama (Authentication) API'lerini saran güvenli giriş/çıkış katmanıdır. Ayrıca `main`'de aktif olan demo hesap girişini (`isDemoAccountPickerEnabled` / `loginDemoAccount`) barındırır; `VITE_DEMO_ACCOUNTS='false'` ile kapatılabilir.
 *   **`OYNA_DEMO_HESAPLARI.md`**: Demo hesaplarının (oyuncu/saha sahibi/kaleci/hakem, ortak şifre) **tek kaynağı**. Giriş ekranındaki "Demo Hesabıyla Gir" seçicisi bu dosyadan beslenir; satır ekle/çıkar → seçici otomatik güncellenir.
 *   **`data/demoAccounts.ts`**: `OYNA_DEMO_HESAPLARI.md`'yi `?raw` içe aktarıp hesap tablolarını ayrıştıran ve giriş ekranı seçicisine tipli, rol-bazlı gruplu liste (`DEMO_ACCOUNT_GROUPS`) sunan modül.
+*   **`supabase/seeds/demo_clean_start_purge.sql`**: Lansman "temiz başlangıç" aracı — tüm demo veriyi (her iki demo sistemi) tek transaction'da, FK-güvenli ve idempotent şekilde siler; gerçek kullanıcı verisine dokunmaz.
 *   **`supabaseMutations.ts`**: Supabase veritabanındaki tablolara (pitches, matches, profiles, teams, vb.) veri ekleme, silme, güncelleme işlemlerini yapan ve cüzdan/konum güncelleme RPC fonksiyonlarını tetikleyen mutasyon katmanıdır.
 *   **`firebaseSync.ts`**: Supabase Realtime veritabanı kanallarını dinleyerek eşzamanlı güncellemeleri (örneğin anlık slot dolulukları) Zustand store'a aktarır.
 *   **`supabase/`**: Supabase yerel CLI ve şema yönetimi dizinidir.

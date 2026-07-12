@@ -23,6 +23,34 @@ otomatik değişir.
 
 ---
 
+## 🧹 Temiz Başlangıç (Clean Start) — zamanı geldiğinde
+
+Lansmanda uygulamanın **sıfır demo** ile tertemiz başlaması için iki adım var:
+
+**1) Veritabanı — tüm demo veriyi sil.**
+`supabase/seeds/demo_clean_start_purge.sql` dosyasını çalıştır. Tek transaction,
+idempotent ve FK-güvenlidir: 29 demo hesabı ve TÜM bağlı içeriği (maçlar, takım,
+kaleci/hakem ilanları, arkadaşlıklar, cüzdan/rezervasyon kayıtları…) siler; gerçek
+kullanıcılara ve saha kataloğuna **dokunmaz**. Çalıştırma yolları:
+
+- Supabase Dashboard → **SQL Editor** → dosyayı yapıştır → **Run**, veya
+- `psql "$DATABASE_URL" -f supabase/seeds/demo_clean_start_purge.sql`, veya
+- bu oturumda **"demoları şimdi temizle"** de → asistan Supabase MCP ile çalıştırır.
+
+Script sonunda doğrulama yapar: geriye demo iz kalırsa transaction'ı geri alır
+(kısmi silme olmaz). Üretim şemasına karşı ROLLBACK'li kuru-çalıştırmayla test
+edilmiştir (tüm demo sayaçları → 0, gerçek veri korunur).
+
+**2) Arayüz — demo giriş seçicisini kapat.**
+Build ortamına `VITE_DEMO_ACCOUNTS=false` ver ve yeniden deploy et. Böylece giriş
+ekranındaki "Demo Hesabıyla Gir" listesi görünmez olur.
+
+> İkisini birlikte yap: önce DB purge, sonra `VITE_DEMO_ACCOUNTS=false` deploy.
+> Seed'i geri yüklemek istersen `supabase/seeds/ordu_admin_demo_seed.sql` +
+> `supabase/migrations/20260713000021_social_demo_seed.sql` yeniden koşturulur.
+
+---
+
 ## Tablo formatı (ayrıştırıcı sözleşmesi)
 
 Her hesap satırı şu dört kolonludur — **bu kolon sırasını koru**:
