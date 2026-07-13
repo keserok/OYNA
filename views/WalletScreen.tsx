@@ -110,6 +110,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Para yükleme
   const [topupAmount, setTopupAmount] = useState<number>(500);
@@ -137,6 +138,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   const fetchData = useCallback(async () => {
     setRefreshing(true);
+    setLoadError(false);
     try {
       const [sum, cards, txRes, payoutRes, earn] = await Promise.all([
         getWalletSummary().catch(() => null),
@@ -149,7 +151,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           .order('created_at', { ascending: false }).limit(20),
         isEarningsRole ? getOwnerEarningsSummary().catch(() => null) : Promise.resolve(null),
       ]);
+      // Finansal veri çekilemezse ₺0'ı gerçek gibi gösterme — kesintiyi maskeleme.
       if (sum) setSummary(sum);
+      else setLoadError(true);
+      if (txRes.error) setLoadError(true);
       setEarnSummary(earn);
       setSavedCards(cards);
       setTopupCardId(prev => prev ?? (cards.find(c => c.isDefault) ?? cards[0])?.id ?? null);
@@ -698,6 +703,25 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               )}
             </div>
             <button onClick={() => setLastPaymentError(null)} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
+          </div>
+        )}
+
+        {/* Finansal veri yüklenemedi — ₺0 yerine dürüst hata + tekrar dene */}
+        {loadError && !summary && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex gap-3">
+            <div className="w-[34px] h-[34px] rounded-[10px] bg-amber-500/15 flex items-center justify-center text-amber-400 shrink-0">
+              <AlertTriangle size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold text-amber-400">Bakiye yüklenemedi</p>
+              <p className="text-[11.5px] text-gray-300 mt-1 leading-relaxed">
+                Bağlantı sorunu nedeniyle bakiyen alınamadı. Gösterilen tutar güncel olmayabilir.
+              </p>
+              <button onClick={() => fetchData()} disabled={refreshing}
+                className="mt-2.5 text-[11px] font-extrabold text-[#0A0E14] bg-amber-400 rounded-[9px] px-3 py-[7px] disabled:opacity-60">
+                Tekrar dene
+              </button>
+            </div>
           </div>
         )}
 

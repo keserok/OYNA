@@ -8,6 +8,14 @@ on:
     branches: [main, master, develop]
   pull_request:
 
+# En az yetki (least privilege): gitleaks PR taramasında PR commit listesini
+# okuyabilmek için pull-requests:read ister; bu blok yokken GITHUB_TOKEN'ın
+# pulls erişimi olmadığından action 403 "Resource not accessible by integration"
+# ile düşüyordu. Salt-okur yetkiler güvenliği zayıflatmaz.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   # ─── 1. TypeScript Tip Kontrolü + Üretim Derlemesi ────────────────────────────
   build-and-typecheck:
@@ -51,6 +59,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks commit aralığını tarar; sığ (shallow) klonda ebeveyn commit
+          # bulunamayıp "unknown revision" hatasıyla düşüyordu. Tam geçmiş şart.
+          fetch-depth: 0
 
       # 3a. Gizli anahtar / token sızıntısı taraması (gitleaks)
       - name: "Gizli Anahtar Sızıntısı Taraması (gitleaks)"

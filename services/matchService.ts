@@ -168,6 +168,89 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
   }
 };
 
+export interface LobbyParticipant {
+  userId: string;
+  side: 'home' | 'away';
+  name: string;
+  avatarUrl: string;
+  rating: number;
+}
+
+/**
+ * Lobi sahasındaki DOLU slotları GERÇEK oyuncularla doldurmak için taraf-bazlı roster.
+ * RLS-güvenli kaynaklar (hepsi authenticated SELECT):
+ *   1) `match_participants` — bireysel/pickup maçlarda kimin katıldığı (role=home/away).
+ *   2) `team_members` — takım-vs-takım maçlarda kadro (homeTeamId/awayTeamId üyeleri).
+ *   3) `public_profiles` view'ı — ad/avatar (profiles PII sertleştirmesi nedeniyle
+ *      başka oyuncuların `profiles` satırı doğrudan okunamaz).
+ * Öncelik: önce katılımcılar, sonra takım üyeleri; kimlik bazında global tekilleştirme.
+ * Slot↔oyuncu doğrudan bağ olmadığından çağıran, roster'ı sırayla TAKEN slotlara eşler.
+ */
+export const getMatchLobbyParticipants = async (
+  matchId: string,
+  homeTeamId?: string | null,
+  awayTeamId?: string | null,
+): Promise<LobbyParticipant[]> => {
+  try {
+    const { data: parts } = await supabase
+      .from('match_participants')
+      .select('user_id, role, status, joined_at')
+      .eq('match_id', matchId);
+    const active = (parts || [])
+      .filter((p: any) => {
+        const s = String(p?.status || '').toLowerCase();
+        return !!p?.user_id && s !== 'left' && s !== 'cancelled' && s !== 'removed' && s !== 'declined';
+      })
+      .sort((a: any, b: any) => String(a.joined_at || '').localeCompare(String(b.joined_at || '')));
+
+    const fetchTeamMemberIds = async (tid?: string | null): Promise<string[]> => {
+      if (!tid) return [];
+      const { data } = await supabase.from('team_members').select('user_id').eq('team_id', tid);
+      return (data || []).map((r: any) => r.user_id).filter(Boolean);
+    };
+    const [homeMembers, awayMembers] = await Promise.all([
+      fetchTeamMemberIds(homeTeamId),
+      fetchTeamMemberIds(awayTeamId),
+    ]);
+
+    // Taraf-bazlı sıralı roster: katılımcı(home) → katılımcı(away) → üye(home) → üye(away),
+    // kimlik bazında global tekilleştirme (bir oyuncu iki tarafta görünmez).
+    const seen = new Set<string>();
+    const roster: { userId: string; side: 'home' | 'away' }[] = [];
+    const push = (userId: string, side: 'home' | 'away') => {
+      if (!userId || seen.has(userId)) return;
+      seen.add(userId);
+      roster.push({ userId, side });
+    };
+    active.filter((p: any) => String(p.role).toLowerCase() !== 'away').forEach((p: any) => push(p.user_id, 'home'));
+    active.filter((p: any) => String(p.role).toLowerCase() === 'away').forEach((p: any) => push(p.user_id, 'away'));
+    homeMembers.forEach(id => push(id, 'home'));
+    awayMembers.forEach(id => push(id, 'away'));
+
+    if (roster.length === 0) return [];
+
+    const { data: profs } = await supabase
+      .from('public_profiles')
+      .select('id, name, avatar_url, rating')
+      .in('id', roster.map(r => r.userId));
+    const byId = new Map((profs || []).map((pr: any) => [pr.id, pr]));
+
+    return roster.map(({ userId, side }) => {
+      const pr: any = byId.get(userId);
+      return {
+        userId,
+        side,
+        name: (pr?.name as string) || 'Oyuncu',
+        avatarUrl: (pr?.avatar_url as string) || '',
+        rating: (typeof pr?.rating === 'number' ? pr.rating : 4.5),
+      };
+    });
+  } catch (e) {
+    console.warn('[matchService] lobi roster çekilemedi:', e);
+    return [];
+  }
+};
+
 /**
  * Saha koordinatı — tek otorite pitch_id (FK). Koordinat girilmemişse null
  * döner; asla varsayılan şehir merkezine düşülmez (MatchJoin haritayı gizler).

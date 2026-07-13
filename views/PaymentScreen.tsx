@@ -19,6 +19,21 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 
+// C1 — idempotency anahtarı üretici. crypto.randomUUID modern webview'de var;
+// eski WebView'ler için güvenli yedek (RFC4122 v4 benzeri).
+const safeUuid = (): string => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch { /* fallback below */ }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 /**
  * TEK ÖDEME EKRANI — üç bağlam (tasarım 1b):
  *   maça katılım · saha kaporası · maç oluşturma kaporası (+ mevcut rezervasyon kaporası)
@@ -148,6 +163,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   // Saha vitrini kaporasında rezervasyon yalnız bir kez oluşturulur; tekrar
   // denemede aynı slot yeniden rezerve edilmesin (SLOT_TAKEN önlenir).
   const pitchBookingIdRef = useRef<string | null>(null);
+  // H1 — Uçuş-halinde kilit: yavaş bağlantıda çift-tık = çift intent = çift çekim.
+  const payBusyRef = useRef(false);
+  // C1 — Aynı ödeme denemesinin retry'larında TEK idempotency anahtarı. Geç gelen
+  // 3DS sonrası "tekrar dene" ikinci bir kart çekimi yaratmasın; sunucu aynı
+  // anahtarlı niyeti yeniden kullanır. Başarıda sıfırlanır (yeni ödeme = yeni anahtar).
+  const idemKeyRef = useRef<string | null>(null);
 
   // Cüzdan özeti + kayıtlı kartlar
   useEffect(() => {
@@ -225,6 +246,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   // Yeni kart tüm bilgisiyle bellekten gider; kayıtlı kartta yalnız id gider.
   const payWithCard = async (input: Omit<InAppPayInput, 'card' | 'savedCardId'>): Promise<PayResult> => {
     const payInput: InAppPayInput = { ...input };
+    // C1 — tüm kart tahsilatları bu tek noktadan geçer; idempotency anahtarını
+    // buraya iliştirince her akış (maça katılım/kapora) çift-çekime karşı korunur.
+    if (idemKeyRef.current) payInput.idempotencyKey = idemKeyRef.current;
     if (selectedCardId === 'temp' && tempCard) {
       payInput.card = {
         holderName: tempCard.holderName,
@@ -371,10 +395,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
 
   const handlePay = async () => {
     if (!canPay) return;
+    // H1 — çift-tık/çift-gönderim kilidi. Ekran PROCESSING'e geçse de React
+    // commit'inden önceki senkron ikinci tık bu ref ile engellenir.
+    if (payBusyRef.current) return;
+    payBusyRef.current = true;
     if (!auth.currentUser) {
       useAppStore.getState().setIsSignupGateOpen(true);
+      payBusyRef.current = false;
       return;
     }
+    // C1 — bu ödeme denemesi için stabil idempotency anahtarı (retry'da aynı kalır).
+    if (!idemKeyRef.current) idemKeyRef.current = safeUuid();
     setInlineError('');
     setScreen('PROCESSING');
     try {
@@ -386,6 +417,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       await delay(needsCard ? 400 : 650);
       setResult(res);
       setLastPaymentError(null);
+      idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
       setScreen('SUCCESS');
     } catch (err) {
       const msg = humanizePaymentError(err);
@@ -399,6 +431,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         });
       }
       setScreen('PAY');
+    } finally {
+      // 3DS sheet'i açıkken de kilidi bırak: pay butonu o ekranda görünmüyor,
+      // sonucu handleThreeDSDone yönetiyor. Böylece 3DS'ten dönüşte tekrar denenebilir.
+      payBusyRef.current = false;
     }
   };
 

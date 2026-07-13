@@ -318,7 +318,7 @@ export const getBlockedUsers = async (blockerId: string): Promise<BlockedUserRow
   const ids = (data || []).map(r => r.blocked_id);
   if (ids.length === 0) return [];
   const { data: profiles, error: pErr } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('id, full_name, avatar_url, oyna_id')
     .in('id', ids);
   if (pErr) throw pErr;

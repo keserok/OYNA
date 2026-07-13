@@ -86,6 +86,81 @@ export const OYNA_MAP_CSS = `
   .oyna-map-carousel::-webkit-scrollbar { display: none; }
 `;
 
+// ════════════════════════════════════════════════════════════════════════
+// MAPLIBRE (VEKTÖR) — keşif haritası. GPU'da pürüzsüz zoom/pan; pinler HTML
+// marker olduğundan koordinata NATIVE sabit (divIcon anchor hilesi gerekmez).
+// Karo kaynağı: OpenFreeMap (ücretsiz, anahtarsız). Diğer ekranlar hâlâ
+// Leaflet kullanır (yukarıdaki export'lar); bu bölüm yalnız PitchDiscovery.
+// ════════════════════════════════════════════════════════════════════════
+
+// OpenFreeMap koyu vektör stili (anahtarsız). Atıf stil içinde gömülü gelir.
+export const OYNA_MAPLIBRE_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+
+/** WebGL desteği (MapLibre zorunlu). Yoksa çağıran taraf nazik fallback gösterir. */
+export function isWebglAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(
+      (window as unknown as { WebGLRenderingContext?: unknown }).WebGLRenderingContext &&
+      (canvas.getContext('webgl2') || canvas.getContext('webgl'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+// MapLibre keşif haritası CSS: marka koyu zemin, atıf (minimal ⓘ), fiyat pini
+// (anchor="bottom" → tip koordinatta), kullanıcı mavi noktası, karusel gizli
+// scrollbar. Pinler maplibre tarafından GPU'da konumlanır → zoom'da kaymaz.
+export const OYNA_MAPLIBRE_CSS = `
+  .maplibregl-map { background: #060B12; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  .maplibregl-ctrl-attrib {
+    background: rgba(10,14,20,0.55) !important;
+    color: rgba(255,255,255,0.38) !important;
+    font-size: 9px !important; border-radius: 8px 0 0 0 !important;
+    backdrop-filter: blur(4px);
+  }
+  .maplibregl-ctrl-attrib a { color: rgba(57,255,20,0.55) !important; }
+  .maplibregl-ctrl-attrib-button { background-color: rgba(255,255,255,0.3) !important; }
+  .oyna-mlpin { position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+  .oyna-mlpin .pin-bubble {
+    display: flex; align-items: center; gap: 4px;
+    background: #0D111A; border: 1.5px solid rgba(57,255,20,0.35);
+    color: #39FF14; font-size: 10px; font-weight: 900; line-height: 1;
+    padding: 6px 10px; border-radius: 100px; white-space: nowrap;
+    box-shadow: 0 4px 22px rgba(0,0,0,0.7), 0 0 12px rgba(57,255,20,0.15);
+    transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+  .oyna-mlpin .pin-bubble.selected {
+    background: #39FF14; color: #000; border-color: #39FF14;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 26px rgba(57,255,20,0.6);
+    transform: scale(1.14);
+  }
+  .oyna-mlpin .pin-nub {
+    width: 9px; height: 9px; border-radius: 50%; background: #39FF14; margin-top: -2px;
+    box-shadow: 0 0 10px rgba(57,255,20,0.85);
+  }
+  .oyna-mlpin .pin-nub.selected { background: #000; box-shadow: 0 0 15px rgba(57,255,20,1); }
+  .oyna-mlpin .pin-flash {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: #FF3B30; color: #fff; font-size: 9px; font-weight: 900;
+    padding: 2px 6px; border-radius: 100px; white-space: nowrap; box-shadow: 0 2px 8px rgba(255,59,48,0.5);
+  }
+  .oyna-mluser { position: relative; width: 16px; height: 16px; }
+  .oyna-mluser .dot {
+    position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;
+    background: #00D8FF; border: 2.5px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0,216,255,0.35), 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .oyna-mluser .pulse {
+    position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(0,216,255,0.4); animation: oynaUserPulse 2s ease-out infinite;
+  }
+  @keyframes oynaUserPulse { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(4); opacity: 0; } }
+  .oyna-map-carousel { scrollbar-width: none; -ms-overflow-style: none; }
+  .oyna-map-carousel::-webkit-scrollbar { display: none; }
+`;
+
 // ── Fiyat baloncuklu saha pini (SABİT anchor) ─────────────────────────────
 // Anchor [0,0] + 0×0 kök: kökün orijini TAM koordinata oturur; nub (tip)
 // orijinde ortalanır, baloncuk tipin üstünde durur. Böylece görsel tip her

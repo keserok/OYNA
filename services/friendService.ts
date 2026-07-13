@@ -64,7 +64,7 @@ export const fetchFriends = async (userId: string): Promise<FriendshipRow[]> => 
   const otherIds = data.map(r => r.sender_id === userId ? r.receiver_id : r.sender_id);
 
   const { data: profiles, error: pError } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('id, full_name, avatar_url, oyna_id, win_count, total_matches, last_active_at, roles, player_card')
     .in('id', otherIds);
 
@@ -100,7 +100,7 @@ export const fetchPendingRequests = async (userId: string): Promise<FriendReques
   const senderIds = data.map(r => r.sender_id);
 
   const { data: profiles } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('id, full_name, avatar_url, oyna_id, win_count, total_matches, last_active_at, roles, player_card')
     .in('id', senderIds);
 
