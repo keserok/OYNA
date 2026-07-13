@@ -117,6 +117,29 @@ const getInitials = (name?: string): string => {
 const isRealPhoto = (url?: string): boolean =>
   !!url && !/ui-avatars\.com|pravatar\.cc/i.test(url);
 
+// Kaleci/hakem REYTİNGLERİ — admin panelindeki yetenek sliderlarının TAM listesi
+// (DeepEditModals: KALECİ/HAKEM YETENEK KONTROLLERİ). Değerler 10–99 ölçeğinde.
+const GK_RATING_KEYS: [string, string][] = [
+  ['reflexes', 'REFLEKSLER'], ['diving', 'DALIŞ'], ['positioning', 'POZİSYON'],
+  ['distribution', 'DAĞITIM'], ['oneOnOne', 'BİRE BİR'], ['aerialReach', 'HAVA HÂKİMİYETİ'],
+];
+const REF_RATING_KEYS: [string, string][] = [
+  ['authority', 'OTORİTE'], ['fitness', 'KONDİSYON'], ['communication', 'İLETİŞİM'],
+];
+// Sağlayıcının skills/stats jsonb'undan admin reyting anahtarlarını sırayla çıkarır.
+// (Kaleci panelde hem stats hem skills'e yazar; hakemde yalnız stats.)
+const extractProviderRatings = (
+  skills?: Record<string, any> | null,
+  stats?: Record<string, any> | null,
+  isRef?: boolean,
+): { label: string; value: number }[] => {
+  const src: Record<string, any> = { ...(stats || {}), ...(skills || {}) };
+  const keys = isRef ? REF_RATING_KEYS : GK_RATING_KEYS;
+  return keys
+    .map(([k, label]) => ({ label, value: Number(src[k]) }))
+    .filter(r => Number.isFinite(r.value));
+};
+
 // DOLU (TAKEN) slotları tarafın GERÇEK katılımcılarıyla (public_profiles) doldurur.
 // Slot'ta zaten kimlikli oyuncu varsa korunur (ad/avatar public_profiles'tan tazelenir);
 // oyuncusuz (seed) TAKEN slotlar, sahada olmayan katılımcılarla sırayla eşlenir.
@@ -263,7 +286,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // FAZ 2: maça ATANMIŞ kaleci/hakem — lobide HERKESE (salt-okunur) gösterilir.
   const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
   const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
-  const [showGkDetail, setShowGkDetail] = useState(false);
+  // Atanmış kaleci/hakem dikey detay kartı (herkese) — hangi sağlayıcı + tür.
+  const [providerDetail, setProviderDetail] = useState<{ p: MatchProvider; isRef: boolean } | null>(null);
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
@@ -1079,10 +1103,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const isMySlot = activePlayer.id === currentUserProfile?.id;
                 const posLabel = { 'GK': 'KALECİ', 'DEF': 'DEFANS', 'MID': 'ORTA SAHA', 'FWD': 'FORVET' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'OYUNCU';
                 const c = playerCard;
-                const notFriend = !!c && c.is_friend === false;
+                const isSelf = !!c?.is_self;
                 const footTr = (f?: string | null) => f === 'SAG' ? 'SAĞ' : f === 'SOL' ? 'SOL' : '—';
-                const heroNum = c?.is_self ? (c?.total_matches ?? 0) : (c?.matches_together ?? 0);
-                const heroLabel = c?.is_self ? 'TOPLAM MAÇ' : 'BİRLİKTE MAÇ';
+                // Bilgiler herkese açık; yalnız "birlikte maç" arkadaşlara özel.
+                const canShowTogether = !!c && !isSelf && c.matches_together != null;
+                const showHero = isSelf || canShowTogether;
+                const heroNum = isSelf ? (c?.total_matches ?? 0) : (c?.matches_together ?? 0);
+                const heroLabel = isSelf ? 'TOPLAM MAÇ' : 'BİRLİKTE MAÇ';
+                const showFriendCta = !!c && !isSelf && !c.is_friend;
 
                 return (
                   <div className="p-6 pt-8 flex flex-col items-center">
@@ -1104,36 +1132,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <div className="w-full flex items-center justify-center py-12">
                         <Loader2 size={22} className="animate-spin text-white/40" />
                       </div>
-                    ) : notFriend ? (
-                      <div className="w-full mt-5 flex flex-col items-center gap-3">
-                        <p className="text-[11px] text-white/45 text-center leading-relaxed px-1">
-                          Yaş, fair play ve birlikte oynadığınız maç bilgileri yalnızca arkadaşlar arasında görünür.
-                        </p>
-                        <button
-                          disabled={friendRequestSent}
-                          onClick={async () => {
-                            try {
-                              await sendFriendRequest(currentUserUid, activePlayer.id);
-                              setFriendRequestSent(true);
-                              showActionSuccess('Arkadaşlık isteği gönderildi.');
-                            } catch (e: any) {
-                              showActionError(e?.message || 'İstek gönderilemedi.');
-                            }
-                          }}
-                          className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.35)] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:shadow-none">
-                          {friendRequestSent ? <><CheckCircle2 size={15} /> İSTEK GÖNDERİLDİ</> : <><UserPlus size={15} /> ARKADAŞ OL</>}
-                        </button>
-                      </div>
                     ) : (
                       <>
-                        <div className="w-full mt-5 rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
-                          <span className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: accent + 'cc' }}>{heroLabel}</span>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-5xl font-black tabular-nums leading-none" style={{ color: accent }}>{heroNum}</span>
-                            <span className="text-sm font-black text-white/70">MAÇ</span>
+                        {showHero && (
+                          <div className="w-full mt-5 rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                            <span className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: accent + 'cc' }}>{heroLabel}</span>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-5xl font-black tabular-nums leading-none" style={{ color: accent }}>{heroNum}</span>
+                              <span className="text-sm font-black text-white/70">MAÇ</span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="w-full grid grid-cols-3 gap-2 mt-3">
+                        )}
+                        <div className={`w-full grid grid-cols-3 gap-2 ${showHero ? 'mt-3' : 'mt-5'}`}>
                           {[
                             { l: 'YAŞ', v: c?.age != null ? String(c.age) : '—' },
                             { l: 'FAIR PLAY', v: c?.fair_play != null ? '%' + c.fair_play : '—' },
@@ -1145,6 +1155,22 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             </div>
                           ))}
                         </div>
+                        {showFriendCta && (
+                          <button
+                            disabled={friendRequestSent}
+                            onClick={async () => {
+                              try {
+                                await sendFriendRequest(currentUserUid, activePlayer.id);
+                                setFriendRequestSent(true);
+                                showActionSuccess('Arkadaşlık isteği gönderildi.');
+                              } catch (e: any) {
+                                showActionError(e?.message || 'İstek gönderilemedi.');
+                              }
+                            }}
+                            className="w-full mt-3 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                            {friendRequestSent ? <><CheckCircle2 size={14} /> İSTEK GÖNDERİLDİ</> : <><UserPlus size={14} /> ARKADAŞ OL</>}
+                          </button>
+                        )}
                       </>
                     )}
 
@@ -1527,7 +1553,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     </div>
                                   </div>
                                   <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide mt-0.5 truncate">
-                                    {[p.style, p.level, `${p.match_count} Maç`].filter(Boolean).join(' • ')}
+                                    {[p.level, `${p.match_count} Maç`].filter(Boolean).join(' • ')}
                                   </p>
                                 </div>
                               </div>
@@ -1583,18 +1609,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const isRef = providerModalType === 'REF';
                 const accent = isRef ? '#A78BFA' : '#FF9F43';
                 const submitting = providerSubmittingId === p.id;
-                const SKILL_LABELS: Record<string, string> = {
-                  refleks: 'REFLEKS', uzak_top: 'UZAK TOP', top_tutma: 'TOP TUTMA', alan_hakimiyeti: 'ALAN HÂKİMİYETİ',
-                  reflexes: 'REFLEKS', diving: 'ÇIKIŞ', handling: 'TOP TUTMA', positioning: 'POZİSYON', kicking: 'VURUŞ', speed: 'HIZ',
-                };
-                const STAT_LABELS: Record<string, string> = {
-                  kurtarish_orani: 'KURTARIŞ', temiz_kale: 'TEMİZ KALE', pas_isabeti: 'PAS İSABETİ', gol_yedi: 'GOL YEDİ',
-                  avgCards: 'ORT. KART', authority: 'OTORİTE', fitness: 'FORM', communication: 'İLETİŞİM',
-                };
-                const PCT_KEYS = new Set(['kurtarish_orani', 'pas_isabeti']);
-                const humanize = (k: string) => k.replace(/_/g, ' ').toUpperCase();
-                const skills = p.skills ? Object.entries(p.skills).filter(([, v]) => typeof v === 'number') as [string, number][] : [];
-                const stats = p.stats ? Object.entries(p.stats).filter(([, v]) => typeof v === 'number' || typeof v === 'string') : [];
+                const ratings = extractProviderRatings(p.skills as any, p.stats as any, isRef);
+                const st = (p.stats || {}) as Record<string, any>;
+                const infoRow = isRef
+                  ? [
+                      { Icon: Activity, l: 'MAÇ', v: p.match_count != null ? String(p.match_count) : '—' },
+                      { Icon: Scale, l: 'ORT. KART', v: st.avgCards != null ? String(st.avgCards) : '—' },
+                      { Icon: MapPin, l: 'KOŞU', v: st.avgDistance || '—' },
+                    ]
+                  : [
+                      { Icon: Calendar, l: 'YAŞ', v: p.age != null ? String(p.age) : '—' },
+                      { Icon: Ruler, l: 'BOY', v: p.height || '—' },
+                      { Icon: Activity, l: 'MAÇ', v: p.match_count != null ? String(p.match_count) : '—' },
+                    ];
                 return (
                   <div className="p-6 pt-8 flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
@@ -1612,7 +1639,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'HAKEM' : 'KİRALIK KALECİ'}</span>
-                      {(p.style || p.level) && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {p.level || p.style}</span>}
+                      {isRef && p.level && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {p.level}</span>}
                     </div>
 
                     <div className="w-full grid grid-cols-2 gap-2 mt-5">
@@ -1630,11 +1657,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
 
                     <div className="w-full grid grid-cols-3 gap-2 mt-2">
-                      {[
-                        { Icon: Calendar, l: 'YAŞ', v: p.age != null ? String(p.age) : '—' },
-                        { Icon: Ruler, l: 'BOY', v: p.height || '—' },
-                        { Icon: Activity, l: 'MAÇ', v: p.match_count != null ? String(p.match_count) : '—' },
-                      ].filter(s => !(isRef && (s.l === 'BOY' || s.l === 'YAŞ'))).map(s => (
+                      {infoRow.map(s => (
                         <div key={s.l} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 flex flex-col items-center gap-0.5">
                           <s.Icon size={12} className="text-white/30" />
                           <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em]">{s.l}</span>
@@ -1643,31 +1666,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       ))}
                     </div>
 
-                    {skills.length > 0 && (
+                    {ratings.length > 0 && (
                       <div className="w-full mt-5">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Kalecilik Reytingleri</span>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">{isRef ? 'Hakemlik Reytingleri' : 'Kalecilik Reytingleri'}</span>
                         <div className="mt-2 space-y-2">
-                          {skills.map(([k, v]) => (
-                            <div key={k} className="flex items-center gap-2">
-                              <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-24 shrink-0 truncate">{SKILL_LABELS[k] || humanize(k)}</span>
+                          {ratings.map(r => (
+                            <div key={r.label} className="flex items-center gap-2">
+                              <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-28 shrink-0 truncate">{r.label}</span>
                               <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, (v / 10) * 100))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, r.value))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
                               </div>
-                              <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{Number(v).toFixed(1)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {stats.length > 0 && (
-                      <div className="w-full mt-5">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">İstatistikler</span>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          {stats.map(([k, v]) => (
-                            <div key={k} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 px-3 flex flex-col items-center gap-0.5">
-                              <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em] text-center">{STAT_LABELS[k] || humanize(k)}</span>
-                              <span className="text-sm font-black text-white">{PCT_KEYS.has(k) ? '%' + v : String(v)}</span>
+                              <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{r.value}</span>
                             </div>
                           ))}
                         </div>
@@ -1698,53 +1707,57 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         )}
       </AnimatePresence>
 
-      {/* ── Kiralık Kaleci — Dikey Detaylı Kart (HERKESE) ────────────────────── */}
+      {/* ── Atanmış Kaleci/Hakem — Dikey Detaylı Kart (HERKESE) ──────────────── */}
       <AnimatePresence>
-        {showGkDetail && assignedGoalkeeper && (
+        {providerDetail && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
-            onClick={() => setShowGkDetail(false)}>
+            onClick={() => setProviderDetail(null)}>
+            {(() => {
+              const p = providerDetail.p;
+              const isRef = providerDetail.isRef;
+              const accent = isRef ? '#A78BFA' : '#FF9F43';
+              const cardBg = isRef ? 'from-[#15111f] to-[#0d1117]' : 'from-[#1c1207] to-[#0d1117]';
+              const initialsBg = isRef ? 'bg-violet-950/60 text-violet-300' : 'bg-orange-950/60 text-orange-300';
+              const ratings = extractProviderRatings(p.skills as any, p.stats as any, isRef);
+              const st = (p.stats || {}) as Record<string, any>;
+              const infoRow = isRef
+                ? [
+                    { Icon: Activity, l: 'MAÇ', v: p.matchCount != null ? String(p.matchCount) : '—' },
+                    { Icon: Scale, l: 'ORT. KART', v: st.avgCards != null ? String(st.avgCards) : '—' },
+                    { Icon: MapPin, l: 'KOŞU', v: st.avgDistance || '—' },
+                  ]
+                : [
+                    { Icon: Calendar, l: 'YAŞ', v: p.age != null ? String(p.age) : '—' },
+                    { Icon: Ruler, l: 'BOY', v: p.height || '—' },
+                    { Icon: Activity, l: 'MAÇ', v: p.matchCount != null ? String(p.matchCount) : '—' },
+                  ];
+              return (
             <motion.div
               initial={{ scale: 0.8, y: 30, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.8, y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              className="relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b from-[#1c1207] to-[#0d1117] border border-[#FF9F43]/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
-              {(() => {
-                const gk = assignedGoalkeeper;
-                const accent = '#FF9F43';
-                const SKILL_LABELS: Record<string, string> = {
-                  refleks: 'REFLEKS', uzak_top: 'UZAK TOP', top_tutma: 'TOP TUTMA', alan_hakimiyeti: 'ALAN HÂKİMİYETİ',
-                  reflexes: 'REFLEKS', diving: 'ÇIKIŞ', handling: 'TOP TUTMA', positioning: 'POZİSYON', kicking: 'VURUŞ', speed: 'HIZ',
-                };
-                const STAT_LABELS: Record<string, string> = {
-                  kurtarish_orani: 'KURTARIŞ', temiz_kale: 'TEMİZ KALE', pas_isabeti: 'PAS İSABETİ', gol_yedi: 'GOL YEDİ',
-                  savePercentage: 'KURTARIŞ', cleanSheets: 'TEMİZ KALE', penaltySaveRate: 'PENALTI',
-                };
-                const PCT_KEYS = new Set(['kurtarish_orani', 'pas_isabeti', 'savePercentage', 'penaltySaveRate']);
-                const humanize = (k: string) => k.replace(/_/g, ' ').toUpperCase();
-                const skills = gk.skills ? Object.entries(gk.skills).filter(([, v]) => typeof v === 'number') as [string, number][] : [];
-                const stats = gk.stats ? Object.entries(gk.stats) : [];
-                return (
+              className={`relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b ${cardBg} border shadow-[0_30px_70px_rgba(0,0,0,0.85)]`}
+              style={{ borderColor: accent + '40' }}>
                   <div className="p-6 pt-8 flex flex-col items-center">
-                    {/* Avatar */}
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
-                      {isRealPhoto(gk.avatar) ? (
-                        <img src={gk.avatar!} alt={gk.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      {isRealPhoto(p.avatar) ? (
+                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-[#0A0E14]" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl font-black bg-orange-950/60 text-orange-300">
-                          {getInitials(gk.name)}
+                        <div className={`w-full h-full flex items-center justify-center text-3xl font-black ${initialsBg}`}>
+                          {getInitials(p.name)}
                         </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight">{gk.name}</h3>
-                      {gk.isElite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                      <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight">{p.name}</h3>
+                      {p.isElite && <Award size={16} className="text-[#FACC15] shrink-0" />}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>KİRALIK KALECİ</span>
-                      {gk.style && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {gk.style}</span>}
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'ATANAN HAKEM' : 'KİRALIK KALECİ'}</span>
+                      {isRef && p.level && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {p.level}</span>}
                     </div>
 
                     {/* Reyting + Ücret */}
@@ -1753,22 +1766,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">REYTİNG</span>
                         <div className="flex items-baseline gap-1">
                           <Star size={16} className="text-yellow-400" fill="currentColor" />
-                          <span className="text-3xl font-black tabular-nums leading-none" style={{ color: accent }}>{gk.rating != null ? gk.rating.toFixed(1) : '—'}</span>
+                          <span className="text-3xl font-black tabular-nums leading-none" style={{ color: accent }}>{p.rating != null ? p.rating.toFixed(1) : '—'}</span>
                         </div>
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">ÜCRET</span>
-                        <span className="text-3xl font-black tabular-nums leading-none text-white">{gk.fee != null ? gk.fee + '₺' : '—'}</span>
+                        <span className="text-3xl font-black tabular-nums leading-none text-white">{p.fee != null ? p.fee + '₺' : '—'}</span>
                       </div>
                     </div>
 
-                    {/* Yaş / Boy / Maç */}
+                    {/* Bilgi satırı */}
                     <div className="w-full grid grid-cols-3 gap-2 mt-2">
-                      {[
-                        { Icon: Calendar, l: 'YAŞ', v: gk.age != null ? String(gk.age) : '—' },
-                        { Icon: Ruler, l: 'BOY', v: gk.height || '—' },
-                        { Icon: Activity, l: 'MAÇ', v: gk.matchCount != null ? String(gk.matchCount) : '—' },
-                      ].map(s => (
+                      {infoRow.map(s => (
                         <div key={s.l} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 flex flex-col items-center gap-0.5">
                           <s.Icon size={12} className="text-white/30" />
                           <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em]">{s.l}</span>
@@ -1777,49 +1786,31 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       ))}
                     </div>
 
-                    {/* Kalecilik Yetenekleri — bar */}
-                    {skills.length > 0 && (
+                    {/* Reytingler — admin panelindeki tüm yetenekler */}
+                    {ratings.length > 0 && (
                       <div className="w-full mt-5">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Kalecilik Reytingleri</span>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">{isRef ? 'Hakemlik Reytingleri' : 'Kalecilik Reytingleri'}</span>
                         <div className="mt-2 space-y-2">
-                          {skills.map(([k, v]) => {
-                            const pct = Math.max(0, Math.min(100, (v / 10) * 100));
-                            return (
-                              <div key={k} className="flex items-center gap-2">
-                                <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-24 shrink-0 truncate">{SKILL_LABELS[k] || humanize(k)}</span>
-                                <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
-                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
-                                </div>
-                                <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{Number(v).toFixed(1)}</span>
+                          {ratings.map(r => (
+                            <div key={r.label} className="flex items-center gap-2">
+                              <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-28 shrink-0 truncate">{r.label}</span>
+                              <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, r.value))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* İstatistikler */}
-                    {stats.length > 0 && (
-                      <div className="w-full mt-5">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">İstatistikler</span>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          {stats.map(([k, v]) => (
-                            <div key={k} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 px-3 flex flex-col items-center gap-0.5">
-                              <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em] text-center">{STAT_LABELS[k] || humanize(k)}</span>
-                              <span className="text-sm font-black text-white">{PCT_KEYS.has(k) ? '%' + v : String(v)}</span>
+                              <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{r.value}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
-                );
-              })()}
-              <button onClick={() => setShowGkDetail(false)}
+              <button onClick={() => setProviderDetail(null)}
                 className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
+              );
+            })()}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2572,7 +2563,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
             {assignedGoalkeeper && (
               <button
-                onClick={() => setShowGkDetail(true)}
+                onClick={() => setProviderDetail({ p: assignedGoalkeeper, isRef: false })}
                 className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(255,159,67,0.14), transparent)' }} />
                 <div className="relative shrink-0">
@@ -2600,9 +2591,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     {assignedGoalkeeper.fee != null && (
                       <span className="text-[10px] font-black text-white/70">{assignedGoalkeeper.fee}₺</span>
                     )}
-                    {assignedGoalkeeper.style && (
-                      <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide truncate">{assignedGoalkeeper.style}</span>
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-white/40 shrink-0">
@@ -2612,7 +2600,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             )}
 
             {assignedReferee && (
-              <div className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#A78BFA]/30 flex items-center gap-3 relative overflow-hidden">
+              <button
+                onClick={() => setProviderDetail({ p: assignedReferee, isRef: true })}
+                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#A78BFA]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(167,139,250,0.14), transparent)' }} />
                 <div className="relative shrink-0">
                   {isRealPhoto(assignedReferee.avatar) ? (
@@ -2644,7 +2634,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     )}
                   </div>
                 </div>
-              </div>
+                <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-white/40 shrink-0">
+                  Detay <ChevronRight size={13} />
+                </div>
+              </button>
             )}
           </div>
         )}
