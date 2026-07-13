@@ -12,6 +12,7 @@ import {
   applyToMatchAsProvider,
   withdrawProviderApplication,
   providerConfirmService,
+  providerDisputeNoShow,
 } from '../services/serviceRequestService';
 import { getMyMatchServiceOffers, respondMatchServiceOffer, MatchServiceOffer } from '../services/serviceOfferService';
 import {
@@ -111,6 +112,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [requestsError, setRequestsError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  // FAZ 4: kaleci kabul sözleşme onayı modalı
+  const [contractModalReq, setContractModalReq] = useState<ServiceRequest | null>(null);
+  const [contractChecked, setContractChecked] = useState(false);
 
   // Kaptan çok-sağlayıcı TEKLİFLERİ (match_service_offers) — kabul/red (FCFS)
   const [matchOffers, setMatchOffers] = useState<MatchServiceOffer[]>([]);
@@ -227,6 +231,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   );
   // Bug D: Ödeme serbest bırakılınca talep COMPLETED'a geçer; sağlayıcı
   // tamamlanan işini görebilmeli (ayrıca payout serbest bırakılmış CAPTURED da).
+  // FAZ 4: hakkında no-show bildirilen talepler → sağlayıcı 48s içinde itiraz edebilir.
+  const noShowRequests = useMemo(
+      () => incomingRequests.filter(r => (r.status as string) === 'NOSHOW_REPORTED'),
+      [incomingRequests]
+  );
   const completedRequests = useMemo(
       () => incomingRequests.filter(r => r.status === 'COMPLETED' || (r.status === 'CAPTURED' && r.payoutReleased)),
       [incomingRequests]
@@ -442,16 +451,41 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
-  // FAZ 5 — Talebe yanıt ver (kabul/red)
-  const handleRespondRequest = async (requestId: string, accept: boolean) => {
+  // FAZ 5/4 — Talebe yanıt ver (kabul/red). Kaleci kabulünde sözleşme onayı geçilir.
+  const handleRespondRequest = async (requestId: string, accept: boolean, contractAccepted = false) => {
     setRespondingId(requestId);
     try {
-      await respondServiceRequest(requestId, accept);
+      await respondServiceRequest(requestId, accept, contractAccepted);
       showActionSuccess(accept ? 'Talebi kabul ettin.' : 'Talebi reddettin.');
+      setContractModalReq(null);
       await fetchIncomingRequests();
     } catch (err: any) {
       console.error('handleRespondRequest:', err);
       showActionError(err?.message || 'İşlem tamamlanamadı. Lütfen tekrar dene.');
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  // FAZ 4 — Kaleci kabulü sözleşme + 500₺ teminat onayı gerektirir → önce modal aç.
+  const handleAcceptClick = (req: ServiceRequest) => {
+    if (req.providerType === 'GK') {
+      setContractChecked(false);
+      setContractModalReq(req);
+    } else {
+      handleRespondRequest(req.id, true);
+    }
+  };
+
+  // FAZ 4 — No-show cezasına itiraz (48s içinde) → admin incelemesine
+  const handleDisputeNoShow = async (requestId: string) => {
+    setRespondingId(requestId);
+    try {
+      await providerDisputeNoShow(requestId);
+      showActionSuccess('İtirazın alındı — durum OYNA yönetimi tarafından incelenecek.');
+      await fetchIncomingRequests();
+    } catch (err: any) {
+      showActionError(err?.message || 'İtiraz gönderilemedi.');
     } finally {
       setRespondingId(null);
     }
@@ -1074,7 +1108,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           <X size={14} /> Reddet
                                       </button>
                                       <button
-                                          onClick={() => handleRespondRequest(req.id, true)}
+                                          onClick={() => handleAcceptClick(req)}
                                           disabled={respondingId === req.id}
                                           className="flex-1 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-white text-xs font-black uppercase transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
                                       >
@@ -1082,6 +1116,36 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           Kabul Et
                                       </button>
                                   </div>
+                              </div>
+                          ))}
+                      </div>
+                  )}
+
+                  {/* FAZ 4: No-show bildirilen talepler → 48s içinde itiraz */}
+                  {noShowRequests.length > 0 && (
+                      <div className="space-y-3">
+                          <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">No-show Bildirimi</p>
+                          {noShowRequests.map(req => (
+                              <div key={req.id} className="bg-red-950/20 border border-red-500/25 rounded-[24px] p-4">
+                                  <div className="flex items-start justify-between">
+                                      <div>
+                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'} — Katılmadın</h4>
+                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                      </div>
+                                      <div className="text-right">
+                                          <p className="text-[9px] text-gray-500 font-bold uppercase">Ceza</p>
+                                          <p className="text-lg font-black text-red-400">{req.penaltyAmount ?? '—'}₺</p>
+                                      </div>
+                                  </div>
+                                  <p className="text-[10px] text-white/45 mt-2 leading-relaxed">
+                                      Kaptan maça gelmediğini bildirdi; ceza teminatından tahsil edildi. Haksız olduğunu düşünüyorsan itiraz et — durum yönetim tarafından incelenir.
+                                  </p>
+                                  <button
+                                      onClick={() => handleDisputeNoShow(req.id)}
+                                      disabled={respondingId === req.id}
+                                      className="w-full mt-3 py-2.5 rounded-xl bg-white/5 border border-red-500/25 text-red-300 text-xs font-black uppercase hover:bg-red-500/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                                      {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <AlertTriangle size={14} />} İtiraz Et
+                                  </button>
                               </div>
                           ))}
                       </div>
@@ -2508,6 +2572,49 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     Vazgeç
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── FAZ 4: Kaleci Hizmet Sözleşmesi Onayı ───────────────────────────── */}
+      <AnimatePresence>
+        {contractModalReq && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-xl flex items-center justify-center p-6"
+            onClick={() => { if (!respondingId) setContractModalReq(null); }}>
+            <motion.div
+              initial={{ scale: 0.88, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.88, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm rounded-[28px] bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-green-500/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)] p-6">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="p-2 rounded-xl bg-green-500/12 border border-green-500/25 text-green-400"><Shield size={18} /></div>
+                <h3 className="text-base font-black text-white tracking-tight">Kaleci Hizmet Sözleşmesi</h3>
+              </div>
+              <div className="rounded-2xl bg-black/30 border border-white/8 p-3.5 text-[11px] text-white/60 leading-relaxed max-h-52 overflow-y-auto custom-scrollbar space-y-2">
+                <p>Kabul ettiğin maça ilan edilen saatte katılmayı taahhüt edersin.</p>
+                <p><span className="text-red-400 font-black">No-show (mazeretsiz katılmama)</span> durumunda, maçın kaleci slot ücreti hesabından otomatik tahsil edilip maç kaptanına tazminat olarak aktarılır.</p>
+                <p>Bu tahsilata karşı <span className="text-white font-bold">48 saat</span> içinde itiraz edebilirsin; itiraz halinde durum OYNA yönetimi tarafından incelenir.</p>
+                <p>Hizmet verebilmek için hesabında en az <span className="text-green-400 font-black">500₺ teminat</span> bulundurmalısın — bu bakiye ceza tahsilatının güvencesidir.</p>
+                <p className="text-white/80 font-bold pt-1">Eline geçecek: {contractModalReq.providerAmount}₺ (brüt {contractModalReq.fee}₺)</p>
+              </div>
+              <label className="flex items-start gap-2.5 mt-4 cursor-pointer select-none">
+                <button onClick={() => setContractChecked(v => !v)}
+                  className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${contractChecked ? 'bg-green-500 border-green-500' : 'border-white/25 bg-white/5'}`}>
+                  {contractChecked && <Check size={13} className="text-black" strokeWidth={3} />}
+                </button>
+                <span className="text-[11px] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve 500₺ teminat şartını kabul ediyorum.</span>
+              </label>
+              <div className="flex gap-2 mt-5">
+                <button disabled={!!respondingId} onClick={() => setContractModalReq(null)}
+                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white/70 bg-white/5 border border-white/10 disabled:opacity-50">Vazgeç</button>
+                <button disabled={!contractChecked || !!respondingId}
+                  onClick={() => handleRespondRequest(contractModalReq.id, true, true)}
+                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-black bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-40">
+                  {respondingId ? <RefreshCcw size={14} className="animate-spin" /> : <><Check size={14} /> Onayla & Kabul Et</>}
+                </button>
               </div>
             </motion.div>
           </motion.div>

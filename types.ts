@@ -625,6 +625,11 @@ export interface ServiceRequest {
   cancelledAt?: string;
   expiresAt?: string;
   createdAt: string;
+  // FAZ 4: ödeme/emanet + no-show
+  fundingSource?: 'WALLET' | 'CARD' | null;
+  contractAccepted?: boolean;
+  penaltyAmount?: number | null;
+  disputeDeadline?: string | null;
 }
 
 /** find_providers_for_match çıktısı — sıralı öneri kartı. */

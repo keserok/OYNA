@@ -31,6 +31,10 @@ const mapServiceRequest = (r: any): ServiceRequest => ({
   cancelledAt: r.cancelled_at ?? undefined,
   expiresAt: r.expires_at ?? undefined,
   createdAt: r.created_at,
+  fundingSource: r.funding_source ?? null,
+  contractAccepted: !!r.contract_accepted,
+  penaltyAmount: r.penalty_amount != null ? Number(r.penalty_amount) : null,
+  disputeDeadline: r.dispute_deadline ?? null,
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -220,16 +224,63 @@ export const getMyProviderApplications = async (): Promise<ServiceRequest[]> => 
   return getIncomingRequests();
 };
 
-/** Sağlayıcı gelen talebi kabul/red eder. */
+/**
+ * Sağlayıcı gelen talebi kabul/red eder.
+ * FAZ 4: kaleci kabulünde sözleşme onayı (contractAccepted) zorunlu; ayrıca
+ * kaptan ödemeyi tamamlamış (fonlanmış) + kalecinin ≥500₺ teminatı olmalı.
+ */
 export const respondServiceRequest = async (
   requestId: string,
   accept: boolean,
+  contractAccepted = false,
 ): Promise<void> => {
   const { error } = await supabase.rpc('respond_service_request', {
     p_request_id: requestId,
     p_accept: accept,
+    p_contract_accepted: contractAccepted,
   });
   if (error) throw new Error(parseRpcError(error.message) || 'İşlem tamamlanamadı.');
+};
+
+/**
+ * FAZ 4 (M3) — Kaptan hizmet talebini fonlar (emanete alınır).
+ * source='WALLET' → cüzdandan tam ödeme (bakiyeden düşülür); 'CARD' → kart pre-auth.
+ * Talep ancak fonlandıktan sonra kaleci/hakem tarafından kabul edilebilir.
+ */
+export const fundServiceRequest = async (
+  requestId: string,
+  source: 'WALLET' | 'CARD' = 'WALLET',
+): Promise<{ status: string; source?: string; amount?: number }> => {
+  const { data, error } = await supabase.rpc('fund_service_request', {
+    p_request_id: requestId,
+    p_source: source,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Ödeme tamamlanamadı.');
+  return { status: data?.status, source: data?.source, amount: data?.amount != null ? Number(data.amount) : undefined };
+};
+
+/**
+ * FAZ 4 (M5) — Kaptan kalecinin/hakemin maça gelmediğini bildirir.
+ * Kalecinin kazancı iptal + kaptana ücret iadesi + ceza (maçın slot ücreti)
+ * kalecinin teminatından kaptana. 48 saat içinde kaleci itiraz edebilir.
+ */
+export const captainReportNoShow = async (
+  requestId: string,
+  note?: string,
+): Promise<{ status: string; penalty: number; penaltyCharged: boolean }> => {
+  const { data, error } = await supabase.rpc('captain_report_no_show', { p_request_id: requestId, p_note: note ?? null });
+  if (error) throw new Error(parseRpcError(error.message) || 'No-show bildirilemedi.');
+  return { status: data?.status, penalty: Number(data?.penalty ?? 0), penaltyCharged: !!data?.penalty_charged };
+};
+
+/** FAZ 4 (M5) — Sağlayıcı no-show cezasına itiraz eder (48s içinde) → admin incelemesi. */
+export const providerDisputeNoShow = async (
+  requestId: string,
+  note?: string,
+): Promise<{ status: string }> => {
+  const { data, error } = await supabase.rpc('provider_dispute_no_show', { p_request_id: requestId, p_note: note ?? null });
+  if (error) throw new Error(parseRpcError(error.message) || 'İtiraz gönderilemedi.');
+  return { status: data?.status };
 };
 
 /** Talep eden/kaptan veya admin talebi iptal eder (tahsil edilmemişse). */

@@ -5,7 +5,7 @@ import {
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
   Plus, CheckCircle2, Users, Star, Wifi, WifiOff,
   Send, AlertCircle, Shield, Layers, Droplets, Award,
-  DollarSign, Info, KeyRound, Copy, Ruler, Activity
+  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
@@ -14,7 +14,7 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
-import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
+import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
@@ -288,6 +288,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
   // Atanmış kaleci/hakem dikey detay kartı (herkese) — hangi sağlayıcı + tür.
   const [providerDetail, setProviderDetail] = useState<{ p: MatchProvider; isRef: boolean } | null>(null);
+  const [showNoShowConfirm, setShowNoShowConfirm] = useState(false);
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
@@ -1049,20 +1050,43 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  const handleSelectProvider = async (provider: ProviderSuggestion) => {
+  // FAZ 4: talep oluştur + hemen fonla (emanet). Kaleci ancak fonlanınca kabul edebilir.
+  const handleSelectProvider = async (provider: ProviderSuggestion, source: 'WALLET' | 'CARD' = 'WALLET') => {
     if (!providerModalType) return;
     setProviderSubmittingId(provider.id);
     try {
-      await createServiceRequest(match.id, provider.id, providerModalType);
+      const { requestId } = await createServiceRequest(match.id, provider.id, providerModalType);
+      await fundServiceRequest(requestId, source);
       await refreshServiceRequests(match.id);
       setMarketDetailProvider(null);
       setProviderModalType(null);
-      showActionSuccess(`Talep gönderildi — ${provider.name} onayını bekliyor`);
+      showActionSuccess(`Ödeme alındı — ${provider.name} onayı bekleniyor`);
     } catch (err: any) {
-      console.error('[MatchJoin] talep oluşturma:', err);
+      console.error('[MatchJoin] talep/ödeme:', err);
       showActionError(err?.message || 'Hizmet talebi oluşturulamadı.');
     } finally {
       setProviderSubmittingId(null);
+    }
+  };
+
+  // FAZ 4: aktif (tahsil edilmiş) kaleci hizmeti → kaptan no-show bildirebilir.
+  const capturedGkRequest = serviceRequests.find(r => r.providerType === 'GK' && r.status === 'CAPTURED');
+  const handleReportNoShow = async () => {
+    if (!capturedGkRequest) return;
+    try {
+      setIsProcessing(true);
+      const r = await captainReportNoShow(capturedGkRequest.id);
+      await refreshServiceRequests(match.id);
+      setShowNoShowConfirm(false);
+      showActionSuccess(
+        r.penaltyCharged
+          ? `No-show bildirildi. ${r.penalty}₺ ceza kalecinin teminatından tahsil edilip sana aktarıldı.`
+          : `No-show bildirildi. Ceza (${r.penalty}₺) teminattan tahsil edilemedi — durum incelemeye alındı.`
+      );
+    } catch (e: any) {
+      showActionError(e?.message || 'No-show bildirilemedi.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1683,17 +1707,27 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </div>
                     )}
 
-                    {/* Talep Gönder — kaptan (ödeme adımı FAZ 4) */}
-                    <motion.button
-                      whileTap={submitting ? undefined : { scale: 0.97 }}
-                      disabled={!!providerSubmittingId}
-                      onClick={() => handleSelectProvider(p)}
-                      className="w-full mt-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                      style={{ background: accent, boxShadow: `0 0 20px ${accent}55` }}>
-                      {submitting ? <Loader2 size={15} className="animate-spin" /> : <>{isRef ? <Scale size={15} /> : <Hand size={15} />} TALEP GÖNDER · {p.fee}₺</>}
-                    </motion.button>
-                    <p className="text-[9px] text-white/30 text-center mt-2 leading-relaxed px-2">
-                      {isRef ? 'Hakem' : 'Kaleci'} talebini onayladığında ücret tahsil edilir. Onaya kadar tutar bloke edilmez.
+                    {/* Ödeme — kaptan cüzdan veya kart ile emanete öder (FAZ 4) */}
+                    <div className="w-full mt-6 flex gap-2">
+                      <motion.button
+                        whileTap={submitting ? undefined : { scale: 0.97 }}
+                        disabled={!!providerSubmittingId}
+                        onClick={() => handleSelectProvider(p, 'WALLET')}
+                        className="flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        style={{ background: accent, boxShadow: `0 0 20px ${accent}55` }}>
+                        {submitting ? <Loader2 size={15} className="animate-spin" /> : <><Wallet size={14} /> Cüzdanla</>}
+                      </motion.button>
+                      <motion.button
+                        whileTap={submitting ? undefined : { scale: 0.97 }}
+                        disabled={!!providerSubmittingId}
+                        onClick={() => handleSelectProvider(p, 'CARD')}
+                        className="flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white bg-white/8 border border-white/15 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                        <CreditCard size={14} /> Kartla
+                      </motion.button>
+                    </div>
+                    <p className="text-center mt-2 text-sm font-black" style={{ color: accent }}>{p.fee}₺</p>
+                    <p className="text-[9px] text-white/30 text-center mt-1 leading-relaxed px-2">
+                      Ücret emanete alınır; {isRef ? 'hakem' : 'kaleci'} onaylayınca aktarılır. Reddedilir/no-show olursa iade edilir.
                     </p>
                   </div>
                 );
@@ -1811,6 +1845,41 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </motion.div>
               );
             })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── No-show Onay Modalı (kaptan) ────────────────────────────────────── */}
+      <AnimatePresence>
+        {showNoShowConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-xl flex items-center justify-center p-6"
+            onClick={() => { if (!isProcessing) setShowNoShowConfirm(false); }}>
+            <motion.div
+              initial={{ scale: 0.85, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.85, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="w-[19rem] rounded-[28px] bg-gradient-to-b from-[#1a1012] to-[#0d1117] border border-red-500/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)] p-6 flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/12 border border-red-500/25 flex items-center justify-center mb-3">
+                <AlertCircle size={26} className="text-red-400" />
+              </div>
+              <h3 className="text-lg font-black text-white tracking-tight">Kaleci gelmedi mi?</h3>
+              <p className="text-[11px] text-white/50 leading-relaxed mt-2 px-1">
+                No-show bildirdiğinde ödediğin ücret iade edilir ve maçın slot ücreti
+                ({match.price ?? 0}₺) ceza olarak kalecinin teminatından sana aktarılır.
+                Kaleci 48 saat içinde itiraz edebilir.
+              </p>
+              <div className="w-full flex gap-2 mt-5">
+                <button disabled={isProcessing} onClick={() => setShowNoShowConfirm(false)}
+                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white/70 bg-white/5 border border-white/10 disabled:opacity-50">
+                  Vazgeç
+                </button>
+                <button disabled={isProcessing} onClick={handleReportNoShow}
+                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white bg-red-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                  {isProcessing ? <Loader2 size={14} className="animate-spin" /> : 'Bildir'}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -2596,6 +2665,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-white/40 shrink-0">
                   Detay <ChevronRight size={13} />
                 </div>
+              </button>
+            )}
+
+            {/* Kaptan: kaleci maça gelmediyse no-show bildir (ceza → teminattan) */}
+            {assignedGoalkeeper && isManageMode && isCaptain && capturedGkRequest && (
+              <button
+                onClick={() => setShowNoShowConfirm(true)}
+                className="w-full py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-red-400 bg-red-950/25 border border-red-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">
+                <AlertCircle size={13} /> Kaleci Gelmedi (No-show)
               </button>
             )}
 
