@@ -52,8 +52,26 @@ modunda; canlı anahtarlar henüz bağlanmadı.
 
 ---
 
+## Alınan kararlar (Bölüm 2/6 — İadeler ve İptaller)
+
+| # | Konu | Karar |
+|---|------|-------|
+| 6 | İptal kademeleri | Global varsayılan + **tesis-bazlı override** (admin panel) |
+| 7 | Cüzdandan karta çekim | **%10 kesinti** (ör. 300₺→270₺); sebep: "ödeme altyapısı komisyonu". Akış **düşük görünürlük** — göze batmayacak |
+| 8 | Slot'tan tek ayrılma | İade önizlemesi + yakınsa uyarı; slot otomatik tekrar açılır |
+| 9 | Maç iptali muhasebesi | Tek orkestrasyon (oyuncu iade + kaptan kapora + tesis kazanç geri + saha iptal), sıfır-toplam doğrulanır |
+| 10 | İade bildirimi | Push + cüzdan chip vurgusu + "sonraki oyunda kullan" mesajı |
+
+### ⚠️ Bölüm 2'den doğan işler
+- [ ] **Cüzdandan karta çekim (%10 kesinti)** — YENİ akış. Açık nokta: kesinti
+  yalnız *yüklenen bakiyeye* mi uygulanır, *iade kredisine* de mi? (İade
+  kredisinden %10 kesmek mevzuat açısından riskli olabilir — Bölüm 3'te netleşecek.)
+- [ ] **Tesis-bazlı iptal politikası override** (admin panel alanı)
+- [ ] **Maç iptali orkestrasyon fonksiyonu** + sıfır-toplam sandbox testi
+- [ ] **İade push bildirimi** + cüzdan "+X₺" vurgusu
+
 ## Bekleyen görüşme bölümleri
-- [ ] Bölüm 2/6 — İadeler ve İptaller
+- [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
 - [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
 - [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
 - [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
