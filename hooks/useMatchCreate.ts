@@ -427,9 +427,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             targetId = await addMatch(matchData);
         }
 
-        // Escrow: kapora artık birleşik ödeme ekranında BLOKE edilir (tasarım 1b,
-        // bağlam: MAÇ OLUŞTUR → KAPORA). Blokaj karta yapılır — bakiye kullanılamaz;
-        // maç dolmazsa blokaj otomatik kalkar. deferredProviders blokajla gönderilir.
+        // Escrow (CÜZDAN-ÖNCELİKLİ): kapora birleşik ödeme ekranında CÜZDANDAN
+        // güvenceye alınır — kart yok, PSP maliyeti yok. Maç dolmazsa/iptalde tutar
+        // otomatik iade kredisine döner. deferredProviders blokajla gönderilir.
         const goesToPayment = !!targetId && matchDeposit > 0;
         if (goesToPayment && targetId) {
           const store = useAppStore.getState();
@@ -449,10 +449,11 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             amountLabel: 'Ödenecek Kapora',
             amountHint: 'Kapora ile saha sana kilitlenir; oyuncular katıldıkça payını geri alırsın.',
             isDeposit: true,
-            allowBalance: false,
+            allowBalance: true,
+            balanceOnly: true,
             successTitle: 'Kapora Onaylandı!',
             successSubtitle: 'Saha sana kilitlendi',
-            infoNote: 'Kapora kartına bloke edilir, hemen çekilmez. Maç dolunca tahsil edilir; dolmazsa otomatik serbest bırakılır.',
+            infoNote: 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolunca kesinleşir; dolmazsa veya iptal olursa tutar anında iade kredisi olarak cüzdanına döner.',
             matchId: targetId,
             deferredProviders,
           });
