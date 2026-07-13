@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Plus, Calendar, MapPin, Clock, Users, ArrowRight, Search, Key, LayoutGrid, X } from 'lucide-react';
 import { AppView } from '../types';
+import { useAppStore } from '../store';
 
 interface MatchCalendarProps {
   onBack: () => void;
@@ -114,7 +115,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            onClick={() => onNavigate('MATCH_JOIN')}
+            onClick={() => { useAppStore.getState().setLobbyMode('DISCOVER'); onNavigate('MATCH_JOIN'); }}
             className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FACC15]/30 transition-all duration-500"
           >
             {/* Dynamic Pulse Strip */}
@@ -332,6 +333,7 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                   onClick={() => {
                     if (joinCode.length === 6) {
                       setShowJoinCodeInput(false);
+                      useAppStore.getState().setLobbyMode('DISCOVER');
                       onNavigate('MATCH_JOIN');
                     }
                   }}

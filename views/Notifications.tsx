@@ -179,6 +179,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
         });
         onBack();
       } else if (n.matchId) {
+        useAppStore.getState().setLobbyMode('DISCOVER');
         navigateTo('MATCH_JOIN' as AppView);
         onBack();
       }

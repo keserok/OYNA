@@ -586,6 +586,7 @@ const App: React.FC = () => {
         return <MatchDiscovery
           onBack={() => goBack('DASHBOARD')}
           onSelect={(match) => {
+            useAppStore.getState().setLobbyMode('DISCOVER');
             setSelectedMatch(match);
             navigateTo('MATCH_JOIN');
           }}

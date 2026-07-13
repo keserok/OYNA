@@ -12,7 +12,8 @@ import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, Provi
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, type LobbyParticipant } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, type LobbyParticipant, type FriendPlayerCard } from '../services/matchService';
+import { sendFriendRequest } from '../services/friendService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
 import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
@@ -226,8 +227,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Sahadaki dolu slotları gerçek oyuncularla doldurmak için (RLS-güvenli public_profiles).
   const [lobbyParticipants, setLobbyParticipants] = useState<LobbyParticipant[]>([]);
 
-  // Dolu slot — VIP Diamond kart
+  // Dolu slota basınca açılan sade oyuncu bilgi kartı
   const [activePlayerSlotId, setActivePlayerSlotId] = useState<string | null>(null);
+  // Sade oyuncu kartı verisi (arkadaş-kapılı; tıklamada get_friend_player_card ile çekilir)
+  const [playerCard, setPlayerCard] = useState<FriendPlayerCard | null>(null);
+  const [playerCardLoading, setPlayerCardLoading] = useState(false);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
 
   const [inviteModalSlotId, setInviteModalSlotId] = useState<string | null>(null);
   const [friendSearch, setFriendSearch] = useState('');
@@ -257,11 +262,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  const { 
-    adminUsers, friends, updateMatch, addUserNotification, adminPitches, 
+  const {
+    adminUsers, friends, updateMatch, addUserNotification, adminPitches,
     userTeams, myTeams, setSelectedMatch,
-    setNewMatchBadge
+    setNewMatchBadge, lobbyMode
   } = useAppStore();
+  // MANAGE = Sıradaki Maçlarım'dan; yönetim aksiyonları yalnız burada görünür.
+  const isManageMode = lobbyMode === 'MANAGE';
 
   // Saha konumu: pitch_id (FK) tek otorite; store'daki isim eşleşmesi varsayılan
   // koordinat bastığı için kullanılmaz. Çözülemezse null kalır → harita gizlenir.
@@ -456,6 +463,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
     if (slot.status === 'TAKEN') {
       setActivePlayerSlotId(slot.id);
+      setFriendRequestSent(false);
+      setPlayerCard(null);
+      const pid = slot.player?.id;
+      if (pid) {
+        setPlayerCardLoading(true);
+        getFriendPlayerCard(pid)
+          .then((c) => setPlayerCard(c))
+          .finally(() => setPlayerCardLoading(false));
+      }
       return;
     }
 
@@ -998,20 +1014,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  const getDiamondValue = (p: any) => {
-    if (!p) return 0;
-    const db = (adminUsers || []).find(u => u?.id === p.id || u?.name === p.name);
-    if (db?.playerCard?.diamondValue) return db.playerCard.diamondValue;
-    const rating = db?.rating || p.rating || 4.5;
-    const mc = db?.matchCount || 24;
-    return mc * 250 + Math.round(rating * 1000);
-  };
-
-  const getFP = (p: any) => {
-    const friend = (friends || []).find(f => (f as any).id === p?.id);
-    return (friend as any)?.fp || Math.floor(Math.random() * 15) + 85;
-  };
-
   const activePlayerSlot = activePlayerSlotId ? (pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).find(s => s?.id === activePlayerSlotId) : null;
   const activePlayer = activePlayerSlot?.player || null;
 
@@ -1027,186 +1029,101 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
 
-      {/* ── VIP Diamond Kart Modalı ────────────────────────────────────────── */}
+      {/* ── Sade Oyuncu Bilgi Kartı (arkadaş-kapılı) ────────────────────────── */}
       <AnimatePresence>
         {activePlayer && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
             onClick={() => setActivePlayerSlotId(null)}>
             <motion.div
-              initial={{ scale: 0.75, y: 40, opacity: 0, rotateY: 20 }}
-              animate={{ scale: 1, y: 0, opacity: 1, rotateY: 0 }}
-              exit={{ scale: 0.75, y: 40, opacity: 0, rotateY: -20 }}
-              transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              className="relative w-80 rounded-[32px] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.9)]"
-              style={{ perspective: '1000px' }}>
-
+              className="relative w-[19rem] rounded-[28px] overflow-hidden bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
               {(() => {
-                const overall = Math.round(((activePlayer as any).rating || 4.5) * 20);
-                const isGold = overall >= 90;
-                const isSilver = overall >= 80 && overall < 90;
-                const tier = isGold ? 'GOLD' : isSilver ? 'SILVER' : 'BRONZE';
-                const accentColor = isGold ? '#FFE875' : isSilver ? '#E2E8F0' : '#C27E47';
-                const glowColor = isGold ? 'rgba(255,232,117,0.35)' : isSilver ? 'rgba(226,232,240,0.25)' : 'rgba(194,126,71,0.25)';
-                const gradFrom = isGold ? '#FFE875' : isSilver ? '#E2E8F0' : '#C27E47';
-                const fp = getFP(activePlayer);
+                const isHome = pitchSide === 'home';
+                const accent = isHome ? '#39FF14' : '#f87171';
+                const initialsCls = isHome
+                  ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/25'
+                  : 'bg-red-950/60 text-red-300 border border-red-500/25';
                 const isMySlot = activePlayer.id === currentUserProfile?.id;
+                const posLabel = { 'GK': 'KALECİ', 'DEF': 'DEFANS', 'MID': 'ORTA SAHA', 'FWD': 'FORVET' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'OYUNCU';
+                const c = playerCard;
+                const notFriend = !!c && c.is_friend === false;
+                const footTr = (f?: string | null) => f === 'SAG' ? 'SAĞ' : f === 'SOL' ? 'SOL' : '—';
+                const heroNum = c?.is_self ? (c?.total_matches ?? 0) : (c?.matches_together ?? 0);
+                const heroLabel = c?.is_self ? 'TOPLAM MAÇ' : 'BİRLİKTE MAÇ';
 
                 return (
-                  <div className="relative" style={{ background: `linear-gradient(160deg, #0d1117 0%, #161B22 100%)` }}>
-                    {/* Doku */}
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-overlay" />
-                    {/* Glow */}
-                    <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-[80px] opacity-40"
-                      style={{ background: glowColor }} />
+                  <div className="p-6 pt-8 flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '66' }}>
+                      {isRealPhoto((activePlayer as any).avatar) ? (
+                        <img src={(activePlayer as any).avatar} alt={(activePlayer as any).name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center text-3xl font-black tracking-tight ${initialsCls}`}>
+                          {getInitials((activePlayer as any).name)}
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight px-2">
+                      {isMySlot ? 'SEN' : (c?.name || (activePlayer as any).name || 'Oyuncu')}
+                    </h3>
+                    <span className="mt-1 text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{posLabel}</span>
 
-                    {/* Üst Şerit — Tier ve Renk */}
-                    <div className="absolute top-0 left-0 right-0 h-1 rounded-t-[32px]"
-                      style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
-
-                    <div className="relative p-7 flex flex-col items-center">
-                      {/* Overall Badge */}
-                      <div className="absolute top-6 left-6 flex flex-col items-center">
-                        <span className="text-4xl font-black italic leading-none" style={{ color: accentColor }}>{overall}</span>
-                        <span className="text-[8px] font-black uppercase tracking-widest mt-0.5" style={{ color: accentColor + 'aa' }}>{tier}</span>
+                    {playerCardLoading ? (
+                      <div className="w-full flex items-center justify-center py-12">
+                        <Loader2 size={22} className="animate-spin text-white/40" />
                       </div>
-
-                      {/* Avatar */}
-                      <div className="relative mt-4 mb-5">
-                        <div className="absolute inset-0 rounded-full blur-2xl opacity-50" style={{ background: glowColor, transform: 'scale(1.3)' }} />
-                        <img src={(activePlayer as any).avatar || `https://i.pravatar.cc/150?u=${(activePlayer as any).id}`}
-                          alt={(activePlayer as any).name}
-                          className="relative w-36 h-36 rounded-full object-cover bg-black border-[3px]"
-                          style={{ borderColor: accentColor + '50' }} />
-                        {isMySlot && (
-                          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#39FF14] flex items-center justify-center shadow-[0_0_12px_rgba(57,255,20,0.8)]">
-                            <Shield size={14} className="text-black" />
+                    ) : notFriend ? (
+                      <div className="w-full mt-5 flex flex-col items-center gap-3">
+                        <p className="text-[11px] text-white/45 text-center leading-relaxed px-1">
+                          Yaş, fair play ve birlikte oynadığınız maç bilgileri yalnızca arkadaşlar arasında görünür.
+                        </p>
+                        <button
+                          disabled={friendRequestSent}
+                          onClick={async () => {
+                            try {
+                              await sendFriendRequest(currentUserUid, activePlayer.id);
+                              setFriendRequestSent(true);
+                              showActionSuccess('Arkadaşlık isteği gönderildi.');
+                            } catch (e: any) {
+                              showActionError(e?.message || 'İstek gönderilemedi.');
+                            }
+                          }}
+                          className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.35)] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:shadow-none">
+                          {friendRequestSent ? <><CheckCircle2 size={15} /> İSTEK GÖNDERİLDİ</> : <><UserPlus size={15} /> ARKADAŞ OL</>}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-full mt-5 rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                          <span className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: accent + 'cc' }}>{heroLabel}</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-5xl font-black tabular-nums leading-none" style={{ color: accent }}>{heroNum}</span>
+                            <span className="text-sm font-black text-white/70">MAÇ</span>
                           </div>
-                        )}
-                        {/* Pozisyon badge */}
-                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 font-black uppercase tracking-widest text-[9px] px-4 py-1.5 rounded-full border border-black/10"
-                          style={{ background: `linear-gradient(90deg, ${gradFrom}, ${isGold ? '#D1A119' : isSilver ? '#64748B' : '#7C4318'})`, color: isGold || isSilver ? '#000' : '#fff' }}>
-                          { { 'GK': 'KL', 'DEF': 'SAV', 'MID': 'ORT', 'FWD': 'HÜC' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'ORT' }
                         </div>
-                      </div>
-
-                      {/* İsim */}
-                      <h3 className="text-2xl font-black text-white uppercase tracking-tight italic text-center mt-3 mb-5 drop-shadow-lg">
-                        {(activePlayer as any).name || 'Oyuncu'}
-                      </h3>
-
-                      {/* Diamond Serveti */}
-                      <div className="w-full rounded-2xl border border-white/5 bg-black/60 backdrop-blur-md p-4 flex flex-col items-center gap-2 relative overflow-hidden mb-4">
-                        <div className="absolute inset-0" style={{
-                          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)',
-                          animation: 'shimmer 2s infinite',
-                        }} />
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40">Kariyer Serveti</span>
-                        <div className="flex items-center gap-2.5">
-                          <Diamond className="w-7 h-7 drop-shadow-[0_0_14px_rgba(0,242,254,0.9)] animate-pulse" style={{ color: '#00f2fe' }} />
-                          <span className="text-3xl font-black text-white tabular-nums tracking-tighter">
-                            {getDiamondValue(activePlayer).toLocaleString('tr-TR')}
-                          </span>
+                        <div className="w-full grid grid-cols-3 gap-2 mt-3">
+                          {[
+                            { l: 'YAŞ', v: c?.age != null ? String(c.age) : '—' },
+                            { l: 'FAIR PLAY', v: c?.fair_play != null ? '%' + c.fair_play : '—' },
+                            { l: 'AYAK', v: footTr(c?.preferred_foot) },
+                          ].map(s => (
+                            <div key={s.l} className="bg-white/[0.04] border border-white/8 rounded-xl py-3 flex flex-col items-center gap-1">
+                              <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.15em]">{s.l}</span>
+                              <span className="text-base font-black text-white">{s.v}</span>
+                            </div>
+                          ))}
                         </div>
-                      </div>
+                      </>
+                    )}
 
-                      {/* Mini İstatistikler */}
-                      <div className="grid grid-cols-3 gap-2 w-full">
-                        {[
-                          { label: 'OVERALL', val: `${overall}` },
-                          { label: 'FAIR PLAY', val: `%${fp}` },
-                          { label: 'POZİSYON', val: { 'GK': 'KL', 'DEF': 'SAV', 'MID': 'ORT', 'FWD': 'HÜC' }[normalizeRole(activePlayerSlot?.role || '')] || 'ORT' },
-                        ].map(stat => (
-                          <div key={stat.label} className="bg-white/[0.04] rounded-xl p-2.5 text-center border border-white/5">
-                            <span className="block text-[7px] font-black text-white/30 uppercase tracking-widest mb-1">{stat.label}</span>
-                            <span className="text-xs font-black text-white/90">{stat.val}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Kapora ve Ödeme Bölümü */}
-                      <div className="w-full mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col gap-3 relative overflow-hidden">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">KAPORA DURUMU</span>
-                          {activePlayer.paymentStatus === 'PAID' ? (
-                            <span className="text-[#39FF14] text-[9px] font-black tracking-wider bg-[#39FF14]/10 border border-[#39FF14]/20 px-2.5 py-1 rounded-full uppercase flex items-center gap-1 shadow-[0_0_10px_rgba(57,255,20,0.15)]">
-                              <CheckCircle2 size={10} /> TAMAMLANDI
-                            </span>
-                          ) : (
-                            <span className="text-amber-500 text-[9px] font-black tracking-wider bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full uppercase flex items-center gap-1">
-                              <Clock size={10} /> BEKLENİYOR (50 ₺)
-                            </span>
-                          )}
-                        </div>
-
-                        {activePlayer.id === currentUserProfile.id && activePlayer.paymentStatus !== 'PAID' && (
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={async () => {
-                              try {
-                                setIsProcessing(true);
-                                const { error } = await supabase.rpc('pay_public_match_deposit', {
-                                  p_match_id: match.id,
-                                  p_user_id: currentUserProfile.id,
-                                  p_amount: 50
-                                });
-
-                                if (error) throw error;
-
-                                // Oyuncunun ev mi deplasman mı takımında olduğunu belirle
-                                const isInAwaySlot = (match.awaySlots || []).some(
-                                  s => s?.player?.id === currentUserProfile.id
-                                );
-
-                                const markPaid = (slots: typeof match.slots) =>
-                                  (slots || []).map(s =>
-                                    s?.player?.id === currentUserProfile.id
-                                      ? { ...s, player: { ...s.player!, paymentStatus: 'PAID' as const } }
-                                      : s
-                                  );
-
-                                const updatedSlots = isInAwaySlot
-                                  ? (match.slots || [])
-                                  : markPaid(match.slots);
-                                const updatedAwaySlots = isInAwaySlot
-                                  ? markPaid(match.awaySlots)
-                                  : (match.awaySlots || []);
-
-                                const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-                                await updateMatch({
-                                  ...match,
-                                  slots: updatedSlots,
-                                  awaySlots: updatedAwaySlots,
-                                  status: nextStatus
-                                });
-                                setActivePlayerSlotId(null);
-                                showActionSuccess('Kapora ödemesi başarıyla gerçekleştirildi! ⚽');
-                              } catch (e: any) {
-                                console.error(e);
-                                showActionError('Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
-                              } finally {
-                                setIsProcessing(false);
-                              }
-                            }}
-                            className="w-full py-3 rounded-xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                          >
-                            <DollarSign size={13} />
-                            <span>KAPORAYI ÖDE (50 ₺)</span>
-                          </motion.button>
-                        )}
-                      </div>
-
-                      {/* Slot sahiplik/atama aksiyonları (FAZ8) — satın aldığın slotu arkadaşa/koda ata */}
-                      {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
-                        <div className="mt-4 space-y-2">
-                          {(activePlayerSlot as any).assignmentStatus === 'INVITED' && (
-                            <p className="text-[10px] text-[#FFAA00] font-bold text-center">Arkadaş daveti gönderildi — kabul bekleniyor.</p>
-                          )}
-                          {(activePlayerSlot as any).assignmentStatus === 'LINK_PENDING' && (activePlayerSlot as any).claimCode && (
-                            <p className="text-[10px] text-[#00B0FF] font-bold text-center">Devralma kodu: <span className="text-white font-black tracking-widest">{(activePlayerSlot as any).claimCode}</span></p>
-                          )}
+                    {/* Yönetim aksiyonları — YALNIZ MANAGE (Sıradaki Maçlarım) */}
+                    {isManageMode && (
+                      <div className="w-full mt-4 space-y-2">
+                        {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
                           <div className="flex gap-2">
                             <button onClick={() => { setInviteModalSlotId(activePlayerSlot.id); setFriendSearch(''); setActivePlayerSlotId(null); }}
                               className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-wider text-black bg-[#39FF14] active:scale-95 transition-all flex items-center justify-center gap-1.5">
@@ -1217,37 +1134,27 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               <KeyRound size={13} /> Kod Oluştur
                             </button>
                           </div>
-                        </div>
-                      )}
-                      {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
-                        <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
-                          className="mt-4 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.4)] flex items-center justify-center gap-2">
-                          <CheckCircle2 size={15} /> Slotu Kabul Et
-                        </button>
-                      )}
-
-                      {/* Kaptan Çıkarma */}
-                      {isCaptain && !isMySlot && (
-                        <button onClick={() => {
-                          setRemoveConfirmSlot(activePlayerSlot);
-                          setActivePlayerSlotId(null);
-                        }}
-                          className="mt-5 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-400 bg-red-950/30 border border-red-500/15 active:scale-95 transition-all">
-                          KADRODAN ÇIKAR
-                        </button>
-                      )}
-
-                      {/* Slottan Ayrıl */}
-                      {isMySlot && (
-                        <button onClick={() => {
-                          setActivePlayerSlotId(null);
-                          setShowLeaveConfirm(true);
-                        }}
-                          className="mt-5 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/20 active:scale-95 transition-all shadow-[0_0_15px_rgba(239,68,68,0.15)]">
-                          SLOTTAN AYRIL
-                        </button>
-                      )}
-                    </div>
+                        )}
+                        {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
+                          <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
+                            <CheckCircle2 size={15} /> Slotu Kabul Et
+                          </button>
+                        )}
+                        {isCaptain && !isMySlot && (
+                          <button onClick={() => { setRemoveConfirmSlot(activePlayerSlot); setActivePlayerSlotId(null); }}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-400 bg-red-950/30 border border-red-500/15 active:scale-95 transition-all">
+                            KADRODAN ÇIKAR
+                          </button>
+                        )}
+                        {isMySlot && (
+                          <button onClick={() => { setActivePlayerSlotId(null); setShowLeaveConfirm(true); }}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 active:scale-95 transition-all">
+                            SLOTTAN AYRIL
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -1640,9 +1547,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {match.title || 'Maç Detayı'}
             </p>
           </div>
-          {/* Sağ Aksiyon: Doluluk Göstergesi veya Maçtan Ayrıl Butonu */}
-          {(isAlreadyJoined || isAlreadyJoinedReserve) ? (
-            <button 
+          {/* Sağ Aksiyon: MANAGE'de Maçtan Ayrıl; DISCOVER'da yalnız doluluk göstergesi */}
+          {(isManageMode && (isAlreadyJoined || isAlreadyJoinedReserve)) ? (
+            <button
               onClick={() => setShowLeaveConfirm(true)}
               className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
               {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
@@ -2145,7 +2052,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
 
           {/* Taktik / Diziliş Seçimi (Yalnızca Kaptanlara Özel) */}
-          {((pitchSide === 'home' && isHomeCaptain) || (pitchSide === 'away' && isAwayCaptain)) && (
+          {isManageMode && ((pitchSide === 'home' && isHomeCaptain) || (pitchSide === 'away' && isAwayCaptain)) && (
             <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto">
               <span className="block text-[8px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 px-1">
                 TAKIM DİZİLİŞİNİ GÜNCELLE
@@ -2205,8 +2112,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         </motion.div>
         </AnimatePresence>
 
-        {/* ── KALECİ & HAKEM (Yalnız Maç Sahibi / Kaptan) ──────────────────── */}
-        {isCaptain && (
+        {/* ── KALECİ & HAKEM (Yalnız MANAGE + Maç Sahibi/Kaptan) ──────────────── */}
+        {isManageMode && isCaptain && (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Kaleci & Hakem</p>
 

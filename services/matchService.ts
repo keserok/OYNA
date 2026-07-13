@@ -168,6 +168,33 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
   }
 };
 
+export interface FriendPlayerCard {
+  is_friend: boolean;
+  is_self: boolean;
+  name?: string;
+  age?: number | null;
+  preferred_foot?: string | null;
+  fair_play?: number | null;
+  matches_together?: number;
+  total_matches?: number;
+}
+
+/**
+ * Sade oyuncu bilgi kartı verisi (sahadaki oyuncuya basınca).
+ * Arkadaş-kapılı + RLS-güvenli (get_friend_player_card RPC).
+ * Arkadaş değilse yalnız {is_friend:false} döner.
+ */
+export const getFriendPlayerCard = async (userId: string): Promise<FriendPlayerCard | null> => {
+  try {
+    const { data, error } = await supabase.rpc('get_friend_player_card', { p_user_id: userId });
+    if (error) throw error;
+    return (data as FriendPlayerCard) ?? null;
+  } catch (e) {
+    console.warn('[matchService] oyuncu kartı çekilemedi:', e);
+    return null;
+  }
+};
+
 export interface LobbyParticipant {
   userId: string;
   side: 'home' | 'away';
