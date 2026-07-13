@@ -14,41 +14,165 @@ type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'CEREZ' | 'SALES';
 
 const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
 const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
-const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Maltepe/İstanbul';
+const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul';
 const CONTACT_EMAIL = 'destek@oyna.app';
-const UPDATED = '12.07.2026';
+const UPDATED = '13.07.2026';
 
 const DOCS: Record<LegalDocKey, { title: string; icon: React.ElementType; body: string }> = {
   TERMS: {
     title: 'Kullanım Şartları',
     icon: FileText,
-    body: `Son güncelleme: ${UPDATED}
+    body: `OYNA Kullanım Şartları / Üyelik Sözleşmesi (Oyuncu)
+Son güncelleme: ${UPDATED}
 
-1. TARAFLAR VE KAPSAM
-Bu Kullanım Şartları, ${COMPANY} ("OYNA", "Platform") tarafından sunulan mobil ve web uygulamasını kullanan tüm kullanıcılar için geçerlidir. Uygulamayı kullanarak bu şartları kabul etmiş sayılırsınız.
+Bu Kullanım Şartları ("Sözleşme"), aşağıda kimliği belirtilen hizmet sağlayıcı ile OYNA mobil/web uygulamasını ("Uygulama", "Platform") kayıtlı kullanıcı ("Kullanıcı", "Oyuncu") sıfatıyla kullanan gerçek kişi arasında, Uygulamanın kullanımına ilişkin hak ve yükümlülükleri düzenler.
 
-2. HİZMET TANIMI
-OYNA; oyuncuların halı saha rezervasyonu yapmasını, maç ve takım oluşturmasını, kaleci/hakem gibi hizmet sağlayıcılarla buluşmasını sağlayan bir aracı platformdur. Saha kiralama hizmeti tesis sahipleri tarafından sunulur; OYNA bu işlemde aracı konumundadır.
+1. TARAFLAR VE TANIMLAR
 
-3. HESAP VE GÜVENLİK
-Kullanıcı, hesap bilgilerinin gizliliğinden kendisi sorumludur. 18 yaşından küçük kullanıcılar veli/vasi onayı ile kullanmalıdır.
+1.1 Taraflar
+(a) Hizmet Sağlayıcı: ${COMPANY} (bundan böyle kısaca "OYNA" veya "Şirket" olarak anılacaktır).
+- Vergi Dairesi/No: ${TAX_INFO}
+- Adres: ${ADDRESS}
+- E-posta: ${CONTACT_EMAIL}
+Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca "OYNA" veya "Şirket" kısa adıyla anılacaktır.
 
-4. REZERVASYON VE KAPORA
-Saha rezervasyonlarında, tesis tarafından belirlenen kapora tutarı uygulama üzerinden tahsil edilebilir. Rezervasyon onayı, tesisin belirlediği otomatik/manuel onay kurallarına tabidir.
+(b) Kullanıcı/Oyuncu: OYNA Uygulamasına üye olan, Uygulamayı indirip kullanan veya Uygulama üzerinden herhangi bir işlem (rezervasyon, maça katılım, mesajlaşma, profil oluşturma vb.) gerçekleştiren gerçek kişi.
 
-5. İPTAL VE İADE
-Rezervasyon/maç saatine 24 saatten fazla süre kala yapılan iptallerde ödenen tutarın tamamına yakını (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç) iade edilir; 6-24 saat kala yapılan iptallerde %50'si iade edilir; 6 saatten az kala iade yapılmaz. Ayrıntılar için Mesafeli Satış ve İptal/İade Koşulları'na bakınız.
+1.2 Tanımlar
+- "Platform" / "Uygulama": OYNA'ya ait mobil uygulama, web sitesi ve bunlara bağlı tüm dijital arayüzler.
+- "Tesis" / "Saha Sahibi": Halı saha işletmesini fiilen yürüten, sahanın kiralanmasına ilişkin hizmeti bizzat sunan gerçek/tüzel kişi.
+- "Hizmet Sağlayıcı" (dar anlamda): Platform üzerinden kaleci, hakem veya benzeri maç-içi hizmet sunan bağımsız üçüncü kişi.
+- "Rezervasyon": Kullanıcının Platform üzerinden bir Tesise ait saha/saatin kiralanması için oluşturduğu talep ve buna bağlı onay süreci.
+- "Kapora": Rezervasyonun teyidi amacıyla Platform üzerinden tahsil edilen, toplam saha bedelinin bir kısmını veya tamamını oluşturan ön ödeme.
+- "İçerik": Kullanıcı tarafından Platforma yüklenen profil fotoğrafı, kullanıcı adı, maç yorumu, değerlendirme, taktik paylaşımı, mesaj ve benzeri her türlü veri/materyal.
 
-6. KULLANICI YÜKÜMLÜLÜKLERI
-Kullanıcı; yanlış bilgi vermemeyi, başkalarının haklarını ihlal etmemeyi, platformu hukuka aykırı amaçlarla kullanmamayı kabul eder.
+1.3 Kapsam ve Kabul
+İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
-7. SORUMLULUĞUN SINIRLANDIRILMASI
-OYNA, tesis ile oyuncu arasındaki hizmetin ifasından doğrudan sorumlu değildir; aracı platform olarak makul özeni gösterir.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
-8. DEĞİŞİKLİKLER
-OYNA bu şartları güncelleyebilir. Önemli değişiklikler uygulama üzerinden duyurulur.
+2. SÖZLEŞMENİN KONUSU VE KAPSAMI; OYNA'NIN ARACI PLATFORM NİTELİĞİ
 
-9. İLETİŞİM
+2.1 Hizmetin Tanımı
+OYNA; oyuncuların (i) halı saha rezervasyonu yapmasına, (ii) maç ve takım oluşturmasına, diğer oyuncularla eşleşmesine ve (iii) kaleci/hakem gibi bağımsız hizmet sağlayıcılarla bir araya gelmesine imkân tanıyan elektronik bir aracı platformdur.
+
+2.2 Aracı Konum
+Saha kiralama hizmeti bizzat ilgili Tesis tarafından sunulur. OYNA, sahanın işletmecisi, kiralayanı veya sahibi değildir; yalnızca Tesis ile Kullanıcı arasındaki rezervasyon sürecini teknik olarak kolaylaştıran ve ödeme tahsilatına aracılık eden platformdur. Kalecilik/hakemlik gibi hizmetler, Platform üzerinde ilan veren bağımsız Hizmet Sağlayıcılar tarafından sunulur. OYNA, bu kişilerin işvereni, temsilcisi veya kefili değildir; yalnızca Kullanıcı ile Hizmet Sağlayıcının bir araya gelmesini sağlayan bir eşleştirme/pazaryeri işlevi görür. Buna göre; sahanın fiziki durumu, zemin/aydınlatma/soyunma odası gibi tesis koşulları, sahada yaşanabilecek kaza/yaralanma olayları ile kaleci/hakemin edimini ifa şekli, bizzat Tesis ve/veya ilgili Hizmet Sağlayıcının sorumluluğundadır. OYNA'nın bu konudaki sorumluluğu, madde 10 (Sorumluluğun Sınırlandırılması) ve madde 9'da (Garanti Reddi) düzenlenen çerçeve ile sınırlıdır.
+
+2.3 Tesis ve Hizmet Sağlayıcılarla İlişki
+Tesisler ve Hizmet Sağlayıcılar, OYNA ile ayrı sözleşmesel ilişki içindedir ve tacir/esnaf sıfatıyla hareket eder; bu kişilerle OYNA arasındaki hak ve yükümlülükler ayrı sözleşmelerle (Tesis/İşletme Sözleşmesi, Hizmet Sağlayıcı Sözleşmesi vb.) düzenlenir ve işbu Sözleşmenin tarafı değildir. İşbu Sözleşme yalnızca OYNA ile Kullanıcı (Oyuncu) arasındaki ilişkiyi düzenler.
+
+3. HESAP OLUŞTURMA, KULLANIM VE GÜVENLİK
+
+3.1 Üyelik Şartları
+Uygulamaya üye olabilmek için doğru, güncel ve eksiksiz bilgi verilmesi zorunludur. Kullanıcı, kayıt sırasında beyan ettiği ad-soyad, e-posta, telefon numarası ve yaş bilgisinin doğruluğundan sorumludur.
+
+3.2 Hesap Güvenliği
+Kullanıcı, hesabına ait kullanıcı adı, şifre ve varsa çok faktörlü doğrulama bilgilerinin gizliliğinden bizzat sorumludur. Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır. Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda ${CONTACT_EMAIL} üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür. Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru bulunmaması kaydıyla, ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. Kullanıcının hesap bilgilerini kasten üçüncü kişiyle paylaşması veya ağır ihmali hâlinde bu sınırlama uygulanmaz.
+
+3.3 Hesabın Kişisel Niteliği
+Hesap, yalnızca kayıt sahibi Kullanıcı tarafından kullanılabilir; başka bir kişiye devredilemez, satılamaz veya kiralanamaz. Bir kişinin birden fazla hesap açması, yalnızca OYNA'nın önceden yazılı (e-posta ile) onayı ile ve meşru bir amaca dayanması hâlinde mümkündür.
+
+3.4 Yaş Şartı
+Uygulamaya üye olabilmek için asgari yaş 13'tür. 13 yaşından küçük çocuklar adına hesap, ancak veli/vasisi tarafından, velinin kendi kimlik ve iletişim bilgileri kullanılarak oluşturulabilir; bu hâlde hesap veli/vasinin gözetimi ve sorumluluğu altında kullanılır. 13-18 yaş arası kullanıcıların hesapları, veli/vasi onayı tamamlanana kadar madde 4'te düzenlenen "sınırlı mod" kapsamında işletilir.
+
+4. REŞİT OLMAYAN KULLANICILAR VE VELİ ONAYI
+
+4.1 Amaç
+Bu madde, 18 yaşından küçük kullanıcıların Platformu güvenli ve hukuka uygun şekilde kullanabilmesi; buna karşılık veli/vasinin ödeme ve maça katılım gibi hukuki sonuç doğuran işlemler bakımından etkin ve gerçek bir onay/kontrol mekanizmasına sahip olması amacıyla düzenlenmiştir.
+
+4.2 Sınırlı Mod
+Kullanıcı 18 yaşından küçükse hesap otomatik olarak "sınırlı mod"da açılır: (a) gezinme, arama, profil oluşturma serbesttir; (b) ödeme gerektiren işlemler ve maça fiilen katılım, veli onayı tamamlanana kadar kapalıdır; (c) 13 yaş altı, veli tarafından oluşturulan hesaplarda mesajlaşma ve profil görünürlüğü de onay tamamlanana kadar ayrıca kısıtlanabilir.
+
+4.3 Veli/Vasi Onay Süreci
+(1) Küçük kullanıcı, velisinin adı-soyadı ve iletişim bilgisini Uygulama üzerinden bildirir. (2) OYNA, veliye bildirilen kanal üzerinden bir onay bağlantısı/kod gönderir. (3) Velinin, bu bağlantı/kod aracılığıyla bizzat ve açıkça onay vermesi gerekir — küçüğün "kabul ediyorum" işaretlemesi, tek başına veli onayı yerine geçmez. (4) OYNA gerekirse ek kimlik doğrulama talep edebilir.
+
+4.4 Onayın Kapsamı ve Süreklilik
+Veli onayı bir kez usulüne uygun tamamlandıktan sonra, geri alınmadığı sürece küçüğün olağan rezervasyon, ödeme ve maça katılım işlemlerini kapsar; her işlem için ayrıca onay istenmez. OYNA, olağan dışı yüksek tutarlı işlemler için ek teyit talep edebilir.
+
+4.5 Onayın Geri Alınması
+Veli, onayını dilediği zaman ${CONTACT_EMAIL} adresine bildirerek geri alabilir; en geç 48 saat içinde hesap yeniden sınırlı moda alınır. Geri alma, önceki onaylı işlemlerin geçerliliğini etkilemez.
+
+4.6 Velinin Sorumluluğu
+Onay veren veli, olağan nitelikteki işlemler bakımından küçük ile birlikte OYNA'ya karşı sorumludur ve bu işlemlerin hukuki/mali sonuçlarını üstlenir. Bu sorumluluk, ek teyit alınmaksızın gerçekleştirilmiş olağan dışı işlemleri kapsamaz ve onayın geri alındığı tarihten sonraki işlemleri kapsamaz.
+
+4.7 Uygulama Notu
+Bu maddenin hukuken bağlayıcı olabilmesi için, yukarıda tarif edilen veli doğrulama akışının (sınırlı mod, veli iletişim bilgisi, onay bağlantısı/kodu, velinin bizzat onayı) Uygulamada fiilen ve eksiksiz uygulanması zorunludur. Yalnızca metnin varlığı, veli onayının hukuken alınmış sayılması için yeterli değildir.
+
+5. REZERVASYON, KAPORA VE ÖDEME
+
+5.1 Rezervasyon Süreci
+Kullanıcı, bir Tesise ait boş saha/saat seçerek rezervasyon talebinde bulunur. Rezervasyonun kesinleşmesi, Tesisin otomatik/manuel onay kurallarına tabidir; onay verilene kadar rezervasyon "ön talep" niteliğindedir.
+
+5.2 Fiyat ve Kapora
+Saha bedeli, kapora tutarı ve ek hizmet bedelleri rezervasyon ekranında, ödeme onayından önce açıkça gösterilir. Kapora, ilgili Tesis tarafından belirlenir ve rezervasyonun teyidi niteliğindedir. Kalan bedelin ödeme şekli Tesise göre değişebilir.
+
+5.3 Ödeme Altyapısı
+Ödemeler, lisanslı ödeme kuruluşu iyzico altyapısı üzerinden gerçekleştirilir. Kart bilgileri OYNA sunucularında saklanmaz. OYNA, iyzico'nun ödeme hizmetinin kesintisiz olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
+
+5.4 Fatura/Makbuz
+Fatura düzenleme yükümlülüğü, hizmeti fiilen sunan tarafa (Tesis) veya kanunen yükümlü tarafa aittir; OYNA yalnızca ödeme aracılık hizmetine ilişkin belgeleri düzenler.
+
+6. İPTAL VE İADE
+
+6.1 Genel Kurallar (Kullanıcı Kaynaklı İptaller)
+- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutarın tamamı iade edilir (yalnızca ödeme altyapısı işlem bedeli hariç).
+- 6-24 saat arasında (6. saat dahil, 24. saat hariç) kala yapılan iptallerde: %50 iade edilir.
+- 6 saatten az kala yapılan iptallerde: iade yapılmaz.
+Bu kademeli yapı yalnızca Kullanıcı kaynaklı iptallere uygulanır.
+
+6.2 Ayrıntılı Düzenleme
+İptal/iade süreçlerine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde düzenlenmiştir; çelişki hâlinde o belge esas alınır.
+
+6.3 Mücbir Sebep ile Bağlantı
+Mücbir sebep hâllerinde iptal/iade esasları madde 12.3'e göre uygulanır; mücbir sebep iade yükümlülüğünü ortadan kaldırmaz.
+
+6.4 Tesis veya OYNA Kaynaklı İptal — Simetrik Telafi
+Rezervasyonun, Kullanıcıdan kaynaklanmayan bir sebeple ve mücbir sebep dışında Tesis veya OYNA inisiyatifiyle iptal edilmesi hâlinde Kullanıcıya: (a) ödediği bedelin tamamı derhal iade edilir; VE (b) bildirim anı ile rezervasyon saati arasındaki süreye göre simetrik bir telafi bedeli ayrıca ödenir — 24 saat öncesinde bildirimde ek telafi aranmaz; 24 saatten az kala %50; 6 saatten az kala veya bildirimsiz gerçekleşen iptalde %100 telafi bedeli.
+
+7. KULLANICI YÜKÜMLÜLÜKLERİ VE PLATFORM KULLANIM KURALLARI
+Kullanıcı; kayıt/profil bilgilerinin doğru olduğunu ve başkasını taklit etmeyeceğini; Platformu yasa dışı, dolandırıcılık amaçlı veya üçüncü kişi haklarını ihlal edecek şekilde kullanmayacağını; nefret söylemi, taciz, tehdit veya şiddet içeren içerik paylaşmayacağını; sahada/maçta diğer kullanıcılara, Tesis personeline veya Hizmet Sağlayıcılara karşı şiddet, hakaret veya tehdit içeren davranışta bulunmayacağını; Tesisin kurallarına ve hakem kararlarına uyacağını; Platformu tanımlanan amaçlar dışında (spam, izinsiz tanıtım, scraping, teknik müdahale) kullanmayacağını kabul ve taahhüt eder. İhlalleri ${CONTACT_EMAIL} üzerinden bildirebilir.
+
+8. FİKRİ MÜLKİYET VE KULLANICI İÇERİĞİ
+Platformun adı, logosu, arayüzü, yazılımı ve tüm bileşenleri üzerindeki fikri/sınai mülkiyet hakları OYNA'ya aittir. Kullanıcının yüklediği İçerik üzerindeki haklar Kullanıcıda kalır; Kullanıcı, OYNA'ya yalnızca Platform hizmetinin işletilmesi amacıyla münhasır olmayan, geri alınabilir, alt lisans verilemeyen bir kullanım hakkı tanır. Bu lisans, İçeriğin kaldırılması veya hesabın silinmesiyle (yasal saklama süreleri saklı kalmak kaydıyla) sona erer. İçeriğin pazarlama/reklam amacıyla kullanılması, bu sınırlı lisansın kapsamı dışındadır ve ancak ayrı, açık, opt-in bir izinle mümkündür; bu izin başka bir onayla otomatik verilmiş sayılmaz ve her zaman geri alınabilir. Kullanıcı, yüklediği İçeriğin üçüncü kişi haklarını ihlal etmediğini beyan eder.
+
+9. GARANTİ REDDİ VE HİZMET KALİTESİ
+Platform "olduğu gibi" ve "mevcut haliyle" sunulur. OYNA; sahanın fiziki durumu ve güvenliği, maçın planlandığı gibi gerçekleşmesi, kaleci/hakem gibi Hizmet Sağlayıcıların performansı ve Platformun kesintisiz/hatasız çalışması konusunda açık veya zımni garanti vermez. Bu garanti reddi, Kullanıcının tüketici sıfatıyla 6502 sayılı TKHK'dan doğan ayıplı hizmet, cayma ve şikâyet haklarını ortadan kaldırmaz.
+
+10. SORUMLULUĞUN SINIRLANDIRILMASI
+OYNA'nın aracı platform sorumluluğu, makul özen ve dikkat yükümlülüğü ile sınırlıdır. OYNA'nın hafif kusuruna dayanan sorumluluğu, olayın gerçekleştiği tarihten geriye dönük son 12 ay içinde Kullanıcının fiilen ödediği toplam hizmet bedeli ile sınırlıdır; OYNA kâr kaybı, veri kaybı, itibar kaybı gibi dolaylı zararlardan sorumlu tutulamaz. Ancak bu sınırlamalar; (i) OYNA'nın veya ifa yardımcılarının/tedarikçilerinin ağır kusuru veya kastından kaynaklanan zararlarda ve (ii) OYNA'ya atfedilebilecek fiil/ihmalden kaynaklanan ölüm veya bedensel yaralanma hâllerinde, TBK m.115 uyarınca uygulanmaz — bu hâllerde OYNA herhangi bir üst sınır olmaksızın sorumludur. İşbu maddedeki sınırlamalar, Kullanıcının TKHK'dan doğan emredici haklarını ortadan kaldıracak şekilde yorumlanamaz.
+
+11. TAZMİNAT VE RÜCU
+Kullanıcının Platformu kötüye kullanması veya kusurlu fiiliyle başkasına zarar vermesi nedeniyle üçüncü kişilerin OYNA'ya yönelttiği taleplerde, OYNA'nın ödediği tazminat ve makul giderler için Kullanıcıya rücu hakkı saklıdır; bu sorumluluk yalnızca Kullanıcının kendi kusurundan kaynaklanan taleplerle sınırlıdır ve OYNA'nın kendi kusurundan doğan zararları kapsamaz. OYNA, rücu talebinden önce Kullanıcıyı bilgilendirir ve itiraz imkânı tanır.
+
+12. MÜCBİR SEBEP
+Doğal afet, yangın, salgın, savaş, terör, genel grev, siber saldırı, bağlayıcı kamu otoritesi kararları ve OYNA'nın makul kontrolü dışında öngörülemez/karşı konulamaz nitelikteki üçüncü taraf altyapı kesintileri mücbir sebep sayılır; ancak bu, OYNA'nın tedarikçi seçiminde özen göstermemesinden veya ağır kusurundan kaynaklanan kesintileri kapsamaz. Mücbir sebep, ağır kusur/kast istisnası ve ölüm/yaralanma istisnası saklı kalmak kaydıyla tazminat sorumluluğunu sınırlar veya ortadan kaldırır; ancak madde 6'daki iade yükümlülüğünü ortadan kaldırmaz — mücbir sebep nedeniyle rezervasyon gerçekleşemezse, Kullanıcının ödediği tutarın tamamı, öğrenilmesinden itibaren en geç 14 gün içinde, kesintisiz iade edilir.
+
+13. İHLALLER, HESABIN ASKIYA ALINMASI VE SONLANDIRILMASI
+OYNA; dolandırıcılık şüphesi, platform/kullanıcı güvenliğini tehdit eden davranış, yasa dışı faaliyet, küçüklerin güvenliğini tehlikeye atan davranış veya şiddet tehdidi hâllerinde hesabı bildirimsiz ve derhal, ihtiyati tedbir niteliğinde askıya alabilir; değerlendirme sürecini gecikmeksizin başlatır ve nihai kararını madde 14 uyarınca verir. Diğer ihlallerde Kullanıcıya bildirim yapılır ve en az 7 gün itiraz süresi tanınır. Askı/sonlandırma, önceden onaylanmış rezervasyon/ödeme işlemlerinin geçerliliğini etkilemez. Kullanıcı, dilediği zaman ${CONTACT_EMAIL} üzerinden hesabının silinmesini talep edebilir; hesap ve veriler talep tarihinden itibaren 7 gün içinde kalıcı olarak silinir.
+
+14. YAPTIRIM SKALASI
+Ağır ihlal kategorilerine (dolandırıcılık, güvenlik tehdidi, yasa dışı faaliyet, küçüklerin güvenliğine tehdit, şiddet) girmeyen ihlallerde kademeli yaptırım uygulanır: (1) uyarı, (2) 7-30 gün geçici askı, (3) kalıcı hesap kapatma. Yukarıda sayılan ağır ihlallerin nihai olarak tespiti hâlinde OYNA, kademeleri atlayarak doğrudan kalıcı hesap kapatma hakkına sahiptir. Yaptırıma tabi Kullanıcı, kararın bildiriminden itibaren makul sürede itiraz edebilir.
+
+15. UYUŞMAZLIKLARIN ÇÖZÜMÜ VE UYGULANACAK HUKUK
+Kullanıcı, şikâyetini dilerse önce ${CONTACT_EMAIL} adresine iletebilir; bu iç süreç isteğe bağlıdır ve yasal başvuru haklarının kullanılması için ön şart değildir. Kullanıcı, tüketici sıfatıyla her zaman ve doğrudan Tüketici Hakem Heyetleri ve/veya Tüketici Mahkemelerine başvurabilir; bu hakkı ortadan kaldıran hiçbir yetki/tahkim şartı bulunmamaktadır. İşbu Sözleşme Türkiye Cumhuriyeti kanunlarına tabidir. Tesis ve Hizmet Sağlayıcı gibi tacir/esnaf taraflarla OYNA arasındaki uyuşmazlıklar, ayrı sözleşmelerdeki yetki hükümlerine tabidir.
+
+16. DEVİR
+OYNA; birleşme, devralma veya benzeri yeniden yapılanma hâllerinde, hak ve yükümlülüklerini ve bağlantılı Kullanıcı verilerini KVKK'ya uygun şekilde devretme hakkını saklı tutar; Kullanıcı bu durumda bilgilendirilir. Kullanıcının hesabı ve sözleşmeden doğan hakları kişiye özeldir; üçüncü kişiye devredilemez.
+
+17. BİLDİRİM VE TEBLİGAT
+OYNA'nın bildirimleri, kayıtlı e-posta, Uygulama içi bildirim veya SMS/push yoluyla yapılabilir ve geçerli tebligat sayılır. Kullanıcı bildirimlerini ${CONTACT_EMAIL} adresine yazılı yapar ve iletişim bilgilerini güncel tutmakla yükümlüdür.
+
+18. SÖZLEŞMENİN BÜTÜNLÜĞÜ
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte taraflar arasındaki tam ve nihai anlaşmayı oluşturur.
+
+19. BÖLÜNEBİLİRLİK
+Herhangi bir hükmün geçersiz sayılması, Sözleşmenin geri kalanının geçerliliğini etkilemez; taraflar geçersiz hükmün amacına en yakın geçerli bir hükümle değiştirilmesi için iyi niyetle çaba gösterir.
+
+20. YÜRÜRLÜK VE DEĞİŞİKLİK PROSEDÜRÜ
+Sözleşme, üyelik veya Uygulamanın kullanılmaya başlanmasıyla yürürlüğe girer. OYNA değişiklik yapma hakkını saklı tutar; önemli değişiklikler önceden duyurulur ve kullanım devamı kabul sayılır. Esaslı bir değişikliği kabul etmeyen Kullanıcı, yürürlük tarihinden önce cezasız hesabını kapatarak feshedebilir. KVKK açık rızası gibi ayrı onay gerektiren hususlar, genel bildirim usulüyle değil ilgili mevzuatın öngördüğü ayrı onay mekanizmasıyla değişir.
+
+21. İLETİŞİM
 Sorularınız için: ${CONTACT_EMAIL}`,
   },
   PRIVACY: {

@@ -53,5 +53,5 @@ Veriler, hizmetin gerektirdiği ve ilgili mevzuatın öngördüğü süre boyunc
 ### 10. Veri Sorumlusu ve İletişim
 - **Unvan:** Miraç Kerem Çürüksulu (OYNA)
 - **Vergi Dairesi / Vergi Kimlik No:** Kartal Vergi Dairesi – 2650883645
-- **Adres:** Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Maltepe/İstanbul
+- **Adres:** Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul
 - **E-posta:** destek@oyna.app
