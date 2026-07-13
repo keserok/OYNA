@@ -87,6 +87,8 @@ const humanizePaymentError = (err: unknown): string => {
     return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
   if (has('BOOKING_CLOSED_REFUNDED'))
     return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
+  if (has('INSUFFICIENT_BALANCE'))
+    return stripRpcPrefix(raw) || 'Cüzdan bakiyen bu ödeme için yetersiz. Cüzdanına yükleme yapıp tekrar dene.';
   if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
     return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
   if (has('UNAUTHORIZED', 'GIRIŞ'))
@@ -167,22 +169,40 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const amount = ctx?.amount ?? 0;
   const spendable = summary?.spendableBalance ?? 0;
   const allowBalance = !!ctx?.allowBalance;
-  const balanceApplied = allowBalance && useBalance ? Math.min(spendable, amount) : 0;
+  // Cüzdan-öncelikli akış (ör. maç kaporası): ödeme YALNIZ bakiyeden — kart yok.
+  const balanceOnly = !!ctx?.balanceOnly;
+  const insufficientBalance = balanceOnly && spendable < amount;
+  const balanceApplied = balanceOnly
+    ? Math.min(spendable, amount)
+    : allowBalance && useBalance ? Math.min(spendable, amount) : 0;
   const remaining = Math.max(amount - balanceApplied, 0);
-  const needsCard = remaining > 0;
+  const needsCard = !balanceOnly && remaining > 0;
   const selectedCard = selectedCardId === 'temp'
     ? tempCard
     : savedCards.find(c => c.id === selectedCardId) ?? null;
-  const canPay = amount > 0 && (!needsCard || !!selectedCard);
+  const canPay = amount > 0 && (balanceOnly ? !insufficientBalance : (!needsCard || !!selectedCard));
 
-  const breakdown = balanceApplied > 0 && needsCard
-    ? `${fmt(balanceApplied)}₺ bakiye + ${fmt(remaining)}₺ kart`
-    : balanceApplied > 0
-      ? 'Tamamı OYNA bakiyenden'
-      : 'Tamamı karttan';
+  // Cüzdana yükleme kısayolu (cüzdan-öncelikli sistem: para platform içinde döner)
+  const goToTopup = () => {
+    const store = useAppStore.getState();
+    store.setWalletInitialTab('TOPUP');
+    store.navigateTo('WALLET');
+  };
 
-  const noteText = !allowBalance
-    ? 'Kapora kartına bloke edilir, hemen çekilmez — bu yüzden bakiye bu ödemede kullanılamaz. Maç dolmazsa blokaj otomatik kalkar.'
+  const breakdown = balanceOnly
+    ? (insufficientBalance ? `Bakiye ${fmt(spendable)}₺ · ${fmt(amount - spendable)}₺ eksik` : 'Tamamı OYNA bakiyenden')
+    : balanceApplied > 0 && needsCard
+      ? `${fmt(balanceApplied)}₺ bakiye + ${fmt(remaining)}₺ kart`
+      : balanceApplied > 0
+        ? 'Tamamı OYNA bakiyenden'
+        : 'Tamamı karttan';
+
+  const noteText = balanceOnly
+    ? (insufficientBalance
+        ? `Bu kapora cüzdan bakiyesinden ödenir. Bakiyen ${fmt(spendable)}₺ — ${fmt(amount - spendable)}₺ daha yüklemen gerekiyor.`
+        : 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolmazsa veya iptal olursa tutar anında iade kredisi olarak cüzdanına döner.')
+    : !allowBalance
+    ? 'Bakiye bu ödemede kullanılamaz.'
     : balanceApplied > 0 && needsCard
       ? `Bakiyen tutarın bir kısmını karşılıyor; kalan ${fmt(remaining)}₺ seçtiğin karttan tahsil edilir.`
       : balanceApplied > 0
@@ -342,8 +362,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       }
       case 'MATCH_CREATE_DEPOSIT': {
         if (!ctx.matchId) throw new Error('Maç bilgisi eksik.');
+        // Cüzdan-öncelikli: kapora bakiyeden güvenceye alınır (kart yok, PSP yok).
         const res = await blockMatchDeposit(ctx.matchId, amount, (ctx.deferredProviders ?? []) as any);
-        return { balanceApplied: 0, cardAmount: amount, intentId: (res as any)?.intent_id ?? null };
+        return { balanceApplied: amount, cardAmount: 0, intentId: (res as any)?.intent_id ?? null };
       }
     }
   };
@@ -660,18 +681,20 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500 mb-3 px-5">Ödeme Yöntemi</p>
           <div className="oy-carousel flex gap-3 overflow-x-auto px-5 pb-1.5" style={{ scrollSnapType: 'x mandatory' }}>
-            {/* OYNA bakiyesi toggle */}
+            {/* OYNA bakiyesi toggle (cüzdan-öncelikli akışta tek yöntem) */}
             <button
-              disabled={!allowBalance}
-              onClick={() => allowBalance && setUseBalance(v => !v)}
+              disabled={!allowBalance || balanceOnly}
+              onClick={() => allowBalance && !balanceOnly && setUseBalance(v => !v)}
               style={{ scrollSnapAlign: 'start' }}
-              className={`shrink-0 w-[158px] rounded-[20px] p-4 text-left bg-gradient-to-br from-green-900/40 to-[#161B22] relative transition-all ${
+              className={`shrink-0 rounded-[20px] p-4 text-left bg-gradient-to-br from-green-900/40 to-[#161B22] relative transition-all ${
+                balanceOnly ? 'w-full' : 'w-[158px]'
+              } ${
                 !allowBalance ? 'opacity-45 border border-white/8'
-                : balanceApplied > 0 ? 'border-2 border-[#39FF14] shadow-[0_0_22px_rgba(57,255,20,0.18)]'
+                : balanceApplied > 0 || balanceOnly ? 'border-2 border-[#39FF14] shadow-[0_0_22px_rgba(57,255,20,0.18)]'
                 : 'border border-white/8'
               }`}
             >
-              {balanceApplied > 0 && (
+              {(balanceApplied > 0 || balanceOnly) && !insufficientBalance && (
                 <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-[#39FF14] flex items-center justify-center">
                   <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
                 </span>
@@ -685,14 +708,23 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
               <p className="text-xs font-extrabold text-white">OYNA Bakiyesi</p>
               <p className="text-xl font-black text-[#39FF14] mt-1 font-numeric">{fmt(spendable)}₺</p>
               <p className="text-[9.5px] text-gray-500 mt-0.5">
-                {!allowBalance ? 'Kaporada kullanılamaz'
+                {!allowBalance ? 'Bu ödemede kullanılamaz'
                   : spendable >= amount ? 'Tamamını karşılar'
                   : spendable > 0 ? 'Kısmen karşılar' : 'Bakiye yok'}
               </p>
+              {/* Cüzdan-öncelikli sistem: bakiye yetmiyorsa hızlı yükleme kısayolu */}
+              {allowBalance && spendable < amount && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); goToTopup(); }}
+                  className="mt-2 inline-flex items-center gap-1 text-[10px] font-extrabold text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
+                >
+                  <Plus size={11} strokeWidth={3} /> Yükle
+                </span>
+              )}
             </button>
 
-            {/* Kayıtlı kartlar */}
-            {savedCards.map(card => {
+            {/* Kayıtlı kartlar (cüzdan-öncelikli akışta gizli) */}
+            {!balanceOnly && savedCards.map(card => {
               const selected = needsCard && selectedCardId === card.id;
               return (
                 <button key={card.id} onClick={() => setSelectedCardId(card.id)}
@@ -720,7 +752,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
             })}
 
             {/* Tek seferlik kart */}
-            {tempCard && (
+            {!balanceOnly && tempCard && (
               <button onClick={() => setSelectedCardId('temp')}
                 style={{ scrollSnapAlign: 'start' }}
                 className={`shrink-0 w-[158px] rounded-[20px] p-4 text-left bg-[#161B22] relative transition-all ${
@@ -742,13 +774,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
               </button>
             )}
 
-            {/* Yeni kart ekle */}
-            <button onClick={() => setScreen('ADD_CARD')}
-              style={{ scrollSnapAlign: 'start' }}
-              className="shrink-0 w-[120px] rounded-[20px] p-4 border-[1.5px] border-dashed border-white/16 flex flex-col items-center justify-center gap-2.5 text-gray-400">
-              <span className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Plus size={20} /></span>
-              <p className="text-[11px] font-bold text-center leading-tight">Yeni<br />kart ekle</p>
-            </button>
+            {/* Yeni kart ekle (cüzdan-öncelikli akışta gizli) */}
+            {!balanceOnly && (
+              <button onClick={() => setScreen('ADD_CARD')}
+                style={{ scrollSnapAlign: 'start' }}
+                className="shrink-0 w-[120px] rounded-[20px] p-4 border-[1.5px] border-dashed border-white/16 flex flex-col items-center justify-center gap-2.5 text-gray-400">
+                <span className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Plus size={20} /></span>
+                <p className="text-[11px] font-bold text-center leading-tight">Yeni<br />kart ekle</p>
+              </button>
+            )}
           </div>
         </div>
 
@@ -798,17 +832,31 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
             Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{fmt(amount)}₺</span>
           </span>
         </div>
-        <button
-          disabled={!canPay}
-          onClick={handlePay}
-          className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-            canPay
-              ? 'bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]'
-              : 'bg-gray-800 text-gray-500'
-          }`}
-        >
-          <Lock size={17} /> {fmt(amount)}₺ {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
-        </button>
+        {insufficientBalance ? (
+          <button
+            onClick={goToTopup}
+            className="w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]"
+          >
+            <Wallet size={17} /> CÜZDANA YÜKLE
+          </button>
+        ) : (
+          <button
+            disabled={!canPay}
+            onClick={handlePay}
+            className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+              canPay
+                ? 'bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]'
+                : 'bg-gray-800 text-gray-500'
+            }`}
+          >
+            <Lock size={17} /> {fmt(amount)}₺ {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
+          </button>
+        )}
+        {insufficientBalance && (
+          <p className="text-center text-[10px] text-gray-500 mt-2">
+            Bu kapora cüzdandan ödenir — {fmt(amount - spendable)}₺ daha yüklemen yeterli.
+          </p>
+        )}
         {needsCard && !selectedCard && (
           <p className="text-center text-[10px] text-gray-500 mt-2">Devam etmek için bir kart seç veya yeni kart ekle.</p>
         )}

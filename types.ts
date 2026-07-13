@@ -102,7 +102,7 @@ export type PaymentContextKind =
   | 'MATCH_JOIN'            // maça katılım (slot satın alma)
   | 'PITCH_DEPOSIT'         // saha vitrini → kapora (rezervasyon + kapora birlikte)
   | 'BOOKING_DEPOSIT'       // mevcut rezervasyonun kaporası (Rezervasyonlarım)
-  | 'MATCH_CREATE_DEPOSIT'; // maç oluşturma → kapora (karta BLOKE edilir)
+  | 'MATCH_CREATE_DEPOSIT'; // maç oluşturma → kapora (CÜZDANDAN güvenceye alınır)
 
 /** Bağlam özet kartındaki dikey satır — küçük ikon + metin (saha/tarih/saat). */
 export interface PaymentContextDetail {
@@ -126,6 +126,9 @@ export interface PaymentContext {
   isDeposit: boolean;
   /** OYNA bakiyesi bu bağlamda kullanılabilir mi (escrow blokajda false) */
   allowBalance: boolean;
+  /** Cüzdan-öncelikli akış: ödeme YALNIZ bakiyeden yapılır (kart gizlenir);
+   *  bakiye yetersizse kullanıcı cüzdana yüklemeye yönlendirilir. */
+  balanceOnly?: boolean;
   successTitle: string;
   successSubtitle: string;
   /** Kapora güven notu vb. (ör. 'Maç dolmazsa otomatik iade edilir.') */

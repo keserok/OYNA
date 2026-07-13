@@ -10,7 +10,7 @@ import { useAppStore } from '../store';
 import { UserRole } from '../types';
 import {
   getWalletSummary, listSavedCards, deleteSavedCard, setDefaultSavedCard,
-  WalletSummary, SavedCard,
+  getOwnerEarningsSummary, EarningsSummary, WalletSummary, SavedCard,
 } from '../services/walletService';
 import { startInAppCardPayment } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
@@ -105,6 +105,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   const [view, setView] = useState<View>('MAIN');
   const [summary, setSummary] = useState<WalletSummary | null>(null);
+  const [earnSummary, setEarnSummary] = useState<EarningsSummary | null>(null);
   const [txList, setTxList] = useState<WalletTx[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +138,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const fetchData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [sum, cards, txRes, payoutRes] = await Promise.all([
+      const [sum, cards, txRes, payoutRes, earn] = await Promise.all([
         getWalletSummary().catch(() => null),
         listSavedCards(),
         supabase.from('wallet_transactions')
@@ -146,8 +147,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         supabase.from('payout_requests')
           .select('id,amount,iban,iban_holder_name,status,created_at')
           .order('created_at', { ascending: false }).limit(20),
+        isEarningsRole ? getOwnerEarningsSummary().catch(() => null) : Promise.resolve(null),
       ]);
       if (sum) setSummary(sum);
+      setEarnSummary(earn);
       setSavedCards(cards);
       setTopupCardId(prev => prev ?? (cards.find(c => c.isDefault) ?? cards[0])?.id ?? null);
       if (txRes.data) setTxList(txRes.data as WalletTx[]);
@@ -156,7 +159,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [setSavedCards]);
+  }, [setSavedCards, isEarningsRole]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -727,6 +730,16 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                     </div>
                   )}
                 </div>
+                {/* Güvence beklemesindeki kazanç (2 hafta) — şeffaflık için görünür */}
+                {(earnSummary?.pending ?? 0) > 0 && (
+                  <div className="mt-3 inline-flex items-center gap-2 bg-blue-400/12 border border-blue-400/25 rounded-xl px-3 py-2">
+                    <Clock size={13} className="text-blue-300" />
+                    <span className="text-[11px] font-bold text-blue-200">
+                      Güvence beklemesinde <span className="text-white">{fmt(earnSummary!.pending)}₺</span>
+                      <span className="text-blue-300/70"> · 2 hafta sonra çekilebilir</span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
