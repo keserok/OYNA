@@ -7,6 +7,12 @@
 
 Bu belge çözümleri **uygulamaz**; onaya sunar. Onayladığın maddeler `PROBLEMLER_VE_COZUMLER.md` iş akışına göre tek tek kodlanır.
 
+> **✅ Onaylanan kararlar (2026-07-13):**
+> - **K2/B1 — minRating:** Varsayılan **YOK** (maç herkese açık); yalnız kurucu isterse baraj koyar.
+> - **K1 — Cüzdan top-up:** **Kalır**; Master 4.6 buna göre güncellenecek (cüzdan-öncelikli ödeme). C-grubu tam kapsam (idempotency + min/max).
+> - **K4 — Ödeme sağlayıcı:** Şimdilik **SIMULATION**; UX simülasyon gerçekliğine göre kurgulanır. Gerçek iyzico pre-auth/capture **ayrı iş** olarak askıda.
+> - **Sonraki adım:** Kod yazılmayacak; kullanıcı planı madde madde inceleyip onaylayacak.
+
 ---
 
 ## 0. Nasıl test ettim (Metodoloji)
@@ -95,7 +101,7 @@ Görünüşte tamam ama **sahte veri** ile çalışan yüzeyler — en tehlikeli
 
 ### B. Maç Keşfi · Katılım · Yaşam Döngüsü
 
-**[B1] 🔴 Oluşturulan HER maça sabit `minRating: 4.0` → yeni oyuncu (rating 0/rookie) tüm vitrini KİLİTLİ görüyor.** (`useMatchCreate.ts:406` + kilit `MatchDiscovery.tsx:1159`). Soğuk-başlangıç çıkmazı: yeni kullanıcı hiçbir maça giremez. **Çözüm:** varsayılan `minRating` **yok**; yalnız kurucu açıkça "deneyimli maçı" seçerse uygulanır (Master fair-play gating "premium kilit" değil). Rookie'ler için ayrı "yeni oyuncu dostu" rozeti.
+**[B1] 🔴 Oluşturulan HER maça sabit `minRating: 4.0` → yeni oyuncu (rating 0/rookie) tüm vitrini KİLİTLİ görüyor.** (`useMatchCreate.ts:406` + kilit `MatchDiscovery.tsx:1159`). Soğuk-başlangıç çıkmazı: yeni kullanıcı hiçbir maça giremez. **✅ Çözüm (K2 kararı):** varsayılan `minRating` **YOK** (maç herkese açık); yalnız kurucu açıkça "deneyimli maçı" seçerse uygulanır. Rookie'ler için ayrı "yeni oyuncu dostu" rozeti.
 
 **[B2] 🔴 `minRating` kapısı yalnız keşif kartında; lobiye yan kapılardan (özel kod, takvim, Dashboard) girince kontrol yok** (`MatchJoin.tsx` içinde `minRating` yalnız realtime map'te). **Çözüm:** kapıyı **sunucu tarafında** (join RPC) zorunlu kıl; UI her giriş yolunda tutarlı mesaj göstersin.
 
@@ -133,7 +139,7 @@ Görünüşte tamam ama **sahte veri** ile çalışan yüzeyler — en tehlikeli
 
 **[C3] 🔴 Sessiz cüzdan-özeti hatası → yanlış "yetersiz bakiye" / tam kart çekimi.** (`PaymentScreen.tsx:174-186`; KN-5). **Çözüm:** KN-5 (açık hata durumu).
 
-**[C4] 🔴 Dijital bilet her zaman "ONAYLANDI" + sahte QR, ödemeden bağımsız (KN-6).** (`MatchTicket.tsx`). Turnike/giriş artefaktı doğrulanamaz. **Çözüm:** gerçek rezervasyon/ödeme durumundan türeyen dinamik QR + gerçek ID; ödeme yoksa bilet yok.
+**[C4] 🔴 Dijital bilet her zaman "ONAYLANDI" + sahte QR, ödemeden bağımsız (KN-6).** (`MatchTicket.tsx`). Turnike/giriş artefaktı doğrulanamaz. **✅ Çözüm (K4 kararı):** bilet, *simüle edilmiş* ödeme/rezervasyon durumunu **dürüstçe** yansıtsın — gerçek rezervasyon ID'sinden dinamik QR; ödeme (simülasyonda dahi) tamamlanmadıysa bilet "ONAYLANDI" göstermesin.
 
 **[C5] 🔴 İptal iade tahmini PSP ücretini atlıyor → söz verilenden az iade.** UI `paid×pct` gösteriyor, backend `−psp_fee` düşüyor (`MyBookings.tsx:325-327` vs `faz7_refund_policy.sql:141`). **Çözüm:** tahmini backend formülüyle **birebir** aynı yap; "≈" yerine kesin kırılım.
 
@@ -201,13 +207,11 @@ Görünüşte tamam ama **sahte veri** ile çalışan yüzeyler — en tehlikeli
 
 ## 4. Senin kararın gereken noktalar
 
-Aşağıdakiler ürün kararı; ben öneriyorum ama sen onaylamalısın:
-
-- **K1 — Cüzdana para yükleme (top-up) kalsın mı?** Kod'da var (L6) ama Master 4.6 "lansmanda YOK" diyor. _Öneri:_ Master'ı güncelle → **kalsın** (cüzdan-öncelikli ödeme zaten merge edildi), veya lansmanda gizle. Bu, C-grubu (idempotency, min/max) kapsamını belirler.
-- **K2 — `minRating` varsayılanı.** _Öneri:_ Varsayılan **yok** (herkese açık); yalnız kurucu isterse. Onaylarsan B1'i buna göre kurgularım.
-- **K3 — Misafir (guest) modu.** Master "lansmanda YOK" diyor. _Öneri:_ Şimdi tam gate'le (dead-end'leri düzeltmek yerine), geliştirmede kalsın. Onayına göre A7/F4 kapsamı değişir.
-- **K4 — Ödeme sağlayıcı.** SIMULATION mı, iyzico pre-auth mı canlıya? Bu, C-grubu para akışının gerçekliğini belirler (B7/B12/C4 "blokaj→capture" gerçek mi simüle mi).
-- **K5 — Kapsam sırası.** _Öneri:_ Önce 6 sistemik kök neden (KN-1..6), sonra P0 para/güven, sonra P1 akış, sonra P2 cila. Farklı bir sıra istersen söyle.
+- **K1 — Cüzdana para yükleme (top-up).** ✅ **KARAR: Kalır.** Master 4.6 "lansmanda YOK" ifadesi cüzdan-öncelikli ödemeye göre güncellenecek. C-grubu tam kapsam (idempotency + min/max + hata durumları).
+- **K2 — `minRating` varsayılanı.** ✅ **KARAR: Varsayılan YOK** (maç herkese açık); yalnız kurucu açıkça "deneyimli maçı" seçerse baraj uygulanır. B1 buna göre kurgulanır.
+- **K3 — Misafir (guest) modu.** ⏳ **AÇIK.** Master "lansmanda YOK" diyor. _Öneri:_ Şimdi tam gate'le (dead-end'leri tek tek düzeltmek yerine); geliştirmede kalsın. Onayına göre A7/F4 kapsamı değişir.
+- **K4 — Ödeme sağlayıcı.** ✅ **KARAR: Şimdilik SIMULATION.** UX simülasyon gerçekliğine göre kurgulanır — bilet/QR (C4) *simüle edilmiş* ödeme durumunu **dürüstçe** yansıtır; blokaj→capture→iade akışı simüle edilir. Gerçek iyzico pre-auth ayrı iş olarak askıda.
+- **K5 — Kapsam sırası.** _Öneri:_ Önce 6 sistemik kök neden (KN-1..6), sonra P0 para/güven, sonra P1 akış, sonra P2 cila. Kullanıcı planı önce inceleyecek; sıra onay sonrası kesinleşir.
 
 ---
 
