@@ -13,7 +13,7 @@
 ### 1. Veri Sorumlusu
 Miraç Kerem Çürüksulu (OYNA)
 Vergi Dairesi/No: Kartal Vergi Dairesi – 2650883645
-Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Maltepe/İstanbul
+Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul
 
 ### 2. İşlenen Kişisel Veriler
 Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri.
