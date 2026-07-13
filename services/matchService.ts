@@ -153,6 +153,7 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       homeTeamId: data.home_team_id || data.homeTeamId,
       awayTeamId: data.away_team_id || data.awayTeamId,
       refereeId: data.ref_id || data.refereeId,
+      gkId: data.gk_id ?? data.gkId ?? undefined,
       creatorId: data.captain_id || data.creatorId,
       // FAZ 3: maç çekirdeği alanları camelCase'e map et
       visibility: data.visibility || 'OPEN',
@@ -276,6 +277,70 @@ export const getMatchLobbyParticipants = async (
     console.warn('[matchService] lobi roster çekilemedi:', e);
     return [];
   }
+};
+
+/**
+ * Maça ATANMIŞ kaleci/hakem — lobide HERKESE gösterilir (salt-okunur).
+ * Kaynak: `matches.gk_id`/`matches.refereeId` → `goalkeepers`/`referees` tabloları.
+ * RLS: her iki tablonun SELECT politikası onaylı (verification_status='approved')
+ * ve demo-değil (ya da demo_mode açık) sağlayıcıları herkese açar; okunamıyorsa
+ * (ör. reddedilmiş sağlayıcı) null döner ve UI o kartı hiç göstermez.
+ * jsonb `skills`/`stats` ham döner — çağıran defansif okur (anahtarlar TR/EN olabilir).
+ */
+export interface MatchProvider {
+  id: string;
+  name: string;
+  avatar: string | null;
+  rating: number | null;
+  fee: number | null;
+  matchCount: number | null;
+  style: string | null;
+  level: string | null;        // yalnız hakem
+  height: string | null;       // yalnız kaleci
+  age: number | null;          // yalnız kaleci
+  isElite: boolean;
+  skills: Record<string, number> | null;
+  stats: Record<string, number | string> | null;
+}
+
+const toNum = (v: any): number | null => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v));
+
+const mapProvider = (row: any): MatchProvider => ({
+  id: row.id,
+  name: row.name || 'Sağlayıcı',
+  avatar: row.avatar || null,
+  rating: toNum(row.rating),
+  fee: toNum(row.fee),
+  matchCount: toNum(row.matchCount),
+  style: row.style || null,
+  level: row.level || null,
+  height: row.height || null,
+  age: toNum(row.age),
+  isElite: !!row.isElite,
+  skills: row.skills && typeof row.skills === 'object' ? row.skills : null,
+  stats: row.stats && typeof row.stats === 'object' ? row.stats : null,
+});
+
+export const getMatchProviders = async (
+  gkId?: string | null,
+  refereeId?: string | null,
+): Promise<{ goalkeeper: MatchProvider | null; referee: MatchProvider | null }> => {
+  const result: { goalkeeper: MatchProvider | null; referee: MatchProvider | null } = { goalkeeper: null, referee: null };
+  try {
+    const [gkRes, refRes] = await Promise.all([
+      gkId
+        ? supabase.from('goalkeepers').select('id,name,avatar,rating,fee,"matchCount",style,height,age,"isElite",skills,stats').eq('id', gkId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      refereeId
+        ? supabase.from('referees').select('id,name,avatar,rating,fee,"matchCount",style,level,"isElite",stats').eq('id', refereeId).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+    if ((gkRes as any).data) result.goalkeeper = mapProvider((gkRes as any).data);
+    if ((refRes as any).data) result.referee = mapProvider((refRes as any).data);
+  } catch (e) {
+    console.warn('[matchService] atanmış sağlayıcılar çekilemedi:', e);
+  }
+  return result;
 };
 
 /**

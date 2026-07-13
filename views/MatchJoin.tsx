@@ -5,14 +5,14 @@ import {
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
   Plus, CheckCircle2, Users, Star, Wifi, WifiOff,
   Send, AlertCircle, Shield, Layers, Droplets, Award,
-  DollarSign, Info, KeyRound, Copy
+  DollarSign, Info, KeyRound, Copy, Ruler, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, type LobbyParticipant, type FriendPlayerCard } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
 import { checkMatchThreshold } from '../services/matchLifecycleService';
@@ -258,6 +258,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [providerSubmittingId, setProviderSubmittingId] = useState<string | null>(null);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
 
+  // FAZ 2: maça ATANMIŞ kaleci/hakem — lobide HERKESE (salt-okunur) gösterilir.
+  const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
+  const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
+  const [showGkDetail, setShowGkDetail] = useState(false);
+
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
 
@@ -333,6 +338,26 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!originalMatch?.id) return;
     refreshServiceRequests(originalMatch.id);
   }, [originalMatch?.id]);
+
+  // ── FAZ 2: Maça atanmış kaleci/hakem (HERKESE görünür, salt-okunur) ────────
+  const assignedGkId = (match as any)?.gkId || (match as any)?.gk_id || null;
+  const assignedRefId = (match as any)?.refereeId || (match as any)?.ref_id || null;
+  useEffect(() => {
+    if (!assignedGkId && !assignedRefId) {
+      setAssignedGoalkeeper(null);
+      setAssignedReferee(null);
+      return;
+    }
+    let alive = true;
+    getMatchProviders(assignedGkId, assignedRefId)
+      .then(({ goalkeeper, referee }) => {
+        if (!alive) return;
+        setAssignedGoalkeeper(goalkeeper);
+        setAssignedReferee(referee);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [assignedGkId, assignedRefId]);
 
   // ── Sahadaki dolu slotları gerçek oyuncularla doldur (public_profiles) ────
   // TAKEN sayısı değişince (katılım/ayrılma, realtime dahil) yeniden çekilir.
@@ -1531,6 +1556,132 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         )}
       </AnimatePresence>
 
+      {/* ── Kiralık Kaleci — Dikey Detaylı Kart (HERKESE) ────────────────────── */}
+      <AnimatePresence>
+        {showGkDetail && assignedGoalkeeper && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
+            onClick={() => setShowGkDetail(false)}>
+            <motion.div
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b from-[#1c1207] to-[#0d1117] border border-[#FF9F43]/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
+              {(() => {
+                const gk = assignedGoalkeeper;
+                const accent = '#FF9F43';
+                const SKILL_LABELS: Record<string, string> = {
+                  refleks: 'REFLEKS', uzak_top: 'UZAK TOP', top_tutma: 'TOP TUTMA', alan_hakimiyeti: 'ALAN HÂKİMİYETİ',
+                  reflexes: 'REFLEKS', diving: 'ÇIKIŞ', handling: 'TOP TUTMA', positioning: 'POZİSYON', kicking: 'VURUŞ', speed: 'HIZ',
+                };
+                const STAT_LABELS: Record<string, string> = {
+                  kurtarish_orani: 'KURTARIŞ', temiz_kale: 'TEMİZ KALE', pas_isabeti: 'PAS İSABETİ', gol_yedi: 'GOL YEDİ',
+                  savePercentage: 'KURTARIŞ', cleanSheets: 'TEMİZ KALE', penaltySaveRate: 'PENALTI',
+                };
+                const PCT_KEYS = new Set(['kurtarish_orani', 'pas_isabeti', 'savePercentage', 'penaltySaveRate']);
+                const humanize = (k: string) => k.replace(/_/g, ' ').toUpperCase();
+                const skills = gk.skills ? Object.entries(gk.skills).filter(([, v]) => typeof v === 'number') as [string, number][] : [];
+                const stats = gk.stats ? Object.entries(gk.stats) : [];
+                return (
+                  <div className="p-6 pt-8 flex flex-col items-center">
+                    {/* Avatar */}
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
+                      {isRealPhoto(gk.avatar) ? (
+                        <img src={gk.avatar!} alt={gk.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl font-black bg-orange-950/60 text-orange-300">
+                          {getInitials(gk.name)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight">{gk.name}</h3>
+                      {gk.isElite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>KİRALIK KALECİ</span>
+                      {gk.style && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {gk.style}</span>}
+                    </div>
+
+                    {/* Reyting + Ücret */}
+                    <div className="w-full grid grid-cols-2 gap-2 mt-5">
+                      <div className="rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">REYTİNG</span>
+                        <div className="flex items-baseline gap-1">
+                          <Star size={16} className="text-yellow-400" fill="currentColor" />
+                          <span className="text-3xl font-black tabular-nums leading-none" style={{ color: accent }}>{gk.rating != null ? gk.rating.toFixed(1) : '—'}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">ÜCRET</span>
+                        <span className="text-3xl font-black tabular-nums leading-none text-white">{gk.fee != null ? gk.fee + '₺' : '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* Yaş / Boy / Maç */}
+                    <div className="w-full grid grid-cols-3 gap-2 mt-2">
+                      {[
+                        { Icon: Calendar, l: 'YAŞ', v: gk.age != null ? String(gk.age) : '—' },
+                        { Icon: Ruler, l: 'BOY', v: gk.height || '—' },
+                        { Icon: Activity, l: 'MAÇ', v: gk.matchCount != null ? String(gk.matchCount) : '—' },
+                      ].map(s => (
+                        <div key={s.l} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 flex flex-col items-center gap-0.5">
+                          <s.Icon size={12} className="text-white/30" />
+                          <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em]">{s.l}</span>
+                          <span className="text-xs font-black text-white">{s.v}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Kalecilik Yetenekleri — bar */}
+                    {skills.length > 0 && (
+                      <div className="w-full mt-5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Kalecilik Reytingleri</span>
+                        <div className="mt-2 space-y-2">
+                          {skills.map(([k, v]) => {
+                            const pct = Math.max(0, Math.min(100, (v / 10) * 100));
+                            return (
+                              <div key={k} className="flex items-center gap-2">
+                                <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-24 shrink-0 truncate">{SKILL_LABELS[k] || humanize(k)}</span>
+                                <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
+                                </div>
+                                <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{Number(v).toFixed(1)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* İstatistikler */}
+                    {stats.length > 0 && (
+                      <div className="w-full mt-5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">İstatistikler</span>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {stats.map(([k, v]) => (
+                            <div key={k} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 px-3 flex flex-col items-center gap-0.5">
+                              <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em] text-center">{STAT_LABELS[k] || humanize(k)}</span>
+                              <span className="text-sm font-black text-white">{PCT_KEYS.has(k) ? '%' + v : String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <button onClick={() => setShowGkDetail(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                <X size={16} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-2xl border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         {/* Navigasyon Satırı */}
@@ -2122,12 +2273,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const isGK = type === 'GK';
                 const assignedId = isGK ? match.gkId : match.refereeId;
                 const activeReq = getActiveRequestForType(type);
-                const assignedUser = assignedId
-                  ? (adminUsers || []).find(u => u?.id === assignedId)
-                  : null;
                 const accent = isGK ? '#FF9F43' : '#A78BFA';
                 const Icon = isGK ? Hand : Scale;
                 const label = isGK ? 'Kaleci' : 'Hakem';
+                // FAZ 2: atanmış sağlayıcı adı/avatarı gerçek goalkeepers/referees verisinden
+                // (adminUsers güvenilmez); okunamıyorsa genel etikete düşer.
+                const assignedProvider = isGK ? assignedGoalkeeper : assignedReferee;
+                const providerName = assignedProvider?.name
+                  || (assignedId ? (adminUsers || []).find(u => u?.id === assignedId)?.name : null)
+                  || label;
 
                 // 1) Atanmış sağlayıcı varsa onun bilgisini göster
                 if (assignedId) {
@@ -2140,19 +2294,26 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <div className="absolute top-0 right-0 w-12 h-12 pointer-events-none"
                         style={{ background: `linear-gradient(to bottom left, ${accent}1a, transparent)` }} />
                       <div className="flex items-center gap-2">
-                        <img
-                          src={assignedUser?.avatar || `https://i.pravatar.cc/150?u=${assignedId}`}
-                          alt={assignedUser?.name || label}
-                          className="w-9 h-9 rounded-xl object-cover border"
-                          style={{ borderColor: accent + '60' }}
-                        />
+                        {isRealPhoto(assignedProvider?.avatar) ? (
+                          <img
+                            src={assignedProvider!.avatar!}
+                            alt={providerName}
+                            className="w-9 h-9 rounded-xl object-cover border"
+                            style={{ borderColor: accent + '60' }}
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black border"
+                            style={{ background: accent + '1a', color: accent, borderColor: accent + '40' }}>
+                            {getInitials(providerName)}
+                          </div>
+                        )}
                         <div className="p-1.5 rounded-lg border" style={{ background: accent + '1a', color: accent, borderColor: accent + '33' }}>
                           <CheckCircle2 size={13} />
                         </div>
                       </div>
                       <div>
                         <h4 className="font-black text-xs text-white uppercase tracking-wider truncate max-w-[120px]">
-                          {assignedUser?.name || label}
+                          {providerName}
                         </h4>
                         <p className="text-[8px] font-bold mt-0.5 uppercase tracking-wide" style={{ color: accent }}>
                           {label} Atandı
@@ -2256,6 +2417,91 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MAÇ GÖREVLİLERİ (HERKESE görünür, salt-okunur) ──────────────────── */}
+        {/* Atanmış kaleci/hakem gerçek verilerle; kaleci basınca dikey detay kartı. */}
+        {(assignedGoalkeeper || assignedReferee) && (
+          <div className="space-y-3 mt-6">
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
+
+            {assignedGoalkeeper && (
+              <button
+                onClick={() => setShowGkDetail(true)}
+                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
+                <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(255,159,67,0.14), transparent)' }} />
+                <div className="relative shrink-0">
+                  {isRealPhoto(assignedGoalkeeper.avatar) ? (
+                    <img src={assignedGoalkeeper.avatar!} alt={assignedGoalkeeper.name} className="w-12 h-12 rounded-2xl object-cover border border-[#FF9F43]/50" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-950/50 text-orange-300 border border-[#FF9F43]/40 font-black">
+                      {getInitials(assignedGoalkeeper.name)}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#FF9F43] border-2 border-[#161B22]">
+                    <Hand size={10} className="text-black" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedGoalkeeper.name}</h4>
+                    {assignedGoalkeeper.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                  </div>
+                  <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {assignedGoalkeeper.rating != null && (
+                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-400"><Star size={10} fill="currentColor" />{assignedGoalkeeper.rating.toFixed(1)}</span>
+                    )}
+                    {assignedGoalkeeper.fee != null && (
+                      <span className="text-[10px] font-black text-white/70">{assignedGoalkeeper.fee}₺</span>
+                    )}
+                    {assignedGoalkeeper.style && (
+                      <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide truncate">{assignedGoalkeeper.style}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-white/40 shrink-0">
+                  Detay <ChevronRight size={13} />
+                </div>
+              </button>
+            )}
+
+            {assignedReferee && (
+              <div className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#A78BFA]/30 flex items-center gap-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(167,139,250,0.14), transparent)' }} />
+                <div className="relative shrink-0">
+                  {isRealPhoto(assignedReferee.avatar) ? (
+                    <img src={assignedReferee.avatar!} alt={assignedReferee.name} className="w-12 h-12 rounded-2xl object-cover border border-[#A78BFA]/50" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-violet-950/50 text-violet-300 border border-[#A78BFA]/40 font-black">
+                      {getInitials(assignedReferee.name)}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#A78BFA] border-2 border-[#161B22]">
+                    <Scale size={10} className="text-black" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedReferee.name}</h4>
+                    {assignedReferee.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                  </div>
+                  <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {assignedReferee.rating != null && (
+                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-400"><Star size={10} fill="currentColor" />{assignedReferee.rating.toFixed(1)}</span>
+                    )}
+                    {assignedReferee.fee != null && (
+                      <span className="text-[10px] font-black text-white/70">{assignedReferee.fee}₺</span>
+                    )}
+                    {assignedReferee.level && (
+                      <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide truncate">{assignedReferee.level}</span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
