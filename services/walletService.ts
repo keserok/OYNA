@@ -193,6 +193,34 @@ export const topUpWallet = async (amount: number, cardId?: string | null): Promi
   };
 };
 
+// ─── Kazanç özeti (tesis/kaleci/hakem) — owner_earnings_summary RPC ──────────
+export interface EarningsSummary {
+  available: number;        // çekilebilir kazanç
+  reserved: number;         // bekleyen çekim talebinde rezerve
+  pending: number;          // güvence beklemesinde (2 hafta)
+  monthGross: number;       // bu ay brüt uygulama tahsilatı (saha)
+  monthNet: number;         // bu ay net saha kazancı
+  monthCommission: number;  // bu ay OYNA komisyonu
+  monthCount: number;       // bu ay ödeme adedi
+  monthOtherNet: number;    // bu ay maç/hizmet kazancı (kaleci/hakem)
+}
+
+export const getOwnerEarningsSummary = async (): Promise<EarningsSummary | null> => {
+  const { data, error } = await supabase.rpc('owner_earnings_summary');
+  if (error || !data) return null;
+  const d = data as any;
+  return {
+    available: Number(d.available) || 0,
+    reserved: Number(d.reserved) || 0,
+    pending: Number(d.pending) || 0,
+    monthGross: Number(d.month_gross) || 0,
+    monthNet: Number(d.month_net) || 0,
+    monthCommission: Number(d.month_commission) || 0,
+    monthCount: Number(d.month_count) || 0,
+    monthOtherNet: Number(d.month_other_net) || 0,
+  };
+};
+
 // ─── Kayıtlı ödeme yöntemleri ─────────────────────────────────────────────────
 export const getPayoutMethods = async (): Promise<PayoutMethod[]> => {
   const { data, error } = await supabase

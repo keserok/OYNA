@@ -13,6 +13,7 @@ import {
   toTurkishError,
   type FinanceDashboardData,
 } from '../../services/pitchOwnerService';
+import { getOwnerEarningsSummary, type EarningsSummary } from '../../services/walletService';
 import { useOwnerToast } from './components/useOwnerToast';
 import { OwnerDemoDataBar } from './components/OwnerDemoDataBar';
 import { localDateISO } from './ownerCalendarHelpers';
@@ -35,6 +36,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const [financeTab, setFinanceTab] = useState<'INCOME' | 'EXPENSE' | 'DATA'>('INCOME');
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<FinanceDashboardData | null>(null);
+  const [oynaEarn, setOynaEarn] = useState<EarningsSummary | null>(null);
   const [expenses, setExpenses] = useState<Awaited<ReturnType<typeof getOwnerExpenses>>>([]);
   const [debtors, setDebtors] = useState<Awaited<ReturnType<typeof getDebtors>>>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,14 +56,16 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
     }
     setIsLoading(true);
     try {
-      const [dash, exp, deb] = await Promise.all([
+      const [dash, exp, deb, earn] = await Promise.all([
         getFinanceDashboard(pitchId),
         getOwnerExpenses(pitchId, monthKey),
         getDebtors(pitchId),
+        getOwnerEarningsSummary().catch(() => null),
       ]);
       setDashboard(dash);
       setExpenses(exp);
       setDebtors(deb);
+      setOynaEarn(earn);
     } catch (err) {
       notify(toTurkishError(err), 'error');
     } finally {
@@ -181,6 +185,52 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
           </div>
         </div>
       </div>
+
+      {/* OYNA üzerinden gelen kazançlar — komisyon şeffaflığı (brüt → komisyon → net) */}
+      {oynaEarn && (
+        <div className="bg-[#161B22] border border-emerald-500/15 rounded-[32px] p-6 mb-6">
+          <h3 className="text-xs font-black text-gray-400 uppercase mb-4 flex items-center gap-2">
+            <Coins size={16} className="text-emerald-400" /> OYNA KAZANÇLARIN
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+              <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Çekilebilir</p>
+              <p className="text-xl font-black text-emerald-400">{oynaEarn.available.toLocaleString('tr-TR')}₺</p>
+              <p className="text-[10px] text-gray-500 mt-1">Cüzdan → IBAN'a Çek</p>
+            </div>
+            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+              <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Güvence Beklemesinde</p>
+              <p className="text-xl font-black text-blue-300">{oynaEarn.pending.toLocaleString('tr-TR')}₺</p>
+              <p className="text-[10px] text-gray-500 mt-1">2 hafta sonra çekilebilir</p>
+            </div>
+          </div>
+          <div className="mt-4 bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+            <p className="text-[10px] text-gray-500 font-black uppercase mb-3">
+              Bu Ay Uygulama Tahsilatı{oynaEarn.monthCount > 0 ? ` · ${oynaEarn.monthCount} ödeme` : ''}
+            </p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Brüt tahsilat</span>
+                <span className="text-white font-bold">{oynaEarn.monthGross.toLocaleString('tr-TR')}₺</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">OYNA komisyonu</span>
+                <span className="text-red-300 font-bold">−{oynaEarn.monthCommission.toLocaleString('tr-TR')}₺</span>
+              </div>
+              <div className="h-px bg-white/8 my-1" />
+              <div className="flex justify-between">
+                <span className="text-gray-300 font-bold">Net kazanç</span>
+                <span className="text-emerald-400 font-black">{oynaEarn.monthNet.toLocaleString('tr-TR')}₺</span>
+              </div>
+            </div>
+          </div>
+          {oynaEarn.reserved > 0 && (
+            <p className="text-[11px] text-yellow-300/90 mt-3">
+              {oynaEarn.reserved.toLocaleString('tr-TR')}₺ bekleyen çekim talebinde rezerve.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex bg-[#161B22] p-1.5 rounded-2xl mb-8 border border-white/5">
         {(['INCOME', 'EXPENSE', 'DATA'] as const).map((tab) => (
