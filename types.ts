@@ -640,6 +640,11 @@ export interface ProviderSuggestion {
   preferred_zones?: string[];
   coordinates?: { lat: number; lng: number };
   is_elite?: boolean;
+  // FAZ 3: pazar dikey detaylı kartı için (find_providers_for_match v2)
+  height?: string | null;           // yalnız kaleci
+  age?: number | null;              // yalnız kaleci
+  skills?: Record<string, number> | null;   // yalnız kaleci (yetenek barları)
+  stats?: Record<string, number | string> | null;
 }
 
 /**

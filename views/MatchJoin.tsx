@@ -257,6 +257,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providerSubmittingId, setProviderSubmittingId] = useState<string | null>(null);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  // FAZ 3: pazarda seçilen sağlayıcının dikey detaylı kartı (yetenek barları + istatistik)
+  const [marketDetailProvider, setMarketDetailProvider] = useState<ProviderSuggestion | null>(null);
 
   // FAZ 2: maça ATANMIŞ kaleci/hakem — lobide HERKESE (salt-okunur) gösterilir.
   const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
@@ -1029,6 +1031,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     try {
       await createServiceRequest(match.id, provider.id, providerModalType);
       await refreshServiceRequests(match.id);
+      setMarketDetailProvider(null);
       setProviderModalType(null);
       showActionSuccess(`Talep gönderildi — ${provider.name} onayını bekliyor`);
     } catch (err: any) {
@@ -1498,16 +1501,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           return (
                             <div
                               key={p.id}
-                              className="bg-black/30 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 transition-all hover:border-white/10"
+                              onClick={() => { if (!disabled) setMarketDetailProvider(p); }}
+                              className="bg-black/30 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 transition-all hover:border-white/10 cursor-pointer active:scale-[0.99]"
                             >
                               <div className="flex items-center gap-3">
                                 <div className="relative shrink-0">
-                                  <img
-                                    src={p.avatar || `https://i.pravatar.cc/150?u=${p.id}`}
-                                    alt={p.name}
-                                    className="w-12 h-12 rounded-xl object-cover border"
-                                    style={{ borderColor: accent + '50' }}
-                                  />
+                                  {isRealPhoto(p.avatar) ? (
+                                    <img src={p.avatar!} alt={p.name} className="w-12 h-12 rounded-xl object-cover border" style={{ borderColor: accent + '50' }} />
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black border" style={{ background: accent + '1a', color: accent, borderColor: accent + '50' }}>
+                                      {getInitials(p.name)}
+                                    </div>
+                                  )}
                                   {p.is_elite && (
                                     <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-[#FACC15] border-2 border-[#161B22]">
                                       <Award size={10} className="text-black" />
@@ -1532,16 +1537,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                   <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Ücret</p>
                                   <p className="text-xl font-black text-white tracking-tighter">{p.fee}₺</p>
                                 </div>
-                                <motion.button
-                                  whileHover={disabled ? undefined : { scale: 1.04 }}
-                                  whileTap={disabled ? undefined : { scale: 0.96 }}
-                                  disabled={disabled}
-                                  onClick={() => handleSelectProvider(p)}
-                                  className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                  style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
-                                >
-                                  {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
-                                </motion.button>
+                                <div className="flex items-center gap-2">
+                                  <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-white/35">Detay <ChevronRight size={12} /></span>
+                                  <motion.button
+                                    whileHover={disabled ? undefined : { scale: 1.04 }}
+                                    whileTap={disabled ? undefined : { scale: 0.96 }}
+                                    disabled={disabled}
+                                    onClick={(e) => { e.stopPropagation(); handleSelectProvider(p); }}
+                                    className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
+                                  >
+                                    {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
+                                  </motion.button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1551,6 +1559,140 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   </>
                 );
               })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Pazar: Sağlayıcı Dikey Detaylı Kart + Talep (kaptan) ─────────────── */}
+      <AnimatePresence>
+        {marketDetailProvider && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
+            onClick={() => { if (!providerSubmittingId) setMarketDetailProvider(null); }}>
+            <motion.div
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b from-[#161B22] to-[#0d1117] border shadow-[0_30px_70px_rgba(0,0,0,0.85)]"
+              style={{ borderColor: (providerModalType === 'REF' ? '#A78BFA' : '#FF9F43') + '33' }}>
+              {(() => {
+                const p = marketDetailProvider;
+                const isRef = providerModalType === 'REF';
+                const accent = isRef ? '#A78BFA' : '#FF9F43';
+                const submitting = providerSubmittingId === p.id;
+                const SKILL_LABELS: Record<string, string> = {
+                  refleks: 'REFLEKS', uzak_top: 'UZAK TOP', top_tutma: 'TOP TUTMA', alan_hakimiyeti: 'ALAN HÂKİMİYETİ',
+                  reflexes: 'REFLEKS', diving: 'ÇIKIŞ', handling: 'TOP TUTMA', positioning: 'POZİSYON', kicking: 'VURUŞ', speed: 'HIZ',
+                };
+                const STAT_LABELS: Record<string, string> = {
+                  kurtarish_orani: 'KURTARIŞ', temiz_kale: 'TEMİZ KALE', pas_isabeti: 'PAS İSABETİ', gol_yedi: 'GOL YEDİ',
+                  avgCards: 'ORT. KART', authority: 'OTORİTE', fitness: 'FORM', communication: 'İLETİŞİM',
+                };
+                const PCT_KEYS = new Set(['kurtarish_orani', 'pas_isabeti']);
+                const humanize = (k: string) => k.replace(/_/g, ' ').toUpperCase();
+                const skills = p.skills ? Object.entries(p.skills).filter(([, v]) => typeof v === 'number') as [string, number][] : [];
+                const stats = p.stats ? Object.entries(p.stats).filter(([, v]) => typeof v === 'number' || typeof v === 'string') : [];
+                return (
+                  <div className="p-6 pt-8 flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
+                      {isRealPhoto(p.avatar) ? (
+                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl font-black" style={{ background: accent + '22', color: accent }}>
+                          {getInitials(p.name)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight">{p.name}</h3>
+                      {p.is_elite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'HAKEM' : 'KİRALIK KALECİ'}</span>
+                      {(p.style || p.level) && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {p.level || p.style}</span>}
+                    </div>
+
+                    <div className="w-full grid grid-cols-2 gap-2 mt-5">
+                      <div className="rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">REYTİNG</span>
+                        <div className="flex items-baseline gap-1">
+                          <Star size={16} className="text-yellow-400" fill="currentColor" />
+                          <span className="text-3xl font-black tabular-nums leading-none" style={{ color: accent }}>{Number(p.rating).toFixed(1)}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">ÜCRET</span>
+                        <span className="text-3xl font-black tabular-nums leading-none text-white">{p.fee}₺</span>
+                      </div>
+                    </div>
+
+                    <div className="w-full grid grid-cols-3 gap-2 mt-2">
+                      {[
+                        { Icon: Calendar, l: 'YAŞ', v: p.age != null ? String(p.age) : '—' },
+                        { Icon: Ruler, l: 'BOY', v: p.height || '—' },
+                        { Icon: Activity, l: 'MAÇ', v: p.match_count != null ? String(p.match_count) : '—' },
+                      ].filter(s => !(isRef && (s.l === 'BOY' || s.l === 'YAŞ'))).map(s => (
+                        <div key={s.l} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 flex flex-col items-center gap-0.5">
+                          <s.Icon size={12} className="text-white/30" />
+                          <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em]">{s.l}</span>
+                          <span className="text-xs font-black text-white">{s.v}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {skills.length > 0 && (
+                      <div className="w-full mt-5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Kalecilik Reytingleri</span>
+                        <div className="mt-2 space-y-2">
+                          {skills.map(([k, v]) => (
+                            <div key={k} className="flex items-center gap-2">
+                              <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-24 shrink-0 truncate">{SKILL_LABELS[k] || humanize(k)}</span>
+                              <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, (v / 10) * 100))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
+                              </div>
+                              <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{Number(v).toFixed(1)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {stats.length > 0 && (
+                      <div className="w-full mt-5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">İstatistikler</span>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {stats.map(([k, v]) => (
+                            <div key={k} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 px-3 flex flex-col items-center gap-0.5">
+                              <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em] text-center">{STAT_LABELS[k] || humanize(k)}</span>
+                              <span className="text-sm font-black text-white">{PCT_KEYS.has(k) ? '%' + v : String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Talep Gönder — kaptan (ödeme adımı FAZ 4) */}
+                    <motion.button
+                      whileTap={submitting ? undefined : { scale: 0.97 }}
+                      disabled={!!providerSubmittingId}
+                      onClick={() => handleSelectProvider(p)}
+                      className="w-full mt-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                      style={{ background: accent, boxShadow: `0 0 20px ${accent}55` }}>
+                      {submitting ? <Loader2 size={15} className="animate-spin" /> : <>{isRef ? <Scale size={15} /> : <Hand size={15} />} TALEP GÖNDER · {p.fee}₺</>}
+                    </motion.button>
+                    <p className="text-[9px] text-white/30 text-center mt-2 leading-relaxed px-2">
+                      {isRef ? 'Hakem' : 'Kaleci'} talebini onayladığında ücret tahsil edilir. Onaya kadar tutar bloke edilmez.
+                    </p>
+                  </div>
+                );
+              })()}
+              <button onClick={() => { if (!providerSubmittingId) setMarketDetailProvider(null); }}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                <X size={16} />
+              </button>
             </motion.div>
           </motion.div>
         )}
