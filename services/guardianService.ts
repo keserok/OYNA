@@ -24,6 +24,41 @@ export interface CreateGuardianConsentInput {
   consentTextVersion: string;
 }
 
+/** Oturum açmış kullanıcının kendi veli-onay durumunu ve reşitlik bilgisini getirir. */
+export const getMyGuardianState = async (): Promise<{ status: GuardianConsentStatus; isMinor: boolean } | null> => {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u?.user) return null;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('guardian_consent_status, is_minor')
+    .eq('id', u.user.id)
+    .single();
+  if (error) throw error;
+  return {
+    status: (data?.guardian_consent_status ?? 'NONE') as GuardianConsentStatus,
+    isMinor: !!data?.is_minor,
+  };
+};
+
+/** Bu velinin verdiği aktif onaylar (geri alma ekranı için). */
+export interface ActiveConsentRow {
+  minor_user_id: string;
+  minor_full_name: string;
+  consented_at: string;
+}
+export const getConsentsIGave = async (): Promise<ActiveConsentRow[]> => {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u?.user) return [];
+  const { data, error } = await supabase
+    .from('guardian_consents')
+    .select('minor_user_id, minor_full_name, consented_at')
+    .eq('guardian_user_id', u.user.id)
+    .eq('status', 'ACTIVE')
+    .order('consented_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as ActiveConsentRow[];
+};
+
 /** Çocuğun kendi hesabında görünen benzersiz Veli Bağlantı Kodu (üret/getir). */
 export const getOrCreateGuardianLinkCode = async (): Promise<string> => {
   const { data, error } = await supabase.rpc('get_or_create_guardian_link_code');

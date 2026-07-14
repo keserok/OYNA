@@ -55,6 +55,8 @@ const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
 const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
 const Onboarding = lazy(() => import('./views/Onboarding'));
+const GuardianConsentChild = lazy(() => import('./views/GuardianConsentChild'));
+const GuardianConsentForm = lazy(() => import('./views/GuardianConsentForm'));
 const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
@@ -471,6 +473,10 @@ const App: React.FC = () => {
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
+      case 'GUARDIAN_CHILD':
+        return <GuardianConsentChild onBack={() => goBack('SETTINGS')} onGoVeliForm={() => navigateTo('GUARDIAN_FORM')} />;
+      case 'GUARDIAN_FORM':
+        return <GuardianConsentForm onBack={() => goBack('SETTINGS')} />;
       case 'LOCATION_PROMPT':
         return <LocationPrompt
           onPermissionGranted={() => resetNavigation(navigateBasedOnRole(role))}

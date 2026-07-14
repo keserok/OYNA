@@ -13,6 +13,7 @@ import {
   getWalletSummary, listSavedCards, WalletSummary, SavedCard,
 } from '../services/walletService';
 import { startInAppCardPayment, InAppPayInput } from '../services/paymentService';
+import { getMyGuardianState } from '../services/guardianService';
 import { blockMatchDeposit } from '../services/matchLifecycleService';
 import { getMatchDetails } from '../services/matchService';
 import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScreen';
@@ -383,6 +384,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       payBusyRef.current = false;
       return;
     }
+    // Reşit olmayan ödeme kapısı (UX katmanı): sunucudaki trigger da bunu
+    // engelliyor, ancak kullanıcıyı ham hata yerine veli onayı ekranına
+    // yönlendirelim. Durum alınamazsa sunucu kapısına güveniriz.
+    try {
+      const gstate = await getMyGuardianState();
+      if (gstate && gstate.isMinor && gstate.status !== 'ACTIVE') {
+        payBusyRef.current = false;
+        useAppStore.getState().navigateTo('GUARDIAN_CHILD');
+        return;
+      }
+    } catch { /* durum alınamadı → sunucu kapısı devrede */ }
     // C1 — bu ödeme denemesi için stabil idempotency anahtarı (retry'da aynı kalır).
     if (!idemKeyRef.current) idemKeyRef.current = safeUuid();
     setInlineError('');
