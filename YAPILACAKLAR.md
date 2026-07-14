@@ -70,8 +70,26 @@ modunda; canlı anahtarlar henüz bağlanmadı.
 - [ ] **Maç iptali orkestrasyon fonksiyonu** + sıfır-toplam sandbox testi
 - [ ] **İade push bildirimi** + cüzdan "+X₺" vurgusu
 
+## Alınan kararlar (Bölüm 3/6 — Cüzdan ekonomisi & çekim)
+
+| # | Konu | Karar |
+|---|------|-------|
+| 11 | %10 çekim kesintisi kapsamı | **Yalnız yüklenen bakiye (TOP_UP)**; iade kredisi kesintisiz çekilir |
+| 12 | Kazanç (kaleci/hakem/tesis) çekimi | **Ücretsiz** + minimum eşik; ayrıca **IBAN çekim akışı iyzico bağlantısına hazır** hale getirilecek |
+| 13 | Bakiye son kullanma | **Süresiz** (ileride 24 ay atıl-hesap politikası notu) |
+| 14 | Harcama sırası | **İade kredisi önce**, sonra yüklenen bakiye (mevcut, korunacak) |
+| 15 | Çekim akışı görünürlüğü | **Düşük görünürlük** (Kart Yönet/Ayarlar altı), ama %10 kesinti + net tutar **şeffaf gösterilir** |
+
+### ⚠️ Bölüm 3'ten doğan işler
+- [ ] **Cüzdandan karta çekim akışı** (`wallet_cashout` RPC + edge): TOP_UP'tan
+  %10 kesinti, iade kredisi kesintisiz; düşük-görünürlük FE; kesinti şeffaf gösterim.
+- [ ] **Kazanç IBAN çekiminde minimum eşik** (ör. 100₺).
+- [ ] **IBAN çekim akışını sağlayıcı-soyutlamalı yap** — bugün manuel havale,
+  yarın iyzico payout/Pazaryeri API'sine takılabilecek şekilde (provider switch).
+- [ ] (İleride) 24 ay atıl-hesap bilgilendirme + iade daveti politikası.
+
 ## Bekleyen görüşme bölümleri
-- [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
+- [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
 - [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
 - [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
 - [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
