@@ -23,6 +23,7 @@ import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
 import { isOnboardingEnabled, hasSeenOnboarding, markOnboardingSeen } from './views/onboarding/onboardingShared';
 import { flushOnboardingDraft } from './services/onboardingService';
+import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
 const Dashboard = lazy(() => import('./views/Dashboard'));
@@ -168,6 +169,11 @@ const App: React.FC = () => {
             // guardian_consent_status SUNUCUDA (apply_onboarding) hesaplanır.
             // Taslak yoksa (ör. onboarding'i atlamış kullanıcı) sessizce geçer.
             await flushOnboardingDraft();
+            // KVKK Aydınlatma + Kullanıcı Sözleşmesi kabulünü sunucuya
+            // denetlenebilir şekilde kaydet — TÜM kayıt yolları (e-posta +
+            // Google/Apple) buradan geçer. Ayrı ayrı kaydedilir (bundle değil).
+            // best-effort: kayıt akışını bloke etmez.
+            recordUserConsents(['KVKK', 'TERMS']).catch(() => {});
             setRole(UserRole.PLAYER);
             useAppStore.getState().setMyRoles([UserRole.PLAYER]);
             identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
