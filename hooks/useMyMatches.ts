@@ -2,21 +2,14 @@ import { useMemo } from 'react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import type { MatchListing } from '../types';
+import { parseMatchDateTime } from '../utils/matchDateTime';
 
 const DEMO_UID = 'u1';
 
-const parseMatchDate = (date: string, time: string): Date | null => {
-  try {
-    if (date.includes('-')) return new Date(`${date}T${time}:00`);
-    const d = new Date();
-    const [h, m] = time.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-    if (date === 'Yarın') d.setDate(d.getDate() + 1);
-    return d;
-  } catch {
-    return null;
-  }
-};
+// Tek ayrıştırma kaynağı: ISO + gün.ay.yıl + TR gün adları + saat aralıkları,
+// asla NaN. (Eski yerel parseMatchDate yalnız ISO/"Yarın" tanıyordu.)
+const parseMatchDate = (date: string, time: string): Date | null =>
+  parseMatchDateTime(date, time);
 
 export interface MyMatchesResult {
   all: MatchListing[];
