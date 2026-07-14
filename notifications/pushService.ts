@@ -318,8 +318,16 @@ export const subscribeToInAppNotifications = (
   userId: string,
   onNotification: (notification: any) => void,
 ) => {
+  // Çift abonelik koruması: aynı topic'li eski kanal (StrictMode remount,
+  // yeniden giriş, hızlı navigasyon) varsa önce kaldır. Yoksa zaten
+  // .subscribe() olmuş kanala .on() eklemek "cannot add postgres_changes
+  // callbacks ... after subscribe()" hatası fırlatır.
+  const topic = `notifications:${userId}`;
+  supabase.getChannels()
+    .filter((c) => c.topic === `realtime:${topic}`)
+    .forEach((c) => { supabase.removeChannel(c); });
   const channel = supabase
-    .channel(`notifications:${userId}`)
+    .channel(topic)
     .on(
       'postgres_changes',
       {

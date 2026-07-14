@@ -438,4 +438,36 @@ Her satır kapanmadan G4 ilan edilemez. (Doğrulama: T/U/P/S/M — bkz. §5.1 ba
 ---
 
 ### Özet (v2)
-59 bulgu (6 kök neden + 53 madde) **15 iş paketine** bağlandı; her bulgu **kabul kriteri + doğrulama yöntemiyle** izlenebilirlik matrisinde. 5 sprint, her biri **ölçülebilir çıkış kapılı**; G4 kapısı = "sıfır bilinen problem" ilanı (matris ✅ + smoke 3× yeşil + taze/kıdemli hesap tam sürüşleri temiz). 8 maddelik durum/para/veri standardı, henüz keşfedilmemiş edge-case *sınıflarını* da önler; yeni bulgular aynı boru hattına girerek sıfır hâlini kalıcı kılar. Onayınla S0'dan başlanır; oyuncu fazı G4'te kapanır ve aynı yöntem Kaleci'ye taşınır.
+59 bulgu (6 kök neden + 53 madde) **15 iş paketine** bağlandı; her bulgu **kabul kriteri + doğrulama yöntemiyle** izlenebilirlik matrisinde. 5 sprint, her biri **ölçülebilir çıkış kapılı**; G4 kapısı = "sıfır bilinen problem" ilanı (matris ✅ + smoke 3× yeşil + taze/kıdemli hesap tam sürüşleri temiz). 8 maddelik durum/para/veri standardı, henüz keşfedilmemiş edge-case *sınıflarını* da önler; yeni bulgular aynı boru hattına girerek sıfır hâlini kalıcı kılar.
+
+---
+
+## 6. Uygulama Günlüğü & Re-validation Düzeltmeleri (2026-07-14)
+
+Plan güncel `main`'e rebase edildi (main +15 commit: yeni **Onboarding** akışı, veli onayı, player card, `MatchJoin` ağır değişti). Tüm bulgular **8-kümeli paralel denetimle güncel koda karşı yeniden doğrulandı**. Sonuç: plan gerçek kodla hizalandı.
+
+### 6.1 Önemli düzeltmeler (efor tasarrufu)
+- **Ölü kod (dokunulmayacak):** `E1` (Studio identity-change çökmesi) `handleIdentityChange` hiçbir UI'dan çağrılmıyor (identity sabit 'BALANCED') → tetiklenemez. `E3` (TeamLineupBoard sahte kadro) & `E7` (TeamDashboard) bileşenleri **hiçbir yerden import edilmiyor** → ölü kod. Bu 3 madde kapsamdan çıktı.
+- **L1 (degraded bant) esasen sandbox artefaktı:** Re-validation, bantın artık admin RPC'ye değil `matchesEmpty‖pitchesEmpty` + 3sn timeout'a bağlı olduğunu gösterdi. Yavaş sandbox proxy'sinde timeout doluyor → bant çıkıyor; **prod'da hızlı ağda çıkmaz**. Gerçek boş sonuç (`[]`) degraded'a girmiyor. KN-2'nin gerçek kalan işi 'Oyuncu' fallback'iydi (çözüldü).
+- **Main'in kısmen çözdükleri (kalan parçalar backlog):** `B5` (ayrılınca sunucu iade kredisi kesiyor; UI uyarısı yok), `C8`, `D3`, `D4`, `E4`, `E5`, `E6`, `F4`.
+
+### 6.2 Yeni bulgular — Onboarding (main ekledi) → backlog
+- `H-A1`: `StepLocation` gerçek izin istemeyen **sahte tarama**. · `H-A2`: onboarding taslağı paylaşılan cihazda sızabilir. · `H-A3`: veli-onayı çocuk ekranında realtime/retry yok. · `H-A4`: **<13 yaş kapısı yok**. · `H-A5`: soyad zorunlu (mononim adlar).
+
+### 6.3 Tamamlanan S0 işleri (test edildi)
+| İP / ID | Ne yapıldı | Doğrulama |
+|---|---|---|
+| **İP-14** | `utils/ratingScale·formatTRY·matchDateTime` + `B13` (useMyMatches ortak ayrıştırıcı) | 23 birim testi + tsc |
+| **İP-04 (KN-4/D1)** | Rookie kart: OVR **"—"** + nötr "rookie" teması; `ratingToOverall` tek kaynak; `isRookie` alanı | tsc + unit + boot smoke |
+| **İP-02 (KN-2)** | `store.currentUserProfile` (gerçek ad/avatar) → `joinMatchPleiAction` + `MatchJoin` artık **"Oyuncu" fallback'i yok** | boot smoke (isim doğru) |
+| **A2** | Bootstrap profil `.single()` hatası artık **yeni-kayıt ile karıştırılmıyor** (retry + PGRST116 ayrımı); mevcut kullanıcı PLAYER'a düşürülmüyor | tsc + boot smoke |
+| **B1 (K2)** | `minRating` varsayılanı **0 (kilitsiz)** — rookie soğuk-başlangıç çıkmazı kalktı | tsc |
+| **İP-15** | `tests/player-smoke.mjs` canlı regresyon smoke'u (session-inject + ağ/isim/konsol assert'leri) | çalışır — G0 |
+
+**Kapsam kararları:** `teamService:389` puan ölçeği → dengeleme ile birlikte **E4'e (S3)** ertelendi (balancing'i riske atmamak için). **KN-1 tam reaktif refaktör** (28 tüketici) yerine gözlenen semptomları çözen **hedefli parça** (currentUserProfile) yapıldı; kalanı sonraki tura. `Güven Puanı` **kasıtlı korundu** (Master 3.4: fair-play 100'den başlar — 0 maçta 100 doğru).
+
+### 6.4 Kalan yol (sonraki turlar)
+- **S0 kalanı:** KN-3 (atomik maç yazımı — büyük), İP-01 tam reaktif geçiş, banner L2 cilası.
+- **S1 (Para):** C1–C5 (idempotency, bilet, PSP-dahil iade), B4/B5 (iptal/ayrılma UI).
+- **S2 (Maç):** B2/B6/B7/B11/B12. · **S3:** A3–A7, C6–C9, E2/E4/E5, F1–F3, D2/D5, G1–G3. · **S4:** cila + H-A backlog.
+- Her paket ayrı commit + kapı; ilerleme bu bölümde güncellenir.

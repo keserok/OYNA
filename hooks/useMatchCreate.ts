@@ -403,7 +403,10 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         duration: dna.duration,
         gender: dna.gender,
         ageGroup: Array.isArray(dna.age) ? dna.age.join(', ') : dna.age,
-        minRating: 4.0,
+        // K2 kararı: varsayılan puan barajı YOK — maç herkese açık (0 = kilitsiz).
+        // Yeni/rookie oyuncunun tüm vitrini kilitli görmesi (soğuk-başlangıç
+        // çıkmazı) böylece kalkar. Kurucu-ayarlı baraj ayrı bir özellik olacak.
+        minRating: 0,
         image: selectedPitch?.image || 'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
         badges: ['Fair Play Vurgulu', `${format.label}`],
         missingPositions: [

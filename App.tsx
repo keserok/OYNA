@@ -137,7 +137,7 @@ const App: React.FC = () => {
           useAppStore.getState().setIsGuest(false);
           const selectProfile = () => supabase
             .from('profiles')
-            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, stats')
+            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
             .eq('id', user.uid)
             .single();
           let { data: profile, error: profileErr } = await selectProfile();
@@ -212,7 +212,7 @@ const App: React.FC = () => {
               id: user.uid,
               name: (profile.full_name as string) || user.displayName || 'Oyuncu',
               avatar: (profile.avatar_url as string) || user.photoURL || '',
-              rating: Number((profile.stats as any)?.rating ?? 0) || 0,
+              rating: 0, // puan ayrı kaynaktan; burada kritik değil (join fallback'i 4.5)
             });
 
             // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
