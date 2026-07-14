@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight, Users } from 'lucide-react';
 
 interface LegalScreenProps {
   onBack: () => void;
   initialDoc?: LegalDocKey;
 }
 
-type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'CEREZ' | 'SALES';
+type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES';
 
 // NOT: Şirket bilgileri (COMPANY/TAX_INFO/ADDRESS) dolduruldu; avukat
 // incelemesi hâlâ önerilir, özellikle KVKK ve mesafeli satış maddeleri için.
@@ -222,7 +222,7 @@ Vergi Dairesi/No: ${TAX_INFO}
 Adres: ${ADDRESS}
 
 2. İŞLENEN KİŞİSEL VERİLER
-Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri.
+Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri. Reşit olmayan kullanıcılarda veli onayı için veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik No işlenir; T.C. Kimlik numaraları şifrelenerek (hash) saklanır, açık tutulmaz.
 
 3. İŞLEME AMAÇLARI
 - Üyelik ve hesap yönetimi
@@ -261,6 +261,33 @@ Fırsat, kampanya ve duyuruları e-posta veya push bildirimi yoluyla almak ister
 
 4. RIZANIN GERİ ALINMASI
 Yukarıdaki izinlerin tamamını veya bir kısmını Ayarlar → Gizlilik ekranından ya da ${CONTACT_EMAIL} adresine yazarak istediğiniz an geri alabilirsiniz. Geri alma, geri alma tarihinden önceki işlemlerin hukuka uygunluğunu etkilemez.`,
+  },
+  VELI: {
+    title: 'Veli Muvafakatnamesi',
+    icon: Users,
+    body: `Son güncelleme: ${UPDATED} · Sürüm: 2026-07-14
+
+Bu muvafakatname, 18 yaşından küçük bir kullanıcının OYNA'yı ödeme ve maça katılım dahil kullanabilmesi için, velisi/vasisi tarafından kendi doğrulanmış OYNA hesabı üzerinden verilen onayı düzenler.
+
+1. NASIL ÇALIŞIR
+Küçük kullanıcının hesabında görünen "Veli Bağlantı Kodu"nu, veli kendi OYNA hesabından Ayarlar → Veli Onayı bölümüne girer; kendi ve çocuğun ad-soyad, T.C. Kimlik No ve doğum tarihini beyan edip bu muvafakatnameyi onaylar. Onay velinin kendi oturumundan verilir; küçüğün "kabul ediyorum" işareti tek başına yeterli değildir.
+
+2. ONAYIN KAPSAMI
+Veli; çocuğunun OYNA'yı kullanmasına, saha rezervasyonu yapmasına, maçlara katılmasına ve bunlara ilişkin ödemeleri gerçekleştirmesine muvafakat eder.
+
+3. SÜREKLİLİK
+Onay, geri alınmadığı sürece çocuğun olağan işlemlerini kapsar; her işlem için ayrıca onay istenmez.
+
+4. 18 YAŞ — OTOMATİK SONA ERME
+Beyan edilen doğum tarihine göre çocuk 18 yaşını doldurduğunda sınırlı mod ve veli onayı gerekliliği kendiliğinden sona erer.
+
+5. GERİ ALMA
+Veli, onayı Ayarlar → Veli Onayı ekranından veya ${CONTACT_EMAIL} üzerinden dilediği zaman geri alabilir; en geç 48 saat içinde etkili olur.
+
+6. KVKK
+Beyan edilen T.C. Kimlik numaraları şifrelenerek (hash) yalnızca doğrulama amacıyla saklanır; açık biçimde tutulmaz. Ayrıntı için KVKK Aydınlatma Metni ve Gizlilik Politikası'na bakınız.
+
+Bu muvafakatname, Kullanım Şartları madde 4'ün ayrılmaz ekidir.`,
   },
   CEREZ: {
     title: 'Çerez Politikası',
@@ -309,7 +336,7 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
   },
 };
 
-const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'CEREZ', 'SALES'];
+const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES'];
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
   const [doc, setDoc] = useState<LegalDocKey | null>(initialDoc ?? null);

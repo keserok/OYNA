@@ -16,7 +16,7 @@ Vergi Dairesi/No: Kartal Vergi Dairesi – 2650883645
 Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul
 
 ### 2. İşlenen Kişisel Veriler
-Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri.
+Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri. Reşit olmayan kullanıcılar için veli onayı sürecinde ayrıca veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik Numarası işlenir; **T.C. Kimlik numaraları şifrelenerek (hash) saklanır, açık biçimde tutulmaz** (bkz. [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md)).
 
 ### 3. İşleme Amaçları
 - Üyelik ve hesap yönetimi

@@ -1,6 +1,6 @@
-> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 13.07.2026 · **PR:** —
+> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 14.07.2026 · **PR:** —
 > **Uygulandığı yer:** `views/LegalScreen.tsx → TERMS` (uygulama içi "Yasal" ekranı)
-> **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı), madde 4.7'de açıkça belirtildiği üzere, yalnızca metnin varlığıyla hukuken bağlayıcı hâle gelmez — "sınırlı mod" ve veli doğrulama akışının (veli iletişim bilgisi alınması, veliye özel onay bağlantısı/kodu, velinin bizzat onayı) **Uygulamada fiilen inşa edilmesi** gerekir. Bu akış şu an kodda mevcut değildir; bkz. `sozlesmeler/README.md` "Sıradaki teknik adımlar".
+> **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı) mekanizması — onboarding'de yaş aralığı alınması, sınırlı mod, çocuğun hesabındaki Veli Bağlantı Kodu, velinin kendi hesabından kodu girip kimlik + muvafakat onayı, T.C.'nin hash'lenmesi, 18 yaşında otomatik açılma ve ödeme kapısı — **Uygulamada fiilen inşa edilmiştir** (guardian_consents/apply_onboarding + payment_intents trigger; `views/Onboarding.tsx`, `views/GuardianConsentForm.tsx`, `views/GuardianConsentChild.tsx`). Ekli tam metin: [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 # OYNA Kullanım Şartları / Üyelik Sözleşmesi (Oyuncu)
 
@@ -100,10 +100,13 @@ Kullanıcı, kayıt sırasında 18 yaşından küçük olduğunu beyan ederse ve
 
 Sınırlı moddaki hesabın ödeme ve maça katılım işlevlerinin açılabilmesi için aşağıdaki adımlar tamamlanmalıdır:
 
-1. Küçük kullanıcı, velisinin/vasisinin adı-soyadı ile iletişim bilgisini (e-posta adresi veya telefon numarası) Uygulama üzerinden OYNA'ya bildirir. (13 yaş altı, veli tarafından oluşturulan hesaplarda, hesap oluşturma sırasında zaten alınmış olan veli iletişim bilgisi bu adım için esas alınabilir.)
-2. OYNA, veli/vasiye bildirilen iletişim kanalı üzerinden bir onay bağlantısı ve/veya tek kullanımlık doğrulama kodu gönderir.
-3. Veli/vasinin, bu bağlantı/kod aracılığıyla **bizzat ve açıkça** onay vermesi gerekir. Küçüğün Uygulama üzerinde "kabul ediyorum" işaretini tıklaması, tek başına veli onayı yerine **geçmez**; onayın veliye ait iletişim kanalından, veli tarafından fiilen verilmiş olması şarttır.
-4. OYNA, gerekli gördüğü hâllerde velinin kimliğini teyit etmek amacıyla ek doğrulama (ör. kimlik bilgisi eşleştirme) talep edebilir.
+1. Küçük kullanıcının hesabında, Uygulama içinde kendisine özel benzersiz bir **"Veli Bağlantı Kodu"** görüntülenir.
+2. Küçük, bu kodu velisine/vasisine iletir.
+3. Veli/vasi, **kendi OYNA hesabından** (18 yaşından büyük gerçek kişi) Uygulamadaki **Ayarlar → Veli Onayı** bölümüne bu kodu girer. Veli/vasinin OYNA hesabı yoksa, ücretsiz olarak oluşturması gerekir.
+4. Veli/vasi; kendi ad-soyadını, T.C. Kimlik Numarasını ve doğum tarihini ve onay verdiği çocuğun ad-soyadını, T.C. Kimlik Numarasını ve doğum tarihini beyan eder; ardından işbu Sözleşmenin eki niteliğindeki **Veli Muvafakatnamesi**ni okuyup açıkça onaylar.
+5. Onay, velinin **kendi doğrulanmış (oturum açmış) OYNA hesabından** verildiğinden, "veli bizzat ve açıkça onaylar" şartını karşılar. Küçüğün Uygulama üzerinde "kabul ediyorum" işaretini tıklaması, tek başına veli onayı yerine **geçmez**.
+6. Beyan edilen T.C. Kimlik Numaraları, 6698 sayılı KVKK'ya uygun olarak **şifrelenmiş (hash) biçimde**, yalnızca doğrulama amacıyla saklanır; açık (düz) biçimde tutulmaz. Beyan edilen çocuk doğum tarihi, çocuğun 18 yaşını doldurduğu anda sınırlı modun kendiliğinden kalkması amacıyla esas alınır.
+7. OYNA, gerekli gördüğü hâllerde velinin kimliğini teyit etmek amacıyla ek doğrulama talep etme hakkını saklı tutar. Bir çocuk için aynı anda yalnızca tek bir aktif veli onayı bulunabilir.
 
 ### 4.4 Onayın Kapsamı ve Süreklilik
 
@@ -112,7 +115,7 @@ Sınırlı moddaki hesabın ödeme ve maça katılım işlevlerinin açılabilme
 
 ### 4.5 Onayın Geri Alınması
 
-Veli/vasi, verdiği onayı dilediği zaman destek@oyna.app adresine yazılı bildirimde bulunarak geri alabilir. Geri alma bildiriminin OYNA'ya ulaşmasından itibaren makul bir süre içinde (en geç 48 saat içinde) hesap yeniden **sınırlı moda** alınır; bu tarihten sonra gerçekleştirilecek ödeme ve maça katılım işlemleri tekrar veli onayına tabi olur. Geri alma, geri alma tarihinden önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
+Veli/vasi, verdiği onayı dilediği zaman **Uygulamadaki Ayarlar → Veli Onayı ekranından** (verdiği onayları yönetme bölümünden) ya da destek@oyna.app adresine yazılı bildirimde bulunarak geri alabilir. Geri alma bildiriminin OYNA'ya ulaşmasından itibaren makul bir süre içinde (en geç 48 saat içinde) hesap yeniden **sınırlı moda** alınır; bu tarihten sonra gerçekleştirilecek ödeme ve maça katılım işlemleri tekrar veli onayına tabi olur. Geri alma, geri alma tarihinden önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
 
 ### 4.6 Velinin Sorumluluğu
 
@@ -120,7 +123,7 @@ Onay veren veli/vasi; madde 4.4'te tanımlanan **olağan** işlem hacmi ve nitel
 
 ### 4.7 Uygulama Notu
 
-> İşbu maddenin hukuken bağlayıcı ve geçerli kabul edilebilmesi için, yukarıda tarif edilen veli doğrulama akışının (sınırlı mod, veli iletişim bilgisi alınması, veliye özel onay bağlantısı/kodu gönderimi ve velinin bizzat onayı) **Uygulamada fiilen ve eksiksiz şekilde uygulanması** zorunludur. Yalnızca işbu sözleşme metninin varlığı, veli onayının hukuken alınmış sayılması için yeterli değildir; ürün/teknik ekip bu akışı devreye almadan bu maddeye dayanarak küçüğün işlemlerinin veli onaylı sayıldığı iddia edilemez.
+> İşbu maddede tarif edilen veli doğrulama akışı — sınırlı mod; küçüğün hesabında görünen Veli Bağlantı Kodu; velinin kendi hesabından bu kodu girerek ad-soyad / T.C. Kimlik No / doğum tarihi beyanı ve muvafakat onayı; T.C. bilgilerinin şifrelenerek (hash) saklanması; çocuğun 18 yaşını doldurmasıyla sınırlı modun otomatik kalkması — **Uygulamada fiilen uygulanmaktadır**. Onayın hukuken geçerli sayılması bu akışın eksiksiz işletilmesine bağlıdır; salt sözleşme metninin varlığı tek başına yeterli değildir. Bu belgenin eki niteliğindeki tam metin için bkz. [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 ---
 

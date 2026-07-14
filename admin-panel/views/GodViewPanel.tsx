@@ -21,6 +21,7 @@ const MatchesPage = lazy(() => import('./pages/MatchesPage').then(m => ({ defaul
 const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => ({ default: m.CommunitiesPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
+const GuardianConsentsPage = lazy(() => import('./pages/GuardianConsentsPage').then(m => ({ default: m.GuardianConsentsPage })));
 const FinancePage = lazy(() => import('./pages/FinancePage').then(m => ({ default: m.FinancePage })));
 const CommissionPage = lazy(() => import('./pages/CommissionPage').then(m => ({ default: m.CommissionPage })));
 const DisputesPage = lazy(() => import('./pages/DisputesPage').then(m => ({ default: m.DisputesPage })));
@@ -44,7 +45,8 @@ export type GodViewSubRoute =
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
   | 'SERVICE_DISPUTES' | 'MODERATION' | 'DELETION_QUEUE'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
-  | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES' | 'REGION_COVERAGE';
+  | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES' | 'REGION_COVERAGE'
+  | 'GUARDIAN_CONSENTS';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -189,6 +191,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <DeletionQueuePage onRefresh={onRefreshData} />;
             case 'AUDIT_LOG':
                 return <AuditLogPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
+            case 'GUARDIAN_CONSENTS':
+                return <GuardianConsentsPage />;
             case 'REGION_COVERAGE':
                 return <RegionCoveragePage />;
             default:
