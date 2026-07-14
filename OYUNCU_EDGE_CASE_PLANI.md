@@ -2,7 +2,7 @@
 
 > **Rol:** Oyuncu (PLAYER) · **Faz:** 1/4 (sonra Kaleci → Hakem → Tesis)
 > **Yöntem:** 4 paralel derin kod-denetimi + **canlı sürüş** (Playwright, prod Supabase) + Master Prensipler'e karşı gap analizi
-> **Tarih:** 2026-07-13 · **Branch:** `claude/player-edge-cases-plan-ggtezh`
+> **Tarih:** 2026-07-13 · **v2 (uygulama-sınıfı):** 2026-07-14 · **Branch:** `claude/player-edge-cases-plan-ggtezh`
 > **Bakış açısı:** Milyar dolarlık bir ürün ekibinin QA'i + geliştiricisi. Odak: **UI/UX akış olgunluğu.**
 
 Bu belge çözümleri **uygulamaz**; onaya sunar. Onayladığın maddeler `PROBLEMLER_VE_COZUMLER.md` iş akışına göre tek tek kodlanır.
@@ -11,7 +11,8 @@ Bu belge çözümleri **uygulamaz**; onaya sunar. Onayladığın maddeler `PROBL
 > - **K2/B1 — minRating:** Varsayılan **YOK** (maç herkese açık); yalnız kurucu isterse baraj koyar.
 > - **K1 — Cüzdan top-up:** **Kalır**; Master 4.6 buna göre güncellenecek (cüzdan-öncelikli ödeme). C-grubu tam kapsam (idempotency + min/max).
 > - **K4 — Ödeme sağlayıcı:** Şimdilik **SIMULATION**; UX simülasyon gerçekliğine göre kurgulanır. Gerçek iyzico pre-auth/capture **ayrı iş** olarak askıda.
-> - **Sonraki adım:** Kod yazılmayacak; kullanıcı planı madde madde inceleyip onaylayacak.
+> - **K3 — Misafir modu (varsayılan karar, v2):** Tek noktadan **GuestGate** ile tam kapılama; lansman build'inde bayrakla kapanır. (Vetoyla değiştirilebilir.)
+> - **Sonraki adım (v2):** Plan **uygulama-sınıfı**na yükseltildi — §5'te iş paketleri, kabul kriterleri, izlenebilirlik matrisi ve sprint çıkış kapıları tanımlı. Uygulama, onayla S0'dan başlar.
 
 ---
 
@@ -209,23 +210,232 @@ Görünüşte tamam ama **sahte veri** ile çalışan yüzeyler — en tehlikeli
 
 - **K1 — Cüzdana para yükleme (top-up).** ✅ **KARAR: Kalır.** Master 4.6 "lansmanda YOK" ifadesi cüzdan-öncelikli ödemeye göre güncellenecek. C-grubu tam kapsam (idempotency + min/max + hata durumları).
 - **K2 — `minRating` varsayılanı.** ✅ **KARAR: Varsayılan YOK** (maç herkese açık); yalnız kurucu açıkça "deneyimli maçı" seçerse baraj uygulanır. B1 buna göre kurgulanır.
-- **K3 — Misafir (guest) modu.** ⏳ **AÇIK.** Master "lansmanda YOK" diyor. _Öneri:_ Şimdi tam gate'le (dead-end'leri tek tek düzeltmek yerine); geliştirmede kalsın. Onayına göre A7/F4 kapsamı değişir.
+- **K3 — Misafir (guest) modu.** 🟨 **VARSAYILAN KARAR (v2): tam kapılama.** Master "lansmanda YOK" der. Tüm misafir dead-end'lerini tek tek onarmak yerine **tek `GuestGate` sarmalayıcısı**: misafir yalnız Keşfet + Saha Vitrini'ni salt-okur gezer; diğer her yüzey/aksiyon kayıt CTA'sına açılır; kalıcı "Misafir modundasın" şeridi + tek dokunuşla çıkış; lansmanda `VITE_GUEST_MODE=false` ile tamamen kapanır. A7/F4 buna göre kurgulandı. (İtiraz edersen İP-07/İP-12 kapsamı güncellenir.)
 - **K4 — Ödeme sağlayıcı.** ✅ **KARAR: Şimdilik SIMULATION.** UX simülasyon gerçekliğine göre kurgulanır — bilet/QR (C4) *simüle edilmiş* ödeme durumunu **dürüstçe** yansıtır; blokaj→capture→iade akışı simüle edilir. Gerçek iyzico pre-auth ayrı iş olarak askıda.
 - **K5 — Kapsam sırası.** _Öneri:_ Önce 6 sistemik kök neden (KN-1..6), sonra P0 para/güven, sonra P1 akış, sonra P2 cila. Kullanıcı planı önce inceleyecek; sıra onay sonrası kesinleşir.
 
 ---
 
-## 5. Önerilen uygulama sırası
+## 5. Sıfır-Problem Programı (v2 — uygulama-sınıfı)
 
-| Sprint | İçerik | Neden önce |
-|--------|--------|-----------|
-| **S0 — Kök nedenler** | KN-2 (degraded banner), KN-1 (reaktif kimlik), KN-4 (rookie ölçeği), KN-3 (maç yazımı), KN-5 (para idempotency), KN-6 (mock temizliği) | Düzinelerce semptomu tek hamlede kapatır; her ekranı etkiliyor |
-| **S1 — P0 Para & Güven** | C1–C5, B4, B5, G1 | Doğrudan para/güven; dispute riski |
-| **S2 — P0/P1 Maç akışı** | B1, B2, B6, B7, B11, B12 | Soğuk-başlangıç çıkmazı + katılım bütünlüğü |
-| **S3 — P1 Tutarsızlık & çıkmaz** | A1–A4, C6–C9, E1–E5, F1–F3 | Akış kırılmaları |
-| **S4 — P2 Cila** | Kalan boş/hata/format/RTL/i18n maddeleri | Son rötuş, mağaza kalitesi |
+> "Sıfır problem" bir dilek değil, **operasyonel bir tanım + süreçtir**: (a) bilinen 59 bulgunun
+> (6 kök neden + 53 madde) tamamı kabul kriterli iş paketlerine bağlanır, (b) her düzeltme bir **teste** bağlanır
+> (izlenebilirlik matrisi), (c) hiçbir sprint, **çıkış kapısı** yeşil olmadan kapanmaz,
+> (d) durum-standardı ve sunucu-kapıları, henüz keşfedilmemiş edge-case **sınıflarını** da önler,
+> (e) yeni bulgular aynı boru hattına girer — sıfır hâli süreçle korunur.
+
+### 5.0 "Sıfır Problem" Tanımı (Definition of Done — 8 standart)
+
+Oyuncu rolü, aşağıdaki 8 standardın **tamamı** sağlandığında "sıfır bilinen problem" ilan edilir:
+
+1. **Durum bütünlüğü:** Oyuncunun gördüğü her ekran 5 durumu eksiksiz sunar — *yükleniyor (iskelet) · dolu · boş (dürüst mesaj+CTA) · hata (+Yeniden Dene) · offline*. İskelet asla boş durumla karışmaz.
+2. **Para değişmezleri:** Her para aksiyonu **idempotent** (client key + sunucu dedup), **sunucu-doğrulamalı** ve **dürüst** (UI asla sunucu durumuyla çelişmez); tüm tutarlar tek `formatTRY()` ile.
+3. **Gerçek veri ilkesi:** Oyuncu yüzeyinde **hiçbir** sabit mock (isim/skor/fiyat/QR/ID) yok — gerçek veri ya da dürüst boş durum.
+4. **Tek doğruluk kaynağı:** Kimlik = reaktif auth store; puan = `ratingScale` util; takım sayıları = `get_my_teams`. Aynı bilgi iki ekranda farklı görünemez.
+5. **Atomik yazım:** Client **asla** tüm-dizi/tam-nesne maç yazmaz; tüm mutasyonlar amaca özel RPC. Realtime handler **salt-okur**.
+6. **Kapılar sunucuda:** minRating, misafir, bakiye, değerlendirme-penceresi kontrolleri RLS/RPC'de zorlanır; UI aynı kuralı *yansıtır*, tek başına *taşımaz*.
+7. **Sessiz hata yasağı:** `catch {}` / `console.error`-ile-yut kalıbı oyuncu akışlarında yasak; her hata ya kullanıcıya açıklanır ya da tasarımla imkânsızlaştırılır.
+8. **Regresyon kilidi:** Her bulgu matriste bir doğrulama yöntemine bağlı; smoke süiti + birim testleri + SQL değişmezleri kapılarda koşulur.
+
+### 5.1 İş Paketleri (İP-01 … İP-15)
+
+Doğrulama kodları: **T**=`tsc --noEmit` · **U**=Vitest birim · **P**=Playwright smoke (canlı sürüş) · **S**=SQL/DB değişmezi · **M**=Manuel QA senaryosu. Efor: S/M/L.
+
+#### İP-01 — Reaktif Kimlik (KN-1) · Efor L
+- **Kapsam:** KN-1; A1'in kökü; D2/F4 bağımlılığı.
+- **Tasarım:** Zustand'a `authSlice`: `{ user, status: 'INIT'|'READY'|'GUEST'|'SIGNED_OUT' }`. `supabaseAuth` olayları store'a yazar; `auth.currentUser` yalnız **salt-okur köprü** olarak kalır (legacy çağrı noktaları kademeli taşınır). Kabuk, `status==='INIT'` iken splash'ta bekler (render kapısı). Ekranlar `useAuthUser()` hook'u ile okur.
+- **Dosyalar:** `supabaseAuth.ts`, `store.ts`, `App.tsx`, `ProfileScreen`, `PendingVerificationView`, `SocialView`, `LocationPrompt`, `RoleSwitcher`, `MatchJoin`.
+- **Kabul:** Girişli kullanıcı hiçbir anda "Misafir/Oyuncu" fallback'i görmez; splash'a erken dokunma AUTH'a düşürmez; `PendingVerification` aboneliği kimlik geç dolsa da kurulur.
+- **Doğrulama:** U (state geçişleri) + P (giriş sonrası hızlı gezinmede isim asserti).
+
+#### İP-02 — Oyuncu Bootstrap Temizliği (KN-2) · Efor M
+- **Tasarım:** `store.ts:976` admin RPC'leri oyuncu bootstrap'ından çıkar; oyuncu kimliği `getMyProfile()` (kendi RLS'i). `adminUsers` yalnız admin panelde yüklenir; `MatchJoin`/`store.ts:1029` benzeri okumalar auth store'a taşınır. Degraded banner yalnız **oyuncuya ait kritik** çağrıların (profil, maç listesi) hatasına bağlanır; retry başarısında kaybolur. Banner offset'i: offline (üst) + degraded (altında), üst üste binme yok (L2).
+- **Kabul:** Oyuncu oturumunda ağ kaydında `admin_fetch_*` = **0**; sağlıklı ağda bant = **0** (L1); başlık kırpılması yok (L2).
+- **Doğrulama:** P (ağ asserti + görsel) + M.
+
+#### İP-03 — Atomik Maç Yazımları (KN-3) · Efor L
+- **Tasarım:** Katıl/ayrıl/çıkar/yedek-terfi akışlarında tam-dizi `updateMatch` kaldırılır; yalnız amaca özel RPC (`join_public_match_slot`, `leave_public_match_slot`, `player_buy_slots_v2`, `player_assign_slot`, kick/terfi için mevcut ya da yeni dar RPC). Realtime handler **salt-okur** (store'u günceller, DB'ye yazmaz — yankı döngüsü ölür). Kaptan devri sunucu tarafına alınır (leave RPC içinde), client hesaplaması silinir.
+- **Kabul:** İki tarayıcı bağlamı eşzamanlı katılır → **ikisi de** kadroda (B3); lobi açıkken gelen realtime tick **0 yazma** üretir; lobi kodunda `player_update_match` çağrısı grep'i = 0.
+- **Doğrulama:** P (çift-bağlam eşzamanlılık) + S + kod grep'i.
+
+#### İP-04 — Rookie Puan Sistemi (KN-4/D1) · Efor M
+- **Tasarım:** `utils/ratingScale.ts`: `ratingToOverall(rating, matchesPlayed)` → `matchesPlayed===0 || rating==null` ise `null` (rookie). `PlayerCard`/`ProfileScreen`/`teamService`/`TeamBuilder` bu util'i kullanır. Rookie kart varyantı: nötr tema, OVR yerine "—", "İlk maçını oyna, kartın oluşsun" CTA'sı. Güven puanı: ilk değerlendirmeye kadar "Yeni" rozeti (100 gösterilmez). Dengeleme, rookie'leri ayrıca işaretler.
+- **Kabul:** 0 maçlı hesap rookie kart görür; varsayılandan OVR 100/Güven 100 üretmek **imkânsız**; alt-stat/OVR çelişkisi yok.
+- **Doğrulama:** U (util sınır değerleri) + P (taze hesap profili).
+
+#### İP-05 — Para Aksiyon Güvenliği (KN-5, C1–C3) · Efor L
+- **Tasarım:** (1) Top-up ve `blockMatchDeposit`'e client-üretimli `idempotencyKey` (PaymentScreen'deki `idemKeyRef` deseni genelleştirilir); sunucu aynı key'i tek işleme indirger. (2) Başarı penceresi dahil buton kilidi (`topupBusy` başarıda erken açılmaz). (3) `ALREADY_BLOCKED`/`ALREADY_*` yanıtları **başarı-yenile** olarak yorumlanır (para/UI çelişkisi ölür — C2). (4) PaymentScreen cüzdan-özeti hatası → açık hata kartı + Yeniden Dene; çözülmeden ödeme adımı kilitli (C3); `catch {}` kaldırılır. (5) Top-up max'ı sunucu ayarından okunur, erken doğrulanır (A2-cüzdan).
+- **Kabul:** Çift dokunuş → **tek** işlem; kayıp-yanıt sonrası retry → başarı UI'ı; özet hatasında asla "0₺" varsayılmaz.
+- **Doğrulama:** P (çift-tık testi) + S (`wallet_transactions`'ta idem key başına satır=1) + U.
+
+#### İP-06 — Mock Temizliği (KN-6, C4, kısmen G1/B9/E3) · Efor L
+- **Tasarım:** (1) **Bilet:** gerçek rezervasyon kaydından türetilir — durum (simüle ödeme dahi olsa **gerçek** durum), gerçek ID, QR payload = rezervasyon id+imza; ödeme yoksa bilet yok (K4 kararıyla: simülasyonu *dürüst* yansıt). (2) **PostMatchEval:** skor/başlık gerçek maçtan; skor yoksa skor bloğu gizli. (3) **MatchCalendar:** gerçek veriye bağlanana kadar oyuncu navigasyonundan çıkarılır (yarım mock yüzey yayında kalamaz). (4) **TeamLineupBoard:** varsayılan sahte kadro silinir. (5) **Keşif:** `i===2?0:200` fiyatı ve sabit "1 STP/1 ORT" kaldırılır (B9 ile birlikte).
+- **Kabul:** Oyuncu görünümlerinde sabit mock (isim/skor/ID/fiyat) grep'i = **0**; her yüzey gerçek veri ya da dürüst boş.
+- **Doğrulama:** kod grep kapısı + P + M.
+
+#### İP-07 — Giriş & Kabuk Akışları (A1–A7) · Efor M
+- A1: giriş başarısında navigasyon **deterministik** (İP-01) + 10sn zaman-aşımı → açıklayıcı hata; sonsuz spinner imkânsız.
+- A2: `.single()` hatası ≠ "kayıt yok"; yalnız gerçek 0-satırda yeni-kullanıcı dalı; hata → retry ekranı; rol asla sessizce PLAYER'a yazılmaz.
+- A3: PendingVerification: mount'ta durum fetch'i + "Durumu Yenile" butonu + 30sn poll (realtime tamamlayıcı olur, tek yol olmaz).
+- A4: Konum: reddedildi/cihaz-yok/zaman-aşımı **üç ayrı** mesaj+CTA; taramada "Vazgeç"; fallback = manuel şehir/ilçe (Master 3.1).
+- A5: View-seviyesi hata sınırı (`Suspense`+boundary): chunk hatası kabuğu düşürmez, "Bu bölüm yüklenemedi → Tekrar Dene".
+- A6: Alt-nav kök yığınları korur; Android geri deterministik.
+- A7: `VITE_DEMO_ACCOUNTS=false` + `VITE_GUEST_MODE=false` lansman profili; `?demo=1` prod build'de etkisiz.
+- **Doğrulama:** A1/A3 P · A2 U+M · A4–A6 M · A7 U (bayrak testi).
+
+#### İP-08 — Maç Keşif & Katılım Bütünlüğü (B1–B12, B14) · Efor L
+- B1 ✅K2: `minRating` varsayılanı **null**; kurucu opsiyonel barajı açıkça seçer.
+- B2: baraj **join RPC'de** zorlanır; tüm giriş yollarında aynı net mesaj ("Bu maç X+ puan istiyor").
+- B4: "Maçı İptal Et" aksiyonu Maçlarım/lobi kurucu menüsünde; `cancelMatchByCaptain`'e bağlanır; modal kademeli-iade özetini gösterir.
+- B5: ücretli maçtan ayrılma modalı **tam finansal sonuç** gösterir (iade/kredi/kayıp) — Master 3.3 kademesiyle birebir.
+- B6: "Takıma Katıl" gerçek talep RPC'si; 2.5sn sahte `setTimeout` onayı silinir; durum = "Talep gönderildi → kaptan onayı".
+- B7: ödeme yolculuğunda **slot hold** (süreli, geri sayım rozetli); süre dolarsa serbest + kullanıcıya bildirim.
+- B8: zaman filtresi — geçmiş/başlamış maç katılıma kapalı; kart "İncele/Sonuç" moduna düşer.
+- B9: fiyat/eksik-pozisyon yalnız gerçek alandan; yoksa gizlenir (İP-06 ile).
+- B10: yakın-maç 0 sonuçta dürüst boş durum + "yarıçapı genişlet" CTA; uzak maçlar ayrı "Diğer Bölgeler" başlığında.
+- B11: rezervasyon/draft→maç dönüşümünde tarifeden `totalPrice`+`deposit` çekilir; 0 çözülürse yayın öncesi uyarı.
+- B12: maç `DRAFT` doğar; **yayın kapora blokajına şartlı** (Master 3.3 "katılım=blokaj").
+- B14: yedek katılımı "Maçlarım"da "Yedek" rozetiyle listelenir.
+- **Doğrulama:** B1/B2 U+S+P · B3(İP-03) P · B4/B5/B7/B8/B10/B14 P · B6 S+M · B11 U+M · B12 S+P.
+
+#### İP-09 — Para Yüzeyleri (C5–C9, C11) · Efor M
+- C5: iade tahmini **sunucudan hesaplanır** (yeni `quote_cancel_refund` RPC ya da settings+PSP formülünün birebir porte edilmesi); modal kesin kırılım gösterir (brüt − PSP = net).
+- C6: rezervasyon yalnız ödeme başarısında yaratılır (ya da kısa süreli hold + otomatik temizlik); yetim PENDING sınıfı ölür.
+- C7: iade eşikleri + zaman dilimi (Europe/Istanbul) sunucu kaynaklı; sınır anlarında UI ile backend aynı yüzdeyi verir.
+- C8: MATCH_JOIN'e `balanceOnly`-eşdeğeri akış: yetersiz bakiyede birincil CTA **"CÜZDANA YÜKLE"**; pasif "ÖDE" çıkmazı ölür.
+- C9: çoklu-slot devrinde "kim ödedi" görünürlüğü: slot karta "X ödedi" rozeti + alıcıya borç listesi (mutabakat MVP'si; gerçek tahsilat iyzico fazına).
+- C11: SIMULATION'a **kontrollü red modu** (belirli test tutarı/kartı → decline) — hata banner'ları/3DS-fail UX'i test edilebilir olur (K4 kararının gereği).
+- **Doğrulama:** C5/C7 U+S · C6 S · C8 P · C9/C11 M.
+
+#### İP-10 — Kimlik & Profil (D2–D5) · Efor M
+- D2: profil yükleme hatası → retry ekranı; "Düzenle" kilitli (boş profili ezme riski ölür); `userService` hata yutmayı bırakır (null ≠ hata).
+- D3: ortak `<Avatar>` bileşeni (foto→initials→silüet zinciri, `onError` dahili) — tüm oyuncu yüzeylerinde.
+- D4: `toLocaleUpperCase('tr')` util'i; ad alanlarında `min-w-0`+`break-words`; mesaj/adlarda `dir="auto"`.
+- D5: görsel yükleme hataları (HEIC/boyut/küçük/offline) **ayrı ayrı** kullanıcıya açıklanır (mesajlar `imageCompression.ts`'te hazır, UI'a bağlanır) + ilerleme/timeout.
+- **Doğrulama:** D2 P · D3/D5 M · D4 U+M.
+
+#### İP-11 — Takım & Stüdyo (E1–E7, E2↔L5) · Efor M
+- E1: `FORMATIONS[size][label]` guard'ı — custom formasyonda kimlik değişimi çökmez; custom düzen ayrı saklanır.
+- E2: takım sayaçlarının tek kaynağı `get_my_teams`; Profil = Sosyal = aynı sayı (L5 ölür).
+- E3: tahta `get_team_squad`'dan; format-duyarlı slotlar (5v5–11v11); mock kadro İP-06'da silindi; boş kadroda dürüst durum.
+- E4: dengeleme `ratingScale` ile (İP-04); eşit-olmayan bölünmede sayı rozeti + uyarı.
+- E5: kaptan ayrılma → üye varsa "önce kaptanlığı devret" yönlendirme akışı; buton durumu öngörülü.
+- E6: boyut/formasyon değişiminde "çizimler silinecek" onayı + tek adım geri-al; kenar-dışına bırakma tokeni kaldırır.
+- E7: `TeamDashboard` kadroyu kadro RPC'sinden alır; `color1` fallback paleti.
+- **Doğrulama:** E1 U+P · E2 P · E3/E6/E7 M · E4 U+M · E5 P.
+
+#### İP-12 — Sosyal & Mesajlaşma (F1–F5) · Efor S
+- F1: blokta kompozer kilitlenir + "Bu kullanıcıyı engelledin" durumu; sohbet başlığında rozet.
+- F2: tek blok semantiği — her yüzey `blockUserFully`; `messageService.blockUser` bu davranışa katlanır.
+- F3: DM şikayeti `reportUser` → `user_reports`'a yazar (sahte "alındı" ölür).
+- F4: misafir Sosyal'i `GuestGate`'e düşer (K3 kararı); boş `userId` ile realtime abonelik açılmaz.
+- F5: "Tümünü Kabul Et" sonuç raporu (x başarılı / y hata); arama isteğine seq/abort guard.
+- **Doğrulama:** F1 P · F2/F3 S+M · F4/F5 M.
+
+#### İP-13 — Maç Sonu Değerlendirme (G1–G3) · Efor M
+- G1: skor onay ekranı gerçek maç verisinden; "Onayla/İtiraz" gerçek RPC'lere (Master 3.4 skor akışı); sabit 5-3 ve sahte başlık silinir (İP-06 ile).
+- G2: gerçek-ama-katılımcısız maçta oyuncu-puanlama adımı dürüstçe atlanır; mock `p1..p5` prod'dan çıkar.
+- G3: "zaten değerlendirdin / süre doldu" durumları sunucudan sorgulanıp gösterilir; organizasyon yorumu alanı state'e bağlanır ve kaydedilir.
+- **Doğrulama:** G1 P+S · G2 M · G3 S+M.
+
+#### İP-14 — Durum Standardı & Ortak Araçlar (B13, B15, C10 + 1. standart) · Efor M
+- **Ortak bileşen kiti:** `<AsyncSection>` (iskelet/boş/hata/retry sarmalayıcısı), `<Avatar>`, `<EmptyState>` tutarlılaştırması.
+- **Ortak util'ler:** `formatTRY()` (tek para biçimi, `1.500,00₺`), `parseMatchDateTime()` (ISO + `dd.mm.yyyy` + TR gün adları + saat aralıkları; `NaN` imkânsız), `trUpper()`.
+- C10: ölü bilet butonları bağlanır ya da kaldırılır; 0-tutar durumları açıklamalı.
+- B15: keşif iskeleti; iskelet↔boş ayrımı her listede (L7).
+- **Doğrulama:** U (üç util'in sınır testleri) + M (ekran taraması).
+
+#### İP-15 — Regresyon Altyapısı & Kalite Kapıları · Efor M
+- **`tests/player-smoke.spec.ts` (Playwright):** bu analizde kurulan sürüş altyapısı kalıcılaşır — oturum-enjeksiyonlu giriş prelüdü; rota: boot→Ana Sayfa→Top Oyna→lobi→Sahalar→Cüzdan→Profil→Sosyal→Stüdyo. **Assert'ler:** konsol hatası=0 (font whitelist'i hariç), 4xx/5xx istek whitelist dışı=0, degraded bant görünmez, `admin_fetch_*`=0, kullanıcı adı ≠ "Misafir/Oyuncu", her listede iskelet→(dolu|boş) geçişi.
+- **Birim süiti (Vitest):** `ratingScale`, `parseMatchDateTime`, `formatTRY`, iade-tahmin eşleşmesi, auth store geçişleri.
+- **SQL değişmezleri:** idem key başına `wallet_transactions` ≤1 · maç başına `BLOCKED` kapora ≤1 · yetim PENDING rezervasyon = 0 · `DRAFT` dışı ödenmemiş yayınlı maç = 0.
+- **Kapı kuralı:** her commit `tsc`+Vitest; her sprint kapısında smoke + SQL değişmezleri.
+
+### 5.2 Sprint Planı & Çıkış Kapıları
+
+| Sprint | İş paketleri | Çıkış kapısı (geçilmeden sonraki sprint başlamaz) |
+|---|---|---|
+| **S0 — Temel** | İP-01, İP-02, İP-04, İP-14 (util'ler), İP-15 (harness kurulumu) | **G0:** sağlıklı ağda bant 0 · `admin_fetch_*` 0 · taze hesap rookie kart · isim asla "Misafir" · tsc+unit yeşil |
+| **S1 — Para** | İP-05, İP-09, İP-06 (bilet) | **G1:** çift-dokunuş=tek işlem (S) · kayıp-yanıt retry=başarı · iade tahmini=sunucu hesabı · ödemesiz "ONAYLANDI" bilet imkânsız |
+| **S2 — Maç bütünlüğü** | İP-03, İP-08, İP-06 (keşif/takvim) | **G2:** eşzamanlı çift katılım ikisi de kadroda · realtime tick 0 yazma · yan-kapı baraj reddi · geçmiş maç katılıma kapalı · DRAFT-yayın şartı |
+| **S3 — Akış & tutarlılık** | İP-07, İP-10, İP-11, İP-12, İP-13, İP-06 (değerlendirme) | **G3:** A-D-E-F-G kabul kriterleri manuel QA listesinde tamam · Profil=Sosyal sayaçları eşit |
+| **S4 — Kapanış** | Kalan P2 + matris kapanışı | **G4 = "Sıfır bilinen problem" ilanı:** matristeki 59 satır ✅ · smoke 3 ardışık koşuda yeşil · taze-hesap **ve** kıdemli-hesap tam sürüşleri temiz · `PROBLEMLER_VE_COZUMLER.md` güncel |
+
+### 5.3 İzlenebilirlik Matrisi (bulgu → paket → kabul → doğrulama)
+
+Her satır kapanmadan G4 ilan edilemez. (Doğrulama: T/U/P/S/M — bkz. §5.1 başı.)
+
+| ID | İP | Kabul kriteri (özet) | Doğrulama |
+|---|---|---|---|
+| KN-1 | İP-01 | Hiçbir ekran render'da singleton'dan kimlik okumaz | U+P |
+| KN-2 | İP-02 | Oyuncuda admin RPC=0; sağlıklı ağda bant=0 | P |
+| KN-3 | İP-03 | Tüm-dizi maç yazımı=0; realtime salt-okur | P+S |
+| KN-4 | İP-04 | Varsayılandan OVR/Güven 100 üretilemez | U+P |
+| KN-5 | İP-05 | Para aksiyonları idempotent + dürüst | P+S |
+| KN-6 | İP-06 | Oyuncu yüzeyinde sabit mock=0 (grep kapısı) | M+P |
+| A1 | İP-07 | Giriş sonrası ≤10sn yönlendirme veya hata; sonsuz spinner yok | P |
+| A2 | İP-07 | Okuma hatası ≠ yeni kullanıcı; retry var; rol korunur | U+M |
+| A3 | İP-07 | Pending: fetch + manuel yenile + poll | P |
+| A4 | İP-07 | 3 konum hatası ayrı mesaj; taramada Vazgeç | M |
+| A5 | İP-07 | Chunk hatası kabuğu düşürmez | M |
+| A6 | İP-07 | Sekme geçişi geçmişi korur | M |
+| A7 | İP-07 | Lansman bayraklarıyla demo/misafir kapalı | U+M |
+| B1 | İP-08 | Varsayılan minRating yok; vitrin rookie'ye açık | U+P |
+| B2 | İP-08 | Baraj RPC'de; yan kapı reddi + net mesaj | S+P |
+| B3 | İP-03 | Eşzamanlı katılımda kayıp yok | P |
+| B4 | İP-08 | Kurucu iptali UI'da + iade özeti | P |
+| B5 | İP-08 | Ayrılma modalı finansal sonucu gösterir | P |
+| B6 | İP-08 | Sahte otomatik onay yok; gerçek talep akışı | S+M |
+| B7 | İP-08 | Ödemede slot hold + geri sayım | P+S |
+| B8 | İP-08 | Geçmiş maç katılıma kapalı | P |
+| B9 | İP-08 | Fiyat/pozisyon yalnız gerçek veriden | M |
+| B10 | İP-08 | 0 sonuçta dürüst boş + yarıçap CTA | P |
+| B11 | İP-08 | Dönüşümde tarife fiyatı/kaporası | U+M |
+| B12 | İP-08 | Yayın kapora blokajına şartlı | S+P |
+| B13 | İP-14 | Tarih ayrıştırma NaN üretemez | U |
+| B14 | İP-08 | Yedeklik "Maçlarım"da görünür | P |
+| B15 | İP-14 | Keşif iskeleti; boş↔stale karışmaz | P |
+| C1 | İP-05 | Çift top-up imkânsız | P+S |
+| C2 | İP-05 | ALREADY_BLOCKED=başarı; para/UI çelişkisi yok | S+M |
+| C3 | İP-05 | Özet hatası açık durum; 0₺ varsayımı yok | P |
+| C4 | İP-06 | Bilet gerçek kayıttan; ödemesiz onay yok | P+S |
+| C5 | İP-09 | İade tahmini=backend (PSP dahil) | U+S |
+| C6 | İP-09 | Yetim PENDING rezervasyon sınıfı yok | S |
+| C7 | İP-09 | Eşik/tz sunucu kaynaklı | U+S |
+| C8 | İP-09 | Yetersiz bakiyede belirgin yükleme CTA'sı | P |
+| C9 | İP-09 | Slot devrinde ödeme görünürlüğü | M |
+| C10 | İP-14 | Tek para formatı; ölü buton yok | U+M |
+| C11 | İP-09 | SIMULATION red modu ile hata UX test edilir | M |
+| D1 | İP-04 | Rookie kart (KN-4 ile) | U+P |
+| D2 | İP-10 | Profil hatasında retry; Düzenle kilitli | P |
+| D3 | İP-10 | Ortak Avatar her yüzeyde | M |
+| D4 | İP-10 | TR casing + taşma güvenli | U+M |
+| D5 | İP-10 | Yükleme hataları açıklanır | M |
+| E1 | İP-11 | Custom formasyon çökmesi imkânsız | U+P |
+| E2 | İP-11 | Takım sayacı tek kaynak | P |
+| E3 | İP-11 | Tahta gerçek kadro + format-duyarlı | M |
+| E4 | İP-11 | Dengeleme rookie-farkında + uyarı | U+M |
+| E5 | İP-11 | Kaptan ayrılmada devir yönlendirmesi | P |
+| E6 | İP-11 | Çizim silme onaylı/geri alınabilir | M |
+| E7 | İP-11 | Kadro RPC'den; renk fallback | M |
+| F1 | İP-12 | Blokta kompozer kilit + durum | P |
+| F2 | İP-12 | Tek blok semantiği | S+M |
+| F3 | İP-12 | DM şikayeti DB'ye yazar | S |
+| F4 | İP-12 | Misafir GuestGate'e düşer | M |
+| F5 | İP-12 | Toplu kabul raporu; arama guard | M |
+| G1 | İP-13 | Skor gerçek; Onayla/İtiraz gerçek RPC | P+S |
+| G2 | İP-13 | Katılımcısız maçta dürüst atlama | M |
+| G3 | İP-13 | Pencere/tekrar durumları + yorum kaydı | S+M |
+
+### 5.4 Süreç Kuralları (sıfır hâlini koruyan mekanizma)
+
+1. **Yeni bulgu prosedürü:** Uygulama sırasında çıkan her yeni edge-case `H-xx` ID'si alır, matrise eklenir; açık `H-xx` varken sprint kapısı geçilmez. "Sıfır problem" tek seferlik temizlik değil, kapılarla korunan bir hâldir.
+2. **Commit disiplini:** Her İP kendi commit dizisi; İP kapanışında matris işaretlenir + `PROBLEMLER_VE_COZUMLER.md`'ye kayıt düşülür (mevcut iş akışı).
+3. **Geri alınabilirlik:** RPC/migration değişiklikleri geri-alınabilir yazılır; her migration'ın down-yolu not edilir.
+4. **Yan etki koruması:** Maç/para RPC'leri diğer rolleri (GK/Hakem/Tesis) de besler → S1/S2 kapılarında admin-panel ve owner smoke'u da koşulur; kırılım varsa kapı kırmızı.
+5. **Kapsam dışı (bilinçli):** Gerçek iyzico pre-auth/capture entegrasyonu (K4), sadakat/promosyon, gerçek borç-tahsilat (C9'un tahsilat ayağı) — ayrı fazlar.
 
 ---
 
-### Özet
-Oyuncu rolünde **~40 somut problem**, **6 sistemik kök nedene** indirgendi. En kritik 3 tema: **(1)** oyuncuda çalışan admin bootstrap'ının ürettiği kalıcı "bağlantı zayıf" bandı ve "Oyuncu" kimlik fallback'i; **(2)** para yüzeylerinde idempotency yokluğu + sahte/statik bilet + yanlış iade tahmini; **(3)** "bitmiş gibi görünen" mock ekranlar (değerlendirme skoru, takvim, taktik kadrosu, keşif fiyatları). Kök nedenlerle başlamak, cila aşamasına gelindiğinde iş listesini dramatik biçimde kısaltır.
+### Özet (v2)
+59 bulgu (6 kök neden + 53 madde) **15 iş paketine** bağlandı; her bulgu **kabul kriteri + doğrulama yöntemiyle** izlenebilirlik matrisinde. 5 sprint, her biri **ölçülebilir çıkış kapılı**; G4 kapısı = "sıfır bilinen problem" ilanı (matris ✅ + smoke 3× yeşil + taze/kıdemli hesap tam sürüşleri temiz). 8 maddelik durum/para/veri standardı, henüz keşfedilmemiş edge-case *sınıflarını* da önler; yeni bulgular aynı boru hattına girerek sıfır hâlini kalıcı kılar. Onayınla S0'dan başlanır; oyuncu fazı G4'te kapanır ve aynı yöntem Kaleci'ye taşınır.
