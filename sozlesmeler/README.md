@@ -8,7 +8,7 @@ Her yeni sözleşme/politika hazırlandığında buraya, açık bir dosya adıyl
 
 | # | Belge | Durum | Uygulandığı yer(ler) | PR |
 |---|---|---|---|---|
-| 1 | [Kullanım Şartları](oyuncu/01-kullanim-sartlari.md) | 📝 Taslak tamamlandı — adversarial hukuki inceleme geçti (uygulama içi kısaltılmış metin güncellendi, madde 4 veli-onay akışı henüz kodda yok) | `LegalScreen.tsx → TERMS` | — |
+| 1 | [Kullanım Şartları](oyuncu/01-kullanim-sartlari.md) | ✅ Yayında — madde 4 veli-onay akışı kodda **inşa edildi** (onboarding + veli onayı sistemi) | `LegalScreen.tsx → TERMS` | — |
 | 2 | [Gizlilik Politikası](oyuncu/02-gizlilik-politikasi.md) | ✅ Yayında | `LegalScreen.tsx → PRIVACY`, `public/gizlilik.html` | #74 |
 | 3 | [KVKK Aydınlatma Metni](oyuncu/03-kvkk-aydinlatma-metni.md) | ✅ Yayında | `LegalScreen.tsx → KVKK` | #74 |
 | 4 | [KVKK Açık Rıza Metni](oyuncu/04-kvkk-acik-riza-metni.md) | ✅ Yayında | `LegalScreen.tsx → RIZA` | #75 |
@@ -17,14 +17,13 @@ Her yeni sözleşme/politika hazırlandığında buraya, açık bir dosya adıyl
 | 7 | [Hesap Silme Bilgilendirmesi](oyuncu/07-hesap-silme-bilgilendirmesi.md) | ✅ Yayında | `public/hesap-silme.html` | — |
 | 8 | [İşletme (Saha Sahibi) B2B Sözleşmesi](saha-sahibi/01-isletme-b2b-sozlesmesi.md) | 📝 Taslak tamamlandı — adversarial hukuki inceleme geçti (henüz onboarding kabul ekranına bağlanmadı) | Onboarding/başvuru süreci (bağlanacak) | — |
 | 9 | [Kaleci/Hakem Hizmet Sağlayıcı Sözleşmesi](kaleci-hakem/01-hizmet-saglayici-sozlesmesi.md) | 📝 Taslak tamamlandı — adversarial hukuki inceleme geçti (%15 komisyon oranı iş kararı onayı bekliyor; henüz başvuru kabul ekranına bağlanmadı) | Hizmet sağlayıcı başvuru süreci (bağlanacak) | — |
+| 10 | [Veli Muvafakatnamesi](oyuncu/08-veli-muvafakatnamesi.md) | ✅ Yürürlükte — Uygulamada fiilen alınıyor (guardian_consents + veli onayı ekranı) | `GuardianConsentForm.tsx`, `LegalScreen.tsx → VELI` | — |
 
 Henüz hazırlanmamış belgeler (tedarikçi sözleşmeleri, kurumsal belgeler vb.) için bkz. [uyum takip paneli](https://claude.ai/code/artifact/9b1e3654-7871-4bc1-b6b8-6d83c5ad0982) — hazırlandıkça ilgili alt klasörle birlikte buraya eklenecekler.
 
 ## Sıradaki teknik adımlar
 
-Sözleşme metinleri tamamlanmış olsa da, aşağıdaki teknik entegrasyonlar henüz **yapılmadı** ve bu belgeler bu adımlar tamamlanana kadar yalnızca kanonik metin olarak mevcuttur:
-
-1. **Madde 4 "sınırlı mod" akışı (Kullanım Şartları):** 18 yaş altı kullanıcılar için veli iletişim bilgisi alma, veliye özel onay bağlantısı/kod gönderimi ve onay sonrası ödeme/maça katılım işlevlerinin açılması — bu akış kodda henüz inşa edilmedi.
+1. **Madde 4 "sınırlı mod" / veli onayı akışı (Kullanım Şartları):** ✅ **Tamamlandı** — onboarding'de yaş aralığı, sınırlı mod, çocuğun Veli Bağlantı Kodu, velinin kendi hesabından kod + kimlik + muvafakat onayı, T.C. hash, 18 yaşında otomatik açılma ve `payment_intents` ödeme kapısı inşa edildi.
 2. **B2B sözleşme kabul ekranları:** Saha Sahibi ve Kaleci/Hakem sözleşmeleri, ilgili onboarding/başvuru akışlarında (`PartnerOnboarding.tsx` ve hizmet sağlayıcı başvuru ekranı) bir kabul adımına henüz bağlanmadı.
 3. **Kaleci/Hakem komisyon oranı (%15):** Sözleşme taslağında iş kararı olarak işaretlenmiştir; şirket tarafından onaylanmalı veya değiştirilmelidir.
 
