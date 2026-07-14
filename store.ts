@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo, CurrentUserProfile } from './types';
 import type { SavedCard } from './services/walletService';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
@@ -436,6 +436,10 @@ interface AppState {
   // Misafir modu: oturum açmadan gezinme. Yazma aksiyonlarında kayıt kapısı açılır.
   isGuest: boolean;
   setIsGuest: (v: boolean) => void;
+  // Giriş yapmış oyuncunun gerçek profili (ad/avatar/puan) — admin-only
+  // adminUsers yerine maç akışlarında kullanılır (KN-2 'Oyuncu' fallback'i).
+  currentUserProfile: CurrentUserProfile | null;
+  setCurrentUserProfile: (p: CurrentUserProfile | null) => void;
   isSignupGateOpen: boolean;
   setIsSignupGateOpen: (open: boolean) => void;
   setIsRoleSwitcherOpen: (open: boolean) => void;
@@ -1032,11 +1036,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     const currentUserUid = auth.currentUser.uid;
-    const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: currentUserUid, name: 'Oyuncu', avatar: 'https://i.pravatar.cc/150' };
+    // Gerçek profil (bootstrap'ta profiles'tan yazılır) önce; admin-only
+    // adminUsers yalnız admin oturumunda dolu olduğundan oyuncuda son çare.
+    const currentUserProfile = state.currentUserProfile
+      || state.adminUsers.find(u => u.id === currentUserUid)
+      || { id: currentUserUid, name: auth.currentUser.displayName || 'Oyuncu', avatar: auth.currentUser.photoURL || `https://i.pravatar.cc/150?u=${currentUserUid}` };
 
     const joinedPlayer: Player = {
       id: currentUserProfile.id || currentUserUid,
-      name: currentUserProfile.name || 'Oyuncu',
+      name: currentUserProfile.name || auth.currentUser.displayName || 'Oyuncu',
       avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
       rating: (currentUserProfile as any).rating || 4.5,
       position: role,
@@ -1221,6 +1229,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
   isGuest: false,
   setIsGuest: (v) => set({ isGuest: v }),
+  currentUserProfile: null,
+  setCurrentUserProfile: (p) => set({ currentUserProfile: p }),
   isSignupGateOpen: false,
   setIsSignupGateOpen: (open) => set({ isSignupGateOpen: open }),
   myRoles: [],

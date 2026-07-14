@@ -297,7 +297,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const {
     adminUsers, friends, updateMatch, addUserNotification, adminPitches,
     userTeams, myTeams, setSelectedMatch,
-    setNewMatchBadge, lobbyMode
+    setNewMatchBadge, lobbyMode, currentUserProfile: storeCurrentUserProfile
   } = useAppStore();
   // MANAGE = Sıradaki Maçlarım'dan; yönetim aksiyonları yalnız burada görünür.
   const isManageMode = lobbyMode === 'MANAGE';
@@ -452,8 +452,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır;
   // katılma aksiyonu store.joinMatch içindeki kayıt kapısına takılır.
   const currentUserUid = auth.currentUser?.uid ?? 'guest';
-  const currentUserProfile = (adminUsers || []).find(u => u?.id === currentUserUid)
-    || { id: currentUserUid, name: auth.currentUser ? 'Oyuncu' : 'Misafir', avatar: '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
+  // Gerçek profil (store) önce; admin-only adminUsers yalnız admin oturumunda dolu.
+  const currentUserProfile = storeCurrentUserProfile
+    || (adminUsers || []).find(u => u?.id === currentUserUid)
+    || { id: currentUserUid, name: auth.currentUser ? (auth.currentUser.displayName || 'Oyuncu') : 'Misafir', avatar: auth.currentUser?.photoURL || '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
 
   // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
   const isCaptain = match.creatorId === currentUserProfile?.id;

@@ -11,6 +11,7 @@ import { useImageUpload } from '../hooks/useImageUpload';
 import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
 import type { ShortcutItem } from '../components/profile';
 import { OynaLogo } from '../components/OynaLogo';
+import { ratingToOverall, tierForOverall } from '../utils/ratingScale';
 
 const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
 
@@ -21,10 +22,15 @@ const buildCardData = (profile: OynaUser | null, wins: number, total: number): P
     if (pc && pc.stats && typeof pc.overall === 'number') {
         return pc as PlayerCardData;
     }
-    const overall = Math.round((profile?.stats?.rating ?? 5) * 20);
+    // Rookie ayrımı: hiç maç oynamamış oyuncu için varsayılan 5.0 × 20 = 100
+    // "gold" göstermek yanıltıcıydı. ratingToOverall rookie'de null döner.
+    const overallOrNull = ratingToOverall(profile?.stats?.rating, total);
+    const rookie = overallOrNull === null;
+    const overall = overallOrNull ?? 0;
     return {
         overall,
-        tier: overall >= 80 ? 'gold' : overall >= 65 ? 'silver' : 'bronze',
+        isRookie: rookie,
+        tier: rookie ? 'bronze' : (tierForOverall(overallOrNull) as 'gold' | 'silver' | 'bronze'),
         isStatsVerified: false,
         diamondValue: 0,
         winCount: wins,
@@ -187,7 +193,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
     const cardData = (() => {
         const c = buildCardData(profile, wins, total);
-        return profile?.cardTier ? { ...c, tier: profile.cardTier } : c;
+        // Admin açıkça tier atadıysa rookie durumunu geçersiz kıl (o kartı göster).
+        return profile?.cardTier ? { ...c, tier: profile.cardTier, isRookie: false } : c;
     })();
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.

@@ -10,7 +10,7 @@ import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, h
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import { startPresenceHeartbeat, stopPresenceHeartbeat } from './services/socialService';
-import { identifyUser, resetUser, trackEvent } from './utils/observability';
+import { identifyUser, resetUser, trackEvent, captureException } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
 import OfflineBanner from './components/OfflineBanner';
@@ -135,13 +135,25 @@ const App: React.FC = () => {
         if (user) {
           // Gerçek oturum açıldı → misafir modu biter
           useAppStore.getState().setIsGuest(false);
-          const { data: profile } = await supabase
+          const selectProfile = () => supabase
             .from('profiles')
-            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email')
+            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, stats')
             .eq('id', user.uid)
             .single();
+          let { data: profile, error: profileErr } = await selectProfile();
+          // A2: geçici okuma hatasını (ağ/timeout/RLS) "kayıt yok" ile KARIŞTIRMA.
+          // Gerçek "satır yok" yalnız PGRST116; diğer hatalarda bir kez daha dene.
+          if (!profile && profileErr && profileErr.code !== 'PGRST116') {
+            await new Promise((r) => setTimeout(r, 800));
+            ({ data: profile, error: profileErr } = await selectProfile());
+          }
 
-          if (!profile) {
+          if (!profile && profileErr && profileErr.code !== 'PGRST116') {
+            // Hâlâ hata → mevcut kullanıcıyı ASLA "yeni kayıt" sanıp PLAYER'a
+            // düşürme/onboarding'e atma. Oturumu koru, açıkla, çık.
+            captureException(profileErr, { where: 'onAuthStateChanged.profileFetch' });
+            showToast('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+          } else if (!profile) {
             // ─── YENİ KULLANICI (kayıt) ───────────────────────────────────────
             // Yeni model: KAYIT OLAN HERKES OYUNCU. Kaleci/Hakem/Tesis rolleri
             // sonradan Profil'den opt-in başvuru + admin onayı ile eklenir; kayıt
@@ -192,6 +204,16 @@ const App: React.FC = () => {
               primaryRole,
             ]));
             useAppStore.getState().setMyRoles(ownedRoles);
+
+            // KN-2: giriş yapan oyuncunun gerçek kimliğini store'a yaz — maç
+            // akışları admin-only adminUsers yerine bunu kullanır ("Oyuncu" +
+            // rastgele pravatar fallback'i ortadan kalkar).
+            useAppStore.getState().setCurrentUserProfile({
+              id: user.uid,
+              name: (profile.full_name as string) || user.displayName || 'Oyuncu',
+              avatar: (profile.avatar_url as string) || user.photoURL || '',
+              rating: Number((profile.stats as any)?.rating ?? 0) || 0,
+            });
 
             // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
             // TOKEN_REFRESHED + yeniden INITIAL_SESSION…). Açılış-rolü OVERRIDE'ı
@@ -283,6 +305,7 @@ const App: React.FC = () => {
           // doğrudan giriş (AUTH) ekranına düşülür.
           resetNavigation(prevView === 'SPLASH' ? 'SPLASH' : 'AUTH');
           resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
+          useAppStore.getState().setCurrentUserProfile(null); // KN-2: kimlik temizlenir
           stopPresenceHeartbeat(); // çıkışta heartbeat durur (Spec F34)
         }
       } catch (error: any) {

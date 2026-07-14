@@ -151,9 +151,21 @@ export interface PlayerStat {
   videoUrl: string | null;
 }
 
+// Giriş yapmış oyuncunun hafif, reaktif kimliği (ad/avatar/puan). Maça katılım
+// gibi akışlar bunu admin-only `adminUsers` listesi yerine kullanır — böylece
+// oyuncuda "Oyuncu" + rastgele pravatar fallback'i oluşmaz (KN-2).
+export interface CurrentUserProfile {
+  id: string;
+  name: string;
+  avatar: string;
+  rating: number;
+}
+
 export interface PlayerCardData {
   overall: number;
   tier: 'gold' | 'silver' | 'bronze';
+  /** Henüz maç oynamamış (rookie) → kart OVR yerine "—" ve nötr tema gösterir. */
+  isRookie?: boolean;
   isStatsVerified: boolean;
   diamondValue: number;
   flatModifier?: number; // Opanel admin override katsayısı
