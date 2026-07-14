@@ -1038,6 +1038,50 @@ export async function fetchDeletionQueue(): Promise<DeletionQueueRow[]> {
   return (data || []) as DeletionQueueRow[];
 }
 
+// ─── Veli Onayları (reşit olmayan kullanıcılar) ───────────────────
+export interface GuardianConsentAdminRow {
+  id: string;
+  minor_user_id: string;
+  guardian_user_id: string;
+  guardian_full_name: string;
+  minor_full_name: string;
+  minor_birthdate: string | null;
+  status: string;
+  consented_at: string;
+  revoked_at: string | null;
+}
+export interface MinorAwaitingRow {
+  id: string;
+  name: string;
+  age_range: string | null;
+  guardian_consent_status: string;
+  created_at: string;
+}
+
+/** Verilmiş veli muvafakatleri (TC hash'leri SEÇİLMEZ — yalnız ad/durum/tarih). */
+export async function fetchGuardianConsents(limit = 200): Promise<GuardianConsentAdminRow[]> {
+  const { data, error } = await supabase
+    .from('guardian_consents')
+    .select('id, minor_user_id, guardian_user_id, guardian_full_name, minor_full_name, minor_birthdate, status, consented_at, revoked_at')
+    .order('consented_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data || []) as GuardianConsentAdminRow[];
+}
+
+/** Reşit olmayan ve veli onayı henüz aktif olmayan (bekleyen) kullanıcılar. */
+export async function fetchMinorsAwaitingConsent(limit = 200): Promise<MinorAwaitingRow[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, age_range, guardian_consent_status, created_at')
+    .eq('is_minor', true)
+    .neq('guardian_consent_status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data || []) as MinorAwaitingRow[];
+}
+
 export type BroadcastSegment = 'ALL' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
 
 export async function broadcastNotification(

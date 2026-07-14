@@ -100,3 +100,10 @@ export const hasSeenOnboarding = (): boolean => {
 
 /** tr-TR büyük harf (İ/ı sorunu için). */
 export const trUpper = (s: string): string => s.toLocaleUpperCase('tr-TR');
+
+/**
+ * Yaş aralığından reşit-olmama çıkarımı. Sunucudaki compute_is_minor ile
+ * aynı kuralı taşır: yalnızca '13-17' aralığı reşit değildir. (Nihai/otoriter
+ * karar sunucudadır; bu yalnızca istemci tarafı gösterim/mantık içindir.)
+ */
+export const isMinorAgeRange = (ageRange: AgeRange | ''): boolean => ageRange === '13-17';
