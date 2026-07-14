@@ -21,6 +21,7 @@ import { Spinner } from './components/ui/Spinner';
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
+import { isOnboardingEnabled, hasSeenOnboarding, markOnboardingSeen } from './views/onboarding/onboardingShared';
 
 // Lazy loaded views to reduce initial bundle size
 const Dashboard = lazy(() => import('./views/Dashboard'));
@@ -52,6 +53,7 @@ const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
 const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
 const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
+const Onboarding = lazy(() => import('./views/Onboarding'));
 const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
@@ -445,15 +447,22 @@ const App: React.FC = () => {
     switch (view) {
       case 'SPLASH':
         return <SplashScreen ready={authResolved} onStart={() => {
-          // Yeni model: rol seçimi yok. Oturum yoksa doğrudan Giriş;
+          // Yeni model: rol seçimi yok. Oturum yoksa yeni kullanıcı akışı;
           // oturum varsa role göre panel. Rolü store'dan TAZE oku (kapanıştaki
           // `role` eski/PLAYER olabilir → kaleci/hakem yanlış panele düşerdi).
           if (!auth.currentUser) {
-            resetNavigation('AUTH');
+            // Yeni kullanıcı → oyuncu onboarding'i (kayıttan önce). Daha önce
+            // görülmüşse veya kill-switch kapalıysa doğrudan Giriş'e düş.
+            resetNavigation(isOnboardingEnabled() && !hasSeenOnboarding() ? 'ONBOARDING' : 'AUTH');
             return;
           }
           resetNavigation(navigateBasedOnRole(useAppStore.getState().role));
         }} />;
+      case 'ONBOARDING':
+        return <Onboarding
+          onComplete={() => { markOnboardingSeen(); resetNavigation('AUTH'); }}
+          onLogin={() => { markOnboardingSeen(); resetNavigation('AUTH'); }}
+        />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
       case 'LOCATION_PROMPT':
