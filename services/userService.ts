@@ -31,6 +31,20 @@ export interface OynaUser {
   preferredFoot?: 'SAG' | 'SOL' | 'CIFT' | null;
   /** Güven puanı, DB'de 0.0–5.0; UI'da ×20 ile 0–100 gösterilir. */
   trustScore?: number | null;
+  // ─── Onboarding + reşit olmayan / veli onayı alanları ───────────
+  ageRange?: string | null;
+  gender?: string | null;
+  playStyle?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  /** Reşit olmayan kullanıcı mı? (sunucuda birthdate/age_range'ten hesaplanır) */
+  isMinor?: boolean;
+  /** Veli onay durumu — ödeme kapısı bu değere bakar. */
+  guardianConsentStatus?: 'NONE' | 'PENDING' | 'ACTIVE' | 'REVOKED';
+  /** Çocuğun velisine vereceği benzersiz bağlantı kodu. */
+  guardianLinkCode?: string | null;
+  /** Onboarding tamamlandı mı? */
+  hasCompletedOnboarding?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -103,6 +117,9 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         is_admin: dbUser.is_admin,
         walletBalance: dbUser.wallet_balance,
         stats: dbUser.stats,
+        isMinor: false,
+        guardianConsentStatus: 'NONE',
+        hasCompletedOnboarding: false,
         createdAt: dbUser.created_at,
         updatedAt: dbUser.updated_at
       } as OynaUser;
@@ -125,6 +142,19 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         is_admin: userSnap.is_admin ?? false,
         walletBalance: Number(userSnap.wallet_balance ?? 0),
         stats: userSnap.stats || { matchesPlayed: 0, rating: 5.0 },
+        position: userSnap.position ?? null,
+        bio: userSnap.bio ?? null,
+        birthdate: userSnap.birthdate ?? null,
+        preferredFoot: userSnap.preferred_foot ?? null,
+        ageRange: userSnap.age_range ?? null,
+        gender: userSnap.gender ?? null,
+        playStyle: userSnap.play_style ?? null,
+        firstName: userSnap.first_name ?? null,
+        lastName: userSnap.last_name ?? null,
+        isMinor: userSnap.is_minor ?? false,
+        guardianConsentStatus: userSnap.guardian_consent_status ?? 'NONE',
+        guardianLinkCode: userSnap.guardian_link_code ?? null,
+        hasCompletedOnboarding: userSnap.has_completed_onboarding ?? false,
         createdAt: userSnap.created_at,
         updatedAt: nowISO
       } as OynaUser;

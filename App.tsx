@@ -22,6 +22,7 @@ import { Spinner } from './components/ui/Spinner';
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
 import { isOnboardingEnabled, hasSeenOnboarding, markOnboardingSeen } from './views/onboarding/onboardingShared';
+import { flushOnboardingDraft } from './services/onboardingService';
 
 // Lazy loaded views to reduce initial bundle size
 const Dashboard = lazy(() => import('./views/Dashboard'));
@@ -160,6 +161,11 @@ const App: React.FC = () => {
               console.error('[App] Error creating user profile:', insertError);
               showToast('Profilin oluşturulurken bir sorun oluştu. Lütfen tekrar giriş yapmayı dene.');
             }
+            // Onboarding taslağını (kayıttan önce toplanan yaş aralığı, ad,
+            // cinsiyet, pozisyon, stil) yeni profile yaz. is_minor ve
+            // guardian_consent_status SUNUCUDA (apply_onboarding) hesaplanır.
+            // Taslak yoksa (ör. onboarding'i atlamış kullanıcı) sessizce geçer.
+            await flushOnboardingDraft();
             setRole(UserRole.PLAYER);
             useAppStore.getState().setMyRoles([UserRole.PLAYER]);
             identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
