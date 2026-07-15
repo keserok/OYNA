@@ -167,18 +167,27 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
     reader.readAsDataURL(file);
   };
 
+  // Dürüstlük (KS0/KD-3): eksik veri sahte sayıya (42/12/94/9.2/4.9) düşürülmez;
+  // gerçek değer yoksa "—". Puan 0-10 ölçeğinde ve yalnız >0 ise gösterilir.
+  const ratingDisplay =
+    typeof userProfile?.rating === 'number' && userProfile.rating > 0
+      ? userProfile.rating.toFixed(1)
+      : '—';
+  const matchDisplay = userProfile?.matchCount != null ? String(userProfile.matchCount) : '—';
+  const numOrDash = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : '—');
+  const strOrDash = (v: unknown) => (typeof v === 'string' && v.trim() ? v : '—');
   const stats = isRef
     ? [
-        { label: 'Yönetim', value: (userProfile as Referee)?.stats?.authority?.toString() || '95', icon: <Scale size={14} /> },
-        { label: 'VAR %', value: (userProfile as Referee)?.stats?.varCallAccuracy || '98', icon: <Target size={14} /> },
-        { label: 'Puan', value: userProfile?.rating?.toString() || '4.9', icon: <Star size={14} /> },
-        { label: 'Sarı Kart Ort.', value: (userProfile as Referee)?.stats?.avgCards?.toString() || '2.1', icon: <Award size={14} /> },
+        { label: 'Yönetim', value: numOrDash((userProfile as Referee)?.stats?.authority), icon: <Scale size={14} /> },
+        { label: 'VAR %', value: strOrDash((userProfile as Referee)?.stats?.varCallAccuracy), icon: <Target size={14} /> },
+        { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
+        { label: 'Sarı Kart Ort.', value: numOrDash((userProfile as Referee)?.stats?.avgCards), icon: <Award size={14} /> },
       ]
     : [
-        { label: 'Maç', value: userProfile?.matchCount?.toString() || '42', icon: <Shield size={14} /> },
-        { label: 'CS', value: (userProfile as Goalkeeper)?.stats?.cleanSheets?.toString() || '12', icon: <Trophy size={14} /> },
-        { label: 'Refleks %', value: (userProfile as Goalkeeper)?.stats?.savePercentage?.toString() || '94', icon: <Zap size={14} /> },
-        { label: 'Puan', value: userProfile?.rating?.toString() || '9.2', icon: <Star size={14} /> },
+        { label: 'Maç', value: matchDisplay, icon: <Shield size={14} /> },
+        { label: 'CS', value: numOrDash((userProfile as Goalkeeper)?.stats?.cleanSheets), icon: <Trophy size={14} /> },
+        { label: 'Refleks %', value: strOrDash((userProfile as Goalkeeper)?.stats?.savePercentage), icon: <Zap size={14} /> },
+        { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
       ];
 
   return (
@@ -289,14 +298,18 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
-                      style={{ background: accentColor }}
-                    >
-                      {isRef ? 'FIFA LİSANSLI' : 'ELİT KALECİ'}
-                    </span>
+                    {/* "Elit/FIFA" rozeti yalnız gerçekten elit sağlayıcıda (isElite);
+                        herkese "ELİT KALECİ" demek dürüst değil (KS0). */}
+                    {userProfile?.isElite && (
+                      <span
+                        className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
+                        style={{ background: accentColor }}
+                      >
+                        {isRef ? 'FIFA LİSANSLI' : 'ELİT KALECİ'}
+                      </span>
+                    )}
                     <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                      <Star size={9} className="text-yellow-400" fill="currentColor" /> 4.9
+                      <Star size={9} className="text-yellow-400" fill="currentColor" /> {ratingDisplay}
                     </span>
                   </div>
                 </div>

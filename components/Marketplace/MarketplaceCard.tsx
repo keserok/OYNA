@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Scale, Star, Navigation, Sparkles } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
+import { formatTRY } from '../../utils/formatTRY';
 
 interface MarketplaceCardProps {
   item: Goalkeeper | Referee;
@@ -15,13 +16,29 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
   const isGK = type === 'GK';
   const roleLabel = isGK ? 'Kaleci' : 'Hakem';
 
-  const reflexes = isGK ? ((item.stats as any).reflexes || 80) : 80;
-  const diving = isGK ? ((item.stats as any).diving || 80) : 80;
-  const positioning = isGK ? ((item.stats as any).positioning || 80) : 80;
+  // Dürüstlük (KS0): puanı olmayan (hiç puanlanmamış) sağlayıcı "—" gösterir;
+  // sahte "0.0" yok. GK/REF puanı 0-10 ölçeğinde (service_ratings ort.); DB
+  // varsayılanı 0 → yalnız gerçek puan alındığında >0 olur. matchCount bug'lı
+  // (KD-1, hiç artmıyor) olduğundan rookie ölçütü olarak PUAN>0 kullanılır.
+  const rated = typeof item.rating === 'number' && item.rating > 0;
 
-  const authority = !isGK ? ((item.stats as any).authority || 80) : 80;
-  const fitness = !isGK ? ((item.stats as any).fitness || 80) : 80;
-  const communication = !isGK ? ((item.stats as any).communication || 80) : 80;
+  // Null/eksik stats guard — goalkeepers/referees.stats nullable jsonb; sahte
+  // %80 bar yok. Gerçek sayı yoksa null → "istatistik yok" durumu gösterilir.
+  const s = (item.stats ?? {}) as Record<string, unknown>;
+  const statOrNull = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null;
+  const bars: { label: string; value: number | null; color: string }[] = isGK
+    ? [
+        { label: 'REFLEKS', value: statOrNull(s.reflexes), color: 'bg-emerald-400' },
+        { label: 'UÇUŞ', value: statOrNull(s.diving), color: 'bg-emerald-500' },
+        { label: 'POZİSYON', value: statOrNull(s.positioning), color: 'bg-teal-400' },
+      ]
+    : [
+        { label: 'OTORİTE', value: statOrNull(s.authority), color: 'bg-yellow-400' },
+        { label: 'KONDİSYON', value: statOrNull(s.fitness), color: 'bg-amber-400' },
+        { label: 'İLETİŞİM', value: statOrNull(s.communication), color: 'bg-orange-400' },
+      ];
+  const hasStats = bars.some((b) => b.value != null);
 
   return (
     <motion.div 
@@ -65,7 +82,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
           className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black text-black leading-none uppercase shadow-md flex items-center justify-center"
           style={{ backgroundColor: isGK ? '#39FF14' : '#FACC15' }}
         >
-          {item.rating.toFixed(1)}
+          {rated ? item.rating.toFixed(1) : '—'}
         </div>
       </div>
 
@@ -80,55 +97,27 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
           )}
         </div>
         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-2">
-          {roleLabel} • {item.distance || '2.4'} KM YAKINDA
+          {roleLabel}{item.distance ? ` • ${item.distance} KM YAKINDA` : ''}
         </p>
 
-        {/* Micro Performance Bars */}
-        <div className="grid grid-cols-3 gap-2 mt-1">
-          {isGK ? (
-            <>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">REFLEKS</span>
+        {/* Micro Performance Bars — gerçek stat yoksa sahte %80 değil, dürüst
+            "istatistik yok" durumu (KS0). */}
+        {hasStats ? (
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            {bars.map((b) => (
+              <div key={b.label} className="space-y-0.5">
+                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">{b.label}</span>
                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${reflexes}%` }} />
+                  <div className={`h-full ${b.color} rounded-full`} style={{ width: `${b.value ?? 0}%` }} />
                 </div>
               </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">UÇUŞ</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${diving}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">POZİSYON</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-400 rounded-full" style={{ width: `${positioning}%` }} />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">OTORİTE</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${authority}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">KONDİSYON</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${fitness}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">İLETİŞİM</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-orange-400 rounded-full" style={{ width: `${communication}%` }} />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[8.5px] font-bold text-gray-600 uppercase tracking-wider mt-1">
+            Yeni {roleLabel.toLocaleLowerCase('tr-TR')} • henüz istatistik yok
+          </p>
+        )}
       </div>
 
       {/* Right Column: Fee & Call-to-action */}
@@ -152,7 +141,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
         <div className="text-right">
           <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block leading-none">ÜCRET</span>
           <span className="text-[11px] font-black italic tracking-tight text-white block mt-1">
-            {item.fee} ₺
+            {formatTRY(item.fee)}
           </span>
         </div>
 

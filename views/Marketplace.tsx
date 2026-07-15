@@ -2,6 +2,7 @@
 import { LAUNCH_CITY } from '../utils/orduData';
 import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
+import { formatTRY } from '../utils/formatTRY';
 import React, { useState, useMemo } from 'react';
 import {
     ChevronLeft, ChevronRight, X, Minus, Plus, Zap, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
@@ -29,22 +30,26 @@ interface MarketplaceProps {
     onSelect?: (item: Goalkeeper | Referee) => void;
 }
 
-const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
+// Dürüstlük (KS0): gerçek sayı yoksa "—" + boş bar; sahte değer render edilmez.
+const SkillBar: React.FC<{ label: string; value: number | null | undefined; color: string }> = ({ label, value, color }) => {
+    const v = typeof value === 'number' && Number.isFinite(value) ? value : null;
+    return (
     <div className="space-y-1">
         <div className="flex justify-between items-center px-1">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{label}</span>
-            <span className="text-[10px] font-black text-white">{value}</span>
+            <span className="text-[10px] font-black text-white">{v == null ? '—' : v}</span>
         </div>
         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
             <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${value}%` }}
+                animate={{ width: `${v ?? 0}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}
                 className={`h-full ${color} rounded-full`}
             />
         </div>
     </div>
-);
+    );
+}
 
 const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, onSelect }) => {
     const [activeTab, setActiveTab] = useState<'GK' | 'REF'>(initialType);
@@ -300,13 +305,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[9px] font-black text-white/40 uppercase">HİZMET BEDELİ</span>
                                                 <span className="text-sm font-black text-[#39FF14]">
-                                                    {hireResult?.fee ?? selectedProfile.fee} ₺
+                                                    {formatTRY(hireResult?.fee ?? selectedProfile.fee)}
                                                 </span>
                                             </div>
                                             {hireResult && (
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-[9px] font-black text-white/40 uppercase">SAĞLAYICININ NET KAZANCI</span>
-                                                    <span className="text-xs font-bold text-white/70">{hireResult.providerAmount} ₺</span>
+                                                    <span className="text-xs font-bold text-white/70">{formatTRY(hireResult.providerAmount)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -438,7 +443,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-3 text-white">
                                             <Star size={14} className="fill-white" />
-                                            <span className="text-[15px] font-medium">{selectedProfile.rating}</span>
+                                            {/* Dürüstlük: puanlanmamış sağlayıcı (rating 0) "—" gösterir, sahte
+                                                skor değil. Puan 0-10 ölçeğinde. */}
+                                            <span className="text-[15px] font-medium">
+                                                {typeof selectedProfile.rating === 'number' && selectedProfile.rating > 0
+                                                    ? `${selectedProfile.rating.toFixed(1)} / 10`
+                                                    : 'Yeni'}
+                                            </span>
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
                                             <span className="text-[15px] text-gray-400">{selectedProfile.preferredZones?.[0] || LAUNCH_CITY}</span>
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
@@ -454,23 +465,38 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                     <div className="px-6 mb-8">
                                         <h3 className="text-lg font-bold text-white mb-6">Performans Analizi</h3>
                                         <div className="grid grid-cols-1 gap-5">
-                                            {activeTab === 'GK' ? (
+                                            {/* Null/eksik stats guard (KC-2 crash) + sahte bar yok. */}
+                                            {activeTab === 'GK' ? (() => {
+                                                const gs = ((selectedProfile as Goalkeeper).stats ?? {}) as Partial<Goalkeeper['stats']>;
+                                                const hasAny = ['reflexes','diving','positioning','distribution','oneOnOne']
+                                                    .some((k) => typeof (gs as any)[k] === 'number');
+                                                if (!hasAny) return (
+                                                    <p className="text-sm text-gray-500">Bu kaleci henüz maç istatistiği biriktirmedi.</p>
+                                                );
+                                                return (
                                                 <>
-                                                    <SkillBar label="Refleksler" value={(selectedProfile as Goalkeeper).stats.reflexes} color="bg-emerald-400" />
-                                                    <SkillBar label="Uçuş (Diving)" value={(selectedProfile as Goalkeeper).stats.diving} color="bg-emerald-500" />
-                                                    <SkillBar label="Pozisyon Alma" value={(selectedProfile as Goalkeeper).stats.positioning} color="bg-teal-400" />
-                                                    <SkillBar label="Oyun Kurma" value={(selectedProfile as Goalkeeper).stats.distribution} color="bg-emerald-600" />
-                                                    <SkillBar label="Bire Bir" value={(selectedProfile as Goalkeeper).stats.oneOnOne} color="bg-lime-400" />
+                                                    <SkillBar label="Refleksler" value={gs.reflexes} color="bg-emerald-400" />
+                                                    <SkillBar label="Uçuş (Diving)" value={gs.diving} color="bg-emerald-500" />
+                                                    <SkillBar label="Pozisyon Alma" value={gs.positioning} color="bg-teal-400" />
+                                                    <SkillBar label="Oyun Kurma" value={gs.distribution} color="bg-emerald-600" />
+                                                    <SkillBar label="Bire Bir" value={gs.oneOnOne} color="bg-lime-400" />
                                                 </>
-                                            ) : (
+                                                );
+                                            })() : (() => {
+                                                const rs = ((selectedProfile as Referee).stats ?? {}) as Partial<Referee['stats']>;
+                                                const hasAny = ['authority','fitness','communication']
+                                                    .some((k) => typeof (rs as any)[k] === 'number');
+                                                if (!hasAny) return (
+                                                    <p className="text-sm text-gray-500">Bu hakem henüz maç istatistiği biriktirmedi.</p>
+                                                );
+                                                return (
                                                 <>
-                                                    <SkillBar label="Otorite" value={(selectedProfile as Referee).stats.authority} color="bg-[#FACC15]" />
-                                                    <SkillBar label="Kondisyon" value={(selectedProfile as Referee).stats.fitness} color="bg-amber-400" />
-                                                    <SkillBar label="İletişim" value={(selectedProfile as Referee).stats.communication} color="bg-orange-400" />
-                                                    <SkillBar label="Kart Yönetimi" value={85} color="bg-yellow-500" />
-                                                    <SkillBar label="VAR Uyumu" value={95} color="bg-yellow-600" />
+                                                    <SkillBar label="Otorite" value={rs.authority} color="bg-[#FACC15]" />
+                                                    <SkillBar label="Kondisyon" value={rs.fitness} color="bg-amber-400" />
+                                                    <SkillBar label="İletişim" value={rs.communication} color="bg-orange-400" />
                                                 </>
-                                            )}
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -479,7 +505,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                 <div className="absolute bottom-0 left-0 w-full p-6 bg-[#0A0E14]/90 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
                                     <div className="flex flex-col items-start pr-2">
                                         <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Hizmet Bedeli</span>
-                                        <span className="text-xl font-black text-white tabular-nums">{selectedProfile.fee}₺</span>
+                                        <span className="text-xl font-black text-white tabular-nums">{formatTRY(selectedProfile.fee)}</span>
                                     </div>
                                     <button
                                         onClick={handleDirectHire}
