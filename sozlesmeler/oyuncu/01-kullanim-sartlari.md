@@ -187,7 +187,7 @@ Bu telafi bedelinin nihai olarak Tesis ile OYNA arasında hangi oranda paylaşı
 
 ## 7. KULLANICI YÜKÜMLÜLÜKLERİ VE PLATFORM KULLANIM KURALLARI
 
-Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt eder:
+Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt eder. Kullanıcı davranışına, yasak içerik/davranışlara, saha içi davranışa, değerlendirme bütünlüğüne ve moderasyona ilişkin ayrıntılı esaslar, işbu Sözleşmenin ayrılmaz eki olan [Topluluk Kuralları ve Kullanıcı Davranış Kuralları](09-topluluk-kurallari.md) belgesinde düzenlenmiştir ve işbu madde ile birlikte uygulanır.
 
 ### 7.1 Doğruluk ve Dürüstlük
 
