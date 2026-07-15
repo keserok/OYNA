@@ -469,9 +469,24 @@ Plan güncel `main`'e rebase edildi (main +15 commit: yeni **Onboarding** akış
 
 ### 6.4 Kalan yol (sonraki turlar)
 - **S1 (Para):** C1–C5, C6–C11 → **ayrı bir ödeme agent'ına devredildi** (2026-07-15). Sınır sözleşmesi: §7.0.
-- **S2 (Maç — bu agent):** KN-3 + B2/B4/B5/B6/B8/B9/B10/B14/B15 + MatchCalendar. Derin uygulama planı: **§7**.
-- **S3:** A3–A7, E2/E4/E5, F1–F3, D2/D5, G1–G3. · **S4:** cila + H-A backlog.
+- **S3:** A3–A7, E2/E4/E5, F1–F3, D2/D5, G1–G3 + `player_kick_slot` dar RPC'si + `B6-full` (DB-destekli talep akışı) + `H-B1` (create RPC zaman-aralığı düzeltmesi). · **S4:** cila + H-A backlog.
 - Her paket ayrı commit + kapı; ilerleme bu bölümde güncellenir.
+
+### 6.5 ✔ S2 TAMAMLANDI (2026-07-15) — G2 kapısı YEŞİL
+
+| İş | Sonuç | Kanıt |
+|---|---|---|
+| **KN-3a** yankı döngüsü | `applyMatchLocal` (RPC'siz) + realtime/hidrasyon salt-okur | concurrency B/D: **0 yazım** |
+| **KN-3b** lost-update | 7 handler RPC→re-fetch desenine; client kaptan-devri/terfi kopyası **silindi** (sunucu zaten yapıyor); kaptan-only kick/skor/diziliş **taze-önce** | concurrency A/C: eşzamanlı katılımda ikisi de kadroda; ayrılmada diğeri hayatta |
+| **B2** minRating sunucuda | rename→`__inner`+sarmalayıcı; 4 halka açık yol kapılı; davetler bilinçli muaf; **canlı DB'ye uygulandı** | canlı: 3.5 puan 4.0 barajında `MIN_RATING` RED, 9.1 GEÇTİ, `__inner` 42501 |
+| **B4/B5** iptal & ayrılma UX | Kurucu "Maçı İptal Et" (24s kuralı modalı); ayrılmada iade kredisi metni (`formatTRY`) | tsc + görsel |
+| **B6** dürüstlük | sahte 2.5sn otomatik onay silindi → "kaptan onayı bekleniyor" | grep 0 |
+| **B8/B9/B10/B15** keşif | başlamış maç düşer+kart kilidi; sahte fiyat/pozisyon silindi (`deriveMissingPositions`); dürüst boş durum+Çapı Genişlet; iskelet | grep 0 + 4 birim testi |
+| **B14** yedek görünürlüğü | `reservePlayers` Maçlarım'da | kod |
+| **KN-6 takvim** | MatchCalendar gerçek veriye (`useMyMatches`); kart→gerçek maç+MANAGE; kod modalı gerçek çözümleme | mock grep 0 |
+
+**G2 kanıt paketi:** smoke **4/4** · `tests/match-concurrency.mjs` **5/5** (kalıcı canlı test) · `updateMatch`=4 (hepsi taze-önce kaptan aksiyonu) · mock/sahte-veri grep'leri 0 · tsc temiz · **260 birim testi**.
+**Süreçte keşfedilen yeni gerçekler:** `profiles.rating` **0-10 skalası** (0-5 değil — plan varsayımı düzeltildi) · keşif kartı başlık olarak `location` render ediyor (`title` değil) · ayrılma aksiyonu tasarım gereği yalnız MANAGE lobisinde · matches RLS'i `isDemo` satırlarını gizler (test-altyapı notu) · `H-B1` create RPC zaman-aralığı bug'ı (S3).
 
 ---
 
