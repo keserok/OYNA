@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight, Users } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight, Users, Scale } from 'lucide-react';
 
 interface LegalScreenProps {
   onBack: () => void;
   initialDoc?: LegalDocKey;
 }
 
-type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES';
+type LegalDocKey = 'TERMS' | 'TOPLULUK' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES';
 
 // NOT: Şirket bilgileri (COMPANY/TAX_INFO/ADDRESS) dolduruldu; avukat
 // incelemesi hâlâ önerilir, özellikle KVKK ve mesafeli satış maddeleri için.
@@ -16,7 +16,7 @@ const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
 const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
 const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul';
 const CONTACT_EMAIL = 'destek@oyna.app';
-const UPDATED = '13.07.2026';
+const UPDATED = '15.07.2026';
 
 const DOCS: Record<LegalDocKey, { title: string; icon: React.ElementType; body: string }> = {
   TERMS: {
@@ -49,7 +49,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca "OYNA" veya "Şirket"
 1.3 Kapsam ve Kabul
 İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
 2. SÖZLEŞMENİN KONUSU VE KAPSAMI; OYNA'NIN ARACI PLATFORM NİTELİĞİ
 
@@ -82,7 +82,7 @@ Uygulamaya üye olabilmek için asgari yaş 13'tür. 13 yaşından küçük çoc
 Bu madde, 18 yaşından küçük kullanıcıların Platformu güvenli ve hukuka uygun şekilde kullanabilmesi; buna karşılık veli/vasinin ödeme ve maça katılım gibi hukuki sonuç doğuran işlemler bakımından etkin ve gerçek bir onay/kontrol mekanizmasına sahip olması amacıyla düzenlenmiştir.
 
 4.2 Sınırlı Mod
-Kullanıcı 18 yaşından küçükse hesap otomatik olarak "sınırlı mod"da açılır: (a) gezinme, arama, profil oluşturma serbesttir; (b) ödeme gerektiren işlemler ve maça fiilen katılım, veli onayı tamamlanana kadar kapalıdır; (c) 13 yaş altı, veli tarafından oluşturulan hesaplarda mesajlaşma ve profil görünürlüğü de onay tamamlanana kadar ayrıca kısıtlanabilir.
+Kullanıcı 18 yaşından küçükse hesap otomatik olarak "sınırlı mod"da açılır: (a) gezinme, arama, profil oluşturma, ödeme gerektirmeyen maçlara katılım ve mesajlaşma serbesttir; (b) ödeme gerektiren tüm işlemler (kapora, ücretli maça katılım için slot/pay satın alımı, cüzdana bakiye yükleme dahil) veli onayı tamamlanana kadar kapalıdır — maça katılım yalnızca ödeme gerektirdiği ölçüde bu kapsamdadır; (c) 13 yaş altı, veli tarafından oluşturulan hesaplarda mesajlaşma ve profil görünürlüğü de onay tamamlanana kadar ayrıca kısıtlanabilir.
 
 4.3 Veli/Vasi Onay Süreci
 (1) Küçük kullanıcı, velisinin adı-soyadı ve iletişim bilgisini Uygulama üzerinden bildirir. (2) OYNA, veliye bildirilen kanal üzerinden bir onay bağlantısı/kod gönderir. (3) Velinin, bu bağlantı/kod aracılığıyla bizzat ve açıkça onay vermesi gerekir — küçüğün "kabul ediyorum" işaretlemesi, tek başına veli onayı yerine geçmez. (4) OYNA gerekirse ek kimlik doğrulama talep edebilir.
@@ -164,7 +164,7 @@ OYNA; birleşme, devralma veya benzeri yeniden yapılanma hâllerinde, hak ve y�
 OYNA'nın bildirimleri, kayıtlı e-posta, Uygulama içi bildirim veya SMS/push yoluyla yapılabilir ve geçerli tebligat sayılır. Kullanıcı bildirimlerini ${CONTACT_EMAIL} adresine yazılı yapar ve iletişim bilgilerini güncel tutmakla yükümlüdür.
 
 18. SÖZLEŞMENİN BÜTÜNLÜĞÜ
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte taraflar arasındaki tam ve nihai anlaşmayı oluşturur.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte taraflar arasındaki tam ve nihai anlaşmayı oluşturur.
 
 19. BÖLÜNEBİLİRLİK
 Herhangi bir hükmün geçersiz sayılması, Sözleşmenin geri kalanının geçerliliğini etkilemez; taraflar geçersiz hükmün amacına en yakın geçerli bir hükümle değiştirilmesi için iyi niyetle çaba gösterir.
@@ -175,6 +175,51 @@ Sözleşme, üyelik veya Uygulamanın kullanılmaya başlanmasıyla yürürlüğ
 21. İLETİŞİM
 Sorularınız için: ${CONTACT_EMAIL}`,
   },
+  TOPLULUK: {
+    title: 'Topluluk Kuralları',
+    icon: Scale,
+    body: `Son güncelleme: ${UPDATED} · Sürüm: 2026-07-15
+
+OYNA; birlikte oynayan gerçek insanların topluluğudur. Bu kurallar herkesin — hem uygulamada hem sahada — güvende ve saygı içinde olması içindir. Herkes için geçerlidir: oyuncular, kaleci/hakemler ve saha sahipleri.
+
+★ TEMEL KURALLAR (6 KURAL)
+
+1. Saygılı ol. Hakaret, nefret ve ayrımcılığa yer yok - ne mesajlarda ne sahada.
+2. Şiddet yok. Sahada ya da yazışmada fiziksel şiddet veya tehdit, hesabının kalıcı olarak kapatılmasına yol açar.
+3. Sözünde dur. Katılacağın maça katıl; sürekli gelmemek (no-show) ve son dakika iptalleri yaptırıma yol açar.
+4. Adil puanla. Değerlendirmen gerçek deneyimine dayansın; intikam amaçlı, sahte veya anlaşmalı puanlama yasak.
+5. Çocukları koru. 18 yaşından küçüklere yönelik her türlü uygunsuz davranışta sıfır tolerans uygulanır.
+6. Kötüye kullanma. Spam, dolandırıcılık, başkasının kişisel bilgisini ifşa etme ve kimlik taklidi yasaktır — ihlal görürsen bildir.
+
+Kısa özet ile ayrıntı arasında çelişki olursa ayrıntılı hükümler esas alınır.
+
+1. KAPSAM
+Kurallar hem uygulama içi içerik/iletişimi hem de Platform üzerinden organize edilen gerçek maçlardaki davranışı kapsar. Bu, Kullanım Şartları'nın ekidir.
+
+2. YASAK İÇERİK VE DAVRANIŞLAR
+Hakaret (TCK m.125), tehdit/şantaj (m.106-107), taciz (m.105), nefret söylemi ve ayrımcılık (m.122, m.216), müstehcenlik (m.226), çocukların istismarı (m.103 vd. — sıfır tolerans), kişisel veri ifşası/doxxing (m.134-136, KVKK), iftira (m.267), dolandırıcılık, kimlik taklidi, spam/izinsiz reklam (6563 s.K.), telif ihlali (FSEK) ve yasa dışı her içerik yasaktır.
+
+3. SAHA İÇİ DAVRANIŞ
+Sahada fiziksel şiddet, kavga, rakibe/hakeme/kaleciye/tesis çalışanına saldırı veya tehdit yasaktır ve ağır ihlal sayılır (doğrudan kalıcı kapatma — Kullanım Şartları m.14.2). Tesis kurallarına, hakem kararlarına ve centilmenliğe uyulur.
+
+4. DEĞERLENDİRME BÜTÜNLÜĞÜ
+Puanlama gerçek deneyime dayanmalı; intikam/sahte/anlaşmalı puan ve toplu karalama yasaktır. Bir sağlayıcı/tesis hakkında asılsız ağır suçlama iftira (TCK m.267) ve kişilik hakkı ihlali doğurabilir; uyar-kaldır uygulanır, masumiyet karinesi gözetilir.
+
+5. NO-SHOW / GÜVENİLİRLİK
+Mazeretsiz gelmeme, tekrarlayan son dakika iptali ve sahte rezervasyon davranış ihlalidir; güvenilirlik puanına yansır ve tekrarında yaptırıma tabidir.
+
+6. ÇOCUKLARIN KORUNMASI
+18 yaş altına yönelik uygunsuz iletişim/davranış (istenmeyen mesaj, grooming dahil) sıfır toleransa tabidir; ispatı hâlinde kalıcı kapatma ve gerekirse yetkili mercilere bildirim yapılır.
+
+7. ŞİKÂYET VE UYAR-KALDIR
+İhlalleri uygulama içi bildirim/engelleme araçlarıyla veya destek@oyna.app üzerinden bildirebilirsin. OYNA, 5651 s.K. yer sağlayıcı sorumluluğu çerçevesinde haberdar olduğu hukuka aykırı içeriği kaldırmaya gayret gösterir; acil içerik (çocuk güvenliği, şiddet) öncelikli ele alınır; katalog suç içeriği derhal kaldırılıp yetkili mercilere bildirilir.
+
+8. YAPTIRIM VE İTİRAZ
+Kademeli yaptırım: uyarı → içerik kaldırma → susturma (mute) → görünürlük kısıtlaması (shadowban) → geçici askı → kalıcı kapatma (Kullanım Şartları m.13-14 ile bütünlük). Kötüye kullanımı önlemek için bazı kısıtlamalar (shadowban) ayrıca bildirilmeksizin uygulanabilir. Karara destek@oyna.app üzerinden itiraz edilebilir. Yaptırım, tamamlanmış işlemleri ve hak edilmiş iadeleri etkilemez.
+
+9. YÜRÜRLÜK
+Bu Kurallar Kullanım Şartları'nın ekidir; ayrıca onay gerektirmez. Esaslı değişiklikler önceden duyurulur.`,
+  },
   PRIVACY: {
     title: 'Gizlilik Politikası',
     icon: Lock,
@@ -182,6 +227,8 @@ Sorularınız için: ${CONTACT_EMAIL}`,
 
 1. TOPLANAN VERİLER
 - Kimlik/iletişim: ad, e-posta, telefon
+- Profil ve oyun tercihleri: ad-soyad, yaş aralığı, cinsiyet (opsiyonel), pozisyon ve oyun stili
+- Veli onayı (yalnızca reşit olmayan kullanıcılar): veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik No; T.C. numaraları şifrelenerek (hash) saklanır, açık tutulmaz
 - Konum: yakındaki sahaları göstermek için, yalnızca uygulamayı kullanırken ve izninizle
 - Rehber eşleştirme: açık izninizle, arkadaş bulma amacıyla; numaralar cihazda şifrelenir (hash), sunucuya yalnızca şifreli hâli gider — Ayarlar'dan kapatılabilir
 - Kullanım: rezervasyon, maç ve uygulama içi etkinlik verileri
@@ -336,7 +383,7 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
   },
 };
 
-const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES'];
+const ORDER: LegalDocKey[] = ['TERMS', 'TOPLULUK', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES'];
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
   const [doc, setDoc] = useState<LegalDocKey | null>(initialDoc ?? null);

@@ -1,10 +1,10 @@
-> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 14.07.2026 · **PR:** —
+> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 15.07.2026 · **PR:** —
 > **Uygulandığı yer:** `views/LegalScreen.tsx → TERMS` (uygulama içi "Yasal" ekranı)
 > **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı) mekanizması — onboarding'de yaş aralığı alınması, sınırlı mod, çocuğun hesabındaki Veli Bağlantı Kodu, velinin kendi hesabından kodu girip kimlik + muvafakat onayı, T.C.'nin hash'lenmesi, 18 yaşında otomatik açılma ve ödeme kapısı — **Uygulamada fiilen inşa edilmiştir** (guardian_consents/apply_onboarding + payment_intents trigger; `views/Onboarding.tsx`, `views/GuardianConsentForm.tsx`, `views/GuardianConsentChild.tsx`). Ekli tam metin: [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 # OYNA Kullanım Şartları / Üyelik Sözleşmesi (Oyuncu)
 
-**Son güncelleme: 13.07.2026**
+**Son güncelleme: 15.07.2026**
 
 Bu Kullanım Şartları ("Sözleşme"), aşağıda kimliği belirtilen hizmet sağlayıcı ile OYNA mobil/web uygulamasını ("Uygulama", "Platform") kayıtlı kullanıcı ("Kullanıcı", "Oyuncu") sıfatıyla kullanan gerçek kişi arasında, Uygulamanın kullanımına ilişkin hak ve yükümlülükleri düzenler.
 
@@ -36,7 +36,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca **"OYNA"** veya **"Ş
 
 İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
 ---
 
@@ -92,8 +92,8 @@ Bu madde, 18 yaşından küçük (reşit olmayan) kullanıcıların Platformu g�
 
 Kullanıcı, kayıt sırasında 18 yaşından küçük olduğunu beyan ederse veya OYNA bunu başka bir şekilde (ör. beyan edilen doğum tarihi, kimlik doğrulama süreci) tespit ederse, hesap otomatik olarak **"sınırlı mod"**da açılır. Sınırlı moddaki bir hesapla:
 
-- (a) Uygulamada gezinme, saha/maç arama, profil oluşturma gibi keşif işlevleri **serbesttir**;
-- (b) **Ödeme gerektiren işlemler** (kapora/rezervasyon bedeli ödemesi dahil) ve **maça fiilen katılım** işlevleri, işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz;
+- (a) Uygulamada gezinme, saha/maç arama, profil oluşturma, **ödeme gerektirmeyen maçlara katılım** ve Platform içi mesajlaşma gibi işlevler **serbesttir**;
+- (b) **Ödeme gerektiren tüm işlemler** — kapora/rezervasyon bedeli ödemesi, ücretli maça katılım için slot/pay satın alımı ve cüzdana bakiye yükleme dahil — işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz. Reşit olmayan kullanıcının maça katılımı, yalnızca o katılımın bir ödeme (slot/pay satın alımı) gerektirdiği ölçüde bu kapsamdadır; ödeme gerektirmeyen katılım kısıtlanmaz;
 - (c) Madde 3.4 uyarınca veli/vasi tarafından bizzat oluşturulmuş 13 yaş altı hesaplarda, Platform içi mesajlaşma işlevi ve profilin diğer kullanıcılara görünürlüğü de, işbu maddede düzenlenen veli onayı tamamlanana kadar ayrıca kısıtlanabilir; bu kısıtlamanın kapsamı OYNA tarafından Uygulama üzerinden belirlenir ve duyurulur.
 
 ### 4.3 Veli/Vasi Onay Süreci
@@ -187,7 +187,7 @@ Bu telafi bedelinin nihai olarak Tesis ile OYNA arasında hangi oranda paylaşı
 
 ## 7. KULLANICI YÜKÜMLÜLÜKLERİ VE PLATFORM KULLANIM KURALLARI
 
-Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt eder:
+Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt eder. Kullanıcı davranışına, yasak içerik/davranışlara, saha içi davranışa, değerlendirme bütünlüğüne ve moderasyona ilişkin ayrıntılı esaslar, işbu Sözleşmenin ayrılmaz eki olan [Topluluk Kuralları ve Kullanıcı Davranış Kuralları](09-topluluk-kurallari.md) belgesinde düzenlenmiştir ve işbu madde ile birlikte uygulanır.
 
 ### 7.1 Doğruluk ve Dürüstlük
 
@@ -420,7 +420,7 @@ Kullanıcı, iletişim bilgilerini güncel tutmakla yükümlüdür; güncel olma
 
 ## 18. SÖZLEŞMENİN BÜTÜNLÜĞÜ
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte, taraflar arasında Platformun kullanımına ilişkin **tam ve nihai anlaşmayı** oluşturur ve bu konudaki önceki tüm sözlü/yazılı görüşme, beyan ve anlaşmaların yerine geçer. Uygulamanın indirildiği mecraya (App Store, Google Play vb.) ait kullanım koşulları, bu Sözleşmeyi etkilemeksizin ayrıca uygulanmaya devam eder.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte, taraflar arasında Platformun kullanımına ilişkin **tam ve nihai anlaşmayı** oluşturur ve bu konudaki önceki tüm sözlü/yazılı görüşme, beyan ve anlaşmaların yerine geçer. Uygulamanın indirildiği mecraya (App Store, Google Play vb.) ait kullanım koşulları, bu Sözleşmeyi etkilemeksizin ayrıca uygulanmaya devam eder.
 
 ---
 
@@ -454,4 +454,4 @@ KVKK açık rızası veya pazarlama izni gibi, mevzuat gereği ayrı ve açık o
 
 ---
 
-*Bu belge, OYNA Platformunun oyuncu kullanıcılarına yönelik Kullanım Şartları / Üyelik Sözleşmesi'dir ve Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ile Gizlilik Politikası'nı tamamlayıcı niteliktedir.*
+*Bu belge, OYNA Platformunun oyuncu kullanıcılarına yönelik Kullanım Şartları / Üyelik Sözleşmesi'dir ve Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ile Veli Muvafakatnamesi'ni tamamlayıcı niteliktedir.*
