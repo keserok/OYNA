@@ -36,7 +36,15 @@ export interface AdminRouteDef {
 }
 
 export const SIDEBAR_GROUP_ORDER = [
-  'BÖLGE KOMUTASI', 'OPERASYON', 'TOPLULUK YÖNETİMİ', 'BİLDİRİM & PAZARLAMA', 'FİNANS', 'SİSTEM',
+  'BÖLGE KOMUTASI',
+  'OYUN YÖNETİMİ',
+  'TESİS YÖNETİMİ',
+  'PLATFORM AKTÖRLERİ',
+  'GÜVENLİK & MODERASYON',
+  'TOPLULUK YÖNETİMİ',
+  'BİLDİRİM & PAZARLAMA',
+  'FİNANS',
+  'SİSTEM',
 ] as const;
 
 /**
@@ -50,23 +58,29 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
   { route: 'GENEL', title: 'Genel Bakış', label: 'Genel', description: 'Platform KPI, gelir trendi ve operasyon özeti.', group: 'Komuta', sidebarGroup: 'BÖLGE KOMUTASI', accent: 'red', icon: Radio, inPalette: true },
   { route: 'CONTROL', title: 'Komuta Merkezi', label: 'Komuta Merkezi', description: 'Canlı kuyruklar, ghost arama ve acil operasyonlar.', group: 'Komuta', sidebarGroup: 'BÖLGE KOMUTASI', accent: 'red', icon: Zap, inPalette: true, badge: 'live' },
 
-  // ── Operasyon ────────────────────────────────────────────────────────────
-  { route: 'SAHALAR', title: 'Sahalar', label: 'Sahalar', description: 'Tesis envanteri, vitrin kurulumu ve onay durumları.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: MapPin, inPalette: true, badge: 'pitches' },
-  { route: 'KULLANICILAR', title: 'Kullanıcılar', label: 'Kullanıcılar', description: 'Oyuncu profilleri, ban ve rol yönetimi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true, badge: 'users' },
-  { route: 'VERIFICATION', title: 'Doğrulama Merkezi', label: 'Doğrulama', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: ShieldCheck, inPalette: true, badge: 'verification', activeAlso: ['PENDING_VERIFICATIONS', 'PROVIDER_IDENTITIES'] },
-  { route: 'MODERATION', title: 'Tesis Onayları', label: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Shield, inPalette: true, badge: 'pendingPitches' },
-  { route: 'USER_REPORTS', title: 'Kullanıcı Şikayetleri', label: 'Şikayetler', description: 'Oyuncuların birbirleri hakkında açtığı şikayetlerin (spam, taciz, hile) moderasyonu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: AlertOctagon, inPalette: true, badge: 'userReports' },
-  { route: 'DELETION_QUEUE', title: 'Silme Kuyruğu', label: 'Silme Kuyruğu', description: 'Bekleyen hesap silme talepleri (KVKK).', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: UserX, inPalette: true, badge: 'deletionRequests' },
-  { route: 'GUARDIAN_CONSENTS', title: 'Veli Onayları', label: 'Veli Onayları', description: 'Reşit olmayan kullanıcılar için veli muvafakatleri ve bekleyen onaylar.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'purple', icon: Baby, inPalette: true },
-  { route: 'MATCHES', title: 'Maçlar', label: 'Maçlar', description: 'Maç kokpiti: kadro, skor, ödeme ve müdahale.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: Swords, inPalette: true, badge: 'matches' },
-  { route: 'KALECİLER', title: 'Kaleciler', label: 'Kaleciler', description: 'Kaleci profilleri, yetenekler ve ücretler.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: Shield, inPalette: true, badge: 'goalkeepers' },
-  { route: 'HAKEMLER', title: 'Hakemler', label: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Scale, inPalette: true, badge: 'referees' },
-  { route: 'TAKIMLAR', title: 'Takımlar', label: 'Takımlar', description: 'Platform takım kayıtları ve kaptan bilgileri.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true },
-  { route: 'REGION_COVERAGE', title: 'Bölge Kapsama', label: 'Bölge Kapsama', description: 'Hizmet kapsamındaki il/ilçeler ve harita sınırları.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Globe, inPalette: true },
+  // ── Oyun Yönetimi ─────────────────────────────────────────────────────────
+  { route: 'MATCHES', title: 'Maçlar', label: 'Maçlar', description: 'Maç kokpiti: kadro, skor, ödeme ve müdahale.', group: 'Oyun Yönetimi', sidebarGroup: 'OYUN YÖNETİMİ', accent: 'red', icon: Swords, inPalette: true, badge: 'matches' },
+  { route: 'TAKIMLAR', title: 'Takımlar', label: 'Takımlar', description: 'Platform takım kayıtları ve kaptan bilgileri.', group: 'Oyun Yönetimi', sidebarGroup: 'OYUN YÖNETİMİ', accent: 'blue', icon: Users, inPalette: true },
+
+  // ── Tesis Yönetimi ────────────────────────────────────────────────────────
+  { route: 'SAHALAR', title: 'Sahalar', label: 'Sahalar', description: 'Tesis envanteri, vitrin kurulumu ve onay durumları.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'green', icon: MapPin, inPalette: true, badge: 'pitches' },
+  { route: 'MODERATION', title: 'Tesis Onayları', label: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'yellow', icon: Shield, inPalette: true, badge: 'pendingPitches' },
+  { route: 'REGION_COVERAGE', title: 'Bölge Kapsama', label: 'Bölge Kapsama', description: 'Hizmet kapsamındaki il/ilçeler ve harita sınırları.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'yellow', icon: Globe, inPalette: true },
+
+  // ── Platform Aktörleri ────────────────────────────────────────────────────
+  { route: 'KULLANICILAR', title: 'Kullanıcılar', label: 'Kullanıcılar', description: 'Oyuncu profilleri, ban ve rol yönetimi.', group: 'Platform Aktörleri', sidebarGroup: 'PLATFORM AKTÖRLERİ', accent: 'blue', icon: Users, inPalette: true, badge: 'users' },
+  { route: 'KALECİLER', title: 'Kaleciler', label: 'Kaleciler', description: 'Kaleci profilleri, yetenekler ve ücretler.', group: 'Platform Aktörleri', sidebarGroup: 'PLATFORM AKTÖRLERİ', accent: 'green', icon: Shield, inPalette: true, badge: 'goalkeepers' },
+  { route: 'HAKEMLER', title: 'Hakemler', label: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Platform Aktörleri', sidebarGroup: 'PLATFORM AKTÖRLERİ', accent: 'yellow', icon: Scale, inPalette: true, badge: 'referees' },
+
+  // ── Güvenlik & Moderasyon ─────────────────────────────────────────────────
+  { route: 'VERIFICATION', title: 'Doğrulama Merkezi', label: 'Doğrulama', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Güvenlik & Moderasyon', sidebarGroup: 'GÜVENLİK & MODERASYON', accent: 'yellow', icon: ShieldCheck, inPalette: true, badge: 'verification', activeAlso: ['PENDING_VERIFICATIONS', 'PROVIDER_IDENTITIES'] },
+  { route: 'USER_REPORTS', title: 'Kullanıcı Şikayetleri', label: 'Şikayetler', description: 'Oyuncuların birbirleri hakkında açtığı şikayetlerin (spam, taciz, hile) moderasyonu.', group: 'Güvenlik & Moderasyon', sidebarGroup: 'GÜVENLİK & MODERASYON', accent: 'red', icon: AlertOctagon, inPalette: true, badge: 'userReports' },
+  { route: 'DELETION_QUEUE', title: 'Silme Kuyruğu', label: 'Silme Kuyruğu', description: 'Bekleyen hesap silme talepleri (KVKK).', group: 'Güvenlik & Moderasyon', sidebarGroup: 'GÜVENLİK & MODERASYON', accent: 'red', icon: UserX, inPalette: true, badge: 'deletionRequests' },
+  { route: 'GUARDIAN_CONSENTS', title: 'Veli Onayları', label: 'Veli Onayları', description: 'Reşit olmayan kullanıcılar için veli muvafakatleri ve bekleyen onaylar.', group: 'Güvenlik & Moderasyon', sidebarGroup: 'GÜVENLİK & MODERASYON', accent: 'purple', icon: Baby, inPalette: true },
 
   // Doğrulama Merkezi'nin alt sekmeleri — sidebar'da yok, palette'ten erişilir.
-  { route: 'PENDING_VERIFICATIONS', title: 'Onay Bekleyenler', label: 'Onay Bekleyenler', description: 'Kaleci ve hakem doğrulama talepleri.', group: 'Operasyon', sidebarGroup: null, accent: 'yellow', icon: BadgeCheck, inPalette: true },
-  { route: 'PROVIDER_IDENTITIES', title: 'Kimlik Doğrulama', label: 'Kimlik Doğrulama', description: 'Sağlayıcı kimlik doğrulama kuyruğu (kaleci & hakem).', group: 'Operasyon', sidebarGroup: null, accent: 'blue', icon: BadgeCheck, inPalette: true },
+  { route: 'PENDING_VERIFICATIONS', title: 'Onay Bekleyenler', label: 'Onay Bekleyenler', description: 'Kaleci ve hakem doğrulama talepleri.', group: 'Güvenlik & Moderasyon', sidebarGroup: null, accent: 'yellow', icon: BadgeCheck, inPalette: true },
+  { route: 'PROVIDER_IDENTITIES', title: 'Kimlik Doğrulama', label: 'Kimlik Doğrulama', description: 'Sağlayıcı kimlik doğrulama kuyruğu (kaleci & hakem).', group: 'Güvenlik & Moderasyon', sidebarGroup: null, accent: 'blue', icon: BadgeCheck, inPalette: true },
 
   // ── Topluluk (kapsam-dışı; flag ile) ─────────────────────────────────────
   { route: 'TOPLULUKLAR', title: 'Topluluklar', label: 'Topluluklar', description: 'Topluluk talepleri ve kayıtlı gruplar.', group: 'Topluluk', sidebarGroup: 'TOPLULUK YÖNETİMİ', accent: 'blue', icon: Globe, inPalette: true, featureFlag: 'module_community', badge: 'communities' },
