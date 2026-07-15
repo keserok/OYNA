@@ -167,7 +167,21 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
       await leaveTeam(team.team_id);
       onToast(`${team.name} takımından ayrıldın`);
       setConfirm(null); onClose(); onGone();
-    } catch (e) { onToast(parseTeamError(e)); setConfirm(null); }
+    } catch (e) {
+      // E5 emniyet ağı: squad henüz yüklenmeden (yarış) ya da istemci durumu
+      // sunucudan sapmışsa kaptan "Ayrıl" derse sunucu CAPTAIN_MUST_TRANSFER
+      // döndürür. Ham hata yerine devir akışına yönlendir (captainMustTransfer
+      // ön-kapısı squad'a dayandığından bu, tek gerçek doğruluk kaynağıdır).
+      const msg = (e as { message?: string })?.message || '';
+      if (msg.includes('CAPTAIN_MUST_TRANSFER')) {
+        setConfirm(null);
+        setTransferOpen(true);
+        onToast('Ayrılmadan önce kaptanlığı devretmelisin.');
+      } else {
+        onToast(parseTeamError(e));
+        setConfirm(null);
+      }
+    }
     finally { setDangerBusy(false); }
   };
 

@@ -710,13 +710,26 @@ const App: React.FC = () => {
               chunk ağ hatası, render exception) uygulama kabuğu + alt menü ayakta
               kalır; kullanıcı beyaz ekranda kilitlenmez. fullScreen={false} → yalnız
               içerik alanını kaplar. Üst motion.div key={view} olduğundan sınır her
-              görünüm değişiminde yeniden kurulur (otomatik sıfırlama) — alt menüden
-              başka sekmeye geçmek ya da "Geri Dön" çöken görünümü daima temizler. */}
+              görünüm değişiminde yeniden kurulur (otomatik sıfırlama). "Geri Dön":
+              yığında önceki görünüm varsa oraya döner (taze sınır kurulur). AÇILIŞ
+              görünümü çöktüyse (yığın boş → goBack aynı yere döner) React.lazy reddi
+              önbellekte olduğundan yeniden render kurtarmaz; ayrıca GK/hakem/tesis
+              açılışları (SERVICE_DASHBOARD/OWNER_PANEL) alt menüsüzdür → başka çıkış
+              yoktur. Bu durumda tam yeniden yükleme chunk'ı yeniden çeker + geçici
+              bozuk store durumunu sıfırlar (gerçek kurtarma yolu). */}
           <ErrorBoundary
             fullScreen={false}
             title="Bu bölüm yüklenemedi"
             message="Bağlantı ya da geçici bir sorun olabilir. Geri dönüp tekrar deneyebilirsin."
-            onBack={() => goBack(navigateBasedOnRole(role))}
+            onBack={() => {
+              // Yığın boşsa (açılış görünümü) geri gidilecek ekran yok ve chunk
+              // reddi önbellektedir → yeniden yükleme tek gerçek kurtarma.
+              if (useAppStore.getState().navigationStack.length === 0) {
+                if (typeof window !== 'undefined') window.location.reload();
+                return;
+              }
+              goBack(navigateBasedOnRole(role));
+            }}
           >
             <Suspense fallback={<ViewLoader />}>
               {renderView()}

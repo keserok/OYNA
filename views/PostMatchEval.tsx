@@ -464,15 +464,20 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             >
               <ShieldCheck size={18} /> {approvingScore ? 'ONAYLANIYOR…' : 'SKORU ONAYLA'}
             </motion.button>
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => {
-                showInfo('Skor itirazınız hakeme ve diğer kaptana iletildi.');
+                // Dürüstlük (G1): sunucuda ayrı bir "itiraz/reddet" akışı yok
+                // (scoreService yalnız öner/onayla sunar). Onaylamamak = öneriyi
+                // PENDING bırakmak; skor tüm katılımcılar onaylamadan kesinleşmez.
+                // Eski "itirazınız hakeme iletildi" mesajı sahteydi (hiçbir şey
+                // gönderilmiyordu) — gerçeği söyleyen mesajla değiştirildi.
+                showInfo('Skoru onaylamadın. Bu skor, tüm katılımcılar onaylamadan kesinleşmez.');
                 setShowHandshake(false);
               }}
               className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
             >
-              SKORA İTİRAZ ET
+              KATILMIYORUM
             </motion.button>
           </div>
         </motion.div>
