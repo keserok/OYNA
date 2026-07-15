@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight, Users } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight, Users, Scale } from 'lucide-react';
 
 interface LegalScreenProps {
   onBack: () => void;
   initialDoc?: LegalDocKey;
 }
 
-type LegalDocKey = 'TERMS' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES';
+type LegalDocKey = 'TERMS' | 'TOPLULUK' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES';
 
 // NOT: Şirket bilgileri (COMPANY/TAX_INFO/ADDRESS) dolduruldu; avukat
 // incelemesi hâlâ önerilir, özellikle KVKK ve mesafeli satış maddeleri için.
@@ -175,6 +175,51 @@ Sözleşme, üyelik veya Uygulamanın kullanılmaya başlanmasıyla yürürlüğ
 21. İLETİŞİM
 Sorularınız için: ${CONTACT_EMAIL}`,
   },
+  TOPLULUK: {
+    title: 'Topluluk Kuralları',
+    icon: Scale,
+    body: `Son güncelleme: ${UPDATED} · Sürüm: 2026-07-15
+
+OYNA; birlikte oynayan gerçek insanların topluluğudur. Bu kurallar herkesin — hem uygulamada hem sahada — güvende ve saygı içinde olması içindir. Herkes için geçerlidir: oyuncular, kaleci/hakemler ve saha sahipleri.
+
+★ TEMEL KURALLAR (6 KURAL)
+
+1. Saygılı ol. Hakaret, taciz, nefret ve ayrımcılığa yer yok — ne mesajlarda ne sahada.
+2. Şiddet yok. Sahada ya da yazışmada fiziksel şiddet veya tehdit, hesabının kalıcı olarak kapatılmasına yol açar.
+3. Sözünde dur. Katılacağın maça gel; sürekli gelmemek (no-show) ve son dakika iptalleri yaptırıma yol açar.
+4. Adil puanla. Değerlendirmen gerçek deneyimine dayansın; intikam amaçlı, sahte veya anlaşmalı puanlama yasak.
+5. Çocukları koru. 18 yaşından küçüklere yönelik her türlü uygunsuz davranışta sıfır tolerans uygulanır.
+6. Kötüye kullanma. Spam, dolandırıcılık, başkasının kişisel bilgisini ifşa etme ve kimlik taklidi yasaktır — ihlal görürsen bildir.
+
+Kısa özet ile ayrıntı arasında çelişki olursa ayrıntılı hükümler esas alınır.
+
+1. KAPSAM
+Kurallar hem uygulama içi içerik/iletişimi hem de Platform üzerinden organize edilen gerçek maçlardaki davranışı kapsar. Bu, Kullanım Şartları'nın ekidir.
+
+2. YASAK İÇERİK VE DAVRANIŞLAR
+Hakaret (TCK m.125), tehdit/şantaj (m.106-107), taciz (m.105), nefret söylemi ve ayrımcılık (m.122, m.216), müstehcenlik (m.226), çocukların istismarı (m.103 vd. — sıfır tolerans), kişisel veri ifşası/doxxing (m.134-136, KVKK), iftira (m.267), dolandırıcılık, kimlik taklidi, spam/izinsiz reklam (6563 s.K.), telif ihlali (FSEK) ve yasa dışı her içerik yasaktır.
+
+3. SAHA İÇİ DAVRANIŞ
+Sahada fiziksel şiddet, kavga, rakibe/hakeme/kaleciye/tesis çalışanına saldırı veya tehdit yasaktır ve ağır ihlal sayılır (doğrudan kalıcı kapatma — Kullanım Şartları m.14.2). Tesis kurallarına, hakem kararlarına ve centilmenliğe uyulur.
+
+4. DEĞERLENDİRME BÜTÜNLÜĞÜ
+Puanlama gerçek deneyime dayanmalı; intikam/sahte/anlaşmalı puan ve toplu karalama yasaktır. Bir sağlayıcı/tesis hakkında asılsız ağır suçlama iftira (TCK m.267) ve kişilik hakkı ihlali doğurabilir; uyar-kaldır uygulanır, masumiyet karinesi gözetilir.
+
+5. NO-SHOW / GÜVENİLİRLİK
+Mazeretsiz gelmeme, tekrarlayan son dakika iptali ve sahte rezervasyon davranış ihlalidir; güvenilirlik puanına yansır ve tekrarında yaptırıma tabidir.
+
+6. ÇOCUKLARIN KORUNMASI
+18 yaş altına yönelik uygunsuz iletişim/davranış (istenmeyen mesaj, grooming dahil) sıfır toleransa tabidir; ispatı hâlinde kalıcı kapatma ve gerekirse yetkili mercilere bildirim yapılır.
+
+7. ŞİKÂYET VE UYAR-KALDIR
+İhlalleri uygulama içi bildirim/engelleme araçlarıyla veya destek@oyna.app üzerinden bildirebilirsin. OYNA, 5651 s.K. yer sağlayıcı sorumluluğu çerçevesinde haberdar olduğu hukuka aykırı içeriği kaldırmaya gayret gösterir; acil içerik (çocuk güvenliği, şiddet) öncelikli ele alınır; katalog suç içeriği derhal kaldırılıp yetkili mercilere bildirilir.
+
+8. YAPTIRIM VE İTİRAZ
+Kademeli yaptırım: uyarı → içerik kaldırma → susturma (mute) → görünürlük kısıtlaması (shadowban) → geçici askı → kalıcı kapatma (Kullanım Şartları m.13-14 ile bütünlük). Kötüye kullanımı önlemek için bazı kısıtlamalar (shadowban) ayrıca bildirilmeksizin uygulanabilir. Karara destek@oyna.app üzerinden itiraz edilebilir. Yaptırım, tamamlanmış işlemleri ve hak edilmiş iadeleri etkilemez.
+
+9. YÜRÜRLÜK
+Bu Kurallar Kullanım Şartları'nın ekidir; ayrıca onay gerektirmez. Esaslı değişiklikler önceden duyurulur.`,
+  },
   PRIVACY: {
     title: 'Gizlilik Politikası',
     icon: Lock,
@@ -336,7 +381,7 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
   },
 };
 
-const ORDER: LegalDocKey[] = ['TERMS', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES'];
+const ORDER: LegalDocKey[] = ['TERMS', 'TOPLULUK', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES'];
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
   const [doc, setDoc] = useState<LegalDocKey | null>(initialDoc ?? null);

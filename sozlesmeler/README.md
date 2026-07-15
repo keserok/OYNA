@@ -18,6 +18,7 @@ Her yeni sözleşme/politika hazırlandığında buraya, açık bir dosya adıyl
 | 8 | [İşletme (Saha Sahibi) B2B Sözleşmesi](saha-sahibi/01-isletme-b2b-sozlesmesi.md) | 📝 Taslak tamamlandı — adversarial hukuki inceleme geçti (henüz onboarding kabul ekranına bağlanmadı) | Onboarding/başvuru süreci (bağlanacak) | — |
 | 9 | [Kaleci/Hakem Hizmet Sağlayıcı Sözleşmesi](kaleci-hakem/01-hizmet-saglayici-sozlesmesi.md) | 📝 Taslak tamamlandı — adversarial hukuki inceleme geçti (%15 komisyon oranı iş kararı onayı bekliyor; henüz başvuru kabul ekranına bağlanmadı) | Hizmet sağlayıcı başvuru süreci (bağlanacak) | — |
 | 10 | [Veli Muvafakatnamesi](oyuncu/08-veli-muvafakatnamesi.md) | ✅ Yürürlükte — Uygulamada fiilen alınıyor (guardian_consents + veli onayı ekranı) | `GuardianConsentForm.tsx`, `LegalScreen.tsx → VELI` | — |
+| 11 | [Topluluk Kuralları ve Kullanıcı Davranış Kuralları](oyuncu/09-topluluk-kurallari.md) | ✅ Yayında — 6 temel kural + hukuki derinleştirilmiş metin (ToS md.7 eki) | `LegalScreen.tsx → TOPLULUK` | — |
 
 Henüz hazırlanmamış belgeler (tedarikçi sözleşmeleri, kurumsal belgeler vb.) için bkz. [uyum takip paneli](https://claude.ai/code/artifact/9b1e3654-7871-4bc1-b6b8-6d83c5ad0982) — hazırlandıkça ilgili alt klasörle birlikte buraya eklenecekler.
 
