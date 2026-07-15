@@ -117,6 +117,17 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
 - **S2 özeti:** KN-3 atomik maç yazımı (realtime salt-okur; 7 handler RPC→re-fetch; client kaptan-devri kopyası silindi) + B2 minRating **sunucu** kapısı (canlı migration, `__inner` sarmalayıcı deseni) + B4 kurucu iptali UI + B5 ayrılmada iade metni + B6 sahte otomatik onay öldü + B8/B9/B10/B15 keşif dürüstlüğü + B14 yedek görünürlüğü + MatchCalendar gerçek veri.
 - **Kanıt:** canlı `tests/match-concurrency.mjs` 5/5 (eşzamanlı katılımda kayıp yok, tarayıcı 0 yazım) · smoke 4/4 · 260 birim testi · tsc temiz.
 
+### [OYUNCU-06] Sıfır-Problem Programı S3 (toplu) — profil/takım/mesaj/değerlendirme + kabuk dayanıklılığı
+- **Durum:** ✔️ Tamamlandı (2026-07-15) · **Branch:** `claude/player-edge-cases-plan-ggtezh`
+- **Kapsam ve tam kayıt:** `OYUNCU_EDGE_CASE_PLANI.md` §6.6 — programın üçüncü sprinti (S3), maç-dışı oyuncu yüzeyleri.
+- **S3-1 (takım tutarlılığı):** E2 — arkadaş/üye sayacı tek kaynaktan (`getMyTeams()` arşiv-dışı filtre; `fetchUserTeams` yerine) · E4 — takım kurmada `stats` kolonu 400'ü arkadaş listesini boşaltıyordu; gerçek kolonlara (`skill_rating`/`match_count`) geçildi, rookie dengeleme onarıldı. İP-04'ün gerçek puan verisi (`mapPlayerStats`) tamamlandı.
+- **S3-2 (profil sağlamlığı):** D2 — profil yüklenemezse hata + retry (sessiz boş ekran yok); yükleme hatasında "Düzenle" kilitli · D5 — görsel yükleme hataları (`photoError`) yakalanıp düzenleme modalında gösteriliyor.
+- **S3-3 (mesajlaşma güvenliği):** F1 — engellenen sohbette besteci kilitli + açıklama · F2 — `blockUserFully` (tam engelleme) · F3 — gerçek `reportUser` şikayet akışı (eskiden no-op).
+- **S3-4 (değerlendirme dürüstlüğü):** G1 — sahte sabit 5-3 skor el sıkışması öldü; yalnız gerçek bekleyen öneri varsa gösterilir (`getPendingScoreProposal`→`approveMatchScore`) · G2 — gerçek maçta mock oyuncular yerine gerçek kadro/BOŞ (mock oyuncuyu gerçek RPC'ye puanlama reddi çözüldü) · G3 — organizasyon yorumu artık yakalanıyor (eskiden sessizce yok oluyordu; kalıcı depolama backend follow-up).
+- **S3-5 (kabuk dayanıklılığı):** A3 — onay bekleme durumu artık yalnız realtime'a bağlı değil: mount-fetch + 30sn poll + manuel "Durumu Yenile" (kaçan event'te sonsuz bekleme yok) · A5 — görünüm-seviyesi `ErrorBoundary` (bir görünüm çökse de kabuk + alt menü ayakta; beyaz ekran kilidi yok) · E5 — kaptan başka üyeler varken "Ayrıl" sunucuda reddedilip hataya düşüyordu; artık önce "Kaptanlığı Devret" akışına yönlendiriyor.
+- **Kapsam sınırı:** Para (S1) ayrı bir agent tarafından yürütülüyor; bu program yalnız maç-dışı oyuncu UI/UX'ini kapsar. GK/hakem `stats` kolonu (`goalkeepers`/`referees` tabloları, `matchService`) bilinçli olarak dokunulmadı — kaleci/hakem fazına ait.
+- **Kanıt:** güncel main ile merge sonrası smoke 4/4 · 260 birim testi · tsc temiz.
+
 ### [OYUNCU-04] "Önce Maçlara Göz At" (misafir) → Profil aktif + boş haller + işlevli misafir şeridi
 - **Durum:** ✔️ Tamamlandı
 - **Tarih:** 2026-06-30

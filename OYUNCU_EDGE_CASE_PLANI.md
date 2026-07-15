@@ -490,6 +490,24 @@ Plan güncel `main`'e rebase edildi (main +15 commit: yeni **Onboarding** akış
 
 ---
 
+### 6.6 ✔ S3 TAMAMLANDI (2026-07-15) — maç-dışı oyuncu yüzeyleri + kabuk dayanıklılığı
+
+Kapsam: profil · takım · mesajlaşma · maç-sonrası değerlendirme · uygulama kabuğu.
+Para (S1) ayrı agent'ta; bu sprint yalnız maç-dışı UI/UX.
+
+| Paket | İş | Sonuç | Kanıt |
+|---|---|---|---|
+| **S3-1** takım tutarlılığı | E2 sayaç tek kaynak (`getMyTeams()` arşiv-dışı); E4 `stats` kolonu 400'ü → gerçek kolonlar, arkadaş listesi geri geldi + rookie dengeleme; İP-04 gerçek puan (`mapPlayerStats`) | tsc + kod |
+| **S3-2** profil sağlamlığı | D2 yükleme hatası→retry + "Düzenle" kilidi (sessiz boş ekran yok); D5 görsel hataları (`photoError`) modalda görünür | tsc + kod |
+| **S3-3** mesaj güvenliği | F1 engelli sohbette besteci kilidi; F2 `blockUserFully`; F3 gerçek `reportUser` (eski no-op öldü) | grep 0 (eski blockUser/no-op) |
+| **S3-4** değerlendirme dürüstlüğü | G1 sahte 5-3 el sıkışması öldü → yalnız gerçek öneri (`getPendingScoreProposal`→`approveMatchScore`); G2 gerçek maçta gerçek kadro/BOŞ (mock→RPC reddi çözüldü); G3 org yorumu yakalanıyor | mock grep yalnız demo yolunda |
+| **S3-5** kabuk dayanıklılığı | A3 onay bekleme: mount-fetch+30sn poll+manuel yenile (kaçan realtime'da sonsuz bekleme yok); A5 görünüm-seviyesi `ErrorBoundary` (çöken görünüm kabuğu düşürmez, alt menü hayatta); E5 kaptan "Ayrıl"→önce devir yönlendirmesi (sonradan hata yok) | tsc + kod |
+
+**Kapanış kanıtı:** güncel `origin/main` merge edildi (yalnız hukuki-doküman çakışmasız güncellemeler) → **smoke 4/4** · **260 birim testi** · **tsc temiz**.
+**Bilinçli kapsam-dışı:** GK/hakem `stats` kolonu (`goalkeepers`/`referees` tabloları, `matchService:332/335`) kaleci/hakem fazına bırakıldı. Backend follow-up'lar: `submit_match_evaluation`'a `p_note` (G3 kalıcılık), `H-B1` create RPC zaman-aralığı bug'ı.
+
+---
+
 ## 7. S2 — Maç Akışı & Bütünlük: Derin Uygulama Planı (2026-07-15)
 
 > Tüm satır referansları **güncel main-rebase'li koda** karşı yeniden doğrulanmıştır (8-ajanlı
