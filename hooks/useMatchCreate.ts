@@ -6,6 +6,7 @@ import { getFullUserProfile } from '../services/userService';
 import { getTeamSquad } from '../services/teamSocialService';
 import { DeferredProvider } from '../services/matchLifecycleService';
 import { FORMATIONS, defaultFormation, type SquadSize } from '../utils/formations';
+import { deriveMissingPositions } from '../utils/matchPositions';
 import { roleShort } from '../shared/lobbyEnrichment';
 
 // ── Profil → maç seçeneği otomatik-işaretleme yardımcıları ──────────────────
@@ -409,10 +410,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         minRating: 0,
         image: selectedPitch?.image || 'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
         badges: ['Fair Play Vurgulu', `${format.label}`],
-        missingPositions: [
-            { role: 'STP', count: 1 },
-            { role: 'ORT', count: 1 }
-        ],
+        // B9: eksik pozisyonlar GERÇEK açık slotlardan türetilir — eski sabit
+        // "1 STP + 1 ORT" dolu maçta bile sahte "ARANIYOR" rozeti üretiyordu.
+        missingPositions: deriveMissingPositions([...homeSlots, ...awaySlots]),
         slots: homeSlots,
         awaySlots,
     };

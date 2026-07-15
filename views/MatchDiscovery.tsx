@@ -120,6 +120,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   });
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
+  // B15: yakın-maç sorgusu sürerken iskelet göster (boş↔stale titremesi ölür).
+  const [isNearbyLoading, setIsNearbyLoading] = useState(false);
 
   useEffect(() => {
     // Çoklu bölge: her seçili bölgenin merkezinden yakındaki maçları çek ve
@@ -133,10 +135,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
     if (centers.length === 0) {
       setNearbyMatches([]);
+      setIsNearbyLoading(false);
       return;
     }
 
     let cancelled = false;
+    setIsNearbyLoading(true);
     Promise.all(centers.map((c) => fetchNearbyMatches(c.lat, c.lng, searchRadius))).then((perCenter) => {
       if (cancelled) return;
       // get_nearby_matches HAM matches satırı döndürür (SETOF matches); satırı
@@ -150,21 +154,29 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         }
       });
       setNearbyMatches(Array.from(byId.values()));
-    });
+      setIsNearbyLoading(false);
+    }).catch(() => { if (!cancelled) setIsNearbyLoading(false); });
     return () => { cancelled = true; };
   }, [userLocation, selectedRegions, searchRadius]);
 
   const enhancedMatches = useMemo(() => {
     const hasScope = selectedRegions.length > 0 || !!userLocation;
-    const sourceMatches = (hasScope && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
+    // B10: kapsam (konum/bölge) varken yakın-sonuç 0 ise TÜM maçlara SESSİZCE
+    // düşme — 0 sonuç gerçek 0'dır; boş durum kartı "çapı genişlet" önerir.
+    const sourceMatches = hasScope ? nearbyMatches : adminMatches;
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
-    const activeMatches = sourceMatches.filter(
-      m => (!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
-    );
-    return activeMatches.map((m, i) => {
-      // Demo price adjustment for index 2 if not set, else keep DB price
-      const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
+    const now = Date.now();
+    const activeMatches = sourceMatches.filter(m => {
+      if (!(!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') || m.visibility === 'PRIVATE') return false;
+      // B8: başlamış/geçmiş maç vitrinde KALMAZ (tarih çözülemiyorsa gösterilir).
+      const dt = parseMatchDateTime(m.date, m.time);
+      return !dt || dt.getTime() > now;
+    });
+    return activeMatches.map((m) => {
+      // B9: fiyat YALNIZ gerçek veriden — eski kod dizin-indeksinden fiyat
+      // uyduruyordu (i===2?0:200) ve bütçe filtresi bu sahte değerle çalışıyordu.
+      const price = Number(m.price) || 0;
       // Difficulty DB'de Türkçe zorluk (Kolay/Orta/Zor) ya da mantalite
       // (Ciddi/Taktiksel/Rahat) olarak gelebilir. Tek bir mantalite uzayına
       // normalize et ki hem kartta görünen rozet hem de MANTALİTE filtresi
@@ -209,8 +221,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
       return {
         ...m,
-        date: m.date || '18.05.2026',
-        time: m.time || '22:00 - 23:00',
+        // KN-6: sahte tarih/saat fallback'i YOK — veri yoksa boş kalır
+        // (countdown parseMatchDateTime null → sessizce gizlenir).
+        date: m.date || '',
+        time: m.time || '',
         missingPositions: mappedMissingPositions,
         price,
         difficulty: normalizedMentality,
@@ -871,7 +885,29 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                         </h2>
                     )}
                     {otherMatches.length === 0 ? (
-                      <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
+                      isNearbyLoading ? (
+                        /* B15: yükleme sürerken iskelet kartlar — "boş" ile karışmaz */
+                        <div className="space-y-6" aria-busy="true">
+                          {[0, 1].map((i) => (
+                            <div key={i} className="w-full min-h-[400px] rounded-[32px] border border-white/5 bg-white/[0.03] animate-pulse" />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
+                          {/* B10: dürüst boş durum + çapı genişletme CTA'sı */}
+                          {userLocation && (
+                            <div className="flex justify-center">
+                              <button
+                                onClick={() => setSearchRadius(Math.min(searchRadius + 5, 50))}
+                                className="px-5 py-2.5 rounded-full bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/40 text-[10px] font-black uppercase tracking-widest text-[#39FF14] transition-all active:scale-95"
+                              >
+                                Çapı Genişlet ({Math.min(searchRadius + 5, 50)} km)
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
                     ) : (
                       otherMatches.map((match, index) => (
                         <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
@@ -1151,11 +1187,13 @@ const MatchCard: React.FC<{
 
   useEffect(() => {
     const target = getMatchTargetDate(match.date, match.time);
-    
+    // Tarih çözülemiyorsa countdown gösterme (eski kod NaN üretiyordu).
+    if (!target) { setTimeLeft(''); setIsUrgentTime(false); return; }
+
     const updateTimer = () => {
       const now = new Date().getTime();
       const diff = target.getTime() - now;
-      
+
       setIsUrgentTime(diff > 0 && diff < 2 * 60 * 60 * 1000);
       if (diff <= 0) {
         setTimeLeft('BAŞLADI');
@@ -1192,9 +1230,12 @@ const MatchCard: React.FC<{
       transition={{ duration: 0.5, delay: index * 0.05, type: 'spring', damping: 25 }}
       onClick={() => {
         if (isLocked) return; // Kilitliyse tıklanamaz
+        // B8: başlamış maça vitrinden katılım yolu kapalı (savunma katmanı —
+        // liste filtresi dakika hassasiyetinde geç kalabilir).
+        if (timeLeft === 'BAŞLADI') return;
         onSelect(match);
       }}
-      className="relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
+      className={`relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden group shadow-2xl border border-white/5 ${timeLeft === 'BAŞLADI' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
     >
       {/* Arka Plan Posteri (saha fotoğrafı) — yoksa sahanın rengiyle zemin */}
       {hasPoster ? (
