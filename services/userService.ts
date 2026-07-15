@@ -2,6 +2,16 @@ import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { PlayerCardData } from '../types';
 
+// GERÇEK puan verisi profiles.skill_rating (0-5, zaten hesaplı) ve
+// profiles.match_count'tan gelir. Eski kod olmayan `profiles.stats` kolonunu
+// okuyup HER kullanıcıya default {matchesPlayed:0, rating:5.0} veriyordu →
+// tüm kartlar sahte OVR 100 çıkıyordu (KN-4). Not: DB'de `rating` 0-10
+// skalasındadır; `skill_rating` onun 0-5 karşılığıdır — kart ölçeği bunu bekler.
+const mapPlayerStats = (row: any): { matchesPlayed: number; rating: number } => ({
+  matchesPlayed: Number(row?.match_count ?? 0),
+  rating: typeof row?.skill_rating === 'number' ? row.skill_rating : 0,
+});
+
 export interface OynaUser {
   id: string;
   email: string | null;
@@ -141,7 +151,7 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         verification_status: userSnap.verification_status ?? 'approved',
         is_admin: userSnap.is_admin ?? false,
         walletBalance: Number(userSnap.wallet_balance ?? 0),
-        stats: userSnap.stats || { matchesPlayed: 0, rating: 5.0 },
+        stats: mapPlayerStats(userSnap),
         position: userSnap.position ?? null,
         bio: userSnap.bio ?? null,
         birthdate: userSnap.birthdate ?? null,
@@ -249,7 +259,7 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     verification_status: data.verification_status ?? 'approved',
     is_admin: data.is_admin ?? false,
     walletBalance: data.wallet_balance ?? 0,
-    stats: data.stats || { matchesPlayed: 0, rating: 5.0 },
+    stats: mapPlayerStats(data),
     playerCard: (data.player_card as PlayerCardData) || null,
     cardActive: data.card_active ?? false,
     cardTier: (data.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,

@@ -5,7 +5,8 @@ import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil } from 'lucide-rea
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
-import { fetchFriends, fetchUserTeams } from '../services/friendService';
+import { fetchFriends } from '../services/friendService';
+import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
@@ -22,9 +23,11 @@ const buildCardData = (profile: OynaUser | null, wins: number, total: number): P
     if (pc && pc.stats && typeof pc.overall === 'number') {
         return pc as PlayerCardData;
     }
-    // Rookie ayrımı: hiç maç oynamamış oyuncu için varsayılan 5.0 × 20 = 100
-    // "gold" göstermek yanıltıcıydı. ratingToOverall rookie'de null döner.
-    const overallOrNull = ratingToOverall(profile?.stats?.rating, total);
+    // Rookie ayrımı: hiç maç oynamamış oyuncu için sahte OVR göstermeyiz.
+    // Maç sayısı için GÜVENİLİR sinyal profiles.match_count (stats.matchesPlayed);
+    // matchHistory.length maç kayıtları linklenmemişse veterana "0" derdi.
+    const matchesForCard = profile?.stats?.matchesPlayed ?? total;
+    const overallOrNull = ratingToOverall(profile?.stats?.rating, matchesForCard);
     const rookie = overallOrNull === null;
     const overall = overallOrNull ?? 0;
     return {
@@ -34,7 +37,7 @@ const buildCardData = (profile: OynaUser | null, wins: number, total: number): P
         isStatsVerified: false,
         diamondValue: 0,
         winCount: wins,
-        totalMatches: total,
+        totalMatches: matchesForCard,
         stats: {
             pace: { ...DEFAULT_CARD_STAT },
             shooting: { ...DEFAULT_CARD_STAT },
@@ -124,11 +127,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             if (profileData?.roles?.length) setMyRoles(profileData.roles);
             // Kısayol sayıları en-iyi-çaba: biri düşerse profil yine açılır.
             const [teamsRes, friendsRes] = await Promise.allSettled([
-                fetchUserTeams(uid),
+                // E2: Sosyal ile TEK kaynak (get_my_teams) — Profil eskiden
+                // fetchUserTeams (arşivi de sayan) kullanıp Sosyal ile çelişiyordu.
+                getMyTeams(),
                 fetchFriends(uid),
             ]);
             if (teamsRes.status === 'fulfilled') {
-                setTeamsCount(teamsRes.value.captainTeams.length + teamsRes.value.memberTeams.length);
+                setTeamsCount(teamsRes.value.filter(t => !t.is_archived).length);
             }
             if (friendsRes.status === 'fulfilled') {
                 setFriendsCount(friendsRes.value.length);
