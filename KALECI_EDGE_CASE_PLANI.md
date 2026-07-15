@@ -147,20 +147,22 @@ koordinasyon gerek.
 
 ---
 
-## 4. KARAR NOKTALARI (kullanıcı onayı gerekli)
+## 4. KARAR NOKTALARI → ONAYLANAN KARARLAR (2026-07-15)
 
-1. **Ödeme sınırı doğrulaması** — GK escrow/cüzdan/payout/no-show-ceza/teminat = ödeme
-   agent'ı; ben operasyonel yaşam-döngüsü (görünürlük, yönlendirme, dashboard bucket,
-   dürüstlük) + para-dışı profil/marketplace. Ama KB-1 (payout UI-kapısı), KB-2 (çifte-
-   booking), KD-1 (matchCount), KB-4 (kabul-sonrası iptal-iade) sınırda — bunları ben mi
-   düzeltiyorum yoksa ödeme agent'ına mı bırakıyorum?
-2. **Gizlilik toggle'ları (KD-2)** — gerçek davranışa bağla mı, kaldır mı?
-3. **Uygunluk matching'i (KB-8)** — gün/saat/bölge matching'e bağlansın mı, yoksa UI vaadi
-   sadeleşsin mi?
-4. **Reşit-olmayan kaleci kapısı (KA-6)** — 14-17 yaş başvuruda guardian onayıyla mı
-   bloklanmalı, yoksa ödeme-anı kapısı yeterli mi? (uyum kararı)
-5. **Onay bildirimi (KA-M2)** — onaylandığında sağlayıcıya gerçek in-app/push bildirim
-   eklensin mi (backend tetikleyici)?
+1. **Ödeme sınırı** → ✅ **Operasyonel tarafı tamamen BEN hallederim; para-kancalı
+   kısımlar için eksiksiz ANALİZ/DEVİR belgesi yazarım (kod değil).** Yani her `[KOORD]`
+   bulgusu ikiye ayrılır: operasyonel-fix (ben kodlarım — buton render kapısı, çakışma
+   guard'ı, dashboard görünürlüğü, sayım) + saf-para RPC parçası (`KALECI_ODEME_DEVIR.md`
+   içinde tam analiz, ödeme agent'ına). Saf escrow/payout/ceza RPC'lerine kod dokunmam.
+2. **Gizlilik toggle'ları (KD-2)** → ✅ **Gerçek davranışa bağla** (dördü de: showProfile→
+   marketplace görünürlüğü, showRating→puan gizleme, hidePhone→telefon maskeleme,
+   allowOffer→teklif alma).
+3. **Uygunluk matching'i (KB-8)** → ✅ **Matching'e bağla** — `find_providers_for_match`
+   gün/saat aralığı + bölgeyi onurlandırsın (matching RPC değişikliği; para-dışı, ben).
+4. **Reşit-olmayan kaleci kapısı (KA-6)** → ✅ **Başvuruda guardian onayıyla blokla** —
+   oyuncu minor işlemesiyle tutarlı.
+5. **Onay bildirimi (KA-M2)** — [açık, K1'de öneriyle ele alınır] onaylandığında sağlayıcıya
+   gerçek bildirim tetikleyicisi eklenmeli.
 
 ---
 
