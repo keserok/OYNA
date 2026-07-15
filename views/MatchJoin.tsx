@@ -589,7 +589,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setNewMatchBadge(true);
     } catch (e: any) {
       console.error('Join error:', e);
-      showActionError('Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
+      showActionError((e?.message || '').includes('MIN_RATING')
+        ? `Bu maç minimum ${match.minRating} puan istiyor — puanın henüz yetmiyor.`
+        : 'Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -650,7 +652,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setNewMatchBadge(true);
     } catch (e: any) {
       console.error('Buy slots error:', e);
-      showActionError((e?.message || '').includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
+      const msg = e?.message || '';
+      showActionError(msg.includes('MIN_RATING')
+        ? `Bu maç minimum ${match.minRating} puan istiyor — puanın henüz yetmiyor.`
+        : msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -709,7 +714,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (fresh) applyMatchLocal(fresh);
     } catch (e: any) {
       console.error('Join reserve error:', e);
-      showActionError('Yedek olarak katılırken bir hata oluştu.');
+      showActionError((e?.message || '').includes('MIN_RATING')
+        ? `Bu maç minimum ${match.minRating} puan istiyor — puanın henüz yetmiyor.`
+        : 'Yedek olarak katılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
