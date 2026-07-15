@@ -152,9 +152,26 @@ UI sunucu durumuyla çelişmez; tüm tutarlar tek `formatTRY()` → "1.500,00₺
 SQL değişmezleri: idempotency anahtarı başına ≤1 cüzdan işlemi · maç başına ≤1
 BLOCKED kapora · yetim PENDING rezervasyon = 0. + smoke + birim. G1 yeşil olmadan S2 yok.
 
-## Bekleyen görüşme bölümleri (30 soru — 4/6 tamam)
-- [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi (S21-25 soruldu, cevap bekliyor)
-- [ ] Bölüm 6/6 — Ölçekleme & operasyon
+## Alınan kararlar (Bölüm 6/6 — Ölçekleme & operasyon)
+
+| # | Konu | Karar |
+|---|------|-------|
+| 26 | Sağlayıcı soyutlama | Şimdilik iki-anahtar switch yeterli; provider alanı kayıtta (var); soyutlama 2. sağlayıcı gelince |
+| 27 | Mutabakat | **Tarih aralığı + gün-bazlı kırılım, tam profesyonel** analiz + CSV export |
+| 28 | Hesap silme | Finansal yükümlülük kapısı: bakiye/rezervasyon çözülmeden silme yok; anonim kayıt saklanır |
+| 29 | Ödeme sağlığı | **Geliştirilmiş — kendi kendini iyileştiren akış**: önleme + tespit + otomatik kurtarma (iyzico mutabakatlı süpürme, APPLY_ERROR retry kuyruğu) + zarif bozulma |
+| 30 | Test sigortası | Para değişmezleri paketi her PR'da — **yüksek önem** |
+
+## Bölüm 5/6 (S21-25) — cevap gelmedi → ⭐ önerilen varsayılanlar
+S21 anlık kesin rezervasyon + çakışmada otomatik telafi · S22 "Kalanı tahsil
+ettim" butonu · S23 kaptan onaylı no-show iadesi · S24 talep-üzerine çekim +
+toplu ödeme listesi · S25 fiyat dondurma. **İtiraz edilirse plan güncellenir.**
+
+## 📋 MASTER PLAN
+30 kararın tamamı + S1 (C1-C11) analizi **`ODEME_MASTER_PLAN.md`** dosyasında
+birleştirildi: S1 Para&Güven → S2 İade&Çekim → S3 Bilgilendirme&Tesis →
+S4 Operasyon&Profesyonellik → S5 Hizmet Tahsilatı+Go-live; sürekli katman:
+para değişmezleri test paketi. Bu dosya artık ödemenin tek yol haritası.
 - [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
 - [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
 - [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
