@@ -12,6 +12,7 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
+import { parseMatchDateTime } from '../utils/matchDateTime';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -1108,35 +1109,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   );
 };
 
-const getMatchTargetDate = (dateStr: string, timeStr: string): Date => {
-  const now = new Date();
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  
-  let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
-  
-  const cleanDateStr = dateStr.toLowerCase().trim();
-  if (cleanDateStr === 'yarın') {
-    targetDate.setDate(targetDate.getDate() + 1);
-  } else if (cleanDateStr !== 'bugün') {
-    const daysOfWeek: Record<string, number> = {
-      'pazartesi': 1,
-      'salı': 2,
-      'çarşamba': 3,
-      'perşembe': 4,
-      'cuma': 5,
-      'cumartesi': 6,
-      'pazar': 0
-    };
-    const targetDayNum = daysOfWeek[cleanDateStr];
-    if (targetDayNum !== undefined) {
-      const currentDayNum = now.getDay();
-      let diff = targetDayNum - currentDayNum;
-      if (diff <= 0) diff += 7; // Next occurrence
-      targetDate.setDate(targetDate.getDate() + diff);
-    }
-  }
-  return targetDate;
-};
+// B13/B8: tek ayrıştırma kaynağı (utils/matchDateTime) — ISO, gün.ay.yıl,
+// TR gün adları ve "22:00 - 23:00" saat aralıklarını güvenle çözer; belirsizse
+// null (eski yerel sürüm bileşik saatte NaN, dd.mm.yyyy'de yanlış gün üretiyordu).
+const getMatchTargetDate = (dateStr: string, timeStr: string): Date | null =>
+  parseMatchDateTime(dateStr, timeStr);
 
 const MatchCard: React.FC<{
   match: any;

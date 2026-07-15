@@ -387,6 +387,10 @@ interface AppState {
   // ─── Match CRUD ────────────────────────────────────────────────
   addMatch: (match: MatchListing) => Promise<string | undefined>;
   updateMatch: (match: MatchListing) => Promise<void>;
+  // KN-3: YEREL-only maç güncellemesi — RPC ÇAĞIRMAZ. Realtime'dan gelen veri
+  // ve RPC-sonrası re-fetch sonuçları bununla uygulanır; updateMatch (DB yazan)
+  // realtime handler'dan ASLA çağrılmamalı (yankı döngüsü + lost-update).
+  applyMatchLocal: (match: MatchListing) => void;
   deleteMatch: (id: string) => Promise<void>;
 
   // ─── User CRUD ─────────────────────────────────────────────────
@@ -1012,6 +1016,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (error) throw error;
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
+  // KN-3: RPC'siz yerel uygulama. adminMatches + (açık lobi varsa) selectedMatch
+  // birlikte senkronlanır — MatchJoin selectedMatch'ten beslendiği için şart.
+  applyMatchLocal: (match) => set((s) => ({
+    adminMatches: s.adminMatches.map(m => m.id === match.id ? match : m),
+    selectedMatch: s.selectedMatch?.id === match.id ? match : s.selectedMatch,
+  })),
   deleteMatch: async (id) => {
     const prev = get().adminMatches;
     set({ adminMatches: prev.filter(m => m.id !== id) });

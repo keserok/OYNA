@@ -29,7 +29,9 @@ export function useMyMatches(): MyMatchesResult {
       if (m.status === 'DRAFT' || m.status === 'CANCELLED') return true;
       return (
         m.slots?.some(s => s.player?.id === currentUserUid) ||
-        m.awaySlots?.some(s => s.player?.id === currentUserUid)
+        m.awaySlots?.some(s => s.player?.id === currentUserUid) ||
+        // B14: yalnız YEDEK listesinde olan oyuncu da maçını görebilmeli.
+        m.reservePlayers?.some(p => p?.id === currentUserUid)
       );
     });
   }, [adminMatches, currentUserUid]);

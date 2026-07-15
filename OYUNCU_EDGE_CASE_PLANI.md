@@ -453,6 +453,7 @@ Plan güncel `main`'e rebase edildi (main +15 commit: yeni **Onboarding** akış
 
 ### 6.2 Yeni bulgular — Onboarding (main ekledi) → backlog
 - `H-A1`: `StepLocation` gerçek izin istemeyen **sahte tarama**. · `H-A2`: onboarding taslağı paylaşılan cihazda sızabilir. · `H-A3`: veli-onayı çocuk ekranında realtime/retry yok. · `H-A4`: **<13 yaş kapısı yok**. · `H-A5`: soyad zorunlu (mononim adlar).
+- `H-B1` (S2 canlı testinde keşfedildi, **sunucu**): `player_create_match`, `time` alanındaki "21:00 - 22:00" biçimli **aralığı timezone sanıyor** — `starts_at` ya bozuk hesaplanıyor ya da (bitiş ≥16 için, ör. "22:00 - 23:00") `time zone displacement out of range` ile **oluşturma çöküyor**. Tek saat ("21:00") sorunsuz. Düzeltme: RPC'de time'ı `substring(time from '\d{1,2}:\d{2}')` ile ilk HH:MM'e indirger; backlog S3.
 
 ### 6.3 Tamamlanan S0 işleri (test edildi)
 | İP / ID | Ne yapıldı | Doğrulama |
