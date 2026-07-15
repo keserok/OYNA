@@ -117,14 +117,30 @@ harita kümelemesi (>25 pin & zoom<11: grid-tabanlı sayı rozetli küme, dokunu
 
 ---
 
-## Karar noktaları (onay gerekli)
+## Karar noktaları — KARARLAŞTI ✓ (kullanıcı, 2026-07-15) ve UYGULANDI
 
-- **N1 · Flash modeli:** Admin **vetosu** (varsayılan açık; öneri — kampanya anlıktır, ön-onay akışı
-  flash'ın doğasını öldürür) ↔ her kampanya için ön-onay kuyruğu.
-- **N2 · Rozet kapalıyken filtre:** "Bugün müsait" filtresi gerçek müsaitliğe göre çalışmaya devam
-  etsin (öneri: rozet sunum, filtre gerçek) ↔ rozeti kapalı sahalar filtreden de düşsün.
-- **N3 · Featured sıralama:** yalnız "Önerilen"de üste sabitleme (öneri) ↔ her sıralamada üstte.
-- **N4 · Harita fiyat bandı:** balonlarda ₺/₺₺/₺₺₺ kısaltması denensin mi, rakam mı kalsın (öneri: rakam kalsın, 6B'de A/B).
+- **N1 · Flash modeli:** `flash_deals_enabled` **varsayılan KAPALI**, admin açar (veto değil, opt-in).
+  Aynı model üç bayrağın hepsine uygulandı (featured/flash/availability hepsi default false).
+- **N2 · "Bugün müsait" filtresi:** **tamamen kaldırıldı.** Rozet (admin-gated) kaldı, verisi
+  düzeltildi; ama filtre olarak sunulmuyor.
+- **N3 · Sıralama:** "Önerilen" = **konum varsa yakınlık, yoksa alfabetik (tr-TR)**. Featured-first
+  global ezme kaldırıldı — Öne Çıkan artık yalnız görsel rozet, sıralamayı etkilemez.
+- **N4 · Harita fiyat bandı:** **rakam kaldı** (₺/₺₺ kısaltması yok).
+
+### Uygulanan dosyalar (dal: claude/field-venue-map-ui-1ll0er)
+- `supabase/migrations/20260724000000_vitrin_rozet_yetkisi.sql` — iki bayrak + `protect_pitch_admin_flags`
+  trigger + `admin_update_pitch` genişletme + `get_showcase_availability` RPC.
+- `tests/integration/vitrin_rozet_yetkisi.sql` — owner bayrak değiştiremez / admin RPC değiştirir + audit.
+- `services/pitchFilterService.ts` + `tests/unit/pitchFilters.test.ts` (22 test) — saf filtre motoru.
+- `services/pitchContentService.ts` (`setPitchShowcaseFlags` → RPC), `services/pitchBookingService.ts`
+  (`fetchShowcaseAvailability`), `views/PitchDiscovery.tsx`, `types.ts`,
+  `admin-panel/views/pages/PitchesPage.tsx`, `admin-panel/views/components/PitchStudio.tsx`.
+- Doğrulama: `tsc` temiz · `vitest` 22/22 · `vite build` başarılı · Playwright sürüşü 22/22.
+
+> **Deploy notu:** Migration dosyası yazıldı ama CANLI Supabase'e UYGULANMADI (deploy ayrı,
+> kontrollü adım). Rozetler canlıda çalışmadan önce migration `admin:deploy` akışıyla uygulanmalı.
+> Migration uygulanana dek `select('*')` yeni kolonları döndürmez → rozetler kapalı görünür (güvenli
+> varsayılan), filtre/sıralama/harita değişiklikleri ise DB'den bağımsız çalışır.
 
 ## Sıra, efor, riskler
 

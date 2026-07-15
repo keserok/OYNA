@@ -16,13 +16,18 @@ import { requestDeviceLocation } from '../services/locationService';
 import { openDirections, isIOSPlatform, appleMapsDirectionsUrl, googleMapsDirectionsUrl } from '../utils/directions';
 import { getHaversineDistance } from '../utils/geo';
 import { ORDU_DISTRICTS } from '../utils/orduData';
-import { TURKEY_REGIONS } from '../data/turkeyRegions';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
-import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO } from '../services/pitchBookingService';
+import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
+import { resolveWorkingHoursForDate } from '../shared/workingHours';
+import {
+  derivePitchFilterOptions,
+  filterAndSortPitches,
+  type PitchSortOrder,
+} from '../services/pitchFilterService';
 import {
   getAverageTariffPrice,
   mapDbTariffsToPitchTariffs,
@@ -31,7 +36,7 @@ import {
 import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchFavoritesService';
 import { recordPitchView } from '../services/pitchShowcaseService';
 import { reportPitchContent } from '../services/pitchMediaService';
-import { splitAmenities, normalizeAmenity, getAmenityDef } from '../shared/amenities';
+import { splitAmenities } from '../shared/amenities';
 import { transformedImageUrl } from '../utils/imageTransform';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
@@ -85,6 +90,8 @@ interface DbPitchRow {
   owner_id?: string | null;
   is_published?: boolean | null;
   is_featured?: boolean | null;
+  flash_deals_enabled?: boolean | null;
+  show_availability_badge?: boolean | null;
   working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
   courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
@@ -162,6 +169,7 @@ const mapDbPitchToUiPitch = (
     ownerId: row.owner_id ?? undefined,
     isPublished: row.is_published !== false,
     isFeatured: row.is_featured === true,
+    showAvailabilityBadge: row.show_availability_badge === true,
     // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
     // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
     workingHoursRaw: wh ?? null,
@@ -706,7 +714,8 @@ const PitchCard: React.FC<{
             )}
           </span>
         </div>
-        {pitch.todayAvailableCount !== undefined && (
+        {/* Müsaitlik rozeti: yalnız admin show_availability_badge açtıysa gösterilir */}
+        {pitch.showAvailabilityBadge && pitch.todayAvailableCount !== undefined && (
           pitch.todayAvailableCount > 0 ? (
             <span className="px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black">
               Bugün {pitch.todayAvailableCount} saat müsait
@@ -782,7 +791,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         }
       });
 
-      const mapped = rows.map((r) => mapDbPitchToUiPitch(r, flashByPitch[r.id]));
+      // Flash rozet/indirimli fiyat YALNIZ admin flash_deals_enabled açtıysa
+      // vitrine yansır (aksi halde ham fiyat gösterilir, "İndirimli" filtresi saymaz).
+      const mapped = rows.map((r) =>
+        mapDbPitchToUiPitch(r, r.flash_deals_enabled === true ? flashByPitch[r.id] : undefined),
+      );
       setRealPitches(mapped);
       void loadTodayAvailability(mapped);
     } catch (err) {
@@ -795,34 +808,59 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   }, []);
 
   /**
-   * "Bugün X saat müsait" rozeti (Karar #7): tüm sahaların bugünkü rezervasyonları
-   * TEK sorguda çekilir; bir slot, tesisteki kortlardan en az biri boşsa müsait sayılır.
+   * "Bugün X saat müsait" rozeti (Karar #7): doluluk kişisel-veri-içermeyen
+   * get_showcase_availability RPC'sinden gelir (doğrudan pitch_bookings SELECT'i
+   * RLS gereği yalnız KULLANICININ KENDİ rezervasyonlarını verir → rozet yanlış
+   * sayardı). Çalışma saati gün-bazlı çözülür (detay sayfasıyla aynı kaynak) ve
+   * sahibin kapattığı slotlar (CLOSURE) dolu sayılır. Bir slot, tesisteki
+   * kortlardan en az biri boş VE kapatılmamışsa müsait sayılır.
    */
   const loadTodayAvailability = async (pitches: Pitch[]) => {
     try {
       const today = todayISO();
-      const { data, error } = await supabase
-        .from('pitch_bookings')
-        .select('pitch_id, court_id, start_time, status')
-        .eq('booking_date', today)
-        .neq('status', 'CANCELLED');
-      if (error) throw error;
-      const byPitch: Record<string, Record<string, number>> = {};
-      (data ?? []).forEach((b: { pitch_id: string; start_time: string }) => {
-        const t = b.start_time.slice(0, 5);
-        byPitch[b.pitch_id] = byPitch[b.pitch_id] ?? {};
-        byPitch[b.pitch_id][t] = (byPitch[b.pitch_id][t] ?? 0) + 1;
+      const rows = await fetchShowcaseAvailability(today);
+
+      // Saha → saat(HH:MM) → dolu kort sayısı  ve  saha → tümüyle kapatılmış saatler
+      const bookedByPitch: Record<string, Record<string, number>> = {};
+      const closedByPitch: Record<string, Set<string>> = {};
+      rows.forEach((r) => {
+        if (r.kind === 'BOOKING') {
+          const t = r.start_time;
+          (bookedByPitch[r.pitch_id] ??= {})[t] = (bookedByPitch[r.pitch_id]?.[t] ?? 0) + 1;
+        } else {
+          // Kapanış: court_id null ise TÜM kortlar kapalı → o saati tümüyle işaretle
+          const start = parseInt(r.start_time.split(':')[0], 10);
+          const end = r.end_time ? parseInt(r.end_time.split(':')[0], 10) : start + 1;
+          const set = (closedByPitch[r.pitch_id] ??= new Set<string>());
+          for (let h = start; h < (end > start ? end : start + 1); h++) {
+            set.add(`${String(h % 24).padStart(2, '0')}:00`);
+          }
+        }
       });
-      const nowHour = new Date().getHours();
+
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const result: Record<string, number> = {};
       pitches.forEach((p) => {
         const courtCount = Math.max(1, p.courts?.length ?? 1);
-        const ranges = generateSlotRanges(p.workingHours);
-        const booked = byPitch[p.id] ?? {};
+        const wh = resolveWorkingHoursForDate(
+          (p as { workingHoursRaw?: unknown }).workingHoursRaw ?? p.workingHours,
+          today,
+        );
+        if (wh.closed) { result[p.id] = 0; return; }
+        const ranges = generateSlotRanges(wh);
+        const booked = bookedByPitch[p.id] ?? {};
+        const closed = closedByPitch[p.id];
         result[p.id] = ranges.filter((r) => {
-          const h = parseInt(r.startTime.split(':')[0], 10);
-          const isFuture = h >= nowHour || h < 6; // gece 00-06 ertesi güne sarkan saatler
-          return isFuture && (booked[r.startTime] ?? 0) < courtCount;
+          const [h, m] = r.startTime.split(':').map(Number);
+          // Gece yarısını aşan pencerede (ör. 09:00-02:00) küçük saatler ertesi güne
+          // sarkar; onları "geçmiş" sayma. Aynı-gün saatte başlangıç geçmişse ele.
+          const slotMin = h * 60 + m;
+          const isNightWrap = h < 6;
+          const isFuture = isNightWrap || slotMin >= nowMinutes;
+          if (!isFuture) return false;
+          if (closed?.has(r.startTime)) return false;
+          return (booked[r.startTime] ?? 0) < courtCount;
         }).length;
       });
       setTodayAvailability(result);
@@ -886,20 +924,18 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     maxPrice: number | null;
     hasAmenities: string[];
     type: 'Tümü' | 'Kapalı' | 'Açık';
-    availability: 'Tümü' | 'Bugün';
   }>({
     district: 'Tümü',
     minRating: 0,
     maxPrice: null,
     hasAmenities: [],
     type: 'Tümü',
-    availability: 'Tümü',
   });
-  const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC' | 'RATING_DESC' | 'DISTANCE_ASC'>('DEFAULT');
+  const [sortOrder, setSortOrder] = useState<PitchSortOrder>('DEFAULT');
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
 
   const resetAllFilters = useCallback(() => {
-    setFilters({ district: 'Tümü', minRating: 0, maxPrice: null, hasAmenities: [], type: 'Tümü', availability: 'Tümü' });
+    setFilters({ district: 'Tümü', minRating: 0, maxPrice: null, hasAmenities: [], type: 'Tümü' });
     setSortOrder('DEFAULT');
     setOnlyDiscounted(false);
   }, []);
@@ -912,7 +948,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     if (filters.minRating > 0) n += 1;
     if (filters.type !== 'Tümü') n += 1;
     n += filters.hasAmenities.length;
-    if (filters.availability === 'Bugün') n += 1;
     if (onlyDiscounted) n += 1;
     return n;
   }, [filters, onlyDiscounted]);
@@ -1154,126 +1189,34 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     }
   };
 
-  // ── Filtre seçenekleri GERÇEK veriden türetilir (boş seçenek üretilmez) ────
-  const districtOptions = useMemo(() => {
-    const counts = new Map<string, number>();
-    sourcePitches.forEach(p => {
-      if (!p.district) return;
-      counts.set(p.district, (counts.get(p.district) ?? 0) + 1);
-    });
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-  }, [sourcePitches]);
-
-  // Fiyat aralığı: vitrindeki gerçek en düşük/en yüksek ort. saatlik fiyat (50₺ adım).
-  const priceBounds = useMemo(() => {
-    const prices = sourcePitches.map(p => p.totalPrice).filter(v => v > 0);
-    if (prices.length === 0) return null;
-    const min = Math.floor(Math.min(...prices) / 50) * 50;
-    const max = Math.ceil(Math.max(...prices) / 50) * 50;
-    return { min, max: max > min ? max : min + 50 };
-  }, [sourcePitches]);
-
-  // Olanaklar: tüm sahaların birleşimi + kaç tesiste bulunduğu (katalog ikonuyla).
-  const amenityOptions = useMemo(() => {
-    const counts = new Map<string, number>();
-    sourcePitches.forEach(p => {
-      const seen = new Set<string>();
-      (p.amenities ?? []).forEach(raw => {
-        const v = normalizeAmenity(raw);
-        if (seen.has(v)) return;
-        seen.add(v);
-        counts.set(v, (counts.get(v) ?? 0) + 1);
-      });
-    });
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([value, count]) => ({ value, count, icon: getAmenityDef(value)?.icon ?? null }));
-  }, [sourcePitches]);
-
-  const typeCounts = useMemo(() => ({
-    'Kapalı': sourcePitches.filter(p => p.courts?.some(c => c.type === 'CLOSED')).length,
-    'Açık': sourcePitches.filter(p => p.courts?.some(c => c.type === 'OPEN')).length,
-  }), [sourcePitches]);
-
-  const todayCount = useMemo(
-    () => sourcePitches.filter(p => (p.todayAvailableCount ?? 0) > 0).length,
-    [sourcePitches],
-  );
-  const discountCount = useMemo(
-    () => sourcePitches.filter(p => p.flashDiscount).length,
+  // ── Filtre seçenekleri GERÇEK veriden türetilir (tek kaynak: saf modül) ────
+  const { districtOptions, priceBounds, amenityOptions, typeCounts, discountCount } = useMemo(
+    () => derivePitchFilterOptions(sourcePitches),
     [sourcePitches],
   );
 
-  // Çoklu bölge üyeliği: seçili bölgelerden herhangi biri sahayı kapsıyor mu?
-  // ilçe seçiliyse ilçe eşleşir; il geneli seçiliyse il (ya da o ilin ilçeleri).
-  const pitchInSelectedRegions = useCallback((p: { city?: string; district: string }) => {
-    if (selectedRegions.length === 0) return true;
-    return selectedRegions.some(r => {
-      if (r.district) return p.district === r.district;
-      if (p.city) return p.city === r.city;
-      const cityDistricts = TURKEY_REGIONS.find(t => t.city === r.city)?.districts ?? [];
-      return cityDistricts.includes(p.district);
-    });
-  }, [selectedRegions]);
+  // Bölge kapsamı (il/ilçe) — saf modülün eşleştiricisiyle aynı davranış.
+  const selectedRegionCriteria = useMemo(
+    () => selectedRegions.map(r => ({ city: r.city, district: r.district })),
+    [selectedRegions],
+  );
 
-  const filteredPitches = useMemo(() => {
-    let result = sourcePitches.filter(p => {
-      if (p.isApproved === false) return false;
-      if (favOnly && !favorites.has(p.id)) return false;
-      if (onlyDiscounted && !p.flashDiscount) return false;
-      if (!pitchInSelectedRegions(p)) return false;
-
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.district.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesDistrict = filters.district === 'Tümü' || p.district === filters.district;
-      const matchesRating = p.rating >= filters.minRating;
-      // maxPrice=null → limit yok. Fiyatı bilinmeyen (0₺) sahalar limitten elenmez.
-      const matchesPrice = filters.maxPrice == null || p.totalPrice <= filters.maxPrice;
-      const matchesAvailability = filters.availability !== 'Bugün' || (p.todayAvailableCount ?? 1) > 0;
-
-      // Seçili olanakların TAMAMI tesiste bulunmalı (kanonik yazımla karşılaştır).
-      let matchesAmenities = true;
-      if (filters.hasAmenities.length > 0) {
-        const pitchAmenities = new Set((p.amenities ?? []).map(normalizeAmenity));
-        matchesAmenities = filters.hasAmenities.every(a => pitchAmenities.has(a));
-      }
-
-      let matchesType = true;
-      if (filters.type === 'Kapalı') {
-        matchesType = p.courts?.some(c => c.type === 'CLOSED') || false;
-      } else if (filters.type === 'Açık') {
-        matchesType = p.courts?.some(c => c.type === 'OPEN') || false;
-      }
-
-      return matchesSearch && matchesDistrict && matchesRating && matchesPrice && matchesType && matchesAvailability && matchesAmenities;
-    }).map(p => {
-      if (p.coordinates?.lat && p.coordinates?.lng) {
-        const dist = getHaversineDistance(mapCenter[0], mapCenter[1], p.coordinates.lat, p.coordinates.lng);
-        return {
-          ...p,
-          distance: `${dist.toFixed(1)} km`
-        };
-      }
-      return p;
-    });
-
-    if (sortOrder === 'PRICE_ASC') {
-      result.sort((a, b) => a.totalPrice - b.totalPrice);
-    } else if (sortOrder === 'RATING_DESC') {
-      result.sort((a, b) => b.rating - a.rating);
-    } else if (sortOrder === 'DISTANCE_ASC') {
-      result.sort((a, b) => {
-        const da = parseFloat(a.distance) || 999;
-        const db = parseFloat(b.distance) || 999;
-        return da - db;
-      });
-    }
-
-    // Öne çıkanlar her sıralamada üstte (Karar #23)
-    result.sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
-
-    return result;
-  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions]);
+  // Filtre + arama + sıralama tek doğru kaynaktan (services/pitchFilterService).
+  const filteredPitches = useMemo(
+    () => filterAndSortPitches({
+      pitches: sourcePitches,
+      searchQuery,
+      filters,
+      sortOrder,
+      favorites,
+      favOnly,
+      onlyDiscounted,
+      selectedRegions: selectedRegionCriteria,
+      mapCenter,
+      userLocation,
+    }),
+    [sourcePitches, searchQuery, filters, sortOrder, mapCenter, userLocation, favOnly, favorites, onlyDiscounted, selectedRegionCriteria],
+  );
 
   // Haritanın pin kaynağı: bölge seçiliyse bölge-filtreli sahalar; bölge yoksa
   // GÜNCEL KONUM çevresi (30 km); konum da yoksa mevcut liste (kullanıcı kararı).
@@ -1575,26 +1518,18 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   </div>
                 </div>
 
-                {/* Müsaitlik + fırsat: sayaçlar gerçek veriden, 0 ise devre dışı */}
-                <div>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">MÜSAİTLİK & FIRSAT</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setFilters(f => ({ ...f, availability: f.availability === 'Bugün' ? 'Tümü' : 'Bugün' }))}
-                      disabled={todayCount === 0 && filters.availability !== 'Bugün'}
-                      className={`py-3 px-3 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all border disabled:opacity-35 ${filters.availability === 'Bugün' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
-                    >
-                      Bugün Müsait{todayCount > 0 ? ` · ${todayCount}` : ''}
-                    </button>
+                {/* Fırsat: indirimli sahalar (sayaç gerçek veriden; 0 ise devre dışı) */}
+                {discountCount > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">FIRSAT</p>
                     <button
                       onClick={() => setOnlyDiscounted(v => !v)}
-                      disabled={discountCount === 0 && !onlyDiscounted}
-                      className={`py-3 px-3 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all border disabled:opacity-35 ${onlyDiscounted ? 'bg-[#FF3B30] text-white border-[#FF3B30]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                      className={`w-full py-3 px-3 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border ${onlyDiscounted ? 'bg-[#FF3B30] text-white border-[#FF3B30]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                     >
-                      🔥 İndirimli{discountCount > 0 ? ` · ${discountCount}` : ''}
+                      🔥 Yalnızca İndirimli · {discountCount}
                     </button>
                   </div>
-                </div>
+                )}
 
                 {/* Bölge — vitrindeki gerçek ilçeler + tesis sayısı */}
                 {districtOptions.length > 1 && (
@@ -1607,7 +1542,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       >
                         TÜMÜ · {sourcePitches.length}
                       </button>
-                      {districtOptions.map(([d, count]) => (
+                      {districtOptions.map(({ name: d, count }) => (
                         <button
                           key={d}
                           onClick={() => setFilters({ ...filters, district: filters.district === d ? 'Tümü' : d })}

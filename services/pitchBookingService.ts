@@ -139,3 +139,29 @@ export function buildOccupancyGrid(
 export function todayISO(): string {
   return toISODate(new Date());
 }
+
+// ── Vitrin "Bugün X saat müsait" rozeti için doluluk kaynağı ────────────────
+// Kişisel veri İÇERMEZ. Tek RPC ile TÜM yayınlanmış sahaların o günkü rezervasyon
+// doluluğu + kapanış istisnaları döner. (Doğrudan pitch_bookings SELECT'i RLS
+// gereği yalnız kullanıcının KENDİ rezervasyonlarını verirdi → rozet yanlış sayardı.)
+export interface ShowcaseAvailabilityRow {
+  pitch_id: string;
+  court_id: string | null;
+  kind: 'BOOKING' | 'CLOSURE';
+  start_time: string; // 'HH:MM[:SS]'
+  end_time: string | null;
+  status: string;
+}
+
+export async function fetchShowcaseAvailability(dateISO: string): Promise<ShowcaseAvailabilityRow[]> {
+  const { data, error } = await supabase.rpc('get_showcase_availability', { p_date: dateISO });
+  if (error) {
+    console.warn('get_showcase_availability başarısız:', error.message);
+    return [];
+  }
+  return ((data ?? []) as ShowcaseAvailabilityRow[]).map((r) => ({
+    ...r,
+    start_time: String(r.start_time).slice(0, 5),
+    end_time: r.end_time ? String(r.end_time).slice(0, 5) : null,
+  }));
+}
