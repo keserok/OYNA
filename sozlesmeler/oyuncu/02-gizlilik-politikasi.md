@@ -24,13 +24,16 @@
 ### 2. Verilerin Kullanım Amacı
 Hizmetin sunulması, rezervasyon ve ödeme süreçleri, maç/takım eşleştirme, bildirimler, güvenlik ve dolandırıcılık önleme, müşteri desteği ve hizmet iyileştirme.
 
-### 3. Verilerin Paylaşımı
+### 3. Verilerin Paylaşımı ve Görünürlüğü
 Verileriniz yalnızca aşağıdaki taraflarla, belirtilen amaçla sınırlı olarak paylaşılabilir:
-- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği ölçüde)
+- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği asgari ölçüde — bkz. [Veri Paylaşım Protokolü](veri-paylasim-protokolu.md); olağan rezervasyonda tesise ad-soyad veya telefonunuz aktarılmaz)
+- Talep ettiğiniz hizmet kapsamında **kaleci/hakem gibi hizmet sağlayıcılar** ile (yalnızca ilgili hizmetin ifası için gerekli asgari ölçüde; telefon/e-posta/konum aktarılmaz)
 - **Ödeme kuruluşu** ile (ödeme işlemlerinin gerçekleştirilmesi için)
 - Barındırma, hata izleme ve kullanım analitiği sağlayan **teknoloji tedarikçilerimiz** ile (yalnızca hizmetin işletilmesi için)
 - Google/Apple hesabınızla giriş yapmanız hâlinde ilgili **kimlik doğrulama sağlayıcısı** ile
 - Yasal yükümlülükler kapsamında **yetkili kamu kurum ve kuruluşları** ile
+
+Bir maça katıldığınızda **adınız ve profil görseliniz** o maçı görüntüleyenlere görünür olur; saha veya hizmet sağlayıcılar hakkında yaptığınız **değerlendirme ve yorumlar** kamuya açık olarak gösterilebilir.
 
 Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz veya kiralanmaz.
 

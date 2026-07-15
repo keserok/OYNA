@@ -193,7 +193,7 @@ Bu kademeler, OYNA'nın Mesafeli Satış Sözleşmesi'nde düzenlenen iade rejim
 
 13.1. Taraflar, işbu Sözleşme kapsamında birbirlerine ait olup kamuya açık olmayan her türlü ticari, mali, teknik bilgi ile Kullanıcı/Oyuncu'lara ait kişisel verileri gizli tutmayı, üçüncü kişilerle paylaşmamayı ve yalnızca işbu Sözleşme'nin ifası amacıyla kullanmayı taahhüt eder.
 
-13.2. Hizmet Sağlayıcı, Platform üzerinden erişim sağladığı Kullanıcı/Oyuncu iletişim bilgilerini yalnızca ilgili Hizmetin ifası amacıyla kullanabilir; bu bilgileri Platform dışı ticari amaçlarla kullanamaz veya üçüncü kişilerle paylaşamaz.
+13.2. Hizmet Sağlayıcı; bir hizmet talebi/teklifi kapsamında Platform üzerinden yalnızca ilgili **maç bilgilerine** (başlık, konum, tarih, saat, format), talebi oluşturan hesabın **sistem içi kimliğine (UUID)** ve **ücret/komisyon** bilgisine erişir; arayüz, talep sahibini "Kaptan" olarak gösterir. **Oyuncu'nun telefon numarası, e-posta adresi veya konumu Hizmet Sağlayıcı'ya aktarılmaz** ve taraflar arasında doğrudan iletişim bilgisi paylaşılmaz; koordinasyon yalnızca Platform içi bildirimler ve maç bağlantıları üzerinden sağlanır. Hizmet Sağlayıcı, Platform üzerinden eriştiği hiçbir Oyuncu verisini ilgili Hizmetin ifası dışında bir amaçla (Platform dışı ticari amaç dâhil) kullanamaz, saklayamaz veya üçüncü kişilerle paylaşamaz.
 
 13.3. Bu maddede düzenlenen gizlilik yükümlülüğü, Sözleşme'nin sona ermesinden sonra da geçerliliğini korur.
 
@@ -204,6 +204,8 @@ Bu kademeler, OYNA'nın Mesafeli Satış Sözleşmesi'nde düzenlenen iade rejim
 14.2. Hizmet Sağlayıcı, kendisine ait kişisel verilerin işlenmesine ilişkin KVKK m. 11 kapsamındaki haklarını destek@oyna.app adresine yapacağı başvuru ile kullanabilir. Hesap silme talepleri, talep tarihinden itibaren 7 (yedi) gün içinde kalıcı olarak yerine getirilir.
 
 14.3. Ayrıntılar OYNA'nın güncel Aydınlatma Metni ve Gizlilik Politikası'nda yer alır; bu metinler işbu Sözleşme'nin eki ve tamamlayıcı unsuru niteliğindedir.
+
+14.4. Oyuncu kişisel verilerinin Hizmet Sağlayıcı ile paylaşımının kapsamı, sınırları, saklama süresi ve tarafların KVKK sıfatları (ayrı/bağımsız veri sorumlusu), işbu Sözleşme'nin ayrılmaz eki olan **[Veri Paylaşım Protokolü](../veri-paylasim-protokolu.md)** ile düzenlenir. Bu belge ile işbu madde arasında bir çelişki hâlinde, Oyuncu lehine en dar (asgari) yorum ve Protokol hükümleri esas alınır.
 
 ## 15. Süre
 

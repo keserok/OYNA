@@ -150,7 +150,7 @@ b) 7.4'teki sürenin **5 (beş) iş günü daha** aşılması ve OYNA'nın bu du
 
 ## 12. KİŞİSEL VERİLERİN PAYLAŞIMI VE KVKK
 
-12.1. İşletme; platform üzerinden kendi Tesis/Saha'sına rezervasyon yapan oyuncuya ait, yalnızca **rezervasyonun ifası için gerekli** verilere (ad-soyad, telefon numarası, rezervasyon/geliş durumu bilgisi vb.) sınırlı olarak erişebilir.
+12.1. İşletme; platform üzerinden kendi Tesis/Saha'sına yapılan rezervasyonlara ilişkin olarak yalnızca **kendi sahasına ait** kayıtlara erişebilir. Uygulama içi olağan bir rezervasyonda İşletme'ye görünen veriler, **rezervasyonun ifası için gerekli asgari** kalemlerle sınırlıdır: rezervasyonu yapan hesabın **sistem içi kimliği (takma kimlik/UUID)**, oyuncunun kendisinin girdiği başlık/not (varsa), tarih-saat-süre ve ücret/kapora/ödeme durumu bilgisi. **Uygulama içi olağan bir rezervasyonda oyuncunun adı-soyadı, telefon numarası veya e-posta adresi İşletme'ye aktarılmaz;** rezervasyon kaydında yer alabilen "müşteri adı/telefonu" alanları yalnızca İşletme'nin kendi elle (walk-in) girdiği müşterilerine ilişkindir. Oyuncunun adı ve profil görseli, yalnızca oyuncunun bir maça katılması hâlinde, Platform'un kamuya açık maç görüntüleme işlevi kapsamında görünür hâle gelir. İşbu paylaşımın kapsamı, sınırları, saklama süresi ve tarafların KVKK sıfatları, işbu Sözleşme'nin ayrılmaz eki olan **[Veri Paylaşım Protokolü](../veri-paylasim-protokolu.md)** ile ayrıca ve ayrıntılı olarak düzenlenir.
 
 12.2. İşletme; bu verileri yalnızca ilgili rezervasyonun ifası amacıyla kullanacağını; OYNA platformu dışında bağımsız pazarlama, listeleme, üçüncü kişilere aktarma veya başkaca herhangi bir amaçla saklama/işleme faaliyetinde bulunmayacağını; 6698 sayılı Kişisel Verilerin Korunması Kanunu ("**KVKK**") ve ilgili ikincil mevzuata tam uyum içinde hareket edeceğini kabul, beyan ve taahhüt eder.
 
@@ -158,7 +158,7 @@ b) 7.4'teki sürenin **5 (beş) iş günü daha** aşılması ve OYNA'nın bu du
 
 12.4. İşletme; kendisine aktarılan oyuncu verileriyle ilgili bir veri ihlali/sızıntı hâlinde, bunu öğrendiği andan itibaren gecikmeksizin (en geç **24 (yirmidört) saat** içinde) OYNA'ya ve gerektiğinde ilgili mevzuat uyarınca Kişisel Verileri Koruma Kurumu'na bildirimde bulunmakla yükümlüdür.
 
-> **Uygulama Notu:** İşbu madde 12, taraflar arasındaki veri paylaşımının KVKK kapsamındaki niteliğini (ayrı veri sorumlusu / duruma göre ortak veri sorumluluğu ilişkisi) genel hatlarıyla düzenlemektedir. Maddenin nihai hukuki hâlinin, işbu Sözleşme yürürlüğe girmeden önce lisanslı bir hukuk danışmanı tarafından teyit edilmesi ve ihtiyaç duyulması hâlinde ayrı, daha detaylı bir "Veri Paylaşım Protokolü" ile desteklenmesi tavsiye edilir.
+> **Uygulama Notu:** İşbu madde 12'nin ayrıntılı uygulaması, işbu Sözleşme'nin ayrılmaz eki olan **[Veri Paylaşım Protokolü](../veri-paylasim-protokolu.md)** ile somutlaştırılmıştır; paylaşılan asgari veri kalemleri (madde 12.1 ile uyumlu), saklama süresi, veri güvenliği ve tarafların KVKK sıfatları (ayrı/bağımsız veri sorumlusu) orada düzenlenir. Madde 12 ile Protokol arasında bir çelişki bulunması hâlinde, oyuncu lehine en dar (asgari) yorum ve Protokol hükümleri esas alınır. Maddenin nihai hukuki hâlinin, işbu Sözleşme yürürlüğe girmeden önce lisanslı bir hukuk danışmanı tarafından teyit edilmesi tavsiye edilir.
 
 ---
 

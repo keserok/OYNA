@@ -238,8 +238,8 @@ Bu Kurallar Kullanım Şartları'nın ekidir; ayrıca onay gerektirmez. Esaslı 
 2. VERİLERİN KULLANIM AMACI
 Hizmetin sunulması, rezervasyon ve ödeme süreçleri, bildirimler, güvenlik ve dolandırıcılık önleme, hizmet iyileştirme.
 
-3. VERİLERİN PAYLAŞIMI
-Verileriniz; rezervasyon yaptığınız tesis ile (gerekli ölçüde), ödeme kuruluşu ile (ödeme işlemleri için), teknoloji/altyapı tedarikçilerimiz ile ve yasal yükümlülükler kapsamında yetkili mercilerle paylaşılabilir. Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz.
+3. VERİLERİN PAYLAŞIMI VE GÖRÜNÜRLÜĞÜ
+Verileriniz; rezervasyon yaptığınız tesis ile (gerekli asgari ölçüde — olağan rezervasyonda tesise ad-soyad veya telefonunuz aktarılmaz), kaleci/hakem gibi hizmet sağlayıcılar ile (ifa için gerekli asgari ölçüde; telefon/e-posta/konum aktarılmaz), ödeme kuruluşu ile (ödeme işlemleri için), teknoloji/altyapı tedarikçilerimiz ile ve yasal yükümlülükler kapsamında yetkili mercilerle paylaşılabilir. Bir maça katıldığınızda adınız ve profil görseliniz o maçı görüntüleyenlere görünür olur; saha/hizmet sağlayıcı hakkındaki değerlendirme ve yorumlarınız kamuya açık olarak gösterilebilir. Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz.
 
 4. YURT DIŞINA AKTARIM
 Bazı teknoloji tedarikçilerimizin sunucuları yurt dışında olabilir; bu hâlde aktarım, 6698 sayılı Kanun'un 9. maddesi ve ilgili mevzuata uygun güvenceler dahilinde yapılır.
@@ -284,8 +284,8 @@ Sözleşmenin kurulması/ifası, hukuki yükümlülük, meşru menfaat ve açık
 5. TOPLAMA YÖNTEMİ
 Verileriniz, uygulamayı kullanımınız sırasında elektronik ortamda, doğrudan sizden veya cihazınızdan (izninizle) elde edilir.
 
-6. AKTARIM
-Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler, teknoloji/altyapı tedarikçilerimiz (gerekirse yurt dışında yerleşik) ve yetkili kamu kurumlarına mevzuata uygun olarak aktarılabilir.
+6. AKTARIM VE GÖRÜNÜRLÜK
+Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler, kaleci/hakem gibi hizmet sağlayıcılar, teknoloji/altyapı tedarikçilerimiz (gerekirse yurt dışında yerleşik) ve yetkili kamu kurumlarına, ilgili hizmetin ifası için gerekli asgari ölçüde aktarılabilir. Ayrıca bir maça katıldığınızda adınız ve profil görseliniz o maçı görüntüleyenlere görünür olur; değerlendirme ve yorumlarınız kamuya açık olarak yayımlanabilir.
 
 7. HAKLARINIZ
 KVKK m.11 kapsamındaki haklarınızı (bilgi talep etme, düzeltme, silme, itiraz ve zararın giderilmesini isteme dahil) ${CONTACT_EMAIL} adresine yazılı başvuruda bulunarak kullanabilirsiniz.`,
