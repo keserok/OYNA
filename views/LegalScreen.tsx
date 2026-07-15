@@ -16,7 +16,7 @@ const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
 const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
 const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul';
 const CONTACT_EMAIL = 'destek@oyna.app';
-const UPDATED = '13.07.2026';
+const UPDATED = '15.07.2026';
 
 const DOCS: Record<LegalDocKey, { title: string; icon: React.ElementType; body: string }> = {
   TERMS: {
@@ -82,7 +82,7 @@ Uygulamaya üye olabilmek için asgari yaş 13'tür. 13 yaşından küçük çoc
 Bu madde, 18 yaşından küçük kullanıcıların Platformu güvenli ve hukuka uygun şekilde kullanabilmesi; buna karşılık veli/vasinin ödeme ve maça katılım gibi hukuki sonuç doğuran işlemler bakımından etkin ve gerçek bir onay/kontrol mekanizmasına sahip olması amacıyla düzenlenmiştir.
 
 4.2 Sınırlı Mod
-Kullanıcı 18 yaşından küçükse hesap otomatik olarak "sınırlı mod"da açılır: (a) gezinme, arama, profil oluşturma serbesttir; (b) ödeme gerektiren işlemler ve maça fiilen katılım, veli onayı tamamlanana kadar kapalıdır; (c) 13 yaş altı, veli tarafından oluşturulan hesaplarda mesajlaşma ve profil görünürlüğü de onay tamamlanana kadar ayrıca kısıtlanabilir.
+Kullanıcı 18 yaşından küçükse hesap otomatik olarak "sınırlı mod"da açılır: (a) gezinme, arama, profil oluşturma, ödeme gerektirmeyen maçlara katılım ve mesajlaşma serbesttir; (b) ödeme gerektiren tüm işlemler (kapora, ücretli maça katılım için slot/pay satın alımı, cüzdana bakiye yükleme dahil) veli onayı tamamlanana kadar kapalıdır — maça katılım yalnızca ödeme gerektirdiği ölçüde bu kapsamdadır; (c) 13 yaş altı, veli tarafından oluşturulan hesaplarda mesajlaşma ve profil görünürlüğü de onay tamamlanana kadar ayrıca kısıtlanabilir.
 
 4.3 Veli/Vasi Onay Süreci
 (1) Küçük kullanıcı, velisinin adı-soyadı ve iletişim bilgisini Uygulama üzerinden bildirir. (2) OYNA, veliye bildirilen kanal üzerinden bir onay bağlantısı/kod gönderir. (3) Velinin, bu bağlantı/kod aracılığıyla bizzat ve açıkça onay vermesi gerekir — küçüğün "kabul ediyorum" işaretlemesi, tek başına veli onayı yerine geçmez. (4) OYNA gerekirse ek kimlik doğrulama talep edebilir.
