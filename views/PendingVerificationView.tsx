@@ -255,13 +255,18 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           }}
         >
           <p className="text-gray-300 text-sm leading-relaxed text-center">
-            Platform güvenliği için profilin ekibimiz tarafından inceleniyor.
-            Bu işlem genellikle <span className="text-[#FACC15] font-bold">24 saat</span> sürer.
-            Onaylandığında sana bildirim göndereceğiz.
+            {/* KA-M3/KA-M2 dürüstlük: "bildirim göndereceğiz" karşılıksızdı (sağlayıcıya
+                bildirim tetikleyicisi yok). A3 ile ekran zaten kendini güncelliyor. */}
+            Platform güvenliği için başvurun ekibimiz tarafından inceleniyor —
+            genellikle <span className="text-[#FACC15] font-bold">24 saat</span> içinde
+            sonuçlanır. Sonuç bu ekranda otomatik görünür; dilediğin an “Durumu Yenile”
+            ile de kontrol edebilirsin.
           </p>
         </motion.div>
 
-        {/* Profili tamamla section */}
+        {/* İnceleme adımları — KA-M1: eski "Onayı Hızlandır" listesi dekoratifti
+            (tıklanamaz, onayı hızlandırmaz + zaten başvuruda verilen bilgiler). Yerine
+            gerçek süreci anlatan dürüst durum listesi. */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -273,17 +278,19 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           }}
         >
           <p className="text-[10px] font-black uppercase tracking-widest text-[#FACC15] mb-4">
-            Onayı Hızlandır
+            İnceleme Adımları
           </p>
           <div className="space-y-3">
             {[
-              { icon: <Camera size={16} />, text: 'Profil fotoğrafı yükle' },
-              { icon: <FileText size={16} />, text: 'Biyografi ekle' },
-              { icon: <MapPin size={16} />, text: 'Tercih ettiğin bölgeleri seç' },
+              { done: true, text: 'Başvurun alındı' },
+              { done: false, text: 'Kimlik ve bilgilerin kontrol ediliyor' },
+              { done: false, text: 'Sonuç bu ekrana düşecek' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-gray-300 text-sm">
-                <span className="text-[#FACC15] opacity-70">{item.icon}</span>
-                <span>{item.text}</span>
+                <span className={item.done ? 'text-[#39FF14]' : 'text-white/30'}>
+                  {item.done ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                </span>
+                <span className={item.done ? 'text-white' : 'text-gray-400'}>{item.text}</span>
               </div>
             ))}
           </div>
