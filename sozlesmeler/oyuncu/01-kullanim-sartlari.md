@@ -36,7 +36,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca **"OYNA"** veya **"Ş
 
 İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
 ---
 
@@ -420,7 +420,7 @@ Kullanıcı, iletişim bilgilerini güncel tutmakla yükümlüdür; güncel olma
 
 ## 18. SÖZLEŞMENİN BÜTÜNLÜĞÜ
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte, taraflar arasında Platformun kullanımına ilişkin **tam ve nihai anlaşmayı** oluşturur ve bu konudaki önceki tüm sözlü/yazılı görüşme, beyan ve anlaşmaların yerine geçer. Uygulamanın indirildiği mecraya (App Store, Google Play vb.) ait kullanım koşulları, bu Sözleşmeyi etkilemeksizin ayrıca uygulanmaya devam eder.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte, taraflar arasında Platformun kullanımına ilişkin **tam ve nihai anlaşmayı** oluşturur ve bu konudaki önceki tüm sözlü/yazılı görüşme, beyan ve anlaşmaların yerine geçer. Uygulamanın indirildiği mecraya (App Store, Google Play vb.) ait kullanım koşulları, bu Sözleşmeyi etkilemeksizin ayrıca uygulanmaya devam eder.
 
 ---
 
@@ -454,4 +454,4 @@ KVKK açık rızası veya pazarlama izni gibi, mevzuat gereği ayrı ve açık o
 
 ---
 
-*Bu belge, OYNA Platformunun oyuncu kullanıcılarına yönelik Kullanım Şartları / Üyelik Sözleşmesi'dir ve Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ile Gizlilik Politikası'nı tamamlayıcı niteliktedir.*
+*Bu belge, OYNA Platformunun oyuncu kullanıcılarına yönelik Kullanım Şartları / Üyelik Sözleşmesi'dir ve Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ile Veli Muvafakatnamesi'ni tamamlayıcı niteliktedir.*

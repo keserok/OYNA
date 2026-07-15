@@ -49,7 +49,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca "OYNA" veya "Şirket"
 1.3 Kapsam ve Kabul
 İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
 2. SÖZLEŞMENİN KONUSU VE KAPSAMI; OYNA'NIN ARACI PLATFORM NİTELİĞİ
 
@@ -164,7 +164,7 @@ OYNA; birleşme, devralma veya benzeri yeniden yapılanma hâllerinde, hak ve y�
 OYNA'nın bildirimleri, kayıtlı e-posta, Uygulama içi bildirim veya SMS/push yoluyla yapılabilir ve geçerli tebligat sayılır. Kullanıcı bildirimlerini ${CONTACT_EMAIL} adresine yazılı yapar ve iletişim bilgilerini güncel tutmakla yükümlüdür.
 
 18. SÖZLEŞMENİN BÜTÜNLÜĞÜ
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte taraflar arasındaki tam ve nihai anlaşmayı oluşturur.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte taraflar arasındaki tam ve nihai anlaşmayı oluşturur.
 
 19. BÖLÜNEBİLİRLİK
 Herhangi bir hükmün geçersiz sayılması, Sözleşmenin geri kalanının geçerliliğini etkilemez; taraflar geçersiz hükmün amacına en yakın geçerli bir hükümle değiştirilmesi için iyi niyetle çaba gösterir.
@@ -227,6 +227,8 @@ Bu Kurallar Kullanım Şartları'nın ekidir; ayrıca onay gerektirmez. Esaslı 
 
 1. TOPLANAN VERİLER
 - Kimlik/iletişim: ad, e-posta, telefon
+- Profil ve oyun tercihleri: ad-soyad, yaş aralığı, cinsiyet (opsiyonel), pozisyon ve oyun stili
+- Veli onayı (yalnızca reşit olmayan kullanıcılar): veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik No; T.C. numaraları şifrelenerek (hash) saklanır, açık tutulmaz
 - Konum: yakındaki sahaları göstermek için, yalnızca uygulamayı kullanırken ve izninizle
 - Rehber eşleştirme: açık izninizle, arkadaş bulma amacıyla; numaralar cihazda şifrelenir (hash), sunucuya yalnızca şifreli hâli gider — Ayarlar'dan kapatılabilir
 - Kullanım: rezervasyon, maç ve uygulama içi etkinlik verileri
