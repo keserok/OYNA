@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Swords, Edit3, Trash2, Eye, Plus } from 'lucide-react';
+import { Swords, Edit3, Trash2, Eye, Plus, KeyRound } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { PageShell } from '../components/PageShell';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
@@ -170,6 +170,14 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onRefresh, onNavigate 
             <p className="font-bold text-white text-sm truncate flex items-center gap-1.5">
               {m.title}
               {m.isDemo && <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wide">Demo</span>}
+              {m.visibility === 'PRIVATE' && (
+                <span
+                  title={m.privateCode ? `Katılım kodu: ${m.privateCode}` : 'Özel maç'}
+                  className="shrink-0 inline-flex items-center gap-0.5 text-[8px] font-black px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 uppercase tracking-wide"
+                >
+                  <KeyRound size={8} /> Özel{m.privateCode ? ` · ${m.privateCode}` : ''}
+                </span>
+              )}
             </p>
             <p className="text-[10px] text-gray-500 font-mono">{m.id.slice(0, 8)}…</p>
           </div>

@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, UploadCloud, Loader2 } from 'lucide-react';
+import { X, Check, UploadCloud, Loader2, KeyRound, Wand2 } from 'lucide-react';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useAppStore } from '../../../store';
 import type { MatchListing } from '../../../types';
 
 const DIFFICULTIES = ['Rahat', 'Taktiksel', 'Ciddi'] as const;
 const STATUSES = ['DRAFT', 'ACTIVE', 'LIVE', 'COMPLETED', 'CANCELLED'] as const;
+// Oyuncu uygulamasıyla birebir aynı kanonik listeler (filtre uyumu için — bkz.
+// hooks/useMatchCreate.ts FORMATS, views/MatchCreate.tsx AGE/GENDER, MatchDiscovery süre).
+const FORMATS = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'] as const;
+const AGE_GROUPS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'] as const;
+const GENDERS = ['Karma', 'Erkek', 'Kadın'] as const;
+const DURATIONS = ['60 Dakika', '90 Dakika', '120 Dakika'] as const;
+
+/** Formattan toplam kişi sayısı: '7v7' → 14. Oyuncu fiyat motoruyla aynı. */
+const headcountFromFormat = (fmt: string): number => {
+  const perSide = parseInt(fmt.split('v')[0], 10);
+  return Number.isFinite(perSide) && perSide > 0 ? perSide * 2 : 14;
+};
 
 interface Props {
   open: boolean;
@@ -29,6 +41,11 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
     minRating: '3.0',
     status: 'ACTIVE' as NonNullable<MatchListing['status']>,
     format: '7v7',
+    ageGroup: 'Tümü',
+    duration: '60 Dakika',
+    gender: 'Karma',
+    visibility: 'OPEN' as NonNullable<MatchListing['visibility']>,
+    privateCode: '',
     image: '',
     pitchId: '',
   });
@@ -47,6 +64,11 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         minRating: String(match.minRating),
         status: match.status || 'ACTIVE',
         format: match.format || '7v7',
+        ageGroup: match.ageGroup || 'Tümü',
+        duration: match.duration || '60 Dakika',
+        gender: match.gender || 'Karma',
+        visibility: match.visibility || 'OPEN',
+        privateCode: match.privateCode || '',
         image: match.image,
         pitchId: match.pitchId || '',
       });
@@ -61,16 +83,30 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         minRating: '3.0',
         status: 'ACTIVE',
         format: '7v7',
+        ageGroup: 'Tümü',
+        duration: '60 Dakika',
+        gender: 'Karma',
+        visibility: 'OPEN',
+        privateCode: '',
         image: '',
         pitchId: '',
       });
     }
   }, [open, mode, match]);
 
+  /** Seçili sahanın toplam ücretini formata göre kişi başına böler (×1.05 servis payı). */
+  const autoPrice = () => {
+    const p = adminPitches.find((x) => x.id === f.pitchId);
+    if (!p || !p.totalPrice) return;
+    const perPerson = Math.ceil((p.totalPrice / headcountFromFormat(f.format)) * 1.05);
+    if (perPerson > 0) setF((prev) => ({ ...prev, price: String(perPerson) }));
+  };
+
   const submit = async () => {
     if (!f.title.trim() || !f.location.trim()) return;
     setSaving(true);
     try {
+      const isPrivate = f.visibility === 'PRIVATE';
       await onSave({
         ...(mode === 'edit' && match ? { id: match.id, slots: match.slots, awaySlots: match.awaySlots, missingPositions: match.missingPositions } : {}),
         title: f.title.trim(),
@@ -82,6 +118,12 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         minRating: Number(f.minRating) || 3,
         status: f.status,
         format: f.format,
+        ageGroup: f.ageGroup,
+        duration: f.duration,
+        gender: f.gender,
+        visibility: f.visibility,
+        // Boş kod + PRIVATE → sunucu 6 haneli kod üretir. OPEN → kod yazılmaz.
+        privateCode: isPrivate ? (f.privateCode.trim().toUpperCase() || undefined) : undefined,
         // Boş → sunucu tetikleyicisi maçın sahasının fotoğrafını otomatik yazar.
         image: f.image.trim(),
         badges: [f.difficulty],
@@ -145,6 +187,15 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
               </Field>
               <Field label="Katılım (₺)">
                 <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className={inputCls} />
+                {f.pitchId && (
+                  <button
+                    type="button"
+                    onClick={autoPrice}
+                    className="mt-1 flex items-center gap-1 text-[9px] font-bold text-cyan-400 hover:text-cyan-300 uppercase tracking-wide"
+                  >
+                    <Wand2 size={10} /> Otomatik (saha ÷ kişi × 1.05)
+                  </button>
+                )}
               </Field>
               <Field label="Min. Rating">
                 <input type="number" step="0.1" value={f.minRating} onChange={(e) => setF({ ...f, minRating: e.target.value })} className={inputCls} />
@@ -158,10 +209,49 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
               </Field>
               <Field label="Format">
                 <select value={f.format} onChange={(e) => setF({ ...f, format: e.target.value })} className={inputCls}>
-                  {['5v5', '7v7', '8v8', '11v11'].map((v) => <option key={v} value={v}>{v}</option>)}
+                  {FORMATS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="Yaş Grubu">
+                <select value={f.ageGroup} onChange={(e) => setF({ ...f, ageGroup: e.target.value })} className={inputCls}>
+                  {AGE_GROUPS.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </Field>
+              <Field label="Süre">
+                <select value={f.duration} onChange={(e) => setF({ ...f, duration: e.target.value })} className={inputCls}>
+                  {DURATIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </Field>
+              <Field label="Cinsiyet">
+                <select value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })} className={inputCls}>
+                  {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </Field>
+              <Field label="Görünürlük">
+                <select
+                  value={f.visibility}
+                  onChange={(e) => setF({ ...f, visibility: e.target.value as NonNullable<MatchListing['visibility']> })}
+                  className={inputCls}
+                >
+                  <option value="OPEN">Açık (herkese)</option>
+                  <option value="PRIVATE">Özel (kodla)</option>
                 </select>
               </Field>
             </div>
+            {f.visibility === 'PRIVATE' && (
+              <Field label="Özel Katılım Kodu">
+                <div className="relative">
+                  <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    value={f.privateCode}
+                    onChange={(e) => setF({ ...f, privateCode: e.target.value.toUpperCase().replace(/\s+/g, '').slice(0, 12) })}
+                    className={`${inputCls} pl-9 font-mono tracking-widest uppercase`}
+                    placeholder="Boş bırak → otomatik üret"
+                  />
+                </div>
+                <p className="mt-1 text-[9px] text-gray-500">Boş bırakılırsa sunucu 6 haneli benzersiz kod üretir. Mevcut kodu buradan değiştirebilirsin.</p>
+              </Field>
+            )}
             {mode === 'edit' && (
               <Field label="Durum">
                 <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as typeof f.status })} className={inputCls}>

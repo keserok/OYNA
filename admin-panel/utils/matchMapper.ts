@@ -178,8 +178,9 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
     homeScore: match.homeScore,
     awayScore: match.awayScore,
     scoreEnteredAt: match.scoreEnteredAt,
-    // FAZ 3
+    // FAZ 3 + admin DNA
     visibility: match.visibility || 'OPEN',
+    private_code: match.privateCode ?? null,
     pitch_id: match.pitchId || null,
   };
 }
