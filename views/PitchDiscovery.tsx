@@ -16,13 +16,18 @@ import { requestDeviceLocation } from '../services/locationService';
 import { openDirections, isIOSPlatform, appleMapsDirectionsUrl, googleMapsDirectionsUrl } from '../utils/directions';
 import { getHaversineDistance } from '../utils/geo';
 import { ORDU_DISTRICTS } from '../utils/orduData';
-import { TURKEY_REGIONS } from '../data/turkeyRegions';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
-import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO } from '../services/pitchBookingService';
+import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
+import { resolveWorkingHoursForDate } from '../shared/workingHours';
+import {
+  derivePitchFilterOptions,
+  filterAndSortPitches,
+  type PitchSortOrder,
+} from '../services/pitchFilterService';
 import {
   getAverageTariffPrice,
   mapDbTariffsToPitchTariffs,
@@ -85,6 +90,8 @@ interface DbPitchRow {
   owner_id?: string | null;
   is_published?: boolean | null;
   is_featured?: boolean | null;
+  flash_deals_enabled?: boolean | null;
+  show_availability_badge?: boolean | null;
   working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
   courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
@@ -162,6 +169,7 @@ const mapDbPitchToUiPitch = (
     ownerId: row.owner_id ?? undefined,
     isPublished: row.is_published !== false,
     isFeatured: row.is_featured === true,
+    showAvailabilityBadge: row.show_availability_badge === true,
     // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
     // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
     workingHoursRaw: wh ?? null,
@@ -191,6 +199,10 @@ interface MapViewProps {
   regionBoundaries: GeoJSON.FeatureCollection | null;
 }
 
+// Zoom eşiği: altında fiyatlar gizlenir, sahalar yalnız nokta olarak görünür
+// (dokununca yakınlaşır); üstünde seçilebilir fiyat balonları gösterilir.
+const PIN_BUBBLE_ZOOM = 12.5;
+
 // Fiyat pini — react-map-gl Marker (anchor="bottom" → tip TAM koordinatta).
 // Maplibre pini GPU'da konumlar; zoom/pan'de native sabit (kayma yok).
 const PricePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; selected: boolean; onSelect: (p: Pitch) => void }) => {
@@ -210,6 +222,21 @@ const PricePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; sele
   );
 });
 
+// Nokta pini — uzak zoom görünümü. Fiyat yok; dokununca harita sahaya yakınlaşır
+// ve pinler seçilebilir fiyat balonlarına dönüşür (aşamalı keşif).
+const DotPin = React.memo(({ pitch, selected, onZoomInto }: { pitch: Pitch; selected: boolean; onZoomInto: (p: Pitch) => void }) => (
+  <MapMarker longitude={pitch.coordinates!.lng} latitude={pitch.coordinates!.lat} anchor="center">
+    <div
+      className={`oyna-mldot${selected ? ' selected' : ''}`}
+      role="button"
+      aria-label={`${pitch.name} — yakınlaş`}
+      onClick={(e) => { e.stopPropagation(); onZoomInto(pitch); }}
+    >
+      <div className="dot-core" />
+    </div>
+  </MapMarker>
+));
+
 const MapViewComponent = ({
   pitches, selectedPitch, onPitchSelect, onOpenDetail, center, userLocation,
   onLocate, onLocateError, regionBoundaries,
@@ -222,6 +249,38 @@ const MapViewComponent = ({
   const [locating, setLocating] = useState(false);
   // iOS: Apple/Google seçici; Android/Web doğrudan Google.
   const [directionsFor, setDirectionsFor] = useState<Pitch | null>(null);
+
+  // Zoom'a bağlı pin modu: eşik altı nokta (fiyat gizli), üstü fiyat balonu.
+  const [bubbleMode, setBubbleMode] = useState(true); // initialViewState zoom=13 ≥ eşik
+
+  // Pin ölçeği React render'ı OLMADAN CSS değişkeniyle güncellenir — zoom
+  // sırasında her karede setState jank üretirdi; CSS var'ı GPU'da ucuz.
+  const applyPinScale = useCallback((zoom: number) => {
+    const el = mapRef.current?.getMap()?.getContainer();
+    if (!el) return;
+    const dotScale = Math.min(1, Math.max(0.5, 0.5 + (zoom - 8) * (0.5 / 4.5)));
+    const bubbleScale = Math.min(1, Math.max(0.88, 0.88 + (zoom - PIN_BUBBLE_ZOOM) * 0.08));
+    el.style.setProperty('--oyna-dot-scale', dotScale.toFixed(3));
+    el.style.setProperty('--oyna-bubble-scale', bubbleScale.toFixed(3));
+  }, []);
+
+  const handleZoomChange = useCallback((zoom: number) => {
+    applyPinScale(zoom);
+    setBubbleMode(zoom >= PIN_BUBBLE_ZOOM); // değer değişmezse React render atlar
+  }, [applyPinScale]);
+
+  // Nokta pinine dokunuş: seçim değil, sahaya yumuşak yakınlaşma — balonlar
+  // görünür olduğu anda pinler seçilebilir hale gelir (aşamalı keşif).
+  const zoomIntoPitch = useCallback((p: Pitch) => {
+    const map = mapRef.current;
+    if (!p.coordinates || !map) return;
+    isFlyingRef.current = true;
+    map.flyTo({
+      center: [p.coordinates.lng, p.coordinates.lat],
+      zoom: Math.max(map.getZoom() + 1.6, PIN_BUBBLE_ZOOM + 1.2),
+      duration: 650,
+    });
+  }, []);
 
   const handleDirections = (p: Pitch) => {
     if (!p.coordinates) return;
@@ -371,7 +430,12 @@ const MapViewComponent = ({
         touchZoomRotate={true}
         style={{ width: '100%', height: '100%' }}
         onClick={() => onPitchSelect(null)}
-        onLoad={() => { mapReadyRef.current = true; fitToBoundaries(); }}
+        onZoom={(e) => handleZoomChange(e.viewState.zoom)}
+        onLoad={() => {
+          mapReadyRef.current = true;
+          handleZoomChange(mapRef.current?.getZoom() ?? 13);
+          fitToBoundaries();
+        }}
       >
         <AttributionControl compact position="bottom-right" />
 
@@ -392,7 +456,11 @@ const MapViewComponent = ({
         )}
 
         {mapPitches.map((pitch) => (
-          <PricePin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onSelect={selectFromPin} />
+          bubbleMode ? (
+            <PricePin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onSelect={selectFromPin} />
+          ) : (
+            <DotPin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onZoomInto={zoomIntoPitch} />
+          )
         ))}
       </MapGL>
 
@@ -646,7 +714,8 @@ const PitchCard: React.FC<{
             )}
           </span>
         </div>
-        {pitch.todayAvailableCount !== undefined && (
+        {/* Müsaitlik rozeti: yalnız admin show_availability_badge açtıysa gösterilir */}
+        {pitch.showAvailabilityBadge && pitch.todayAvailableCount !== undefined && (
           pitch.todayAvailableCount > 0 ? (
             <span className="px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black">
               Bugün {pitch.todayAvailableCount} saat müsait
@@ -722,7 +791,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         }
       });
 
-      const mapped = rows.map((r) => mapDbPitchToUiPitch(r, flashByPitch[r.id]));
+      // Flash rozet/indirimli fiyat YALNIZ admin flash_deals_enabled açtıysa
+      // vitrine yansır (aksi halde ham fiyat gösterilir, "İndirimli" filtresi saymaz).
+      const mapped = rows.map((r) =>
+        mapDbPitchToUiPitch(r, r.flash_deals_enabled === true ? flashByPitch[r.id] : undefined),
+      );
       setRealPitches(mapped);
       void loadTodayAvailability(mapped);
     } catch (err) {
@@ -735,34 +808,59 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   }, []);
 
   /**
-   * "Bugün X saat müsait" rozeti (Karar #7): tüm sahaların bugünkü rezervasyonları
-   * TEK sorguda çekilir; bir slot, tesisteki kortlardan en az biri boşsa müsait sayılır.
+   * "Bugün X saat müsait" rozeti (Karar #7): doluluk kişisel-veri-içermeyen
+   * get_showcase_availability RPC'sinden gelir (doğrudan pitch_bookings SELECT'i
+   * RLS gereği yalnız KULLANICININ KENDİ rezervasyonlarını verir → rozet yanlış
+   * sayardı). Çalışma saati gün-bazlı çözülür (detay sayfasıyla aynı kaynak) ve
+   * sahibin kapattığı slotlar (CLOSURE) dolu sayılır. Bir slot, tesisteki
+   * kortlardan en az biri boş VE kapatılmamışsa müsait sayılır.
    */
   const loadTodayAvailability = async (pitches: Pitch[]) => {
     try {
       const today = todayISO();
-      const { data, error } = await supabase
-        .from('pitch_bookings')
-        .select('pitch_id, court_id, start_time, status')
-        .eq('booking_date', today)
-        .neq('status', 'CANCELLED');
-      if (error) throw error;
-      const byPitch: Record<string, Record<string, number>> = {};
-      (data ?? []).forEach((b: { pitch_id: string; start_time: string }) => {
-        const t = b.start_time.slice(0, 5);
-        byPitch[b.pitch_id] = byPitch[b.pitch_id] ?? {};
-        byPitch[b.pitch_id][t] = (byPitch[b.pitch_id][t] ?? 0) + 1;
+      const rows = await fetchShowcaseAvailability(today);
+
+      // Saha → saat(HH:MM) → dolu kort sayısı  ve  saha → tümüyle kapatılmış saatler
+      const bookedByPitch: Record<string, Record<string, number>> = {};
+      const closedByPitch: Record<string, Set<string>> = {};
+      rows.forEach((r) => {
+        if (r.kind === 'BOOKING') {
+          const t = r.start_time;
+          (bookedByPitch[r.pitch_id] ??= {})[t] = (bookedByPitch[r.pitch_id]?.[t] ?? 0) + 1;
+        } else {
+          // Kapanış: court_id null ise TÜM kortlar kapalı → o saati tümüyle işaretle
+          const start = parseInt(r.start_time.split(':')[0], 10);
+          const end = r.end_time ? parseInt(r.end_time.split(':')[0], 10) : start + 1;
+          const set = (closedByPitch[r.pitch_id] ??= new Set<string>());
+          for (let h = start; h < (end > start ? end : start + 1); h++) {
+            set.add(`${String(h % 24).padStart(2, '0')}:00`);
+          }
+        }
       });
-      const nowHour = new Date().getHours();
+
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const result: Record<string, number> = {};
       pitches.forEach((p) => {
         const courtCount = Math.max(1, p.courts?.length ?? 1);
-        const ranges = generateSlotRanges(p.workingHours);
-        const booked = byPitch[p.id] ?? {};
+        const wh = resolveWorkingHoursForDate(
+          (p as { workingHoursRaw?: unknown }).workingHoursRaw ?? p.workingHours,
+          today,
+        );
+        if (wh.closed) { result[p.id] = 0; return; }
+        const ranges = generateSlotRanges(wh);
+        const booked = bookedByPitch[p.id] ?? {};
+        const closed = closedByPitch[p.id];
         result[p.id] = ranges.filter((r) => {
-          const h = parseInt(r.startTime.split(':')[0], 10);
-          const isFuture = h >= nowHour || h < 6; // gece 00-06 ertesi güne sarkan saatler
-          return isFuture && (booked[r.startTime] ?? 0) < courtCount;
+          const [h, m] = r.startTime.split(':').map(Number);
+          // Gece yarısını aşan pencerede (ör. 09:00-02:00) küçük saatler ertesi güne
+          // sarkar; onları "geçmiş" sayma. Aynı-gün saatte başlangıç geçmişse ele.
+          const slotMin = h * 60 + m;
+          const isNightWrap = h < 6;
+          const isFuture = isNightWrap || slotMin >= nowMinutes;
+          if (!isFuture) return false;
+          if (closed?.has(r.startTime)) return false;
+          return (booked[r.startTime] ?? 0) < courtCount;
         }).length;
       });
       setTodayAvailability(result);
@@ -817,17 +915,42 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     };
   }, [selectedPitch]);
 
-  // Filters
-  const [filters, setFilters] = useState({
+  // ── Filtreler ───────────────────────────────────────────────────────────
+  // maxPrice=null → fiyat limiti yok (varsayılan). Sınırlar gerçek veriden
+  // türetilir (priceBounds); sabit 4000₺ tavanı kaldırıldı.
+  const [filters, setFilters] = useState<{
+    district: string;
+    minRating: number;
+    maxPrice: number | null;
+    hasAmenities: string[];
+    type: 'Tümü' | 'Kapalı' | 'Açık';
+  }>({
     district: 'Tümü',
     minRating: 0,
-    maxPrice: 4000,
-    hasAmenities: [] as string[],
+    maxPrice: null,
+    hasAmenities: [],
     type: 'Tümü',
-    availability: 'Tümü' as 'Tümü' | 'Bugün',
   });
-  const [sortOrder, setSortOrder] = useState<'DEFAULT' | 'PRICE_ASC' | 'RATING_DESC' | 'DISTANCE_ASC'>('DEFAULT');
+  const [sortOrder, setSortOrder] = useState<PitchSortOrder>('DEFAULT');
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
+
+  const resetAllFilters = useCallback(() => {
+    setFilters({ district: 'Tümü', minRating: 0, maxPrice: null, hasAmenities: [], type: 'Tümü' });
+    setSortOrder('DEFAULT');
+    setOnlyDiscounted(false);
+  }, []);
+
+  // Header'daki filtre rozetinde gösterilen aktif filtre sayısı (sıralama hariç).
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (filters.district !== 'Tümü') n += 1;
+    if (filters.maxPrice != null) n += 1;
+    if (filters.minRating > 0) n += 1;
+    if (filters.type !== 'Tümü') n += 1;
+    n += filters.hasAmenities.length;
+    if (onlyDiscounted) n += 1;
+    return n;
+  }, [filters, onlyDiscounted]);
 
   // ── Kalıcı favoriler (Karar #3-4) ─────────────────────────────────────────
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -1066,70 +1189,34 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     }
   };
 
-  const districts = useMemo(() => ['Tümü', ...Array.from(new Set(sourcePitches.map(p => p.district).filter(Boolean)))], [sourcePitches]);
+  // ── Filtre seçenekleri GERÇEK veriden türetilir (tek kaynak: saf modül) ────
+  const { districtOptions, priceBounds, amenityOptions, typeCounts, discountCount } = useMemo(
+    () => derivePitchFilterOptions(sourcePitches),
+    [sourcePitches],
+  );
 
-  // Çoklu bölge üyeliği: seçili bölgelerden herhangi biri sahayı kapsıyor mu?
-  // ilçe seçiliyse ilçe eşleşir; il geneli seçiliyse il (ya da o ilin ilçeleri).
-  const pitchInSelectedRegions = useCallback((p: { city?: string; district: string }) => {
-    if (selectedRegions.length === 0) return true;
-    return selectedRegions.some(r => {
-      if (r.district) return p.district === r.district;
-      if (p.city) return p.city === r.city;
-      const cityDistricts = TURKEY_REGIONS.find(t => t.city === r.city)?.districts ?? [];
-      return cityDistricts.includes(p.district);
-    });
-  }, [selectedRegions]);
+  // Bölge kapsamı (il/ilçe) — saf modülün eşleştiricisiyle aynı davranış.
+  const selectedRegionCriteria = useMemo(
+    () => selectedRegions.map(r => ({ city: r.city, district: r.district })),
+    [selectedRegions],
+  );
 
-  const filteredPitches = useMemo(() => {
-    let result = sourcePitches.filter(p => {
-      if (p.isApproved === false) return false;
-      if (favOnly && !favorites.has(p.id)) return false;
-      if (onlyDiscounted && !p.flashDiscount) return false;
-      if (!pitchInSelectedRegions(p)) return false;
-
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.district.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesDistrict = filters.district === 'Tümü' || p.district === filters.district;
-      const matchesRating = p.rating >= filters.minRating;
-      const matchesPrice = p.totalPrice <= filters.maxPrice;
-      const matchesAvailability = filters.availability !== 'Bugün' || (p.todayAvailableCount ?? 1) > 0;
-
-      let matchesType = true;
-      if (filters.type === 'Kapalı') {
-        matchesType = p.courts?.some(c => c.type === 'CLOSED') || false;
-      } else if (filters.type === 'Açık') {
-        matchesType = p.courts?.some(c => c.type === 'OPEN') || false;
-      }
-
-      return matchesSearch && matchesDistrict && matchesRating && matchesPrice && matchesType && matchesAvailability;
-    }).map(p => {
-      if (p.coordinates?.lat && p.coordinates?.lng) {
-        const dist = getHaversineDistance(mapCenter[0], mapCenter[1], p.coordinates.lat, p.coordinates.lng);
-        return {
-          ...p,
-          distance: `${dist.toFixed(1)} km`
-        };
-      }
-      return p;
-    });
-
-    if (sortOrder === 'PRICE_ASC') {
-      result.sort((a, b) => a.totalPrice - b.totalPrice);
-    } else if (sortOrder === 'RATING_DESC') {
-      result.sort((a, b) => b.rating - a.rating);
-    } else if (sortOrder === 'DISTANCE_ASC') {
-      result.sort((a, b) => {
-        const da = parseFloat(a.distance) || 999;
-        const db = parseFloat(b.distance) || 999;
-        return da - db;
-      });
-    }
-
-    // Öne çıkanlar her sıralamada üstte (Karar #23)
-    result.sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
-
-    return result;
-  }, [sourcePitches, searchQuery, filters, sortOrder, mapCenter, favOnly, favorites, onlyDiscounted, pitchInSelectedRegions]);
+  // Filtre + arama + sıralama tek doğru kaynaktan (services/pitchFilterService).
+  const filteredPitches = useMemo(
+    () => filterAndSortPitches({
+      pitches: sourcePitches,
+      searchQuery,
+      filters,
+      sortOrder,
+      favorites,
+      favOnly,
+      onlyDiscounted,
+      selectedRegions: selectedRegionCriteria,
+      mapCenter,
+      userLocation,
+    }),
+    [sourcePitches, searchQuery, filters, sortOrder, mapCenter, userLocation, favOnly, favorites, onlyDiscounted, selectedRegionCriteria],
+  );
 
   // Haritanın pin kaynağı: bölge seçiliyse bölge-filtreli sahalar; bölge yoksa
   // GÜNCEL KONUM çevresi (30 km); konum da yoksa mevcut liste (kullanıcı kararı).
@@ -1143,10 +1230,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     }
     return withCoords;
   }, [filteredPitches, selectedRegions, userLocation]);
-
-  const locationLabel = filters.district !== 'Tümü'
-    ? `${filters.district} çevresi`
-    : userLocation ? 'Yakınımdaki sahalar' : 'Ordu çevresi';
 
   // ── Takvim ızgarası (Karar #12: bugün + 90 gün) ────────────────────────────
   const calendarWeeks = useMemo(() => {
@@ -1204,15 +1287,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 <ArrowLeft size={20} />
               </button>
             )}
-            <button
-              onClick={() => setShowFilters(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 active:scale-95 transition-transform"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shadow-[0_0_7px_#39FF14]" />
-              <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white/80 truncate">{locationLabel}</span>
-              <ChevronRight size={10} className="rotate-90 text-white/60" />
-            </button>
-            <h1 className="mt-2 text-[32px] font-black italic uppercase tracking-[-0.04em] leading-[0.9]">
+            <h1 className="mt-1 text-[32px] font-black italic uppercase tracking-[-0.04em] leading-[0.9]">
               Saha<br />Vitrini
             </h1>
           </div>
@@ -1233,13 +1308,22 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               </button>
             </div>
             <div className="flex gap-2">
-              {/* Favori filtresi: yalnızca favorileri süzer, sayaç gösterir */}
+              {/* Favori filtresi: kapalıyken yıldız BOŞ, açılınca dolar ve yalnız favoriler listelenir */}
               <button
                 onClick={() => setFavOnly(v => !v)}
-                title="Favori sahalar"
-                className={`relative w-10 h-10 rounded-[13px] flex items-center justify-center transition-all bg-[#FFFF00]/10 border ${favOnly ? 'border-[#FFFF00] shadow-[0_0_14px_rgba(255,255,0,0.4)]' : 'border-[#FFFF00]/40'}`}
+                title={favOnly ? 'Tüm sahaları göster' : 'Favori sahaları göster'}
+                aria-pressed={favOnly}
+                className={`relative w-10 h-10 rounded-[13px] flex items-center justify-center transition-all border ${
+                  favOnly
+                    ? 'bg-[#FFFF00]/15 border-[#FFFF00] shadow-[0_0_14px_rgba(255,255,0,0.4)]'
+                    : 'bg-white/5 border-white/10'
+                }`}
               >
-                <Star size={19} className="fill-[#FFFF00] text-[#FFFF00]" />
+                <Star
+                  size={19}
+                  strokeWidth={2}
+                  className={`transition-colors ${favOnly ? 'fill-[#FFFF00] text-[#FFFF00]' : 'fill-transparent text-[#FFFF00]/80'}`}
+                />
                 {favorites.size > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#39FF14] text-black text-[9px] font-black flex items-center justify-center border-2 border-[#0A0E14]">
                     {favorites.size}
@@ -1249,9 +1333,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <button
                 onClick={() => setShowFilters(true)}
                 title="Filtrele"
-                className="w-10 h-10 rounded-[13px] bg-white/5 border border-white/10 flex items-center justify-center"
+                className={`relative w-10 h-10 rounded-[13px] border flex items-center justify-center transition-all ${
+                  activeFilterCount > 0 ? 'bg-[#FFFF00]/15 border-[#FFFF00]/60 text-[#FFFF00]' : 'bg-white/5 border-white/10'
+                }`}
               >
                 <Filter size={17} />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#FFFF00] text-black text-[9px] font-black flex items-center justify-center border-2 border-[#0A0E14]">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -1271,39 +1362,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           />
         </div>
 
-        {/* Hızlı filtre çipleri (Karar #5) */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pt-3 -mx-6 px-6">
-          <button
-            onClick={() => setFilters(f => ({ ...f, availability: f.availability === 'Bugün' ? 'Tümü' : 'Bugün' }))}
-            className={`shrink-0 px-4 py-2 rounded-full text-[11px] font-black transition-all border ${filters.availability === 'Bugün' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.04] text-white/70 border-white/10'}`}
-          >
-            Bu akşam müsait
-          </button>
-          <button
-            onClick={() => setFilters(f => ({ ...f, type: f.type === 'Kapalı' ? 'Tümü' : 'Kapalı' }))}
-            className={`shrink-0 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${filters.type === 'Kapalı' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.04] text-white/70 border-white/10'}`}
-          >
-            Kapalı saha
-          </button>
-          <button
-            onClick={() => setSortOrder(s => s === 'DISTANCE_ASC' ? 'DEFAULT' : 'DISTANCE_ASC')}
-            className={`shrink-0 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${sortOrder === 'DISTANCE_ASC' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.04] text-white/70 border-white/10'}`}
-          >
-            En yakın
-          </button>
-          <button
-            onClick={() => setOnlyDiscounted(v => !v)}
-            className={`shrink-0 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${onlyDiscounted ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.04] text-white/70 border-white/10'}`}
-          >
-            İndirimli
-          </button>
-          <button
-            onClick={() => setSortOrder(s => s === 'PRICE_ASC' ? 'DEFAULT' : 'PRICE_ASC')}
-            className={`shrink-0 px-4 py-2 rounded-full text-[11px] font-extrabold transition-all border ${sortOrder === 'PRICE_ASC' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.04] text-white/70 border-white/10'}`}
-          >
-            ₺ Uygun fiyat
-          </button>
-        </div>
       </header>
 
       {/* Main Content */}
@@ -1366,9 +1424,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   <p className="text-gray-500 text-xs mt-2">Filtreleri temizleyip tekrar dene.</p>
                   <button
                     onClick={() => {
-                      setFilters({ district: 'Tümü', minRating: 0, maxPrice: 4000, hasAmenities: [], type: 'Tümü', availability: 'Tümü' });
+                      resetAllFilters();
                       setSearchQuery('');
-                      setOnlyDiscounted(false);
                       setFavOnly(false);
                     }}
                     className="mt-6 text-[#FFFF00] text-[10px] font-black uppercase tracking-widest underline"
@@ -1380,7 +1437,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             ) : null}
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-320px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+          <div className="w-full h-[calc(100vh-250px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
             <MapViewComponent
               pitches={mapPins}
               selectedPitch={selectedPitch}
@@ -1396,7 +1453,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         )}
       </main>
 
-      {/* Filter Modal */}
+      {/* ── Filtre sheet: TÜM seçenekler gerçek vitrin verisinden türetilir ── */}
       <AnimatePresence>
         {showFilters && (
           <div className="fixed inset-0 z-[100] flex items-end justify-center">
@@ -1412,57 +1469,145 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-md bg-[#161B22] border-t border-white/10 rounded-t-[40px] p-8 shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar"
+              className="relative w-full max-w-md bg-[#161B22] border-t border-white/10 rounded-t-[36px] shadow-2xl max-h-[88vh] flex flex-col overflow-hidden"
             >
-              <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mb-8"></div>
-
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">FİLTRELE</h2>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="w-10 h-10 bg-[#0A0E14] rounded-full flex items-center justify-center text-gray-400"
-                >
-                  <X size={20} />
-                </button>
+              {/* Başlık — sabit */}
+              <div className="shrink-0 px-7 pt-4 pb-2">
+                <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mb-5" />
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">FİLTRELE</h2>
+                  <div className="flex items-center gap-2">
+                    {(activeFilterCount > 0 || sortOrder !== 'DEFAULT') && (
+                      <button
+                        onClick={resetAllFilters}
+                        className="px-3 h-9 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/70 active:scale-95 transition-transform"
+                      >
+                        Temizle
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="w-9 h-9 bg-[#0A0E14] rounded-full flex items-center justify-center text-gray-400"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-8">
-                {/* District Filter */}
+              {/* İçerik — kaydırılır */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar px-7 pt-5 pb-6 space-y-8">
+                {/* Sıralama */}
                 <div>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">BÖLGE SEÇİMİ</p>
-                  <div className="flex flex-wrap gap-2">
-                    {districts.map(d => (
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">SIRALAMA</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['DEFAULT', 'Önerilen'],
+                      ['DISTANCE_ASC', 'En Yakın'],
+                      ['PRICE_ASC', 'En Uygun Fiyat'],
+                      ['RATING_DESC', 'En Yüksek Puan'],
+                    ] as const).map(([key, label]) => (
                       <button
-                        key={d}
-                        onClick={() => setFilters({ ...filters, district: d })}
-                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === d ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        key={key}
+                        onClick={() => setSortOrder(key)}
+                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all border ${sortOrder === key ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                       >
-                        {d.toUpperCase()}
+                        {label}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Price Filter */}
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">MAKSİMUM FİYAT</p>
-                    <span className="text-sm font-black text-[#FFFF00]">{filters.maxPrice}₺</span>
+                {/* Fırsat: indirimli sahalar (sayaç gerçek veriden; 0 ise devre dışı) */}
+                {discountCount > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">FIRSAT</p>
+                    <button
+                      onClick={() => setOnlyDiscounted(v => !v)}
+                      className={`w-full py-3 px-3 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border ${onlyDiscounted ? 'bg-[#FF3B30] text-white border-[#FF3B30]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                    >
+                      🔥 Yalnızca İndirimli · {discountCount}
+                    </button>
                   </div>
-                  <input
-                    type="range"
-                    min="500"
-                    max="4000"
-                    step="100"
-                    value={filters.maxPrice}
-                    onChange={(e) => setFilters({ ...filters, maxPrice: parseInt(e.target.value) })}
-                    className="w-full h-2 bg-[#0A0E14] rounded-lg appearance-none cursor-pointer accent-[#FFFF00]"
-                  />
+                )}
+
+                {/* Bölge — vitrindeki gerçek ilçeler + tesis sayısı */}
+                {districtOptions.length > 1 && (
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">BÖLGE</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setFilters({ ...filters, district: 'Tümü' })}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === 'Tümü' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                      >
+                        TÜMÜ · {sourcePitches.length}
+                      </button>
+                      {districtOptions.map(({ name: d, count }) => (
+                        <button
+                          key={d}
+                          onClick={() => setFilters({ ...filters, district: filters.district === d ? 'Tümü' : d })}
+                          className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all border ${filters.district === d ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        >
+                          {d.toUpperCase()} · {count}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Saha tipi — gerçek kort sayılarıyla; hiç yoksa devre dışı */}
+                <div>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">SAHA TİPİ</p>
+                  <div className="flex gap-2">
+                    {(['Tümü', 'Kapalı', 'Açık'] as const).map(t => {
+                      const count = t === 'Tümü' ? sourcePitches.length : typeCounts[t];
+                      const disabled = t !== 'Tümü' && count === 0 && filters.type !== t;
+                      return (
+                        <button
+                          key={t}
+                          disabled={disabled}
+                          onClick={() => setFilters({ ...filters, type: filters.type === t ? 'Tümü' : t })}
+                          className={`flex-1 py-3 rounded-xl transition-all border disabled:opacity-35 ${filters.type === t ? 'bg-[#FFFF00] border-[#FFFF00]' : 'bg-[#0A0E14] border-white/5'}`}
+                        >
+                          <span className={`block text-[10px] font-black uppercase ${filters.type === t ? 'text-black' : 'text-gray-400'}`}>{t}</span>
+                          <span className={`block text-[9px] font-bold mt-0.5 ${filters.type === t ? 'text-black/60' : 'text-gray-600'}`}>{count} tesis</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Rating Filter */}
+                {/* Fiyat — gerçek min/max aralığı; en sağ = limitsiz */}
+                {priceBounds && (
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ORT. SAATLİK FİYAT</p>
+                      <span className="text-sm font-black text-[#FFFF00]">
+                        {filters.maxPrice == null ? 'Tümü' : `≤ ${filters.maxPrice}₺`}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={priceBounds.min}
+                      max={priceBounds.max}
+                      step={50}
+                      value={filters.maxPrice ?? priceBounds.max}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setFilters({ ...filters, maxPrice: v >= priceBounds.max ? null : v });
+                      }}
+                      className="w-full h-2 bg-[#0A0E14] rounded-lg appearance-none cursor-pointer accent-[#FFFF00]"
+                    />
+                    <div className="flex justify-between mt-1.5 text-[9px] font-bold text-white/30">
+                      <span>₺{priceBounds.min}</span>
+                      <span>₺{priceBounds.max}+</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Puan */}
                 <div>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">MİNİMUM PUAN</p>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">MİNİMUM PUAN</p>
                   <div className="flex gap-2">
                     {[0, 3.5, 4.0, 4.5].map(r => (
                       <button
@@ -1476,28 +1621,52 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   </div>
                 </div>
 
-                {/* Saha tipi */}
-                <div>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">SAHA TİPİ</p>
-                  <div className="flex gap-2">
-                    {(['Tümü', 'Kapalı', 'Açık'] as const).map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setFilters({ ...filters, type: t })}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border ${filters.type === t ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
-                      >
-                        {t.toUpperCase()}
-                      </button>
-                    ))}
+                {/* Olanaklar — vitrindeki tesislerde gerçekten bulunanlar */}
+                {amenityOptions.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">TESİS OLANAKLARI</p>
+                    <div className="flex flex-wrap gap-2">
+                      {amenityOptions.map(({ value, count, icon: Icon }) => {
+                        const active = filters.hasAmenities.includes(value);
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => setFilters(f => ({
+                              ...f,
+                              hasAmenities: active
+                                ? f.hasAmenities.filter(a => a !== value)
+                                : [...f.hasAmenities, value],
+                            }))}
+                            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[10px] font-extrabold transition-all border ${active ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                          >
+                            {Icon && <Icon size={13} className={active ? 'text-black' : 'text-[#39FF14]'} />}
+                            {value}
+                            <span className={active ? 'text-black/50' : 'text-gray-600'}>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
 
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="w-full h-16 bg-[#FFFF00] text-black rounded-2xl font-black text-sm tracking-widest uppercase shadow-[0_10px_30px_rgba(255,255,0,0.2)]"
-                >
-                  UYGULA
-                </button>
+              {/* Alt bar — canlı sonuç sayacı; sonuç yoksa tek dokunuşla temizleme */}
+              <div className="shrink-0 px-7 py-4 pb-safe border-t border-white/[0.07] bg-[#161B22]">
+                {filteredPitches.length > 0 ? (
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="w-full h-14 bg-[#FFFF00] text-black rounded-2xl font-black text-sm tracking-widest uppercase shadow-[0_10px_30px_rgba(255,255,0,0.2)] active:scale-[0.98] transition-transform"
+                  >
+                    {filteredPitches.length} SAHAYI GÖSTER
+                  </button>
+                ) : (
+                  <button
+                    onClick={resetAllFilters}
+                    className="w-full h-14 bg-white/10 text-white/80 border border-white/15 rounded-2xl font-black text-sm tracking-widest uppercase active:scale-[0.98] transition-transform"
+                  >
+                    SONUÇ YOK — FİLTRELERİ TEMİZLE
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>

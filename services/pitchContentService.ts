@@ -95,14 +95,29 @@ export async function setPitchPublished(pitchId: string, published: boolean): Pr
   void logAudit(pitchId, 'publish_toggle', { is_published: published });
 }
 
-/** Admin: "Öne Çıkan" bayrağı (Karar #23). */
-export async function setPitchFeatured(pitchId: string, featured: boolean): Promise<void> {
-  const { error } = await supabase
-    .from('pitches')
-    .update({ is_featured: featured })
-    .eq('id', pitchId);
+/**
+ * Admin: vitrin rozet bayrakları (Öne Çıkan / flash izni / müsaitlik rozeti).
+ * DB'de protect_pitch_admin_flags trigger'ı bu üç kolonu admin dışı her yola
+ * karşı kilitler; bu yüzden yazım admin_update_pitch RPC'sinden (is_platform_admin
+ * guard + admin_audit_log) geçer — düz .update() trigger'a takılırdı.
+ */
+export type PitchShowcaseFlags = Partial<{
+  is_featured: boolean;
+  flash_deals_enabled: boolean;
+  show_availability_badge: boolean;
+}>;
+
+export async function setPitchShowcaseFlags(pitchId: string, flags: PitchShowcaseFlags): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_pitch', {
+    p_pitch_id: pitchId,
+    p_payload: flags,
+  });
   if (error) throw new Error(toTurkishError(error));
-  void logAudit(pitchId, 'featured_toggle', { is_featured: featured });
+}
+
+/** Admin: "Öne Çıkan" bayrağı (Karar #23). Geriye dönük uyum sarmalayıcısı. */
+export async function setPitchFeatured(pitchId: string, featured: boolean): Promise<void> {
+  await setPitchShowcaseFlags(pitchId, { is_featured: featured });
 }
 
 /** Admin: owner'ın beyan ettiği kalite notlarını onaylar (Karar #2). */
