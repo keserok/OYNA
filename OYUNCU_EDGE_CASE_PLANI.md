@@ -503,8 +503,14 @@ Para (S1) ayrı agent'ta; bu sprint yalnız maç-dışı UI/UX.
 | **S3-4** değerlendirme dürüstlüğü | G1 sahte 5-3 el sıkışması öldü → yalnız gerçek öneri (`getPendingScoreProposal`→`approveMatchScore`); G2 gerçek maçta gerçek kadro/BOŞ (mock→RPC reddi çözüldü); G3 org yorumu yakalanıyor | mock grep yalnız demo yolunda |
 | **S3-5** kabuk dayanıklılığı | A3 onay bekleme: mount-fetch+30sn poll+manuel yenile (kaçan realtime'da sonsuz bekleme yok); A5 görünüm-seviyesi `ErrorBoundary` (çöken görünüm kabuğu düşürmez, alt menü hayatta); E5 kaptan "Ayrıl"→önce devir yönlendirmesi (sonradan hata yok) | tsc + kod |
 
-**Kapanış kanıtı:** güncel `origin/main` merge edildi (yalnız hukuki-doküman çakışmasız güncellemeler) → **smoke 4/4** · **260 birim testi** · **tsc temiz**.
-**Bilinçli kapsam-dışı:** GK/hakem `stats` kolonu (`goalkeepers`/`referees` tabloları, `matchService:332/335`) kaleci/hakem fazına bırakıldı. Backend follow-up'lar: `submit_match_evaluation`'a `p_note` (G3 kalıcılık), `H-B1` create RPC zaman-aralığı bug'ı.
+**Adversaryal inceleme (bağımsız ajan) → 3 düzeltme:**
+- **A5 (doğrulanmış çıkmaz):** GK/hakem `SERVICE_DASHBOARD` / tesis `OWNER_PANEL` açılışı (alt menüsüz + lazy chunk) çökerse yığın boş → `goBack` aynı görünüme döner + React.lazy reddi önbellekte → yeniden render kurtarmıyordu. `onBack` artık yığın boşsa `reload()` ile chunk'ı yeniden çeker (gerçek kurtarma).
+- **G1 (dürüstlük açığı):** "SKORA İTİRAZ ET" sunucuya hiçbir şey göndermeden "itirazınız iletildi" diyordu (itiraz RPC'si yok). "KATILMIYORUM" + gerçeği söyleyen mesaj (onaylamamak öneriyi PENDING bırakır).
+- **E5 (yarış):** squad yüklenmeden kaptan "Ayrıl" derse `captainMustTransfer` ön-kapısı yanılıp ham sunucu hatası çıkarabiliyordu → `doLeave` emniyet ağı `CAPTAIN_MUST_TRANSFER` hatasını devir akışına yönlendirir.
+- **Temiz onaylanan:** ErrorBoundary · A3 (appliedRef/interval/maybeSingle) · F1/F2/F3 argüman sırası · D2/D5/E2 · G2/G3 (mock asla gerçek RPC'ye ulaşmıyor) · mapPlayerStats & E4 skala tutarlılığı.
+
+**Kapanış kanıtı:** güncel `origin/main` merge edildi (yalnız hukuki-doküman çakışmasız güncellemeler) → **smoke 4/4** · **260 birim testi** · **tsc temiz** · adversaryal inceleme bulguları kapatıldı.
+**Bilinçli kapsam-dışı:** GK/hakem `stats` kolonu (`goalkeepers`/`referees` tabloları, `matchService:332/335`) kaleci/hakem fazına bırakıldı. Backend follow-up'lar: `submit_match_evaluation`'a `p_note` (G3 kalıcılık), skor itiraz/dispute RPC'si (G1 tam çözüm), `H-B1` create RPC zaman-aralığı bug'ı.
 
 ---
 
