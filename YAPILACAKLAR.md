@@ -119,8 +119,42 @@ modunda; canlı anahtarlar henüz bağlanmadı.
 - Muhasebe sıfır-toplamda kapandı; demo verisi test sonrası eski haline getirildi.
 - **Sonuç:** mevcut satır-kilidi mimarisi eşzamanlılığa karşı sağlam — kanıtlandı.
 
-## Bekleyen görüşme bölümleri
-- [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
+## 🎯 S1 Sprint — Para & Güven (onaylandı, sıradaki iş)
+Para değişmezi: her para aksiyonu **idempotent + sunucu-doğrulamalı + dürüst**;
+UI sunucu durumuyla çelişmez; tüm tutarlar tek `formatTRY()` → "1.500,00₺".
+
+### P0 — doğrudan para/güven
+- [ ] **C1 · Çift top-up:** idempotency anahtarını *prepare* çağrısına koy (apply
+  zaten idempotent); buton başarı animasyonu boyunca ref-kilitli; özel tutar max
+  girişte doğrulanır. (Not: artık startInAppCardPayment akışı — eski RPC değil.)
+- [ ] **C2 · Sahte başarısızlık:** `ALREADY_BLOCKED` → başarı olarak yorumla
+  (payment_intents'ten sunucu teyidi + bakiye tazele + "kapora alındı").
+- [ ] **C3 · Yanlış yetersiz bakiye:** özet hatası yutulmaz → hata kartı + Yeniden
+  Dene; çözülene dek ödeme kilitli; asla 0 bakiye varsayma.
+- [ ] **C4 · Sahte bilet (DOĞRULANDI):** `ONAYLANDI` sabit + `<QrCode>` lucide
+  ikonu (taranamaz!) + `OYNA-8293-TX` sabit + ölü butonlar. Bilet gerçek
+  rezervasyon/ödeme kaydından türeyecek; **gerçek QR üreteci gerekli** (şu an yok);
+  ödeme yoksa onaylı bilet yok. Ölü Paylaş/Cüzdana Ekle bağlan ya da kaldır.
+
+### P1 — akış & tutarlılık
+- [ ] **C8** MATCH_JOIN yetersiz bakiye → "CÜZDANA YÜKLE" CTA.
+- [ ] **C6** Yetim rezervasyon → ödeme başarısında yarat / hold+temizlik
+  (Soru 19 askıda-ödeme süpürme cron'u ile aynı kök — birlikte çöz).
+- [ ] **C10** `formatTRY()` tüm para ekranlarına; sıfır-kapora "0₺" durumu açıklanır.
+
+### Latent (düşük öncelik)
+- [ ] **C5/C7** İptal iade tahmini sunucu formülüyle birebir (brüt−PSP=net). PSP=0
+  olduğundan etki şimdilik düşük.
+- [ ] **C9** Çoklu-slot split görünürlüğü ("X ödedi" rozeti); gerçek tahsilat iyzico fazına.
+- [ ] **C11** Kontrollü red modu (test tutarı/kartı → decline) — hata UX'i QA edilebilsin.
+
+### Regresyon kapısı (S1 çıkış = G1)
+SQL değişmezleri: idempotency anahtarı başına ≤1 cüzdan işlemi · maç başına ≤1
+BLOCKED kapora · yetim PENDING rezervasyon = 0. + smoke + birim. G1 yeşil olmadan S2 yok.
+
+## Bekleyen görüşme bölümleri (30 soru — 4/6 tamam)
+- [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi (S21-25 soruldu, cevap bekliyor)
+- [ ] Bölüm 6/6 — Ölçekleme & operasyon
 - [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
 - [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
 - [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
