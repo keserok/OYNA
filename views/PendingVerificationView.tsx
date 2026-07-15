@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, LogOut, CheckCircle2, XCircle, Camera, FileText, MapPin } from 'lucide-react';
+import { Clock, LogOut, CheckCircle2, XCircle, Camera, FileText, MapPin, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { auth, logout } from '../supabaseAuth';
 
@@ -30,44 +30,65 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
   const [showRejectedModal, setShowRejectedModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showApprovedBanner, setShowApprovedBanner] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const appliedRef = useRef(false); // approved akışı bir kez tetiklensin
+
+  // A3: durumu tek yerden uygula — hem realtime hem fetch/poll buraya düşer.
+  const applyStatus = useCallback((newStatus?: string | null, notes?: string | null) => {
+    if (newStatus === 'approved') {
+      if (appliedRef.current) return;
+      appliedRef.current = true;
+      setStatus('approved');
+      setShowConfetti(true);
+      setShowApprovedBanner(true);
+      setTimeout(() => { onApproved(); }, 2500);
+    } else if (newStatus === 'rejected') {
+      setStatus('rejected');
+      setRejectionNotes(notes ?? null);
+      setShowRejectedModal(true);
+    }
+  }, [onApproved]);
+
+  // A3: durumu SUNUCUDAN çek (realtime tek yol değil — kaçan event / offline /
+  // geç mount edilen singleton durumunda kullanıcı sonsuza dek beklemesin).
+  const checkStatus = useCallback(async (manual = false) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    if (manual) setChecking(true);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('verification_status, verification_notes')
+        .eq('id', uid)
+        .maybeSingle();
+      if (data) applyStatus(data.verification_status, data.verification_notes);
+    } finally {
+      if (manual) setChecking(false);
+    }
+  }, [applyStatus]);
 
   useEffect(() => {
-    if (!auth.currentUser?.uid) return;
+    // (1) mount'ta anlık durum, (2) 30sn poll — realtime'ı tamamlar.
+    checkStatus();
+    const poll = setInterval(() => checkStatus(), 30000);
 
-    // profiles tablosundaki verification_status değişimini Realtime ile dinle
-    const channel = supabase
-      .channel(`verification:${auth.currentUser.uid}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${auth.currentUser.uid}`,
-        },
-        (payload) => {
-          const newStatus = payload.new?.verification_status;
-          if (newStatus === 'approved') {
-            setStatus('approved');
-            setShowConfetti(true);
-            setShowApprovedBanner(true);
-            // 2.5 saniye sonra onApproved'u çağır
-            setTimeout(() => {
-              onApproved();
-            }, 2500);
-          } else if (newStatus === 'rejected') {
-            setStatus('rejected');
-            setRejectionNotes(payload.new?.verification_notes ?? null);
-            setShowRejectedModal(true);
-          }
-        },
-      )
-      .subscribe();
+    // (3) Realtime — anında yakalar (bağlıysa).
+    const uid = auth.currentUser?.uid;
+    const channel = uid
+      ? supabase
+          .channel(`verification:${uid}`)
+          .on('postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${uid}` },
+            (payload) => applyStatus(payload.new?.verification_status, payload.new?.verification_notes),
+          )
+          .subscribe()
+      : null;
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(poll);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [onApproved]);
+  }, [checkStatus, applyStatus]);
 
   const handleLogout = async () => {
     await logout();
@@ -198,6 +219,18 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
             <Clock size={14} /> Onay Bekleniyor
           </span>
         </motion.div>
+
+        {/* A3: manuel durum yenileme — kaçan realtime event'te sonsuz bekleme yok */}
+        <div className="flex justify-center -mt-4 mb-6">
+          <button
+            onClick={() => checkStatus(true)}
+            disabled={checking}
+            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors disabled:opacity-50 py-1"
+          >
+            <RefreshCw size={13} className={checking ? 'animate-spin' : ''} />
+            {checking ? 'Kontrol ediliyor…' : 'Durumu Yenile'}
+          </button>
+        </div>
 
         {/* Ana kart */}
         <motion.div

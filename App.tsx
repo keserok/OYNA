@@ -17,6 +17,7 @@ import OfflineBanner from './components/OfflineBanner';
 import { GlobalToast, showToast } from './components/common/GlobalToast';
 import SignupGate from './components/common/SignupGate';
 import { Spinner } from './components/ui/Spinner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
@@ -705,9 +706,22 @@ const App: React.FC = () => {
           {...PAGE_TRANSITION}
           className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : 'pb-safe'}`}
         >
-          <Suspense fallback={<ViewLoader />}>
-            {renderView()}
-          </Suspense>
+          {/* A5: Görünüm-seviyesi hata sınırı. Bir görünüm çökse de (ör. lazy
+              chunk ağ hatası, render exception) uygulama kabuğu + alt menü ayakta
+              kalır; kullanıcı beyaz ekranda kilitlenmez. fullScreen={false} → yalnız
+              içerik alanını kaplar. Üst motion.div key={view} olduğundan sınır her
+              görünüm değişiminde yeniden kurulur (otomatik sıfırlama) — alt menüden
+              başka sekmeye geçmek ya da "Geri Dön" çöken görünümü daima temizler. */}
+          <ErrorBoundary
+            fullScreen={false}
+            title="Bu bölüm yüklenemedi"
+            message="Bağlantı ya da geçici bir sorun olabilir. Geri dönüp tekrar deneyebilirsin."
+            onBack={() => goBack(navigateBasedOnRole(role))}
+          >
+            <Suspense fallback={<ViewLoader />}>
+              {renderView()}
+            </Suspense>
+          </ErrorBoundary>
         </motion.div>
       </AnimatePresence>
 

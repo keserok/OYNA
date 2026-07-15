@@ -182,6 +182,10 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
   };
 
   const transferCandidates = squad.filter(m => m.user_id !== userId);
+  // E5: Kaptan başka üyeler varken doğrudan ayrılamaz (sunucu reddeder). "Ayrıl"
+  // dialog'unu, sonradan hataya düşmek yerine önce devir akışına yönlendiren bir
+  // kapıya çeviririz.
+  const captainMustTransfer = isCaptain && transferCandidates.length > 0;
 
   return (
     <>
@@ -428,12 +432,16 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
       />
       <ConfirmDialog
         open={confirm === 'LEAVE'}
-        title="Takımdan ayrıl?"
-        description={isCaptain
-          ? 'Kaptansın — başka üye varsa önce kaptanlığı devretmen gerekir.'
+        title={captainMustTransfer ? 'Önce kaptanlığı devret' : 'Takımdan ayrıl?'}
+        description={captainMustTransfer
+          ? 'Kaptansın ve takımda başka üyeler var. Ayrılmadan önce kaptanlığı bir takım arkadaşına devretmen gerekir.'
           : `${team.name} kadrosundan çıkacaksın.`}
-        confirmLabel={dangerBusy ? '…' : 'Ayrıl'}
-        onConfirm={doLeave}
+        confirmLabel={captainMustTransfer ? 'Kaptanlığı Devret' : (dangerBusy ? '…' : 'Ayrıl')}
+        // Devir yapıcı bir eylem (yeşil); gerçek ayrılma yıkıcı (kırmızı).
+        danger={!captainMustTransfer}
+        onConfirm={captainMustTransfer
+          ? () => { setConfirm(null); setTransferOpen(true); }
+          : doLeave}
         onCancel={() => setConfirm(null)}
       />
       <ConfirmDialog
