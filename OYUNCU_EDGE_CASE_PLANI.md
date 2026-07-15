@@ -467,7 +467,109 @@ Plan güncel `main`'e rebase edildi (main +15 commit: yeni **Onboarding** akış
 **Kapsam kararları:** `teamService:389` puan ölçeği → dengeleme ile birlikte **E4'e (S3)** ertelendi (balancing'i riske atmamak için). **KN-1 tam reaktif refaktör** (28 tüketici) yerine gözlenen semptomları çözen **hedefli parça** (currentUserProfile) yapıldı; kalanı sonraki tura. `Güven Puanı` **kasıtlı korundu** (Master 3.4: fair-play 100'den başlar — 0 maçta 100 doğru).
 
 ### 6.4 Kalan yol (sonraki turlar)
-- **S0 kalanı:** KN-3 (atomik maç yazımı — büyük), İP-01 tam reaktif geçiş, banner L2 cilası.
-- **S1 (Para):** C1–C5 (idempotency, bilet, PSP-dahil iade), B4/B5 (iptal/ayrılma UI).
-- **S2 (Maç):** B2/B6/B7/B11/B12. · **S3:** A3–A7, C6–C9, E2/E4/E5, F1–F3, D2/D5, G1–G3. · **S4:** cila + H-A backlog.
+- **S1 (Para):** C1–C5, C6–C11 → **ayrı bir ödeme agent'ına devredildi** (2026-07-15). Sınır sözleşmesi: §7.0.
+- **S2 (Maç — bu agent):** KN-3 + B2/B4/B5/B6/B8/B9/B10/B14/B15 + MatchCalendar. Derin uygulama planı: **§7**.
+- **S3:** A3–A7, E2/E4/E5, F1–F3, D2/D5, G1–G3. · **S4:** cila + H-A backlog.
 - Her paket ayrı commit + kapı; ilerleme bu bölümde güncellenir.
+
+---
+
+## 7. S2 — Maç Akışı & Bütünlük: Derin Uygulama Planı (2026-07-15)
+
+> Tüm satır referansları **güncel main-rebase'li koda** karşı yeniden doğrulanmıştır (8-ajanlı
+> re-validation + hedefli kod teyidi). Bu bölüm doğrudan kodlanabilir düzeydedir.
+
+### 7.0 Sınır sözleşmesi — ödeme agent'ı ile iş bölümü
+
+| Alan | Bu agent (S2 maç) | Ödeme agent'ı (S1 para) |
+|---|---|---|
+| `views/MatchJoin.tsx` | Roster/slot/realtime/iptal-ayrılma UI (handleJoin, handleLeaveMatch, handleRemovePlayer, handleJoinAsReserve, realtime handler, kaptan menüsü) | `handleBuySlots`'un **ödeme bağlamı** kısmı (setPaymentContext/PAYMENT navigasyonu), slot-hold para mekaniği |
+| `views/PaymentScreen.tsx` / `views/WalletScreen.tsx` / `views/MyBookings.tsx` / `views/MatchTicket.tsx` | ❌ dokunmam | ✅ tamamı (C1–C11) |
+| `hooks/useMatchCreate.ts` | B9 (missingPositions türetme), B11 (totalPrice) | B12'nin ödeme-başarı tarafı |
+| `store.ts` | `applyMatchLocal` yeni aksiyonu, updateMatch çağrı disiplini | cüzdan/ödeme aksiyonları |
+| Migration'lar | B2 min_rating kapısı (join RPC'leri) | idempotency/iade/hold RPC'leri |
+
+**Ortak sözleşmeler (iki agent'ın uyacağı):**
+- **B12 sözleşmesi (migration'sız):** Kapora gereken maç `status:'DRAFT'` doğar (keşif filtresi `MatchDiscovery.tsx:161-163` DRAFT'ı zaten gizliyor ✓). Ödeme başarısında ödeme agent'ı **kısmi payload** ile aktive eder: `supabase.rpc('player_update_match', { p_match_id, p_payload: { status: 'ACTIVE' } })` — güvenli, çünkü RPC gövdesi `CASE WHEN p_payload ? 'slots'` korumalı (migration `20260705000002:314`): payload'da olmayan alanlar **ezilmez**.
+- **B7 sözleşmesi:** Slot-hold RPC'sini (HELD + expiry) ödeme agent'ı tasarlar; benim `handleBuySlots` roster tarafım hold sonucu dönen slot durumunu `getMatchDetails` re-fetch ile yansıtır — client dizi yazmaz.
+- **Rebase protokolü:** KN-3 (7.1+7.2) önce ben commit'lerim → ödeme agent'ı üstüne rebase eder. `MatchJoin.tsx`'te eş-zamanlı çalışma YOK; sıra: ben → o.
+
+### 7.1 Adım 1 — KN-3a: Realtime yankı döngüsünü kes (salt-okuma)
+
+**Kanıt:** `MatchJoin.tsx:330-352` realtime callback'i `updateMatch({...originalMatch, ...mapped})` çağırıyor; `store.ts:1002-1010 updateMatch` HER ZAMAN `player_update_match` RPC'si (DB yazımı). Her gelen UPDATE → yeni DB yazımı → yeni UPDATE → açık her lobi istemcisinde **yazma fırtınası + birbirini ezme**.
+
+**Değişiklik:**
+1. `store.ts` — yeni **yerel-only** aksiyon (RPC YOK):
+   ```ts
+   applyMatchLocal: (match) => set((s) => ({
+     adminMatches: s.adminMatches.map(m => m.id === match.id ? match : m),
+     selectedMatch: s.selectedMatch?.id === match.id ? match : s.selectedMatch,
+   })),
+   ```
+   (`selectedMatch` senkronu şart — MatchJoin `selectedMatch`'ten besleniyor.)
+2. `MatchJoin.tsx:349` → `updateMatch(...)` yerine `applyMatchLocal(...)`. Mapping bloğu aynen kalır.
+
+**Kabul:** Lobi açıkken gelen realtime tick **0 RPC yazımı** üretir (ağ kaydında `player_update_match` yok). İki istemcili testte alıcı taraf yazma yapmaz.
+
+### 7.2 Adım 2 — KN-3b: Lost-update — "RPC → re-fetch → applyMatchLocal" deseni
+
+**Kanıt + kritik keşif:** Her handler atomik RPC'yi çağırıp **sonra bayat tam diziyi** `updateMatch` ile yazıyor. Üstelik `leave_public_match_slot` RPC'si **kaptan devrini sunucuda zaten yapıyor** (migration: `IF v_creator_id = p_user_id THEN v_new_creator_id := ...`); `MatchJoin.tsx:931-942`'deki client hesabı (hiç yüklenmeyen `adminUsers.reliabilityScore` ile — herkes 100) sunucunun doğru sonucunu **çöple eziyor**.
+
+**Tek desen (handleBuySlots `:662-663` zaten böyle):** RPC başarısı → `getMatchDetails(match.id)` (matchService:145) → `applyMatchLocal(fresh)` → bayat-dizi `updateMatch` çağrısı **silinir**.
+
+| Handler | Konum | RPC (zaten var) | Silinecek |
+|---|---|---|---|
+| `handleJoin` | `:549-617` | `join_public_match_slot` | `:599-604` tam-dizi yazımı; status türetimi taze veriden |
+| `handleJoinAsReserve` | `:715-746` | `join_public_match_reserve` | `:741` reservePlayers dizi yazımı |
+| `handleLeaveMatch` | `:892-982` | `leave_public_match_slot` | `:931-942` kaptan-devri client hesabı + tam-dizi yazımı (tamamı) |
+| `handleRemovePlayer` | `:855-890` | mevcut kick yolu* | tam-dizi yazımı |
+| `fillVacatedSlot` (yedek terfisi) | `:~611+` | — sunucu leave RPC'si terfiyi yapıyorsa sil; yapmıyorsa şimdilik **kaptan-only + fresh-first** kalır* | bayat-dizi tabanı |
+
+\* Kick/terfi için özel RPC yoksa asgari güvenlik: önce `getMatchDetails` ile taze çek, değişikliği taze üstüne uygula, yaz (lost-update penceresi daralır); kalıcı çözüm dar `player_kick_slot` RPC'si → S3 backlog'a not düşülür.
+
+**Kabul (G2 ana testi):** İki tarayıcı bağlamı **eşzamanlı** farklı slotlara katılır → ikisi de kadroda kalır. Ayrılan kaptanın yerine sunucunun seçtiği kaptan gelir (client override yok). Kod kapısı: `views/MatchJoin.tsx`'te `updateMatch(` çağrısı yalnız izinli site(lar)da (grep hedefi ≤2: skor/diziliş gibi kaptan-only alanlar).
+
+### 7.3 Adım 3 — B-grubu görünür düzeltmeler (küçük, bağımsız)
+
+- **B4 — Maçı İptal Et (kaptan):** `cancelMatchByCaptain` (matchLifecycleService:49, RPC `match_cancel_by_captain`) **hiçbir view'den çağrılmıyor**. MatchJoin kaptan yönetim bölümüne (Kaleci/Hakem bloğu `~:2468` yanına) "Maçı İptal Et" + onay modalı (kademeli iade özeti: ≥24s iade / <24s yok) + outcome toast + `onBack()`.
+- **B5 — Ayrılma modalı iade metni:** Sunucu iadeyi ZATEN kesiyor (`20260717000003:200-213` idempotent MATCH_REFUND) ama modal metni (`:1271`) parayı hiç anmıyor. `match.price>0 && mySlot.paymentStatus==='PAID'` ise: "Ödediğin {formatTRY(price)} iade kredisi olarak cüzdanına dönecek." + başarıda onay toast'ı. (Salt UI — para mantığına dokunmaz.)
+- **B8 — BAŞLADI kilidi:** `MatchCard onClick :1216-1219` yalnız kilit kontrolü; countdown `diff<=0 → 'BAŞLADI'` ama kart tıklanabilir. Fix: `diff<=0 || status==='LIVE'|'COMPLETED'` → onClick pasif + kart "OYNANIYOR/BİTTİ" görünümü; `enhancedMatches :161-163` geçmiş maçları (getMatchTargetDate < now) listeden düşürür.
+- **B9 — Sahte veri:** `:166` `i===2?0:200` → `Number(m.price)||0`. `useMatchCreate:409-412` sabit `STP/ORT` → gerçek OPEN slotların rollerinden türet (role başına count; saf fonksiyon → birim test).
+- **B10 — Dürüst boş durum:** `:158` `hasScope && nearbyMatches.length>0 ? nearby : adminMatches` → `hasScope ? nearbyMatches : adminMatches` (0 sonuç = gerçek 0) + boş durumda "çapı genişlet" CTA'sı; "X KM" başlığı yalnız gerçek yakın-sonuçta.
+- **B14 — Yedek görünürlüğü:** `useMyMatches:37-40` filtresine `|| m.reservePlayers?.some(p => p?.id === currentUserUid)` + kartta "Yedek" rozeti.
+- **B15 — Keşif iskeleti:** `fetchNearbyMatches` effect'ine `isLoading`; yüklemede skeleton MatchCard'lar (min-h-[400px]); EmptyState yalnız yükleme bitince.
+- **B13 — ✔ İP-14'te çözüldü** (ortak `parseMatchDateTime`); re-validation bu commit'ten önceydi.
+
+### 7.4 Adım 4 — B2: min_rating kapısı sunucuya (migration)
+
+**Kanıt:** `join_public_match_slot` / `player_buy_slots*` gövdelerinde `min_rating` kontrolü YOK; kapı yalnız keşif kartında (`MatchDiscovery:1159`); özel kod (`handleJoinPrivate :69-104`), davet tokeni (`join_by_invite_token`) ve doğrudan lobi yan kapı.
+
+**Değişiklik:** Yeni migration — `join_public_match_slot`, `player_buy_slots(_v2)`, `join_by_invite_token`, `join_public_match_reserve` gövdelerine:
+```sql
+IF COALESCE(v_match.min_rating, 0) > 0 AND
+   COALESCE((SELECT (stats->>'rating')::numeric FROM ... profiles ...), 0) < v_match.min_rating THEN
+  RAISE EXCEPTION 'MIN_RATING';
+END IF;
+```
++ MatchJoin hata haritasına `MIN_RATING → "Bu maç {minRating}+ puan istiyor"`. **Veri düzeltmesi (öneri):** eski sabit-4.0 hiçbir zaman kurucu iradesi değildi → tek seferlik `UPDATE matches SET min_rating = 0 WHERE min_rating = 4.0 AND status IN ('ACTIVE','DRAFT')` (B1 ile tutarlı; onayına sunulur). Rollback: fonksiyon gövdelerinin önceki sürümü migration'da yorum olarak saklanır.
+
+### 7.5 Adım 5 — B6: Sahte otomatik onayı kaldır (dürüst talep akışı)
+
+**Kanıt:** `MatchDiscovery:1000-1003` — 2.5sn `setTimeout` → `acceptPlayerSeekAdRequest` + "Talebiniz Kabul Edildi!" toast'ı. Seek-ilanlarının **DB tablosu yok** (store-local `PlayerSeekAnnouncement`).
+
+**S2 kapsamı (dürüstlük):** setTimeout + sahte toast silinir; buton → "Talep gönderildi — kaptan onayı bekleniyor" kalıcı durumu; un-join yarışı ölür. **Tam çözüm** (DB-destekli talep + kaptan onay ekranı) → S3 backlog (yeni kalem `B6-full`).
+
+### 7.6 Adım 6 — KN-6: MatchCalendar'ı gerçek veriye bağla
+
+**Kanıt:** m1/m2/m3 sabit mock; kart tıklaması `setSelectedMatch`'siz `MATCH_JOIN` → `match=null` → **boş ekran**; kod modalı 6 karakteri doğrulamadan aynı boş ekrana gider.
+
+**Değişiklik:** Mock dizi silinir; kaynak = `useMyMatches()` (İP-14 sayesinde tarih/saat artık güvenilir). Kart → `setSelectedMatch(gerçekMaç)` + `MATCH_JOIN`; countdown `parseMatchDateTime`'dan; kod modalı MatchDiscovery `handleJoinPrivate` desenine bağlanır; maç yoksa dürüst boş durum ("Yaklaşan maçın yok → Top Oyna'ya git" CTA).
+
+### 7.7 Test planı & G2 çıkış kapısı & commit sırası
+
+**Yeni testler:** birim → `deriveMissingPositions` (B9), `sourceMatches` seçimi (B10, saf yardımcıya çıkarılır), reserve filtresi (B14). Canlı → `tests/match-concurrency.mjs`: iki bağlam eşzamanlı katılım (KN-3 kabulü); smoke'a "BAŞLADI kartı pasif" + "keşif iskeleti" adımları.
+
+**Commit sırası (her biri tsc+unit+smoke sonrası):**
+`(1)` KN-3a+B14+B13-not · `(2)` KN-3b handler'lar + kaptan-devri silme · `(3)` B8+B9+B10+B15 keşif paketi · `(4)` B4+B5 iptal/ayrılma UX · `(5)` B2 migration + hata haritası (+veri düzeltmesi onaylıysa) · `(6)` B6 dürüstlük + MatchCalendar.
+
+**G2 kapısı:** eşzamanlı çift katılım ✓ · realtime tick'te 0 yazım ✓ · `updateMatch(` grep ≤2 ✓ · yan-kapı MIN_RATING reddi (SQL testi) ✓ · BAŞLADI kartı pasif ✓ · keşifte sahte fiyat/pozisyon grep'i 0 ✓ · MatchCalendar'da mock grep'i 0 ✓ · smoke 4/4 + 256+ birim yeşil.
