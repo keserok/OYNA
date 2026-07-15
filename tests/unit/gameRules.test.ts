@@ -1,9 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import {
   processCancellationPenalty,
   check90MinAutoCancel,
 } from '../../utils/gameRules';
 import type { MatchListing } from '../../types';
+
+// Bu testler zamanı Date.now()'a GÖRELİ kurar (ör. minutesFromNow(45)). Gerçek
+// duvar-saatine bağımlılık, gece yarısına ~45-90 dk kala "HH:MM" stringinin ertesi
+// güne taşması gibi FLAKY kırılmalara yol açıyordu (23:15 + 45dk → "00:00" → date
+// 'Bugün' ile bugünün geçmişi sanılır). Saati sabit bir öğlene pinliyoruz →
+// determinist; hem test hem gameRules aynı faked Date.now()'u görür.
+beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-07-15T12:00:00')); });
+afterAll(() => { vi.useRealTimers(); });
 
 // ─── processCancellationPenalty ────────────────────────────────────────────────
 //
