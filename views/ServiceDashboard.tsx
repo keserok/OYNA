@@ -232,12 +232,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // Bug D: Ödeme serbest bırakılınca talep COMPLETED'a geçer; sağlayıcı
   // tamamlanan işini görebilmeli (ayrıca payout serbest bırakılmış CAPTURED da).
   // FAZ 4: hakkında no-show bildirilen talepler → sağlayıcı 48s içinde itiraz edebilir.
+  // KB-3: NOSHOW_REPORTED + DISPUTED birlikte gösterilir — GK itiraz ettikten
+  // sonra (status DISPUTED) satır hiçbir bucket'a düşmeyip EKRANDAN KAYBOLUYORDU;
+  // sağlayıcı kendi aktif itirazını göremiyordu. Artık burada kalır (durum-duyarlı UI).
   const noShowRequests = useMemo(
-      () => incomingRequests.filter(r => (r.status as string) === 'NOSHOW_REPORTED'),
+      () => incomingRequests.filter(r => {
+        const s = r.status as string;
+        return s === 'NOSHOW_REPORTED' || s === 'DISPUTED';
+      }),
       [incomingRequests]
   );
   const completedRequests = useMemo(
-      () => incomingRequests.filter(r => r.status === 'COMPLETED' || (r.status === 'CAPTURED' && r.payoutReleased)),
+      () => incomingRequests.filter(r => {
+        const s = r.status as string;
+        // KB-3: NOSHOW_FINALIZED (itiraz reddedildi / kesinleşti) da geçmişte görünür.
+        return s === 'COMPLETED' || (r.status === 'CAPTURED' && r.payoutReleased) || s === 'NOSHOW_FINALIZED';
+      }),
       [incomingRequests]
   );
 
@@ -1137,15 +1147,27 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           <p className="text-lg font-black text-red-400">{req.penaltyAmount ?? '—'}₺</p>
                                       </div>
                                   </div>
-                                  <p className="text-[10px] text-white/45 mt-2 leading-relaxed">
-                                      Kaptan maça gelmediğini bildirdi; ceza teminatından tahsil edildi. Haksız olduğunu düşünüyorsan itiraz et — durum yönetim tarafından incelenir.
-                                  </p>
-                                  <button
-                                      onClick={() => handleDisputeNoShow(req.id)}
-                                      disabled={respondingId === req.id}
-                                      className="w-full mt-3 py-2.5 rounded-xl bg-white/5 border border-red-500/25 text-red-300 text-xs font-black uppercase hover:bg-red-500/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-                                      {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <AlertTriangle size={14} />} İtiraz Et
-                                  </button>
+                                  {(req.status as string) === 'DISPUTED' ? (
+                                      // KB-3: İtiraz zaten yapıldı — tekrar itiraz butonu değil, durum bilgisi.
+                                      <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-500/8 border border-amber-500/25 px-3 py-2.5">
+                                          <AlertTriangle size={14} className="text-amber-300 shrink-0" />
+                                          <p className="text-[10px] text-amber-200/90 font-bold leading-relaxed">
+                                              İtirazın alındı — durum yönetim tarafından inceleniyor. Sonuç bu ekrana düşecek.
+                                          </p>
+                                      </div>
+                                  ) : (
+                                      <>
+                                          <p className="text-[10px] text-white/45 mt-2 leading-relaxed">
+                                              Kaptan maça gelmediğini bildirdi; ceza teminatından tahsil edildi. Haksız olduğunu düşünüyorsan itiraz et — durum yönetim tarafından incelenir.
+                                          </p>
+                                          <button
+                                              onClick={() => handleDisputeNoShow(req.id)}
+                                              disabled={respondingId === req.id}
+                                              className="w-full mt-3 py-2.5 rounded-xl bg-white/5 border border-red-500/25 text-red-300 text-xs font-black uppercase hover:bg-red-500/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                                              {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <AlertTriangle size={14} />} İtiraz Et
+                                          </button>
+                                      </>
+                                  )}
                               </div>
                           ))}
                       </div>
