@@ -1,11 +1,84 @@
-# OYNA — Ödeme Sistemi Master Planı
+# OYNA — Ödeme Sistemi Master Planı (v2 — kapsam denetimli)
 
 > Kaynaklar: 30 soruluk değerlendirmenin tüm kararları + S1 "Para & Güven"
-> sprint analizi (C1-C11) + kod denetimi bulguları. Bu belge ödeme sisteminin
+> sprint analizi (C1-C11) + kod denetimi bulguları + **son kapsam taraması**
+> (tüm para yüzeyleri şemadan tek tek çıkarıldı). Bu belge ödeme sisteminin
 > **tek yol haritasıdır**; her sprint bitiminde güncellenir.
 >
 > Bölüm 5 (S21-25) cevapsız kaldı → önerilen varsayılanlar ⭐ ile işaretli;
 > itiraz edilirse plan güncellenir.
+
+---
+
+## 0-A) KAPSAM HARİTASI — hiçbir para yüzeyi dışarıda kalmasın
+
+Son denetimde uygulamadaki **her** para yüzeyi sayıldı ve bir sprint sahibine
+bağlandı. Buraya girmeyen para hareketi = plan hatası; bulunursa önce buraya işlenir.
+
+| Para yüzeyi | Durum | Sahip |
+|---|---|---|
+| Saha kaporası (uygulama içi 3DS) | ✅ canlı, doğrulandı | S1 cilası (C2/C3/C6) |
+| Cüzdan yükleme (3DS, tek dokunuş) | ✅ canlı, doğrulandı | S1 (C1 idempotency) |
+| Maça katılım (bakiye+kart) | ✅ canlı, doğrulandı | S1 (C8) |
+| Maç kaporası (cüzdan güvencesi) | ✅ canlı, doğrulandı | S1 (C2), S2 (orkestrasyon) |
+| İadeler (kademeli → kredi) | ✅ canlı | S2 (bildirim, tesis-override) |
+| Cüzdandan karta çekim (%10) | ❌ yok — yeni akış | S2 |
+| Kazanç çekimi (IBAN, admin onaylı) | ⚠️ var, eşik/toplu liste yok | S2 |
+| Kaleci/hakem hizmet ücreti | 🔴 tahsilat YOK (bilinen blocker) | S5 |
+| Tesis manuel tahsilat (OWNER_MANUAL) | ✅ altyapı var, UI cilası | S3 (S22) |
+| Dijital bilet (ödeme kanıtı) | 🔴 sahte (C4 doğrulandı) | S1 |
+| **Abonelik yenileme rezervasyonları** | ⚠️ *yeni tespit:* otomatik yenileme PENDING rezervasyon+fiyat üretiyor; ödemesi tesiste — uygulama-ödeme yoluna girmediği testle sabitlenecek | S3 (S25 fiyat dondurma ile birlikte) |
+| **Flaş fırsat indirimleri** | ⚠️ *yeni tespit:* indirimli fiyat, dondurulan fiyatla tutarlı olmalı | S3 (S25 kapsamına) |
+| **Referans bonusu (REFERRAL_BONUS)** | ✅ EARNINGS kovasında; çekim kurallarına tabi (kesintisiz kazanç sınıfı) | S2 çekim testlerine dahil |
+| **Tesis borç defteri (pitch_debtors)** | ✅ platform parası DEĞİL (tesisin offline defteri) — cüzdanla karışmadığı test edilir | S4 mutabakat notu |
+| **Ölü yol: `wallet_topup` RPC** | 🔴 *yeni tespit:* FE artık kullanmıyor ama çağrılabilir — S1'de devre dışı bırakılır (çift yol = risk) | S1 |
+| **Eski hosted checkout** (`create` aksiyonu + payment-webhook) | ⚠️ belgeli YEDEK olarak kalır; FE'den erişilmez; go-live'da tekrar değerlendirilir | S5 |
+| Admin force capture/void/refund | ✅ v2 imzayla tamir edildi | S4 (chargeback aracı eklenir) |
+
+## 0-B) HATA-GEÇİRMEZLİK KATMANI — "kesinlikle hata çıkmasın" disiplini
+
+**Her iş kaleminin Tanımı-Bitti (DoD) 5 adımdır — biri eksikse iş bitmemiştir:**
+1. Migration/kod değişikliği (DB → edge → FE **sırasıyla**; asla FE önce gitmez).
+2. Birim/SQL değişmez testi yazıldı ve geçti.
+3. **Canlı sandbox'ta uçtan uca doğrulandı** (bu oturumdaki 3DS/eşzamanlılık
+   testleri gibi — kanıt: gerçek intent id'leri).
+4. Geri alma notu: bu değişiklik nasıl geri alınır (önceki fonksiyon gövdesi
+   migration'da saklı / edge önceki sürüme dönebilir / FE bayrakla kapanır).
+5. `YAPILACAKLAR.md` + bu plan güncellendi.
+
+**"ASLA" listesi (ihlali = otomatik red):**
+- PAN/CVV asla DB'ye, log'a, e-postaya yazılmaz (yalnız son 4 + marka).
+- İstemciden gelen tutar/durum asla tek başına güvenilmez — otorite sunucu.
+- **Muhasebe satırı asla silinmez/güncellenmez** — düzeltme daima ters/telafi
+  kaydıyla yapılır (test temizlikleri sandbox'a özeldir; prod'da yasak).
+- İki para yolu aynı işi yapamaz (ölü yol tespit edilirse kapatılır — bkz. wallet_topup).
+- Timeout'lu dış çağrıda tahsilat belirsizse asla kör retry (çift çekim) ve
+  asla kör FAILED (para kaybı) — önce sağlayıcı mutabakatı.
+- Yeni para akışı **kill-switch'siz** açılmaz (app_config bayrağı: cashout,
+  süpürücü, hizmet-tahsilatı hepsi kapatılabilir doğar).
+
+**Riskli işler için aşamalı açılış:** önce SIMULATION'da, sonra sandbox
+iyzico'da, sonra (go-live'da) düşük limitle prod — her aşamada sağlık paneli
+izlenir (S4 tamamlanana dek: admin ledger elle kontrol).
+
+## 0-C) RİSK KAYDI — en olası 6 hata ve panzehirleri
+
+| Risk | Panzehir (planda nerede) |
+|---|---|
+| Süpürücü, iyzico'da çekilmiş parayı FAILED'a çeker → para kaybı | Süpürücü **iyzico mutabakatı olmadan FAILED yazamaz**; eşiği ≥15 dk ve aktif 3DS penceresine (5 dk) asla girmez; belirsizse PENDING bırakıp uyarı üretir (S1/C6 çekirdeği, S4 gelişimi) |
+| Çift dokunuş → iki intent → çift çekim | Idempotency anahtarı prepare'da + buton kilidi (S1/C1); değişmez testi her PR'da |
+| Çekim istismarı (kredi biriktir → çek) | %10 yalnız TOP_UP'tan bilinçli; iade kredisi çekilebilir ama kesintisiz→ hacim izlemesi + yeni hesap 24s kilidi + hız limitleri (S4) |
+| E-posta sağlayıcı yokken S3 bildirimleri bloklanır | Push (mevcut altyapı) e-postadan **bağımsız** gönderilir; e-posta kalemi ayrı bayrakta — sağlayıcı gecikmesi sprinti kilitlemez |
+| Abonelik/flaş fiyatları dondurulan fiyatla çelişir | S25 testi üç kaynağı birlikte doğrular: tarife + abonelik + flaş → rezervasyona yazılan tek fiyat |
+| Sprint ortasında main'e paralel değişiklik (çakışma) | Her sprint küçük PR'lar + gün sonu merge; para dosyalarında çakışma çözümü ancak iki tarafın testi birden yeşilken |
+
+## 0-D) BAĞIMLILIK SIRASI (neden bu dizilim)
+
+S1 önce çünkü idempotency + 3dk oturum + dürüst durum, sonraki her şeyin
+zeminidir → S2 çekim/iade bu zemine oturur → S3 bilgilendirme, S2'nin ürettiği
+olayları anlatır → S4 sağlık/mutabakat, S1-S3'ün ürettiği veriyi izler →
+S5 hizmet tahsilatı (kararın gereği en son) her katmanı hazır bulur ve
+go-live hepsinin üstüne gelir. Sürekli test katmanı S1'de doğar, hiç kapanmaz.
 
 ---
 
@@ -16,7 +89,7 @@
 | P1 | **Para değişmezi** | Her para aksiyonu idempotent + sunucu-doğrulamalı + dürüst. UI asla sunucu durumuyla çelişmez; otorite tektir: `payment_intents.status`. |
 | P2 | **Cüzdan-öncelikli** | PSP komisyonu minimum: tek seferde yükle, platform içinde harca. İadeler krediye döner; çekim düşük görünürlük + TOP_UP'tan %10 kesinti (iade kredisi kesintisiz). |
 | P3 | **Tek gerçek kaynak** | Komisyon `commission_config`'ten; tutar biçimi tek `formatTRY()` ("1.500,00₺"); fiyat rezervasyon anında donar. |
-| P4 | **Test kapısı** | Hiçbir sprint, kendi G kapısı (SQL değişmezleri + smoke + birim) yeşil olmadan kapanmaz. Para değişmezleri paketi her PR'da koşar (S30 — "önem ver"). |
+| P4 | **Test kapısı** | Hiçbir sprint, kendi G kapısı (SQL değişmezleri + smoke + birim) yeşil olmadan kapanmaz; her G kapısı ayrıca **tüm kalemlerde DoD 5/5** şartı taşır (bkz. 0-B). Para değişmezleri paketi her PR'da koşar (S30 — "önem ver"). |
 
 ## ✅ Bitmiş temel (yeniden planlanmaz)
 
@@ -48,11 +121,17 @@ Hepsi kod denetimiyle doğrulandı. Sıra: C1 → C2 → C3 → C4 → P1'ler �
 
 ### P1
 - [ ] **C8** MATCH_JOIN yetersiz bakiye → "CÜZDANA YÜKLE" CTA (kapora akışındaki gibi).
-- [ ] **C6 + S19 (birleşik kök):** yetim rezervasyon + askıda PENDING temizliği:
-  ödeme ekranı **3 dk oturum** (süre dolunca sıfırla — bayat fiyat/slot yok);
-  saatlik süpürme cron'u: 3 dk+ PENDING kart intent → iyzico teyidi → FAILED
-  (gerçek çekim varsa PAID'e düzelt) + halı saha slot/booking kilidi serbest.
+- [ ] **C6 + S19 (birleşik kök):** yetim rezervasyon + askıda PENDING temizliği.
+  **Zaman pencereleri (çelişki denetiminde netleşti — karışırsa para hatası doğar):**
+  - *Ödeme ekranı oturumu:* **3 dk** — kart/özet ekranında 3 dk hareketsizlik →
+    ekran sıfırlanır, bayat fiyat/slot ile ödeme yapılamaz (3DS'e girilmediyse).
+  - *Banka doğrulama penceresi:* 3DS başladıysa **5 dk** (SMS için; mevcut).
+  - *Süpürücü eşiği:* **≥15 dk** — aktif 3DS penceresindeki intent'e ASLA
+    dokunmaz; 15 dk+ PENDING → önce iyzico teyidi → çekilmişse PAID'e düzelt,
+    çekilmemişse FAILED + halı saha slot/booking kilidi serbest.
 - [ ] **C10** `formatTRY()` tüm para ekranlarına; "0₺ ÖDE" sessiz kilit açıklanır.
+- [ ] **Ölü yol kapatma** (kapsam denetimi bulgusu): `wallet_topup` RPC devre
+  dışı (grant kaldır + walletService'ten sil) — tek yükleme yolu 3DS akışı kalır.
 
 ### Latent
 - [ ] **C5/C7** iade tahmini sunucu formülüyle birebir (brüt−PSP=net; PSP=0 → düşük etki).
@@ -105,9 +184,12 @@ kesintisiz · negatif bakiye imkânsız) + iptal orkestrasyonu sıfır-toplam te
   yeniden rezervasyon.
 - [ ] ⭐ **S22 — "Kalanı tahsil ettim"**: tesis rezervasyon detayında belirgin
   buton (nakit/kart/havale); OWNER_MANUAL kayıt; komisyon yalnız online kaporadan.
-- [ ] ⭐ **S25 — Fiyat dondurma**: rezervasyon anındaki fiyat+kapora kayda
-  yazılır; tarife değişikliği yalnız yeni rezervasyonları etkiler (kodda garanti
-  altına al + testle kanıtla).
+- [ ] ⭐ **S25 — Fiyat dondurma (3 kaynaklı)**: rezervasyon anındaki fiyat+kapora
+  kayda yazılır; tarife değişikliği yalnız yeni rezervasyonları etkiler. Test
+  ÜÇ fiyat kaynağını birlikte kapsar: normal tarife + **abonelik yenileme
+  rezervasyonları** + **flaş fırsat indirimi** → rezervasyona yazılan tek fiyat,
+  sonradan hiçbir kaynaktan değişmez. Abonelik rezervasyonlarının uygulama-ödeme
+  yoluna girmediği (tesiste ödeme) ayrıca testle sabitlenir.
 
 **G3 kapısı:** bilgilendirme smoke turu (ödeme→onay detayı→iptal→bildirim
 zinciri ekran ekran doğrulanır).
@@ -188,4 +270,5 @@ S1'in G1'i ile doğar, her sprintte genişler, **her PR'da koşar**:
 
 ⭐ S21 anlık kesin rezervasyon+telafi · ⭐ S22 kalan tahsilat butonu ·
 ⭐ S23 kaptan onaylı no-show (S5'te) · ⭐ S24 talep-üzerine+toplu liste ·
-⭐ S25 fiyat dondurma. (S23/24 karar tablosunda K-numaralarıyla da geçiyor.)
+⭐ S25 fiyat dondurma. (Metindeki K-referansları `YAPILACAKLAR.md` karar
+tablolarındaki soru numaralarına işaret eder.)
