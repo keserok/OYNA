@@ -88,8 +88,39 @@ modunda; canlı anahtarlar henüz bağlanmadı.
   yarın iyzico payout/Pazaryeri API'sine takılabilecek şekilde (provider switch).
 - [ ] (İleride) 24 ay atıl-hesap bilgilendirme + iade daveti politikası.
 
+## Alınan kararlar (Bölüm 4/6 — Güvenlik, uyum & sınır durumlar)
+
+| # | Konu | Karar |
+|---|------|-------|
+| 16 | Çekim için kimlik | TC + IBAN sahibi zorunlu; admin onayda eşleşme kontrolü; ileride iyzico IBAN-isim doğrulama |
+| 17 | İstismar (iade/kart deneme) | Başarısız-ödeme hız limiti + yeni hesap 24s çekim kilidi + iyzico fraud/BIN (yayın sonrası ilk faz) |
+| 18 | Chargeback | 2 hafta güvence süresi tampon + admin dondurma aracı; iyzico webhook otomasyonu ileride |
+| 19 | Askıda PENDING temizleme | Onaylandı + geliştirildi: **ödeme ekranı 3 dk oturur sonra sıfırlanır**; halı saha rezervasyonuna uygun süpürme (slot kilidi de bırakılır) |
+| 20 | Eşzamanlılık | Mevcut FOR UPDATE kilidi korunur + **kanıt testi koşulacak** (bakiye çift-harcama + son slot yarışı) |
+
+### ⚠️ Bölüm 4'ten doğan işler
+- [ ] **Askıda ödeme süpürme cron'u** (saatlik): 3 dk+ PENDING kart intent'i →
+  FAILED (+ iyzico teyidi; gerçekten çekildiyse PAID'e düzelt); halı saha
+  rezervasyonundaki slot/booking kilidini de serbest bırak.
+- [ ] **Ödeme ekranı 3 dk oturma süresi** — FE tarafında intent tazeliği; süre
+  dolunca ekran sıfırlanır, kullanıcı baştan başlar (bayat fiyat/slot önlenir).
+- [ ] **Başarısız-ödeme hız limiti** + yeni hesap 24s çekim kilidi.
+- [ ] **Admin chargeback dondurma aracı** (intent işaretle + kazanç dondur).
+- [ ] **Çekim öncesi IBAN-isim eşleşme kontrolü** (admin ekranı; ileride otomatik).
+- [x] **Eşzamanlılık kanıt testi** — canlı sandbox'ta koşuldu (bkz. aşağıdaki not).
+
+### ✅ Eşzamanlılık kanıt testi (canlı sandbox, 2026-07)
+- **Test A — çift-harcama:** aynı 300₺ bakiyeyle aynı anda iki maça 300₺ kapora
+  denendi → biri BLOCKED, diğeri "Yetersiz bakiye" (0₺). İki katman koruma
+  (ön-kontrol + `wallet_spend_balance` FOR UPDATE). Para çift harcanamadı. ✓
+- **Test B — son slot yarışı:** iki kullanıcı aynı anda tek açık slotu (h5)
+  kapmaya çalıştı → biri aldı, diğeri `SLOT_TAKEN`. Kaybedenden **hiç para
+  gitmedi** (500₺→500₺). Çifte satış yok. ✓
+- Muhasebe sıfır-toplamda kapandı; demo verisi test sonrası eski haline getirildi.
+- **Sonuç:** mevcut satır-kilidi mimarisi eşzamanlılığa karşı sağlam — kanıtlandı.
+
 ## Bekleyen görüşme bölümleri
-- [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
+- [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
 - [ ] Bölüm 3/6 — Cüzdan ekonomisi & çekim
 - [ ] Bölüm 4/6 — Güvenlik, uyum & sınır durumlar
 - [ ] Bölüm 5/6 — Tesis & sağlayıcı deneyimi
