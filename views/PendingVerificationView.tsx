@@ -32,6 +32,8 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
   const [showApprovedBanner, setShowApprovedBanner] = useState(false);
   const [checking, setChecking] = useState(false);
   const appliedRef = useRef(false); // approved akışı bir kez tetiklensin
+  const rejectedRef = useRef(false); // KA-8: red modalı bir kez açılsın (poll re-pop etmesin)
+  const approvedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // KA-9: unmount'ta temizlenecek
 
   // A3: durumu tek yerden uygula — hem realtime hem fetch/poll buraya düşer.
   const applyStatus = useCallback((newStatus?: string | null, notes?: string | null) => {
@@ -41,8 +43,14 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
       setStatus('approved');
       setShowConfetti(true);
       setShowApprovedBanner(true);
-      setTimeout(() => { onApproved(); }, 2500);
+      // KA-9: timer'ı ref'te tut → unmount'ta (ör. 2.5sn içinde "başka hesapla
+      // giriş"/logout) iptal edilsin; aksi halde çıkış yapmış kullanıcıyı landing'e
+      // yönlendirirdi.
+      approvedTimerRef.current = setTimeout(() => { onApproved(); }, 2500);
     } else if (newStatus === 'rejected') {
+      // KA-8: her poll/realtime'da modalı yeniden açma — yalnız ilk kez.
+      if (rejectedRef.current) return;
+      rejectedRef.current = true;
       setStatus('rejected');
       setRejectionNotes(notes ?? null);
       setShowRejectedModal(true);
@@ -87,6 +95,8 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
     return () => {
       clearInterval(poll);
       if (channel) supabase.removeChannel(channel);
+      // KA-9: bekleyen onay timer'ını temizle (unmount sonrası onApproved yok).
+      if (approvedTimerRef.current) clearTimeout(approvedTimerRef.current);
     };
   }, [checkStatus, applyStatus]);
 
