@@ -137,10 +137,14 @@ harita kümelemesi (>25 pin & zoom<11: grid-tabanlı sayı rozetli küme, dokunu
   `admin-panel/views/pages/PitchesPage.tsx`, `admin-panel/views/components/PitchStudio.tsx`.
 - Doğrulama: `tsc` temiz · `vitest` 22/22 · `vite build` başarılı · Playwright sürüşü 22/22.
 
-> **Deploy notu:** Migration dosyası yazıldı ama CANLI Supabase'e UYGULANMADI (deploy ayrı,
-> kontrollü adım). Rozetler canlıda çalışmadan önce migration `admin:deploy` akışıyla uygulanmalı.
-> Migration uygulanana dek `select('*')` yeni kolonları döndürmez → rozetler kapalı görünür (güvenli
-> varsayılan), filtre/sıralama/harita değişiklikleri ise DB'den bağımsız çalışır.
+> **Deploy notu — UYGULANDI ✓ (2026-07-15, prod iikvzgyccvgcybzdfwlv):** Migration canlıya
+> `apply_migration` ile uygulandı. Uygulamadan önce canlı `admin_update_pitch` gövdesi okundu ve
+> drift tespit edildi (canlıda `require_admin_role('MODERATOR')` + `is_super_admin()` guard'ları vardı,
+> repo migration geçmişinde yoktu) → migration bu guard'ları KAYBETMEDEN yalnız iki kolon ekleyecek
+> şekilde uyumlulaştırıldı; repo dosyası da aynı gövdeye güncellendi (repo↔prod yakınsadı).
+> Doğrulama (canlı): kolonlar/trigger/RPC/grant mevcut · guard'lar korundu · `get_showcase_availability`
+> read-only smoke hatasız · trigger davranış kanıtı (rolled-back): bayrak-dışı güncelleme geçer,
+> admin-dışı bayrak değişimi engellenir. Prod'a hiçbir kalıcı test verisi yazılmadı.
 
 ## Sıra, efor, riskler
 

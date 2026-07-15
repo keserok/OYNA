@@ -61,8 +61,12 @@ CREATE TRIGGER trg_protect_pitch_admin_flags
   FOR EACH ROW EXECUTE FUNCTION public.protect_pitch_admin_flags();
 
 -- ─── 3) admin_update_pitch: iki yeni bayrağı payload'dan al ─────────────────
--- Not: fonksiyonun canlı gövdesi 20260710000006_admin_rbac_wrappers.sql'den
--- okunarak birebir korundu; yalnız SET listesine iki satır eklendi.
+-- ÖNEMLİ (drift uyumlulaştırması): fonksiyonun CANLI gövdesi (prod
+-- iikvzgyccvgcybzdfwlv) pg_get_functiondef ile okunarak birebir korundu —
+-- canlıdaki require_admin_role('MODERATOR') ve is_super_admin() guard'ları repo
+-- migration geçmişinde yoktu (canlı hotfix). Bu migration onları KAYBETMEDEN
+-- yalnız SET listesine iki satır ekler. (Karar: "canlı kaynak okunmadan eski
+-- dal kopyası uygulanmaz".)
 CREATE OR REPLACE FUNCTION public.admin_update_pitch(p_pitch_id uuid, p_payload jsonb)
  RETURNS boolean
  LANGUAGE plpgsql
@@ -72,11 +76,8 @@ AS $function$
 DECLARE v_old JSONB;
 BEGIN
   IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
-  -- Sahiplik devri koruması: owner_id değişiyorsa yalnız SUPER_ADMIN.
-  IF (p_payload ? 'owner_id')
-     AND NULLIF(p_payload->>'owner_id','')::uuid IS DISTINCT FROM
-         (SELECT owner_id FROM public.pitches WHERE id = p_pitch_id)
-     AND NOT public.has_role('SUPER_ADMIN') THEN
+  PERFORM public.require_admin_role(ARRAY['MODERATOR']);
+  IF p_payload ? 'owner_id' AND NOT public.is_super_admin() THEN
     RAISE EXCEPTION 'Tesis sahipliği devri yalnız SUPER_ADMIN tarafından yapılabilir';
   END IF;
   SELECT to_jsonb(p.*) INTO v_old FROM public.pitches p WHERE id = p_pitch_id;
