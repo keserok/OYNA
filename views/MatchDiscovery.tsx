@@ -44,7 +44,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     adminUsers, 
     playerSeekAds,
     toggleJoinPlayerSeekAd,
-    acceptPlayerSeekAdRequest,
     navigateTo,
     userLocation,
     selectedRegions,
@@ -1031,13 +1030,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
                               onClick={() => {
+                                // B6: sahte otomatik onay YOK — talep durumu dürüst
+                                // kalır ('Talep gönderildi'); kabul yalnız kaptanın
+                                // gerçek aksiyonuyla olur (DB-destekli akış: B6-full/S3).
                                 toggleJoinPlayerSeekAd(ad.id, currentUserUid);
                                 if (!isJoined) {
-                                  // Simulate captain accepting after 2.5 seconds
-                                  setTimeout(() => {
-                                    acceptPlayerSeekAdRequest(ad.id, currentUserUid);
-                                    showToast('Talebiniz Kabul Edildi! Kaptanla mesajlaşabilirsiniz. 💬', 'success');
-                                  }, 2500);
+                                  showToast('Talebin iletildi — kaptan onayı bekleniyor.', 'info');
                                 }
                               }}
                               className={`px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer ${
