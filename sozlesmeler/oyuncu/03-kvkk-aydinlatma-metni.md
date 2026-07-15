@@ -1,12 +1,12 @@
 # KVKK Aydınlatma Metni
 
-> **Durum:** Yayında · **Son güncelleme:** 12.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
 > **Uygulandığı yer:** `views/LegalScreen.tsx → KVKK` (uygulama içi "Yasal" ekranı)
 > **İlgili belge:** Bu metin, 6698 s. KVKK m.10'daki aydınlatma yükümlülüğünü karşılar; [Gizlilik Politikası](02-gizlilik-politikasi.md) ile birlikte okunmalıdır.
 
 ---
 
-**Son güncelleme: 12.07.2026**
+**Son güncelleme: 15.07.2026**
 
 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, veri sorumlusu sıfatıyla Miraç Kerem Çürüksulu (OYNA) tarafından kişisel verileriniz aşağıda açıklanan kapsamda işlenmektedir.
 
@@ -31,8 +31,8 @@ Sözleşmenin kurulması/ifası, hukuki yükümlülük, meşru menfaat ve açık
 ### 5. Toplama Yöntemi
 Verileriniz, uygulamayı kullanımınız sırasında elektronik ortamda, doğrudan sizden veya cihazınızdan (izninizle) elde edilir.
 
-### 6. Aktarım
-Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler, teknoloji/altyapı tedarikçilerimiz (gerekirse yurt dışında yerleşik) ve yetkili kamu kurumlarına mevzuata uygun olarak aktarılabilir.
+### 6. Aktarım ve Görünürlük
+Verileriniz; ödeme kuruluşları, rezervasyon yaptığınız tesisler, kaleci/hakem gibi hizmet sağlayıcılar, teknoloji/altyapı tedarikçilerimiz (gerekirse yurt dışında yerleşik) ve yetkili kamu kurumlarına mevzuata uygun olarak aktarılabilir. Tesis ve hizmet sağlayıcılarla paylaşılan veriler, **yalnızca ilgili hizmetin ifası için gerekli asgari** kalemlerle sınırlıdır (bkz. [Veri Paylaşım Protokolü](../veri-paylasim-protokolu.md)). Ayrıca, bir maça katıldığınızda **adınız ve profil görseliniz** o maçı görüntüleyenlere görünür olur; saha veya hizmet sağlayıcılar hakkında yaptığınız **değerlendirme ve yorumlar** kamuya açık olarak yayımlanabilir.
 
 ### 7. Haklarınız
 KVKK m.11 kapsamındaki haklarınızı (bilgi talep etme, düzeltme, silme, itiraz ve zararın giderilmesini isteme dahil) destek@oyna.app adresine yazılı başvuruda bulunarak kullanabilirsiniz.
