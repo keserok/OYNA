@@ -110,6 +110,13 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
 - **Uygulanan çözüm:** Rozet bloğu kaldırıldı; kullanılmayan `badgeLabel` değişkeni temizlendi. "Bildirimler" başlığı + okunmamış sayacı kaldı. Ortak ekran olduğundan tüm rollerde tutarlı.
 - **Etkilenen katmanlar:** Frontend. **Doğrulama:** `tsc` temiz.
 
+### [OYUNCU-05] Sıfır-Problem Programı S0+S2 (toplu) — kök nedenler + maç akışı bütünlüğü
+- **Durum:** ✔️ Tamamlandı (2026-07-14/15) · **Branch:** `claude/player-edge-cases-plan-ggtezh`
+- **Kapsam ve tam kayıt:** `OYUNCU_EDGE_CASE_PLANI.md` §6.3 (S0) ve §6.5 (S2) — 59 bulguluk programın uygulanan ilk iki sprinti.
+- **S0 özeti:** ortak util'ler (`ratingScale`/`formatTRY`/`matchDateTime`) + rookie kart (OVR "—", sahte gold-100 öldü) + gerçek kimlik (`store.currentUserProfile` — "Oyuncu"/pravatar fallback'i öldü) + bootstrap A2 (geçici hata ≠ yeni kayıt) + `minRating` varsayılanı 0 (K2) + kalıcı smoke (`tests/player-smoke.mjs`). Smoke'un yakaladığı 2 bug düzeltildi (stats-kolon 400'ü, notifications çift-abonelik).
+- **S2 özeti:** KN-3 atomik maç yazımı (realtime salt-okur; 7 handler RPC→re-fetch; client kaptan-devri kopyası silindi) + B2 minRating **sunucu** kapısı (canlı migration, `__inner` sarmalayıcı deseni) + B4 kurucu iptali UI + B5 ayrılmada iade metni + B6 sahte otomatik onay öldü + B8/B9/B10/B15 keşif dürüstlüğü + B14 yedek görünürlüğü + MatchCalendar gerçek veri.
+- **Kanıt:** canlı `tests/match-concurrency.mjs` 5/5 (eşzamanlı katılımda kayıp yok, tarayıcı 0 yazım) · smoke 4/4 · 260 birim testi · tsc temiz.
+
 ### [OYUNCU-04] "Önce Maçlara Göz At" (misafir) → Profil aktif + boş haller + işlevli misafir şeridi
 - **Durum:** ✔️ Tamamlandı
 - **Tarih:** 2026-06-30
