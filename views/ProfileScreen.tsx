@@ -83,6 +83,8 @@ interface ProfileScreenProps {
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı
     const [showEditModal, setShowEditModal] = useState(false);
+    // D5: görsel yükleme hatası (HEIC/boyut/çok küçük/offline) kullanıcıya gösterilir.
+    const [photoError, setPhotoError] = useState<string | null>(null);
     const [editPos, setEditPos] = useState('');
     const [editBio, setEditBio] = useState('');
     const [editAvatar, setEditAvatar] = useState('');
@@ -121,6 +123,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 getFullUserProfile(uid),
                 getMatchHistory(uid),
             ]);
+            // D2: giriş yapmış kullanıcının profili null ise bu bir YÜKLEME
+            // HATASIDIR (getFullUserProfile hatayı yutup null döndürüyor) —
+            // düzenlenebilir boş "Oyuncu" profili gösterip gerçek profili ezme
+            // riski yaratmak yerine hata durumu + Yeniden Dene göster.
+            if (!profileData) {
+                setError('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+                return;
+            }
             setProfile(profileData);
             setMatchHistory(history);
             // FAZ 7.5: rol değiştirici için güncel rolleri store'a yansıt
@@ -152,6 +162,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     }, [uid]);
 
     const openEdit = () => {
+        setPhotoError(null);
         setEditPos(profile?.position || '');
         setEditBio(profile?.bio || '');
         setEditAvatar(profile?.avatar_url || '');
@@ -162,11 +173,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPhotoError(null);
         try {
             const url = await uploadImage(file);
             setEditAvatar(url);
-        } catch (err) {
+        } catch (err: any) {
+            // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
+            // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
             console.error('Fotoğraf yükleme hatası:', err);
+            setPhotoError(err?.message || 'Fotoğraf yüklenemedi. Farklı bir görsel dene (JPG/PNG, en fazla 10MB).');
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
@@ -375,6 +390,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-black text-primary uppercase tracking-widest disabled:opacity-60">
                                 Fotoğrafı Değiştir
                             </button>
+                            {photoError && (
+                                <p className="text-[11px] font-bold text-red-400 text-center max-w-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                                    {photoError}
+                                </p>
+                            )}
                             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
                         </div>
                         <div>
