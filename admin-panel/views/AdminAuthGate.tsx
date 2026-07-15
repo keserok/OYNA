@@ -4,25 +4,15 @@ import { Lock, Terminal, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Spinner } from '../../components/ui/Spinner';
 import {
   signInAdmin,
-  signOutAdmin,
   toTurkishAdminError,
   type AdminSession,
-  type AdminSignInResult,
 } from '../services/adminService';
-import AdminMfaGate from './AdminMfaGate';
 
 const EMAIL_KEY = 'oyna_admin_email';
 
 interface Props {
   onAuthenticated: (session: AdminSession) => void;
   bootError?: string | null;
-}
-
-/** Şifre doğru ama henüz aal2'ye ulaşılmadı → MFA adımı için ara durum. */
-interface MfaStep {
-  mode: 'challenge' | 'enroll';
-  session: AdminSession;
-  factorId?: string;
 }
 
 const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
@@ -36,7 +26,6 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
   });
   const [err, setErr] = useState<string | null>(bootError || null);
   const [loading, setLoading] = useState(false);
-  const [mfaStep, setMfaStep] = useState<MfaStep | null>(null);
 
   useEffect(() => {
     if (bootError) setErr(bootError);
@@ -49,28 +38,14 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
     } catch { /* storage optional */ }
   };
 
-  const handleSignInResult = (result: AdminSignInResult) => {
-    if (result.status === 'authenticated') {
-      persistEmail();
-      onAuthenticated(result.session);
-      return;
-    }
-    // aal2'ye ulaşılana kadar panel AÇILMAZ — MFA adımına geç.
-    persistEmail();
-    setMfaStep(
-      result.status === 'mfa_challenge'
-        ? { mode: 'challenge', session: result.session, factorId: result.factorId }
-        : { mode: 'enroll', session: result.session },
-    );
-  };
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErr(null);
     try {
-      const result = await signInAdmin(email.trim(), password);
-      handleSignInResult(result);
+      const session = await signInAdmin(email.trim(), password);
+      persistEmail();
+      onAuthenticated(session);
     } catch (error) {
       setErr(toTurkishAdminError(error));
       if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
@@ -78,26 +53,6 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
       setLoading(false);
     }
   };
-
-  // MFA adımı aktifse doğrulama ekranını göster; aal2 olmadan panel açılmaz.
-  if (mfaStep) {
-    return (
-      <AdminMfaGate
-        mode={mfaStep.mode}
-        session={mfaStep.session}
-        factorId={mfaStep.factorId}
-        onVerified={(session) => {
-          setMfaStep(null);
-          onAuthenticated(session);
-        }}
-        onCancel={() => {
-          void signOutAdmin();
-          setMfaStep(null);
-          setPassword('');
-        }}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#050812] flex flex-col items-center justify-center p-6 relative overflow-hidden">

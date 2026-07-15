@@ -13,7 +13,7 @@ export const ADMIN_FETCH_TIMEOUT_MS = 12_000;
 /**
  * Boot-time session probe timeout. Uzak bölgedeki (ör. Singapur) Supabase'e
  * Türkiye'den birden çok auth roundtrip gerektiği için 4s fazla agresifti ve
- * GEÇERLİ oturumu yanlışlıkla düşürüp tekrar-giriş (ve 2FA) döngüsüne sokuyordu.
+ * GEÇERLİ oturumu yanlışlıkla düşürüp tekrar-giriş döngüsüne sokuyordu.
  * Daha toleranslı: yavaş-ama-geçerli oturum artık kapı dışı kalmaz.
  */
 export const ADMIN_SESSION_CHECK_MS = 8_000;

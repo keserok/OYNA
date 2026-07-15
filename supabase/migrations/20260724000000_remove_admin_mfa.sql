@@ -1,0 +1,11 @@
+-- Admin panel 2FA / authenticator (TOTP) katmanı KALDIRILDI.
+-- Frontend (signInAdmin + checkPlatformAdmin) artık admin_mfa_required bayrağını
+-- OKUMUYOR. Panel girişi yalnızca e-posta + şifre, sunucu-taraflı platform-admin
+-- rol kontrolü (RLS/RBAC), oturum zaman aşımı (idle/mutlak) ve audit log ile
+-- korunur.
+--
+-- Bu göç, Sistem Parametreleri → Güvenlik ekranında artık hiçbir işlevi olmayan
+-- "Panel 2FA (İki Adımlı Doğrulama) Zorunlu" bayrağını app_config'ten temizler ki
+-- panelde ölü/yanıltıcı bir anahtar görünmesin. get_config_bool RPC'si ve diğer
+-- GUVENLIK anahtarları (admin_readonly_mode vb.) DOKUNULMADAN kalır.
+DELETE FROM public.app_config WHERE key = 'admin_mfa_required';
