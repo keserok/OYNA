@@ -405,6 +405,54 @@ const App: React.FC = () => {
     return () => { if (remove) remove(); };
   }, []);
 
+  // ─── Davet bağlantısı (?match=…&join=…) — "indir → katıl" döngüsü ───────────
+  // Kaptan lobiden paylaştığı evrensel bağlantıyla arkadaşını çağırır. Bağlantı
+  // açılınca param'ı ERKEN sakla: oturumsuz kullanıcı AUTH'a düşse bile davet
+  // kaybolmasın; kullanıcı uygulamaya girince (aşağıdaki effect) lobiye yönlenir.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const matchId = params.get('match');
+      // Gevşek UUID kontrolü — kesin doğrulamayı handleDeepLink yapar.
+      if (matchId && /^[0-9a-f-]{32,40}$/i.test(matchId)) {
+        const join = params.get('join') || '';
+        sessionStorage.setItem('oyna.pendingInvite', JSON.stringify({ matchId, join }));
+        params.delete('match');
+        params.delete('join');
+        const qs = params.toString();
+        window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      }
+    } catch {
+      /* sessionStorage/URL erişilemezse davet yok sayılır */
+    }
+  }, []);
+
+  // Bekleyen daveti tüket: kullanıcı gerçekten uygulamanın içine girdiğinde
+  // (splash/giriş/onboarding/rol ekranları DIŞINDA) maç lobisine yönlendir.
+  // Yeni kayıt da onboarding'i bitirip DASHBOARD'a düşünce buraya düşer.
+  useEffect(() => {
+    if (!authResolved || !auth.currentUser?.uid) return;
+    const PRE_APP_VIEWS = new Set<string>([
+      'SPLASH', 'AUTH', 'ONBOARDING', 'LOCATION_PROMPT', 'ROLE_SELECTION',
+      'PENDING_VERIFICATION', 'GUARDIAN_CHILD', 'GUARDIAN_FORM',
+    ]);
+    if (PRE_APP_VIEWS.has(view)) return;
+    let raw: string | null = null;
+    try { raw = sessionStorage.getItem('oyna.pendingInvite'); } catch { return; }
+    if (!raw) return;
+    try { sessionStorage.removeItem('oyna.pendingInvite'); } catch { /* yut */ }
+    let matchId = '';
+    try { matchId = (JSON.parse(raw) as { matchId?: string }).matchId || ''; } catch { return; }
+    if (!matchId) return;
+    const s = useAppStore.getState();
+    // Mevcut oyna:// deep-link makinesini yeniden kullan: UUID doğrula → maçı
+    // çek → setSelectedMatch → MATCH_JOIN. (Özel maçta katılım kodu davet
+    // mesajında zaten var; lobide kodla katılım akışı devrede.)
+    handleDeepLink(`oyna://match/${matchId}`, (v) => s.navigateTo(v as AppView), {
+      setSelectedMatch: (m) => s.setSelectedMatch(m),
+    });
+  }, [view, authResolved]);
+
   // ─── Android donanım geri tuşu ─────────────────────────────────────────────
   // Yığında ekran varsa geri git; kök ekrandaysa uygulamayı arka plana al
   // (kapatmak yerine) — Play incelemesinin beklediği davranış.

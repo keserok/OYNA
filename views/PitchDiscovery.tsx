@@ -4,7 +4,7 @@ import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
-  LocateFixed, Loader2, Navigation2,
+  LocateFixed, Loader2, Navigation2, Users,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
@@ -679,6 +679,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setBookingDeposit,
     navigateTo,
     setPaymentContext,
+    setMatchCreateSeed,
   } = useAppStore();
 
   // Canlı saha verisi (onaylı + açık + yayında). Mock'a düşme — vitrin yalnızca gerçek veriyi gösterir.
@@ -1043,6 +1044,28 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       infoNote: 'Kapora rezervasyonunu güvenceye alır. İptal koşulları tesis politikasına göre uygulanır.',
     });
     navigateTo('PAYMENT');
+  };
+
+  // "Maç Oluştur · Herkes Ödesin" → tek başına kaporayı fonlamak yerine maçı
+  // kur, ücret oyunculara bölünsün. Saha + saat + toplam ücreti maç-oluşturma
+  // akışına tohumlarız; kişi başı ücret (perTeam×2'ye bölünür) ve kaptanın
+  // kilit kaporası orada hesaplanır. Kaptan kadroyu kurup yayınlar, sonra
+  // lobiden arkadaşlarını (uygulamayı indirmeye) davet eder.
+  // Not: date ISO formatında gider — matchMapper yalnız ISO / gg.aa.yyyy ayrıştırır.
+  const handleCreateMatch = () => {
+    if (!selectedSlot || !selectedCourtId || !selectedPitch || !selectedCourt || !selectedSlotQuote) return;
+    persistBookingSelection();
+    setIsDetailOpen(false);
+    setMatchCreateSeed({
+      pitchId: selectedPitch.id,
+      pitchName: selectedPitch.name,
+      district: selectedPitch.district,
+      date: selectedDateISO,
+      time: parseSlotLabel(selectedSlot).startTime,
+      price: selectedSlotQuote.price,
+      totalPrice: selectedSlotQuote.price,
+    });
+    navigateTo('MATCH_CREATE');
   };
 
   const handleReportContent = async () => {
@@ -1830,27 +1853,23 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
             {/* Yapışkan kapora barı (tasarım 1a) */}
             <div className="absolute bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/[0.07] z-20">
-              <div className="px-6 py-4 pb-safe flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-[0.08em] text-white/45 truncate">
-                    {selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık'}
-                    {' · '}{selectedDateObj.getDate()} {MONTHS_TR_SHORT[selectedDateObj.getMonth()]}
-                    {selectedSlot ? ` · ${parseSlotLabel(selectedSlot).startTime}` : ''}
-                    {!isSelectionMode ? ' · Kapora' : ''}
-                  </div>
-                  {selectedSlotQuote ? (
-                    <div className="text-xl font-black italic mt-0.5">
-                      {isSelectionMode ? (
-                        <>₺{selectedSlotQuote.price}<span className="text-xs font-semibold text-white/50"> / saat</span></>
-                      ) : (
-                        <>₺{selectedSlotQuote.deposit}<span className="text-xs font-semibold text-white/50"> / ₺{selectedSlotQuote.price}</span></>
-                      )}
+              {isSelectionMode ? (
+                /* ── Seçim modu: maç oluştururken saha/saat seçimi (tek CTA) ── */
+                <div className="px-6 py-4 pb-safe flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-[0.08em] text-white/45 truncate">
+                      {selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık'}
+                      {' · '}{selectedDateObj.getDate()} {MONTHS_TR_SHORT[selectedDateObj.getMonth()]}
+                      {selectedSlot ? ` · ${parseSlotLabel(selectedSlot).startTime}` : ''}
                     </div>
-                  ) : (
-                    <div className="text-sm font-bold text-white/50 mt-0.5">Önce saat seç</div>
-                  )}
-                </div>
-                {isSelectionMode ? (
+                    {selectedSlotQuote ? (
+                      <div className="text-xl font-black italic mt-0.5">
+                        ₺{selectedSlotQuote.price}<span className="text-xs font-semibold text-white/50"> / saat</span>
+                      </div>
+                    ) : (
+                      <div className="text-sm font-bold text-white/50 mt-0.5">Önce saat seç</div>
+                    )}
+                  </div>
                   <button
                     disabled={!selectedSlot || !selectedCourtId}
                     onClick={() => {
@@ -1868,24 +1887,73 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   >
                     Bu Saati Seç
                   </button>
-                ) : (
-                  <button
-                    disabled={!selectedSlot || !selectedCourtId}
-                    onClick={handlePayDeposit}
-                    className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-black italic uppercase tracking-wide whitespace-nowrap transition-all ${
-                      selectedSlot && selectedCourtId
-                        ? 'shadow-[0_0_30px_rgba(255,255,0,0.3)] active:scale-95'
-                        : 'opacity-60 cursor-not-allowed'
-                    }`}
-                  >
-                    Kaporayı Öde
-                  </button>
-                )}
-              </div>
-              {selectedSlotQuote && !isSelectionMode && (
-                <p className="px-6 pb-3 -mt-1 text-[9px] text-white/35 leading-relaxed">
-                  Kapora rezervasyon güvencesidir; kalan ₺{selectedSlotQuote.price - selectedSlotQuote.deposit} maç günü tesiste ödenir. İptalde tesis politikasına göre iade edilir.
-                </p>
+                </div>
+              ) : (
+                /* ── Rezervasyon modu: iki CTA — Maç Oluştur (herkes öder) · Kaporayı Öde ── */
+                <div className="px-4 pt-4 pb-safe pb-4 space-y-3">
+                  {/* Özet: saha ücreti + kapora */}
+                  <div className="px-2 flex items-end justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-black uppercase tracking-[0.08em] text-white/45 truncate">
+                        {selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık'}
+                        {' · '}{selectedDateObj.getDate()} {MONTHS_TR_SHORT[selectedDateObj.getMonth()]}
+                        {selectedSlot ? ` · ${parseSlotLabel(selectedSlot).startTime}` : ''}
+                      </div>
+                      {selectedSlotQuote ? (
+                        <div className="text-xl font-black italic mt-0.5">
+                          ₺{selectedSlotQuote.price}<span className="text-xs font-semibold text-white/50"> / saha</span>
+                        </div>
+                      ) : (
+                        <div className="text-sm font-bold text-white/50 mt-0.5">Önce saat seç</div>
+                      )}
+                    </div>
+                    {selectedSlotQuote && (
+                      <div className="text-right shrink-0">
+                        <div className="text-[9px] font-black uppercase tracking-[0.1em] text-[#FACC15]/70">Kapora</div>
+                        <div className="text-base font-black italic text-[#FACC15] leading-tight">₺{selectedSlotQuote.deposit}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* İki aksiyon: yan yana */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Maç Oluştur · Herkes Ödesin (öne çıkan) */}
+                    <button
+                      disabled={!selectedSlot || !selectedCourtId}
+                      onClick={handleCreateMatch}
+                      className={`flex flex-col items-center justify-center gap-0.5 h-16 rounded-2xl bg-[#39FF14] text-[#0A0E14] transition-all ${
+                        selectedSlot && selectedCourtId
+                          ? 'shadow-[0_0_30px_rgba(57,255,20,0.32)] active:scale-95'
+                          : 'opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 text-[13px] font-black italic uppercase tracking-tight">
+                        <Users size={15} strokeWidth={2.5} /> Maç Oluştur
+                      </span>
+                      <span className="text-[9px] font-black uppercase tracking-wide opacity-70">Herkes payını öder</span>
+                    </button>
+                    {/* Kaporayı Öde (tek başına kirala) */}
+                    <button
+                      disabled={!selectedSlot || !selectedCourtId}
+                      onClick={handlePayDeposit}
+                      className={`flex flex-col items-center justify-center gap-0.5 h-16 rounded-2xl bg-[#FFFF00] text-black transition-all ${
+                        selectedSlot && selectedCourtId
+                          ? 'shadow-[0_0_24px_rgba(255,255,0,0.22)] active:scale-95'
+                          : 'opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <span className="text-[13px] font-black italic uppercase tracking-tight">Kaporayı Öde</span>
+                      <span className="text-[9px] font-black uppercase tracking-wide opacity-60">Tek başına kirala</span>
+                    </button>
+                  </div>
+
+                  {selectedSlotQuote && (
+                    <p className="px-2 text-[9px] text-white/35 leading-relaxed">
+                      <span className="text-[#39FF14]/80 font-bold">Maç oluştur:</span> saha ücreti oyunculara bölünür; sen yalnız kilit kaporası verirsin, kalanı katılanlar öder.{' '}
+                      <span className="text-[#FACC15]/80 font-bold">Kapora:</span> kalan ₺{selectedSlotQuote.price - selectedSlotQuote.deposit} maç günü tesiste ödenir.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </motion.div>

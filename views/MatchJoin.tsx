@@ -25,6 +25,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
+import { shareMatchInvite } from '../utils/inviteLink';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -241,6 +242,23 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const showActionSuccess = (msg: string) => {
     setActionSuccess(msg);
     setTimeout(() => setActionSuccess(null), 4000);
+  };
+
+  // Kaptan → arkadaşını davet et: uygulamayı indirip kadroya katılacağı evrensel
+  // bağlantı (+ özel maçta kod). Native paylaşım sayfası; yoksa panoya kopyalanır.
+  const handleInviteFriends = async () => {
+    const result = await shareMatchInvite({
+      matchId: match.id,
+      matchTitle: match.title,
+      pitchName: match.location,
+      dateLabel: match.date,
+      timeLabel: match.time,
+      joinCode: match.visibility === 'PRIVATE' ? match.privateCode : undefined,
+      costPerPerson: match.price || undefined,
+    });
+    if (result === 'shared') showActionSuccess('Davet paylaşıldı — arkadaşların indirip katılabilir! ⚽');
+    else if (result === 'copied') showActionSuccess('Davet panoya kopyalandı — arkadaşına gönder! 📋');
+    else showActionError('Davet paylaşılamadı. Lütfen tekrar dene.');
   };
 
   // Taktik Kenarı — saha tarafı + ilk açılışta otomatik taraf seçimi (bir kez)
@@ -1915,36 +1933,59 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           )}
         </div>
 
-        {/* ── Özel Maç Kodu (yalnız kaptana) ── */}
-        {match.visibility === 'PRIVATE' && match.privateCode && isCaptain && (
-          <div className="px-4 pb-3">
+        {/* ── Kaptan: Arkadaşını Davet Et (uygulamayı indir + kadroya katıl) ── */}
+        {isCaptain && (
+          <div className="px-4 pb-3 space-y-2">
             <button
-              onClick={() => {
-                const code = match.privateCode!;
-                if (navigator.clipboard?.writeText) {
-                  navigator.clipboard.writeText(code).then(
-                    () => showActionSuccess(`Kod kopyalandı: ${code}`),
-                    () => showActionSuccess(`Kod: ${code}`),
-                  );
-                } else {
-                  showActionSuccess(`Kod: ${code}`);
-                }
-              }}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 hover:bg-[#FACC15]/10 active:scale-[0.98] transition-all"
+              onClick={handleInviteFriends}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#39FF14]/[0.06] border border-[#39FF14]/25 hover:bg-[#39FF14]/10 active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-center shrink-0">
-                  <KeyRound size={14} className="text-[#FACC15]" />
+                <div className="w-9 h-9 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/30 flex items-center justify-center shrink-0">
+                  <UserPlus size={16} className="text-[#39FF14]" />
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FACC15]/70">Özel Maç Kodu</p>
-                  <p className="text-lg font-black tracking-[0.3em] text-white truncate">{match.privateCode}</p>
+                  <p className="text-[13px] font-black italic uppercase tracking-tight text-white leading-tight">Arkadaşını Davet Et</p>
+                  <p className="text-[9px] font-bold text-white/45 truncate mt-0.5">
+                    Bağlantıyı gönder — uygulamayı indirip kadroya katılsın, payını ödesin
+                  </p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FACC15] shrink-0">
-                <Copy size={12} /> Paylaş
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#39FF14] shrink-0">
+                <Send size={12} /> Paylaş
               </span>
             </button>
+
+            {/* Özel maç kodu — kaptana, davetle birlikte hatırlatılır */}
+            {match.visibility === 'PRIVATE' && match.privateCode && (
+              <button
+                onClick={() => {
+                  const code = match.privateCode!;
+                  if (navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(code).then(
+                      () => showActionSuccess(`Kod kopyalandı: ${code}`),
+                      () => showActionSuccess(`Kod: ${code}`),
+                    );
+                  } else {
+                    showActionSuccess(`Kod: ${code}`);
+                  }
+                }}
+                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 hover:bg-[#FACC15]/10 active:scale-[0.98] transition-all"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-center shrink-0">
+                    <KeyRound size={14} className="text-[#FACC15]" />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FACC15]/70">Özel Maç Kodu</p>
+                    <p className="text-lg font-black tracking-[0.3em] text-white truncate">{match.privateCode}</p>
+                  </div>
+                </div>
+                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FACC15] shrink-0">
+                  <Copy size={12} /> Kopyala
+                </span>
+              </button>
+            )}
           </div>
         )}
 

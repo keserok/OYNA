@@ -98,6 +98,11 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   // FAZ 3: Rezervasyon → Maça Çevir tohumu (MyBookings'ten gelir) — saha + saat ön-doldur
   useEffect(() => {
     if (!matchCreateSeed) return;
+    // totalPrice: saha vitrininden "Maç Oluştur" ile gelen tohum, sahanın slot
+    // ücretini taşır → kişi başı ücret (perTeam×2'ye bölünür) ve kapora bundan
+    // hesaplanır. Eski tohum yollarında (yalnız price) totalPrice yoktur; o
+    // durumda mevcut davranış korunur (ücret 0 → serbest maç).
+    const seedTotal = matchCreateSeed.totalPrice ?? 0;
     setSelectedPitch({
       id: matchCreateSeed.pitchId || 'seed-pitch',
       name: matchCreateSeed.pitchName || 'Saha',
@@ -105,6 +110,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       location: matchCreateSeed.district || '',
       image: '',
       price: matchCreateSeed.price ?? 0,
+      totalPrice: seedTotal,
       type: 'OPEN', slots: [], features: [],
     } as any);
     if (matchCreateSeed.date && matchCreateSeed.time) {

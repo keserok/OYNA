@@ -216,7 +216,7 @@ interface AppState {
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
   // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
-  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number } | null;
+  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number; totalPrice?: number } | null;
   reliabilityScore: number;
   banExpiresAt: string | null;
   setReliabilityScore: (score: number) => void;
