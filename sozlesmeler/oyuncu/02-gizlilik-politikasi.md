@@ -1,16 +1,18 @@
 # Gizlilik Politikası
 
-> **Durum:** Yayında · **Son güncelleme:** 12.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
 > **Uygulandığı yerler:** `public/gizlilik.html` (herkese açık — https://oyna.app/gizlilik.html) ve `views/LegalScreen.tsx → PRIVACY` (uygulama içi, aynı içeriğin kısaltılmış hâli)
 >
 > Bu dosya `public/gizlilik.html`'in tam metnidir; bu iki dosya **birlikte** güncellenmelidir.
 
 ---
 
-**Son güncelleme: 12.07.2026 · Veri sorumlusu: Miraç Kerem Çürüksulu (OYNA)**
+**Son güncelleme: 15.07.2026 · Veri sorumlusu: Miraç Kerem Çürüksulu (OYNA)**
 
 ### 1. Toplanan Veriler
 - **Kimlik/iletişim:** ad, e-posta, telefon
+- **Profil ve oyun tercihleri:** ad-soyad, yaş aralığı, cinsiyet (opsiyonel), mevki/pozisyon ve oyun stili gibi profil bilgileri
+- **Veli onayı (yalnızca reşit olmayan kullanıcılar için):** veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik Numarası; T.C. Kimlik numaraları **şifrelenerek (hash) saklanır, açık (düz) biçimde tutulmaz** ve yalnızca veli-çocuk ilişkisinin doğrulanması amacıyla işlenir
 - **Konum:** yakındaki sahaları ve maçları gösterebilmek için, yalnızca uygulamayı kullanırken ve izninizle işlenir; hassasiyeti azaltılmış (yaklaşık) olarak saklanır
 - **Rehber eşleştirme:** arkadaşlarınızı bulabilmeniz için, açık izninizle cihazınızdaki rehber okunur; numaralar cihazınızda şifrelenip (hash) yalnızca bu şifreli hâli sunucumuza gönderilir — OYNA'yı kullanmayan kişilerin ham telefon numarası cihazınızdan hiçbir şekilde çıkmaz. Bu özelliği Ayarlar'dan istediğiniz zaman kapatabilirsiniz.
 - **Kullanım:** rezervasyon, maç, takım ve mesajlaşma gibi uygulama içi etkinlik verileri
