@@ -14,9 +14,9 @@ OYNA; birlikte oynayan, rezervasyon yapan ve buluşan gerçek insanların toplul
 
 Aşağıdaki altı kural, uygulamayı kullanan herkes için geçerlidir. Kısaca:
 
-1. **Saygılı ol.** Hakaret, taciz, nefret ve ayrımcılığa yer yok — ne mesajlarda ne sahada.
+1. **Saygılı ol.** Hakaret, nefret ve ayrımcılığa yer yok - ne mesajlarda ne sahada.
 2. **Şiddet yok.** Sahada ya da yazışmada fiziksel şiddet veya tehdit, hesabının kalıcı olarak kapatılmasına yol açar.
-3. **Sözünde dur.** Katılacağın maça gel; sürekli gelmemek (no-show) ve son dakika iptalleri yaptırıma yol açar.
+3. **Sözünde dur.** Katılacağın maça katıl; sürekli gelmemek (no-show) ve son dakika iptalleri yaptırıma yol açar.
 4. **Adil puanla.** Değerlendirmen gerçek deneyimine dayansın; intikam amaçlı, sahte veya anlaşmalı puanlama yasak.
 5. **Çocukları koru.** 18 yaşından küçüklere yönelik her türlü uygunsuz davranışta sıfır tolerans uygulanır.
 6. **Kötüye kullanma.** Spam, dolandırıcılık, başkasının kişisel bilgisini ifşa etme ve kimlik taklidi yasaktır — ihlal görürsen bildir.
