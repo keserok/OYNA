@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Globe, Trophy, Users, Check, X, Trash2, Eye } from 'lucide-react';
+import { Globe, Trophy, Users, Check, X, Trash2, Eye, Edit3, MapPin } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
 import { CommunityDetailDrawer } from '../components/CommunityDetailDrawer';
 import { CommunityFormModal } from '../components/CommunityFormModal';
+import { TeamFormModal } from '../components/TeamFormModal';
+import { useAppStore } from '../../../store';
 import {
   fetchCommunitiesAdmin, fetchCommunityCreationRequests, fetchTeamsFromDb, fetchTournaments,
   moderateCommunityCreation, deleteCommunity, createCommunityAdmin, updateCommunityAdmin,
-  deleteTeamAdmin, createTeamAdmin, deleteTournament, createTournamentAdmin,
+  deleteTeamAdmin, createTeamAdmin, createTeamAdminFull, updateTeamAdmin, deleteTournament, createTournamentAdmin,
   toTurkishAdminError,
   type CommunityRow, type CommunityCreationRequest, type CommunityAdminInput,
+  type AdminTeamRow, type TeamAdminInput,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -30,7 +33,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
   const [communities, setCommunities] = useState<CommunityRow[]>([]);
   const [communityTotal, setCommunityTotal] = useState(0);
   const [requests, setRequests] = useState<CommunityCreationRequest[]>([]);
-  const [teams, setTeams] = useState<Array<{ id: string; name: string; captain_id: string | null; created_at: string; is_demo?: boolean }>>([]);
+  const [teams, setTeams] = useState<AdminTeamRow[]>([]);
   const [tournaments, setTournaments] = useState<Array<{ id: string; name: string; status: string; max_teams: number; is_demo: boolean; starts_at: string | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +45,18 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
   const [detailId, setDetailId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [teamFormOpen, setTeamFormOpen] = useState(false);
+  const [teamFormMode, setTeamFormMode] = useState<'create' | 'edit'>('create');
+  const [editTeam, setEditTeam] = useState<AdminTeamRow | null>(null);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, 350);
   const { success, error: toastError } = useAdminToast();
+  const adminPitches = useAppStore((s) => s.adminPitches);
+  const pitchNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    adminPitches.forEach((p) => m.set(p.id, p.name));
+    return m;
+  }, [adminPitches]);
 
   useEffect(() => {
     if (openCommunityId && subRoute === 'TOPLULUKLAR') {
@@ -145,6 +157,17 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
     await load();
   };
 
+  const handleTeamSave = async (input: TeamAdminInput) => {
+    if (teamFormMode === 'create') {
+      await createTeamAdminFull(input);
+      success('Takım oluşturuldu');
+    } else if (editTeam) {
+      await updateTeamAdmin(editTeam.id, input);
+      success('Takım güncellendi');
+    }
+    await load();
+  };
+
   const handleDelete = (id: string, label: string) => setDeleteTarget({ id, label });
 
   const confirmDelete = async () => {
@@ -186,28 +209,47 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
     return (
       <>
       <PageShell route="TAKIMLAR" icon={<Users size={20} />} actions={
-        <ModuleCrudBar moduleKey="teams" addLabel="Yeni Takım" onAdd={() => setShowAdd(true)} onRefresh={refresh} />
+        <ModuleCrudBar moduleKey="teams" addLabel="Yeni Takım" onAdd={() => { setTeamFormMode('create'); setEditTeam(null); setTeamFormOpen(true); }} onRefresh={refresh} />
       }>
-        {addForm}
         <AdminSearchBar value={query} onChange={setQuery} placeholder="Takım ara..." resultCount={filteredTeams.length} className="mb-4" />
         <DataTable
           columns={[
             { header: 'Takım', render: (t) => (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                {t.logo ? (
+                  <img src={t.logo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-gray-600 shrink-0"><Users size={13} /></div>
+                )}
                 <span className="font-semibold text-white">{t.name}</span>
                 {t.is_demo && <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">DEMO</span>}
               </div>
             )},
-            { header: 'Kaptan', render: (t) => <span className="font-mono text-[11px] text-gray-500">{t.captain_id?.slice(0, 8) ?? '—'}</span> },
-            { header: 'Tarih', render: (t) => <span className="text-[11px] text-gray-500">{t.created_at ? new Date(t.created_at).toLocaleDateString('tr-TR') : '—'}</span> },
+            { header: 'Kaptan', render: (t) => t.captainName
+              ? <span className="text-[11px] text-gray-300">{t.captainName}</span>
+              : <span className="text-[11px] text-gray-600">—</span> },
+            { header: 'İç Saha', render: (t) => t.home_pitch_id
+              ? <span className="flex items-center gap-1 text-[11px] text-gray-400"><MapPin size={11} className="text-gray-500 shrink-0" /> {pitchNameById.get(t.home_pitch_id) || `${t.home_pitch_id.slice(0, 8)}…`}</span>
+              : <span className="text-[11px] text-gray-600">—</span> },
+            { header: 'Konum', render: (t) => <span className="text-[11px] text-gray-500">{t.location || '—'}</span> },
             { header: '', render: (t) => (
-              <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10"><Trash2 size={14} /></button>
+              <div className="flex gap-1">
+                <button onClick={() => { setEditTeam(t); setTeamFormMode('edit'); setTeamFormOpen(true); }} className="p-1.5 text-gray-500 hover:text-blue-400 rounded-lg hover:bg-blue-500/10" title="Düzenle"><Edit3 size={14} /></button>
+                <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10" title="Sil"><Trash2 size={14} /></button>
+              </div>
             )},
           ]}
           data={filteredTeams}
           loading={loading}
         />
       </PageShell>
+      <TeamFormModal
+        open={teamFormOpen}
+        mode={teamFormMode}
+        team={editTeam}
+        onClose={() => setTeamFormOpen(false)}
+        onSave={handleTeamSave}
+      />
       {deleteDialog}
       </>
     );

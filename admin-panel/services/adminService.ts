@@ -1589,23 +1589,67 @@ export async function fetchProfileById(userId: string): Promise<AdminUser | null
   return mapProfileRow(data as Record<string, unknown>);
 }
 
-export async function fetchTeamsFromDb(): Promise<Array<{ id: string; name: string; captain_id: string | null; created_at: string | null; is_demo?: boolean }>> {
+export interface AdminTeamRow {
+  id: string;
+  name: string;
+  logo: string | null;
+  location: string | null;
+  captain_id: string | null;
+  captainName: string | null;
+  home_pitch_id: string | null;
+  level: string | null;
+  rating: number | null;
+  created_at: string | null;
+  is_demo: boolean;
+}
+
+export interface TeamAdminInput {
+  name: string;
+  logo?: string | null;
+  location?: string | null;
+  captain_id?: string | null;
+  home_pitch_id?: string | null;
+  level?: 'EASY' | 'MEDIUM' | 'HARD' | null;
+  is_demo?: boolean;
+}
+
+export async function fetchTeamsFromDb(): Promise<AdminTeamRow[]> {
   const { data, error } = await supabase
     .from('teams')
-    .select('id, name, captain_id, captain, rating, level, location, is_demo')
+    .select('id, name, logo, captain_id, captain, rating, level, location, home_pitch_id, is_demo')
     .order('name', { ascending: true })
-    .limit(100);
+    .limit(200);
   if (error) {
     if (isRpcFallback(error) || (error.message || '').includes('row-level security')) return [];
     throw new Error(error.message);
   }
-  return (data || []).map((t: Record<string, unknown>) => ({
-    id: t.id as string,
-    name: t.name as string,
-    captain_id: (t.captain_id as string) || (t.captain as string) || null,
-    created_at: null,
-    is_demo: Boolean(t.is_demo),
-  }));
+  const rows = (data || []) as Array<Record<string, unknown>>;
+  const captainIds = Array.from(
+    new Set(rows.map((t) => ((t.captain_id as string) || (t.captain as string)) || '').filter(Boolean)),
+  );
+  const nameMap: Record<string, string> = {};
+  if (captainIds.length) {
+    const { data: profiles } = await supabase.from('profiles').select('id, full_name, name').in('id', captainIds);
+    (profiles || []).forEach((p: { id: string; full_name: string | null; name: string | null }) => {
+      nameMap[p.id] = p.full_name || p.name || '—';
+    });
+  }
+  return rows.map((t) => {
+    const cid = ((t.captain_id as string) || (t.captain as string)) || null;
+    return {
+      id: t.id as string,
+      name: t.name as string,
+      logo: (t.logo as string) || null,
+      location: (t.location as string) || null,
+      captain_id: cid,
+      captainName: cid ? (nameMap[cid] ?? null) : null,
+      home_pitch_id: (t.home_pitch_id as string) || null,
+      level: (t.level as string) || null,
+      rating: t.rating != null ? Number(t.rating) : null,
+      created_at: null,
+      is_demo: Boolean(t.is_demo),
+    };
+  });
 }
 
 export async function fetchSegmentPreview(segment: string): Promise<number> {
@@ -1676,6 +1720,35 @@ export async function createTeamAdmin(name: string, isDemo = false): Promise<str
   const { data, error } = await supabase.from('teams').insert({ name, is_demo: isDemo }).select('id').single();
   if (error) throw new Error(error.message);
   return data.id as string;
+}
+
+/** TeamAdminInput → teams satırı; kaptan yazılırken legacy `captain` kolonu da senkronlanır. */
+function teamInputToRow(input: Partial<TeamAdminInput>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (input.name !== undefined) row.name = input.name;
+  if (input.logo !== undefined) row.logo = input.logo || null;
+  if (input.location !== undefined) row.location = input.location || null;
+  if (input.captain_id !== undefined) {
+    row.captain_id = input.captain_id || null;
+    row.captain = input.captain_id || null; // iki kaptan kolonunu tutarlı tut
+  }
+  if (input.home_pitch_id !== undefined) row.home_pitch_id = input.home_pitch_id || null;
+  if (input.level !== undefined) row.level = input.level || null;
+  if (input.is_demo !== undefined) row.is_demo = input.is_demo;
+  return row;
+}
+
+/** Tam takım oluşturma (logo/kaptan/iç saha/konum). RLS: admin insert izinli. */
+export async function createTeamAdminFull(input: TeamAdminInput): Promise<string> {
+  const { data, error } = await supabase.from('teams').insert(teamInputToRow(input)).select('id').single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+/** Takım meta verilerini günceller. RLS: "Captains or platform admins can update teams". */
+export async function updateTeamAdmin(id: string, input: Partial<TeamAdminInput>): Promise<void> {
+  const { error } = await supabase.from('teams').update(teamInputToRow(input)).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteTournament(id: string): Promise<void> {
