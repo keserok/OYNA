@@ -15,7 +15,8 @@ import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
-import { checkMatchThreshold } from '../services/matchLifecycleService';
+import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
+import { formatTRY } from '../utils/formatTRY';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -271,6 +272,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  // B4: Kaptanın maçı iptali (yalnız MANAGE lobisinde görünür)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // (Rakip davet/katıl modalları kaldırıldı — lobi sadeleştirmesi)
 
@@ -877,6 +880,32 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
+  // B4: Kurucu maçı iptal eder — sunucu 24s kuralını uygular
+  // (≥24s: katılımcı ödemeleri iade / <24s: no-show politikası).
+  const handleCancelMatch = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const res = await cancelMatchByCaptain(match.id);
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
+      showActionSuccess(
+        res?.outcome && String(res.outcome).toUpperCase().includes('REFUND')
+          ? 'Maç iptal edildi — katılımcı ödemeleri iade edildi.'
+          : 'Maç iptal edildi.'
+      );
+      setShowCancelConfirm(false);
+      setTimeout(() => onBack(), 900);
+    } catch (e: any) {
+      console.error('Cancel match error:', e);
+      showActionError((e?.message || '').includes('UNAUTHORIZED')
+        ? 'Bu maçı yalnız kurucusu iptal edebilir.'
+        : 'Maç iptal edilemedi. Lütfen tekrar dene.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // ── FAZ 5: Kaleci / Hakem Talep Handler'ları ────────────────────────────
   const ACTIVE_REQUEST_STATUSES: ServiceRequest['status'][] = ['PENDING', 'ACCEPTED', 'CAPTURED'];
 
@@ -1161,11 +1190,22 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
               </h3>
               
-              <p className="text-sm text-gray-400 mb-6">
-                {isAlreadyJoinedReserve 
-                  ? 'Yedek listesinden çıkmak istediğinize emin misiniz?' 
+              <p className="text-sm text-gray-400 mb-3">
+                {isAlreadyJoinedReserve
+                  ? 'Yedek listesinden çıkmak istediğinize emin misiniz?'
                   : 'Maçtan ayrılmak istediğinize emin misiniz? Kadrodaki yeriniz boşaltılacaktır.'}
               </p>
+              {/* B5: para ayrılmadan önce KONUŞULUR — sunucu iade kredisini zaten
+                  işliyor (leave RPC); kullanıcı sonucu burada net görür. */}
+              {!isAlreadyJoinedReserve && (match.price || 0) > 0 && (
+                <p className="text-[11px] font-bold text-[#39FF14]/90 bg-[#39FF14]/[0.07] border border-[#39FF14]/20 rounded-xl px-3 py-2 mb-6">
+                  {[...(match.slots || []), ...(match.awaySlots || [])].some(
+                    (s: any) => s?.player?.id === currentUserProfile?.id && s?.player?.paymentStatus === 'PAID'
+                  )
+                    ? `Ödediğin ${formatTRY(match.price)} iade kredisi olarak cüzdanına dönecek.`
+                    : 'Ödeme yaptıysan tutar iade kredisi olarak cüzdanına döner.'}
+                </p>
+              )}
               
               <div className="flex gap-3">
                 <button 
@@ -1179,6 +1219,47 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   disabled={isProcessing}
                   className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
                   {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'AYRIL'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── B4: Maçı İptal Onay Modalı (kurucu) ─────────────────────────────── */}
+      <AnimatePresence>
+        {showCancelConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="bg-[#161B22] border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} className="text-red-500" />
+              </div>
+              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">Maçı İptal Et</h3>
+              <p className="text-sm text-gray-400 mb-3">
+                Bu maçı iptal etmek istediğine emin misin? Tüm kadro bilgilendirilir ve maç vitrinden kaldırılır.
+              </p>
+              {/* Kademeli iade özeti — sunucu 24s kuralıyla birebir */}
+              <p className="text-[11px] font-bold text-amber-300/90 bg-amber-400/[0.07] border border-amber-400/20 rounded-xl px-3 py-2 mb-6 text-left">
+                • Maça <b>24 saatten fazla</b> varsa: katılımcı ödemeleri iade edilir.<br />
+                • <b>24 saatten az</b> kaldıysa: geç iptal — iade yapılmaz ve fair-play puanın etkilenebilir.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  disabled={isProcessing}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                  VAZGEÇ
+                </button>
+                <button
+                  onClick={handleCancelMatch}
+                  disabled={isProcessing}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
+                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'MAÇI İPTAL ET'}
                 </button>
               </div>
             </motion.div>
@@ -1810,6 +1891,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
           )}
         </div>
+
+        {/* ── B4: Maçı İptal Et (yalnız kurucu, yönetim lobisi) ── */}
+        {isManageMode && isCaptain && match.status !== 'CANCELLED' && match.status !== 'COMPLETED' && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-red-500/[0.06] border border-red-500/25 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/15 active:scale-[0.98] transition-all"
+            >
+              <AlertCircle size={13} /> Maçı İptal Et
+            </button>
+          </div>
+        )}
 
         {/* ── Özel Maç Kodu (yalnız kaptana) ── */}
         {match.visibility === 'PRIVATE' && match.privateCode && isCaptain && (
