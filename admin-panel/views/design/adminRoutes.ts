@@ -12,7 +12,7 @@ export type AdminAccent = 'red' | 'green' | 'yellow' | 'blue' | 'purple' | 'pink
 export type AdminBadgeKey =
   | 'live' | 'pitches' | 'users' | 'matches' | 'goalkeepers' | 'referees'
   | 'pendingPitches' | 'openDisputes' | 'verification' | 'activePromos' | 'communities'
-  | 'deletionRequests';
+  | 'deletionRequests' | 'userReports';
 
 export interface AdminRouteDef {
   route: GodViewSubRoute;
@@ -55,6 +55,7 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
   { route: 'KULLANICILAR', title: 'Kullanıcılar', label: 'Kullanıcılar', description: 'Oyuncu profilleri, ban ve rol yönetimi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true, badge: 'users' },
   { route: 'VERIFICATION', title: 'Doğrulama Merkezi', label: 'Doğrulama', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: ShieldCheck, inPalette: true, badge: 'verification', activeAlso: ['PENDING_VERIFICATIONS', 'PROVIDER_IDENTITIES'] },
   { route: 'MODERATION', title: 'Tesis Onayları', label: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Shield, inPalette: true, badge: 'pendingPitches' },
+  { route: 'USER_REPORTS', title: 'Kullanıcı Şikayetleri', label: 'Şikayetler', description: 'Oyuncuların birbirleri hakkında açtığı şikayetlerin (spam, taciz, hile) moderasyonu.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: AlertOctagon, inPalette: true, badge: 'userReports' },
   { route: 'DELETION_QUEUE', title: 'Silme Kuyruğu', label: 'Silme Kuyruğu', description: 'Bekleyen hesap silme talepleri (KVKK).', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: UserX, inPalette: true, badge: 'deletionRequests' },
   { route: 'GUARDIAN_CONSENTS', title: 'Veli Onayları', label: 'Veli Onayları', description: 'Reşit olmayan kullanıcılar için veli muvafakatleri ve bekleyen onaylar.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'purple', icon: Baby, inPalette: true },
   { route: 'MATCHES', title: 'Maçlar', label: 'Maçlar', description: 'Maç kokpiti: kadro, skor, ödeme ve müdahale.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'red', icon: Swords, inPalette: true, badge: 'matches' },

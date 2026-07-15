@@ -64,6 +64,7 @@ export interface AdminDashboardStats {
   open_disputes?: number;
   total_communities?: number;
   active_promo_codes?: number;
+  open_user_reports?: number;
 }
 
 export interface DbAuditLogRow {
@@ -408,6 +409,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     active_goalkeepers,
     active_referees,
     active_promo_codes,
+    open_user_reports,
     settingsRes,
   ] = await Promise.all([
     countRows('profiles'),
@@ -422,6 +424,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     countRows('goalkeepers'),
     countRows('referees'),
     countRows('promo_codes', { column: 'is_active', op: 'eq', value: true }),
+    countRows('user_reports', { column: 'status', op: 'eq', value: 'OPEN' }),
     supabase.from('settings').select('commissionRate').eq('id', 'main').maybeSingle(),
   ]);
 
@@ -438,6 +441,7 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     active_goalkeepers,
     active_referees,
     active_promo_codes,
+    open_user_reports,
     commission_rate: Number(settingsRes.data?.commissionRate ?? 10),
   };
 }
@@ -862,6 +866,79 @@ export async function resolveDispute(disputeId: string, status: 'RESOLVED' | 'DI
     p_notes: notes ?? null,
   });
   if (error) throw new Error(error.message);
+}
+
+// ─── Kullanıcı Şikayetleri (user_reports) moderasyonu ────────────────────────
+// RLS: "Admins manage user_reports" FOR ALL USING(is_platform_admin()) →
+// doğrudan tablo okuma/güncelleme yeterli (RPC gerekmez).
+
+export type UserReportReason = 'SPAM' | 'HARASSMENT' | 'FAKE_PROFILE' | 'CHEATING' | 'OTHER';
+export type UserReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED';
+
+export interface UserReportRow {
+  id: string;
+  reporter_id: string;
+  reported_id: string;
+  context_type: 'CHAT' | 'PROFILE' | 'MATCH';
+  context_id: string | null;
+  reason: UserReportReason;
+  note: string | null;
+  status: UserReportStatus;
+  resolution_notes: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  reporterName?: string;
+  reportedName?: string;
+}
+
+/** Kullanıcı şikayetlerini (opsiyonel duruma göre) çeker; şikayet eden/edilen adları eklenir. */
+export async function fetchUserReports(status?: UserReportStatus, limit = 200): Promise<UserReportRow[]> {
+  let q = supabase
+    .from('user_reports')
+    .select('id, reporter_id, reported_id, context_type, context_id, reason, note, status, resolution_notes, resolved_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (status) q = q.eq('status', status);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  const rows = (data || []) as UserReportRow[];
+  if (rows.length === 0) return rows;
+
+  const ids = Array.from(new Set(rows.flatMap((r) => [r.reporter_id, r.reported_id])));
+  const { data: profiles } = await supabase.from('profiles').select('id, full_name, name, email').in('id', ids);
+  const nameMap: Record<string, string> = {};
+  (profiles || []).forEach((p: { id: string; full_name: string | null; name: string | null; email: string | null }) => {
+    nameMap[p.id] = p.full_name || p.name || p.email || 'Bilinmeyen';
+  });
+  return rows.map((r) => ({
+    ...r,
+    reporterName: nameMap[r.reporter_id],
+    reportedName: nameMap[r.reported_id],
+  }));
+}
+
+/** Şikayeti kapatır (REVIEWED/DISMISSED); karar notu + denetim kaydı ekler. */
+export async function resolveUserReport(
+  reportId: string,
+  status: 'REVIEWED' | 'DISMISSED',
+  notes?: string,
+): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const { error } = await supabase
+    .from('user_reports')
+    .update({
+      status,
+      resolution_notes: notes ?? null,
+      resolved_by: sessionData.session?.user?.id ?? null,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', reportId);
+  if (error) throw new Error(error.message);
+  // Denetim kaydı best-effort (audit zinciri kesintisiz kalsın diye hata yutulur).
+  await persistAdminLog('USER_REPORT_RESOLVE', 'user_report', reportId, status, undefined, {
+    status,
+    notes: notes ?? null,
+  }).catch(() => undefined);
 }
 
 export async function processAccountDeletion(userId: string, anonymize = true): Promise<void> {
