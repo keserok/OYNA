@@ -208,3 +208,15 @@ _Bu belge canlı; onaylanan kararlar ve tamamlanan sprintler §-güncellemeleriy
 - **KC-4** uygun-olmayan kaleci filtresi: `is_available` `profiles`'ta (goalkeepers'ta yok) → marketplace'e ikincil sorgu/join + `create_service_request` sunucu kontrolü (operasyonel/sınırda).
 - **KC-6** `selectedGk` ölü prop temizliği · **KC-7** boş-durum yükleme hatasını maskeliyor (store hata state'i).
 - **KD-8** foto base64 yerine Storage upload · **KB-5** APPLIED expire (sunucu sweep) · **KB-7** geri-sayım parse (kozmetik).
+
+### ✔ TÜM KALEN MADDELER TAMAMLANDI (SQL + veri katmanı dahil)
+- **KC-4** uygunluk: `create_service_request`'e is_available/showProfile/allowOffer guard (otoritatif) + `get_available_provider_ids` RPC + marketplace filtre. Canlı doğrulandı (offline kaleci vitrinden düşer). Migration `20260726000001`.
+- **KB-8** eşleştirme: `_provider_serves_zone` (jsonb, kelime-sınırı) + `_provider_serves_schedule` (TR gün + "HH:MM-HH:MM" saat, gece-aşan, defansif) → `find_providers_for_match`. 20 helper birim-vaka SQL testi geçti; gerçek maçla entegrasyon doğrulandı. Migration `20260726000000` (showProfile) + `20260726000002`.
+- **KD-2 tam:** marketplace showProfile/showRating (canlı) + detay-modal allowOffer kilidi + showRating gizleme + find_providers showProfile. hidePhone: kaptan-tarafı telefon gösterimi yok → gizlenecek sızıntı yok (dürüst).
+- **KC-7** boş-durum: `store.servicesError` + marketplace ErrorState/retry (yükleme hatası maskelenmez).
+- **KD-8** foto: base64 yerine `useImageUpload('avatars')` Storage (satır/payload şişmesi bitti).
+- **KB-5** APPLIED expire: `expire_service_requests` ikinci döngü. Migration `20260726000003`.
+- **KB-7** parse: GK dashboard geri-sayım `parseMatchDateTime` ile sağlam.
+- **KC-6** ölü `selectedGk`/`selectedRef` prop'ları kaldırıldı.
+
+**Kaleci fazı KAPANDI.** Tüm bulgular (KA/KB/KC/KD + para devri) çözüldü ya da (para-kancalılar) `KALECI_ODEME_DEVIR.md`'ye eksiksiz devredildi. Kanıt: tsc temiz · 260 birim testi · GK smoke 4/4 · player smoke 4/4 · 4 canlı migration (helper birim-testli) · marketplace/uygunluk/gizlilik canlı doğrulandı · tüm demo hesap mutasyonları geri yüklendi.
