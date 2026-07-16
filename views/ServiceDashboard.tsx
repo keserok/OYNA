@@ -285,6 +285,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 createdAt: new Date(),
                 stats: me.stats,
                 style: me.style, // KB-M2: kimlik kartı gerçek stili göstersin (sabit "PANTER" yerine)
+                level: (me as any).level, // HR-B: hakem kartı gerçek seviyeyi göstersin (sabit "FIFA" yerine)
                 workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
             });
             setIsAvailable(me.isAvailable ?? true);
@@ -821,6 +822,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const idStyle: string | null = (typeof userProfile?.style === 'string' && userProfile.style.trim()) ? userProfile.style : null;
   // Sabit "A-CLASS" yerine puandan türetilen sınıf (rookie → YENİ).
   const idClass = !idRated ? 'YENİ' : Number(userProfile.rating) >= 8 ? 'A SINIF' : Number(userProfile.rating) >= 6 ? 'B SINIF' : 'C SINIF';
+  // HR-B: hakem kartı için gerçek seviye + VAR (varCallAccuracy string).
+  const idLevel: string | null = (typeof userProfile?.level === 'string' && userProfile.level.trim()) ? userProfile.level : null;
+  const idVar: string = (typeof gkCardStats.varCallAccuracy === 'string' && (gkCardStats.varCallAccuracy as string).trim())
+    ? `%${(gkCardStats.varCallAccuracy as string).replace('%', '')}` : '—';
 
   // --- GOALKEEPER IDENTITY CARD (FLIPPING) ---
   const renderGoalkeeperIdentityCard = () => (
@@ -968,35 +973,43 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                   <div className="flex gap-4 items-center h-full">
                       <div className="relative shrink-0">
-                          <div className="w-24 h-32 bg-black/40 rounded-2xl overflow-hidden border-2 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                              <img src={auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=400"} className="w-full h-full object-cover object-top" alt="Referee" referrerPolicy="no-referrer" />
+                          {/* HR-B: yabancının stok fotosu yerine hakem ikonu placeholder. */}
+                          <div className="w-24 h-32 bg-black/40 rounded-2xl overflow-hidden border-2 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)] flex items-center justify-center">
+                              {auth.currentUser?.photoURL
+                                ? <img src={auth.currentUser.photoURL} className="w-full h-full object-cover object-top" alt="Hakem" referrerPolicy="no-referrer" />
+                                : <Scale size={40} className="text-red-500/40" />}
                           </div>
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
-                              FIFA
-                          </div>
+                          {/* Sabit "FIFA" yerine gerçek seviye (varsa). */}
+                          {idLevel && (
+                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
+                                {idLevel.toLocaleUpperCase('tr-TR')}
+                            </div>
+                          )}
                       </div>
                       <div className="flex-1">
-                          <h2 className="text-3xl font-black text-white leading-none mb-1 truncate max-w-[150px]">{userProfile?.fullName?.split(' ')[0]?.toUpperCase() || 'CÜNEYT'}</h2>
-                          <div className="flex items-center gap-2 mb-3">
+                          <h2 className="text-3xl font-black text-white leading-none mb-1 truncate max-w-[150px]">{idFirstName}</h2>
+                          {/* Sabit "OTORİTER / Ordu" yerine gerçek stil (varsa). */}
+                          {idStyle && (
+                            <div className="flex items-center gap-2 mb-3">
                               <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
-                                  <Scale size={10} /> OTORİTER
+                                  <Scale size={10} /> {idStyle.toLocaleUpperCase('tr-TR')}
                               </span>
-                              <span className="text-xs text-gray-400">Ordu</span>
-                          </div>
-                          
-                          {/* Stats Grid */}
+                            </div>
+                          )}
+
+                          {/* Stats Grid — gerçek veri / "—" (sabit 150/%98/4.9 değil) */}
                           <div className="grid grid-cols-3 gap-2 mt-2">
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">YÖNETİM</p>
-                                  <p className="text-sm font-black text-white">150</p>
+                                  <p className="text-sm font-black text-white">{idNum(gkCardStats.authority)}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">VAR</p>
-                                  <p className="text-sm font-black text-white">%98</p>
+                                  <p className="text-sm font-black text-white">{idVar}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">PUAN</p>
-                                  <p className="text-sm font-black text-red-400">4.9</p>
+                                  <p className="text-sm font-black text-red-400">{idRatingText}</p>
                               </div>
                           </div>
                       </div>
@@ -1014,7 +1027,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <Activity size={14} /> KARİYER PERFORMANSI
                       </h3>
                       <div className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse">
-                          ELİT
+                          {idClass}
                       </div>
                   </div>
 
@@ -1023,7 +1036,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="absolute inset-0 bg-red-500 blur-2xl opacity-20 rounded-full animate-breathe"></div>
                           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest absolute -top-5 w-full text-center">Genel Reyting</span>
                           <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-                              4.9
+                              {idRatingText}
                           </span>
                       </div>
                   </div>
@@ -1032,12 +1045,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="bg-black/40 backdrop-blur lg:hover:-translate-y-1 transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
                           <div className="absolute w-full h-1 top-0 left-0 bg-gradient-to-r from-transparent via-red-400 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
                           <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center">Maç Puanı Ort.</span>
-                          <span className="text-2xl font-black text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.6)] z-10 relative">4.7</span>
+                          <span className="text-2xl font-black text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.6)] z-10 relative">{idRatingText}</span>
                       </div>
                       <div className="bg-black/40 backdrop-blur lg:hover:-translate-y-1 transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
                           <div className="absolute w-full h-1 top-0 left-0 bg-gradient-to-r from-transparent via-orange-400 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
                           <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center text-balance leading-tight">Yönetim Değeri</span>
-                          <span className="text-2xl font-black text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.6)] z-10 relative">A+</span>
+                          <span className="text-2xl font-black text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.6)] z-10 relative">{idClass}</span>
                       </div>
                   </div>
               </div>
