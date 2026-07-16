@@ -4,6 +4,7 @@ import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, Service
 import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import { formatTRY } from '../utils/formatTRY';
+import { parseMatchDateTime } from '../utils/matchDateTime';
 import {
   getIncomingRequests,
   respondServiceRequest,
@@ -152,11 +153,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               ? m.refereeId === userProfile.id 
               : (m.gkId === userProfile.id || m.gk_id === userProfile.id);
           return isMyMatch && (m.status === 'CONFIRMED' || m.status === 'LIVE' || m.status === 'ACTIVE' || !m.status);
-      }).sort((a: any, b: any) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime());
-      
+      // KB-7: TR tarih/saat stringlerini (ör. "Bugün 21:00", "dd.mm.yyyy") güvenle
+      // ayrıştır — ham new Date(`${date} ${time}`) bunlarda Invalid Date veriyordu.
+      }).sort((a: any, b: any) =>
+          (parseMatchDateTime(a.date, a.time)?.getTime() ?? Infinity) -
+          (parseMatchDateTime(b.date, b.time)?.getTime() ?? Infinity));
+
       return upcoming.filter((m: any) => {
-          const matchTime = new Date(`${m.date} ${m.time}`).getTime();
-          return isNaN(matchTime) ? true : matchTime > new Date().getTime(); // If invalid date, keep it for now
+          const mt = parseMatchDateTime(m.date, m.time)?.getTime();
+          return mt == null ? true : mt > Date.now(); // ayrıştırılamıyorsa şimdilik tut
       });
   }, [adminMatches, userProfile, isRef]);
 
@@ -164,9 +169,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       const timer = setInterval(() => {
           if (myUpcomingMatches.length > 0) {
               const match = myUpcomingMatches[0];
-              const matchDate = new Date(`${match.date} ${match.time}`);
+              const matchDate = parseMatchDateTime(match.date, match.time);
               const now = new Date();
-              const diff = matchDate.getTime() - now.getTime();
+              const diff = matchDate ? matchDate.getTime() - now.getTime() : NaN;
               
               if (isNaN(diff) || diff <= 0) {
                   setTimeLeft("00:00:00");
