@@ -5,15 +5,16 @@ import {
   X, Loader2, ChevronRight, Diamond, Search, UserPlus,
   Plus, CheckCircle2, Users, Star, Wifi, WifiOff,
   Send, AlertCircle, Shield, Layers, Droplets, Award,
-  DollarSign, Info, KeyRound, Copy
+  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, type LobbyParticipant } from '../services/matchService';
-import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService } from '../services/serviceRequestService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
+import { sendFriendRequest } from '../services/friendService';
+import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold } from '../services/matchLifecycleService';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
@@ -115,6 +116,29 @@ const getInitials = (name?: string): string => {
 // sahada dış fetch yerine yerel baş harf gösterilir (kullanıcının niyeti).
 const isRealPhoto = (url?: string): boolean =>
   !!url && !/ui-avatars\.com|pravatar\.cc/i.test(url);
+
+// Kaleci/hakem REYTİNGLERİ — admin panelindeki yetenek sliderlarının TAM listesi
+// (DeepEditModals: KALECİ/HAKEM YETENEK KONTROLLERİ). Değerler 10–99 ölçeğinde.
+const GK_RATING_KEYS: [string, string][] = [
+  ['reflexes', 'REFLEKSLER'], ['diving', 'DALIŞ'], ['positioning', 'POZİSYON'],
+  ['distribution', 'DAĞITIM'], ['oneOnOne', 'BİRE BİR'], ['aerialReach', 'HAVA HÂKİMİYETİ'],
+];
+const REF_RATING_KEYS: [string, string][] = [
+  ['authority', 'OTORİTE'], ['fitness', 'KONDİSYON'], ['communication', 'İLETİŞİM'],
+];
+// Sağlayıcının skills/stats jsonb'undan admin reyting anahtarlarını sırayla çıkarır.
+// (Kaleci panelde hem stats hem skills'e yazar; hakemde yalnız stats.)
+const extractProviderRatings = (
+  skills?: Record<string, any> | null,
+  stats?: Record<string, any> | null,
+  isRef?: boolean,
+): { label: string; value: number }[] => {
+  const src: Record<string, any> = { ...(stats || {}), ...(skills || {}) };
+  const keys = isRef ? REF_RATING_KEYS : GK_RATING_KEYS;
+  return keys
+    .map(([k, label]) => ({ label, value: Number(src[k]) }))
+    .filter(r => Number.isFinite(r.value));
+};
 
 // DOLU (TAKEN) slotları tarafın GERÇEK katılımcılarıyla (public_profiles) doldurur.
 // Slot'ta zaten kimlikli oyuncu varsa korunur (ad/avatar public_profiles'tan tazelenir);
@@ -226,8 +250,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Sahadaki dolu slotları gerçek oyuncularla doldurmak için (RLS-güvenli public_profiles).
   const [lobbyParticipants, setLobbyParticipants] = useState<LobbyParticipant[]>([]);
 
-  // Dolu slot — VIP Diamond kart
+  // Dolu slota basınca açılan sade oyuncu bilgi kartı
   const [activePlayerSlotId, setActivePlayerSlotId] = useState<string | null>(null);
+  // Sade oyuncu kartı verisi (arkadaş-kapılı; tıklamada get_friend_player_card ile çekilir)
+  const [playerCard, setPlayerCard] = useState<FriendPlayerCard | null>(null);
+  const [playerCardLoading, setPlayerCardLoading] = useState(false);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
 
   const [inviteModalSlotId, setInviteModalSlotId] = useState<string | null>(null);
   const [friendSearch, setFriendSearch] = useState('');
@@ -252,16 +280,27 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providerSubmittingId, setProviderSubmittingId] = useState<string | null>(null);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  // FAZ 3: pazarda seçilen sağlayıcının dikey detaylı kartı (yetenek barları + istatistik)
+  const [marketDetailProvider, setMarketDetailProvider] = useState<ProviderSuggestion | null>(null);
+
+  // FAZ 2: maça ATANMIŞ kaleci/hakem — lobide HERKESE (salt-okunur) gösterilir.
+  const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
+  const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
+  // Atanmış kaleci/hakem dikey detay kartı (herkese) — hangi sağlayıcı + tür.
+  const [providerDetail, setProviderDetail] = useState<{ p: MatchProvider; isRef: boolean } | null>(null);
+  const [showNoShowConfirm, setShowNoShowConfirm] = useState(false);
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  const { 
-    adminUsers, friends, updateMatch, addUserNotification, adminPitches, 
+  const {
+    adminUsers, friends, updateMatch, addUserNotification, adminPitches,
     userTeams, myTeams, setSelectedMatch,
-    setNewMatchBadge
+    setNewMatchBadge, lobbyMode
   } = useAppStore();
+  // MANAGE = Sıradaki Maçlarım'dan; yönetim aksiyonları yalnız burada görünür.
+  const isManageMode = lobbyMode === 'MANAGE';
 
   // Saha konumu: pitch_id (FK) tek otorite; store'daki isim eşleşmesi varsayılan
   // koordinat bastığı için kullanılmaz. Çözülemezse null kalır → harita gizlenir.
@@ -326,6 +365,26 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!originalMatch?.id) return;
     refreshServiceRequests(originalMatch.id);
   }, [originalMatch?.id]);
+
+  // ── FAZ 2: Maça atanmış kaleci/hakem (HERKESE görünür, salt-okunur) ────────
+  const assignedGkId = (match as any)?.gkId || (match as any)?.gk_id || null;
+  const assignedRefId = (match as any)?.refereeId || (match as any)?.ref_id || null;
+  useEffect(() => {
+    if (!assignedGkId && !assignedRefId) {
+      setAssignedGoalkeeper(null);
+      setAssignedReferee(null);
+      return;
+    }
+    let alive = true;
+    getMatchProviders(assignedGkId, assignedRefId)
+      .then(({ goalkeeper, referee }) => {
+        if (!alive) return;
+        setAssignedGoalkeeper(goalkeeper);
+        setAssignedReferee(referee);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [assignedGkId, assignedRefId]);
 
   // ── Sahadaki dolu slotları gerçek oyuncularla doldur (public_profiles) ────
   // TAKEN sayısı değişince (katılım/ayrılma, realtime dahil) yeniden çekilir.
@@ -456,6 +515,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
     if (slot.status === 'TAKEN') {
       setActivePlayerSlotId(slot.id);
+      setFriendRequestSent(false);
+      setPlayerCard(null);
+      const pid = slot.player?.id;
+      if (pid) {
+        setPlayerCardLoading(true);
+        getFriendPlayerCard(pid)
+          .then((c) => setPlayerCard(c))
+          .finally(() => setPlayerCardLoading(false));
+      }
       return;
     }
 
@@ -982,34 +1050,44 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  const handleSelectProvider = async (provider: ProviderSuggestion) => {
+  // FAZ 4: talep oluştur + hemen fonla (emanet). Kaleci ancak fonlanınca kabul edebilir.
+  const handleSelectProvider = async (provider: ProviderSuggestion, source: 'WALLET' | 'CARD' = 'WALLET') => {
     if (!providerModalType) return;
     setProviderSubmittingId(provider.id);
     try {
-      await createServiceRequest(match.id, provider.id, providerModalType);
+      const { requestId } = await createServiceRequest(match.id, provider.id, providerModalType);
+      await fundServiceRequest(requestId, source);
       await refreshServiceRequests(match.id);
+      setMarketDetailProvider(null);
       setProviderModalType(null);
-      showActionSuccess(`Talep gönderildi — ${provider.name} onayını bekliyor`);
+      showActionSuccess(`Ödeme alındı — ${provider.name} onayı bekleniyor`);
     } catch (err: any) {
-      console.error('[MatchJoin] talep oluşturma:', err);
+      console.error('[MatchJoin] talep/ödeme:', err);
       showActionError(err?.message || 'Hizmet talebi oluşturulamadı.');
     } finally {
       setProviderSubmittingId(null);
     }
   };
 
-  const getDiamondValue = (p: any) => {
-    if (!p) return 0;
-    const db = (adminUsers || []).find(u => u?.id === p.id || u?.name === p.name);
-    if (db?.playerCard?.diamondValue) return db.playerCard.diamondValue;
-    const rating = db?.rating || p.rating || 4.5;
-    const mc = db?.matchCount || 24;
-    return mc * 250 + Math.round(rating * 1000);
-  };
-
-  const getFP = (p: any) => {
-    const friend = (friends || []).find(f => (f as any).id === p?.id);
-    return (friend as any)?.fp || Math.floor(Math.random() * 15) + 85;
+  // FAZ 4: aktif (tahsil edilmiş) kaleci hizmeti → kaptan no-show bildirebilir.
+  const capturedGkRequest = serviceRequests.find(r => r.providerType === 'GK' && r.status === 'CAPTURED');
+  const handleReportNoShow = async () => {
+    if (!capturedGkRequest) return;
+    try {
+      setIsProcessing(true);
+      const r = await captainReportNoShow(capturedGkRequest.id);
+      await refreshServiceRequests(match.id);
+      setShowNoShowConfirm(false);
+      showActionSuccess(
+        r.penaltyCharged
+          ? `No-show bildirildi. ${r.penalty}₺ ceza kalecinin teminatından tahsil edilip sana aktarıldı.`
+          : `No-show bildirildi. Ceza (${r.penalty}₺) teminattan tahsil edilemedi — durum incelemeye alındı.`
+      );
+    } catch (e: any) {
+      showActionError(e?.message || 'No-show bildirilemedi.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const activePlayerSlot = activePlayerSlotId ? (pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).find(s => s?.id === activePlayerSlotId) : null;
@@ -1027,186 +1105,103 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
 
-      {/* ── VIP Diamond Kart Modalı ────────────────────────────────────────── */}
+      {/* ── Sade Oyuncu Bilgi Kartı (arkadaş-kapılı) ────────────────────────── */}
       <AnimatePresence>
         {activePlayer && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
             onClick={() => setActivePlayerSlotId(null)}>
             <motion.div
-              initial={{ scale: 0.75, y: 40, opacity: 0, rotateY: 20 }}
-              animate={{ scale: 1, y: 0, opacity: 1, rotateY: 0 }}
-              exit={{ scale: 0.75, y: 40, opacity: 0, rotateY: -20 }}
-              transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              className="relative w-80 rounded-[32px] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.9)]"
-              style={{ perspective: '1000px' }}>
-
+              className="relative w-[19rem] rounded-[28px] overflow-hidden bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
               {(() => {
-                const overall = Math.round(((activePlayer as any).rating || 4.5) * 20);
-                const isGold = overall >= 90;
-                const isSilver = overall >= 80 && overall < 90;
-                const tier = isGold ? 'GOLD' : isSilver ? 'SILVER' : 'BRONZE';
-                const accentColor = isGold ? '#FFE875' : isSilver ? '#E2E8F0' : '#C27E47';
-                const glowColor = isGold ? 'rgba(255,232,117,0.35)' : isSilver ? 'rgba(226,232,240,0.25)' : 'rgba(194,126,71,0.25)';
-                const gradFrom = isGold ? '#FFE875' : isSilver ? '#E2E8F0' : '#C27E47';
-                const fp = getFP(activePlayer);
+                const isHome = pitchSide === 'home';
+                const accent = isHome ? '#39FF14' : '#f87171';
+                const initialsCls = isHome
+                  ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/25'
+                  : 'bg-red-950/60 text-red-300 border border-red-500/25';
                 const isMySlot = activePlayer.id === currentUserProfile?.id;
+                const posLabel = { 'GK': 'KALECİ', 'DEF': 'DEFANS', 'MID': 'ORTA SAHA', 'FWD': 'FORVET' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'OYUNCU';
+                const c = playerCard;
+                const isSelf = !!c?.is_self;
+                const footTr = (f?: string | null) => f === 'SAG' ? 'SAĞ' : f === 'SOL' ? 'SOL' : '—';
+                // Bilgiler herkese açık; yalnız "birlikte maç" arkadaşlara özel.
+                const canShowTogether = !!c && !isSelf && c.matches_together != null;
+                const showHero = isSelf || canShowTogether;
+                const heroNum = isSelf ? (c?.total_matches ?? 0) : (c?.matches_together ?? 0);
+                const heroLabel = isSelf ? 'TOPLAM MAÇ' : 'BİRLİKTE MAÇ';
+                const showFriendCta = !!c && !isSelf && !c.is_friend;
 
                 return (
-                  <div className="relative" style={{ background: `linear-gradient(160deg, #0d1117 0%, #161B22 100%)` }}>
-                    {/* Doku */}
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-overlay" />
-                    {/* Glow */}
-                    <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-[80px] opacity-40"
-                      style={{ background: glowColor }} />
+                  <div className="p-6 pt-8 flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '66' }}>
+                      {isRealPhoto((activePlayer as any).avatar) ? (
+                        <img src={(activePlayer as any).avatar} alt={(activePlayer as any).name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center text-3xl font-black tracking-tight ${initialsCls}`}>
+                          {getInitials((activePlayer as any).name)}
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight px-2">
+                      {isMySlot ? 'SEN' : (c?.name || (activePlayer as any).name || 'Oyuncu')}
+                    </h3>
+                    <span className="mt-1 text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{posLabel}</span>
 
-                    {/* Üst Şerit — Tier ve Renk */}
-                    <div className="absolute top-0 left-0 right-0 h-1 rounded-t-[32px]"
-                      style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
-
-                    <div className="relative p-7 flex flex-col items-center">
-                      {/* Overall Badge */}
-                      <div className="absolute top-6 left-6 flex flex-col items-center">
-                        <span className="text-4xl font-black italic leading-none" style={{ color: accentColor }}>{overall}</span>
-                        <span className="text-[8px] font-black uppercase tracking-widest mt-0.5" style={{ color: accentColor + 'aa' }}>{tier}</span>
+                    {playerCardLoading ? (
+                      <div className="w-full flex items-center justify-center py-12">
+                        <Loader2 size={22} className="animate-spin text-white/40" />
                       </div>
-
-                      {/* Avatar */}
-                      <div className="relative mt-4 mb-5">
-                        <div className="absolute inset-0 rounded-full blur-2xl opacity-50" style={{ background: glowColor, transform: 'scale(1.3)' }} />
-                        <img src={(activePlayer as any).avatar || `https://i.pravatar.cc/150?u=${(activePlayer as any).id}`}
-                          alt={(activePlayer as any).name}
-                          className="relative w-36 h-36 rounded-full object-cover bg-black border-[3px]"
-                          style={{ borderColor: accentColor + '50' }} />
-                        {isMySlot && (
-                          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#39FF14] flex items-center justify-center shadow-[0_0_12px_rgba(57,255,20,0.8)]">
-                            <Shield size={14} className="text-black" />
+                    ) : (
+                      <>
+                        {showHero && (
+                          <div className="w-full mt-5 rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                            <span className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: accent + 'cc' }}>{heroLabel}</span>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-5xl font-black tabular-nums leading-none" style={{ color: accent }}>{heroNum}</span>
+                              <span className="text-sm font-black text-white/70">MAÇ</span>
+                            </div>
                           </div>
                         )}
-                        {/* Pozisyon badge */}
-                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 font-black uppercase tracking-widest text-[9px] px-4 py-1.5 rounded-full border border-black/10"
-                          style={{ background: `linear-gradient(90deg, ${gradFrom}, ${isGold ? '#D1A119' : isSilver ? '#64748B' : '#7C4318'})`, color: isGold || isSilver ? '#000' : '#fff' }}>
-                          { { 'GK': 'KL', 'DEF': 'SAV', 'MID': 'ORT', 'FWD': 'HÜC' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'ORT' }
+                        <div className={`w-full grid grid-cols-3 gap-2 ${showHero ? 'mt-3' : 'mt-5'}`}>
+                          {[
+                            { l: 'YAŞ', v: c?.age != null ? String(c.age) : '—' },
+                            { l: 'FAIR PLAY', v: c?.fair_play != null ? '%' + c.fair_play : '—' },
+                            { l: 'AYAK', v: footTr(c?.preferred_foot) },
+                          ].map(s => (
+                            <div key={s.l} className="bg-white/[0.04] border border-white/8 rounded-xl py-3 flex flex-col items-center gap-1">
+                              <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.15em]">{s.l}</span>
+                              <span className="text-base font-black text-white">{s.v}</span>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-
-                      {/* İsim */}
-                      <h3 className="text-2xl font-black text-white uppercase tracking-tight italic text-center mt-3 mb-5 drop-shadow-lg">
-                        {(activePlayer as any).name || 'Oyuncu'}
-                      </h3>
-
-                      {/* Diamond Serveti */}
-                      <div className="w-full rounded-2xl border border-white/5 bg-black/60 backdrop-blur-md p-4 flex flex-col items-center gap-2 relative overflow-hidden mb-4">
-                        <div className="absolute inset-0" style={{
-                          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)',
-                          animation: 'shimmer 2s infinite',
-                        }} />
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40">Kariyer Serveti</span>
-                        <div className="flex items-center gap-2.5">
-                          <Diamond className="w-7 h-7 drop-shadow-[0_0_14px_rgba(0,242,254,0.9)] animate-pulse" style={{ color: '#00f2fe' }} />
-                          <span className="text-3xl font-black text-white tabular-nums tracking-tighter">
-                            {getDiamondValue(activePlayer).toLocaleString('tr-TR')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Mini İstatistikler */}
-                      <div className="grid grid-cols-3 gap-2 w-full">
-                        {[
-                          { label: 'OVERALL', val: `${overall}` },
-                          { label: 'FAIR PLAY', val: `%${fp}` },
-                          { label: 'POZİSYON', val: { 'GK': 'KL', 'DEF': 'SAV', 'MID': 'ORT', 'FWD': 'HÜC' }[normalizeRole(activePlayerSlot?.role || '')] || 'ORT' },
-                        ].map(stat => (
-                          <div key={stat.label} className="bg-white/[0.04] rounded-xl p-2.5 text-center border border-white/5">
-                            <span className="block text-[7px] font-black text-white/30 uppercase tracking-widest mb-1">{stat.label}</span>
-                            <span className="text-xs font-black text-white/90">{stat.val}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Kapora ve Ödeme Bölümü */}
-                      <div className="w-full mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col gap-3 relative overflow-hidden">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">KAPORA DURUMU</span>
-                          {activePlayer.paymentStatus === 'PAID' ? (
-                            <span className="text-[#39FF14] text-[9px] font-black tracking-wider bg-[#39FF14]/10 border border-[#39FF14]/20 px-2.5 py-1 rounded-full uppercase flex items-center gap-1 shadow-[0_0_10px_rgba(57,255,20,0.15)]">
-                              <CheckCircle2 size={10} /> TAMAMLANDI
-                            </span>
-                          ) : (
-                            <span className="text-amber-500 text-[9px] font-black tracking-wider bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full uppercase flex items-center gap-1">
-                              <Clock size={10} /> BEKLENİYOR (50 ₺)
-                            </span>
-                          )}
-                        </div>
-
-                        {activePlayer.id === currentUserProfile.id && activePlayer.paymentStatus !== 'PAID' && (
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                        {showFriendCta && (
+                          <button
+                            disabled={friendRequestSent}
                             onClick={async () => {
                               try {
-                                setIsProcessing(true);
-                                const { error } = await supabase.rpc('pay_public_match_deposit', {
-                                  p_match_id: match.id,
-                                  p_user_id: currentUserProfile.id,
-                                  p_amount: 50
-                                });
-
-                                if (error) throw error;
-
-                                // Oyuncunun ev mi deplasman mı takımında olduğunu belirle
-                                const isInAwaySlot = (match.awaySlots || []).some(
-                                  s => s?.player?.id === currentUserProfile.id
-                                );
-
-                                const markPaid = (slots: typeof match.slots) =>
-                                  (slots || []).map(s =>
-                                    s?.player?.id === currentUserProfile.id
-                                      ? { ...s, player: { ...s.player!, paymentStatus: 'PAID' as const } }
-                                      : s
-                                  );
-
-                                const updatedSlots = isInAwaySlot
-                                  ? (match.slots || [])
-                                  : markPaid(match.slots);
-                                const updatedAwaySlots = isInAwaySlot
-                                  ? markPaid(match.awaySlots)
-                                  : (match.awaySlots || []);
-
-                                const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-                                await updateMatch({
-                                  ...match,
-                                  slots: updatedSlots,
-                                  awaySlots: updatedAwaySlots,
-                                  status: nextStatus
-                                });
-                                setActivePlayerSlotId(null);
-                                showActionSuccess('Kapora ödemesi başarıyla gerçekleştirildi! ⚽');
+                                await sendFriendRequest(currentUserUid, activePlayer.id);
+                                setFriendRequestSent(true);
+                                showActionSuccess('Arkadaşlık isteği gönderildi.');
                               } catch (e: any) {
-                                console.error(e);
-                                showActionError('Ödeme sırasında bir hata oluştu. Lütfen bakiyenizi kontrol edin.');
-                              } finally {
-                                setIsProcessing(false);
+                                showActionError(e?.message || 'İstek gönderilemedi.');
                               }
                             }}
-                            className="w-full py-3 rounded-xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                          >
-                            <DollarSign size={13} />
-                            <span>KAPORAYI ÖDE (50 ₺)</span>
-                          </motion.button>
+                            className="w-full mt-3 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                            {friendRequestSent ? <><CheckCircle2 size={14} /> İSTEK GÖNDERİLDİ</> : <><UserPlus size={14} /> ARKADAŞ OL</>}
+                          </button>
                         )}
-                      </div>
+                      </>
+                    )}
 
-                      {/* Slot sahiplik/atama aksiyonları (FAZ8) — satın aldığın slotu arkadaşa/koda ata */}
-                      {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
-                        <div className="mt-4 space-y-2">
-                          {(activePlayerSlot as any).assignmentStatus === 'INVITED' && (
-                            <p className="text-[10px] text-[#FFAA00] font-bold text-center">Arkadaş daveti gönderildi — kabul bekleniyor.</p>
-                          )}
-                          {(activePlayerSlot as any).assignmentStatus === 'LINK_PENDING' && (activePlayerSlot as any).claimCode && (
-                            <p className="text-[10px] text-[#00B0FF] font-bold text-center">Devralma kodu: <span className="text-white font-black tracking-widest">{(activePlayerSlot as any).claimCode}</span></p>
-                          )}
+                    {/* Yönetim aksiyonları — YALNIZ MANAGE (Sıradaki Maçlarım) */}
+                    {isManageMode && (
+                      <div className="w-full mt-4 space-y-2">
+                        {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
                           <div className="flex gap-2">
                             <button onClick={() => { setInviteModalSlotId(activePlayerSlot.id); setFriendSearch(''); setActivePlayerSlotId(null); }}
                               className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-wider text-black bg-[#39FF14] active:scale-95 transition-all flex items-center justify-center gap-1.5">
@@ -1217,37 +1212,27 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               <KeyRound size={13} /> Kod Oluştur
                             </button>
                           </div>
-                        </div>
-                      )}
-                      {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
-                        <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
-                          className="mt-4 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.4)] flex items-center justify-center gap-2">
-                          <CheckCircle2 size={15} /> Slotu Kabul Et
-                        </button>
-                      )}
-
-                      {/* Kaptan Çıkarma */}
-                      {isCaptain && !isMySlot && (
-                        <button onClick={() => {
-                          setRemoveConfirmSlot(activePlayerSlot);
-                          setActivePlayerSlotId(null);
-                        }}
-                          className="mt-5 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-400 bg-red-950/30 border border-red-500/15 active:scale-95 transition-all">
-                          KADRODAN ÇIKAR
-                        </button>
-                      )}
-
-                      {/* Slottan Ayrıl */}
-                      {isMySlot && (
-                        <button onClick={() => {
-                          setActivePlayerSlotId(null);
-                          setShowLeaveConfirm(true);
-                        }}
-                          className="mt-5 w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/20 active:scale-95 transition-all shadow-[0_0_15px_rgba(239,68,68,0.15)]">
-                          SLOTTAN AYRIL
-                        </button>
-                      )}
-                    </div>
+                        )}
+                        {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
+                          <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
+                            <CheckCircle2 size={15} /> Slotu Kabul Et
+                          </button>
+                        )}
+                        {isCaptain && !isMySlot && (
+                          <button onClick={() => { setRemoveConfirmSlot(activePlayerSlot); setActivePlayerSlotId(null); }}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-400 bg-red-950/30 border border-red-500/15 active:scale-95 transition-all">
+                            KADRODAN ÇIKAR
+                          </button>
+                        )}
+                        {isMySlot && (
+                          <button onClick={() => { setActivePlayerSlotId(null); setShowLeaveConfirm(true); }}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 active:scale-95 transition-all">
+                            SLOTTAN AYRIL
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -1566,16 +1551,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           return (
                             <div
                               key={p.id}
-                              className="bg-black/30 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 transition-all hover:border-white/10"
+                              onClick={() => { if (!disabled) setMarketDetailProvider(p); }}
+                              className="bg-black/30 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 transition-all hover:border-white/10 cursor-pointer active:scale-[0.99]"
                             >
                               <div className="flex items-center gap-3">
                                 <div className="relative shrink-0">
-                                  <img
-                                    src={p.avatar || `https://i.pravatar.cc/150?u=${p.id}`}
-                                    alt={p.name}
-                                    className="w-12 h-12 rounded-xl object-cover border"
-                                    style={{ borderColor: accent + '50' }}
-                                  />
+                                  {isRealPhoto(p.avatar) ? (
+                                    <img src={p.avatar!} alt={p.name} className="w-12 h-12 rounded-xl object-cover border" style={{ borderColor: accent + '50' }} />
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black border" style={{ background: accent + '1a', color: accent, borderColor: accent + '50' }}>
+                                      {getInitials(p.name)}
+                                    </div>
+                                  )}
                                   {p.is_elite && (
                                     <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-[#FACC15] border-2 border-[#161B22]">
                                       <Award size={10} className="text-black" />
@@ -1590,7 +1577,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     </div>
                                   </div>
                                   <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide mt-0.5 truncate">
-                                    {[p.style, p.level, `${p.match_count} Maç`].filter(Boolean).join(' • ')}
+                                    {[p.level, `${p.match_count} Maç`].filter(Boolean).join(' • ')}
                                   </p>
                                 </div>
                               </div>
@@ -1600,16 +1587,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                   <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Ücret</p>
                                   <p className="text-xl font-black text-white tracking-tighter">{p.fee}₺</p>
                                 </div>
-                                <motion.button
-                                  whileHover={disabled ? undefined : { scale: 1.04 }}
-                                  whileTap={disabled ? undefined : { scale: 0.96 }}
-                                  disabled={disabled}
-                                  onClick={() => handleSelectProvider(p)}
-                                  className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                  style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
-                                >
-                                  {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
-                                </motion.button>
+                                <div className="flex items-center gap-2">
+                                  <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-white/35">Detay <ChevronRight size={12} /></span>
+                                  <motion.button
+                                    whileHover={disabled ? undefined : { scale: 1.04 }}
+                                    whileTap={disabled ? undefined : { scale: 0.96 }}
+                                    disabled={disabled}
+                                    onClick={(e) => { e.stopPropagation(); handleSelectProvider(p); }}
+                                    className="px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
+                                  >
+                                    {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
+                                  </motion.button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1619,6 +1609,276 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   </>
                 );
               })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Pazar: Sağlayıcı Dikey Detaylı Kart + Talep (kaptan) ─────────────── */}
+      <AnimatePresence>
+        {marketDetailProvider && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
+            onClick={() => { if (!providerSubmittingId) setMarketDetailProvider(null); }}>
+            <motion.div
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b from-[#161B22] to-[#0d1117] border shadow-[0_30px_70px_rgba(0,0,0,0.85)]"
+              style={{ borderColor: (providerModalType === 'REF' ? '#A78BFA' : '#FF9F43') + '33' }}>
+              {(() => {
+                const p = marketDetailProvider;
+                const isRef = providerModalType === 'REF';
+                const accent = isRef ? '#A78BFA' : '#FF9F43';
+                const submitting = providerSubmittingId === p.id;
+                const ratings = extractProviderRatings(p.skills as any, p.stats as any, isRef);
+                const st = (p.stats || {}) as Record<string, any>;
+                const infoRow = isRef
+                  ? [
+                      { Icon: Activity, l: 'MAÇ', v: p.match_count != null ? String(p.match_count) : '—' },
+                      { Icon: Scale, l: 'ORT. KART', v: st.avgCards != null ? String(st.avgCards) : '—' },
+                      { Icon: MapPin, l: 'KOŞU', v: st.avgDistance || '—' },
+                    ]
+                  : [
+                      { Icon: Calendar, l: 'YAŞ', v: p.age != null ? String(p.age) : '—' },
+                      { Icon: Ruler, l: 'BOY', v: p.height || '—' },
+                      { Icon: Activity, l: 'MAÇ', v: p.match_count != null ? String(p.match_count) : '—' },
+                    ];
+                return (
+                  <div className="p-6 pt-8 flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
+                      {isRealPhoto(p.avatar) ? (
+                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl font-black" style={{ background: accent + '22', color: accent }}>
+                          {getInitials(p.name)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight">{p.name}</h3>
+                      {p.is_elite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'HAKEM' : 'KİRALIK KALECİ'}</span>
+                      {isRef && p.level && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {p.level}</span>}
+                    </div>
+
+                    <div className="w-full grid grid-cols-2 gap-2 mt-5">
+                      <div className="rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">REYTİNG</span>
+                        <div className="flex items-baseline gap-1">
+                          <Star size={16} className="text-yellow-400" fill="currentColor" />
+                          <span className="text-3xl font-black tabular-nums leading-none" style={{ color: accent }}>{Number(p.rating).toFixed(1)}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">ÜCRET</span>
+                        <span className="text-3xl font-black tabular-nums leading-none text-white">{p.fee}₺</span>
+                      </div>
+                    </div>
+
+                    <div className="w-full grid grid-cols-3 gap-2 mt-2">
+                      {infoRow.map(s => (
+                        <div key={s.l} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 flex flex-col items-center gap-0.5">
+                          <s.Icon size={12} className="text-white/30" />
+                          <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em]">{s.l}</span>
+                          <span className="text-xs font-black text-white">{s.v}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {ratings.length > 0 && (
+                      <div className="w-full mt-5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">{isRef ? 'Hakemlik Reytingleri' : 'Kalecilik Reytingleri'}</span>
+                        <div className="mt-2 space-y-2">
+                          {ratings.map(r => (
+                            <div key={r.label} className="flex items-center gap-2">
+                              <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-28 shrink-0 truncate">{r.label}</span>
+                              <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, r.value))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
+                              </div>
+                              <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{r.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ödeme — kaptan cüzdan veya kart ile emanete öder (FAZ 4) */}
+                    <div className="w-full mt-6 flex gap-2">
+                      <motion.button
+                        whileTap={submitting ? undefined : { scale: 0.97 }}
+                        disabled={!!providerSubmittingId}
+                        onClick={() => handleSelectProvider(p, 'WALLET')}
+                        className="flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        style={{ background: accent, boxShadow: `0 0 20px ${accent}55` }}>
+                        {submitting ? <Loader2 size={15} className="animate-spin" /> : <><Wallet size={14} /> Cüzdanla</>}
+                      </motion.button>
+                      <motion.button
+                        whileTap={submitting ? undefined : { scale: 0.97 }}
+                        disabled={!!providerSubmittingId}
+                        onClick={() => handleSelectProvider(p, 'CARD')}
+                        className="flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white bg-white/8 border border-white/15 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                        <CreditCard size={14} /> Kartla
+                      </motion.button>
+                    </div>
+                    <p className="text-center mt-2 text-sm font-black" style={{ color: accent }}>{p.fee}₺</p>
+                    <p className="text-[9px] text-white/30 text-center mt-1 leading-relaxed px-2">
+                      Ücret emanete alınır; {isRef ? 'hakem' : 'kaleci'} onaylayınca aktarılır. Reddedilir/no-show olursa iade edilir.
+                    </p>
+                  </div>
+                );
+              })()}
+              <button onClick={() => { if (!providerSubmittingId) setMarketDetailProvider(null); }}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                <X size={16} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Atanmış Kaleci/Hakem — Dikey Detaylı Kart (HERKESE) ──────────────── */}
+      <AnimatePresence>
+        {providerDetail && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-6"
+            onClick={() => setProviderDetail(null)}>
+            {(() => {
+              const p = providerDetail.p;
+              const isRef = providerDetail.isRef;
+              const accent = isRef ? '#A78BFA' : '#FF9F43';
+              const cardBg = isRef ? 'from-[#15111f] to-[#0d1117]' : 'from-[#1c1207] to-[#0d1117]';
+              const initialsBg = isRef ? 'bg-violet-950/60 text-violet-300' : 'bg-orange-950/60 text-orange-300';
+              const ratings = extractProviderRatings(p.skills as any, p.stats as any, isRef);
+              const st = (p.stats || {}) as Record<string, any>;
+              const infoRow = isRef
+                ? [
+                    { Icon: Activity, l: 'MAÇ', v: p.matchCount != null ? String(p.matchCount) : '—' },
+                    { Icon: Scale, l: 'ORT. KART', v: st.avgCards != null ? String(st.avgCards) : '—' },
+                    { Icon: MapPin, l: 'KOŞU', v: st.avgDistance || '—' },
+                  ]
+                : [
+                    { Icon: Calendar, l: 'YAŞ', v: p.age != null ? String(p.age) : '—' },
+                    { Icon: Ruler, l: 'BOY', v: p.height || '—' },
+                    { Icon: Activity, l: 'MAÇ', v: p.matchCount != null ? String(p.matchCount) : '—' },
+                  ];
+              return (
+            <motion.div
+              initial={{ scale: 0.8, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className={`relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b ${cardBg} border shadow-[0_30px_70px_rgba(0,0,0,0.85)]`}
+              style={{ borderColor: accent + '40' }}>
+                  <div className="p-6 pt-8 flex flex-col items-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
+                      {isRealPhoto(p.avatar) ? (
+                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center text-3xl font-black ${initialsBg}`}>
+                          {getInitials(p.name)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black text-white tracking-tight text-center leading-tight">{p.name}</h3>
+                      {p.isElite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'ATANAN HAKEM' : 'KİRALIK KALECİ'}</span>
+                      {isRef && p.level && <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">· {p.level}</span>}
+                    </div>
+
+                    {/* Reyting + Ücret */}
+                    <div className="w-full grid grid-cols-2 gap-2 mt-5">
+                      <div className="rounded-2xl border py-4 flex flex-col items-center gap-1" style={{ borderColor: accent + '33', background: accent + '10' }}>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">REYTİNG</span>
+                        <div className="flex items-baseline gap-1">
+                          <Star size={16} className="text-yellow-400" fill="currentColor" />
+                          <span className="text-3xl font-black tabular-nums leading-none" style={{ color: accent }}>{p.rating != null ? p.rating.toFixed(1) : '—'}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">ÜCRET</span>
+                        <span className="text-3xl font-black tabular-nums leading-none text-white">{p.fee != null ? p.fee + '₺' : '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* Bilgi satırı */}
+                    <div className="w-full grid grid-cols-3 gap-2 mt-2">
+                      {infoRow.map(s => (
+                        <div key={s.l} className="bg-white/[0.03] border border-white/8 rounded-xl py-2.5 flex flex-col items-center gap-0.5">
+                          <s.Icon size={12} className="text-white/30" />
+                          <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.1em]">{s.l}</span>
+                          <span className="text-xs font-black text-white">{s.v}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Reytingler — admin panelindeki tüm yetenekler */}
+                    {ratings.length > 0 && (
+                      <div className="w-full mt-5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">{isRef ? 'Hakemlik Reytingleri' : 'Kalecilik Reytingleri'}</span>
+                        <div className="mt-2 space-y-2">
+                          {ratings.map(r => (
+                            <div key={r.label} className="flex items-center gap-2">
+                              <span className="text-[8px] font-black text-white/50 uppercase tracking-wide w-28 shrink-0 truncate">{r.label}</span>
+                              <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, r.value))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
+                              </div>
+                              <span className="text-[10px] font-black tabular-nums w-7 text-right" style={{ color: accent }}>{r.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+              <button onClick={() => setProviderDetail(null)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                <X size={16} />
+              </button>
+            </motion.div>
+              );
+            })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── No-show Onay Modalı (kaptan) ────────────────────────────────────── */}
+      <AnimatePresence>
+        {showNoShowConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-xl flex items-center justify-center p-6"
+            onClick={() => { if (!isProcessing) setShowNoShowConfirm(false); }}>
+            <motion.div
+              initial={{ scale: 0.85, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.85, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="w-[19rem] rounded-[28px] bg-gradient-to-b from-[#1a1012] to-[#0d1117] border border-red-500/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)] p-6 flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/12 border border-red-500/25 flex items-center justify-center mb-3">
+                <AlertCircle size={26} className="text-red-400" />
+              </div>
+              <h3 className="text-lg font-black text-white tracking-tight">Kaleci gelmedi mi?</h3>
+              <p className="text-[11px] text-white/50 leading-relaxed mt-2 px-1">
+                No-show bildirdiğinde ödediğin ücret iade edilir ve maçın slot ücreti
+                ({match.price ?? 0}₺) ceza olarak kalecinin teminatından sana aktarılır.
+                Kaleci 48 saat içinde itiraz edebilir.
+              </p>
+              <div className="w-full flex gap-2 mt-5">
+                <button disabled={isProcessing} onClick={() => setShowNoShowConfirm(false)}
+                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white/70 bg-white/5 border border-white/10 disabled:opacity-50">
+                  Vazgeç
+                </button>
+                <button disabled={isProcessing} onClick={handleReportNoShow}
+                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white bg-red-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                  {isProcessing ? <Loader2 size={14} className="animate-spin" /> : 'Bildir'}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -1640,9 +1900,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {match.title || 'Maç Detayı'}
             </p>
           </div>
-          {/* Sağ Aksiyon: Doluluk Göstergesi veya Maçtan Ayrıl Butonu */}
-          {(isAlreadyJoined || isAlreadyJoinedReserve) ? (
-            <button 
+          {/* Sağ Aksiyon: MANAGE'de Maçtan Ayrıl; DISCOVER'da yalnız doluluk göstergesi */}
+          {(isManageMode && (isAlreadyJoined || isAlreadyJoinedReserve)) ? (
+            <button
               onClick={() => setShowLeaveConfirm(true)}
               className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors">
               {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
@@ -2145,7 +2405,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
 
           {/* Taktik / Diziliş Seçimi (Yalnızca Kaptanlara Özel) */}
-          {((pitchSide === 'home' && isHomeCaptain) || (pitchSide === 'away' && isAwayCaptain)) && (
+          {isManageMode && ((pitchSide === 'home' && isHomeCaptain) || (pitchSide === 'away' && isAwayCaptain)) && (
             <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto">
               <span className="block text-[8px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 px-1">
                 TAKIM DİZİLİŞİNİ GÜNCELLE
@@ -2205,8 +2465,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         </motion.div>
         </AnimatePresence>
 
-        {/* ── KALECİ & HAKEM (Yalnız Maç Sahibi / Kaptan) ──────────────────── */}
-        {isCaptain && (
+        {/* ── KALECİ & HAKEM (Yalnız MANAGE + Maç Sahibi/Kaptan) ──────────────── */}
+        {isManageMode && isCaptain && (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Kaleci & Hakem</p>
 
@@ -2215,12 +2475,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const isGK = type === 'GK';
                 const assignedId = isGK ? match.gkId : match.refereeId;
                 const activeReq = getActiveRequestForType(type);
-                const assignedUser = assignedId
-                  ? (adminUsers || []).find(u => u?.id === assignedId)
-                  : null;
                 const accent = isGK ? '#FF9F43' : '#A78BFA';
                 const Icon = isGK ? Hand : Scale;
                 const label = isGK ? 'Kaleci' : 'Hakem';
+                // FAZ 2: atanmış sağlayıcı adı/avatarı gerçek goalkeepers/referees verisinden
+                // (adminUsers güvenilmez); okunamıyorsa genel etikete düşer.
+                const assignedProvider = isGK ? assignedGoalkeeper : assignedReferee;
+                const providerName = assignedProvider?.name
+                  || (assignedId ? (adminUsers || []).find(u => u?.id === assignedId)?.name : null)
+                  || label;
 
                 // 1) Atanmış sağlayıcı varsa onun bilgisini göster
                 if (assignedId) {
@@ -2233,19 +2496,26 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <div className="absolute top-0 right-0 w-12 h-12 pointer-events-none"
                         style={{ background: `linear-gradient(to bottom left, ${accent}1a, transparent)` }} />
                       <div className="flex items-center gap-2">
-                        <img
-                          src={assignedUser?.avatar || `https://i.pravatar.cc/150?u=${assignedId}`}
-                          alt={assignedUser?.name || label}
-                          className="w-9 h-9 rounded-xl object-cover border"
-                          style={{ borderColor: accent + '60' }}
-                        />
+                        {isRealPhoto(assignedProvider?.avatar) ? (
+                          <img
+                            src={assignedProvider!.avatar!}
+                            alt={providerName}
+                            className="w-9 h-9 rounded-xl object-cover border"
+                            style={{ borderColor: accent + '60' }}
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black border"
+                            style={{ background: accent + '1a', color: accent, borderColor: accent + '40' }}>
+                            {getInitials(providerName)}
+                          </div>
+                        )}
                         <div className="p-1.5 rounded-lg border" style={{ background: accent + '1a', color: accent, borderColor: accent + '33' }}>
                           <CheckCircle2 size={13} />
                         </div>
                       </div>
                       <div>
                         <h4 className="font-black text-xs text-white uppercase tracking-wider truncate max-w-[120px]">
-                          {assignedUser?.name || label}
+                          {providerName}
                         </h4>
                         <p className="text-[8px] font-bold mt-0.5 uppercase tracking-wide" style={{ color: accent }}>
                           {label} Atandı
@@ -2350,6 +2620,102 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   );
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MAÇ GÖREVLİLERİ (HERKESE görünür, salt-okunur) ──────────────────── */}
+        {/* Atanmış kaleci/hakem gerçek verilerle; kaleci basınca dikey detay kartı. */}
+        {(assignedGoalkeeper || assignedReferee) && (
+          <div className="space-y-3 mt-6">
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
+
+            {assignedGoalkeeper && (
+              <button
+                onClick={() => setProviderDetail({ p: assignedGoalkeeper, isRef: false })}
+                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
+                <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(255,159,67,0.14), transparent)' }} />
+                <div className="relative shrink-0">
+                  {isRealPhoto(assignedGoalkeeper.avatar) ? (
+                    <img src={assignedGoalkeeper.avatar!} alt={assignedGoalkeeper.name} className="w-12 h-12 rounded-2xl object-cover border border-[#FF9F43]/50" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-950/50 text-orange-300 border border-[#FF9F43]/40 font-black">
+                      {getInitials(assignedGoalkeeper.name)}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#FF9F43] border-2 border-[#161B22]">
+                    <Hand size={10} className="text-black" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedGoalkeeper.name}</h4>
+                    {assignedGoalkeeper.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                  </div>
+                  <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {assignedGoalkeeper.rating != null && (
+                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-400"><Star size={10} fill="currentColor" />{assignedGoalkeeper.rating.toFixed(1)}</span>
+                    )}
+                    {assignedGoalkeeper.fee != null && (
+                      <span className="text-[10px] font-black text-white/70">{assignedGoalkeeper.fee}₺</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-white/40 shrink-0">
+                  Detay <ChevronRight size={13} />
+                </div>
+              </button>
+            )}
+
+            {/* Kaptan: kaleci maça gelmediyse no-show bildir (ceza → teminattan) */}
+            {assignedGoalkeeper && isManageMode && isCaptain && capturedGkRequest && (
+              <button
+                onClick={() => setShowNoShowConfirm(true)}
+                className="w-full py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-red-400 bg-red-950/25 border border-red-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">
+                <AlertCircle size={13} /> Kaleci Gelmedi (No-show)
+              </button>
+            )}
+
+            {assignedReferee && (
+              <button
+                onClick={() => setProviderDetail({ p: assignedReferee, isRef: true })}
+                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#A78BFA]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
+                <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(167,139,250,0.14), transparent)' }} />
+                <div className="relative shrink-0">
+                  {isRealPhoto(assignedReferee.avatar) ? (
+                    <img src={assignedReferee.avatar!} alt={assignedReferee.name} className="w-12 h-12 rounded-2xl object-cover border border-[#A78BFA]/50" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-violet-950/50 text-violet-300 border border-[#A78BFA]/40 font-black">
+                      {getInitials(assignedReferee.name)}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#A78BFA] border-2 border-[#161B22]">
+                    <Scale size={10} className="text-black" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedReferee.name}</h4>
+                    {assignedReferee.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                  </div>
+                  <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {assignedReferee.rating != null && (
+                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-400"><Star size={10} fill="currentColor" />{assignedReferee.rating.toFixed(1)}</span>
+                    )}
+                    {assignedReferee.fee != null && (
+                      <span className="text-[10px] font-black text-white/70">{assignedReferee.fee}₺</span>
+                    )}
+                    {assignedReferee.level && (
+                      <span className="text-[9px] font-bold text-white/40 uppercase tracking-wide truncate">{assignedReferee.level}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-white/40 shrink-0">
+                  Detay <ChevronRight size={13} />
+                </div>
+              </button>
             )}
           </div>
         )}

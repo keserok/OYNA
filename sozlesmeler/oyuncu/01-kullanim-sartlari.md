@@ -1,10 +1,10 @@
-> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 13.07.2026 · **PR:** —
+> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 15.07.2026 · **PR:** —
 > **Uygulandığı yer:** `views/LegalScreen.tsx → TERMS` (uygulama içi "Yasal" ekranı)
-> **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı), madde 4.7'de açıkça belirtildiği üzere, yalnızca metnin varlığıyla hukuken bağlayıcı hâle gelmez — "sınırlı mod" ve veli doğrulama akışının (veli iletişim bilgisi alınması, veliye özel onay bağlantısı/kodu, velinin bizzat onayı) **Uygulamada fiilen inşa edilmesi** gerekir. Bu akış şu an kodda mevcut değildir; bkz. `sozlesmeler/README.md` "Sıradaki teknik adımlar".
+> **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı) mekanizması — onboarding'de yaş aralığı alınması, sınırlı mod, çocuğun hesabındaki Veli Bağlantı Kodu, velinin kendi hesabından kodu girip kimlik + muvafakat onayı, T.C.'nin hash'lenmesi, 18 yaşında otomatik açılma ve ödeme kapısı — **Uygulamada fiilen inşa edilmiştir** (guardian_consents/apply_onboarding + payment_intents trigger; `views/Onboarding.tsx`, `views/GuardianConsentForm.tsx`, `views/GuardianConsentChild.tsx`). Ekli tam metin: [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 # OYNA Kullanım Şartları / Üyelik Sözleşmesi (Oyuncu)
 
-**Son güncelleme: 13.07.2026**
+**Son güncelleme: 15.07.2026**
 
 Bu Kullanım Şartları ("Sözleşme"), aşağıda kimliği belirtilen hizmet sağlayıcı ile OYNA mobil/web uygulamasını ("Uygulama", "Platform") kayıtlı kullanıcı ("Kullanıcı", "Oyuncu") sıfatıyla kullanan gerçek kişi arasında, Uygulamanın kullanımına ilişkin hak ve yükümlülükleri düzenler.
 
@@ -36,7 +36,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca **"OYNA"** veya **"Ş
 
 İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
 ---
 
@@ -92,18 +92,21 @@ Bu madde, 18 yaşından küçük (reşit olmayan) kullanıcıların Platformu g�
 
 Kullanıcı, kayıt sırasında 18 yaşından küçük olduğunu beyan ederse veya OYNA bunu başka bir şekilde (ör. beyan edilen doğum tarihi, kimlik doğrulama süreci) tespit ederse, hesap otomatik olarak **"sınırlı mod"**da açılır. Sınırlı moddaki bir hesapla:
 
-- (a) Uygulamada gezinme, saha/maç arama, profil oluşturma gibi keşif işlevleri **serbesttir**;
-- (b) **Ödeme gerektiren işlemler** (kapora/rezervasyon bedeli ödemesi dahil) ve **maça fiilen katılım** işlevleri, işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz;
+- (a) Uygulamada gezinme, saha/maç arama, profil oluşturma, **ödeme gerektirmeyen maçlara katılım** ve Platform içi mesajlaşma gibi işlevler **serbesttir**;
+- (b) **Ödeme gerektiren tüm işlemler** — kapora/rezervasyon bedeli ödemesi, ücretli maça katılım için slot/pay satın alımı ve cüzdana bakiye yükleme dahil — işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz. Reşit olmayan kullanıcının maça katılımı, yalnızca o katılımın bir ödeme (slot/pay satın alımı) gerektirdiği ölçüde bu kapsamdadır; ödeme gerektirmeyen katılım kısıtlanmaz;
 - (c) Madde 3.4 uyarınca veli/vasi tarafından bizzat oluşturulmuş 13 yaş altı hesaplarda, Platform içi mesajlaşma işlevi ve profilin diğer kullanıcılara görünürlüğü de, işbu maddede düzenlenen veli onayı tamamlanana kadar ayrıca kısıtlanabilir; bu kısıtlamanın kapsamı OYNA tarafından Uygulama üzerinden belirlenir ve duyurulur.
 
 ### 4.3 Veli/Vasi Onay Süreci
 
 Sınırlı moddaki hesabın ödeme ve maça katılım işlevlerinin açılabilmesi için aşağıdaki adımlar tamamlanmalıdır:
 
-1. Küçük kullanıcı, velisinin/vasisinin adı-soyadı ile iletişim bilgisini (e-posta adresi veya telefon numarası) Uygulama üzerinden OYNA'ya bildirir. (13 yaş altı, veli tarafından oluşturulan hesaplarda, hesap oluşturma sırasında zaten alınmış olan veli iletişim bilgisi bu adım için esas alınabilir.)
-2. OYNA, veli/vasiye bildirilen iletişim kanalı üzerinden bir onay bağlantısı ve/veya tek kullanımlık doğrulama kodu gönderir.
-3. Veli/vasinin, bu bağlantı/kod aracılığıyla **bizzat ve açıkça** onay vermesi gerekir. Küçüğün Uygulama üzerinde "kabul ediyorum" işaretini tıklaması, tek başına veli onayı yerine **geçmez**; onayın veliye ait iletişim kanalından, veli tarafından fiilen verilmiş olması şarttır.
-4. OYNA, gerekli gördüğü hâllerde velinin kimliğini teyit etmek amacıyla ek doğrulama (ör. kimlik bilgisi eşleştirme) talep edebilir.
+1. Küçük kullanıcının hesabında, Uygulama içinde kendisine özel benzersiz bir **"Veli Bağlantı Kodu"** görüntülenir.
+2. Küçük, bu kodu velisine/vasisine iletir.
+3. Veli/vasi, **kendi OYNA hesabından** (18 yaşından büyük gerçek kişi) Uygulamadaki **Ayarlar → Veli Onayı** bölümüne bu kodu girer. Veli/vasinin OYNA hesabı yoksa, ücretsiz olarak oluşturması gerekir.
+4. Veli/vasi; kendi ad-soyadını, T.C. Kimlik Numarasını ve doğum tarihini ve onay verdiği çocuğun ad-soyadını, T.C. Kimlik Numarasını ve doğum tarihini beyan eder; ardından işbu Sözleşmenin eki niteliğindeki **Veli Muvafakatnamesi**ni okuyup açıkça onaylar.
+5. Onay, velinin **kendi doğrulanmış (oturum açmış) OYNA hesabından** verildiğinden, "veli bizzat ve açıkça onaylar" şartını karşılar. Küçüğün Uygulama üzerinde "kabul ediyorum" işaretini tıklaması, tek başına veli onayı yerine **geçmez**.
+6. Beyan edilen T.C. Kimlik Numaraları, 6698 sayılı KVKK'ya uygun olarak **şifrelenmiş (hash) biçimde**, yalnızca doğrulama amacıyla saklanır; açık (düz) biçimde tutulmaz. Beyan edilen çocuk doğum tarihi, çocuğun 18 yaşını doldurduğu anda sınırlı modun kendiliğinden kalkması amacıyla esas alınır.
+7. OYNA, gerekli gördüğü hâllerde velinin kimliğini teyit etmek amacıyla ek doğrulama talep etme hakkını saklı tutar. Bir çocuk için aynı anda yalnızca tek bir aktif veli onayı bulunabilir.
 
 ### 4.4 Onayın Kapsamı ve Süreklilik
 
@@ -112,7 +115,7 @@ Sınırlı moddaki hesabın ödeme ve maça katılım işlevlerinin açılabilme
 
 ### 4.5 Onayın Geri Alınması
 
-Veli/vasi, verdiği onayı dilediği zaman destek@oyna.app adresine yazılı bildirimde bulunarak geri alabilir. Geri alma bildiriminin OYNA'ya ulaşmasından itibaren makul bir süre içinde (en geç 48 saat içinde) hesap yeniden **sınırlı moda** alınır; bu tarihten sonra gerçekleştirilecek ödeme ve maça katılım işlemleri tekrar veli onayına tabi olur. Geri alma, geri alma tarihinden önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
+Veli/vasi, verdiği onayı dilediği zaman **Uygulamadaki Ayarlar → Veli Onayı ekranından** (verdiği onayları yönetme bölümünden) ya da destek@oyna.app adresine yazılı bildirimde bulunarak geri alabilir. Geri alma bildiriminin OYNA'ya ulaşmasından itibaren makul bir süre içinde (en geç 48 saat içinde) hesap yeniden **sınırlı moda** alınır; bu tarihten sonra gerçekleştirilecek ödeme ve maça katılım işlemleri tekrar veli onayına tabi olur. Geri alma, geri alma tarihinden önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
 
 ### 4.6 Velinin Sorumluluğu
 
@@ -120,7 +123,7 @@ Onay veren veli/vasi; madde 4.4'te tanımlanan **olağan** işlem hacmi ve nitel
 
 ### 4.7 Uygulama Notu
 
-> İşbu maddenin hukuken bağlayıcı ve geçerli kabul edilebilmesi için, yukarıda tarif edilen veli doğrulama akışının (sınırlı mod, veli iletişim bilgisi alınması, veliye özel onay bağlantısı/kodu gönderimi ve velinin bizzat onayı) **Uygulamada fiilen ve eksiksiz şekilde uygulanması** zorunludur. Yalnızca işbu sözleşme metninin varlığı, veli onayının hukuken alınmış sayılması için yeterli değildir; ürün/teknik ekip bu akışı devreye almadan bu maddeye dayanarak küçüğün işlemlerinin veli onaylı sayıldığı iddia edilemez.
+> İşbu maddede tarif edilen veli doğrulama akışı — sınırlı mod; küçüğün hesabında görünen Veli Bağlantı Kodu; velinin kendi hesabından bu kodu girerek ad-soyad / T.C. Kimlik No / doğum tarihi beyanı ve muvafakat onayı; T.C. bilgilerinin şifrelenerek (hash) saklanması; çocuğun 18 yaşını doldurmasıyla sınırlı modun otomatik kalkması — **Uygulamada fiilen uygulanmaktadır**. Onayın hukuken geçerli sayılması bu akışın eksiksiz işletilmesine bağlıdır; salt sözleşme metninin varlığı tek başına yeterli değildir. Bu belgenin eki niteliğindeki tam metin için bkz. [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 ---
 
@@ -184,7 +187,7 @@ Bu telafi bedelinin nihai olarak Tesis ile OYNA arasında hangi oranda paylaşı
 
 ## 7. KULLANICI YÜKÜMLÜLÜKLERİ VE PLATFORM KULLANIM KURALLARI
 
-Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt eder:
+Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt eder. Kullanıcı davranışına, yasak içerik/davranışlara, saha içi davranışa, değerlendirme bütünlüğüne ve moderasyona ilişkin ayrıntılı esaslar, işbu Sözleşmenin ayrılmaz eki olan [Topluluk Kuralları ve Kullanıcı Davranış Kuralları](09-topluluk-kurallari.md) belgesinde düzenlenmiştir ve işbu madde ile birlikte uygulanır.
 
 ### 7.1 Doğruluk ve Dürüstlük
 
@@ -417,7 +420,7 @@ Kullanıcı, iletişim bilgilerini güncel tutmakla yükümlüdür; güncel olma
 
 ## 18. SÖZLEŞMENİN BÜTÜNLÜĞÜ
 
-İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ve Gizlilik Politikası ile birlikte, taraflar arasında Platformun kullanımına ilişkin **tam ve nihai anlaşmayı** oluşturur ve bu konudaki önceki tüm sözlü/yazılı görüşme, beyan ve anlaşmaların yerine geçer. Uygulamanın indirildiği mecraya (App Store, Google Play vb.) ait kullanım koşulları, bu Sözleşmeyi etkilemeksizin ayrıca uygulanmaya devam eder.
+İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte, taraflar arasında Platformun kullanımına ilişkin **tam ve nihai anlaşmayı** oluşturur ve bu konudaki önceki tüm sözlü/yazılı görüşme, beyan ve anlaşmaların yerine geçer. Uygulamanın indirildiği mecraya (App Store, Google Play vb.) ait kullanım koşulları, bu Sözleşmeyi etkilemeksizin ayrıca uygulanmaya devam eder.
 
 ---
 
@@ -451,4 +454,4 @@ KVKK açık rızası veya pazarlama izni gibi, mevzuat gereği ayrı ve açık o
 
 ---
 
-*Bu belge, OYNA Platformunun oyuncu kullanıcılarına yönelik Kullanım Şartları / Üyelik Sözleşmesi'dir ve Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni ile Gizlilik Politikası'nı tamamlayıcı niteliktedir.*
+*Bu belge, OYNA Platformunun oyuncu kullanıcılarına yönelik Kullanım Şartları / Üyelik Sözleşmesi'dir ve Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ile Veli Muvafakatnamesi'ni tamamlayıcı niteliktedir.*

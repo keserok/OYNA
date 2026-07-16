@@ -84,7 +84,7 @@ export interface BasicMatchRecord {
 export type Match = BasicMatchRecord;
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL' | 'MESSAGES';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
 
 export interface SavedPaymentCard {
   id: string;
@@ -422,8 +422,10 @@ export interface Pitch {
   tariffs?: PitchTariff[];
   /** Owner kontrollü vitrin görünürlüğü (false → listede çıkmaz) */
   isPublished?: boolean;
-  /** Admin kontrollü "Öne Çıkan" rozeti — listede üste taşınır */
+  /** Admin kontrollü "Öne Çıkan" rozeti (yalnız görsel; sıralamayı etkilemez) */
   isFeatured?: boolean;
+  /** Admin kontrollü: "Bugün X saat müsait" rozeti gösterilsin mi */
+  showAvailabilityBadge?: boolean;
   /** Bugün için müsait saat sayısı (liste rozetinde, tek toplu sorgudan) */
   todayAvailableCount?: number;
 }
@@ -628,6 +630,11 @@ export interface ServiceRequest {
   cancelledAt?: string;
   expiresAt?: string;
   createdAt: string;
+  // FAZ 4: ödeme/emanet + no-show
+  fundingSource?: 'WALLET' | 'CARD' | null;
+  contractAccepted?: boolean;
+  penaltyAmount?: number | null;
+  disputeDeadline?: string | null;
 }
 
 /** find_providers_for_match çıktısı — sıralı öneri kartı. */
@@ -643,6 +650,11 @@ export interface ProviderSuggestion {
   preferred_zones?: string[];
   coordinates?: { lat: number; lng: number };
   is_elite?: boolean;
+  // FAZ 3: pazar dikey detaylı kartı için (find_providers_for_match v2)
+  height?: string | null;           // yalnız kaleci
+  age?: number | null;              // yalnız kaleci
+  skills?: Record<string, number> | null;   // yalnız kaleci (yetenek barları)
+  stats?: Record<string, number | string> | null;
 }
 
 /**

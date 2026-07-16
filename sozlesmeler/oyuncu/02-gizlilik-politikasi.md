@@ -1,16 +1,18 @@
 # Gizlilik Politikası
 
-> **Durum:** Yayında · **Son güncelleme:** 12.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
 > **Uygulandığı yerler:** `public/gizlilik.html` (herkese açık — https://oyna.app/gizlilik.html) ve `views/LegalScreen.tsx → PRIVACY` (uygulama içi, aynı içeriğin kısaltılmış hâli)
 >
 > Bu dosya `public/gizlilik.html`'in tam metnidir; bu iki dosya **birlikte** güncellenmelidir.
 
 ---
 
-**Son güncelleme: 12.07.2026 · Veri sorumlusu: Miraç Kerem Çürüksulu (OYNA)**
+**Son güncelleme: 15.07.2026 · Veri sorumlusu: Miraç Kerem Çürüksulu (OYNA)**
 
 ### 1. Toplanan Veriler
 - **Kimlik/iletişim:** ad, e-posta, telefon
+- **Profil ve oyun tercihleri:** ad-soyad, yaş aralığı, cinsiyet (opsiyonel), mevki/pozisyon ve oyun stili gibi profil bilgileri
+- **Veli onayı (yalnızca reşit olmayan kullanıcılar için):** veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik Numarası; T.C. Kimlik numaraları **şifrelenerek (hash) saklanır, açık (düz) biçimde tutulmaz** ve yalnızca veli-çocuk ilişkisinin doğrulanması amacıyla işlenir
 - **Konum:** yakındaki sahaları ve maçları gösterebilmek için, yalnızca uygulamayı kullanırken ve izninizle işlenir; hassasiyeti azaltılmış (yaklaşık) olarak saklanır
 - **Rehber eşleştirme:** arkadaşlarınızı bulabilmeniz için, açık izninizle cihazınızdaki rehber okunur; numaralar cihazınızda şifrelenip (hash) yalnızca bu şifreli hâli sunucumuza gönderilir — OYNA'yı kullanmayan kişilerin ham telefon numarası cihazınızdan hiçbir şekilde çıkmaz. Bu özelliği Ayarlar'dan istediğiniz zaman kapatabilirsiniz.
 - **Kullanım:** rezervasyon, maç, takım ve mesajlaşma gibi uygulama içi etkinlik verileri
@@ -22,18 +24,21 @@
 ### 2. Verilerin Kullanım Amacı
 Hizmetin sunulması, rezervasyon ve ödeme süreçleri, maç/takım eşleştirme, bildirimler, güvenlik ve dolandırıcılık önleme, müşteri desteği ve hizmet iyileştirme.
 
-### 3. Verilerin Paylaşımı
+### 3. Verilerin Paylaşımı ve Görünürlüğü
 Verileriniz yalnızca aşağıdaki taraflarla, belirtilen amaçla sınırlı olarak paylaşılabilir:
-- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği ölçüde)
+- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği asgari ölçüde — bkz. [Veri Paylaşım Protokolü](veri-paylasim-protokolu.md); olağan rezervasyonda tesise ad-soyad veya telefonunuz aktarılmaz)
+- Talep ettiğiniz hizmet kapsamında **kaleci/hakem gibi hizmet sağlayıcılar** ile (yalnızca ilgili hizmetin ifası için gerekli asgari ölçüde; telefon/e-posta/konum aktarılmaz)
 - **Ödeme kuruluşu** ile (ödeme işlemlerinin gerçekleştirilmesi için)
 - Barındırma, hata izleme ve kullanım analitiği sağlayan **teknoloji tedarikçilerimiz** ile (yalnızca hizmetin işletilmesi için)
 - Google/Apple hesabınızla giriş yapmanız hâlinde ilgili **kimlik doğrulama sağlayıcısı** ile
 - Yasal yükümlülükler kapsamında **yetkili kamu kurum ve kuruluşları** ile
 
+Bir maça katıldığınızda **adınız ve profil görseliniz** o maçı görüntüleyenlere görünür olur; saha veya hizmet sağlayıcılar hakkında yaptığınız **değerlendirme ve yorumlar** kamuya açık olarak gösterilebilir.
+
 Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz veya kiralanmaz.
 
 ### 4. Yurt Dışına Aktarım
-Barındırma, hata izleme ve kullanım analitiği hizmeti aldığımız bazı teknoloji tedarikçilerimizin sunucuları yurt dışında bulunabilir. Bu durumda kişisel verileriniz, 6698 sayılı Kanun'un 9. maddesi ve ilgili Kurul kararları uyarınca yalnızca yeterli korumanın bulunduğu ülkelere, uygun güvence mekanizmalarına dayanılarak veya mevzuatın öngördüğü diğer hukuki sebeplerle aktarılır.
+Barındırma ve veritabanı başta olmak üzere bazı teknoloji altyapı hizmetlerimizi, sunucuları **yurt dışında** bulunan tedarikçilerden alırız (barındırma/veritabanı hizmetimiz yurt dışı bir veri merkezinde çalışır). Bu hâlde kişisel verileriniz, 6698 sayılı Kanun'un 9. maddesi uyarınca, **Kurul'ca ilan edilen standart sözleşme gibi uygun güvencelere** dayanılarak veya mevzuatın öngördüğü diğer hukuki sebeplerle yurt dışına aktarılır. Ayrıca harita, içerik dağıtım ağı (CDN) ve avatar görselleri gibi hizmetleri görüntülerken IP adresiniz ilgili yurt dışı sağlayıcıya iletilebilir.
 
 ### 5. Çerezler ve Benzer Teknolojiler
 Oturum yönetimi ve tercihleriniz için gerekli teknolojiler kullanılır. Detaylı bilgi için [Çerez Politikamıza](06-cerez-politikasi.md) bakabilirsiniz.

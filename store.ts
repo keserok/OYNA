@@ -191,6 +191,9 @@ interface AppState {
   role: UserRole | null;
   isAuthReady: boolean;
   selectedMatch: MatchListing | null;
+  // Lobi bağlamı: DISCOVER = Top Oyna'dan katılım (yönetim aksiyonları gizli),
+  // MANAGE = Sıradaki Maçlarım'dan (ödediğin slotlar + kaptanlık yetkileri).
+  lobbyMode: 'DISCOVER' | 'MANAGE';
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
   selectedConversationId: string | null;
@@ -310,6 +313,7 @@ interface AppState {
   setServiceAppRole: (r: UserRole | null) => void;
   setIsAuthReady: (isReady: boolean) => void;
   setSelectedMatch: (match: MatchListing | null) => void;
+  setLobbyMode: (mode: 'DISCOVER' | 'MANAGE') => void;
   setSelectedDiaryId: (id: string | null) => void;
   setSelectedConversationId: (id: string | null) => void;
   setMatchCreateSeed: (seed: AppState['matchCreateSeed']) => void;
@@ -554,6 +558,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   serviceAppRole: null,
   isAuthReady: true,
   selectedMatch: null,
+  lobbyMode: 'DISCOVER',
   selectedDiaryId: null,
   selectedConversationId: null,
   matchCreateSeed: null,
@@ -799,6 +804,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setServiceAppRole: (serviceAppRole) => set({ serviceAppRole }),
   setIsAuthReady: (isAuthReady) => set({ isAuthReady }),
   setSelectedMatch: (match) => set({ selectedMatch: match }),
+  setLobbyMode: (lobbyMode) => set({ lobbyMode }),
   setSelectedDiaryId: (id) => set({ selectedDiaryId: id }),
   setSelectedConversationId: (id) => set({ selectedConversationId: id }),
   // SOSYAL yeniden tasarım — navigasyon yükleri (Spec §2.2)

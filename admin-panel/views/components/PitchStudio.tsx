@@ -12,12 +12,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
   X, MapPin, Building2, Clock, LayoutGrid, Wallet, Image as ImageIcon,
-  Sparkles, Check, Eye, Star, Lock, Loader2, Plus, Trash2, ShieldCheck,
+  Sparkles, Check, Eye, Star, Lock, Loader2, Plus, Trash2, ShieldCheck, Percent,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
 import { getTariffs, saveTariffs, type TariffInput } from '../../../services/pitchOwnerService';
-import { setPitchFeatured, setPitchPublished } from '../../../services/pitchContentService';
+import { setPitchPublished, setPitchShowcaseFlags, type PitchShowcaseFlags } from '../../../services/pitchContentService';
 import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
 import PhotoManager from '../../../components/pitch-editor/PhotoManager';
 import ShowcaseScoreCard from '../../../components/pitch-editor/ShowcaseScoreCard';
@@ -130,6 +130,8 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   // ── Vitrin ──
   const [isPublished, setIsPublished] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [flashEnabled, setFlashEnabled] = useState(false);
+  const [availabilityBadge, setAvailabilityBadge] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>('approved');
   const [showPreview, setShowPreview] = useState(false);
   const [scoreRefresh, setScoreRefresh] = useState(0);
@@ -141,7 +143,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     void (async () => {
       const { data, error } = await supabase
         .from('pitches')
-        .select('name, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, is_active, verification_status, price_per_match, owner_id')
+        .select('name, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, is_active, verification_status, price_per_match, owner_id')
         .eq('id', pitchId)
         .single();
       if (!alive) return;
@@ -167,6 +169,8 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       }
       setIsPublished(data.is_published !== false);
       setIsFeatured(data.is_featured === true);
+      setFlashEnabled((data as { flash_deals_enabled?: boolean | null }).flash_deals_enabled === true);
+      setAvailabilityBadge((data as { show_availability_badge?: boolean | null }).show_availability_badge === true);
       setIsActive(data.is_active !== false);
       setVerificationStatus((data.verification_status as typeof verificationStatus) ?? 'approved');
       setPricePerMatch(Number(data.price_per_match ?? 0));
@@ -337,16 +341,23 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     }
   };
 
-  const handleToggleFeatured = async () => {
+  // Üç admin rozet bayrağı (Öne Çıkan / flash izni / müsaitlik) tek yoldan;
+  // DB trigger'ı bu kolonları admin-only kildeler, yazım admin_update_pitch RPC'sinden geçer.
+  const handleToggleShowcaseFlag = async (
+    key: keyof PitchShowcaseFlags,
+    cur: boolean,
+    setLocal: (v: boolean) => void,
+    okMsg: [string, string],
+  ) => {
     if (!id) return;
-    const next = !isFeatured;
-    setIsFeatured(next);
+    const next = !cur;
+    setLocal(next);
     try {
-      await setPitchFeatured(id, next);
-      success(next ? 'Tesis öne çıkarıldı.' : 'Öne çıkarma kaldırıldı.');
+      await setPitchShowcaseFlags(id, { [key]: next });
+      success(next ? okMsg[0] : okMsg[1]);
       onSaved();
     } catch (err) {
-      setIsFeatured(!next);
+      setLocal(cur);
       toastError(toTurkishAdminError(err));
     }
   };
@@ -832,15 +843,45 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                       <div>
                         <p className="text-sm font-bold text-white flex items-center gap-1.5"><Star size={14} className="text-[#FFFF00]" /> Öne Çıkar</p>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[200px]">
-                          Öne çıkan tesis vitrin listesinin üstünde rozetle görünür.
+                          Kartta sarı "Öne Çıkan" rozeti gösterilir.
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => void handleToggleFeatured()}
+                        onClick={() => void handleToggleShowcaseFlag('is_featured', isFeatured, setIsFeatured, ['Tesis öne çıkarıldı.', 'Öne çıkarma kaldırıldı.'])}
                         className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${isFeatured ? 'bg-[#FFFF00]' : 'bg-gray-700'}`}
                       >
                         <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isFeatured ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+                    <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><Percent size={14} className="text-[#FF3B30]" /> Flash İndirim Rozeti</p>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[200px]">
+                          Kapalıyken tesisin flash kampanyaları vitrine yansımaz.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleShowcaseFlag('flash_deals_enabled', flashEnabled, setFlashEnabled, ['Flash indirim rozeti açıldı.', 'Flash indirim rozeti kapatıldı.'])}
+                        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${flashEnabled ? 'bg-[#FF3B30]' : 'bg-gray-700'}`}
+                      >
+                        <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${flashEnabled ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+                    <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><Clock size={14} className="text-[#39FF14]" /> Müsaitlik Rozeti</p>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[200px]">
+                          Kartta "Bugün X saat müsait / dolu" rozeti gösterilir.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleShowcaseFlag('show_availability_badge', availabilityBadge, setAvailabilityBadge, ['Müsaitlik rozeti açıldı.', 'Müsaitlik rozeti kapatıldı.'])}
+                        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${availabilityBadge ? 'bg-[#39FF14]' : 'bg-gray-700'}`}
+                      >
+                        <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${availabilityBadge ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
                   </div>

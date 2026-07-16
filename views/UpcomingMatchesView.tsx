@@ -75,6 +75,7 @@ const UpcomingMatchesView: React.FC<UpcomingMatchesViewProps> = ({ onBack, onNav
                     match={match}
                     currentUserUid={currentUserUid}
                     onOpenLobby={() => {
+                      useAppStore.getState().setLobbyMode('MANAGE');
                       setSelectedMatch(match);
                       onNavigate('MATCH_JOIN');
                     }}
