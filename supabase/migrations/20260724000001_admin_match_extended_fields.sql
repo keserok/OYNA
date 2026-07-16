@@ -10,6 +10,11 @@
 -- (kodla katılım) akışı bu kolonlara dayanır → admin maçları filtrelerde eksik
 -- çıkıyor, özel maçların kodu yönetilemiyordu.
 --
+-- 🐛 EK DÜZELTME: Canlı gövdeler var olmayan `ref_id` kolonuna yazıyordu
+--   (matches tablosunda yalnız "refereeId" var; ref_id yok) → admin maç
+--   oluşturma/güncelleme RUNTIME'da "column ref_id does not exist" ile
+--   kırılıyordu. Bu göç ref_id referanslarını kaldırarak hatayı da giderir.
+--
 -- ⚠️ RBAC deseni korunur (Wave 8, 20260710000006): davranış yalnız __core
 --    gövdelerinde değişir. require_admin_role(['MODERATOR']) kapılı sarmalayıcılar
 --    (admin_create_match / admin_update_match) ve is_platform_admin() koruması
@@ -77,7 +82,7 @@ BEGIN
   INSERT INTO public.matches (
     id, title, location, date, "time", price, difficulty, status, format,
     image, badges, "minRating", "missingPositions", slots, "awaySlots",
-    "refereeId", ref_id, "creatorId", captain_id, pitch_id, "isDemo",
+    "refereeId", "creatorId", captain_id, pitch_id, "isDemo",
     visibility, private_code, duration, gender, "ageGroup"
   ) VALUES (
     v_id,
@@ -95,7 +100,6 @@ BEGIN
     v_missing,
     v_slots,
     v_away,
-    NULLIF(p_payload->>'refereeId', '')::uuid,
     NULLIF(p_payload->>'refereeId', '')::uuid,
     NULLIF(p_payload->>'creatorId', '')::uuid,
     NULLIF(p_payload->>'creatorId', '')::uuid,
@@ -115,8 +119,10 @@ $function$;
 REVOKE ALL ON FUNCTION public.admin_create_match__core(jsonb) FROM PUBLIC, anon, authenticated;
 
 -- ─── UPDATE ──────────────────────────────────────────────────────────────────
--- Gövde 20260624000001'deki admin_update_match okunarak yeniden tanımlandı;
--- yalnız DNA kolonları eklendi. RBAC sarmalayıcısı (admin_update_match) korunur.
+-- Gövde CANLI admin_update_match__core (prod) okunarak yeniden tanımlandı; canlı
+-- imza/yetki (yalnız is_platform_admin) KORUNDU, var olmayan ref_id yazımı
+-- KALDIRILDI (bug fix) ve DNA kolonları eklendi. RBAC sarmalayıcısı
+-- (admin_update_match) korunur.
 CREATE OR REPLACE FUNCTION public.admin_update_match__core(p_match_id uuid, p_payload jsonb)
  RETURNS boolean
  LANGUAGE plpgsql
@@ -125,15 +131,7 @@ CREATE OR REPLACE FUNCTION public.admin_update_match__core(p_match_id uuid, p_pa
 AS $function$
 DECLARE v_old JSONB;
 BEGIN
-  IF NOT (
-    public.is_platform_admin()
-    OR auth.uid() = (SELECT captain_id FROM public.matches WHERE id = p_match_id)
-    OR auth.uid() = (SELECT "creatorId" FROM public.matches WHERE id = p_match_id)
-    OR public._is_match_participant(p_match_id, auth.uid())
-  ) THEN
-    RAISE EXCEPTION 'UNAUTHORIZED';
-  END IF;
-
+  IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
   SELECT to_jsonb(m.*) INTO v_old FROM public.matches m WHERE id = p_match_id;
   IF v_old IS NULL THEN RAISE EXCEPTION 'Maç bulunamadı'; END IF;
   UPDATE public.matches SET
@@ -152,8 +150,6 @@ BEGIN
     slots = CASE WHEN p_payload ? 'slots' THEN p_payload->'slots' ELSE slots END,
     "awaySlots" = CASE WHEN p_payload ? 'awaySlots' OR p_payload ? 'away_slots'
       THEN COALESCE(p_payload->'awaySlots', p_payload->'away_slots') ELSE "awaySlots" END,
-    "reservePlayers" = CASE WHEN p_payload ? 'reservePlayers' OR p_payload ? 'reserve_players'
-      THEN COALESCE(p_payload->'reservePlayers', p_payload->'reserve_players') ELSE "reservePlayers" END,
     "refereeId" = COALESCE(NULLIF(p_payload->>'refereeId', '')::uuid, "refereeId"),
     -- FAZ 3 + admin DNA: süre/cinsiyet/yaş/görünürlük/özel kod
     duration = CASE WHEN p_payload ? 'duration' THEN NULLIF(p_payload->>'duration','') ELSE duration END,
