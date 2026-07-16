@@ -34,7 +34,8 @@ import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
-import { subscribeToOpenMatches } from '../services/matchService';
+import { subscribeToOpenMatches, getMatchDetails } from '../services/matchService';
+import { submitRefereeMatchScore } from '../services/scoreService';
 import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
@@ -57,7 +58,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     unreadNotificationsCount,
     setIsNotificationsOpen,
     updateOwnProvider,
-    adminMatches
+    adminMatches,
+    applyMatchLocal
   } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>('HOME');
   const [isAvailable, setIsAvailable] = useState(true);
@@ -94,6 +96,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [matchLiveStatus, setMatchLiveStatus] = useState<Record<string, 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED'>>({});
   const [showPostMatchReport, setShowPostMatchReport] = useState(false);
   const [postMatchRating, setPostMatchRating] = useState(5);
+  // HR-A: hakem resmi skor girişi — kontrollü alanlar + gönderim durumu.
+  const [refScore, setRefScore] = useState<{ home: string; away: string }>({ home: '', away: '' });
+  const [submittingScore, setSubmittingScore] = useState(false);
   const [newCardHolder, setNewCardHolder] = useState('');
   
   const [flipCard, setFlipCard] = useState(false);
@@ -2476,57 +2481,104 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <Award size={32} />
                 </div>
                 <h3 className="text-xl font-black text-white uppercase italic">MAÇ SONU RAPORU</h3>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Takımı ve Ortamı Değerlendir</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">
+                  {isRef ? 'Resmi Maç Skorunu Gir' : 'Takımı ve Ortamı Değerlendir'}
+                </p>
               </div>
 
               <div className="space-y-4 mb-6">
                 {isRef && (
+                  /* HR-A: kontrollü skor alanları — girilen değer gerçekten finalize_match'e yazılır. */
                   <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
                     <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Maç Skoru</label>
                     <div className="flex items-center justify-center gap-4">
-                      <input type="number" placeholder="0" className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors" />
+                      <input
+                        type="number" inputMode="numeric" min={0} max={99} placeholder="0"
+                        value={refScore.home}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                          setRefScore(p => ({ ...p, home: v }));
+                        }}
+                        aria-label="Ev sahibi skoru"
+                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors"
+                      />
                       <span className="text-xl font-black text-gray-600">-</span>
-                      <input type="number" placeholder="0" className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors" />
+                      <input
+                        type="number" inputMode="numeric" min={0} max={99} placeholder="0"
+                        value={refScore.away}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                          setRefScore(p => ({ ...p, away: v }));
+                        }}
+                        aria-label="Deplasman skoru"
+                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors"
+                      />
                     </div>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase text-center mt-3">Kaptanlara skor onayı gönderilecektir</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase text-center mt-3">Resmi hakem skoru — maç bu skorla tamamlanır</p>
                   </div>
                 )}
-                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
-                  <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Centilmenlik ve Misafirperverlik</label>
-                  <div className="flex justify-between items-center px-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button 
-                        key={star}
-                        onClick={() => setPostMatchRating(star)}
-                        className="transition-transform hover:scale-110 active:scale-95"
-                      >
-                        <Star size={32} className={star <= postMatchRating ? 'text-[#FACC15] fill-[#FACC15]' : 'text-gray-700'} />
-                      </button>
-                    ))}
+                {!isRef && (
+                  <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
+                    <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Centilmenlik ve Misafirperverlik</label>
+                    <div className="flex justify-between items-center px-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setPostMatchRating(star)}
+                          className="transition-transform hover:scale-110 active:scale-95"
+                        >
+                          <Star size={32} className={star <= postMatchRating ? 'text-[#FACC15] fill-[#FACC15]' : 'text-gray-700'} />
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-center text-[10px] text-[#FACC15] font-black mt-3 uppercase tracking-widest">
+                      {postMatchRating === 5 ? "Mükemmel Takım" : postMatchRating >= 3 ? "İyi Takım" : "Toksik Takım"}
+                    </p>
                   </div>
-                  <p className="text-center text-[10px] text-[#FACC15] font-black mt-3 uppercase tracking-widest">
-                    {postMatchRating === 5 ? "Mükemmel Takım" : postMatchRating >= 3 ? "İyi Takım" : "Toksik Takım"}
-                  </p>
-                </div>
+                )}
               </div>
 
-              <button 
-                onClick={() => {
-                  setShowPostMatchReport(false);
-                  const updatedStatus = { ...matchLiveStatus };
-                  if (myUpcomingMatches[0]?.id) {
-                      updatedStatus[myUpcomingMatches[0].id] = 'FINISHED';
-                  }
-                  setMatchLiveStatus(updatedStatus);
+              <button
+                disabled={submittingScore}
+                onClick={async () => {
+                  const matchId = myUpcomingMatches[0]?.id;
                   if (isRef) {
-                      showActionSuccess('Raporunuz gönderildi. Her iki kaptana skor onayı için bildirim iletildi.');
+                      // HR-A: hakem skoru GERÇEKTEN yazılır (finalize_match). Başarısızsa
+                      // modal açık kalır ve dürüst hata gösterilir — sahte başarı YOK.
+                      if (!matchId) { showActionError('Atanmış bir maç bulunamadı.'); return; }
+                      const home = refScore.home === '' ? 0 : parseInt(refScore.home, 10);
+                      const away = refScore.away === '' ? 0 : parseInt(refScore.away, 10);
+                      if (!Number.isFinite(home) || !Number.isFinite(away)) {
+                        showActionError('Geçerli bir skor gir.'); return;
+                      }
+                      setSubmittingScore(true);
+                      try {
+                        await submitRefereeMatchScore(matchId, home, away);
+                        // Store'u sunucudaki taze maçla eşitle (COMPLETED + skor).
+                        try {
+                          const fresh = await getMatchDetails(matchId);
+                          if (fresh) applyMatchLocal(fresh);
+                        } catch { /* görsel tazeleme başarısızsa akış bozulmaz */ }
+                        setMatchLiveStatus(prev => ({ ...prev, [matchId]: 'FINISHED' }));
+                        setShowPostMatchReport(false);
+                        setRefScore({ home: '', away: '' });
+                        showActionSuccess(`Maç skoru resmi olarak kaydedildi: ${home}–${away}.`);
+                      } catch (e: any) {
+                        showActionError(e?.message || 'Skor kaydedilemedi. Tekrar dene.');
+                      } finally {
+                        setSubmittingScore(false);
+                      }
                   } else {
-                      showActionSuccess('Raporunuz gönderildi. Kazancınız cüzdanınıza aktarıldı.');
+                      // Kaleci: bu ekran ödeme değil operasyon; ödeme escrow onayıyla otomatik akar.
+                      if (matchId) setMatchLiveStatus(prev => ({ ...prev, [matchId]: 'FINISHED' }));
+                      setShowPostMatchReport(false);
+                      showActionSuccess('Maç tamamlandı olarak işaretlendi. Kazancın, maç onayı sonrası cüzdanına otomatik aktarılır.');
                   }
                 }}
-                className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg`}
+                className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
-                RAPORU GÖNDER VE BİTİR
+                {submittingScore && <RefreshCcw size={14} className="animate-spin" />}
+                {submittingScore ? 'KAYDEDİLİYOR...' : (isRef ? 'SKORU KAYDET VE BİTİR' : 'RAPORU GÖNDER VE BİTİR')}
               </button>
             </motion.div>
           </div>
