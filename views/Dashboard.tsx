@@ -16,8 +16,8 @@ interface DashboardProps {
   onNavigate: (view: AppView) => void;
   onBack: () => void;
   onRoleSelect?: (role: any) => void;
-  selectedGk: Goalkeeper | null;
-  selectedRef: Referee | null;
+  // KC-6: selectedGk/selectedRef prop'ları kaldırıldı — Dashboard bunları hiç
+  // kullanmıyordu (ölü prop). Marketplace onSelect zaten goBack yapıyor.
 }
 
 const DashboardSkeleton = () => (
@@ -277,7 +277,7 @@ const itemVariants = {
 };
 
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, selectedRef }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
   const { 
     initialLoadComplete, 
     globalTexts, 

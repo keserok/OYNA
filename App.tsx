@@ -621,8 +621,6 @@ const App: React.FC = () => {
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
           onBack={() => goBack(navigateBasedOnRole(role))}
-          selectedGk={selectedGk}
-          selectedRef={selectedRef}
         />;
       case 'PITCH_DISCOVERY':
         return <PitchDiscovery
