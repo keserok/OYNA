@@ -143,6 +143,10 @@ export const OYNA_MAPLIBRE_CSS = `
     box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 26px rgba(57,255,20,0.6);
     transform: scale(1.14);
   }
+  /* Saha adı: uzun adlar pini şişirmesin — tek satır, kısaltmalı */
+  .oyna-mlpin .pin-bubble .pin-name {
+    max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .oyna-mlpin .pin-nub {
     width: 9px; height: 9px; border-radius: 50%; background: #39FF14; margin-top: -2px;
     box-shadow: 0 0 10px rgba(57,255,20,0.85);
