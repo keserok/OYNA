@@ -21,6 +21,8 @@ Her yeni sözleşme/politika hazırlandığında buraya, açık bir dosya adıyl
 | 11 | [Topluluk Kuralları ve Kullanıcı Davranış Kuralları](oyuncu/09-topluluk-kurallari.md) | ✅ Yayında — 6 temel kural + hukuki derinleştirilmiş metin (ToS md.7 eki) | `LegalScreen.tsx → TOPLULUK` | — |
 | 12 | [Veri Paylaşım Protokolü](veri-paylasim-protokolu.md) | 📝 Taslak tamamlandı — B2B md.12 ve Kaleci/Hakem md.13-14'ün eki; uygulamanın fiilî paylaşım davranışına (canlı DB RLS teyidiyle) göre yazıldı | B2B + Hizmet Sağlayıcı sözleşmelerinin eki; KVKK Aydınlatma/Gizlilik ile tutarlı | — |
 | 13 | [Güvenlik Notu — Anonim Veri Görünürlüğü](guvenlik-notu-anon-veri-gorunurlugu.md) | 🔎 Değerlendirme — anon maç kadrosu (ad+avatar) + sağlayıcı kataloğu (konum) ifşası; Seçenek B (maskeleme) önerildi, uygulaması **iş onayı bekliyor** | İç değerlendirme; RLS migration (onay bekliyor) | — |
+| 14 | [Veri İşleyen Envanteri ve Yurt Dışı Aktarım](tedarikci/01-veri-isleyen-envanteri-ve-yurtdisi-aktarim.md) | 🔎 Değerlendirme — aktif/dormant tedarikçi envanteri (koda dayalı) + KVKK m.9 (standart sözleşme) yol haritası | İç değerlendirme; Gizlilik §4 / KVKK §6 ile tutarlı | — |
+| 15 | [VERBİS/ETBİS Uyum Değerlendirmesi](kurumsal/01-verbis-etbis-uyum-degerlendirmesi.md) | 🔎 Değerlendirme — VERBİS **istisna** (1 çalışan/ciro yok); ETBİS kaydı **zorunlu, bekliyor** | İç değerlendirme | — |
 
 Henüz hazırlanmamış belgeler (tedarikçi sözleşmeleri, kurumsal belgeler vb.) için bkz. [uyum takip paneli](https://claude.ai/code/artifact/9b1e3654-7871-4bc1-b6b8-6d83c5ad0982) — hazırlandıkça ilgili alt klasörle birlikte buraya eklenecekler.
 
@@ -30,6 +32,8 @@ Henüz hazırlanmamış belgeler (tedarikçi sözleşmeleri, kurumsal belgeler v
 2. **B2B sözleşme kabul ekranları:** Saha Sahibi ve Kaleci/Hakem sözleşmeleri, ilgili onboarding/başvuru akışlarında (`PartnerOnboarding.tsx` ve hizmet sağlayıcı başvuru ekranı) bir kabul adımına henüz bağlanmadı.
 3. **Kaleci/Hakem komisyon oranı (%15):** Sözleşme taslağında iş kararı olarak işaretlenmiştir; şirket tarafından onaylanmalı veya değiştirilmelidir.
 4. **Anonim veri görünürlüğü daraltması (Seçenek B):** [Güvenlik Notu](guvenlik-notu-anon-veri-gorunurlugu.md) uyarınca, giriş yapmamış (anon) kullanıcılara açık olan maç kadrosu (ad+avatar) ve sağlayıcı kataloğu (konum) görünürlüğünü maskeleyen bir RLS/görünüm düzenlemesi önerilmiştir; üründe davranış değiştireceğinden **iş/ürün onayı** beklemektedir.
+5. **ETBİS kaydı (öncelikli):** OYNA aracı hizmet sağlayıcı olarak ETBİS'e kayıt yükümlüsüdür; erişim düzelince tamamlanmalı (bkz. [VERBİS/ETBİS Değerlendirmesi](kurumsal/01-verbis-etbis-uyum-degerlendirmesi.md)).
+6. **Yurt dışı aktarım güvenceleri:** Supabase (ve teyit sonrası SMS/barındırma sağlayıcıları) için Kurul standart sözleşmesi imzalanmalı ve 5 iş günü içinde Kurul'a bildirilmelidir. Ayrıca istisnaya rağmen **Kişisel Veri Saklama ve İmha Politikası** hazırlanmalıdır.
 
 ## Klasör Planı
 
@@ -39,8 +43,8 @@ sozlesmeler/
   oyuncu/                        — oyuncuya yönelik belgeler (hazır)
   saha-sahibi/                   — işletme/saha sahibi sözleşmesi (taslak tamamlandı)
   kaleci-hakem/                  — hizmet sağlayıcı sözleşmesi (taslak tamamlandı)
-  tedarikci/                     — iyzico, Supabase, Sentry/PostHog vb. (sırada)
-  kurumsal/                      — şirket/marka ile ilgili belgeler (sırada)
+  tedarikci/                     — veri işleyen envanteri + yurt dışı aktarım değerlendirmesi (taslak eklendi)
+  kurumsal/                      — VERBİS/ETBİS uyum değerlendirmesi (taslak eklendi)
 ```
 
 ## Veri Sorumlusu / Sözleşme Tarafı

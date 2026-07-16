@@ -38,7 +38,7 @@ Bir maça katıldığınızda **adınız ve profil görseliniz** o maçı görü
 Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz veya kiralanmaz.
 
 ### 4. Yurt Dışına Aktarım
-Barındırma, hata izleme ve kullanım analitiği hizmeti aldığımız bazı teknoloji tedarikçilerimizin sunucuları yurt dışında bulunabilir. Bu durumda kişisel verileriniz, 6698 sayılı Kanun'un 9. maddesi ve ilgili Kurul kararları uyarınca yalnızca yeterli korumanın bulunduğu ülkelere, uygun güvence mekanizmalarına dayanılarak veya mevzuatın öngördüğü diğer hukuki sebeplerle aktarılır.
+Barındırma ve veritabanı başta olmak üzere bazı teknoloji altyapı hizmetlerimizi, sunucuları **yurt dışında** bulunan tedarikçilerden alırız (barındırma/veritabanı hizmetimiz yurt dışı bir veri merkezinde çalışır). Bu hâlde kişisel verileriniz, 6698 sayılı Kanun'un 9. maddesi uyarınca, **Kurul'ca ilan edilen standart sözleşme gibi uygun güvencelere** dayanılarak veya mevzuatın öngördüğü diğer hukuki sebeplerle yurt dışına aktarılır. Ayrıca harita, içerik dağıtım ağı (CDN) ve avatar görselleri gibi hizmetleri görüntülerken IP adresiniz ilgili yurt dışı sağlayıcıya iletilebilir.
 
 ### 5. Çerezler ve Benzer Teknolojiler
 Oturum yönetimi ve tercihleriniz için gerekli teknolojiler kullanılır. Detaylı bilgi için [Çerez Politikamıza](06-cerez-politikasi.md) bakabilirsiniz.
