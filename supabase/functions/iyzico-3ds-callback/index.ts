@@ -131,6 +131,16 @@ Deno.serve(async (req: Request) => {
   })
   if (applyErr) {
     console.error('[iyzico-3ds-callback] apply_card_payment hatası:', applyErr.message)
+    // KURŞUNGEÇİRMEZ HEAL: para iyzico'da KESİN çekildi (auth success) ama sisteme
+    // işlenemedi. Çekimin kanıtını (paymentId) intent'e işaretle → askıda ödeme
+    // süpürücüsü bunu görünce iyzico'ya sormadan güvenle heal eder (para güvende).
+    try {
+      await admin.rpc('mark_intent_auth_charged', {
+        p_intent_id: intentId, p_payment_id: auth.paymentId ?? paymentId,
+      })
+    } catch (e) {
+      console.error('[iyzico-3ds-callback] auth_charged işareti yazılamadı:', e instanceof Error ? e.message : e)
+    }
     return resultPage(false, 'Bir Sorun Oluştu',
       'Ödemen bankadan onaylandı ancak sisteme işlenirken bir sorun oluştu. Ekibimiz durumu görebiliyor; kısa süre içinde düzeltilir, paran güvende.',
       intentId, 'APPLY_ERROR', 500)
