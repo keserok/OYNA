@@ -197,3 +197,14 @@ _Bu belge canlı; onaylanan kararlar ve tamamlanan sprintler §-güncellemeleriy
 - **KS3** marketplace: KC-4 uygun-olmayan kaleci filtresi (is_available `profiles`'ta → marketplace sorgusuna join gerek, veri-katmanı), KC-6 `selectedGk` ölü prop temizliği, KC-7 boş-durum yükleme-hatasını maskeliyor (store hata durumu).
 - **KS4** profil/ayarlar + gizlilik + matching: KD-2 gizlilik toggle'larını gerçeğe bağla (4'ü), KD-4/5 ayar tutarlılığı/hata, KD-6 radius geri-okuma, KD-7 kaydet dürüstlüğü, KD-8 foto Storage, KD-9 loading guard, KD-M1 preset foto; **KB-8** uygunluk gün/saat/bölge matching'e bağla (find_providers migration).
 - **KS2 minör**: KB-5 APPLIED expire (sunucu sweep), KB-7 geri-sayım parse (kozmetik).
+
+### Güncelleme (KS4-1 + KD-2)
+- **KS4-1** profil/ayarlar sağlamlığı: KD-4 (yanlış-sağlayıcı fallback kalktı + toggle senkron), KD-5 (ayar yazımı revert+toast), KD-6 (radius geri-okuma), KD-7 (kaydet dürüstlüğü: "Kaydediliyor…" + iç buton "TAMAM"), KD-9 (profil yükleme guard'ı, sahte default'lar boşaltıldı). ✔ push'landı.
+- **KD-2 gizlilik gerçeğe bağlandı:** marketplace `showProfile` (opted-out listelenmez, canlı doğrulandı) + `showRating` (kart puanı gizlenir); ayrıca `find_providers_for_match`'e `showProfile` filtresi (canlı migration `20260726000000`). ✔ push'landı.
+
+### Kalan follow-up'lar (odaklı pass gerektirir)
+- **KB-8 tam eşleştirme:** find_providers'ın gün/saat (`working_hours` "HH:MM - HH:MM" + TR gün-adı) ve bölge (`preferredZones` vs maç konumu) filtreleri — riskli SQL, ayrı testli migration (find_providers maç konumunu da seçmeli).
+- **KD-2 kalan:** `allowOffer` (kapalıysa doğrudan kiralama kilidi — detay modal), `hidePhone` (rezervasyon/iletişim akışı), detay-modal puan gizleme.
+- **KC-4** uygun-olmayan kaleci filtresi: `is_available` `profiles`'ta (goalkeepers'ta yok) → marketplace'e ikincil sorgu/join + `create_service_request` sunucu kontrolü (operasyonel/sınırda).
+- **KC-6** `selectedGk` ölü prop temizliği · **KC-7** boş-durum yükleme hatasını maskeliyor (store hata state'i).
+- **KD-8** foto base64 yerine Storage upload · **KB-5** APPLIED expire (sunucu sweep) · **KB-7** geri-sayım parse (kozmetik).
