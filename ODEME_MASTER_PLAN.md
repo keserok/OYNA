@@ -161,12 +161,21 @@ Hepsi kod denetimiyle doğrulandı. Sıra: C1 → C2 → C3 → C4 → P1'ler �
 > 4. `app_config.sweeper_enabled = true` (Admin panelden) — tek anahtarla geri kapatılır.
 
 ### Latent
-- [ ] **C5/C7** iade tahmini sunucu formülüyle birebir (brüt−PSP=net; PSP=0 → düşük etki).
+- [x] **C5/C7** iade tahmini sunucu formülüyle birebir — SSOT `_booking_cancel_quote`
+  helper; `preview_booking_cancel` RPC FE'ye net (brüt−PSP) tutarı verir; cancel +
+  preview aynı helper'ı paylaşır (ayrışamaz). *(PR #91, canlı kanıt)*
 - [ ] **C9** çoklu-slot "X ödedi" rozeti (gerçek split-tahsilat iyzico fazına).
 - [ ] **C11** kontrollü RED modu (belirli test tutarı/kartı → decline) — hata UX'i QA edilebilir.
 
-**G1 kapısı:** idempotency anahtarı başına ≤1 cüzdan işlemi · maç başına ≤1
-BLOCKED kapora · yetim PENDING rezervasyon = 0 · smoke + birim yeşil.
+### G1 kapısı — ✅ KALICI GUARD (`check_money_invariants()`)
+- [x] Canlı DB'ye karşı çalışan değişmez denetçisi (S4 sağlık akışına da bağlanır):
+  I1 cüzdan aynası tutar · I2 idempotency (anahtar başına ≤1 intent) · I3 çift
+  TOP_UP kredisi yok · I4 negatif kova yok (over-spend sızıntısı) · I5 yetim iade
+  yok · I6 (bilgi) stale-PENDING sayısı.
+- **Bulgu:** guard 2 gerçek tutarsızlık yakaladı (test/seed hesaplarında phantom
+  bakiye/borç) → **üretim spend/escrow kodu sağlam doğrulandı** (wallet_spend_balance
+  kovaları böler + tavanlar); artıklar kurallı düzeltildi (telafi + ayna senkron,
+  silme yok). Denetçi şimdi `ok=true`.
 
 ---
 
