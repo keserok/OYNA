@@ -273,9 +273,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         // fakat id/uid'yi auth.currentUser.uid'e sabitle ki cüzdan/transfer/teklif
         // işlemleri yanlış (demo) kullanıcıya gitmesin.
         const authUid = auth.currentUser?.uid;
-        // Misafirde mock 'u1' kimliğine düşülmez: demo profil yalnız görsel,
-        // finansal aksiyonlar guardGuest ile kilitli.
-        const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === authUid) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
+        const own = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === authUid);
+        // HR-F: Giriş yapmış kullanıcının KENDİ sağlayıcı satırı store'da yoksa,
+        // katalogun ilk sağlayıcısına (adminReferees[0] = Yusuf gibi) düşüp onun
+        // adını/puanını/statlarını "kendisiymiş" gibi göstermek KİMLİK SIZINTISIDIR
+        // (kimlik kartı de-fake çalışmasını çürütür). Bu durumda gerçek oturum
+        // kimliğini BOŞ istatistiklerle göster → kart "—" gösterir, başkasının
+        // verisi değil. Misafirde (authUid yok) demo profil yalnız görsel amaçlı
+        // korunur — ortada sızdırılacak gerçek kimlik yoktur.
+        const me = own || (authUid ? null : (isRef ? adminReferees[0] : adminGoalkeepers[0]));
 
         if (active && me) {
             setUserProfile({
@@ -299,6 +305,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               setActiveDays(me.workingHours.activeDays || ['Bugün']);
               setActiveHours(me.workingHours.activeHours || '18:00 - 23:00');
             }
+        } else if (active && authUid) {
+            // Kendi satırı henüz store'da yok — gerçek oturum kimliği + boş stat.
+            setUserProfile({
+                id: authUid,
+                uid: authUid,
+                fullName: auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || '',
+                role: role,
+                email: auth.currentUser?.email || '',
+                isAvailable: true,
+                rating: undefined,      // idRated=false → "—"
+                matchesPlayed: 0,
+                createdAt: new Date(),
+                stats: {},
+                style: undefined,
+                level: undefined,
+                workingHours: { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
+            });
         }
     };
 
@@ -2074,11 +2097,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                            <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-4 mb-4">
                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Kaptana Gidecek Kartın</h4>
+                               {/* HR-E: kaptana gidecek kart artık GERÇEK kimlik — sabit
+                                   "Cüneyt (FIFA) 4.9/150" / "Volkan (Panter)" ve yabancı
+                                   stok foto değil. Veri yoksa "—". */}
                                <div className="flex items-center gap-3">
-                                   <img src={isRef ? "https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=100" : "https://images.unsplash.com/photo-1544966614-05a04dd69d0c?auto=format&fit=crop&q=80&w=100"} className={`w-10 h-10 rounded-full border object-cover object-top ${isRef ? 'border-red-500' : 'border-green-500'}`} alt="profile" />
+                                   {auth.currentUser?.photoURL
+                                     ? <img src={auth.currentUser.photoURL} referrerPolicy="no-referrer" className={`w-10 h-10 rounded-full border object-cover object-top ${isRef ? 'border-red-500' : 'border-green-500'}`} alt="profil" />
+                                     : <div className={`w-10 h-10 rounded-full border flex items-center justify-center bg-black/40 ${isRef ? 'border-red-500' : 'border-green-500'}`}>
+                                         {isRef ? <Scale size={16} className="text-red-400" /> : <Hand size={16} className="text-green-400" />}
+                                       </div>}
                                    <div>
-                                       <p className="text-sm font-bold text-white">{isRef ? 'Cüneyt (FIFA)' : 'Volkan (Panter)'}</p>
-                                       <p className={`text-[10px] ${isRef ? 'text-red-400' : 'text-green-400'}`}>{isRef ? 'Puan: 4.9 • Maç: 150' : 'Refleks: 94 • Penaltı: 40%'}</p>
+                                       <p className="text-sm font-bold text-white">
+                                         {idFirstName || '—'}{(isRef ? idLevel : idStyle) ? ` (${(isRef ? idLevel : idStyle)!.toLocaleUpperCase('tr-TR')})` : ''}
+                                       </p>
+                                       <p className={`text-[10px] ${isRef ? 'text-red-400' : 'text-green-400'}`}>
+                                         Puan: {idRatingText} • Maç: {typeof userProfile?.matchesPlayed === 'number' ? userProfile.matchesPlayed : '—'}
+                                       </p>
                                    </div>
                                </div>
                            </div>
