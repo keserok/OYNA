@@ -11,6 +11,18 @@ import type { AdminLog } from '../../../types';
 
 import type { AdminNavigateFn } from '../GodViewPanel';
 
+/** Ham aksiyon kodlarını insan-okur Türkçe etikete çevirir (audit şablonları). */
+const ACTION_LABELS: Record<string, string> = {
+  USER_REPORT_RESOLVE: 'Şikayet Kapatıldı',
+  PITCH_RATING_DELETE: 'Saha Yorumu Silindi',
+  MATCH_CREATE: 'Maç Oluşturuldu',
+  MATCH_UPDATE: 'Maç Güncellendi',
+  MATCH_CANCEL: 'Maç İptal Edildi',
+  GHOST_START: 'Ghost Oturum Başladı',
+  GHOST_END: 'Ghost Oturum Bitti',
+};
+const actionLabel = (a: string): string => ACTION_LABELS[a] || a.replace(/_/g, ' ');
+
 /** Eski→yeni değer diff'i (Karar #70b): yalnız değişen alanlar yan yana. */
 const AuditDiff: React.FC<{ log: AdminLog; onClose: () => void }> = ({ log, onClose }) => {
   const oldV = (log.oldValue ?? {}) as Record<string, unknown>;
@@ -25,7 +37,7 @@ const AuditDiff: React.FC<{ log: AdminLog; onClose: () => void }> = ({ log, onCl
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
           <div className="min-w-0">
             <p className="text-[10px] text-gray-500 font-mono uppercase">Denetim Diff</p>
-            <h3 className="text-sm font-black text-white truncate">{log.action} · {log.targetName}</h3>
+            <h3 className="text-sm font-black text-white truncate">{actionLabel(log.action)} · {log.targetName}</h3>
             <p className="text-[10px] text-gray-500 mt-0.5">{new Date(log.timestamp).toLocaleString('tr-TR')} · {log.adminName || log.adminId.slice(0, 8)}</p>
           </div>
           <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center shrink-0"><X size={16} /></button>
@@ -113,7 +125,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
     }
     const chips = [{ id: 'all', label: 'Tümü', count: logs.length }];
     for (const [action, count] of [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)) {
-      chips.push({ id: action, label: action.replace(/_/g, ' '), count });
+      chips.push({ id: action, label: actionLabel(action), count });
     }
     return chips;
   }, [logs]);
@@ -145,7 +157,7 @@ export const AuditLogPage: React.FC<AuditLogPageProps> = ({ onRefresh, onNavigat
     {
       header: 'Aksiyon',
       render: (row: AdminLog) => (
-        <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">{row.action}</span>
+        <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider" title={row.action}>{actionLabel(row.action)}</span>
       ),
     },
     {
