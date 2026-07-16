@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, ArrowUpRight, Check, CheckCircle2, Clock,
   CreditCard, Gift, History, Info, Landmark, List, Pencil, Plus,
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { UserRole } from '../types';
+import { formatTRY, formatTRYInt } from '../utils/formatTRY';
 import {
   getWalletSummary, listSavedCards, deleteSavedCard, setDefaultSavedCard,
   getOwnerEarningsSummary, EarningsSummary, WalletSummary, SavedCard,
@@ -57,12 +58,14 @@ interface PayoutRequest {
 type View = 'MAIN' | 'TOPUP' | 'CARDS' | 'ADD_CARD' | 'HISTORY' | 'PAYOUT_FORM';
 type HistoryFilter = 'ALL' | 'TOPUP' | 'PAYMENT' | 'REFUND' | 'EARNING';
 
-const fmt = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtInt = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+// C10 — para biçimi tek kaynaktan (utils/formatTRY).
+const fmt = formatTRY;
+const fmtInt = formatTRYInt;
 
 const INCOME_TYPES = new Set(['TOP_UP', 'DEPOSIT', 'REFUND', 'MATCH_REFUND', 'MATCH_EARNING', 'BOOKING_EARNING', 'SERVICE_EARNING', 'REFERRAL_BONUS']);
 const TOPUP_PRESETS = [300, 500, 750, 1000, 1500];
 const TOPUP_MIN = 300;
+const TOPUP_MAX = 20000; // sunucu (prepare_card_payment) ile aynı üst sınır — C1: girişte doğrula
 
 const formatIBAN = (raw: string): string => {
   const clean = raw.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 26);
@@ -122,6 +125,13 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [topupDone, setTopupDone] = useState(false);
   // Uygulama-içi 3DS (banka SMS) sayfası — para yüklemede
   const [topupThreeDS, setTopupThreeDS] = useState<{ html: string; intentId: string } | null>(null);
+  // C1 — çift-tık kilidi (senkron) + idempotency anahtarı (retry'da aynı kalır).
+  const topupBusyRef = useRef(false);
+  const topupIdemRef = useRef<string | null>(null);
+  const genIdem = () => {
+    try { if (crypto?.randomUUID) return crypto.randomUUID(); } catch { /* eski webview */ }
+    return `topup-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  };
   // Kart ekleme hangi ekrandan açıldı — bitince oraya dön
   const [addCardReturn, setAddCardReturn] = useState<'CARDS' | 'TOPUP'>('CARDS');
 
@@ -200,47 +210,63 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   // Canlıda banka SMS doğrulaması (3DS) uygulama içinde açılır; simülasyonda
   // anında uygulanır. Kart verisi FE'de tutulmaz — yalnız kayıtlı kart id gider.
   const handleTopup = async () => {
-    if (topupBusy) return;
+    // C1 — senkron kilit: React state async olduğundan çok hızlı çift-tık
+    // topupBusy state'ini aşabilir; ref anında kapıyı kapatır.
+    if (topupBusyRef.current || topupBusy) return;
     setTopupError('');
     if (effectiveTopup < TOPUP_MIN) {
       setTopupError(`Minimum yükleme tutarı ${TOPUP_MIN}₺'dir.`);
+      return;
+    }
+    if (effectiveTopup > TOPUP_MAX) {
+      setTopupError(`Tek seferde en fazla ${fmtInt(TOPUP_MAX)}₺ yüklenebilir.`);
       return;
     }
     if (!topupCardId) {
       setTopupError('Yükleme için bir kart seç veya yeni kart ekle.');
       return;
     }
+    // C1 — bu yükleme denemesi için stabil idempotency anahtarı (retry'da aynı).
+    if (!topupIdemRef.current) topupIdemRef.current = genIdem();
+    topupBusyRef.current = true;
     setTopupBusy(true);
     try {
       const res = await startInAppCardPayment({
         flow: 'TOP_UP',
         amount: effectiveTopup,
         savedCardId: topupCardId,
+        idempotencyKey: topupIdemRef.current,
       });
       if (res.requiresThreeDS && res.threeDSHtml) {
         // Banka SMS doğrulaması — sonuç handleTopupThreeDSDone'a gelir
         setTopupThreeDS({ html: res.threeDSHtml, intentId: res.intentId });
         return; // busy açık kalır; sheet kapanınca sıfırlanır
       }
+      topupIdemRef.current = null; // başarı → yeni yükleme yeni anahtar
       setTopupDone(true);
       await fetchData();
       setTimeout(() => { setTopupDone(false); setView('MAIN'); }, 1800);
+      topupBusyRef.current = false;
       setTopupBusy(false);
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Para yükleme başarısız.';
       setTopupError(raw.replace(/^[A-Z_]+:\s*/, '') || 'Para yükleme başarısız.');
+      topupBusyRef.current = false;
       setTopupBusy(false);
     }
   };
 
   const handleTopupThreeDSDone = async (outcome: ThreeDSOutcome) => {
     setTopupThreeDS(null);
+    topupBusyRef.current = false;
     setTopupBusy(false);
     if (outcome.ok) {
+      topupIdemRef.current = null; // başarı → yeni yükleme yeni anahtar
       setTopupDone(true);
       await fetchData();
       setTimeout(() => { setTopupDone(false); setView('MAIN'); }, 1800);
     } else {
+      // Başarısız → aynı anahtar korunur; "tekrar dene" ikinci çekim yaratmaz.
       setTopupError(outcome.reason === 'TIMEOUT'
         ? 'Banka doğrulaması zaman aşımına uğradı. Yükleme alınmadıysa tekrar deneyebilirsin.'
         : 'Banka doğrulaması tamamlanamadı. Onaylanmayan tutar kartına yansımaz — tekrar deneyebilirsin.');
@@ -249,6 +275,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   const handleTopupThreeDSCancel = () => {
     setTopupThreeDS(null);
+    topupBusyRef.current = false;
     setTopupBusy(false);
     setTopupError('Banka doğrulaması yarıda kaldı — yükleme alınmadı.');
   };

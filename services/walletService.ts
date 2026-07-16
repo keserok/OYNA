@@ -168,30 +168,11 @@ export const setDefaultSavedCard = async (cardId: string): Promise<void> => {
   if (error) throw new Error(parseRpcError(error.message) || 'Varsayılan kart ayarlanamadı.');
 };
 
-// ─── Para yükleme (min 300₺, bonus yok; canlı modda edge function'a taşınır) ──
-export interface TopUpResult {
-  intentId: string | null;
-  amount: number;
-  topupBalance: number;
-  refundCreditBalance: number;
-  spendableBalance: number;
-}
-
-export const topUpWallet = async (amount: number, cardId?: string | null): Promise<TopUpResult> => {
-  const { data, error } = await supabase.rpc('wallet_topup', {
-    p_amount: amount,
-    p_card_id: cardId ?? null,
-  });
-  if (error) throw new Error(parseRpcError(error.message) || 'Para yükleme başarısız.');
-  const d = data as any;
-  return {
-    intentId: d?.intent_id ?? null,
-    amount: Number(d?.amount) || amount,
-    topupBalance: Number(d?.topup_balance) || 0,
-    refundCreditBalance: Number(d?.refund_credit_balance) || 0,
-    spendableBalance: Number(d?.spendable_balance) || 0,
-  };
-};
+// ─── Para yükleme ─────────────────────────────────────────────────────────────
+// KALDIRILDI (S1 ölü-yol temizliği): eski `wallet_topup` RPC'si idempotency ve
+// 3DS içermiyordu. Tek yükleme yolu artık uygulama-içi 3DS akışıdır
+// (paymentService.startInAppCardPayment, flow:'TOP_UP'). İki para yolu = risk;
+// bu yüzden bu fonksiyon ve RPC grant'ı devre dışı bırakıldı.
 
 // ─── Kazanç özeti (tesis/kaleci/hakem) — owner_earnings_summary RPC ──────────
 export interface EarningsSummary {
