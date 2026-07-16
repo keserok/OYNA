@@ -122,7 +122,14 @@ export const OYNA_MAPLIBRE_CSS = `
   }
   .maplibregl-ctrl-attrib a { color: rgba(57,255,20,0.55) !important; }
   .maplibregl-ctrl-attrib-button { background-color: rgba(255,255,255,0.3) !important; }
-  .oyna-mlpin { position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+  /* Fiyat balonu pini — yalnız yakın zoom'da görünür; --oyna-bubble-scale
+     zoom'a göre JS'ten set edilir (uzaklaştıkça hafifçe küçülür). Anchor
+     bottom olduğundan ölçek alt-orta noktadan uygulanır → tip koordinatta kalır. */
+  .oyna-mlpin {
+    position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;
+    transform: scale(var(--oyna-bubble-scale, 1));
+    transform-origin: center bottom;
+  }
   .oyna-mlpin .pin-bubble {
     display: flex; align-items: center; gap: 4px;
     background: #0D111A; border: 1.5px solid rgba(57,255,20,0.35);
@@ -136,6 +143,10 @@ export const OYNA_MAPLIBRE_CSS = `
     box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 26px rgba(57,255,20,0.6);
     transform: scale(1.14);
   }
+  /* Saha adı: uzun adlar pini şişirmesin — tek satır, kısaltmalı */
+  .oyna-mlpin .pin-bubble .pin-name {
+    max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .oyna-mlpin .pin-nub {
     width: 9px; height: 9px; border-radius: 50%; background: #39FF14; margin-top: -2px;
     box-shadow: 0 0 10px rgba(57,255,20,0.85);
@@ -146,6 +157,26 @@ export const OYNA_MAPLIBRE_CSS = `
     background: #FF3B30; color: #fff; font-size: 9px; font-weight: 900;
     padding: 2px 6px; border-radius: 100px; white-space: nowrap; box-shadow: 0 2px 8px rgba(255,59,48,0.5);
   }
+  .oyna-mlpin .pin-bubble, .oyna-mlpin .pin-nub { animation: oynaPinFade .22s ease-out; }
+  /* Nokta pini — uzak zoom'da fiyat gizli, yalnız konum noktası. Dokunma alanı
+     sabit 30px (parmak dostu); görünen çekirdek --oyna-dot-scale ile küçülür. */
+  .oyna-mldot {
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .oyna-mldot .dot-core {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: #39FF14; border: 2px solid rgba(6,11,18,0.95);
+    box-shadow: 0 0 9px rgba(57,255,20,0.65), 0 1px 4px rgba(0,0,0,0.5);
+    transform: scale(var(--oyna-dot-scale, 1));
+    transition: box-shadow .15s ease;
+    animation: oynaPinFade .22s ease-out;
+  }
+  .oyna-mldot.selected .dot-core {
+    background: #FFFF00;
+    box-shadow: 0 0 0 4px rgba(255,255,0,0.22), 0 0 14px rgba(255,255,0,0.85);
+  }
+  @keyframes oynaPinFade { from { opacity: 0; } to { opacity: 1; } }
   .oyna-mluser { position: relative; width: 16px; height: 16px; }
   .oyna-mluser .dot {
     position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;

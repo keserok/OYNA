@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Scale, Star, Navigation, Sparkles } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
-import { formatTRY } from '../../utils/formatTRY';
+import { formatTRYWithSymbol } from '../../utils/formatTRY';
 
 interface MarketplaceCardProps {
   item: Goalkeeper | Referee;
@@ -143,7 +143,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
         <div className="text-right">
           <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block leading-none">ÜCRET</span>
           <span className="text-[11px] font-black italic tracking-tight text-white block mt-1">
-            {formatTRY(item.fee)}
+            {formatTRYWithSymbol(item.fee)}
           </span>
         </div>
 

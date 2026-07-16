@@ -16,7 +16,7 @@ import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatch
 import { sendFriendRequest } from '../services/friendService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
-import { formatTRY } from '../utils/formatTRY';
+import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -1209,7 +1209,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   {[...(match.slots || []), ...(match.awaySlots || [])].some(
                     (s: any) => s?.player?.id === currentUserProfile?.id && s?.player?.paymentStatus === 'PAID'
                   )
-                    ? `Ödediğin ${formatTRY(match.price)} iade kredisi olarak cüzdanına dönecek.`
+                    ? `Ödediğin ${formatTRYWithSymbol(match.price)} iade kredisi olarak cüzdanına dönecek.`
                     : 'Ödeme yaptıysan tutar iade kredisi olarak cüzdanına döner.'}
                 </p>
               )}

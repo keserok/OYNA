@@ -434,8 +434,12 @@ export interface Pitch {
   tariffs?: PitchTariff[];
   /** Owner kontrollü vitrin görünürlüğü (false → listede çıkmaz) */
   isPublished?: boolean;
-  /** Admin kontrollü "Öne Çıkan" rozeti — listede üste taşınır */
+  /** Admin kontrollü "Öne Çıkan" rozeti (yalnız görsel; sıralamayı etkilemez) */
   isFeatured?: boolean;
+  /** Admin kontrollü: harita pininde fiyat yerine gösterilecek kısa isim (boşsa tam ad) */
+  mapLabel?: string;
+  /** Admin kontrollü: "Bugün X saat müsait" rozeti gösterilsin mi */
+  showAvailabilityBadge?: boolean;
   /** Bugün için müsait saat sayısı (liste rozetinde, tek toplu sorgudan) */
   todayAvailableCount?: number;
 }

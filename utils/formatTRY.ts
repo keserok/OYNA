@@ -1,27 +1,21 @@
-// Tüm oyuncu-tarafı para gösterimi için tek biçim kaynağı.
-// Ekranlar arası tutarsızlığı önler ("1.500₺" vs "1.500,00₺").
-// Kanonik biçim: binlik ayraç + iki ondalık + ₺ soneki → "1.500,00₺".
+// ─── Para biçimi — TEK KAYNAK (C10) ─────────────────────────────────────────
+// Tüm para ekranları bunu kullanır; "1.500,00₺" vs "1.500₺" tutarsızlığı biter.
+// Kanonik: formatTRY ham gövde döner (₺ YOK); ₺ soneki *WithSymbol ile eklenir.
 
-export interface FormatTRYOptions {
-  /** Kuruşu her zaman göster (varsayılan true). false → tam sayıda ondalık gizler. */
-  decimals?: boolean;
-  /** ₺ sonekini ekle (varsayılan true). */
-  symbol?: boolean;
-}
+/** Tam biçim: her zaman 2 ondalık — "1.500,00". (₺ işaretini çağıran ekler.) */
+export const formatTRY = (n: number): string =>
+  (Number.isFinite(n) ? n : 0).toLocaleString('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+/** Tam sayı biçim: ondalıksız — hızlı-seçim çipleri, tutar girişleri ("1.500"). */
+export const formatTRYInt = (n: number): string =>
+  (Number.isFinite(n) ? n : 0).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
 
 /**
- * TL tutarını Türkçe yerelinde biçimler. `null`/`undefined`/`NaN` → "—".
- * amount kuruş değil, TL cinsindendir (ör. 1500 → "1.500,00₺").
+ * ₺ ekli kısayol: "1.500,00₺". `null`/`undefined`/`NaN` → "—" (dürüst boşluk;
+ * "—₺" değil). Ücret/tutar gösterimlerinde değer olmayabiliyorsa bunu kullan.
  */
-export function formatTRY(
-  amount: number | null | undefined,
-  opts: FormatTRYOptions = {},
-): string {
-  const { decimals = true, symbol = true } = opts;
-  if (amount == null || !Number.isFinite(amount)) return '—';
-  const body = amount.toLocaleString('tr-TR', {
-    minimumFractionDigits: decimals ? 2 : 0,
-    maximumFractionDigits: decimals ? 2 : 0,
-  });
-  return symbol ? `${body}₺` : body;
-}
+export const formatTRYWithSymbol = (n: number | null | undefined): string =>
+  (typeof n === 'number' && Number.isFinite(n)) ? `${formatTRY(n)}₺` : '—';

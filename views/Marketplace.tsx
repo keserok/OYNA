@@ -2,7 +2,7 @@
 import { LAUNCH_CITY } from '../utils/orduData';
 import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
-import { formatTRY } from '../utils/formatTRY';
+import { formatTRYWithSymbol } from '../utils/formatTRY';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     ChevronLeft, ChevronRight, X, Minus, Plus, Zap, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
@@ -331,13 +331,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[9px] font-black text-white/40 uppercase">HİZMET BEDELİ</span>
                                                 <span className="text-sm font-black text-[#39FF14]">
-                                                    {formatTRY(hireResult?.fee ?? selectedProfile.fee)}
+                                                    {formatTRYWithSymbol(hireResult?.fee ?? selectedProfile.fee)}
                                                 </span>
                                             </div>
                                             {hireResult && (
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-[9px] font-black text-white/40 uppercase">SAĞLAYICININ NET KAZANCI</span>
-                                                    <span className="text-xs font-bold text-white/70">{formatTRY(hireResult.providerAmount)}</span>
+                                                    <span className="text-xs font-bold text-white/70">{formatTRYWithSymbol(hireResult.providerAmount)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -533,7 +533,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                 <div className="absolute bottom-0 left-0 w-full p-6 bg-[#0A0E14]/90 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
                                     <div className="flex flex-col items-start pr-2">
                                         <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Hizmet Bedeli</span>
-                                        <span className="text-xl font-black text-white tabular-nums">{formatTRY(selectedProfile.fee)}</span>
+                                        <span className="text-xl font-black text-white tabular-nums">{formatTRYWithSymbol(selectedProfile.fee)}</span>
                                     </div>
                                     {/* KD-2: "Direkt Teklif Al" kapalıysa (settings.allowOffer===false)
                                         doğrudan kiralama kilitli — sunucu da reddediyor (create_service_request),

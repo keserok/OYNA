@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest } from '../types';
 import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
-import { formatTRY } from '../utils/formatTRY';
+import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { parseMatchDateTime } from '../utils/matchDateTime';
 import {
   getIncomingRequests,
@@ -1667,7 +1667,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                          <div className="p-4 flex items-center justify-between">
                              <div>
                                  <h4 className="font-black text-white text-sm">{job.pitchName || job.location || 'Saha'}</h4>
-                                 <p className="text-[10px] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRY(job.fee)}` : ''}</p>
+                                 <p className="text-[10px] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRYWithSymbol(job.fee)}` : ''}</p>
                              </div>
                              <div className="flex items-center gap-2">
                                  <span className="bg-yellow-500/20 text-yellow-500 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
@@ -1723,7 +1723,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         </div>
                         <div className="text-right shrink-0">
                           {/* Gerçek fiyat yoksa uydurma 250/350 değil "Standart ücret". */}
-                          <p className="text-lg font-black text-white">{job.fee != null ? formatTRY(job.fee) : 'Standart'}</p>
+                          <p className="text-lg font-black text-white">{job.fee != null ? formatTRYWithSymbol(job.fee) : 'Standart'}</p>
                           <p className="text-[9px] text-gray-500">maç başı</p>
                         </div>
                       </div>

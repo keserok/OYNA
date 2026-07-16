@@ -327,6 +327,10 @@ interface AppState {
   bookingSlot: string | null;
   bookingPrice: number | null;
   bookingDeposit: number | null;
+  // C4 — dürüst bilet: başarılı kapora sonrası GERÇEK rezervasyon id'si. Bilet
+  // ekranı bunu okuyup sunucudan gerçek durumu/QR'ı türetir (sahte "ONAYLANDI" yok).
+  ticketBookingId: string | null;
+  setTicketBookingId: (id: string | null) => void;
   setBookingPitch: (pitch: Pitch | null) => void;
   setBookingCourt: (court: Court | null) => void;
   setBookingDate: (date: string | null) => void;
@@ -574,6 +578,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedRef: null,
   bookingPitch: null,
   bookingCourt: null,
+  ticketBookingId: null,
   bookingDate: null,
   bookingSlot: null,
   bookingPrice: null,
@@ -829,6 +834,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
   setSelectedRef: (selectedRef) => set({ selectedRef }),
+  setTicketBookingId: (ticketBookingId) => set({ ticketBookingId }),
   setBookingPitch: (bookingPitch) => set({ bookingPitch }),
   setBookingCourt: (bookingCourt) => set({ bookingCourt }),
   setBookingDate: (bookingDate) => set({ bookingDate }),

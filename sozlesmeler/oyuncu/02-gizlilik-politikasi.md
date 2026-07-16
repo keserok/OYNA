@@ -24,18 +24,21 @@
 ### 2. Verilerin Kullanım Amacı
 Hizmetin sunulması, rezervasyon ve ödeme süreçleri, maç/takım eşleştirme, bildirimler, güvenlik ve dolandırıcılık önleme, müşteri desteği ve hizmet iyileştirme.
 
-### 3. Verilerin Paylaşımı
+### 3. Verilerin Paylaşımı ve Görünürlüğü
 Verileriniz yalnızca aşağıdaki taraflarla, belirtilen amaçla sınırlı olarak paylaşılabilir:
-- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği ölçüde)
+- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği asgari ölçüde — bkz. [Veri Paylaşım Protokolü](veri-paylasim-protokolu.md); olağan rezervasyonda tesise ad-soyad veya telefonunuz aktarılmaz)
+- Talep ettiğiniz hizmet kapsamında **kaleci/hakem gibi hizmet sağlayıcılar** ile (yalnızca ilgili hizmetin ifası için gerekli asgari ölçüde; telefon/e-posta/konum aktarılmaz)
 - **Ödeme kuruluşu** ile (ödeme işlemlerinin gerçekleştirilmesi için)
 - Barındırma, hata izleme ve kullanım analitiği sağlayan **teknoloji tedarikçilerimiz** ile (yalnızca hizmetin işletilmesi için)
 - Google/Apple hesabınızla giriş yapmanız hâlinde ilgili **kimlik doğrulama sağlayıcısı** ile
 - Yasal yükümlülükler kapsamında **yetkili kamu kurum ve kuruluşları** ile
 
+Bir maça katıldığınızda **adınız ve profil görseliniz** o maçı görüntüleyenlere görünür olur; saha veya hizmet sağlayıcılar hakkında yaptığınız **değerlendirme ve yorumlar** kamuya açık olarak gösterilebilir.
+
 Verileriniz pazarlama amacıyla üçüncü taraflara satılmaz veya kiralanmaz.
 
 ### 4. Yurt Dışına Aktarım
-Barındırma, hata izleme ve kullanım analitiği hizmeti aldığımız bazı teknoloji tedarikçilerimizin sunucuları yurt dışında bulunabilir. Bu durumda kişisel verileriniz, 6698 sayılı Kanun'un 9. maddesi ve ilgili Kurul kararları uyarınca yalnızca yeterli korumanın bulunduğu ülkelere, uygun güvence mekanizmalarına dayanılarak veya mevzuatın öngördüğü diğer hukuki sebeplerle aktarılır.
+Barındırma ve veritabanı başta olmak üzere bazı teknoloji altyapı hizmetlerimizi, sunucuları **yurt dışında** bulunan tedarikçilerden alırız (barındırma/veritabanı hizmetimiz yurt dışı bir veri merkezinde çalışır). Bu hâlde kişisel verileriniz, 6698 sayılı Kanun'un 9. maddesi uyarınca, **Kurul'ca ilan edilen standart sözleşme gibi uygun güvencelere** dayanılarak veya mevzuatın öngördüğü diğer hukuki sebeplerle yurt dışına aktarılır. Ayrıca harita, içerik dağıtım ağı (CDN) ve avatar görselleri gibi hizmetleri görüntülerken IP adresiniz ilgili yurt dışı sağlayıcıya iletilebilir.
 
 ### 5. Çerezler ve Benzer Teknolojiler
 Oturum yönetimi ve tercihleriniz için gerekli teknolojiler kullanılır. Detaylı bilgi için [Çerez Politikamıza](06-cerez-politikasi.md) bakabilirsiniz.
