@@ -284,6 +284,13 @@ Deno.serve(async (req: Request) => {
 
       // Simülasyon: 3DS yok → direkt uygula (geliştirme/test modu)
       if (PROVIDER === 'SIMULATION') {
+        // C11 — kontrollü RED: kart tutarı sim_decline_amount'e eşitse gerçek kart
+        // reddi gibi 402 döndür (para uygulanmaz; hata UX'i QA edilir). 0 = kapalı.
+        const { data: declAmt } = await admin.rpc('get_config_number', { p_key: 'sim_decline_amount', p_default: 0 })
+        if (Number(declAmt) > 0 && Number(cardAmount) === Number(declAmt)) {
+          await admin.rpc('mark_intent_failed', { p_intent_id: intentId, p_reason: 'SIM_DECLINE (QA)' })
+          return json({ error: 'iyzico: Kart reddedildi (SIMULATION test). Farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.' }, 402)
+        }
         const { data: result, error: applyErr } = await admin.rpc('apply_card_payment', {
           p_intent_id: intentId, p_provider_ref: `SIM-${Date.now()}`,
           p_raw: { simulated: true, at: new Date().toISOString() },
