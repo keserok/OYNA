@@ -178,3 +178,22 @@ koordinasyon gerek.
 ---
 
 _Bu belge canlı; onaylanan kararlar ve tamamlanan sprintler §-güncellemeleriyle işlenir._
+
+---
+
+## 8. UYGULAMA GÜNLÜĞÜ (Kaleci sprintleri)
+
+### ✔ Tamamlanan (test edildi + push'landı)
+- **KS0** dürüstlük altyapısı: MarketplaceCard + Marketplace detay + ServiceProfile'da sahte stat/puan/fiyat öldü, null-`stats` crash guard (KC-2), `formatTRY`, rookie "—". Yeni `tests/gk-smoke.mjs`.
+- **KS1a** yönlendirme: KA-1/2/3 `verification_status` kapısı (onaysız kaleci panele düşmez; token-yenileme bounce'u yok; canlı onay doğru panele). **+ veri kaybı bug'ı**: zayıf bağlantıda mevcut kaleci "yeni kullanıcı" sanılıp role/roles PLAYER'a sıfırlanıyordu → maybeSingle re-check + insert-çakışma tespiti + downgrade koruması. KA-8/9 pending guard/timer.
+- **KS1b** başvuru sağlamlığı: KA-4 orphan önleme (foto-önce + kuyruk retry), KA-5 tekrar-başvuru kilidi, KA-6 minor guardian kapısı (başvuruda blokla), KA-M1/3/4 dürüstlük (dekoratif checklist, SLA, seedName).
+- **KS2** servis operasyon dürüstlüğü: KB-3 dispute/no-show görünürlüğü; KB-M2 kimlik kartı gerçek veri (ekran görüntüsüyle doğrulandı: AHMET/SWEEPER-KEEPER/62·92·8.4); KB-M3 açık-maç kartı uydurma alanları öldü; KB-M1 legacy service_offers sahte-kabul yolu gizlendi; KB-1 payout onay butonu tüm CAPTURED'da (operasyonel yarı).
+- **K-ÖDEME** devir belgesi: `KALECI_ODEME_DEVIR.md` (7 kalem + öncelik tablosu, gerçek migration'lara karşı doğrulanmış).
+- **test hijyeni**: gameRules gece-yarısı flake'i sabit saatle giderildi.
+
+**Not (düzeltmeler):** KB-M4 kimlik-CTA "verified'da da görünüyor" iddiası YANLIŞ POZİTİF — buton VERIFIED dalının else'inde, doğru çalışıyor. KC-5 (duplicate request) unique index + advisory lock ile zaten veri-güvenli (devir belgesinde).
+
+### ⏳ Kalan
+- **KS3** marketplace: KC-4 uygun-olmayan kaleci filtresi (is_available `profiles`'ta → marketplace sorgusuna join gerek, veri-katmanı), KC-6 `selectedGk` ölü prop temizliği, KC-7 boş-durum yükleme-hatasını maskeliyor (store hata durumu).
+- **KS4** profil/ayarlar + gizlilik + matching: KD-2 gizlilik toggle'larını gerçeğe bağla (4'ü), KD-4/5 ayar tutarlılığı/hata, KD-6 radius geri-okuma, KD-7 kaydet dürüstlüğü, KD-8 foto Storage, KD-9 loading guard, KD-M1 preset foto; **KB-8** uygunluk gün/saat/bölge matching'e bağla (find_providers migration).
+- **KS2 minör**: KB-5 APPLIED expire (sunucu sweep), KB-7 geri-sayım parse (kozmetik).
