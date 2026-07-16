@@ -20,7 +20,9 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
   // sahte "0.0" yok. GK/REF puanı 0-10 ölçeğinde (service_ratings ort.); DB
   // varsayılanı 0 → yalnız gerçek puan alındığında >0 olur. matchCount bug'lı
   // (KD-1, hiç artmıyor) olduğundan rookie ölçütü olarak PUAN>0 kullanılır.
-  const rated = typeof item.rating === 'number' && item.rating > 0;
+  // KD-2: "Puan Görünsün" kapalıysa (settings.showRating === false) puan gizlenir.
+  const showRating = (item as { settings?: { showRating?: boolean } }).settings?.showRating !== false;
+  const rated = showRating && typeof item.rating === 'number' && item.rating > 0;
 
   // Null/eksik stats guard — goalkeepers/referees.stats nullable jsonb; sahte
   // %80 bar yok. Gerçek sayı yoksa null → "istatistik yok" durumu gösterilir.

@@ -98,7 +98,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
             const matchesDistrict = filterDistrict === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z => z === filterDistrict || z.split('/').pop()?.trim() === filterDistrict));
             const matchesDay = filterDay === 'Tümü' || (p.workingHours && p.workingHours.activeDays && p.workingHours.activeDays.includes(filterDay));
             const matchesTime = filterTime === 'Tümü' || (p.workingHours && p.workingHours.activeHours && p.workingHours.activeHours.includes(filterTime));
-            return matchesRegion && matchesDistrict && matchesDay && matchesTime;
+            // KD-2: "Profilimi Göster" kapalı (settings.showProfile === false) sağlayıcı
+            // vitrinde listelenmez — gizlilik toggle'ı artık gerçekten etkili.
+            const notHidden = (p as any).settings?.showProfile !== false;
+            return matchesRegion && matchesDistrict && matchesDay && matchesTime && notHidden;
         });
     }, [profiles, filterDistrict, filterDay, filterTime, scopeCities, cityDistricts]);
 
