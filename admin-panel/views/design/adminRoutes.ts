@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
   Radio, Swords, Lock, Globe, Trophy, ScrollText, ShieldCheck, AlertOctagon,
-  SlidersHorizontal, MessageSquare, Building2, BadgeCheck, UserX, Baby,
+  SlidersHorizontal, MessageSquare, Building2, BadgeCheck, UserX, Baby, Star,
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 
@@ -65,6 +65,7 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
   // ── Tesis Yönetimi ────────────────────────────────────────────────────────
   { route: 'SAHALAR', title: 'Sahalar', label: 'Sahalar', description: 'Tesis envanteri, vitrin kurulumu ve onay durumları.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'green', icon: MapPin, inPalette: true, badge: 'pitches' },
   { route: 'MODERATION', title: 'Tesis Onayları', label: 'Tesis Onayları', description: 'Saha ve çekim taleplerinin moderasyonu.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'yellow', icon: Shield, inPalette: true, badge: 'pendingPitches' },
+  { route: 'PITCH_RATINGS', title: 'Saha Yorumları', label: 'Saha Yorumları', description: 'Oyuncuların sahalara yaptığı puan ve yorumların moderasyonu; uygunsuz olan silinir, ortalama otomatik güncellenir.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'yellow', icon: Star, inPalette: true },
   { route: 'REGION_COVERAGE', title: 'Bölge Kapsama', label: 'Bölge Kapsama', description: 'Hizmet kapsamındaki il/ilçeler ve harita sınırları.', group: 'Tesis Yönetimi', sidebarGroup: 'TESİS YÖNETİMİ', accent: 'yellow', icon: Globe, inPalette: true },
 
   // ── Platform Aktörleri ────────────────────────────────────────────────────

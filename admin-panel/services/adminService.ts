@@ -941,6 +941,55 @@ export async function resolveUserReport(
   }).catch(() => undefined);
 }
 
+// ─── Saha Yorumları (pitch_ratings) moderasyonu ──────────────────────────────
+// Okuma: "Anyone can read pitch_ratings" (public SELECT). Silme: admin_delete_pitch_rating
+// SECURITY DEFINER RPC (is_platform_admin guard + audit + tr_pitch_rating_sync ile ortalama senkron).
+
+export interface AdminPitchRatingRow {
+  id: string;
+  pitch_id: string;
+  match_id: string | null;
+  rater_id: string;
+  score: number;
+  tags: string[] | null;
+  comment: string | null;
+  created_at: string;
+  pitchName?: string;
+  raterName?: string;
+}
+
+/** Saha yorumlarını çeker; saha adı + puanlayan adı eklenir. */
+export async function fetchPitchRatings(limit = 200): Promise<AdminPitchRatingRow[]> {
+  const { data, error } = await supabase
+    .from('pitch_ratings')
+    .select('id, pitch_id, match_id, rater_id, score, tags, comment, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  const rows = (data || []) as AdminPitchRatingRow[];
+  if (rows.length === 0) return rows;
+
+  const pitchIds = Array.from(new Set(rows.map((r) => r.pitch_id).filter(Boolean)));
+  const raterIds = Array.from(new Set(rows.map((r) => r.rater_id).filter(Boolean)));
+  const [pitchesRes, profilesRes] = await Promise.all([
+    supabase.from('pitches').select('id, name').in('id', pitchIds),
+    supabase.from('profiles').select('id, full_name, name').in('id', raterIds),
+  ]);
+  const pitchMap: Record<string, string> = {};
+  (pitchesRes.data || []).forEach((p: { id: string; name: string | null }) => { pitchMap[p.id] = p.name || '—'; });
+  const nameMap: Record<string, string> = {};
+  (profilesRes.data || []).forEach((p: { id: string; full_name: string | null; name: string | null }) => {
+    nameMap[p.id] = p.full_name || p.name || 'Bilinmeyen';
+  });
+  return rows.map((r) => ({ ...r, pitchName: pitchMap[r.pitch_id], raterName: nameMap[r.rater_id] }));
+}
+
+/** Uygunsuz saha yorumunu siler; trigger sahanın ortalama puanını otomatik günceller. */
+export async function deletePitchRating(id: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_pitch_rating', { p_id: id });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_delete_pitch_rating RPC deploy edilmedi' : error.message);
+}
+
 export async function processAccountDeletion(userId: string, anonymize = true): Promise<void> {
   const { error } = await supabase.rpc('admin_process_account_deletion', {
     p_user_id: userId,

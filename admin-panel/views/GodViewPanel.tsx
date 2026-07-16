@@ -33,6 +33,7 @@ const ProviderIdentitiesPage = lazy(() => import('./pages/ProviderIdentitiesPage
 const ServiceDisputesPage = lazy(() => import('./pages/ServiceDisputesPage').then(m => ({ default: m.ServiceDisputesPage })));
 const ModerationPage = lazy(() => import('./pages/ModerationPage').then(m => ({ default: m.ModerationPage })));
 const UserReportsPage = lazy(() => import('./pages/UserReportsPage').then(m => ({ default: m.UserReportsPage })));
+const PitchRatingsPage = lazy(() => import('./pages/PitchRatingsPage').then(m => ({ default: m.PitchRatingsPage })));
 const SystemParamsPage = lazy(() => import('./pages/SystemParamsPage').then(m => ({ default: m.SystemParamsPage })));
 const VerificationCenterPage = lazy(() => import('./pages/VerificationCenterPage').then(m => ({ default: m.VerificationCenterPage })));
 const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplatesPage').then(m => ({ default: m.NotificationTemplatesPage })));
@@ -44,7 +45,7 @@ export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
   | 'MATCHES' | 'NOTIFICATIONS' | 'CONTENT' | 'SETTINGS' | 'TOPLULUKLAR'
   | 'TAKIMLAR' | 'TURNUVALAR' | 'PENDING_VERIFICATIONS' | 'PROVIDER_IDENTITIES'
-  | 'SERVICE_DISPUTES' | 'MODERATION' | 'USER_REPORTS' | 'DELETION_QUEUE'
+  | 'SERVICE_DISPUTES' | 'MODERATION' | 'USER_REPORTS' | 'PITCH_RATINGS' | 'DELETION_QUEUE'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
   | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES' | 'REGION_COVERAGE'
   | 'GUARDIAN_CONSENTS';
@@ -190,6 +191,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <ModerationPage />;
             case 'USER_REPORTS':
                 return <UserReportsPage onRefresh={onRefreshData} />;
+            case 'PITCH_RATINGS':
+                return <PitchRatingsPage onRefresh={onRefreshData} />;
             case 'DELETION_QUEUE':
                 return <DeletionQueuePage onRefresh={onRefreshData} />;
             case 'AUDIT_LOG':

@@ -251,6 +251,22 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
     }
 
+    // FAZ 8b: Saha/zemin puanı → pitch_ratings (admin panelinde moderasyon edilebilir).
+    // Bağımsız try/catch: diğer akışları (servis puanı, finalize) etkilemez.
+    // Yalnız puan verildiyse ve maça saha bağlıysa (RPC pitch yoksa NO_PITCH atar).
+    if (pitchRating > 0) {
+      try {
+        await supabase.rpc('submit_pitch_rating', {
+          p_match_id: selectedMatch.id,
+          p_score: Math.max(1, Math.min(5, Math.round(pitchRating))),
+          p_tags: [],
+          p_comment: null,
+        });
+      } catch (err) {
+        console.warn('[PostMatchEval] Saha puanı kaydedilemedi:', err);
+      }
+    }
+
     // FAZ 5: Kaleci/Hakem 1-10 puanlaması — sağlayıcı rating'ini günceller + payout serbest.
     // Atlanabilir: yalnız puan girilmiş (score > 0) sağlayıcılar gönderilir.
     // Oyuncu-değerlendirme başarısız olsa bile burası bağımsız çalışır.
