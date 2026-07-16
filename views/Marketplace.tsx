@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
-import { EmptyState } from '../components/common/StatusState';
+import { EmptyState, ErrorState } from '../components/common/StatusState';
 import { createServiceRequest, getAvailableProviderIds } from '../services/serviceRequestService';
 
 const getNormalizedDifficulty = (diff?: string): string => {
@@ -63,7 +63,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     // The user said "yalnızca ... çıksın", so I'll hide the tabs if initialType is passed.
     const isLocked = !!initialType;
 
-    const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, selectedRegions, userLocation } = useAppStore();
+    const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, selectedRegions, userLocation, servicesError, loadServices } = useAppStore();
     const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
 
     // KC-4: uygun (approved + is_available) sağlayıcı id kümesi. null = henüz
@@ -256,7 +256,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                 <div className="h-full px-6 pb-24 overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-1 gap-6 pt-2">
                         {filteredProfiles.length === 0 ? (
-                            <EmptyState title="Profil Bulunamadı" message="Bu kriterlere uygun bir profil bulunamadı." />
+                            // KC-7: yükleme hatasını "sonuç yok"tan ayırt et. Ham liste
+                            // boş + servicesError → yükleme başarısız → retry sun (sessiz
+                            // "profil yok" değil).
+                            servicesError && profiles.length === 0 ? (
+                                <ErrorState message="Sağlayıcılar yüklenemedi. Bağlantını kontrol edip tekrar dene." onRetry={() => { void loadServices(); }} />
+                            ) : (
+                                <EmptyState title="Profil Bulunamadı" message="Bu kriterlere uygun bir profil bulunamadı." />
+                            )
                         ) : (
                             filteredProfiles.map(p => (
                                 <MarketplaceCard
@@ -462,12 +469,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-3 text-white">
                                             <Star size={14} className="fill-white" />
-                                            {/* Dürüstlük: puanlanmamış sağlayıcı (rating 0) "—" gösterir, sahte
-                                                skor değil. Puan 0-10 ölçeğinde. */}
+                                            {/* Dürüstlük: puanlanmamış sağlayıcı "Yeni". KD-2: "Puan Görünsün"
+                                                kapalıysa (settings.showRating===false) puan gizlenir. */}
                                             <span className="text-[15px] font-medium">
-                                                {typeof selectedProfile.rating === 'number' && selectedProfile.rating > 0
-                                                    ? `${selectedProfile.rating.toFixed(1)} / 10`
-                                                    : 'Yeni'}
+                                                {(selectedProfile as { settings?: { showRating?: boolean } }).settings?.showRating === false
+                                                    ? 'Puan gizli'
+                                                    : (typeof selectedProfile.rating === 'number' && selectedProfile.rating > 0
+                                                        ? `${selectedProfile.rating.toFixed(1)} / 10`
+                                                        : 'Yeni')}
                                             </span>
                                             <span className="text-gray-400 text-[15px] mx-1">·</span>
                                             <span className="text-[15px] text-gray-400">{selectedProfile.preferredZones?.[0] || LAUNCH_CITY}</span>
@@ -526,6 +535,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Hizmet Bedeli</span>
                                         <span className="text-xl font-black text-white tabular-nums">{formatTRY(selectedProfile.fee)}</span>
                                     </div>
+                                    {/* KD-2: "Direkt Teklif Al" kapalıysa (settings.allowOffer===false)
+                                        doğrudan kiralama kilitli — sunucu da reddediyor (create_service_request),
+                                        UI'da baştan engellenir (başarısız talep denemesi yok). */}
+                                    {(selectedProfile as { settings?: { allowOffer?: boolean } }).settings?.allowOffer === false ? (
+                                        <div className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-gray-400 text-[11px] font-black uppercase tracking-widest flex items-center justify-center text-center px-3">
+                                            Bu sağlayıcı şu an doğrudan teklif almıyor
+                                        </div>
+                                    ) : (
                                     <button
                                         onClick={handleDirectHire}
                                         className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-lg ${
@@ -537,6 +554,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                                         <Zap size={14} />
                                         KİRALA — TALEP GÖNDER
                                     </button>
+                                    )}
                                 </div>
                             </>
                         )}

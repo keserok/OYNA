@@ -376,7 +376,10 @@ interface AppState {
   updateReferee: (ref: Referee) => Promise<void>;
   deleteReferee: (id: string) => Promise<void>;
   loadServices: () => Promise<void>;
-  
+  /** KC-7: son loadServices başarısız oldu mu? Marketplace boş-durumu yükleme
+   * hatasından ayırt edip retry sunar (sessiz "profil yok" yerine). */
+  servicesError: boolean;
+
   // ─── Owner (SaaS) Data Load ─────────────────────────────────────
   loadOwnerData: (facilityId?: string) => Promise<void>;
 
@@ -664,6 +667,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminPitches: [],
   adminGoalkeepers: [],
   adminReferees: [],
+  servicesError: false,
   adminMatches: [],
   adminUsers: [],
   adminNotifications: [],
@@ -988,9 +992,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./admin-panel/services/adminService');
       const [gks, refs] = await Promise.all([fetchGoalkeepersAdmin(), fetchRefereesAdmin()]);
-      set({ adminGoalkeepers: gks || [], adminReferees: refs || [] });
+      set({ adminGoalkeepers: gks || [], adminReferees: refs || [], servicesError: false });
     } catch (err) {
       console.error('Error loading services', err);
+      set({ servicesError: true }); // KC-7: boş-durumu hatadan ayırt et
     }
   },
 
