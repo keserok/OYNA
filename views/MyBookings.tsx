@@ -5,12 +5,15 @@ import { useAppStore } from '../store';
 import {
   fetchMyBookings,
   cancelMyBooking,
+  previewBookingCancel,
   canCancel,
   toPlayerErrorMessage,
   shortTime,
   type MyBooking,
   type CancelResult,
+  type CancelPreview,
 } from '../services/playerBookingService';
+import { formatTRY } from '../utils/formatTRY';
 import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
@@ -70,6 +73,10 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  // C5/C7 — iptal önizlemesi SUNUCUDAN gelir (kendi tahminini uydurma).
+  const [cancelPreview, setCancelPreview] = useState<CancelPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
 
   // Kapora ödeme durumu
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -124,6 +131,19 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // C5/C7 — modal açılınca sunucudan iade önizlemesini çek (kendi formülünü uydurma).
+  useEffect(() => {
+    if (!cancelTarget) { setCancelPreview(null); setPreviewError(false); return; }
+    let alive = true;
+    setPreviewLoading(true);
+    setPreviewError(false);
+    previewBookingCancel(cancelTarget.id)
+      .then((p) => { if (alive) setCancelPreview(p); })
+      .catch(() => { if (alive) setPreviewError(true); })
+      .finally(() => { if (alive) setPreviewLoading(false); });
+    return () => { alive = false; };
+  }, [cancelTarget]);
 
   const handleCancel = async () => {
     if (!cancelTarget) return;
@@ -317,18 +337,22 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {cancelTarget.pitches?.name} — {formatDate(cancelTarget.booking_date)} {shortTime(cancelTarget.start_time)}
               </p>
+              {/* C5/C7 — iade tahmini SUNUCUDAN (kendi formülünü uydurmaz; PSP/eşik/saat dahil, gerçek iptalle birebir) */}
               <p className="text-xs text-gray-500 mb-6">
-                {(() => {
-                  const start = new Date(`${cancelTarget.booking_date}T${cancelTarget.start_time}`);
-                  const hrs = (start.getTime() - Date.now()) / 3_600_000;
-                  const pct = hrs >= 24 ? 100 : hrs >= 6 ? 50 : 0;
-                  return pct > 0 ? (
-                    <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{pct}</span> iadesi yapılacak
-                    {cancelTarget.paid_amount > 0 && <> (≈ ₺{Math.round(cancelTarget.paid_amount * pct / 100)})</>}.</>
-                  ) : (
-                    <>Rezervasyon saatine 6 saatten az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
-                  );
-                })()}
+                {previewLoading ? (
+                  <span className="inline-flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> İade koşulları hesaplanıyor…</span>
+                ) : previewError || !cancelPreview ? (
+                  <>İade tutarı iptal anında sunucu tarafından kesinleştirilecek.</>
+                ) : cancelPreview.paid_amount <= 0 ? (
+                  <>Bu rezervasyon için ödeme bulunmuyor; iade söz konusu değil.</>
+                ) : cancelPreview.refund_amount > 0 ? (
+                  <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{cancelPreview.refund_percent}</span>'i
+                    {' '}(<span className="text-[#39FF14] font-bold">{formatTRY(cancelPreview.refund_amount)}₺</span>){' '}
+                    iade kredisi olarak cüzdanına döner
+                    {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −{formatTRY(cancelPreview.psp_fee)}₺)</>}.</>
+                ) : (
+                  <>Rezervasyon saatine az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
+                )}
                 {' '}Bu işlem geri alınamaz.
               </p>
 
@@ -373,7 +397,7 @@ const MyBookings: React.FC<MyBookingsProps> = ({ onBack }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="text-[#39FF14] font-bold">₺{cancelResult.refund_amount}</span> (%{cancelResult.refund_percent}) iade işlemine alındı.</>
+                  ? <> <span className="text-[#39FF14] font-bold">{formatTRY(cancelResult.refund_amount)}₺</span> (%{cancelResult.refund_percent}) iade kredisi olarak cüzdanına eklendi.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
               <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">

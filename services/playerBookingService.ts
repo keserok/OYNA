@@ -40,6 +40,19 @@ export interface CancelResult {
   paid_amount: number;
 }
 
+// C5/C7 — iptal ÖNİZLEMESİ (salt-okunur). Sunucunun KENDİ formülüyle (eşik +
+// PSP + Istanbul saati) hesaplanan iade; FE artık kendi tahminini uydurmaz.
+export interface CancelPreview {
+  booking_id: string;
+  cancellable: boolean;
+  refund_percent: number;
+  refund_amount: number;   // net (gross − PSP), gerçek iptalle birebir
+  psp_fee: number;
+  gross: number;
+  paid_amount: number;
+  hours_left: number;
+}
+
 // SQL exception mesajlarını kullanıcı dostu Türkçe'ye çevir
 const ERROR_MAP: [string, string][] = [
   ['SLOT_TAKEN', 'Bu saat dilimi az önce dolmuş. Lütfen başka bir saat seç.'],
@@ -194,6 +207,19 @@ export async function cancelMyBooking(bookingId: string, reason?: string): Promi
   });
   if (error) throw error;
   return data as CancelResult;
+}
+
+/**
+ * C5/C7 — İptal önizlemesi: SUNUCUNUN kendi hesabıyla (aynı `_booking_cancel_quote`
+ * helper'ı; cancel_app_booking ile birebir) iade yüzdesi + net tutarı döndürür.
+ * FE bu rakamı gösterir → tahmin gerçek iptalle asla ayrışmaz (PSP/eşik/timezone).
+ */
+export async function previewBookingCancel(bookingId: string): Promise<CancelPreview> {
+  const { data, error } = await supabase.rpc('preview_booking_cancel', {
+    p_booking_id: bookingId,
+  });
+  if (error) throw error;
+  return data as CancelPreview;
 }
 
 /**
