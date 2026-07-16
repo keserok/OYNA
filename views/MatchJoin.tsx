@@ -2283,6 +2283,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <div className="absolute inset-0 bg-[#39FF14]/10" />
                           )}
                         </div>
+                        {/* C9 — split ödeme görünürlüğü: bu slotu SEN ödedin (oyuncu başkası) */}
+                        {!isMyOwnSlot && (slot as any).purchasedBy === currentUserProfile?.id && (
+                          <div className="absolute -top-1 -right-1 w-[15px] h-[15px] rounded-full bg-[#39FF14] border border-[#0A0E14] flex items-center justify-center z-30 pointer-events-none shadow-[0_0_8px_rgba(57,255,20,0.6)]"
+                               title="Bu slotu sen ödedin">
+                            <span className="text-[8px] font-black text-[#0A0E14] leading-none">₺</span>
+                          </div>
+                        )}
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md max-w-[64px] z-20 pointer-events-none">
                           <span className="text-[8px] font-black text-white whitespace-nowrap uppercase truncate block">
                             {isMyOwnSlot ? 'SEN' : (player.name || 'Oyuncu').split(' ')[0]}

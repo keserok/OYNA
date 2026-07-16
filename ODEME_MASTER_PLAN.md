@@ -164,8 +164,13 @@ Hepsi kod denetimiyle doğrulandı. Sıra: C1 → C2 → C3 → C4 → P1'ler �
 - [x] **C5/C7** iade tahmini sunucu formülüyle birebir — SSOT `_booking_cancel_quote`
   helper; `preview_booking_cancel` RPC FE'ye net (brüt−PSP) tutarı verir; cancel +
   preview aynı helper'ı paylaşır (ayrışamaz). *(PR #91, canlı kanıt)*
-- [ ] **C9** çoklu-slot "X ödedi" rozeti (gerçek split-tahsilat iyzico fazına).
-- [ ] **C11** kontrollü RED modu (belirli test tutarı/kartı → decline) — hata UX'i QA edilebilir.
+- [x] **C9** çoklu-slot "X ödedi" rozeti — maç sahasında SEN ödeyip başkasının
+  oturduğu slotlarda küçük "₺" rozeti (split ödeme görünürlüğü). *(FE, MatchJoin)*
+- [x] **C11** kontrollü RED modu — `sim_decline_amount` config (0=kapalı); SIMULATION'da
+  kart tutarı bu değere eşitse 402 red döner (hata UX'i QA edilir). Config canlıda
+  (kapalı). NOT: create-payment edge kodu repo'da hazır; edge **en kritik para yolu**
+  ve C11 SIMULATION'a özel (prod IYZICO'da iyzico sandbox red kartları zaten var) →
+  redeploy bir sonraki meşru create-payment dağıtımına bırakıldı (IYZICO'da inert).
 
 ### G1 kapısı — ✅ KALICI GUARD (`check_money_invariants()`)
 - [x] Canlı DB'ye karşı çalışan değişmez denetçisi (S4 sağlık akışına da bağlanır):
