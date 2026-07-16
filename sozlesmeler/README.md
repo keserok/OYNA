@@ -4,6 +4,8 @@ Bu klasör, OYNA'nın tüm sözleşme ve yasal metinlerinin **okunabilir, kanoni
 
 Her yeni sözleşme/politika hazırlandığında buraya, açık bir dosya adıyla eklenir.
 
+> 📋 **Tüm yapılacaklar, idari aksiyonlar ve uyum kalemleri tek belgede toplandı:** [Yapılacaklar / Uyum Yol Haritası](00-yapilacaklar-uyum-yol-haritasi.md)
+
 ## Durum Tablosu
 
 | # | Belge | Durum | Uygulandığı yer(ler) | PR |
