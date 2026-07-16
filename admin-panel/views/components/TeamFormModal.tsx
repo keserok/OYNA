@@ -5,6 +5,7 @@ import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useAppStore } from '../../../store';
 import { fetchAdminProfiles, type AdminTeamRow, type TeamAdminInput } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { ImageCropModal } from '../../../components/common/ImageCropModal';
 
 const LEVELS: Array<{ v: '' | 'EASY' | 'MEDIUM' | 'HARD'; label: string }> = [
   { v: '', label: 'Belirtilmedi' },
@@ -38,6 +39,7 @@ export const TeamFormModal: React.FC<Props> = ({ open, mode, team, onClose, onSa
   const debouncedCaptainQuery = useDebouncedValue(captainQuery, 300);
   const [captainHits, setCaptainHits] = useState<CaptainHit[]>([]);
   const [searching, setSearching] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   const { uploadImage, uploading, progress } = useImageUpload('teams');
 
@@ -111,6 +113,17 @@ export const TeamFormModal: React.FC<Props> = ({ open, mode, team, onClose, onSa
   if (!open) return null;
 
   return (
+    <>
+    <ImageCropModal
+      file={cropFile}
+      title="Takım Logosu"
+      onCancel={() => setCropFile(null)}
+      onCropped={async (f) => {
+        setCropFile(null);
+        const url = await uploadImage(f);
+        if (url) setLogo(url);
+      }}
+    />
     <AnimatePresence>
       <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
         <motion.div
@@ -141,9 +154,10 @@ export const TeamFormModal: React.FC<Props> = ({ open, mode, team, onClose, onSa
                   ) : (
                     <span className="text-gray-600 flex flex-col items-center gap-1"><UploadCloud size={18} /><span className="text-[8px] uppercase tracking-wide">Logo</span></span>
                   )}
-                  <input type="file" className="hidden" accept="image/*" disabled={uploading} onChange={async (e) => {
+                  <input type="file" className="hidden" accept="image/*" disabled={uploading} onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) { const url = await uploadImage(file); if (url) setLogo(url); }
+                    e.target.value = '';
+                    if (file) setCropFile(file);
                   }} />
                 </label>
                 {logo && !uploading && (
@@ -238,6 +252,7 @@ export const TeamFormModal: React.FC<Props> = ({ open, mode, team, onClose, onSa
         </motion.div>
       </div>
     </AnimatePresence>
+    </>
   );
 };
 

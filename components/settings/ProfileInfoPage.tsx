@@ -7,6 +7,7 @@ import { getFullUserProfile, updateProfileBasics, updateProfileName } from '../.
 import { useImageUpload } from '../../hooks/useImageUpload';
 import Avatar from '../ui/Avatar';
 import SettingsSubPage from '../common/SettingsSubPage';
+import { ImageCropModal } from '../common/ImageCropModal';
 
 // ─── Ayarlar → Profil Bilgileri ──────────────────────────────────────────────
 // ProfileScreen'e gitmek yerine kimlik/hesap alanlarını burada yönetir:
@@ -43,6 +44,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
   const uid = auth.currentUser?.uid || '';
   const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
   const fileRef = useRef<HTMLInputElement>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [identity, setIdentity] = useState<AuthIdentityInfo | null>(null);
@@ -101,10 +103,16 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
   const isOAuthEmail = !!identity && !identity.hasPassword; // e-posta sağlayıcı-yönetimli
   const hasPassword = !!identity?.hasPassword;
 
-  const handleAvatarPick = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Dosya seçilince önce kare kırpma modalı açılır; kırpılan görsel yüklenir.
+  const handleAvatarPick = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
-    if (!file || !uid) return;
+    if (file) setCropFile(file);
+  }, []);
+
+  const handleCroppedAvatar = useCallback(async (file: File) => {
+    setCropFile(null);
+    if (!uid) return;
     setAvatarMsg(null);
     try {
       const url = await uploadImage(file);
@@ -194,6 +202,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
   return (
     <SettingsSubPage open={open} onClose={onClose} title="Profil Bilgileri" subtitle="Hesabını ve kimlik bilgilerini yönet">
+      <ImageCropModal file={cropFile} title="Profil Fotoğrafı" circle onCancel={() => setCropFile(null)} onCropped={handleCroppedAvatar} />
       {loading ? (
         <div className="py-16 flex justify-center"><RefreshCw size={20} className="animate-spin text-gray-500" /></div>
       ) : (

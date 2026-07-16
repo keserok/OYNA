@@ -8,6 +8,7 @@ import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, upd
 import { fetchFriends, fetchUserTeams } from '../services/friendService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { ImageCropModal } from '../components/common/ImageCropModal';
 import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
 import type { ShortcutItem } from '../components/profile';
 import { OynaLogo } from '../components/OynaLogo';
@@ -81,6 +82,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const [editFoot, setEditFoot] = useState<'SAG' | 'SOL' | 'CIFT' | null>(null);
     const [savingEdit, setSavingEdit] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [cropFile, setCropFile] = useState<File | null>(null);
     const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
     const { setMyRoles, setSocialTarget } = useAppStore();
 
@@ -148,16 +150,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         setEditFoot(profile?.preferredFoot ?? null);
         setShowEditModal(true);
     };
-    const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (file) setCropFile(file); // önce kare kırpma
+    };
+    const handleCroppedPhoto = async (file: File) => {
+        setCropFile(null);
         try {
             const url = await uploadImage(file);
             setEditAvatar(url);
         } catch (err) {
             console.error('Fotoğraf yükleme hatası:', err);
-        } finally {
-            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
     const saveEdit = async () => {
@@ -218,6 +222,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
 
     return (
         <div className="fixed inset-0 bg-bg-main flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-black">
+            <ImageCropModal file={cropFile} title="Profil Fotoğrafı" circle onCancel={() => setCropFile(null)} onCropped={handleCroppedPhoto} />
             {/* Ambient ışıma */}
             <div className="pf-ambient" />
 
