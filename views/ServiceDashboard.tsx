@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest } from '../types';
 import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
+import { formatTRY } from '../utils/formatTRY';
 import {
   getIncomingRequests,
   respondServiceRequest,
@@ -278,6 +279,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 matchesPlayed: me.matchCount || 0,
                 createdAt: new Date(),
                 stats: me.stats,
+                style: me.style, // KB-M2: kimlik kartı gerçek stili göstersin (sabit "PANTER" yerine)
                 workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
             });
             setIsAvailable(me.isAvailable ?? true);
@@ -302,20 +304,21 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         .map((m: any) => {
           const slots = Array.isArray(m.slots) ? m.slots : [];
           const filled = slots.filter((s: any) => s?.player || s?.userId).length;
+          // KB-M3: uydurma alan yok. matches tablosunda captain_name/format/difficulty
+          // YOK → sahte "Kaptan"/"7v7"/"Ciddi" yerine null (kart bunları gizler).
+          // Fiyat gerçek değilse null → kartta "Standart ücret" (250/350 uydurması değil).
           return {
             id: m.id,
             roleNeeded: role === UserRole.GOALKEEPER ? 'GK' : 'REF',
-            date: m.date || 'Bugün',
-            time: m.time || '21:00',
+            date: m.date || null,
+            time: m.time || null,
             pitchName: m.title || m.location || 'Saha',
             location: m.location || '—',
-            captainName: 'Kaptan',
+            captainName: m.captain_name || null,
             players: filled || slots.length,
             missing: role === UserRole.GOALKEEPER ? 'Kaleci' : 'Hakem',
-            duration: m.duration ? `${m.duration} Dk` : '90 Dk',
-            fee: Number(m.price) > 0 ? Number(m.price) : (role === UserRole.REFEREE ? 350 : 250),
-            format: m.format || '7v7',
-            difficulty: m.difficulty || 'Ciddi',
+            duration: m.duration ? `${m.duration} Dk` : null,
+            fee: Number(m.price) > 0 ? Number(m.price) : null,
             status: m.status || 'OPEN',
           };
         });
@@ -549,7 +552,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   useEffect(() => {
     if (!userProfile?.id) return;
-    fetchOffers();
+    // KB-M1: legacy `service_offers` yükleme kaldırıldı — o tablo "KULLANILMAZ"
+    // (20260716000002); gerçek teklif sistemi FCFS `match_service_offers`
+    // (fetchMatchOffers). Böylece dürüst-olmayan legacy kabul yolu hiç tetiklenmez.
     fetchPayoutData();
     fetchWalletHistory();
     fetchIncomingRequests();
@@ -799,6 +804,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }
   };
 
+  // KB-M2: kimlik kartı DÜRÜST türetmeleri — sabit "42/90/4.8/88/82" fallback'leri
+  // ve "LVL 8 / PANTER / Altınordu / A-CLASS / VOLKAN" placeholder'ları yerine gerçek
+  // veri; yoksa "—". Puan 0-10 ölçeğinde, yalnız >0 ise gösterilir.
+  const gkCardStats = (userProfile?.stats ?? {}) as Record<string, unknown>;
+  const idNum = (v: unknown): string => (typeof v === 'number' && Number.isFinite(v) ? String(v) : '—');
+  const idRated = typeof userProfile?.rating === 'number' && userProfile.rating > 0;
+  const idRatingText = idRated ? Number(userProfile.rating).toFixed(1) : '—';
+  const idFilledBars = idRated ? Math.round(Number(userProfile.rating) / 2) : 0; // 0-10 → 0-5
+  const idFirstName = userProfile?.fullName?.split(' ')[0]?.toUpperCase() || '';
+  const idStyle: string | null = (typeof userProfile?.style === 'string' && userProfile.style.trim()) ? userProfile.style : null;
+  // Sabit "A-CLASS" yerine puandan türetilen sınıf (rookie → YENİ).
+  const idClass = !idRated ? 'YENİ' : Number(userProfile.rating) >= 8 ? 'A SINIF' : Number(userProfile.rating) >= 6 ? 'B SINIF' : 'C SINIF';
+
   // --- GOALKEEPER IDENTITY CARD (FLIPPING) ---
   const renderGoalkeeperIdentityCard = () => (
       <div 
@@ -817,35 +835,36 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                   <div className="flex gap-4 items-center h-full">
                       <div className="relative shrink-0">
-                          <div className="w-24 h-32 bg-black/40 rounded-2xl overflow-hidden border-2 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
-                              <img src={auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1529516222410-a269c812ac8d?auto=format&fit=crop&q=80&w=400"} className="w-full h-full object-cover object-center" alt="Goalkeeper" referrerPolicy="no-referrer" />
-                          </div>
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
-                              LVL 8
+                          <div className="w-24 h-32 bg-black/40 rounded-2xl overflow-hidden border-2 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)] flex items-center justify-center">
+                              {auth.currentUser?.photoURL
+                                ? <img src={auth.currentUser.photoURL} className="w-full h-full object-cover object-center" alt="Kaleci" referrerPolicy="no-referrer" />
+                                : <Shield size={40} className="text-green-500/40" />}
                           </div>
                       </div>
                       <div className="flex-1">
-                          <h2 className="text-3xl font-black text-white leading-none mb-1 truncate max-w-[150px]">{userProfile?.fullName?.split(' ')[0]?.toUpperCase() || 'VOLKAN'}</h2>
-                          <div className="flex items-center gap-2 mb-3">
+                          <h2 className="text-3xl font-black text-white leading-none mb-1 truncate max-w-[150px]">{idFirstName}</h2>
+                          {/* Sabit "PANTER / Altınordu" yerine gerçek stil (varsa). */}
+                          {idStyle && (
+                            <div className="flex items-center gap-2 mb-3">
                               <span className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
-                                  <Shield size={10} fill="black" /> PANTER
+                                  <Shield size={10} fill="black" /> {idStyle.toLocaleUpperCase('tr-TR')}
                               </span>
-                              <span className="text-xs text-gray-400">Altınordu</span>
-                          </div>
-                          
+                            </div>
+                          )}
+
                           {/* Stats Grid */}
                           <div className="grid grid-cols-3 gap-2 mt-2">
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">MAÇ</p>
-                                  <p className="text-sm font-black text-white">{userProfile?.matchesPlayed || 42}</p>
+                                  <p className="text-sm font-black text-white">{idNum(userProfile?.matchesPlayed)}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">REAKSİYON</p>
-                                  <p className="text-sm font-black text-white">{userProfile?.stats?.reflexes || 90}</p>
+                                  <p className="text-sm font-black text-white">{idNum(gkCardStats.reflexes)}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[9px] text-gray-500 font-bold">PUAN</p>
-                                  <p className="text-sm font-black text-green-400">{userProfile?.rating || 4.8}</p>
+                                  <p className="text-sm font-black text-green-400">{idRatingText}</p>
                               </div>
                           </div>
                       </div>
@@ -884,7 +903,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     </div>
                     <div className="flex items-center gap-1.5 bg-green-500/20 border border-green-400/40 px-2.5 py-1 rounded-lg">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      <span className="text-[10px] font-black text-green-300">A-CLASS</span>
+                      <span className="text-[10px] font-black text-green-300">{idClass}</span>
                     </div>
                   </div>
 
@@ -895,11 +914,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] mb-0.5">Genel Reyting</div>
                       <div className="text-6xl font-black leading-none relative"
                         style={{ color: '#22c55e', textShadow: '0 0 30px rgba(34,197,94,0.8), 0 0 60px rgba(34,197,94,0.4)' }}>
-                        {userProfile?.rating || 4.8}
+                        {idRatingText}
                       </div>
                       <div className="flex items-center justify-center gap-0.5 mt-1">
                         {[1,2,3,4,5].map(i => (
-                          <div key={i} className="w-5 h-1 rounded-full" style={{ background: i <= 4 ? '#22c55e' : 'rgba(255,255,255,0.1)' }} />
+                          <div key={i} className="w-5 h-1 rounded-full" style={{ background: i <= idFilledBars ? '#22c55e' : 'rgba(255,255,255,0.1)' }} />
                         ))}
                       </div>
                     </div>
@@ -908,9 +927,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* Stats row */}
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: 'Uçuş', value: userProfile?.stats?.diving || 88, glow: '#22c55e' },
-                      { label: 'Konum', value: userProfile?.stats?.positioning || 82, glow: '#facc15' },
-                      { label: 'Bire Bir', value: userProfile?.stats?.oneOnOne || 88, glow: '#22c55e' },
+                      { label: 'Uçuş', value: idNum(gkCardStats.diving), glow: '#22c55e' },
+                      { label: 'Konum', value: idNum(gkCardStats.positioning), glow: '#facc15' },
+                      { label: 'Bire Bir', value: idNum(gkCardStats.oneOnOne), glow: '#22c55e' },
                     ].map(s => (
                       <div key={s.label} className="rounded-xl py-2 px-1 text-center border border-white/8"
                         style={{ background: 'rgba(0,0,0,0.5)' }}>
@@ -1191,8 +1210,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           <p className="text-sm font-black text-green-400 mt-1">{req.providerAmount}₺</p>
                                       </div>
                                   </div>
-                                  {/* İki-taraflı onay: sağlayıcı-başlatan CAPTURED talepte "Maçı Onayla" */}
-                                  {req.status === 'CAPTURED' && !req.payoutReleased && req.initiatedBy === 'PROVIDER' && (
+                                  {/* KB-1: İki-taraflı onay TÜM CAPTURED taleplerde gösterilir.
+                                      Eskiden yalnız initiatedBy==='PROVIDER' iken görünüyordu; ama
+                                      _release_service_payout her talepte provider_confirmed AND
+                                      captain_confirmed istiyor → kaptan-başlatan/FCFS-kabul edilen
+                                      rezervasyonlarda GK'nin onay butonu HİÇ çıkmadığından payout
+                                      sonsuza dek PENDING kalıyordu. Artık initiator'dan bağımsız. */}
+                                  {req.status === 'CAPTURED' && !req.payoutReleased && (
                                     req.providerConfirmed ? (
                                       <div className="w-full mt-3 py-2 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
                                           <Check size={13} /> Onayladın · Kaptan onayı bekleniyor
@@ -1498,7 +1522,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               )}
           </div>
 
-          {/* Direct Offers Section */}
+          {/* KB-M1: legacy "ÖZEL TEKLİFLER" (myOffers / service_offers) tamamen gizli —
+              o tablo kullanılmıyor, gerçek teklifler FCFS matchOffers'ta. myOffers hiç
+              dolmadığından bu blok asla render olmaz (dürüst-olmayan sahte teklif/kabul yok). */}
+          {myOffers.length > 0 && (
           <div className="px-6">
               <div className="flex items-center gap-2 mb-3">
                   <Sparkles size={16} className="text-[#FACC15]" />
@@ -1562,6 +1589,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   )}
               </div>
           </div>
+          )}
       </motion.div>
   );
 
@@ -1593,7 +1621,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                          <div className="p-4 flex items-center justify-between">
                              <div>
                                  <h4 className="font-black text-white text-sm">{job.pitchName || job.location || 'Saha'}</h4>
-                                 <p className="text-[10px] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'} · {job.fee}₺</p>
+                                 <p className="text-[10px] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRY(job.fee)}` : ''}</p>
                              </div>
                              <div className="flex items-center gap-2">
                                  <span className="bg-yellow-500/20 text-yellow-500 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
@@ -1639,16 +1667,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         <div className="flex items-center gap-3">
                           {/* Date box */}
                           <div className="w-12 shrink-0 bg-[#0A0E14] rounded-xl py-2 text-center border border-white/5">
-                            <p className="text-[8px] text-gray-500 font-bold uppercase">{job.date.slice(5).replace('-','/')}</p>
-                            <p className="text-xs font-black text-white">{job.time}</p>
+                            <p className="text-[8px] text-gray-500 font-bold uppercase">{job.date ? (job.date.includes('-') ? job.date.slice(5).replace('-', '/') : job.date) : '—'}</p>
+                            <p className="text-xs font-black text-white">{job.time || '—'}</p>
                           </div>
                           <div>
                             <h4 className="font-black text-white text-sm">{job.pitchName}</h4>
-                            <p className="text-[10px] text-gray-400 mt-0.5">Kpt: {job.captainName} • <span className="text-green-400">{job.players} oyuncu</span></p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{job.captainName ? `Kpt: ${job.captainName} • ` : ''}<span className="text-green-400">{job.players} oyuncu</span></p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-lg font-black text-white">{job.fee}₺</p>
+                          {/* Gerçek fiyat yoksa uydurma 250/350 değil "Standart ücret". */}
+                          <p className="text-lg font-black text-white">{job.fee != null ? formatTRY(job.fee) : 'Standart'}</p>
                           <p className="text-[9px] text-gray-500">maç başı</p>
                         </div>
                       </div>
