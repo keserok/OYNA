@@ -15,6 +15,8 @@ interface ServiceProfileProps {
 
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { showToast } from '../components/common/GlobalToast';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -165,15 +167,23 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // KD-8: fotoğraf base64 data-URL olarak goalkeepers.avatar'a yazılıyordu → satırı
+  // ve HER find_providers/marketplace payload'ını şişiriyordu. Artık Storage'a
+  // ('avatars') yüklenir, kalıcı public URL saklanır; hata kullanıcıya bildirilir.
+  const { uploadImage: uploadAvatar, uploading: avatarUploading } = useImageUpload('avatars', { minWidth: 200 });
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCustomPhoto(ev.target?.result as string);
+    try {
+      const url = await uploadAvatar(file);
+      setCustomPhoto(url);
       setShowPhotoPicker(false);
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error('Foto yükleme hatası:', err);
+      showToast(err?.message || 'Fotoğraf yüklenemedi. JPG/PNG dene (en fazla ~10MB).');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
   };
 
   // Dürüstlük (KS0/KD-3): eksik veri sahte sayıya (42/12/94/9.2/4.9) düşürülmez;
