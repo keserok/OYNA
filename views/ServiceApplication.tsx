@@ -166,6 +166,14 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     height: isGk && !(Number(height) >= 140) ? 'Boy en az 140 cm olmalı' : null,
     age: isGk && !(Number(age) >= 14) ? 'Yaş en az 14 olmalı' : null,
     level: !isGk && level.length === 0 ? 'Lisans seviyesi seçmelisin' : null,
+    // HR-D: hakem deneyimi (yıl) — dürüst, sınırlı tam sayı. Boş/negatif/ondalık
+    // ya da mantıksız (>60) değerler engellenir; bu değer matchCount'a DEĞİL,
+    // stats.experienceYears'a yazılır (serviceProviderService).
+    experience: !isGk && (
+      experienceYears.trim() === '' ||
+      !/^\d+$/.test(experienceYears.trim()) ||
+      Number(experienceYears) > 60
+    ) ? 'Deneyimini 0-60 yıl arası tam sayı gir' : null,
   };
 
   const isFieldVisible = (field: keyof typeof fieldErrors) => touched[field] || submitAttempted;
@@ -464,16 +472,20 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 </div>
                 {visibleError('level') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.level}</p>}
               </div>
-              <Field label="Deneyim (Yıl)" icon={<Calendar size={20} />} color={color}>
+              <Field label="Deneyim (Yıl)" icon={<Calendar size={20} />} color={color} error={visibleError('experience')}>
                 <input
                   type="number"
                   inputMode="numeric"
+                  min={0}
+                  max={60}
                   value={experienceYears}
-                  onChange={(e) => setExperienceYears(e.target.value)}
+                  onChange={(e) => setExperienceYears(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                  onBlur={() => markTouched('experience')}
                   className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
                   placeholder="5"
                 />
               </Field>
+              {visibleError('experience') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.experience}</p>}
             </>
           )}
 
