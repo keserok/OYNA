@@ -92,6 +92,7 @@ interface DbPitchRow {
   is_featured?: boolean | null;
   flash_deals_enabled?: boolean | null;
   show_availability_badge?: boolean | null;
+  map_label?: string | null;
   working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
   courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
@@ -170,6 +171,7 @@ const mapDbPitchToUiPitch = (
     isPublished: row.is_published !== false,
     isFeatured: row.is_featured === true,
     showAvailabilityBadge: row.show_availability_badge === true,
+    mapLabel: row.map_label?.trim() || undefined,
     // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
     // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
     workingHoursRaw: wh ?? null,
@@ -206,15 +208,16 @@ const PIN_BUBBLE_ZOOM = 12.5;
 // Fiyat pini — react-map-gl Marker (anchor="bottom" → tip TAM koordinatta).
 // Maplibre pini GPU'da konumlar; zoom/pan'de native sabit (kayma yok).
 const PricePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; selected: boolean; onSelect: (p: Pitch) => void }) => {
-  const priceLabel = pitch.totalPrice ? `~${pitch.totalPrice}₺` : (pitch.name.split(' ')[0] || 'Saha');
+  // Pin, fiyat yerine sahanın TEK İSMİNİ gösterir. Admin map_label belirlediyse o,
+  // yoksa tam ad kullanılır (uzun adlar CSS ile kısaltılır).
+  const nameLabel = pitch.mapLabel || pitch.name || 'Saha';
   return (
     <MapMarker longitude={pitch.coordinates!.lng} latitude={pitch.coordinates!.lat} anchor="bottom">
       <div className="oyna-mlpin" onClick={(e) => { e.stopPropagation(); onSelect(pitch); }}>
         {pitch.flashDiscount ? <div className="pin-flash">🔥 %{pitch.flashDiscount}</div> : null}
         <div className={`pin-bubble${selected ? ' selected' : ''}`}>
           <svg width="8" height="8" viewBox="0 0 8 8" fill={selected ? '#000' : '#39FF14'}><circle cx="4" cy="4" r="4" /></svg>
-          {pitch.originalPrice ? <span style={{ textDecoration: 'line-through', color: '#888', fontSize: 8, marginRight: 2 }}>₺{pitch.originalPrice}</span> : null}
-          {priceLabel}
+          <span className="pin-name">{nameLabel}</span>
         </div>
         <div className={`pin-nub${selected ? ' selected' : ''}`} />
       </div>

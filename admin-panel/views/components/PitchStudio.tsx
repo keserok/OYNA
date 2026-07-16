@@ -98,6 +98,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
 
   // ── Kimlik & konum ──
   const [name, setName] = useState('');
+  const [mapLabel, setMapLabel] = useState('');
   const [city, setCity] = useState('Ordu');
   const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
@@ -143,7 +144,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     void (async () => {
       const { data, error } = await supabase
         .from('pitches')
-        .select('name, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, is_active, verification_status, price_per_match, owner_id')
+        .select('name, map_label, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, is_active, verification_status, price_per_match, owner_id')
         .eq('id', pitchId)
         .single();
       if (!alive) return;
@@ -153,6 +154,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
         return;
       }
       setName(data.name ?? '');
+      setMapLabel((data as { map_label?: string | null }).map_label ?? '');
       setCity(data.city ?? 'Ordu');
       setDistrict(data.district ?? '');
       setAddress(data.address ?? '');
@@ -244,6 +246,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
 
   const buildProfilePayload = () => ({
     name: name.trim(),
+    map_label: mapLabel.trim(),
     city: city.trim() || 'Ordu',
     district: district.trim(),
     address: address.trim(),
@@ -491,6 +494,11 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                     <div>
                       <label className={labelCls}>Tesis Adı *</label>
                       <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Örn: Capo Arena" />
+                      <div className="mt-2">
+                        <label className={`${labelCls} flex items-center gap-1.5`}><MapPin size={11} /> Haritada Görünecek İsim</label>
+                        <input value={mapLabel} onChange={(e) => setMapLabel(e.target.value)} className={inputCls} placeholder={name.trim() || 'Boş bırakılırsa tesis adı kullanılır'} maxLength={40} />
+                        <p className="text-[10px] text-gray-500 mt-1">Harita pininde fiyat yerine bu isim görünür. Boşsa tesis adı kullanılır.</p>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
