@@ -1128,7 +1128,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const posLabel = { 'GK': 'KALECİ', 'DEF': 'DEFANS', 'MID': 'ORTA SAHA', 'FWD': 'FORVET' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'OYUNCU';
                 const c = playerCard;
                 const isSelf = !!c?.is_self;
-                const footTr = (f?: string | null) => f === 'SAG' ? 'SAĞ' : f === 'SOL' ? 'SOL' : '—';
                 // Bilgiler herkese açık; yalnız "birlikte maç" arkadaşlara özel.
                 const canShowTogether = !!c && !isSelf && c.matches_together != null;
                 const showHero = isSelf || canShowTogether;
@@ -1167,11 +1166,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             </div>
                           </div>
                         )}
-                        <div className={`w-full grid grid-cols-3 gap-2 ${showHero ? 'mt-3' : 'mt-5'}`}>
+                        <div className={`w-full grid grid-cols-2 gap-2 ${showHero ? 'mt-3' : 'mt-5'}`}>
                           {[
                             { l: 'YAŞ', v: c?.age != null ? String(c.age) : '—' },
                             { l: 'FAIR PLAY', v: c?.fair_play != null ? '%' + c.fair_play : '—' },
-                            { l: 'AYAK', v: footTr(c?.preferred_foot) },
                           ].map(s => (
                             <div key={s.l} className="bg-white/[0.04] border border-white/8 rounded-xl py-3 flex flex-col items-center gap-1">
                               <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.15em]">{s.l}</span>

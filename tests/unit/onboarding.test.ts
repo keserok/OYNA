@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  isMinorAgeRange, POSITION_LABEL, POSITION_CODE, trUpper, AGE_RANGES,
+  isMinorAgeRange, POSITION_LABEL, POSITION_CODE, POSITION_ABBR,
+  PLAY_STYLE_META, GENDER_LABEL, trUpper, AGE_RANGES,
   splitFullName, isOnboardingEnabled, OnboardingPosition, AgeRange,
 } from '../../views/onboarding/onboardingShared';
 
@@ -48,6 +49,29 @@ describe('POSITION_LABEL / POSITION_CODE', () => {
     for (const code of codes) {
       expect(POSITION_CODE[POSITION_LABEL[code]]).toBe(code);
     }
+  });
+
+  it('kısaltmalar KL/SAV/ORT/HÜC (orta = ORT, OS değil)', () => {
+    expect(POSITION_ABBR.kaleci).toBe('KL');
+    expect(POSITION_ABBR.defans).toBe('SAV');
+    expect(POSITION_ABBR.orta).toBe('ORT');
+    expect(POSITION_ABBR.forvet).toBe('HÜC');
+  });
+});
+
+// ─── Oyun stili + cinsiyet etiketleri (profil rozetleri tek kaynak) ───
+describe('PLAY_STYLE_META / GENDER_LABEL', () => {
+  it('üç oyun stili etiket + renk içerir', () => {
+    expect(PLAY_STYLE_META.ciddi.label).toBe('Ciddi');
+    expect(PLAY_STYLE_META.taktiksel.label).toBe('Taktiksel');
+    expect(PLAY_STYLE_META.rahat.label).toBe('Rahat');
+    for (const k of ['ciddi', 'taktiksel', 'rahat'] as const) {
+      expect(PLAY_STYLE_META[k].color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+  it('cinsiyet etiketleri', () => {
+    expect(GENDER_LABEL.kadin).toBe('Kadın');
+    expect(GENDER_LABEL.erkek).toBe('Erkek');
   });
 });
 

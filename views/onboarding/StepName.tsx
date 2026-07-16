@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gender, OnboardingPosition, trUpper } from './onboardingShared';
+import { Gender, OnboardingPosition, POSITION_ABBR, POSITION_LABEL, trUpper } from './onboardingShared';
 
 interface StepNameProps {
   firstName: string;
@@ -19,10 +19,10 @@ const GENDERS: [Gender, string, string][] = [
   ['erkek', 'Erkek', '♂'],
 ];
 const POSITIONS: [OnboardingPosition, string, string][] = [
-  ['kaleci', 'KL', 'Kaleci'],
-  ['defans', 'SAV', 'Savunma'],
-  ['orta', 'OS', 'Orta Saha'],
-  ['forvet', 'HÜC', 'Hücum'],
+  ['kaleci', POSITION_ABBR.kaleci, POSITION_LABEL.kaleci],
+  ['defans', POSITION_ABBR.defans, POSITION_LABEL.defans],
+  ['orta', POSITION_ABBR.orta, POSITION_LABEL.orta],
+  ['forvet', POSITION_ABBR.forvet, POSITION_LABEL.forvet],
 ];
 
 const inputBase: React.CSSProperties = {

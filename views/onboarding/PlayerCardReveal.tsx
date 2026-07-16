@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
-import { Gender, OnboardingPosition, PlayStyle, AgeRange, POSITION_LABEL, trUpper } from './onboardingShared';
+import { Gender, OnboardingPosition, PlayStyle, AgeRange, POSITION_LABEL, PLAY_STYLE_META, trUpper } from './onboardingShared';
 
 interface PlayerCardRevealProps {
   firstName: string;
@@ -19,11 +19,6 @@ interface PlayerCardRevealProps {
 }
 
 const SPHERE = 'radial-gradient(circle at 32% 28%, #C8FFB0, #4DFF2A 45%, #17B356 72%, #075B2C)';
-const STYLE_META: Record<Exclude<PlayStyle, ''>, { label: string; color: string }> = {
-  ciddi: { label: 'Ciddi', color: '#FFC107' },
-  taktiksel: { label: 'Taktiksel', color: '#00B0FF' },
-  rahat: { label: 'Rahat', color: '#39FF14' },
-};
 
 /**
  * Onboarding final özeti — KARTSIZ ("havada"). Kart çerçevesi/kenarlığı
@@ -39,7 +34,7 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
   const rows: { label: string; value: string; color: string }[] = [];
   if (ageRange) rows.push({ label: 'YAŞ', value: ageRange.replace('-', '–'), color: '#FFFFFF' });
   if (gender) rows.push({ label: 'CİNSİYET', value: gender === 'kadin' ? '♀ Kadın' : '♂ Erkek', color: '#00B0FF' });
-  if (playStyle) rows.push({ label: 'OYUN STİLİ', value: STYLE_META[playStyle].label, color: STYLE_META[playStyle].color });
+  if (playStyle) rows.push({ label: 'OYUN STİLİ', value: PLAY_STYLE_META[playStyle].label, color: PLAY_STYLE_META[playStyle].color });
   if (locationGranted) rows.push({ label: 'KONUM', value: 'Onaylı', color: '#00E676' });
   if (position) rows.push({ label: 'POZİSYON', value: POSITION_LABEL[position], color: '#FFC107' });
 

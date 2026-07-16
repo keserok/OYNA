@@ -39,12 +39,20 @@ export interface OnboardingDraft {
   completedAt: number;
 }
 
-/** Onboarding pozisyon kodunu profildeki metin karşılığına çevirir. */
+/** Onboarding pozisyon kodunu profildeki metin karşılığına çevirir (DB'de saklanan biçim). */
 export const POSITION_LABEL: Record<Exclude<OnboardingPosition, ''>, string> = {
   kaleci: 'Kaleci',
   defans: 'Savunma',
   orta: 'Orta Saha',
   forvet: 'Hücum',
+};
+
+/** Pozisyon kısaltmaları (kompakt grid/rozet gösterimi için). */
+export const POSITION_ABBR: Record<Exclude<OnboardingPosition, ''>, string> = {
+  kaleci: 'KL',
+  defans: 'SAV',
+  orta: 'ORT',
+  forvet: 'HÜC',
 };
 
 /** Profildeki pozisyon metnini onboarding koduna geri çevirir (ön-dolum için). */
@@ -53,6 +61,19 @@ export const POSITION_CODE: Record<string, OnboardingPosition> = {
   Savunma: 'defans',
   'Orta Saha': 'orta',
   Hücum: 'forvet',
+};
+
+/** Oyun stili etiket + vurgu rengi (kart/rozet gösterimlerinde tek kaynak). */
+export const PLAY_STYLE_META: Record<Exclude<PlayStyle, ''>, { label: string; color: string }> = {
+  ciddi: { label: 'Ciddi', color: '#FFC107' },
+  taktiksel: { label: 'Taktiksel', color: '#00B0FF' },
+  rahat: { label: 'Rahat', color: '#39FF14' },
+};
+
+/** Cinsiyet etiketleri. */
+export const GENDER_LABEL: Record<Exclude<Gender, ''>, string> = {
+  kadin: 'Kadın',
+  erkek: 'Erkek',
 };
 
 /** tr-TR büyük harf (İ/ı sorunu için). */

@@ -4,8 +4,8 @@
 -- yalnız demo profillerine gerçekçi-çeşitli değerler yazar. Canlıda veri kullanıcının
 -- kendi profilinden gelir (get_friend_player_card mekanizması aynen çalışır).
 
--- 1) Yaş (birthdate) + ayak (preferred_foot) + fair play (reliability_score) — çeşitli.
---    Mevcut GERÇEK birthdate/foot değerleri korunur (coalesce); fair play çeşitlendirilir.
+-- 1) Yaş (birthdate) + fair play (reliability_score) — çeşitli.
+--    Mevcut GERÇEK birthdate değeri korunur (coalesce); fair play çeşitlendirilir.
 update public.profiles p set
   birthdate = coalesce(p.birthdate, make_date(
      1989 + (abs(hashtext(p.id::text||'yr')) % 19),
@@ -13,14 +13,6 @@ update public.profiles p set
      1 + (abs(hashtext(p.id::text||'dy')) % 28))),
   reliability_score = 79 + (abs(hashtext(p.id::text||'rel')) % 22)
 where p.id::text like 'd0e51a00-%';
-
--- Ayak: garantili çeşitlilik (her 3. oyuncu SOL).
-with ranked as (
-  select id, row_number() over (order by id) rn
-  from public.profiles where id::text like 'd0e51a00-%'
-)
-update public.profiles p set preferred_foot = case when r.rn % 3 = 0 then 'SOL' else 'SAG' end
-from ranked r where r.id = p.id;
 
 -- 2) matches_together backfill — tamamlanmış demo maçlarına örtüşen kadrolar
 --    (Emre=01 ile lobi-arkadaşlarının çeşitli birlikte-maç sayıları oluşur).
