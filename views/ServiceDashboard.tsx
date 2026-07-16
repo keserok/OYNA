@@ -1136,7 +1136,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <Inbox size={16} className={theme.primary} />
                   <h3 className="font-black text-white text-sm tracking-wide uppercase">GELEN TALEPLER</h3>
                   {newRequests.length > 0 && (
-                      <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{newRequests.length}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{newRequests.length}</span>
                   )}
               </div>
               <button onClick={fetchIncomingRequests} className="text-gray-500 hover:text-white transition-colors">
@@ -1162,7 +1162,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="space-y-3">
                           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yeni Talepler</p>
                           {newRequests.map(req => (
-                              <div key={req.id} className="bg-gradient-to-r from-green-900/30 to-[#161B22] border border-green-500/30 rounded-[24px] p-4">
+                              <div key={req.id} className={`bg-gradient-to-r to-[#161B22] border rounded-[24px] p-4 ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
                                   <div className="flex items-start justify-between">
                                       <div>
                                           <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik Talebi' : 'Kalecilik Talebi'}</h4>
@@ -1185,7 +1185,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                       <button
                                           onClick={() => handleAcceptClick(req)}
                                           disabled={respondingId === req.id}
-                                          className="flex-1 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-white text-xs font-black uppercase transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
+                                          className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black uppercase transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_12px_rgba(34,197,94,0.3)]'}`}
                                       >
                                           {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <Check size={14} />}
                                           Kabul Et
@@ -1422,24 +1422,24 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {matchOffers.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3 px-1">
-                <Inbox size={16} className="text-[#39FF14]" />
+                <Inbox size={16} className={isRef ? 'text-red-400' : 'text-[#39FF14]'} />
                 <h3 className="text-sm font-black text-white uppercase tracking-wide">Gelen Teklifler</h3>
-                <span className="text-[10px] font-black text-[#0A0E14] bg-[#39FF14] rounded-full px-2 py-0.5">{matchOffers.length}</span>
+                <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${isRef ? 'text-white bg-red-500' : 'text-[#0A0E14] bg-[#39FF14]'}`}>{matchOffers.length}</span>
               </div>
               <div className="space-y-3">
                 {matchOffers.map(o => {
                   const busy = respondingOfferId === o.id;
                   return (
-                    <div key={o.id} className="rounded-[24px] p-4 bg-gradient-to-br from-green-900/30 to-[#161B22] border border-green-500/30">
+                    <div key={o.id} className={`rounded-[24px] p-4 bg-gradient-to-br to-[#161B22] border ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="min-w-0">
                           <p className="text-sm font-black text-white uppercase italic">{o.provider_type === 'GK' ? 'Kalecilik' : 'Hakemlik'} Teklifi</p>
                           <p className="text-[11px] text-white/50 truncate mt-0.5">{o.location || o.match_title || 'Maç'}{o.date ? ` · ${o.date}` : ''}{o.time ? ` ${o.time}` : ''}</p>
-                          <p className="text-[10px] text-[#39FF14] font-bold mt-1">İlk kabul eden işi alır</p>
+                          <p className={`text-[10px] font-bold mt-1 ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>İlk kabul eden işi alır</p>
                         </div>
                         <div className="text-right shrink-0 pl-3">
                           <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Bedel</p>
-                          <p className="text-lg font-black text-[#39FF14]">{o.fee}₺</p>
+                          <p className={`text-lg font-black ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>{o.fee}₺</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -1448,7 +1448,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <X size={14} /> Reddet
                         </button>
                         <button disabled={busy} onClick={() => handleRespondMatchOffer(o.id, true)}
-                          className="flex-[1.5] h-11 rounded-xl bg-[#39FF14] text-[#0A0E14] text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40">
+                          className={`flex-[1.5] h-11 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 ${isRef ? 'bg-red-500 text-white' : 'bg-[#39FF14] text-[#0A0E14]'}`}>
                           {busy ? <Activity size={14} className="animate-spin" /> : <Check size={14} />} Kabul Et
                         </button>
                       </div>
@@ -1488,13 +1488,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="px-6">
               <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-green-500" />
+                      <Calendar size={16} className={theme.primary} />
                       <h3 className="font-black text-white text-sm tracking-wide uppercase">SIRADAKİ MAÇLARIM</h3>
                   </div>
               </div>
               
               {myUpcomingMatches.length > 0 ? (
-                  <div className="bg-gradient-to-r from-green-900/40 to-[#161B22] border border-green-500/30 rounded-[24px] p-5 relative overflow-hidden">
+                  <div className={`bg-gradient-to-r to-[#161B22] border rounded-[24px] p-5 relative overflow-hidden ${isRef ? 'from-red-900/40 border-red-500/30' : 'from-green-900/40 border-green-500/30'}`}>
                       <div className="flex justify-between items-start">
                           <div>
                               <h4 className="font-black text-white text-lg">{myUpcomingMatches[0].pitchName || myUpcomingMatches[0].location || 'Saha Bilinmiyor'}</h4>
@@ -1513,7 +1513,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             </div>
                             <button 
                               onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0] as any)}
-                              className="text-[10px] font-black text-green-400 hover:text-white transition-colors"
+                              className={`text-[10px] font-black hover:text-white transition-colors ${isRef ? 'text-red-400' : 'text-green-400'}`}
                             >
                                 DETAYLAR
                             </button>
@@ -1536,7 +1536,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             ) : matchLiveStatus[myUpcomingMatches[0].id] === 'ON_THE_WAY' ? (
                                 <button 
                                   onClick={() => setMatchLiveStatus(prev => ({ ...prev, [myUpcomingMatches[0].id]: 'ARRIVED' }))}
-                                  className="w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-black uppercase shadow-[0_0_15px_rgba(34,197,94,0.3)] flex items-center justify-center gap-2 hover:bg-green-400 transition-colors"
+                                  className={`w-full py-2.5 rounded-xl text-white text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
                                 >
                                   <MapPin size={14} /> TESİSE VARDIM
                                 </button>
@@ -1560,7 +1560,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <motion.button 
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setActiveTab('JOBS')}
-                        className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl text-xs font-black shadow-lg shadow-green-900/20 transition-all"
+                        className={`text-white px-6 py-2 rounded-xl text-xs font-black shadow-lg transition-all ${isRef ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20' : 'bg-green-600 hover:bg-green-500 shadow-green-900/20'}`}
                       >
                           MAÇ BUL
                       </motion.button>
@@ -1646,8 +1646,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          <div className="px-6 mb-2 mt-4">
             <div>
               <h3 className="font-black text-white text-sm flex items-center gap-2">
-                🧤 {isRef ? 'HAKEM' : 'KALECİ'} ARAYAN MAÇLAR
-                <span className="bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{openMatches.length}</span>
+                {isRef ? '⚖️ HAKEM' : '🧤 KALECİ'} ARAYAN MAÇLAR
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{openMatches.length}</span>
               </h3>
               <p className="text-[10px] text-gray-500 mt-0.5">Bölgendeki maçlar — başvur, oyna, kazan</p>
             </div>
@@ -1706,7 +1706,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     key={job.id}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-[#161B22] border border-white/6 rounded-[24px] overflow-hidden hover:border-green-500/30 transition-all"
+                    className={`bg-[#161B22] border border-white/6 rounded-[24px] overflow-hidden transition-all ${isRef ? 'hover:border-red-500/30' : 'hover:border-green-500/30'}`}
                 >
                     <div className="p-4">
                       <div className="flex items-start justify-between">
@@ -1718,7 +1718,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                           <div>
                             <h4 className="font-black text-white text-sm">{job.pitchName}</h4>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{job.captainName ? `Kpt: ${job.captainName} • ` : ''}<span className="text-green-400">{job.players} oyuncu</span></p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{job.captainName ? `Kpt: ${job.captainName} • ` : ''}<span className={isRef ? 'text-red-400' : 'text-green-400'}>{job.players} oyuncu</span></p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
@@ -1730,23 +1730,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                            <span className="text-[9px] font-black text-green-400">{job.missing} Aranıyor</span>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border ${isRef ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isRef ? 'bg-red-400' : 'bg-green-400'}`} />
+                            <span className={`text-[9px] font-black ${isRef ? 'text-red-400' : 'text-green-400'}`}>{job.missing} Aranıyor</span>
                           </div>
                           <div className="flex items-center gap-1 text-[9px] text-gray-500">
                             <MapPin size={9} /> {job.location}
                           </div>
                         </div>
                         {appliedMatchIds.has(job.id) ? (
-                          <span className="px-4 py-1.5 rounded-xl text-[10px] font-black text-green-400 bg-green-500/10 border border-green-500/30 flex items-center gap-1">
+                          <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 border ${isRef ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-green-400 bg-green-500/10 border-green-500/30'}`}>
                             <Check size={11} /> Başvuruldu
                           </span>
                         ) : (
                           <motion.button
                             whileTap={{ scale: 0.94 }}
                             onClick={() => handleOpenBid(job as any)}
-                            className="px-4 py-1.5 rounded-xl text-[10px] font-black text-black bg-green-400 hover:bg-green-300 transition-colors shadow-[0_0_12px_rgba(34,197,94,0.4)]"
+                            className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-colors ${isRef ? 'text-white bg-red-500 hover:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 'text-black bg-green-400 hover:bg-green-300 shadow-[0_0_12px_rgba(34,197,94,0.4)]'}`}
                           >
                             BAŞVUR
                           </motion.button>
