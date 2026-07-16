@@ -3,7 +3,7 @@ import { LAUNCH_CITY } from '../utils/orduData';
 import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
 import { formatTRY } from '../utils/formatTRY';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     ChevronLeft, ChevronRight, X, Minus, Plus, Zap, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
 } from 'lucide-react';
@@ -13,7 +13,7 @@ import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
 import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
 import { EmptyState } from '../components/common/StatusState';
-import { createServiceRequest } from '../services/serviceRequestService';
+import { createServiceRequest, getAvailableProviderIds } from '../services/serviceRequestService';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -66,6 +66,19 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
     const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, selectedRegions, userLocation } = useAppStore();
     const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
 
+    // KC-4: uygun (approved + is_available) sağlayıcı id kümesi. null = henüz
+    // yüklenmedi / alınamadı → filtreleme yapma (herkesi göster; güvenli fallback,
+    // RPC hatasında listeyi boşaltmaz). Uygun-olmayan sağlayıcı vitrinde görünmez.
+    const [availableIds, setAvailableIds] = useState<Set<string> | null>(null);
+    useEffect(() => {
+        let alive = true;
+        setAvailableIds(null);
+        getAvailableProviderIds(activeTab)
+            .then(ids => { if (alive) setAvailableIds(new Set(ids)); })
+            .catch(() => { if (alive) setAvailableIds(null); });
+        return () => { alive = false; };
+    }, [activeTab]);
+
     const [filterDistrict, setFilterDistrict] = useState<string>('Tümü');
     const [filterDay, setFilterDay] = useState<string>('Tümü');
     const [filterTime, setFilterTime] = useState<string>('Tümü');
@@ -101,9 +114,12 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
             // KD-2: "Profilimi Göster" kapalı (settings.showProfile === false) sağlayıcı
             // vitrinde listelenmez — gizlilik toggle'ı artık gerçekten etkili.
             const notHidden = (p as any).settings?.showProfile !== false;
-            return matchesRegion && matchesDistrict && matchesDay && matchesTime && notHidden;
+            // KC-4: uygun-olmayan (is_available=false) sağlayıcı vitrinde görünmez.
+            // availableIds null iken (yüklenmedi/hata) filtre uygulanmaz.
+            const isBookable = availableIds === null || availableIds.has(p.id);
+            return matchesRegion && matchesDistrict && matchesDay && matchesTime && notHidden && isBookable;
         });
-    }, [profiles, filterDistrict, filterDay, filterTime, scopeCities, cityDistricts]);
+    }, [profiles, filterDistrict, filterDay, filterTime, scopeCities, cityDistricts, availableIds]);
 
     const myMatches = useMemo(() => {
         return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);
