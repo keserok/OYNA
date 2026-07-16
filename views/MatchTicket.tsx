@@ -1,120 +1,257 @@
-
-import React from 'react';
-import { ArrowLeft, Share2, QrCode, Calendar, Clock, MapPin, ShieldCheck, Download } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Share2, Calendar, Clock, MapPin, ShieldCheck, Download, Loader2, AlertTriangle } from 'lucide-react';
+import QRCode from 'qrcode';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
+import { formatTRY } from '../utils/formatTRY';
+
+/**
+ * DİJİTAL BİLET — DÜRÜST (C4).
+ *
+ * ÖNCEKİ SORUN: bilet her zaman "ONAYLANDI" gösteriyordu, QR gerçek değildi
+ * (lucide ikonu — taranamaz), ID sabitti ("OYNA-8293-TX") ve butonlar ölüydü.
+ *
+ * ŞİMDİ: bilet GERÇEK rezervasyon kaydından türer (store.ticketBookingId →
+ * pitch_bookings). Durum ödemenin gerçeğini yansıtır (SIMULATION dahi olsa
+ * dürüst): PAID/PARTIAL/PENDING/CANCELLED. Ödeme yoksa "ONAYLANDI" bileti YOK.
+ * QR gerçek: rezervasyon referansını kodlar (turnikede/temsilcide doğrulanabilir).
+ */
+
+type PayState = 'PAID' | 'PARTIAL' | 'PENDING' | 'CANCELLED' | 'UNKNOWN';
+
+interface BookingRow {
+  id: string;
+  status: string | null;
+  payment_status: string | null;
+  paid_amount: number | null;
+  price: number | null;
+  deposit_amount: number | null;
+  booking_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  court_id: string | null;
+  pitch_id: string | null;
+}
 
 interface MatchTicketProps {
   onBack: () => void;
 }
 
+const STATE_STYLE: Record<PayState, { label: string; bg: string; text: string; note: string }> = {
+  PAID:      { label: 'ONAYLANDI',      bg: '#39FF14', text: '#0A0E14', note: 'Ödeme tamamlandı. Girişte bu bileti okut.' },
+  PARTIAL:   { label: 'KAPORA ÖDENDİ',  bg: '#FACC15', text: '#0A0E14', note: 'Kapora alındı; kalan tutar tesiste ödenir.' },
+  PENDING:   { label: 'ÖDEME BEKLİYOR', bg: '#F59E0B', text: '#0A0E14', note: 'Rezervasyon henüz ödenmedi.' },
+  CANCELLED: { label: 'İPTAL EDİLDİ',   bg: '#F87171', text: '#0A0E14', note: 'Bu rezervasyon iptal edilmiştir.' },
+  UNKNOWN:   { label: 'DURUM BİLİNMİYOR', bg: '#6B7280', text: '#fff',   note: 'Rezervasyon durumu okunamadı.' },
+};
+
 const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
-  const { bookingPitch, bookingCourt, bookingDate, bookingSlot } = useAppStore();
+  const { bookingPitch, bookingCourt, bookingDate, bookingSlot, ticketBookingId } = useAppStore();
+  const [booking, setBooking] = useState<BookingRow | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!ticketBookingId);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [shareMsg, setShareMsg] = useState('');
+
+  // Gerçek rezervasyonu çek (varsa). RLS: kullanıcı kendi rezervasyonunu görür.
+  useEffect(() => {
+    let alive = true;
+    if (!ticketBookingId) { setLoading(false); return; }
+    (async () => {
+      setLoading(true);
+      try {
+        const { data } = await supabase
+          .from('pitch_bookings')
+          .select('id,status,payment_status,paid_amount,price,deposit_amount,booking_date,start_time,end_time,court_id,pitch_id')
+          .eq('id', ticketBookingId)
+          .maybeSingle();
+        if (alive) setBooking((data as BookingRow) ?? null);
+      } catch { /* okunamadı — dürüst 'bilinmiyor' gösterilir */ }
+      finally { if (alive) setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [ticketBookingId]);
+
+  // Ödeme durumu — GERÇEK kayıttan türetilir (sahte "ONAYLANDI" yok).
+  const payState: PayState = useMemo(() => {
+    if (!ticketBookingId) return 'UNKNOWN';        // referans yok → onay iddia edilmez
+    if (loading) return 'UNKNOWN';
+    if (!booking) return 'UNKNOWN';
+    if (booking.status === 'CANCELLED') return 'CANCELLED';
+    const ps = (booking.payment_status ?? '').toUpperCase();
+    const paid = Number(booking.paid_amount) || 0;
+    const price = Number(booking.price) || 0;
+    if (ps === 'PAID' || (price > 0 && paid >= price)) return 'PAID';
+    if (paid > 0) return 'PARTIAL';
+    return 'PENDING';
+  }, [ticketBookingId, loading, booking]);
+
+  const style = STATE_STYLE[payState];
+
+  // GERÇEK QR — rezervasyon referansını kodlar (turnikede doğrulanabilir).
+  // İçerik: oyna://ticket/<bookingId> ; kayıt yoksa QR üretilmez (yalan yok).
+  useEffect(() => {
+    let alive = true;
+    const ref = booking?.id ?? ticketBookingId;
+    if (!ref || payState === 'CANCELLED' || payState === 'UNKNOWN') { setQrDataUrl(''); return; }
+    QRCode.toDataURL(`oyna://ticket/${ref}`, {
+      width: 320, margin: 1,
+      color: { dark: '#0A0E14', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    }).then(url => { if (alive) setQrDataUrl(url); }).catch(() => { if (alive) setQrDataUrl(''); });
+    return () => { alive = false; };
+  }, [booking?.id, ticketBookingId, payState]);
 
   const formatDateString = (dateStr: string | null) => {
     if (!dateStr) return 'Seçilmedi';
     try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
-    } catch {
-      return dateStr;
-    }
+      return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+    } catch { return dateStr; }
   };
 
-  const pitchNameParts = bookingPitch ? bookingPitch.name.split(' ') : ['ARENA', 'SPORT'];
+  // Görüntü verisi: gerçek rezervasyon > store booking* (yedek).
+  const dateStr = formatDateString(booking?.booking_date ?? bookingDate);
+  const timeStr = booking?.start_time
+    ? `${booking.start_time.slice(0, 5)}${booking.end_time ? ' - ' + booking.end_time.slice(0, 5) : ''}`
+    : (bookingSlot || 'Saat bilgisi yok');
+  const pitchName = bookingPitch?.name || 'Saha';
+  const pitchNameParts = pitchName.split(' ');
+  const courtName = bookingCourt?.name || '';
   const captainName = auth.currentUser?.email ? auth.currentUser.email.split('@')[0] : 'Kaptan';
+  const refShort = (booking?.id ?? ticketBookingId ?? '').slice(0, 8).toUpperCase();
+
+  const handleShare = async () => {
+    const text = `OYNA rezervasyonum: ${pitchName}${courtName ? ' · ' + courtName : ''} · ${dateStr} ${timeStr}`;
+    try {
+      if (navigator.share) { await navigator.share({ title: 'OYNA Rezervasyon', text }); return; }
+      await navigator.clipboard?.writeText(text);
+      setShareMsg('Rezervasyon bilgisi kopyalandı.');
+      setTimeout(() => setShareMsg(''), 2500);
+    } catch { /* kullanıcı iptal etti */ }
+  };
+
+  const handleSaveImage = () => {
+    if (!qrDataUrl) return;
+    const a = document.createElement('a');
+    a.href = qrDataUrl;
+    a.download = `oyna-bilet-${refShort || 'qr'}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  const canEnter = payState === 'PAID' || payState === 'PARTIAL';
 
   return (
     <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center p-6 relative">
-        
-       <button 
-         onClick={onBack} 
-         className="absolute top-6 left-6 p-3 bg-[#161B22] border border-white/10 rounded-full text-white hover:bg-white/10 transition-colors z-20"
-       >
-           <ArrowLeft size={20} />
-       </button>
+      <button onClick={onBack}
+        className="absolute top-6 left-6 p-3 bg-[#161B22] border border-white/10 rounded-full text-white hover:bg-white/10 transition-colors z-20">
+        <ArrowLeft size={20} />
+      </button>
 
-       <div className="w-full max-w-md animate-in slide-in-from-bottom duration-700">
-           {/* Header text */}
-           <div className="text-center mb-6">
-               <h1 className="text-2xl font-black text-white tracking-tight">MAÇ KARTINIZ</h1>
-               <p className="text-gray-400 text-sm">Giriş için turnikede okutunuz.</p>
-           </div>
+      <div className="w-full max-w-md animate-in slide-in-from-bottom duration-700">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-black text-white tracking-tight">MAÇ KARTINIZ</h1>
+          <p className="text-gray-400 text-sm">
+            {canEnter ? 'Giriş için turnikede/temsilcide okutunuz.' : 'Ödeme tamamlanınca giriş için geçerli olur.'}
+          </p>
+        </div>
 
-           {/* Ticket Card */}
-           <div className="bg-white rounded-[32px] overflow-hidden relative shadow-[0_0_50px_rgba(255,255,255,0.1)]">
-               
-               {/* Top Section (Visual) */}
-               <div className="bg-[#FACC15] p-6 pb-12 relative">
-                   <div className="flex justify-between items-start relative z-10">
-                       <div className="bg-black text-[#FACC15] px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider">
-                           ONAYLANDI
-                       </div>
-                       <ShieldCheck size={24} className="text-black opacity-50" />
-                   </div>
-                   <div className="mt-4">
-                       <h2 className="text-3xl font-black text-black leading-none uppercase">
-                         {pitchNameParts[0]}<br/>{pitchNameParts.slice(1).join(' ')}
-                       </h2>
-                       <p className="text-black/60 font-bold text-sm mt-1">{bookingPitch?.district || 'Altınordu'}, Ordu</p>
-                   </div>
-                   
-                   {/* Decorative Circles */}
-                   <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/20 rounded-full blur-xl"></div>
-               </div>
+        <div className="bg-white rounded-[32px] overflow-hidden relative shadow-[0_0_50px_rgba(255,255,255,0.1)]">
+          {/* Üst — durum GERÇEK ödemeye göre */}
+          <div className="p-6 pb-12 relative" style={{ background: style.bg }}>
+            <div className="flex justify-between items-start relative z-10">
+              <div className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider"
+                style={{ background: style.text, color: style.bg }}>
+                {loading ? 'YÜKLENİYOR…' : style.label}
+              </div>
+              <ShieldCheck size={24} style={{ color: style.text }} className="opacity-50" />
+            </div>
+            <div className="mt-4">
+              <h2 className="text-3xl font-black leading-none uppercase" style={{ color: style.text }}>
+                {pitchNameParts[0]}<br />{pitchNameParts.slice(1).join(' ')}
+              </h2>
+              <p className="font-bold text-sm mt-1" style={{ color: style.text, opacity: 0.6 }}>
+                {bookingPitch?.district || 'Ordu'}
+              </p>
+            </div>
+            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/20 rounded-full blur-xl" />
+          </div>
 
-               {/* Cutout Effect */}
-               <div className="relative h-4 bg-white">
-                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0A0E14] rounded-full"></div>
-                    <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0A0E14] rounded-full"></div>
-                    <div className="absolute top-1/2 left-4 right-4 h-0.5 border-t-2 border-dashed border-gray-300"></div>
-               </div>
+          {/* Kesik efekti */}
+          <div className="relative h-4 bg-white">
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0A0E14] rounded-full" />
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0A0E14] rounded-full" />
+            <div className="absolute top-1/2 left-4 right-4 h-0.5 border-t-2 border-dashed border-gray-300" />
+          </div>
 
-               {/* Details Section */}
-               <div className="bg-white p-6 pt-2">
-                   <div className="grid grid-cols-2 gap-6 mb-6">
-                       <div>
-                           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1"><Calendar size={10} /> TARİH</p>
-                           <p className="text-lg font-black text-black">{formatDateString(bookingDate)}</p>
-                       </div>
-                       <div>
-                           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1"><Clock size={10} /> SAAT</p>
-                           <p className="text-lg font-black text-black">{bookingSlot || '20:00 - 21:00'}</p>
-                       </div>
-                       <div>
-                           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1"><MapPin size={10} /> SAHA</p>
-                           <p className="text-lg font-black text-black truncate">{bookingCourt?.name || 'Halı Saha 1'}</p>
-                       </div>
-                       <div>
-                           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">KAPTAN</p>
-                           <p className="text-lg font-black text-black truncate capitalize">{captainName}</p>
-                       </div>
-                   </div>
+          {/* Detaylar */}
+          <div className="bg-white p-6 pt-2">
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <Detail icon={<Calendar size={10} />} label="TARİH" value={dateStr} />
+              <Detail icon={<Clock size={10} />} label="SAAT" value={timeStr} />
+              <Detail icon={<MapPin size={10} />} label="SAHA" value={courtName || pitchName} />
+              <Detail label="KAPTAN" value={captainName} />
+            </div>
 
-                   {/* QR Code */}
-                   <div className="bg-black p-4 rounded-2xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                       <QrCode size={120} className="text-white relative z-10" />
-                       <div className="absolute inset-0 bg-gradient-to-tr from-[#FACC15]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                       {/* Scanning Line */}
-                       <div className="absolute top-0 left-0 w-full h-1 bg-[#FACC15] shadow-[0_0_15px_#FACC15] animate-[scan_2s_linear_infinite]"></div>
-                   </div>
-                   <p className="text-center text-[10px] text-gray-400 mt-2 font-mono">ID: OYNA-8293-TX</p>
-               </div>
-           </div>
+            {/* Ödeme özeti — gerçek tutarlar */}
+            {booking && (
+              <div className="mb-5 rounded-2xl bg-gray-50 border border-gray-200 p-3 flex justify-between text-[12px]">
+                <span className="text-gray-500 font-bold">
+                  {payState === 'PARTIAL' ? 'Ödenen kapora' : payState === 'PAID' ? 'Ödendi' : 'Ödenen'}
+                </span>
+                <span className="text-black font-black font-numeric">
+                  {formatTRY(Number(booking.paid_amount) || 0)}₺
+                  {Number(booking.price) > 0 && <span className="text-gray-400"> / {formatTRY(Number(booking.price))}₺</span>}
+                </span>
+              </div>
+            )}
 
-           {/* Actions */}
-           <div className="flex gap-4 mt-8">
-               <button className="flex-1 bg-[#161B22] border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors">
-                   <Share2 size={18} /> Paylaş
-               </button>
-               <button className="flex-1 bg-[#FACC15] text-black py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20">
-                   <Download size={18} /> Cüzdana Ekle
-               </button>
-           </div>
+            {/* QR — GERÇEK (rezervasyon referansı). Yoksa dürüst boş durum. */}
+            <div className="rounded-2xl flex flex-col items-center justify-center relative overflow-hidden p-4"
+              style={{ background: canEnter ? '#0A0E14' : '#F3F4F6' }}>
+              {loading ? (
+                <div className="py-10 flex flex-col items-center gap-2 text-gray-400">
+                  <Loader2 size={28} className="animate-spin" /><span className="text-[11px] font-bold">Bilet hazırlanıyor…</span>
+                </div>
+              ) : canEnter && qrDataUrl ? (
+                <>
+                  <img src={qrDataUrl} alt="Rezervasyon QR kodu" className="w-[150px] h-[150px]" />
+                  <p className="text-[10px] text-gray-400 mt-2 font-mono">REF: {refShort || '—'}</p>
+                </>
+              ) : (
+                <div className="py-8 flex flex-col items-center gap-2 text-center px-4">
+                  <AlertTriangle size={26} className="text-gray-400" />
+                  <p className="text-[12px] font-bold text-gray-600">{style.note}</p>
+                  <p className="text-[10px] text-gray-400">Giriş QR kodu yalnız ödeme tamamlanınca oluşur.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-       </div>
+        {/* Aksiyonlar — gerçekten çalışır */}
+        <div className="flex gap-4 mt-8">
+          <button onClick={handleShare}
+            className="flex-1 bg-[#161B22] border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors">
+            <Share2 size={18} /> Paylaş
+          </button>
+          <button onClick={handleSaveImage} disabled={!qrDataUrl}
+            className={`flex-1 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-colors ${
+              qrDataUrl ? 'bg-[#FACC15] text-black hover:bg-yellow-300 shadow-lg shadow-yellow-900/20' : 'bg-gray-700 text-gray-400'
+            }`}>
+            <Download size={18} /> QR'ı Kaydet
+          </button>
+        </div>
+        {shareMsg && <p className="text-center text-[11px] text-[#39FF14] mt-3">{shareMsg}</p>}
+      </div>
     </div>
   );
 };
+
+const Detail: React.FC<{ icon?: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+  <div>
+    <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1">{icon}{label}</p>
+    <p className="text-lg font-black text-black truncate">{value}</p>
+  </div>
+);
 
 export default MatchTicket;
