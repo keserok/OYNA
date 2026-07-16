@@ -105,33 +105,60 @@ edge imza tamirleri + çifte-iade bug fix · H2 timeout/retry sertleştirmesi ·
 
 Hepsi kod denetimiyle doğrulandı. Sıra: C1 → C2 → C3 → C4 → P1'ler → latent.
 
-### P0
-- [ ] **C1 · Çift top-up:** idempotency anahtarı **prepare** aşamasına
+### P0 — ✅ TAMAM (PR #89, canlı kanıtlı, merge: 2bd96cd)
+- [x] **C1 · Çift top-up:** idempotency anahtarı **prepare** aşamasına
   (`prepare_card_payment`'a `p_idempotency_key`; aynı anahtar → aynı intent).
   Buton başarı animasyonu boyunca ref-kilitli; özel tutar max'ı girişte doğrula;
-  sıfır iade-kredi çipi gizle.
-- [ ] **C2 · Sahte başarısızlık:** `ALREADY_BLOCKED` → sunucudan teyitli BAŞARI
+  sıfır iade-kredi çipi gizle. *Kanıt: aynı anahtarla 2 pay → tek intent, canlı.*
+- [x] **C2 · Sahte başarısızlık:** `ALREADY_BLOCKED` → sunucudan teyitli BAŞARI
   (intent durumu okunur, bakiye tazelenir, "kapora alındı" gösterilir).
-- [ ] **C3 · Yanlış yetersiz bakiye:** özet hatası yutulmaz → hata kartı +
+- [x] **C3 · Yanlış yetersiz bakiye:** özet hatası yutulmaz → hata kartı +
   Yeniden Dene; çözülene dek ödeme kilitli; asla 0 bakiye varsayılmaz.
-- [ ] **C4 · Dürüst bilet:** `ONAYLANDI` sabiti, lucide `<QrCode>` (taranamaz!),
+- [x] **C4 · Dürüst bilet:** `ONAYLANDI` sabiti, lucide `<QrCode>` (taranamaz!),
   `OYNA-8293-TX` sabiti, sahte yedekler, ölü Paylaş/Cüzdana-Ekle → hepsi gider.
   Bilet gerçek rezervasyon+ödeme kaydından türer; **gerçek QR üreteci** (rez. id
   + HMAC imza); ödeme yoksa onaylı bilet yok. (K4: SIMULATION'da bile dürüst.)
 
-### P1
-- [ ] **C8** MATCH_JOIN yetersiz bakiye → "CÜZDANA YÜKLE" CTA (kapora akışındaki gibi).
-- [ ] **C6 + S19 (birleşik kök):** yetim rezervasyon + askıda PENDING temizliği.
+### P1 — ✅ TAMAM
+- [x] **C8** MATCH_JOIN yetersiz bakiye → "CÜZDANA YÜKLE" CTA (kapora akışındaki gibi). *(PR #89)*
+- [x] **C6 + S19 (birleşik kök):** askıda PENDING temizliği — **S1.2, canlı DB kanıtı** (bkz. aşağı).
   **Zaman pencereleri (çelişki denetiminde netleşti — karışırsa para hatası doğar):**
-  - *Ödeme ekranı oturumu:* **3 dk** — kart/özet ekranında 3 dk hareketsizlik →
-    ekran sıfırlanır, bayat fiyat/slot ile ödeme yapılamaz (3DS'e girilmediyse).
+  - *Ödeme ekranı oturumu:* **3 dk** ✅ — `PaymentScreen` 3 dk boşta → bakiye/slot
+    tazelenir; 3DS AÇIKKEN/işlem sırasında sayaç DURUR (bankadayken kesilmez).
   - *Banka doğrulama penceresi:* 3DS başladıysa **5 dk** (SMS için; mevcut).
-  - *Süpürücü eşiği:* **≥15 dk** — aktif 3DS penceresindeki intent'e ASLA
-    dokunmaz; 15 dk+ PENDING → önce iyzico teyidi → çekilmişse PAID'e düzelt,
-    çekilmemişse FAILED + halı saha slot/booking kilidi serbest.
-- [ ] **C10** `formatTRY()` tüm para ekranlarına; "0₺ ÖDE" sessiz kilit açıklanır.
-- [ ] **Ölü yol kapatma** (kapsam denetimi bulgusu): `wallet_topup` RPC devre
-  dışı (grant kaldır + walletService'ten sil) — tek yükleme yolu 3DS akışı kalır.
+  - *Süpürücü eşiği:* **≥15 dk** ✅ — DB'de `GREATEST(15,…)` ile TABAN zorlanır;
+    aktif 3DS penceresine ASLA giremez. 15 dk+ PENDING → önce iyzico mutabakatı →
+    çekilmişse PAID'e düzelt (heal), çekilmemişse FAILED, belirsizse dokunma.
+    NOT: `prepare_card_payment` yan etki yaratmadığından (slot kilitlemez) stale
+    intent yetim slot/booking BIRAKMAZ; süpürücü yalnız intent durumunu düzeltir.
+- [x] **C10** `formatTRY()` tüm para ekranlarına; "0₺ ÖDE" sessiz kilit açıklanır. *(PR #89)*
+- [x] **Ölü yol kapatma:** `wallet_topup` RPC devre dışı; tek yükleme yolu 3DS akışı. *(PR #89)*
+
+### S1.2 — Askıda Ödeme Süpürücüsü (C6/S19) — ✅ KODLANDI + CANLI DB KANITI
+- **DB** (canlı: `20260726000000`): `list_stale_payment_intents` (kill-switch içi
+  kontrol + 15dk taban + yalnız in-app flow + IYZICO + PENDING; escrow/BLOCKED ve
+  legacy raw=NULL kapsam dışı), `mark_intent_auth_charged` (kurşungeçirmez heal
+  işareti). Heal=`apply_card_payment`, Fail=`mark_intent_failed` (mevcut, idempotent).
+- **Edge** (canlı: `sweep-stale-payments` v1): iyzico `/payment/detail`
+  (`paymentConversationId`=intent id) mutabakatı → CHARGED heal / NOT_CHARGED fail /
+  AMBIGUOUS skip. `auth_charged` işareti varsa iyzico'ya SORMADAN heal. Kör FAILED yasak.
+- **Callback** (canlı: `iyzico-3ds-callback` v2): APPLY_ERROR'da çekim kanıtını işaretler.
+- **Cron** (`20260726000001`): saatlik; GUC yoksa kurulmaz (bu projede henüz yok).
+- **Kill-switch** `sweeper_enabled` = **KAPALI** doğar.
+- **Canlı DB kanıtı (sıfır kalıntı, RAISE ile geri alındı):** kill-switch kapalı→liste
+  boş ✓ · aday seçimi yalnız in-app+≥15dk ✓ · 5dk/legacy/BLOCKED hariç ✓ · 15dk taban
+  eşik=1'e rağmen korunur ✓ · marker-heal→PAID+1 TOP_UP wtx ✓ · fail→FAILED ✓ · tekrar
+  apply idempotent (çift kredi yok) ✓.
+
+> **⚠️ GO-LIVE (süpürücüyü açmak — bilinçli adım, "kill-switch'siz açılmaz"):**
+> 1. `WEBHOOK_SECRET` edge secret'ını ayarla (bu projede henüz yok → edge şu an
+>    fail-closed 500 döner, hiçbir şey yapmaz).
+> 2. GUC: `ALTER DATABASE postgres SET app.settings.functions_base_url=…` +
+>    `… webhook_secret=…`, sonra `20260726000001` cron bloğunu tekrar çalıştır.
+> 3. İlk çalıştırmalarda `[sweep] detail` loglarından iyzico `/payment/detail`'in
+>    `paymentConversationId` ile SUCCESS/failure döndürdüğünü **teyit et** (FAIL
+>    yolunun güvenli olduğunu doğrula). Belirsizse yalnız marker-heal aktif kalır.
+> 4. `app_config.sweeper_enabled = true` (Admin panelden) — tek anahtarla geri kapatılır.
 
 ### Latent
 - [ ] **C5/C7** iade tahmini sunucu formülüyle birebir (brüt−PSP=net; PSP=0 → düşük etki).

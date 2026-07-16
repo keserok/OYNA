@@ -164,6 +164,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   // çözülene dek ödeme kilitli. (Misafirde özet zaten yok — o durumda hata değil.)
   const [summaryError, setSummaryError] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  // S1.2/C6 — 3 dk oturum tazelendi bildirimi (ince, kendiliğinden kaybolur).
+  const [sessionRefreshed, setSessionRefreshed] = useState(false);
   // Uygulama-içi 3DS (banka SMS) sayfası — açıkken tam ekran sheet gösterilir
   const [threeDS, setThreeDS] = useState<{
     html: string; intentId: string; balanceApplied: number; cardAmount: number;
@@ -264,6 +266,33 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
       }
     } catch { /* kritik değil */ }
   };
+
+  // S1.2/C6 — ÖDEME EKRANI 3 DK OTURUMU (üç zaman penceresinin ilki):
+  //   ekran 3dk < 3DS banka penceresi 5dk < süpürücü ≥15dk.
+  // Kullanıcı PAY ekranında boşta beklerse her 3 dk'da bir bakiye + (maç ise)
+  // slot bilgisi tazelenir; böylece bayat fiyat/dolmuş slotla ödeme denemesi
+  // (kafa karıştırıcı sunucu reddi) önlenir. 3DS AÇIKKEN veya işlem/başarı
+  // ekranındayken sayaç DURUR — bankadayken asla kesilmez. NOT: bu yalnız UX
+  // tazelemedir; para güvenliği sunucudadır (prepare_card_payment ödeme anında
+  // slot/fiyatı yeniden doğrular ve bayatsa reddeder).
+  useEffect(() => {
+    if (screen !== 'PAY' || threeDS) return; // yalnız boşta-PAY'de say; 3DS'te dur
+    const id = setInterval(() => {
+      loadWallet.current();
+      if (ctx?.kind === 'MATCH_JOIN') refreshMatch(ctx.matchId);
+      setSessionRefreshed(true);
+    }, 3 * 60 * 1000);
+    return () => clearInterval(id);
+    // ctx?.matchId yalnız MATCH_JOIN bağlamında vardır; kind+id ile sabit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, threeDS, ctx?.kind]);
+
+  // Tazelendi bildirimi birkaç saniye sonra kendiliğinden kaybolsun.
+  useEffect(() => {
+    if (!sessionRefreshed) return;
+    const t = setTimeout(() => setSessionRefreshed(false), 5000);
+    return () => clearTimeout(t);
+  }, [sessionRefreshed]);
 
   // Kart kısmı olan ödeme: uygulama-içi kart akışı (edge 'pay').
   // Yeni kart tüm bilgisiyle bellekten gider; kayıtlı kartta yalnız id gider.
@@ -731,6 +760,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                 <RefreshCw size={12} className={summaryLoading ? 'animate-spin' : ''} /> Yeniden Dene
               </button>
             </div>
+          </div>
+        )}
+
+        {/* S1.2/C6 — 3 dk oturum tazelendi: güncel bakiye/slot ile devam bilgisi */}
+        {sessionRefreshed && !balanceUnknown && (
+          <div className="mx-5 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl p-3 flex items-center gap-2.5">
+            <RefreshCw size={14} className="text-[#39FF14] shrink-0" />
+            <p className="text-[11.5px] text-gray-300 leading-relaxed">
+              Güncel bilgilerle tazelendi — bakiye ve uygunluk şu an geçerli.
+            </p>
           </div>
         )}
 
