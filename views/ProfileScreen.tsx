@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole, AppView, PlayerCardData } from '../types';
-import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil } from 'lucide-react';
+import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
@@ -273,6 +273,23 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* ═══ PROFİL TAMAMLANMADI ŞERİDİ — onboarding'i atlayan kayıtlı kullanıcı ═══ */}
+                {!isGuest && profile && profile.hasCompletedOnboarding === false && (
+                    <button
+                        onClick={() => onNavigate && onNavigate('ONBOARDING')}
+                        className="w-full mb-4 text-left bg-[#FACC15]/[0.07] border border-[#FACC15]/30 rounded-3xl p-4 flex items-center gap-3 active:scale-[0.99] transition-all shadow-[0_8px_30px_rgba(0,0,0,0.35)]"
+                    >
+                        <div className="w-10 h-10 rounded-2xl bg-[#FACC15]/15 flex items-center justify-center shrink-0">
+                            <AlertCircle size={20} className="text-[#FACC15]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-black text-white">Profil tamamlanmadı</p>
+                            <p className="text-[11px] text-gray-400 leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
+                        </div>
+                        <span className="text-[11px] font-black text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
+                    </button>
                 )}
 
                 {/* ═══ KİMLİK KARTI ═══ */}

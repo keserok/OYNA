@@ -21,8 +21,7 @@ import { Spinner } from './components/ui/Spinner';
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
-import { isOnboardingEnabled, hasSeenOnboarding, markOnboardingSeen } from './views/onboarding/onboardingShared';
-import { flushOnboardingDraft } from './services/onboardingService';
+import { isOnboardingEnabled } from './views/onboarding/onboardingShared';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -164,11 +163,6 @@ const App: React.FC = () => {
               console.error('[App] Error creating user profile:', insertError);
               showToast('Profilin oluşturulurken bir sorun oluştu. Lütfen tekrar giriş yapmayı dene.');
             }
-            // Onboarding taslağını (kayıttan önce toplanan yaş aralığı, ad,
-            // cinsiyet, pozisyon, stil) yeni profile yaz. is_minor ve
-            // guardian_consent_status SUNUCUDA (apply_onboarding) hesaplanır.
-            // Taslak yoksa (ör. onboarding'i atlamış kullanıcı) sessizce geçer.
-            await flushOnboardingDraft();
             // KVKK Aydınlatma + Kullanıcı Sözleşmesi kabulünü sunucuya
             // denetlenebilir şekilde kaydet — TÜM kayıt yolları (e-posta +
             // Google/Apple) buradan geçer. Ayrı ayrı kaydedilir (bundle değil).
@@ -178,9 +172,12 @@ const App: React.FC = () => {
             useAppStore.getState().setMyRoles([UserRole.PLAYER]);
             identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
             trackEvent('user_registered', { role: UserRole.PLAYER });
-            // Yeni kayıtta bir kez bağlamsal konum izni sor ("yakınındaki
-            // sahaları görebilmen için") — atlanabilir, sonra Dashboard.
-            resetNavigation('LOCATION_PROMPT');
+            // Yeni kayıt → oyuncu onboarding'i (kayıt SONRASI, kullanıcı
+            // girişliyken): ad soyad ön-dolu gelir, veriler doğrudan DB'ye
+            // yazılır. Onboarding kendi konum adımını içerdiğinden ayrı
+            // LOCATION_PROMPT'a gerek yok. Kill-switch kapalıysa eski
+            // bağlamsal konum istemine düşülür.
+            resetNavigation(isOnboardingEnabled() ? 'ONBOARDING' : 'LOCATION_PROMPT');
           } else {
             // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
@@ -461,21 +458,21 @@ const App: React.FC = () => {
     switch (view) {
       case 'SPLASH':
         return <SplashScreen ready={authResolved} onStart={() => {
-          // Yeni model: rol seçimi yok. Oturum yoksa yeni kullanıcı akışı;
-          // oturum varsa role göre panel. Rolü store'dan TAZE oku (kapanıştaki
-          // `role` eski/PLAYER olabilir → kaleci/hakem yanlış panele düşerdi).
+          // Yeni model: onboarding artık kayıt SONRASINDA. Oturum yoksa
+          // doğrudan Giriş/Kayıt ekranına; oturum varsa role göre panele.
+          // Rolü store'dan TAZE oku (kapanıştaki `role` eski/PLAYER olabilir).
           if (!auth.currentUser) {
-            // Yeni kullanıcı → oyuncu onboarding'i (kayıttan önce). Daha önce
-            // görülmüşse veya kill-switch kapalıysa doğrudan Giriş'e düş.
-            resetNavigation(isOnboardingEnabled() && !hasSeenOnboarding() ? 'ONBOARDING' : 'AUTH');
+            resetNavigation('AUTH');
             return;
           }
           resetNavigation(navigateBasedOnRole(useAppStore.getState().role));
         }} />;
       case 'ONBOARDING':
+        // Kayıt sonrası (girişli) onboarding. Bitince (tamamlandı VEYA atlandı)
+        // goBack: profil "Tamamla" ile gelindiyse profile döner; yeni kayıt
+        // akışında yığın boş → role göre panele (Dashboard) düşer.
         return <Onboarding
-          onComplete={() => { markOnboardingSeen(); resetNavigation('AUTH'); }}
-          onLogin={() => { markOnboardingSeen(); resetNavigation('AUTH'); }}
+          onComplete={() => goBack(navigateBasedOnRole(useAppStore.getState().role))}
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;

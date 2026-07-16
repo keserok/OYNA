@@ -1,16 +1,13 @@
-// ─── Onboarding: paylaşılan tipler, sabitler, taslak kalıcılık ────
-// Onboarding KAYITTAN ÖNCE çalışır; toplanan veri hesap oluşana kadar
-// localStorage'da "taslak" olarak tutulur, kayıt başarılı olunca (e-posta
-// VEYA Google/Apple) profile flush edilir (Faz 2). Bu modül veriyi ve
-// kill-switch bayrağını tek yerde toplar.
-
-export const ONBOARDING_DRAFT_KEY = 'oyna.onboarding.draft.v1';
+// ─── Onboarding: paylaşılan tipler, sabitler, yardımcılar ─────────
+// Onboarding KAYIT SONRASINDA (kullanıcı girişliyken) çalışır: toplanan
+// veri doğrudan apply_onboarding RPC'si ile profile yazılır (localStorage
+// taslağı YOK). Bu modül tipleri, sabitleri ve kill-switch'i tek yerde
+// toplar. is_minor / guardian_consent_status SUNUCUDA hesaplanır.
 
 /**
- * Kill-switch: Onboarding kayıt hunisinin önüne geçtiği için, bir sorun
- * çıkarsa tek bayrakla eski "Splash → Auth" akışına dönülebilir.
- * localStorage'da 'oyna.onboarding.disabled' = '1' ise devre dışı kalır;
- * ayrıca derleme zamanı sabiti (aşağıda) ile de kapatılabilir.
+ * Kill-switch: Bir sorun çıkarsa onboarding adımı tek bayrakla devre dışı
+ * bırakılabilir; bu durumda yeni kayıt eski "kayıt → LOCATION_PROMPT"
+ * akışına düşer. localStorage'da 'oyna.onboarding.disabled' = '1' ise kapalı.
  */
 export const ONBOARDING_ENABLED_DEFAULT = true;
 
@@ -30,6 +27,7 @@ export type Gender = '' | 'kadin' | 'erkek';
 export type OnboardingPosition = '' | 'kaleci' | 'defans' | 'orta' | 'forvet';
 export type PlayStyle = '' | 'ciddi' | 'taktiksel' | 'rahat';
 
+/** Onboarding adımlarında toplanan alanların bellek-içi şekli. */
 export interface OnboardingDraft {
   ageRange: AgeRange | '';
   firstName: string;
@@ -49,57 +47,28 @@ export const POSITION_LABEL: Record<Exclude<OnboardingPosition, ''>, string> = {
   forvet: 'Hücum',
 };
 
-export const saveOnboardingDraft = (draft: OnboardingDraft): void => {
-  try {
-    localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
-  } catch (e) {
-    console.error('[onboarding] taslak kaydedilemedi:', e);
-  }
-};
-
-export const loadOnboardingDraft = (): OnboardingDraft | null => {
-  try {
-    const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as OnboardingDraft;
-  } catch {
-    return null;
-  }
-};
-
-export const clearOnboardingDraft = (): void => {
-  try {
-    localStorage.removeItem(ONBOARDING_DRAFT_KEY);
-  } catch {
-    /* yoksay */
-  }
-};
-
-// ─── "Onboarding görüldü" bayrağı ─────────────────────────────────
-// Aynı cihazda çıkış yapmış dönen kullanıcı her açılışta onboarding'e
-// düşmesin diye: onboarding tamamlanınca veya giriş kısayolu kullanılınca
-// işaretlenir. Oturum yokken splash yalnızca bu bayrak YOKSA onboarding'i
-// gösterir; varsa doğrudan giriş ekranına gider.
-const ONBOARDING_SEEN_KEY = 'oyna.onboarding.seen';
-
-export const markOnboardingSeen = (): void => {
-  try {
-    localStorage.setItem(ONBOARDING_SEEN_KEY, '1');
-  } catch {
-    /* yoksay */
-  }
-};
-
-export const hasSeenOnboarding = (): boolean => {
-  try {
-    return localStorage.getItem(ONBOARDING_SEEN_KEY) === '1';
-  } catch {
-    return false;
-  }
+/** Profildeki pozisyon metnini onboarding koduna geri çevirir (ön-dolum için). */
+export const POSITION_CODE: Record<string, OnboardingPosition> = {
+  Kaleci: 'kaleci',
+  Savunma: 'defans',
+  'Orta Saha': 'orta',
+  Hücum: 'forvet',
 };
 
 /** tr-TR büyük harf (İ/ı sorunu için). */
 export const trUpper = (s: string): string => s.toLocaleUpperCase('tr-TR');
+
+/**
+ * Tek "ad soyad" metnini ad/soyad olarak böler: son kelime = soyad, kalanı ad.
+ * Kayıtta tek alan (full_name) alındığından onboarding'i ön-doldurmak için.
+ * Örn. "Ahmet Mehmet Yılmaz" → { firstName: 'Ahmet Mehmet', lastName: 'Yılmaz' }.
+ */
+export const splitFullName = (full: string | null | undefined): { firstName: string; lastName: string } => {
+  const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: '', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  return { firstName: parts.slice(0, -1).join(' '), lastName: parts[parts.length - 1] };
+};
 
 /**
  * Yaş aralığından reşit-olmama çıkarımı. Sunucudaki compute_is_minor ile
