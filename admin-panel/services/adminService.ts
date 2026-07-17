@@ -2261,6 +2261,43 @@ export async function fetchReconciliationSummary(from?: string, to?: string): Pr
   return (data || {}) as ReconciliationSummary;
 }
 
+// ─── [S4] Tarih aralıklı + gün kırılımlı finans raporu (admin_finance_report) ─
+export interface FinanceReportDay {
+  day: string;
+  gross: number;
+  commission: number;
+  owner_share: number;
+  refunded: number;
+  topups: number;
+  count: number;
+}
+
+export interface AdminFinanceReport {
+  from: string;
+  to: string;
+  totals: {
+    gross_captured: number;
+    commission: number;
+    owner_share: number;
+    refunded: number;
+    count: number;
+  };
+  topups: number;
+  cashouts: { net: number; fee: number; count: number };
+  payouts_completed: number;
+  days: FinanceReportDay[];
+}
+
+/**
+ * Seçilen tarih aralığında tüm platformun gün-gün finans raporu. Kullanıcı isteği:
+ * "tüm ödemelerin seçilen tarih aralıklarında ve günlerde dahi analiz edilebilmesi."
+ */
+export async function fetchAdminFinanceReport(from: string, to: string): Promise<AdminFinanceReport> {
+  const { data, error } = await supabase.rpc('admin_finance_report', { p_from: from, p_to: to });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_finance_report RPC deploy edilmedi' : error.message);
+  return (data || {}) as AdminFinanceReport;
+}
+
 // ─── Wave 12: Toplu bildirim geçmişi + şablon editörü ───────────────────────
 export interface BroadcastCampaignRow {
   id: string; created_by_name: string; segment: string; type_key: string | null;
