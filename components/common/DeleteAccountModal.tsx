@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, AlertTriangle, ShieldAlert, Wallet } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { MODAL_BACKDROP, MODAL_CARD } from './motion';
 
@@ -8,6 +8,20 @@ import { MODAL_BACKDROP, MODAL_CARD } from './motion';
 // Tek yerde tanımlı: Oyuncu (SettingsScreen) ve Kaleci/Hakem (ServiceSettings)
 // ekranlarının ikisi de buradan içe aktarır, böylece hesap silme her hesap
 // türünden aynı şekilde erişilebilir olur (mağaza şartı).
+//
+// [S4] Silme öncesi sunucudan durum (preview_account_deletion) alınır: açık
+// rezervasyon/maç, ÇEKİLEBİLİR BAKİYE veya bekleyen çekim varsa silme engellenir
+// ve NET yönlendirme gösterilir (para kaybı olmasın). İade kredisi çekilemez →
+// yalnız "kaybolur" uyarısıyla bildirilir.
+
+interface DeletionItem { code: string; message: string; amount?: number }
+interface DeletionPreview {
+  can_delete: boolean;
+  blockers: DeletionItem[];
+  warnings: DeletionItem[];
+  wait_days: number;
+}
+
 const DeleteAccountModal: React.FC<{
   onClose: () => void;
   onConfirmed: () => void;
@@ -15,22 +29,44 @@ const DeleteAccountModal: React.FC<{
   const [step, setStep] = useState<1 | 2>(1);
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<DeletionPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.rpc('preview_account_deletion');
+      if (!alive) return;
+      if (error) {
+        // Önizleme RPC yoksa/başarısızsa akışı kilitleme — sunucu request'te yine korur.
+        setPreview({ can_delete: true, blockers: [], warnings: [], wait_days: 7 });
+      } else {
+        setPreview(data as DeletionPreview);
+      }
+      setPreviewLoading(false);
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const waitDays = preview?.wait_days ?? 7;
 
   const handleConfirm = async () => {
     if (confirmText !== 'HESABIMI SİL') return;
     setLoading(true);
-    try {
-      await supabase.rpc('request_account_deletion');
-      setToast({ message: 'Silme talebiniz alındı. 7 gün içinde hesabınız silinecek.', variant: 'success' });
-      setTimeout(() => {
-        onConfirmed();
-      }, 2000);
-    } catch {
-      setToast({ message: 'Bir hata oluştu. Lütfen tekrar deneyin.', variant: 'error' });
+    const { error } = await supabase.rpc('request_account_deletion');
+    if (error) {
+      // Sunucunun Türkçe yönlendirme mesajını göster (bakiye/rezervasyon engeli).
+      setToast({ message: error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.', variant: 'error' });
       setLoading(false);
+      return;
     }
+    setToast({ message: `Silme talebiniz alındı. ${waitDays} gün içinde hesabınız silinecek.`, variant: 'success' });
+    setTimeout(() => { onConfirmed(); }, 2000);
   };
+
+  const blocked = !!preview && !preview.can_delete;
+  const warnings = preview?.warnings ?? [];
 
   return (
     <motion.div
@@ -47,7 +83,7 @@ const DeleteAccountModal: React.FC<{
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-black text-white text-lg">
-            {step === 1 ? 'Hesabı Sil' : 'Son Adım'}
+            {blocked ? 'Hesap Silinemiyor' : step === 1 ? 'Hesabı Sil' : 'Son Adım'}
           </h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
             <X size={18} />
@@ -64,12 +100,46 @@ const DeleteAccountModal: React.FC<{
           </div>
         )}
 
-        {step === 1 ? (
+        {previewLoading ? (
+          <div className="py-8 text-center text-sm text-gray-500">Durum kontrol ediliyor…</div>
+        ) : blocked ? (
           <>
-            <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-              Bu işlem <span className="text-red-400 font-bold">geri alınamaz</span>. Hesabın, tüm verilerinle birlikte 7 gün içinde kalıcı olarak silinecek.
-              Devam etmek istediğine emin misin?
+            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+              Hesabını silebilmek için önce aşağıdakileri çözmen gerekiyor:
             </p>
+            <div className="space-y-2.5 mb-6">
+              {preview!.blockers.map((b) => (
+                <div key={b.code} className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/25">
+                  {b.code === 'CASHABLE_BALANCE' || b.code === 'PENDING_PAYOUT'
+                    ? <Wallet size={16} className="text-red-400 shrink-0 mt-0.5" />
+                    : <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />}
+                  <p className="text-[13px] text-red-200 leading-snug">{b.message}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full h-12 rounded-2xl font-black text-sm bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors"
+            >
+              Anladım
+            </button>
+          </>
+        ) : step === 1 ? (
+          <>
+            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+              Bu işlem <span className="text-red-400 font-bold">geri alınamaz</span>. Hesabın, tüm verilerinle birlikte {waitDays} gün içinde kalıcı olarak silinecek.
+            </p>
+            {warnings.length > 0 && (
+              <div className="space-y-2.5 mb-4">
+                {warnings.map((w) => (
+                  <div key={w.code} className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                    <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-[13px] text-amber-200 leading-snug">{w.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-sm text-gray-400 mb-6">Devam etmek istediğine emin misin?</p>
             <div className="space-y-3">
               <button
                 onClick={() => setStep(2)}
