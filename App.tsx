@@ -557,6 +557,7 @@ const App: React.FC = () => {
             setSelectedGk(gk as Goalkeeper);
             goBack('DASHBOARD');
           }}
+          onCreateMatch={() => navigateTo('MATCH_CREATE')}
         />;
       case 'MARKETPLACE_REF':
         return <Marketplace
@@ -566,6 +567,7 @@ const App: React.FC = () => {
             setSelectedRef(ref as Referee);
             goBack('DASHBOARD');
           }}
+          onCreateMatch={() => navigateTo('MATCH_CREATE')}
         />;
       case 'PAYMENT':
         return <PaymentScreen

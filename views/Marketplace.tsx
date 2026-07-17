@@ -2,7 +2,7 @@
 import { LAUNCH_CITY } from '../utils/orduData';
 import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
     ChevronLeft, ChevronRight, X, Search, SlidersHorizontal, Star, MapPin, Clock,
     Share2, BadgeCheck, ShieldCheck, Zap, CheckCircle2, Check, Info, MessageSquare,
@@ -73,7 +73,12 @@ interface MarketplaceProps {
     type: 'REF' | 'GK';
     onBack: () => void;
     onSelect?: (item: Goalkeeper | Referee) => void;
+    /** Boş "maçın yok" durumundan doğrudan maç oluşturmaya geçiş (çıkmaz sokak bırakma). */
+    onCreateMatch?: () => void;
 }
+
+// Bugünün kısa gün adı (workingHours.activeDays ile aynı sözlük: Pzt..Paz)
+const TODAY_SHORT = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][new Date().getDay()];
 
 // ─── Küçük yapı taşları ───────────────────────────────────────────────────────
 
@@ -134,7 +139,7 @@ const StatTile: React.FC<{ label: string; value: React.ReactNode; sub?: string }
 
 // ─── Ana bileşen ──────────────────────────────────────────────────────────────
 
-const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => {
+const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCreateMatch }) => {
     const theme = ROLE_THEME[type];
     const roleLabel = theme.label; // "Kaleci" | "Hakem"
     const RoleIcon = theme.icon;
@@ -145,10 +150,15 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
     const [hireResult, setHireResult] = useState<{ fee: number; providerAmount: number } | null>(null);
     const [hireError, setHireError] = useState<string | null>(null);
     const [showMatchSelection, setShowMatchSelection] = useState(false);
+    // Onay adımı (Plan 8A.1): maça dokunmak talebi HEMEN göndermez; ücret dökümüyle
+    // açık onay istenir. Tek aktif maç varsa liste adımı tamamen atlanır.
+    const [matchPendingConfirm, setMatchPendingConfirm] = useState<any>(null);
     const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
     const [showSuccessScreen, setShowSuccessScreen] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
     const [heroBroken, setHeroBroken] = useState(false);
+    const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); }, []);
 
     const {
         adminGoalkeepers, adminReferees, adminMatches,
@@ -274,10 +284,30 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
     const handleSelect = (p: Goalkeeper | Referee) => {
         setSelectedProfile(p);
         setShowMatchSelection(false);
+        setMatchPendingConfirm(null);
         setShowSuccessScreen(false);
         setHireError(null);
         setShareCopied(false);
         setHeroBroken(false);
+    };
+
+    // Detay CTA'sı: tek aktif maç varsa liste adımını atla, doğrudan onaya git (Plan 8A.1).
+    const openHireFlow = () => {
+        setHireError(null);
+        setMatchPendingConfirm(sortedMatches.length === 1 ? sortedMatches[0] : null);
+        setShowMatchSelection(true);
+    };
+
+    // Başarıyı kapat (Tamam butonu veya otomatik zamanlayıcı — hangisi önce gelirse).
+    const finishSuccess = () => {
+        if (successTimerRef.current) { clearTimeout(successTimerRef.current); successTimerRef.current = null; }
+        const chosen = selectedProfile;
+        setShowSuccessScreen(false);
+        setSelectedProfile(null);
+        setShowMatchSelection(false);
+        setMatchPendingConfirm(null);
+        setHireResult(null);
+        if (onSelect && chosen) onSelect(chosen);
     };
 
     const handleShare = async (p: Goalkeeper | Referee) => {
@@ -305,16 +335,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
             const result = await createServiceRequest(match.id, selectedProfile.id, type);
             setHireResult({ fee: result.fee, providerAmount: result.providerAmount });
             setShowSuccessScreen(true);
-
-            setTimeout(() => {
-                setShowSuccessScreen(false);
-                setSelectedProfile(null);
-                setShowMatchSelection(false);
-                setHireResult(null);
-                if (onSelect && selectedProfile) {
-                    onSelect(selectedProfile);
-                }
-            }, 3500);
+            successTimerRef.current = setTimeout(finishSuccess, 6000);
         } catch (err: any) {
             setHireError(err?.message || 'Talep oluşturulamadı. Lütfen tekrar dene.');
         } finally {
@@ -328,6 +349,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
     const detailDistance = detail ? distanceOf(detail) : null;
     const detailUnavailable = detail?.isAvailable === false;
     const detailReviews = detail?.reviews || [];
+    // Çalışma günlerinden türetilmiş dürüst sinyal: bugün çalışıyor mu?
+    const detailAvailableToday = !detailUnavailable && !!detail?.workingHours?.activeDays?.includes(TODAY_SHORT);
 
     const skillRows: { label: string; value: number }[] = useMemo(() => {
         if (!detail) return [];
@@ -660,114 +683,213 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
                                     <p className="text-[10px] text-white/30 font-semibold">
                                         Ödeme yalnızca bloke edilir; onay ve maç kesinleşene kadar tahsil edilmez.
                                     </p>
+
+                                    <button
+                                        onClick={finishSuccess}
+                                        className="w-full h-13 min-h-[52px] rounded-2xl text-xs font-black uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
+                                        style={{ backgroundColor: theme.accent }}
+                                    >
+                                        Tamam
+                                    </button>
                                 </motion.div>
                             </div>
                         ) : showMatchSelection ? (
-                            /* ── Maç seçim ekranı ── */
-                            <div className="flex-1 flex flex-col overflow-hidden">
-                                <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
-                                    <div className="min-w-0">
-                                        <h2 className="text-lg font-black uppercase tracking-tight text-white">Maçını Seç</h2>
-                                        <p className="text-[11px] font-bold text-white/40 mt-0.5">
-                                            Talep hangi maç için gönderilsin?
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowMatchSelection(false)}
-                                        aria-label="Kapat"
-                                        className="w-10 h-10 shrink-0 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-
-                                {/* Seçilen sağlayıcı özeti */}
-                                <div className="mx-5 mt-4 p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06] flex items-center gap-3">
-                                    <SafeAvatar src={detail.avatar} name={detail.name} className="w-10 h-10 rounded-xl" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[13px] font-extrabold text-white truncate">{detail.name}</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
-                                    </div>
-                                    <div className="text-right shrink-0">
-                                        <p className="text-base font-black text-white font-numeric tabular-nums">{detail.fee}₺</p>
-                                        <p className="text-[9px] font-bold text-white/35 uppercase">maç başı</p>
-                                    </div>
-                                </div>
-
-                                <div className="mx-5 mt-3 px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-start gap-2">
-                                    <Info size={13} className="text-white/35 mt-0.5 shrink-0" />
-                                    <p className="text-[10px] font-semibold text-white/45 leading-relaxed">
-                                        Ücret şimdi kartında bloke edilir; {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip maç kesinleşince tahsil edilir.
-                                    </p>
-                                </div>
-
-                                {hireError && (
-                                    <div className="mx-5 mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-                                        <p className="text-[11px] font-bold text-red-400">{hireError}</p>
-                                    </div>
-                                )}
-
-                                <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 space-y-2.5 pb-safe">
-                                    {isHiring ? (
-                                        <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                            <Spinner size={32} color={theme.accent} />
-                                            <p className="text-[11px] font-black text-white/50 uppercase tracking-widest">
-                                                Talep oluşturuluyor…
+                            matchPendingConfirm ? (
+                                /* ── Onay adımı — ücret dökümüyle açık onay (Plan 8A.1) ── */
+                                <div className="flex-1 flex flex-col overflow-hidden">
+                                    <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
+                                        <div className="min-w-0">
+                                            <h2 className="text-lg font-black uppercase tracking-tight text-white">Talebi Onayla</h2>
+                                            <p className="text-[11px] font-bold text-white/40 mt-0.5">
+                                                Göndermeden önce son kontrol
                                             </p>
                                         </div>
-                                    ) : sortedMatches.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center text-center py-16 gap-3">
-                                            <CalendarX size={40} strokeWidth={1.2} className="text-white/20" />
-                                            <p className="text-sm font-black text-white/70">Planlanmış maçın yok</p>
-                                            <p className="text-[11px] font-semibold text-white/35 max-w-[240px] leading-relaxed">
-                                                {roleLabel} kiralamak için önce bir maç oluşturmalısın. Maçını kurduktan sonra buradan devam edebilirsin.
+                                        <button
+                                            onClick={() => { setShowMatchSelection(false); setMatchPendingConfirm(null); }}
+                                            aria-label="Kapat"
+                                            className="w-10 h-10 shrink-0 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 space-y-3">
+                                        {/* Sağlayıcı */}
+                                        <div className="p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06] flex items-center gap-3">
+                                            <SafeAvatar src={detail.avatar} name={detail.name} className="w-11 h-11 rounded-xl" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[13px] font-extrabold text-white truncate">{detail.name}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
+                                            </div>
+                                            {detail.rating > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-[12px] font-black text-amber-400 shrink-0">
+                                                    <Star size={12} className="fill-amber-400" /> {detail.rating.toFixed(1)}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Maç */}
+                                        <div className="p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06]">
+                                            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Maç</p>
+                                            <p className="text-[13px] font-extrabold text-white">{matchPendingConfirm.location}</p>
+                                            <p className="text-[11px] font-semibold text-white/40 mt-0.5">
+                                                {matchPendingConfirm.date} · {matchPendingConfirm.time}
+                                            </p>
+                                            <div className="flex gap-1.5 mt-2">
+                                                {matchPendingConfirm.format && (
+                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                        {matchPendingConfirm.format}
+                                                    </span>
+                                                )}
+                                                <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                    {getNormalizedDifficulty(matchPendingConfirm.difficulty)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Ücret dökümü */}
+                                        <div className="p-4 rounded-2xl border" style={{ backgroundColor: theme.soft, borderColor: theme.border }}>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Hizmet Bedeli</span>
+                                                <span className="text-xl font-black font-numeric tabular-nums text-white">{detail.fee}₺</span>
+                                            </div>
+                                            <p className="text-[10px] font-semibold text-white/45 mt-2 leading-relaxed">
+                                                Şimdi yalnızca <span className="text-white font-bold">bloke edilir</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
+                                                maç kesinleşince tahsil edilir. Sabit ücret; %10 platform komisyonu bedele dahildir.
                                             </p>
                                         </div>
-                                    ) : (
-                                        sortedMatches.map(m => {
-                                            const needsThisRole = matchNeedsRole(m);
-                                            return (
-                                                <motion.button
-                                                    key={m.id}
-                                                    type="button"
-                                                    whileTap={{ scale: 0.985 }}
-                                                    onClick={() => handleConfirmMatch(m)}
-                                                    className="w-full text-left p-4 rounded-2xl border transition-colors relative overflow-hidden"
-                                                    style={needsThisRole
-                                                        ? { backgroundColor: theme.soft, borderColor: theme.border }
-                                                        : { backgroundColor: '#11161F', borderColor: 'rgba(255,255,255,0.06)' }}
-                                                >
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div className="min-w-0 flex-1">
-                                                            {needsThisRole && (
-                                                                <span
-                                                                    className="inline-block mb-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest text-black"
-                                                                    style={{ backgroundColor: theme.accent }}
-                                                                >
-                                                                    {type === 'GK' ? 'Kaleci Aranıyor' : 'Hakem Eksik'}
-                                                                </span>
-                                                            )}
-                                                            <p className="text-[13px] font-extrabold text-white truncate">{m.location}</p>
-                                                            <p className="text-[11px] font-semibold text-white/40 mt-0.5">{m.date} · {m.time}</p>
-                                                            <div className="flex gap-1.5 mt-2">
-                                                                {m.format && (
-                                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
-                                                                        {m.format}
+
+                                        {hireError && (
+                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                                                <p className="text-[11px] font-bold text-red-400">{hireError}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="px-5 pt-3 pb-safe border-t border-white/5 space-y-2.5">
+                                        <button
+                                            onClick={() => handleConfirmMatch(matchPendingConfirm)}
+                                            disabled={isHiring}
+                                            className="w-full h-14 rounded-2xl text-xs font-black uppercase tracking-widest text-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                                            style={{ backgroundColor: theme.accent, boxShadow: `0 8px 24px ${theme.accent}30` }}
+                                        >
+                                            {isHiring ? (
+                                                <><Spinner size={16} color="#0A0E14" /> Gönderiliyor…</>
+                                            ) : (
+                                                <><Zap size={14} /> Onayla ve Talep Gönder</>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setMatchPendingConfirm(null)}
+                                            disabled={isHiring}
+                                            className="w-full h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white/50 bg-white/[0.04] border border-white/10 active:scale-[0.98] transition-transform disabled:opacity-40"
+                                        >
+                                            Farklı Maç Seç
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ── Maç seçim listesi ── */
+                                <div className="flex-1 flex flex-col overflow-hidden">
+                                    <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
+                                        <div className="min-w-0">
+                                            <h2 className="text-lg font-black uppercase tracking-tight text-white">Maçını Seç</h2>
+                                            <p className="text-[11px] font-bold text-white/40 mt-0.5">
+                                                Talep hangi maç için gönderilsin?
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowMatchSelection(false)}
+                                            aria-label="Kapat"
+                                            className="w-10 h-10 shrink-0 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+
+                                    {/* Seçilen sağlayıcı özeti */}
+                                    <div className="mx-5 mt-4 p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06] flex items-center gap-3">
+                                        <SafeAvatar src={detail.avatar} name={detail.name} className="w-10 h-10 rounded-xl" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-extrabold text-white truncate">{detail.name}</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-base font-black text-white font-numeric tabular-nums">{detail.fee}₺</p>
+                                            <p className="text-[9px] font-bold text-white/35 uppercase">maç başı</p>
+                                        </div>
+                                    </div>
+
+                                    {hireError && (
+                                        <div className="mx-5 mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                                            <p className="text-[11px] font-bold text-red-400">{hireError}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 space-y-2.5 pb-safe">
+                                        {sortedMatches.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center text-center py-16 gap-3">
+                                                <CalendarX size={40} strokeWidth={1.2} className="text-white/20" />
+                                                <p className="text-sm font-black text-white/70">Planlanmış maçın yok</p>
+                                                <p className="text-[11px] font-semibold text-white/35 max-w-[240px] leading-relaxed">
+                                                    {roleLabel} kiralamak için önce bir maç oluşturmalısın.
+                                                </p>
+                                                {onCreateMatch && (
+                                                    <button
+                                                        onClick={onCreateMatch}
+                                                        className="mt-2 px-6 h-11 rounded-full text-[11px] font-black uppercase tracking-wider text-black active:scale-95 transition-transform"
+                                                        style={{ backgroundColor: theme.accent }}
+                                                    >
+                                                        Maç Oluştur
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            sortedMatches.map(m => {
+                                                const needsThisRole = matchNeedsRole(m);
+                                                return (
+                                                    <motion.button
+                                                        key={m.id}
+                                                        type="button"
+                                                        whileTap={{ scale: 0.985 }}
+                                                        onClick={() => { setHireError(null); setMatchPendingConfirm(m); }}
+                                                        className="w-full text-left p-4 rounded-2xl border transition-colors relative overflow-hidden"
+                                                        style={needsThisRole
+                                                            ? { backgroundColor: theme.soft, borderColor: theme.border }
+                                                            : { backgroundColor: '#11161F', borderColor: 'rgba(255,255,255,0.06)' }}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div className="min-w-0 flex-1">
+                                                                {needsThisRole && (
+                                                                    <span
+                                                                        className="inline-block mb-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest text-black"
+                                                                        style={{ backgroundColor: theme.accent }}
+                                                                    >
+                                                                        {type === 'GK' ? 'Kaleci Aranıyor' : 'Hakem Eksik'}
                                                                     </span>
                                                                 )}
-                                                                <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
-                                                                    {getNormalizedDifficulty(m.difficulty)}
-                                                                </span>
+                                                                <p className="text-[13px] font-extrabold text-white truncate">{m.location}</p>
+                                                                <p className="text-[11px] font-semibold text-white/40 mt-0.5">{m.date} · {m.time}</p>
+                                                                <div className="flex gap-1.5 mt-2">
+                                                                    {m.format && (
+                                                                        <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                                            {m.format}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                                        {getNormalizedDifficulty(m.difficulty)}
+                                                                    </span>
+                                                                </div>
                                                             </div>
+                                                            <ChevronRight size={18} className="shrink-0 text-white/25" />
                                                         </div>
-                                                        <ChevronRight size={18} className="shrink-0 text-white/25" />
-                                                    </div>
-                                                </motion.button>
-                                            );
-                                        })
-                                    )}
+                                                    </motion.button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )
                         ) : (
                             /* ── Profil detayı ── */
                             <>
@@ -796,9 +918,20 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
                                         {detail.avatar && !heroBroken ? (
                                             <img src={detail.avatar} className="w-full h-full object-cover" alt={detail.name} referrerPolicy="no-referrer" onError={() => setHeroBroken(true)} />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#131A24] to-[#0A0E14]">
+                                            <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-[#131A24] to-[#0A0E14] overflow-hidden">
+                                                {/* Rol filigranı + yumuşak parıltı — boş kapak ucuz görünmesin */}
+                                                <RoleIcon
+                                                    size={280}
+                                                    strokeWidth={0.6}
+                                                    className="absolute -right-14 -bottom-10 pointer-events-none"
+                                                    style={{ color: theme.accent, opacity: 0.05 }}
+                                                />
                                                 <div
-                                                    className="w-28 h-28 rounded-3xl flex items-center justify-center border text-3xl font-black"
+                                                    className="absolute -top-16 -left-16 w-56 h-56 rounded-full blur-[80px] pointer-events-none"
+                                                    style={{ backgroundColor: theme.accent, opacity: 0.07 }}
+                                                />
+                                                <div
+                                                    className="w-28 h-28 rounded-3xl flex items-center justify-center border text-3xl font-black relative"
                                                     style={{ backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }}
                                                 >
                                                     {getInitials(detail.name)}
@@ -818,7 +951,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
                                                     : { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: 'rgba(34,197,94,0.35)', color: '#4ADE80' }}
                                             >
                                                 <span className={`w-1.5 h-1.5 rounded-full ${detailUnavailable ? 'bg-white/30' : 'bg-[#4ADE80] animate-pulse'}`} />
-                                                {detailUnavailable ? 'Müsait Değil' : 'Müsait'}
+                                                {detailUnavailable ? 'Müsait Değil' : (detailAvailableToday ? 'Bugün Müsait' : 'Müsait')}
                                             </span>
                                             {detail.isElite && (
                                                 <span
@@ -861,10 +994,12 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
                                     <div className="px-5 mt-6 flex gap-2.5">
                                         <StatTile
                                             label="Puan"
-                                            value={detail.rating > 0 ? detail.rating.toFixed(1) : '—'}
+                                            value={detail.rating > 0
+                                                ? detail.rating.toFixed(1)
+                                                : <span className="text-sm leading-tight">Yeni</span>}
                                             sub={detailReviews.length > 0
                                                 ? `${detailReviews.length} değerlendirme`
-                                                : (detail.rating > 0 ? 'genel ortalama' : 'henüz yok')}
+                                                : (detail.rating > 0 ? 'genel ortalama' : 'ilk maçlarını bekliyor')}
                                         />
                                         <StatTile
                                             label="Maç"
@@ -1021,7 +1156,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect }) => 
                                         <span className="text-[9px] font-bold text-white/30">maç başı</span>
                                     </div>
                                     <button
-                                        onClick={() => { setHireError(null); setShowMatchSelection(true); }}
+                                        onClick={openHireFlow}
                                         disabled={detailUnavailable}
                                         className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:active:scale-100"
                                         style={detailUnavailable
