@@ -152,7 +152,14 @@ export function filterAndSortPitches(input: FilterAndSortInput): Pitch[] {
 
       const matchesSearch = q === '' || trLower(p.name).includes(q) || trLower(p.district).includes(q);
       const matchesDistrict = filters.district === 'Tümü' || p.district === filters.district;
-      const matchesRating = p.rating >= filters.minRating;
+      // V-2: puansız saha (ratingCount=0, Google yorumu da yok) puan filtresine
+      // GİRMEZ — sahte 5.0 default ile "4.5+" filtresine sızmasın. minRating=0/yok
+      // ise herkes geçer (filtre kapalı sayılır).
+      const hasRealRating = p.ratingCount > 0 || p.googleReviews > 0;
+      const matchesRating =
+        !filters.minRating || filters.minRating <= 0
+          ? true
+          : hasRealRating && p.rating >= filters.minRating;
       // maxPrice=null → limit yok. Fiyatı bilinmeyen (0₺) saha limitten elenmez.
       const matchesPrice = filters.maxPrice == null || p.totalPrice <= filters.maxPrice;
 

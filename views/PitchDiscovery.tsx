@@ -76,6 +76,7 @@ interface DbPitchRow {
   district: string | null;
   address: string | null;
   rating: number | null;
+  rating_count: number | null;
   google_rating: number | null;
   google_review_count: number | null;
   price_per_person: number | null;
@@ -142,7 +143,15 @@ const mapDbPitchToUiPitch = (
     district: row.district ?? row.city ?? '',
     location: row.address ?? [row.district, row.city].filter(Boolean).join(', '),
     distance: '',
-    rating: row.rating ?? row.google_rating ?? 0,
+    // V-2: puansız saha sahte "5.0" göstermesin. Platform değerlendirmesi varsa
+    // onu, yoksa Google yorumu varsa onu; ikisi de yoksa 0 (kart "Yeni" gösterir).
+    // (pitches.rating DEFAULT 5.0 olduğundan rating_count kapısı ŞART.)
+    rating: (row.rating_count ?? 0) > 0
+      ? (row.rating ?? 0)
+      : (row.google_review_count ?? 0) > 0
+        ? (row.google_rating ?? 0)
+        : 0,
+    ratingCount: row.rating_count ?? 0,
     googleRating: row.google_rating ?? 0,
     googleReviews: row.google_review_count ?? 0,
     pricePerPerson: row.price_per_person ?? 0,
@@ -156,9 +165,9 @@ const mapDbPitchToUiPitch = (
     grassQuality: 0,
     lockerRoomQuality: 0,
     goalQuality: 0,
-    occupancy: row.rating
-      ? Math.min(95, Math.max(40, Math.round(row.rating * 16 + ((row.google_review_count ?? 0) % 20))))
-      : 75,
+    // V-8: puandan uydurma doluluk türetme kaldırıldı; gerçek doluluk keşif
+    // tarafında hesaplanmıyor → 0 (bilinmiyor). Sahte veri modelde taşınmaz.
+    occupancy: 0,
     // Koordinat yoksa sahte varsayılan basma — undefined bırak (haritada gizlenir).
     coordinates:
       row.latitude != null && row.longitude != null
@@ -698,10 +707,17 @@ const PitchCard: React.FC<{
       <div className="flex items-start justify-between mt-3 gap-3">
         <h3 className="text-lg font-black italic uppercase tracking-tight leading-none text-white">{pitch.name}</h3>
         <div className="flex items-center gap-1 shrink-0">
-          <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
-          <span className="text-sm font-extrabold text-white">{pitch.rating.toFixed(1)}</span>
-          {pitch.googleReviews > 0 && (
-            <span className="text-xs font-medium text-white/45">({pitch.googleReviews})</span>
+          {/* V-2: gerçek değerlendirme (platform veya Google) yoksa "5.0" değil "Yeni". */}
+          {(pitch.ratingCount > 0 || pitch.googleReviews > 0) ? (
+            <>
+              <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
+              <span className="text-sm font-extrabold text-white">{pitch.rating.toFixed(1)}</span>
+              {pitch.googleReviews > 0 && (
+                <span className="text-xs font-medium text-white/45">({pitch.googleReviews})</span>
+              )}
+            </>
+          ) : (
+            <span className="text-[11px] font-black uppercase tracking-wide text-white/40">Yeni</span>
           )}
         </div>
       </div>
@@ -1727,12 +1743,22 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <div className="px-6 -mt-6 relative z-10">
                 <h1 className="text-[26px] font-black italic uppercase tracking-[-0.03em] leading-[0.95] text-white pr-4">{selectedPitch.name}</h1>
                 <div className="flex items-center gap-1.5 mt-2.5 text-[13.5px] text-white/65 font-medium">
-                  <Star size={13} className="fill-white text-white" />
-                  <span className="text-white font-bold">{selectedPitch.rating}</span>
-                  <span className="opacity-50">·</span>
-                  {selectedPitch.googleReviews > 0 && (
+                  {/* V-2: gerçek değerlendirme yoksa sahte puan yerine "Yeni". */}
+                  {(selectedPitch.ratingCount > 0 || selectedPitch.googleReviews > 0) ? (
                     <>
-                      <span className="underline">{selectedPitch.googleReviews} değerlendirme</span>
+                      <Star size={13} className="fill-white text-white" />
+                      <span className="text-white font-bold">{selectedPitch.rating.toFixed(1)}</span>
+                      <span className="opacity-50">·</span>
+                      {selectedPitch.googleReviews > 0 && (
+                        <>
+                          <span className="underline">{selectedPitch.googleReviews} değerlendirme</span>
+                          <span className="opacity-50">·</span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-white/50 font-bold uppercase tracking-wide">Yeni</span>
                       <span className="opacity-50">·</span>
                     </>
                   )}

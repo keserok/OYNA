@@ -14,6 +14,7 @@ interface PreviewData {
   district: string | null;
   city: string | null;
   rating: number | null;
+  rating_count: number | null;
   google_review_count: number | null;
   description: string | null;
   amenities: string[] | null;
@@ -39,7 +40,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
   useEffect(() => {
     supabase
       .from('pitches')
-      .select('name, district, city, rating, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, price, is_active, description, lighting_grade, grass_grade, grades_status)')
+      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, price, is_active, description, lighting_grade, grass_grade, grades_status)')
       .eq('id', pitchId)
       .single()
       .then(({ data: d }) => setData(d as unknown as PreviewData));
@@ -90,8 +91,15 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
             <div className="px-5 -mt-4 relative pb-6">
               <h2 className="text-xl font-black italic uppercase tracking-[-0.03em] text-white leading-none">{data.name}</h2>
               <div className="flex items-center gap-1.5 mt-2 text-xs text-white/60 font-medium">
-                <Star size={11} className="fill-white text-white" />
-                <span className="text-white font-bold">{data.rating ?? '—'}</span>
+                {/* V-2: gerçek değerlendirme yoksa sahte 5.0 değil "Yeni". */}
+                {((data.rating_count ?? 0) > 0 || (data.google_review_count ?? 0) > 0) ? (
+                  <>
+                    <Star size={11} className="fill-white text-white" />
+                    <span className="text-white font-bold">{(data.rating ?? 0).toFixed(1)}</span>
+                  </>
+                ) : (
+                  <span className="text-white/50 font-bold uppercase tracking-wide">Yeni</span>
+                )}
                 <span className="opacity-50">·</span>
                 <span>{data.district ?? data.city ?? ''}</span>
                 {data.total_price ? (<><span className="opacity-50">·</span><span>~₺{data.total_price}/saat</span></>) : null}

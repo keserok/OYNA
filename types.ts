@@ -388,6 +388,7 @@ export interface Pitch {
   location: string; // Full address
   distance: string;
   rating: number;
+  ratingCount: number; // Platform değerlendirme sayısı; 0 ise puan gösterilmez ("Yeni")
   googleRating: number;
   googleReviews: number;
   pricePerPerson: number;
