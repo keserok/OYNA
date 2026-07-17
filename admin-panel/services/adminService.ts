@@ -2298,6 +2298,31 @@ export async function fetchAdminFinanceReport(from: string, to: string): Promise
   return (data || {}) as AdminFinanceReport;
 }
 
+// ─── [S4] Ödeme sağlığı — tespit katmanı (admin_payment_health) ──────────────
+export interface PaymentHealthAlert { level: 'WARN' | 'CRITICAL'; key: string; message: string; }
+export interface PaymentHealth {
+  window_hours: number;
+  succeeded: number;
+  failed: number;
+  success_rate: number | null;
+  pending_now: number;
+  blocked_now: number;
+  stale_pending: number;
+  avg_capture_seconds: number | null;
+  sweeper_enabled: boolean;
+  invariants: { ok: boolean; invariants: Record<string, number>; info: Record<string, number> };
+  status: 'OK' | 'WARN' | 'CRITICAL';
+  alerts: PaymentHealthAlert[];
+  checked_at: string;
+}
+
+/** Son N saatlik ödeme sağlığı: başarı oranı, askıda, tahsilat süresi, değişmezler, süpürücü. */
+export async function fetchPaymentHealth(windowHours = 24): Promise<PaymentHealth> {
+  const { data, error } = await supabase.rpc('admin_payment_health', { p_window_hours: windowHours });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_payment_health RPC deploy edilmedi' : error.message);
+  return (data || {}) as PaymentHealth;
+}
+
 // ─── Wave 12: Toplu bildirim geçmişi + şablon editörü ───────────────────────
 export interface BroadcastCampaignRow {
   id: string; created_by_name: string; segment: string; type_key: string | null;
