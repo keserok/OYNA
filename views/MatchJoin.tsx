@@ -271,6 +271,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  // S2.4 — ayrılınca iade edilecek tutar (SUNUCUDAN; leave_public_match_slot ile birebir)
+  const [leaveRefund, setLeaveRefund] = useState<number | null>(null);
 
   // (Rakip davet/katıl modalları kaldırıldı — lobi sadeleştirmesi)
 
@@ -485,6 +487,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const mySlot = isAlreadyJoined
     ? [...enrichedSlots, ...enrichedAwaySlots].find(s => s?.player?.id === currentUserProfile?.id)
     : null;
+
+  // S2.4 — ayrılma modalı açılınca iade tutarını SUNUCUDAN çek (yedeklikte 0 döner).
+  useEffect(() => {
+    if (!showLeaveConfirm || !match?.id) { setLeaveRefund(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('preview_leave_match', { p_match_id: match.id });
+        if (alive) setLeaveRefund(Number((data as any)?.refundable) || 0);
+      } catch { if (alive) setLeaveRefund(null); }
+    })();
+    return () => { alive = false; };
+  }, [showLeaveConfirm, match?.id]);
 
   const assignedIds = (match.slots || []).filter(s => s?.player).map(s => s.player!.id);
   const filteredFriends = (friends || []).filter(f => {
@@ -1263,11 +1278,20 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
               </h3>
               
-              <p className="text-sm text-gray-400 mb-6">
-                {isAlreadyJoinedReserve 
-                  ? 'Yedek listesinden çıkmak istediğinize emin misiniz?' 
+              <p className="text-sm text-gray-400 mb-4">
+                {isAlreadyJoinedReserve
+                  ? 'Yedek listesinden çıkmak istediğinize emin misiniz?'
                   : 'Maçtan ayrılmak istediğinize emin misiniz? Kadrodaki yeriniz boşaltılacaktır.'}
               </p>
+              {/* S2.4 — iade önizlemesi (SUNUCUDAN; gerçek iadeyle birebir) */}
+              {leaveRefund != null && leaveRefund > 0 && (
+                <div className="mb-6 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl px-4 py-3">
+                  <p className="text-[12.5px] text-gray-200 leading-relaxed">
+                    Ödediğin <span className="text-[#39FF14] font-black">{leaveRefund.toLocaleString('tr-TR')}₺</span> ayrılınca
+                    {' '}<span className="text-white font-semibold">iade kredisi</span> olarak cüzdanına eksiksiz döner.
+                  </p>
+                </div>
+              )}
               
               <div className="flex gap-3">
                 <button 
