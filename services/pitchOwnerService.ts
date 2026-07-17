@@ -137,6 +137,9 @@ export function toTurkishError(error: unknown): string {
   if (raw.includes('INVALID_SCORE')) return 'Girilen skor geçersiz.';
   if (raw.includes('INVALID_SOURCE')) return 'Geçersiz rezervasyon kaynağı.';
   if (raw.includes('UNAUTHORIZED')) return 'Bu işlem için yetkiniz yok.';
+  if (raw.includes('FORBIDDEN')) return 'Yalnız kendi sahanızın raporunu görebilirsiniz.';
+  if (raw.includes('RANGE_TOO_LARGE')) return 'En fazla 366 günlük aralık seçebilirsiniz.';
+  if (raw.includes('INVALID_RANGE')) return 'Bitiş tarihi başlangıçtan önce olamaz.';
   if (raw.includes('exclusion') || raw.includes('overlap'))
     return 'Bu saat dilimi başka bir rezervasyonla çakışıyor.';
   if (raw.includes('duplicate key') || raw.includes('unique'))
@@ -1351,6 +1354,54 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
   } catch (error) {
     console.error('getFinanceDashboard:', error);
     return empty;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// [S4] Tarih aralıklı + gün kırılımlı finans raporu (owner_finance_report RPC)
+// Kullanıcı: "tüm ödemelerin seçilen tarih aralıklarında ve günlerde dahi
+// analiz edilebilmesi. Tam profesyonellik." → tesis sahibi kendi sahasının
+// gerçek uygulama tahsilatını gün-gün görebilir + CSV indirebilir.
+// ----------------------------------------------------------------------------
+export interface FinanceReportDay {
+  day: string;          // YYYY-MM-DD
+  gross: number;        // brüt tahsilat
+  commission: number;   // OYNA komisyonu
+  owner_net: number;    // sahaya kalan net
+  refunded: number;     // iade edilen
+  count: number;        // ödeme adedi
+}
+
+export interface OwnerFinanceReport {
+  pitch_id: string;
+  from: string;
+  to: string;
+  totals: {
+    gross_captured: number;
+    commission: number;
+    owner_net: number;
+    refunded: number;
+    count: number;
+  };
+  days: FinanceReportDay[];
+}
+
+export async function ownerFinanceReport(
+  pitchId: string,
+  from: string,
+  to: string,
+): Promise<OwnerFinanceReport> {
+  try {
+    const { data, error } = await supabase.rpc('owner_finance_report', {
+      p_pitch_id: pitchId,
+      p_from: from,
+      p_to: to,
+    });
+    if (error) throw error;
+    return data as OwnerFinanceReport;
+  } catch (error) {
+    console.error('ownerFinanceReport:', error);
+    throw new Error(toTurkishError(error));
   }
 }
 
