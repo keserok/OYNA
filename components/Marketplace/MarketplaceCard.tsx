@@ -1,175 +1,168 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Scale, Star, Navigation, Sparkles } from 'lucide-react';
+import { Star, MapPin, ChevronRight, BadgeCheck, Shield, Scale } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
+import { getInitials } from '../ui/Avatar';
+
+// Rol bazlı tema — Dashboard giriş kartlarıyla tutarlı: Kaleci = neon yeşil,
+// Hakem = mavi. (Eski "brand-primary" sınıfları Tailwind temasında tanımsızdı
+// ve hakem vurguları hiç render olmuyordu.)
+export const ROLE_THEME = {
+  GK: {
+    accent: '#39FF14',
+    soft: 'rgba(57,255,20,0.10)',
+    border: 'rgba(57,255,20,0.35)',
+    label: 'Kaleci',
+    icon: Shield,
+  },
+  REF: {
+    accent: '#60A5FA',
+    soft: 'rgba(96,165,250,0.10)',
+    border: 'rgba(96,165,250,0.35)',
+    label: 'Hakem',
+    icon: Scale,
+  },
+} as const;
 
 interface MarketplaceCardProps {
   item: Goalkeeper | Referee;
   type: 'GK' | 'REF';
   onClick: () => void;
+  /** Kullanıcı konumuna göre hesaplanan gerçek mesafe; yoksa gösterilmez (sahte "2.4 KM" fallback kaldırıldı — Plan 8A.6). */
+  distanceKm?: number | null;
 }
 
-export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, onClick }) => {
-  const [isFavorite, setIsFavorite] = React.useState(false);
+const InfoPill: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07] text-[10px] font-bold text-white/70 leading-none whitespace-nowrap ${className}`}>
+    {children}
+  </span>
+);
+
+export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, onClick, distanceKm }) => {
+  const theme = ROLE_THEME[type];
   const isGK = type === 'GK';
-  const roleLabel = isGK ? 'Kaleci' : 'Hakem';
+  // Görsel yüklenemezse baş harflere düş (kırık kare görünmesin)
+  const [imgBroken, setImgBroken] = React.useState(false);
+  React.useEffect(() => { setImgBroken(false); }, [item.avatar]);
 
-  const reflexes = isGK ? ((item.stats as any).reflexes || 80) : 80;
-  const diving = isGK ? ((item.stats as any).diving || 80) : 80;
-  const positioning = isGK ? ((item.stats as any).positioning || 80) : 80;
-
-  const authority = !isGK ? ((item.stats as any).authority || 80) : 80;
-  const fitness = !isGK ? ((item.stats as any).fitness || 80) : 80;
-  const communication = !isGK ? ((item.stats as any).communication || 80) : 80;
+  const unavailable = item.isAvailable === false;
+  const reviewCount = item.reviews?.length ?? 0;
+  const matchCount = (item as Referee).matchCount ?? (item as Goalkeeper).matchCount ?? 0;
+  const styleLabel = typeof item.style === 'string' && item.style.trim() ? item.style : null;
+  const subMeta = isGK
+    ? ((item as Goalkeeper).age ? `${(item as Goalkeeper).age} yaş` : null)
+    : ((item as Referee).level || null);
+  const zone = item.preferredZones?.[0]?.split('/').pop()?.trim() || null;
+  const hasRating = (item.rating ?? 0) > 0;
 
   return (
-    <motion.div 
+    <motion.button
       layout
-      initial={{ opacity: 0, y: 15 }}
+      type="button"
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.015 }}
       whileTap={{ scale: 0.985 }}
-      className="relative overflow-hidden rounded-[24px] border border-white/5 bg-[#161B22]/60 backdrop-blur-md p-4 flex gap-4 items-center group transition-all duration-300 hover:border-white/10 hover:bg-[#161B22]/80 cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.3)] mb-3"
       onClick={onClick}
+      className={`relative w-full text-left overflow-hidden rounded-3xl border bg-[#11161F] p-4 flex gap-3.5 items-center transition-colors duration-200 border-white/[0.06] hover:border-white/[0.14] hover:bg-[#151B26] cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.25)] ${unavailable ? 'opacity-70' : ''}`}
     >
-      {/* Ambient Glow */}
-      <div 
-        className="absolute -top-12 -left-12 w-28 h-28 blur-[40px] opacity-10 pointer-events-none transition-opacity duration-300 group-hover:opacity-20"
-        style={{ backgroundColor: isGK ? '#39FF14' : '#FACC15' }}
+      {/* Rol vurgulu ambient parıltı */}
+      <div
+        className="absolute -top-14 -left-14 w-32 h-32 rounded-full blur-[46px] opacity-[0.14] pointer-events-none"
+        style={{ backgroundColor: theme.accent }}
       />
 
-
-
-      {/* Left Column: Avatar & Glow Circle & Rating Badge */}
-      <div className="relative w-16 h-16 shrink-0">
-        <div 
-          className="absolute -inset-0.5 rounded-full border border-white/10"
-        />
-        <div 
-          className="absolute inset-0 rounded-full p-[3px]"
+      {/* Avatar — foto yoksa baş harf, elite'e degrade çerçeve */}
+      <div className="relative shrink-0">
+        <div
+          className="w-14 h-14 rounded-2xl p-[2px]"
           style={{
-            background: isGK 
-              ? 'linear-gradient(135deg, rgba(57,255,20,0.6) 0%, rgba(16,185,129,0.1) 100%)' 
-              : 'linear-gradient(135deg, rgba(250,204,21,0.6) 0%, rgba(245,158,11,0.1) 100%)'
+            background: item.isElite
+              ? `linear-gradient(140deg, ${theme.accent} 0%, rgba(255,255,255,0.14) 55%, transparent 100%)`
+              : 'rgba(255,255,255,0.08)',
           }}
         >
-          <img 
-            src={item.avatar} 
-            alt={item.name} 
-            className="w-full h-full object-cover rounded-full"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-        <div 
-          className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black text-black leading-none uppercase shadow-md flex items-center justify-center"
-          style={{ backgroundColor: isGK ? '#39FF14' : '#FACC15' }}
-        >
-          {item.rating.toFixed(1)}
-        </div>
-      </div>
-
-      {/* Middle Column: Name, Description & Micro Stats */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <h3 className="text-sm font-black text-white uppercase italic tracking-tight truncate leading-tight">
-            {item.name}
-          </h3>
-          {item.isElite && (
-            <Sparkles size={11} className={isGK ? 'text-emerald-400' : 'text-brand-primary'} />
+          {item.avatar && !imgBroken ? (
+            <img
+              src={item.avatar}
+              alt={item.name}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setImgBroken(true)}
+              className="w-full h-full object-cover rounded-[14px] bg-white/5"
+            />
+          ) : (
+            <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-white/10 to-white/[0.03] flex items-center justify-center">
+              <span className="text-sm font-black text-white/80">{getInitials(item.name)}</span>
+            </div>
           )}
         </div>
-        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-2">
-          {roleLabel} • {item.distance || '2.4'} KM YAKINDA
+        {/* Müsaitlik noktası */}
+        <span
+          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#11161F]"
+          style={{ backgroundColor: unavailable ? '#6B7280' : '#22C55E' }}
+          aria-label={unavailable ? 'Müsait değil' : 'Müsait'}
+        />
+      </div>
+
+      {/* Kimlik + gerçek veri rozetleri */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-[15px] font-extrabold text-white tracking-tight truncate">{item.name}</h3>
+          {item.isElite && <BadgeCheck size={15} className="shrink-0" style={{ color: theme.accent }} />}
+        </div>
+        <p className="text-[11px] font-semibold text-white/40 truncate mt-0.5">
+          <span style={{ color: theme.accent }}>{theme.label}</span>
+          {styleLabel && <> · {styleLabel}</>}
+          {subMeta && <> · {subMeta}</>}
         </p>
 
-        {/* Micro Performance Bars */}
-        <div className="grid grid-cols-3 gap-2 mt-1">
-          {isGK ? (
-            <>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">REFLEKS</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${reflexes}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">UÇUŞ</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${diving}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">POZİSYON</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-400 rounded-full" style={{ width: `${positioning}%` }} />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">OTORİTE</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${authority}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">KONDİSYON</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${fitness}%` }} />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-bold text-gray-500 block uppercase tracking-tighter truncate">İLETİŞİM</span>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-orange-400 rounded-full" style={{ width: `${communication}%` }} />
-                </div>
-              </div>
-            </>
+        <div className="flex flex-wrap gap-1.5 mt-2.5">
+          <InfoPill>
+            <Star size={10} className={hasRating ? 'fill-amber-400 text-amber-400' : 'text-white/30'} />
+            {hasRating ? (
+              <>
+                <span className="text-white font-numeric">{item.rating.toFixed(1)}</span>
+                {reviewCount > 0 && <span className="text-white/40">({reviewCount})</span>}
+              </>
+            ) : (
+              <span className="text-white/55">Yeni</span>
+            )}
+          </InfoPill>
+          {matchCount > 0 && (
+            <InfoPill>
+              <span className="font-numeric text-white">{matchCount}</span> maç
+            </InfoPill>
           )}
+          {distanceKm != null && (
+            <InfoPill>
+              <MapPin size={10} className="text-white/40" />
+              <span className="font-numeric text-white">{distanceKm.toFixed(1)}</span> km
+            </InfoPill>
+          )}
+          {zone && <InfoPill className="max-w-[110px]"><span className="truncate capitalize">{zone}</span></InfoPill>}
         </div>
       </div>
 
-      {/* Right Column: Fee & Call-to-action */}
-      <div className="flex flex-col justify-between items-end shrink-0 self-stretch border-l border-white/5 pl-3 py-1.5 min-h-[90px]">
-        {/* Favorite Button */}
-        <button 
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-          className="p-1 rounded-full hover:scale-110 active:scale-95 transition-all text-white/40 hover:text-rose-500 z-10"
-        >
-          <svg 
-            width="16" height="16" viewBox="0 0 24 24" 
-            fill={isFavorite ? '#FF385C' : 'none'} 
-            stroke={isFavorite ? '#FF385C' : 'currentColor'} 
-            strokeWidth="2" 
-            strokeLinecap="round" strokeLinejoin="round" 
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-        </button>
-
+      {/* Ücret + profil oku */}
+      <div className="shrink-0 self-stretch flex flex-col items-end justify-between pl-3 border-l border-white/[0.06] py-0.5">
         <div className="text-right">
-          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block leading-none">ÜCRET</span>
-          <span className="text-[11px] font-black italic tracking-tight text-white block mt-1">
-            {item.fee} ₺
+          <span className="block text-lg font-black text-white font-numeric leading-none tabular-nums">
+            {item.fee}<span className="text-[13px] font-bold text-white/60">₺</span>
           </span>
+          <span className="block text-[9px] font-bold text-white/35 uppercase tracking-wider mt-1">maç başı</span>
         </div>
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg border transition-all"
-          style={{
-            backgroundColor: isGK ? 'rgba(57,255,20,0.1)' : 'rgba(250,204,21,0.1)',
-            borderColor: isGK ? 'rgba(57,255,20,0.25)' : 'rgba(250,204,21,0.25)',
-            color: isGK ? '#39FF14' : '#FACC15',
-            boxShadow: isGK ? '0 0 10px rgba(57,255,20,0.05)' : '0 0 10px rgba(250,204,21,0.05)'
-          }}
-        >
-          KİRALA
-        </motion.button>
+        {unavailable ? (
+          <span className="text-[9px] font-black uppercase tracking-wider text-white/35">Müsait Değil</span>
+        ) : (
+          <span
+            className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider"
+            style={{ color: theme.accent }}
+          >
+            Profil <ChevronRight size={12} />
+          </span>
+        )}
       </div>
-    </motion.div>
+    </motion.button>
   );
 };
