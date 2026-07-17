@@ -4,7 +4,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { 
   ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
-  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette
+  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette, CalendarRange
 } from 'lucide-react';
 
 import { useAppStore } from '../store';
@@ -20,6 +20,7 @@ import { OwnerFlashDealModal } from './owner/OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from './owner/OwnerCloseSlotModal';
 import { OwnerBookingDetailModal } from './owner/OwnerBookingDetailModal';
 import { OwnerFacilityScheduleView } from './owner/OwnerFacilityScheduleView';
+import { OwnerFacilityWeekView } from './owner/OwnerFacilityWeekView';
 import { OwnerSpecialPriceModal } from './owner/OwnerSpecialPriceModal';
 import { useOwnerEntitlements } from '../hooks/useOwnerEntitlements';
 import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerToast';
@@ -335,8 +336,10 @@ const FinancialCalendarView: React.FC<{
     const [closeSlotModalOpen, setCloseSlotModalOpen] = useState<string | null>(null);
     const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState<string | null>(null);
     const [isMonthlyView, setIsMonthlyView] = useState(false);
-    // OW-E (P4): TESİS görünümü (satır=saat, sütun=kort). GÜN'e paralel mod.
+    // OW-E (P4): TESİS (satır=saat, sütun=kort) ve HAFTA (satır=kort, sütun=7 gün)
+    // görünümleri — GÜN'e paralel modlar. Aynı anda yalnız biri açık.
     const [facilityView, setFacilityView] = useState(false);
+    const [weekView, setWeekView] = useState(false);
     const [facilityRefreshKey, setFacilityRefreshKey] = useState(0);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
     const [isAddingSlot, setIsAddingSlot] = useState(false);
@@ -564,7 +567,7 @@ const FinancialCalendarView: React.FC<{
                         {/* OW-E (P4): TESİS görünümü — çok kortlu tesiste tek bakışta. */}
                         {activeCourts.length > 1 && (
                             <button
-                                onClick={() => { setFacilityView((v) => !v); setIsMonthlyView(false); }}
+                                onClick={() => { setFacilityView((v) => !v); setWeekView(false); setIsMonthlyView(false); }}
                                 className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${facilityView ? 'bg-blue-500 text-white border-blue-500' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 title="Tesis görünümü (tüm kortlar)"
                             >
@@ -572,8 +575,19 @@ const FinancialCalendarView: React.FC<{
                                 {facilityView && <span className="text-[10px] font-black uppercase">Tesis</span>}
                             </button>
                         )}
+                        {/* OW-E (P4): HAFTA görünümü — kort×7 gün doluluk ısı-haritası. */}
+                        {activeCourts.length > 0 && (
+                            <button
+                                onClick={() => { setWeekView((v) => !v); setFacilityView(false); setIsMonthlyView(false); }}
+                                className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${weekView ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                title="Hafta görünümü (doluluk ısı-haritası)"
+                            >
+                                <CalendarRange size={20} />
+                                {weekView && <span className="text-[10px] font-black uppercase">Hafta</span>}
+                            </button>
+                        )}
                         <button
-                            onClick={() => { setIsMonthlyView(!isMonthlyView); setFacilityView(false); }}
+                            onClick={() => { setIsMonthlyView(!isMonthlyView); setFacilityView(false); setWeekView(false); }}
                             className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <CalendarDays size={20} />
@@ -599,6 +613,20 @@ const FinancialCalendarView: React.FC<{
                             onBookingTap={(bookingId) => {
                                 const b = bookings.find((x) => x.id === bookingId);
                                 if (b) setSelectedBooking(b);
+                            }}
+                        />
+                    </div>
+                ) : weekView ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <OwnerFacilityWeekView
+                            pitchId={pitchId}
+                            isRealPitch={isRealPitch}
+                            selectedDateISO={selectedDateISO}
+                            refreshKey={facilityRefreshKey}
+                            onSelectDay={(dateISO) => {
+                                const idx = weekDates.findIndex((d) => formatDateISO(d) === dateISO);
+                                if (idx >= 0) setSelectedDate(idx);
+                                setWeekView(false);
                             }}
                         />
                     </div>
