@@ -493,7 +493,19 @@ const App: React.FC = () => {
         />;
       case 'PENDING_VERIFICATION':
         return <PendingVerificationView
-          onApproved={() => resetNavigation(navigateBasedOnRole(role))}
+          onApproved={async () => {
+            // Aktif rol başvuru boyunca PLAYER kalıyor; onay sonrası başvurulan
+            // sağlayıcı rolüne (serviceAppRole) geçip ServiceDashboard'a yönlendir.
+            // Aksi hâlde re-login'e kadar oyuncu Dashboard'una düşülüyordu.
+            const applied = useAppStore.getState().serviceAppRole;
+            if (applied) {
+              useAppStore.getState().setRole(applied);
+              try { await setActiveRole(applied); } catch { /* yine de yönlendir */ }
+              resetNavigation(navigateBasedOnRole(applied));
+            } else {
+              resetNavigation(navigateBasedOnRole(role));
+            }
+          }}
           onLogout={() => resetNavigation('AUTH')}
           onReapply={(note) => { setVerificationNote(note); navigateTo('SERVICE_APPLICATION'); }}
         />;

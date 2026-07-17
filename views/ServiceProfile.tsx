@@ -15,6 +15,7 @@ interface ServiceProfileProps {
 
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { useImageUpload } from '../hooks/useImageUpload';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -118,6 +119,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   }, [userProfile]);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Avatar'ı storage'a yükle (compress + public URL) — base64'ü DB kolonuna
+  // yazmak yerine (satır/pazaryeri yükünü şişiriyordu).
+  const { uploadImage, uploading: photoUploading } = useImageUpload('avatars', { minWidth: 200 });
 
 
 
@@ -161,23 +165,21 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Boyut koruması: avatar base64 olarak DB'ye yazıldığından (storage bucket
-    // henüz yok) büyük dosya satırı ve pazaryeri liste yükünü şişirir. 2 MB üstünü reddet.
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError('Fotoğraf çok büyük (en fazla 2 MB). Lütfen daha küçük bir görsel seç.');
-      e.target.value = '';
-      return;
-    }
     setSaveError(null);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCustomPhoto(ev.target?.result as string);
+    try {
+      // compressImageForUpload tip/boyut doğrular + 1920px JPEG'e küçültür,
+      // ardından storage 'images/avatars'a yükler ve public URL döner.
+      const url = await uploadImage(file);
+      setCustomPhoto(url);
       setShowPhotoPicker(false);
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Fotoğraf yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const stats = isRef
@@ -582,11 +584,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all"
+                disabled={photoUploading}
+                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all disabled:opacity-60"
                 style={{ borderColor: accentColor + '60', background: accentBg, color: accentColor }}
               >
                 <Upload size={20} />
-                CİHAZDAN FOTOĞRAF YÜKLE
+                {photoUploading ? 'YÜKLENİYOR…' : 'CİHAZDAN FOTOĞRAF YÜKLE'}
               </motion.button>
 
               {/* Preset grid */}
