@@ -143,19 +143,16 @@ const MatchCountdownItem: React.FC<{
     onReject: () => void;
 }> = ({ request, onApprove, onReject }) => {
     const [timeLeft, setTimeLeft] = useState(request.timerSeconds || (request.timerMinutes ? request.timerMinutes * 60 : 0));
-    const onApproveRef = useRef(onApprove);
-    onApproveRef.current = onApprove;
 
+    // OP-P1-9: istemci sayacı SADECE GÖRSEL geri sayımdır — sıfıra inince
+    // otomatik onaylamaz. Otomatik onay kararı sunucu cron'una aittir
+    // (auto_approve_pending_bookings), ki o auto_approve_enabled toggle'ına ve
+    // dakikaya saygılıdır. Eski istemci-onayı toggle'ı yok sayıyor ve yalnız
+    // ekran açıkken çalışıyordu (çelişkili/eksik onay). Erken onay hâlâ elle.
     useEffect(() => {
         if (request.status !== 'PENDING') return;
         const timerId = setInterval(() => {
-            setTimeLeft((prev: number) => {
-                if (prev <= 1) {
-                    onApproveRef.current();
-                    return 0;
-                }
-                return prev - 1;
-            });
+            setTimeLeft((prev: number) => (prev <= 1 ? 0 : prev - 1));
         }, 1000);
         return () => clearInterval(timerId);
     }, [request.id, request.status]);
@@ -1554,6 +1551,15 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   const [ownedFacilities, setOwnedFacilities] = useState<OwnerPitch[]>([]);
   const [showFacilityPicker, setShowFacilityPicker] = useState(false);
 
+  // OP-P1-6: doluluk paydası sabit 16 değil, owner'ın BUGÜNE ayarladığı gerçek
+  // çalışma penceresi. Ref ile tutulur ki refreshDashboard useCallback'i dep
+  // churn'ü olmadan güncel değeri okusun. Kapalı gün → 0 (doluluk 0).
+  const todayOpenHoursRef = useRef<number>(16);
+  useEffect(() => {
+    const wh = resolveWorkingHoursForDate(facilityData?.workingHours as any, todayISO());
+    todayOpenHoursRef.current = wh.closed ? 0 : openHourCount(wh.open, wh.close);
+  }, [facilityData]);
+
   const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
     try {
       const [summary, bookings, pending] = await Promise.all([
@@ -1565,7 +1571,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       setTodayBookings(bookings);
       const activeCourtRows = (courtList ?? courts).filter((c) => c.is_active !== false);
       const courtMeta = activeCourtRows.map((c) => ({ id: c.id, name: c.name }));
-      setCourtStats(computeCourtDailyStats(bookings, courtMeta));
+      setCourtStats(computeCourtDailyStats(bookings, courtMeta, todayOpenHoursRef.current));
       setHourlyOccupancy(buildHourlyOccupancyGrid(bookings, courtMeta));
       setPendingRequests(pending.map((b) => bookingToPendingRequest(b, approveMins)));
     } catch (err) {
@@ -1729,8 +1735,8 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
   const dynamicTotalRevenue = dailySummary?.collected_today ?? todayBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
   const dynamicOccupancyRatio = dailySummary && dailySummary.total_courts > 0
-    ? computeOverallOccupancy(todayBookings, dailySummary.active_courts || dailySummary.total_courts)
-    : computeOverallOccupancy(todayBookings, courts.length);
+    ? computeOverallOccupancy(todayBookings, dailySummary.active_courts || dailySummary.total_courts, todayOpenHoursRef.current)
+    : computeOverallOccupancy(todayBookings, courts.length, todayOpenHoursRef.current);
 
   const pendingCount = pendingRequests.filter((r) => r.status === 'PENDING').length;
   const confirmedToday = todayBookings.filter((b) => b.status === 'CONFIRMED').length;

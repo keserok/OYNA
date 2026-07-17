@@ -166,9 +166,12 @@ function todayISO(): string {
 }
 
 function addDaysISO(base: string, days: number): string {
+  // N-1: toISOString() UTC'ye çevirip TR'de (UTC+3) bir gün geri kaydırıyordu
+  // (yerel gece yarısı → önceki gün 21:00Z). getWeeklyRevenue kovaları bir gün
+  // geri kayıyor, bugünün cirosu hiçbir kovaya düşmüyordu. Yerel bileşenle biçimle.
   const d = new Date(base + 'T00:00:00');
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateISO(d);
 }
 
 // ----------------------------------------------------------------------------
@@ -1101,7 +1104,7 @@ export function computeOverallOccupancy(
   courtCount: number,
   operatingHours = DEFAULT_OPERATING_HOURS,
 ): number {
-  if (courtCount <= 0) return 0;
+  if (courtCount <= 0 || operatingHours <= 0) return 0; // kapalı gün / geçersiz pencere
   const totalSlots = courtCount * operatingHours;
   // B4: rezervasyon SAYISI yerine kapladığı SAAT toplamı (gerçek doluluk).
   const booked = bookings
@@ -1235,15 +1238,6 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashboardData> {
-  const empty: FinanceDashboardData = {
-    monthCollected: 0,
-    monthRevenue: 0,
-    weeklyRevenue: [],
-    paymentMethods: [],
-    recentTransactions: [],
-    subscriptionRatio: { subscription: 0, regular: 0 },
-    hourlyIntensity: [],
-  };
   try {
   const month = todayISO().slice(0, 7);
   const monthStart = `${month}-01`;
@@ -1349,8 +1343,11 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
     hourlyIntensity,
   };
   } catch (error) {
+    // OP-P2-16: hatayı YUTMA. Eskiden boş dashboard dönüyordu → owner "veri yok"
+    // sanıp gerçek bir arızayı fark etmiyordu. Artık fırlat; OwnerFinanceView
+    // bunu yakalayıp görünür hata (toast) gösterir.
     console.error('getFinanceDashboard:', error);
-    return empty;
+    throw new Error(toTurkishError(error));
   }
 }
 
