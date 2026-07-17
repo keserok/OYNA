@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   growthPercent, shiftMonth, monthLabel, isMonthAfter,
-  buildMonthSeries, sharePercent, methodLabel, sourceLabel, parseTRYAmount,
+  buildMonthSeries, sharePercent, methodLabel, sourceLabel, parseTRYAmount, buildFinanceCsv,
 } from '../../shared/financeModel';
 
 describe('growthPercent', () => {
@@ -127,5 +127,29 @@ describe('etiketler', () => {
   it('kaynak', () => {
     expect(sourceLabel('SUBSCRIPTION')).toBe('Abonman');
     expect(sourceLabel('APP_BOOKING')).toBe('Uygulama');
+  });
+});
+
+describe('buildFinanceCsv', () => {
+  it('BOM + başlık + ; ayraç + TR ondalık', () => {
+    const csv = buildFinanceCsv('2026-07', [
+      { type: 'ÖDEME', date: '2026-07-10', description: 'Ali', detail: 'Nakit', amount: 1500.5 },
+      { type: 'GİDER', date: '2026-07-05', description: 'Elektrik', detail: 'Fatura', amount: -300 },
+    ]);
+    expect(csv.startsWith('﻿')).toBe(true);
+    const lines = csv.trim().split('\r\n');
+    expect(lines[0]).toBe('Tür;Tarih;Açıklama;Kategori/Yöntem;Tutar (₺)');
+    expect(lines[1]).toBe('ÖDEME;2026-07-10;Ali;Nakit;1500,5');
+    expect(lines[2]).toBe('GİDER;2026-07-05;Elektrik;Fatura;-300');
+  });
+  it('; ve " içeren alanları kaçışlar', () => {
+    const csv = buildFinanceCsv('2026-07', [
+      { type: 'ÖDEME', date: '2026-07-10', description: 'A; "B"', detail: '', amount: 10 },
+    ]);
+    expect(csv).toContain('"A; ""B"""');
+  });
+  it('boş satırda sadece başlık', () => {
+    const csv = buildFinanceCsv('2026-07', []);
+    expect(csv.trim().split('\r\n')).toHaveLength(1);
   });
 });

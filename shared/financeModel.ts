@@ -122,3 +122,40 @@ const SOURCE_LABELS: Record<string, string> = {
 export function sourceLabel(source: string): string {
   return SOURCE_LABELS[source] ?? source;
 }
+
+// ─── FI-4 — CSV dışa aktarım (Excel-TR uyumlu) ───────────────────────────────
+
+export interface CsvRow {
+  type: string;        // ÖDEME | GİDER | VERESİYE | BEKLEYEN
+  date: string;
+  description: string;
+  detail: string;      // yöntem/kategori
+  amount: number;      // gelir + , gider/borç − işaretiyle çağıran verir
+}
+
+/** Excel-TR hücre kaçışı: ; ayraç, " içinde " → "". */
+function csvCell(v: string | number): string {
+  const s = String(v ?? '');
+  return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** Tutarı TR-ondalık (virgül), binliksiz: 1500.5 → "1500,5". */
+function csvAmount(n: number): string {
+  return (Number.isFinite(n) ? n : 0).toString().replace('.', ',');
+}
+
+/**
+ * Finans hareketlerini UTF-8 BOM'lu, ';' ayraçlı CSV'ye çevirir (Excel-TR).
+ * Satır tipleri çağıran tarafından hazır verilir; bu fonksiyon yalnız biçimler.
+ */
+export function buildFinanceCsv(month: string, rows: CsvRow[]): string {
+  const header = ['Tür', 'Tarih', 'Açıklama', 'Kategori/Yöntem', 'Tutar (₺)'];
+  const lines = [header.map(csvCell).join(';')];
+  for (const r of rows) {
+    lines.push([
+      csvCell(r.type), csvCell(r.date), csvCell(r.description), csvCell(r.detail), csvAmount(r.amount),
+    ].join(';'));
+  }
+  // BOM → Excel UTF-8 Türkçe karakterleri doğru okur.
+  return '﻿' + lines.join('\r\n') + '\r\n';
+}

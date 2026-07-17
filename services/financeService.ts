@@ -117,6 +117,37 @@ function mapDebtorError(msg: string): string {
   return 'İşlem tamamlanamadı. Lütfen tekrar dene.';
 }
 
+// ─── FI-4 — CSV için tam ay ödemeleri (recent_payments 20-limitinden bağımsız) ─
+export interface MonthPayment {
+  date: string; customer: string; method: string; amount: number;
+}
+export async function getMonthPayments(pitchId: string, month: string): Promise<MonthPayment[]> {
+  const start = `${month}-01`;
+  const [y, m] = month.split('-').map(Number);
+  const endBase = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const { data: bookings } = await supabase
+    .from('pitch_bookings')
+    .select('id, customer_name, booking_date')
+    .eq('pitch_id', pitchId)
+    .gte('booking_date', start)
+    .lt('booking_date', endBase)
+    .neq('status', 'CANCELLED');
+  const rows = (bookings ?? []) as { id: string; customer_name: string | null; booking_date: string }[];
+  if (rows.length === 0) return [];
+  const map = new Map(rows.map((b) => [b.id, b]));
+  const { data: pays } = await supabase
+    .from('booking_payments')
+    .select('amount, payment_method, booking_id')
+    .in('booking_id', rows.map((b) => b.id));
+  return ((pays ?? []) as any[]).map((p) => {
+    const b = map.get(p.booking_id);
+    return {
+      date: b?.booking_date ?? '', customer: b?.customer_name ?? 'Müşteri',
+      method: p.payment_method ?? 'CASH', amount: num(p.amount),
+    };
+  });
+}
+
 // ─── FI-3 — Gider düzenle/sil + sabit gider şablonları ───────────────────────
 
 export interface ExpenseTemplate {

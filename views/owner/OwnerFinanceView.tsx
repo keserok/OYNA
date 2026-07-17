@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Coins, ChevronLeft, ChevronRight, ArrowUpRight, Loader2, AlertTriangle } from 'lucide-react';
+import { Coins, ChevronLeft, ChevronRight, ArrowUpRight, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { LoadingState } from '../../components/common/StatusState';
 import {
   addExpense, getDebtors, getOwnerExpenses, toTurkishError,
 } from '../../services/pitchOwnerService';
-import { getPitchFinanceSummary, createDebtor, type FinanceSummary } from '../../services/financeService';
+import { getPitchFinanceSummary, createDebtor, getMonthPayments, type FinanceSummary } from '../../services/financeService';
 import { getOwnerEarningsSummary, type EarningsSummary } from '../../services/walletService';
 import type { PitchDebtor, PitchExpense } from '../../types';
 import { useOwnerToast } from './components/useOwnerToast';
 import { OwnerDemoDataBar } from './components/OwnerDemoDataBar';
 import { OwnerWithdrawalsModal } from './menu/OwnerWithdrawalsModal';
 import { localDateISO } from './ownerCalendarHelpers';
-import { growthPercent, monthLabel, shiftMonth, isMonthAfter } from '../../shared/financeModel';
+import { growthPercent, monthLabel, shiftMonth, isMonthAfter, methodLabel, buildFinanceCsv, type CsvRow } from '../../shared/financeModel';
 import { money, StatTile, GrowthBadge } from './finance/financeUi';
 import { FinanceSummaryTab } from './finance/FinanceSummaryTab';
 import { FinanceCollectTab } from './finance/FinanceCollectTab';
@@ -90,6 +90,30 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
     catch (err) { notify(toTurkishError(err), 'error'); throw err; }
   }, [pitchId, readOnly, load, notify]);
 
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = useCallback(async () => {
+    if (!summary) return;
+    setExporting(true);
+    try {
+      const payments = await getMonthPayments(pitchId, month);
+      const rows: CsvRow[] = [];
+      payments.forEach((p) => rows.push({ type: 'ÖDEME', date: p.date, description: p.customer, detail: methodLabel(p.method), amount: p.amount }));
+      expenses.forEach((e) => rows.push({ type: 'GİDER', date: e.expense_date, description: e.title, detail: e.category, amount: -(e.amount ?? 0) }));
+      summary.income.pending_bookings.forEach((b) => rows.push({ type: 'BEKLEYEN', date: b.date, description: b.customer_name ?? 'Müşteri', detail: b.court ?? '', amount: b.balance }));
+      debtors.forEach((d) => rows.push({ type: 'VERESİYE', date: '', description: d.name, detail: d.phone ?? '', amount: d.amount_owed }));
+      rows.sort((a, b) => a.date.localeCompare(b.date));
+      const csv = buildFinanceCsv(month, rows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `finans_${month}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      notify(toTurkishError(err), 'error');
+    } finally { setExporting(false); }
+  }, [summary, pitchId, month, expenses, debtors, notify]);
+
   const net = (summary?.income.collected_total ?? 0) - (summary?.expenses.total ?? 0);
   const prevNet = (summary?.prev.collected_total ?? 0) - (summary?.prev.expense_total ?? 0);
   const growth = growthPercent(net, prevNet);
@@ -159,6 +183,18 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             aria-label="Sonraki ay"
           >
             <ChevronRight size={18} />
+          </button>
+        </div>
+
+        {/* CSV dışa aktar (muhasebe) */}
+        <div className="flex justify-end mb-4 -mt-2">
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 text-[10px] font-black text-gray-400 hover:text-white bg-[#161B22] border border-white/5 px-3 py-1.5 rounded-lg disabled:opacity-40"
+          >
+            {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} CSV indir
           </button>
         </div>
 
