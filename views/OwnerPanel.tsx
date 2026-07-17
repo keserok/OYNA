@@ -1683,26 +1683,30 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     // Rezervasyon özetleri (HOME) — kortlar zaten set edildi, bloklamadan yükle.
     void refreshDashboard(pitch.id, pitch.auto_approve_minutes ?? 35, facilityCourts);
 
-    // ── YAVAŞ YOL: ödeme/banka/hesap ayarları — arkada yükle, facilityData'yı yamala.
-    // Bu yükleme başarısız olsa da kortlar/takvim/HOME çalışmaya devam eder.
-    try {
-      const [paymentSettings, bankAccounts, account] = await Promise.all([
-        getPaymentSettings(pitch.id),
-        getBankAccounts(pitch.id),
-        getOrCreateOwnerAccount(uid),
-      ]);
-      setOwnerAccount(account);
-      setFacilityData((prev: any) => (prev && prev.id === pitch.id ? {
-        ...prev,
-        bankAccounts,
-        paymentOptions: paymentSettings.paymentOptions,
-        paramMerchantId: paymentSettings.paramMerchantId,
-        paramApiKey: paymentSettings.paramApiKey,
-        paramClientId: paymentSettings.paramClientId,
-      } : prev));
-    } catch (e) {
-      console.warn('Ödeme/banka/hesap ayarları yüklenemedi (kortlar/takvim etkilenmez):', e);
-    }
+    // ── YAVAŞ YOL: ödeme/banka/hesap ayarları — TAMAMEN arkada (await EDİLMEZ).
+    // applyPitch bunu beklemez; yükleme efekti isLoading'i çekirdek veri gelir
+    // gelmez kapatır. Yavaş/bozuk bağlantıda 3 finansal-ayar sorgusu TÜM paneli
+    // (HOME iskeleti) kilitlemesin. Başarısız olsa da kortlar/takvim/HOME çalışır.
+    void (async () => {
+      try {
+        const [paymentSettings, bankAccounts, account] = await Promise.all([
+          getPaymentSettings(pitch.id),
+          getBankAccounts(pitch.id),
+          getOrCreateOwnerAccount(uid),
+        ]);
+        setOwnerAccount(account);
+        setFacilityData((prev: any) => (prev && prev.id === pitch.id ? {
+          ...prev,
+          bankAccounts,
+          paymentOptions: paymentSettings.paymentOptions,
+          paramMerchantId: paymentSettings.paramMerchantId,
+          paramApiKey: paymentSettings.paramApiKey,
+          paramClientId: paymentSettings.paramClientId,
+        } : prev));
+      } catch (e) {
+        console.warn('Ödeme/banka/hesap ayarları yüklenemedi (kortlar/takvim etkilenmez):', e);
+      }
+    })();
   }, [refreshDashboard]);
 
   const switchFacility = async (pitchId: string) => {
@@ -2239,6 +2243,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           pitchId={realPitchId ?? facilityData?.id ?? ''}
           isDemoMode={isDemoMode}
           readOnly={isReadOnly}
+          onOpenCalendar={() => setActiveTab('CALENDAR')}
         />
       )}
       {activeTab === 'TEAM' && (
