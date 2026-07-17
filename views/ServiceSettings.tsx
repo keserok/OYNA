@@ -56,7 +56,11 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
 
   const { adminGoalkeepers, adminReferees, updateOwnProvider, myRoles, setIsRoleSwitcherOpen } = useAppStore();
   const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
-  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === (auth.currentUser?.uid || 'u1')) || (isRef ? adminReferees[0] : adminGoalkeepers[0]);
+  // Kendi sağlayıcı kaydı: authUid VEYA id ile (ServiceProfile ile tutarlı).
+  // Bulunamazsa dizinin İLK sağlayıcısına düşmek yanlış kişinin ayarlarını
+  // gösterip düzenletiyordu — undefined bırak, updateSettings zaten !me'de erken döner.
+  const uid = auth.currentUser?.uid;
+  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => (x as any).authUid === uid || x.id === uid);
   
   const savedSettings = me?.settings || {};
 

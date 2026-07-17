@@ -1504,17 +1504,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <div>
                                   <h4 className="font-bold text-white text-sm">{offer.pitchName}</h4>
                                   <p className="text-[10px] text-gray-400">{offer.teamName} • {offer.time}</p>
-                                  
-                                  {/* Team Reliability / Toxic Warning */}
-                                  {offer.captainName === 'Ali Y.' ? (
-                                      <div className="flex items-center gap-1 mt-1 text-[8px] font-black bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20 w-fit uppercase">
-                                          <AlertTriangle size={8} /> Düşük Centilmenlik (2.1/5.0)
-                                      </div>
-                                  ) : (
-                                      <div className="flex items-center gap-1 mt-1 text-[8px] font-black bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 w-fit uppercase">
-                                          <Shield size={8} /> Güvenilir Takım (4.9/5.0)
-                                      </div>
-                                  )}
+                                  {/* Not: sahte "centilmenlik puanı" rozeti kaldırıldı — offer nesnesinde
+                                      gerçek fairplay verisi yok; uydurma güven sinyali yanıltıcıydı. */}
                               </div>
                           </div>
                           
@@ -2449,10 +2440,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       updatedStatus[myUpcomingMatches[0].id] = 'FINISHED';
                   }
                   setMatchLiveStatus(updatedStatus);
+                  // Bu kart yalnız yerel bir işaretleyici; gerçek payout iki-taraflı
+                  // onayla (sen + kaptan) serbest kalır. Sahte "cüzdana aktarıldı"
+                  // yerine gerçek adımı söyle — onayı "Gelen Talepler"den verirsin.
                   if (isRef) {
-                      showActionSuccess('Raporunuz gönderildi. Her iki kaptana skor onayı için bildirim iletildi.');
+                      showActionSuccess('Maçı bitirdin olarak işaretledin. Skoru resmileştirmek için maç kaydından onayla.');
                   } else {
-                      showActionSuccess('Raporunuz gönderildi. Kazancınız cüzdanınıza aktarıldı.');
+                      showActionSuccess('Maçı bitirdin olarak işaretledin. Ücretin, sen ve kaptan onaylayınca cüzdanına geçer — onayı “Gelen Talepler”den ver.');
                   }
                 }}
                 className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg`}

@@ -86,7 +86,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     userProfile?.coordinates ? [userProfile.coordinates.lat, userProfile.coordinates.lng] : defaultCenter
   );
-  const [radiusKm, setRadiusKm] = useState(15);
+  // Kayıtlı yarıçapı hidrate et — sabit 15 ile başlarsa her kayıtta settings.radiusKm 15'e sıfırlanıyordu.
+  const [radiusKm, setRadiusKm] = useState<number>((userProfile as any)?.settings?.radiusKm ?? 15);
   
   const MapEventsComponent = () => {
     useMapEvents({
@@ -111,6 +112,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           if (userProfile.fee) setFee(userProfile.fee);
           if (userProfile.style) setSelectedStyle(typeof userProfile.style === 'string' ? userProfile.style : 'Dengeli');
           if (userProfile.avatar) setCustomPhoto(userProfile.avatar);
+          const savedRadius = (userProfile as any).settings?.radiusKm;
+          if (typeof savedRadius === 'number') setRadiusKm(savedRadius);
       }
   }, [userProfile]);
   const [saving, setSaving] = useState(false);
@@ -142,7 +145,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         fee,
         name: displayName,
         style: selectedStyle,
-        avatar: customPhoto || userProfile.avatar,
+        // WYSIWYG: ekranda görünen fotoğrafı kaydet. Eski hâlde preset seçimi
+        // customPhoto=null bıraktığından hazır fotoğraf seçimi hiç kaydedilmiyordu.
+        avatar: currentPhoto || userProfile.avatar,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
         settings: { ...(userProfile as any).settings, radiusKm },
       });
@@ -159,6 +164,14 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Boyut koruması: avatar base64 olarak DB'ye yazıldığından (storage bucket
+    // henüz yok) büyük dosya satırı ve pazaryeri liste yükünü şişirir. 2 MB üstünü reddet.
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveError('Fotoğraf çok büyük (en fazla 2 MB). Lütfen daha küçük bir görsel seç.');
+      e.target.value = '';
+      return;
+    }
+    setSaveError(null);
     const reader = new FileReader();
     reader.onload = (ev) => {
       setCustomPhoto(ev.target?.result as string);
@@ -206,7 +219,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           className="px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-wider text-black flex items-center gap-1.5"
           style={{ background: saving ? '#22c55e' : accentColor, minWidth: 72 }}
         >
-          {saving ? <><Check size={14} /> Kaydedildi</> : 'KAYDET'}
+          {saving ? 'Kaydediliyor…' : 'KAYDET'}
         </motion.button>
       </div>
 
