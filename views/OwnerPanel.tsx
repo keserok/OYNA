@@ -19,6 +19,7 @@ import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
 import { OwnerFlashDealModal } from './owner/OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from './owner/OwnerCloseSlotModal';
 import { OwnerBookingDetailModal } from './owner/OwnerBookingDetailModal';
+import { OwnerFacilityScheduleView } from './owner/OwnerFacilityScheduleView';
 import { OwnerSpecialPriceModal } from './owner/OwnerSpecialPriceModal';
 import { useOwnerEntitlements } from '../hooks/useOwnerEntitlements';
 import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerToast';
@@ -334,6 +335,9 @@ const FinancialCalendarView: React.FC<{
     const [closeSlotModalOpen, setCloseSlotModalOpen] = useState<string | null>(null);
     const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState<string | null>(null);
     const [isMonthlyView, setIsMonthlyView] = useState(false);
+    // OW-E (P4): TESİS görünümü (satır=saat, sütun=kort). GÜN'e paralel mod.
+    const [facilityView, setFacilityView] = useState(false);
+    const [facilityRefreshKey, setFacilityRefreshKey] = useState(0);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
     const [isAddingSlot, setIsAddingSlot] = useState(false);
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
@@ -557,8 +561,19 @@ const FinancialCalendarView: React.FC<{
                                 </button>
                             ))}
                         </div>
-                        <button 
-                            onClick={() => setIsMonthlyView(!isMonthlyView)}
+                        {/* OW-E (P4): TESİS görünümü — çok kortlu tesiste tek bakışta. */}
+                        {activeCourts.length > 1 && (
+                            <button
+                                onClick={() => { setFacilityView((v) => !v); setIsMonthlyView(false); }}
+                                className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${facilityView ? 'bg-blue-500 text-white border-blue-500' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                title="Tesis görünümü (tüm kortlar)"
+                            >
+                                <List size={20} />
+                                {facilityView && <span className="text-[10px] font-black uppercase">Tesis</span>}
+                            </button>
+                        )}
+                        <button
+                            onClick={() => { setIsMonthlyView(!isMonthlyView); setFacilityView(false); }}
                             className={`h-full px-3 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <CalendarDays size={20} />
@@ -569,7 +584,25 @@ const FinancialCalendarView: React.FC<{
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-32">
-                {isMonthlyView ? (
+                {facilityView ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <OwnerFacilityScheduleView
+                            pitchId={pitchId}
+                            isRealPitch={isRealPitch}
+                            selectedDateISO={selectedDateISO}
+                            refreshKey={facilityRefreshKey}
+                            onQuickBook={(courtId, time) => {
+                                if (readOnly) { notify('Hesabınız salt okunur modda.', 'warning'); return; }
+                                setSelectedCourtId(courtId);
+                                setIsQuickCreateOpen(time);
+                            }}
+                            onBookingTap={(bookingId) => {
+                                const b = bookings.find((x) => x.id === bookingId);
+                                if (b) setSelectedBooking(b);
+                            }}
+                        />
+                    </div>
+                ) : isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
                             <div className="flex justify-between items-center mb-6">
@@ -933,6 +966,7 @@ const FinancialCalendarView: React.FC<{
                                         paymentMethod: 'CASH',
                                     });
                                     await loadBookings();
+                                    setFacilityRefreshKey((k) => k + 1); // TESİS görünümünü tazele
                                     setIsQuickCreateOpen(null);
                                     setCustomerName('');
                                     setCustomerPhone('');
