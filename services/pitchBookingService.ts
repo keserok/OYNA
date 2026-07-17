@@ -146,9 +146,9 @@ export function todayISO(): string {
 // gereği yalnız kullanıcının KENDİ rezervasyonlarını verirdi → rozet yanlış sayardı.)
 export interface ShowcaseAvailabilityRow {
   pitch_id: string;
-  court_id: string | null;
+  court_id: string | null; // null = tesis geneli (tüm kortlar)
   kind: 'BOOKING' | 'CLOSURE';
-  start_time: string; // 'HH:MM[:SS]'
+  start_time: string | null; // 'HH:MM[:SS]' · CLOSURE'da null = TÜM GÜN kapalı
   end_time: string | null;
   status: string;
 }
@@ -161,7 +161,8 @@ export async function fetchShowcaseAvailability(dateISO: string): Promise<Showca
   }
   return ((data ?? []) as ShowcaseAvailabilityRow[]).map((r) => ({
     ...r,
-    start_time: String(r.start_time).slice(0, 5),
+    // V-4: null start_time (tüm-gün kapanış) "null" string'ine çevrilmemeli.
+    start_time: r.start_time ? String(r.start_time).slice(0, 5) : null,
     end_time: r.end_time ? String(r.end_time).slice(0, 5) : null,
   }));
 }

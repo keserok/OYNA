@@ -839,21 +839,25 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       const today = todayISO();
       const rows = await fetchShowcaseAvailability(today);
 
-      // Saha → saat(HH:MM) → dolu kort sayısı  ve  saha → tümüyle kapatılmış saatler
-      const bookedByPitch: Record<string, Record<string, number>> = {};
-      const closedByPitch: Record<string, Set<string>> = {};
+      // V-4/V-5: kapanış ve rezervasyonlar KORT-BAZLI ve SAAT-ARALIĞI olarak
+      // tutulur. court_id null = tesis geneli; CLOSURE start_time null = tüm gün.
+      type Span = { startH: number; endH: number; court: string | null; allDay: boolean };
+      const bookingsByPitch: Record<string, Span[]> = {};
+      const closuresByPitch: Record<string, Span[]> = {};
+      const hourSpan = (r: (typeof rows)[number]): { startH: number; endH: number } => {
+        const startH = parseInt((r.start_time as string).split(':')[0], 10);
+        const endRaw = r.end_time ? parseInt(r.end_time.split(':')[0], 10) : startH + 1;
+        return { startH, endH: endRaw > startH ? endRaw : startH + 1 };
+      };
       rows.forEach((r) => {
         if (r.kind === 'BOOKING') {
-          const t = r.start_time;
-          (bookedByPitch[r.pitch_id] ??= {})[t] = (bookedByPitch[r.pitch_id]?.[t] ?? 0) + 1;
+          if (!r.start_time) return; // rezervasyonda saat yoksa atla
+          const { startH, endH } = hourSpan(r);
+          (bookingsByPitch[r.pitch_id] ??= []).push({ startH, endH, court: r.court_id, allDay: false });
         } else {
-          // Kapanış: court_id null ise TÜM kortlar kapalı → o saati tümüyle işaretle
-          const start = parseInt(r.start_time.split(':')[0], 10);
-          const end = r.end_time ? parseInt(r.end_time.split(':')[0], 10) : start + 1;
-          const set = (closedByPitch[r.pitch_id] ??= new Set<string>());
-          for (let h = start; h < (end > start ? end : start + 1); h++) {
-            set.add(`${String(h % 24).padStart(2, '0')}:00`);
-          }
+          const allDay = !r.start_time; // start_time null = TÜM GÜN kapalı
+          const { startH, endH } = allDay ? { startH: 0, endH: 0 } : hourSpan(r);
+          (closuresByPitch[r.pitch_id] ??= []).push({ startH, endH, court: r.court_id, allDay });
         }
       });
 
@@ -868,18 +872,39 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         );
         if (wh.closed) { result[p.id] = 0; return; }
         const ranges = generateSlotRanges(wh);
-        const booked = bookedByPitch[p.id] ?? {};
-        const closed = closedByPitch[p.id];
+        // V-7: gece-sarkması sabit "h<6" yerine çalışma penceresinden türetilir.
+        // Pencere gece yarısını aşıyorsa (kapanış ≤ açılış) açılış saatinin altındaki
+        // slotlar ertesi güne sarkan (gelecek) slotlardır.
+        const openHour = parseInt(wh.open.slice(0, 2), 10);
+        const bookings = bookingsByPitch[p.id] ?? [];
+        const closures = closuresByPitch[p.id] ?? [];
         result[p.id] = ranges.filter((r) => {
           const [h, m] = r.startTime.split(':').map(Number);
-          // Gece yarısını aşan pencerede (ör. 09:00-02:00) küçük saatler ertesi güne
-          // sarkar; onları "geçmiş" sayma. Aynı-gün saatte başlangıç geçmişse ele.
           const slotMin = h * 60 + m;
-          const isNightWrap = h < 6;
+          const isNightWrap = h < openHour;
           const isFuture = isNightWrap || slotMin >= nowMinutes;
           if (!isFuture) return false;
-          if (closed?.has(r.startTime)) return false;
-          return (booked[r.startTime] ?? 0) < courtCount;
+
+          const covers = (s: Span) => s.allDay || (h >= s.startH && h < s.endH);
+          // Kapanışlar: tesis-geneli (court null) → o saat tümüyle kapalı;
+          // kort-özel → yalnız o kort meşgul.
+          let pitchWideClosed = false;
+          const busyCourts = new Set<string>();
+          let busyNullCourt = 0;
+          for (const c of closures) {
+            if (!covers(c)) continue;
+            if (c.court == null) { pitchWideClosed = true; break; }
+            busyCourts.add(c.court);
+          }
+          if (pitchWideClosed) return false;
+          // Rezervasyonlar da kort meşgul eder (kort null ise legacy tek-kort sayımı).
+          for (const b of bookings) {
+            if (!covers(b)) continue;
+            if (b.court == null) busyNullCourt++;
+            else busyCourts.add(b.court);
+          }
+          const occupied = busyCourts.size + busyNullCourt;
+          return occupied < courtCount; // en az bir kort boşsa müsait
         }).length;
       });
       setTodayAvailability(result);
