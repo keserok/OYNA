@@ -258,6 +258,49 @@ export const requestPayoutWithMethod = async (
   return mapPayout(data);
 };
 
+// ─── Cüzdandan çekim (S2.1: yalnız yüklenen bakiye, %10 kesinti) ─────────────
+export interface CashoutPreview {
+  gross: number;
+  fee_pct: number;
+  fee: number;
+  net: number;
+  enabled: boolean;
+  min: number;
+  topup_balance: number;   // çekilebilir (yüklenen) bakiye
+  identity_ok: boolean;
+  identity_required: boolean;
+  has_pending: boolean;
+}
+
+/** İptal-önizleme deseni: sunucunun KENDİ kesinti/net rakamı (asla FE'de hesaplama). */
+export const previewWalletCashout = async (gross: number): Promise<CashoutPreview> => {
+  const { data, error } = await supabase.rpc('preview_wallet_cashout', { p_gross: gross });
+  if (error) throw new Error(parseRpcError(error.message) || 'Çekim önizlemesi alınamadı.');
+  const d = data as any;
+  return {
+    gross: Number(d.gross) || 0, fee_pct: Number(d.fee_pct) || 0, fee: Number(d.fee) || 0,
+    net: Number(d.net) || 0, enabled: !!d.enabled, min: Number(d.min) || 0,
+    topup_balance: Number(d.topup_balance) || 0, identity_ok: !!d.identity_ok,
+    identity_required: !!d.identity_required, has_pending: !!d.has_pending,
+  };
+};
+
+/** Çekim talebi — yalnız kayıtlı IBAN'a; TOP_UP anında düşülür; %10 kesinti sunucuda. */
+export const requestWalletCashout = async (
+  gross: number,
+  methodId: string,
+): Promise<{ payout_id: string; gross: number; fee: number; net: number; iban_last4: string }> => {
+  const { data, error } = await supabase.rpc('request_wallet_cashout', {
+    p_gross: gross, p_method_id: methodId,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Çekim talebi oluşturulamadı.');
+  const d = data as any;
+  return {
+    payout_id: d.payout_id, gross: Number(d.gross) || 0, fee: Number(d.fee) || 0,
+    net: Number(d.net) || 0, iban_last4: String(d.iban_last4 ?? ''),
+  };
+};
+
 // ─── Çekim geçmişi (RLS: kullanıcı kendi satırlarını görür) ──────────────────
 export const getMyPayoutRequests = async (limit = 20): Promise<PayoutRequestRow[]> => {
   const { data, error } = await supabase
