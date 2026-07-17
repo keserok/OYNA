@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Coins, ChevronLeft, ChevronRight, ArrowUpRight, Loader2, AlertTriangle } from 'lucide-react';
 import { LoadingState } from '../../components/common/StatusState';
 import {
-  addExpense, addDebtor, getDebtors, getOwnerExpenses, resolveDebtor, toTurkishError,
+  addExpense, getDebtors, getOwnerExpenses, toTurkishError,
 } from '../../services/pitchOwnerService';
-import { getPitchFinanceSummary, type FinanceSummary } from '../../services/financeService';
+import { getPitchFinanceSummary, createDebtor, type FinanceSummary } from '../../services/financeService';
 import { getOwnerEarningsSummary, type EarningsSummary } from '../../services/walletService';
 import type { PitchDebtor, PitchExpense } from '../../types';
 import { useOwnerToast } from './components/useOwnerToast';
@@ -80,15 +80,9 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
 
   const onAddDebtor = useCallback(async (d: { name: string; phone?: string; amount_owed: number }) => {
     if (readOnly) { notify('Salt okunur mod.', 'warning'); return; }
-    try { await addDebtor(pitchId, d); await load(); }
+    try { await createDebtor(pitchId, d.name, d.phone, d.amount_owed); await load(); }
     catch (err) { notify(toTurkishError(err), 'error'); throw err; }
   }, [pitchId, readOnly, load, notify]);
-
-  const onResolveDebtor = useCallback(async (id: string) => {
-    if (readOnly) { notify('Salt okunur mod.', 'warning'); return; }
-    try { await resolveDebtor(id); await load(); }
-    catch (err) { notify(toTurkishError(err), 'error'); }
-  }, [readOnly, load, notify]);
 
   const onAddExpense = useCallback(async (e: { title: string; amount: number; category: string }) => {
     if (readOnly) { notify('Salt okunur mod.', 'warning'); return; }
@@ -254,7 +248,14 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         {/* key={month}: ay değişince ÖZET içi seçili gün/yöntem durumu sıfırlansın. */}
         {tab === 'SUMMARY' && <FinanceSummaryTab key={month} summary={summary} onOpenCalendarWeek={onOpenCalendar} />}
         {tab === 'COLLECT' && (
-          <FinanceCollectTab summary={summary} debtors={debtors} readOnly={readOnly} onAddDebtor={onAddDebtor} onResolveDebtor={onResolveDebtor} />
+          <FinanceCollectTab
+            summary={summary}
+            debtors={debtors}
+            readOnly={readOnly}
+            onAddDebtor={onAddDebtor}
+            onChanged={load}
+            notify={notify}
+          />
         )}
         {tab === 'EXPENSE' && (
           <FinanceExpenseTab summary={summary} expenses={expenses} readOnly={readOnly} onAddExpense={onAddExpense} />

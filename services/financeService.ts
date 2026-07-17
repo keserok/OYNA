@@ -42,6 +42,81 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// ─── FI-2 — Veresiye defteri (hareket + kısmi ödeme + rezervasyon köprüsü) ────
+
+export interface DebtorEntry {
+  id: string;
+  entry_type: 'DEBT' | 'PAYMENT';
+  amount: number;
+  payment_method: string | null;
+  note: string | null;
+  booking_id: string | null;
+  created_at: string;
+}
+
+/** Bir veresiye kişisinin hareket defteri (borç + ödemeler), yeni→eski. */
+export async function getDebtorEntries(debtorId: string): Promise<DebtorEntry[]> {
+  const { data, error } = await supabase
+    .from('pitch_debtor_entries')
+    .select('id, entry_type, amount, payment_method, note, booking_id, created_at')
+    .eq('debtor_id', debtorId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error('Hareket geçmişi yüklenemedi.');
+  return (data ?? []).map((e: any) => ({
+    id: String(e.id), entry_type: e.entry_type, amount: num(e.amount),
+    payment_method: e.payment_method ?? null, note: e.note ?? null,
+    booking_id: e.booking_id ?? null, created_at: String(e.created_at),
+  }));
+}
+
+/** Yeni veresiye kişisi + açılış borcu (atomik RPC). Debtor id döner. */
+export async function createDebtor(
+  pitchId: string, name: string, phone: string | undefined, amount: number, note?: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('debtor_create', {
+    p_pitch_id: pitchId, p_name: name, p_phone: phone ?? null, p_amount: amount, p_note: note ?? null,
+  });
+  if (error) throw new Error(mapDebtorError(error.message));
+  return String(data);
+}
+
+/** Kısmi/tam ödeme al. Yeni bakiyeyi döner. */
+export async function debtorAddPayment(
+  debtorId: string, amount: number, method: string, note?: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc('debtor_add_payment', {
+    p_debtor_id: debtorId, p_amount: amount, p_method: method, p_note: note ?? null,
+  });
+  if (error) throw new Error(mapDebtorError(error.message));
+  return num(data);
+}
+
+/** Bekleyen rezervasyon bakiyesini veresiyeye taşı. Debtor id döner. */
+export async function bookingToDebtor(
+  bookingId: string, name?: string, phone?: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('booking_to_debtor', {
+    p_booking_id: bookingId, p_name: name ?? null, p_phone: phone ?? null,
+  });
+  if (error) throw new Error(mapDebtorError(error.message));
+  return String(data);
+}
+
+/** WhatsApp hatırlatması gönderildi damgası (last_reminded_at). */
+export async function markDebtorReminded(debtorId: string): Promise<void> {
+  await supabase.from('pitch_debtors').update({ last_reminded_at: new Date().toISOString() }).eq('id', debtorId);
+}
+
+function mapDebtorError(msg: string): string {
+  const m = msg || '';
+  if (m.includes('OVER_PAYMENT')) return 'Bakiyeden fazla ödeme alınamaz.';
+  if (m.includes('NO_BALANCE')) return 'Bu rezervasyonda bekleyen tutar yok.';
+  if (m.includes('UNAUTHORIZED')) return 'Bu işlem için yetkin yok.';
+  if (m.includes('INVALID_AMOUNT')) return 'Geçersiz tutar.';
+  if (m.includes('INVALID_NAME')) return 'İsim zorunludur.';
+  return 'İşlem tamamlanamadı. Lütfen tekrar dene.';
+}
+
 /** Tesisin bir aylık ('YYYY-MM') finans özeti. Yetki sunucuda (owner/admin). */
 export async function getPitchFinanceSummary(pitchId: string, month: string): Promise<FinanceSummary> {
   const { data, error } = await supabase.rpc('get_pitch_finance_summary', {

@@ -1,28 +1,33 @@
 import React, { useState } from 'react';
-import { Plus, Clock, Banknote, HandCoins } from 'lucide-react';
-import type { FinanceSummary } from '../../../services/financeService';
+import { Plus, Clock, Banknote, HandCoins, ChevronRight } from 'lucide-react';
+import type { FinanceSummary, PendingBooking } from '../../../services/financeService';
 import type { PitchDebtor } from '../../../types';
 import { methodLabel, parseTRYAmount } from '../../../shared/financeModel';
 import { money } from './financeUi';
 import { BottomSheetModal } from './BottomSheetModal';
+import { CollectModal } from './CollectModal';
+import { DebtorSheet } from './DebtorSheet';
 
-// ─── FI-1 — TAHSİLAT: bekleyen tahsilatlar + veresiye + son ödemeler ──────────
-// Bekleyen tahsilatlar RPC'den (D8 — "kim borçlu kaldı" ilk kez görünür).
-// Yazma akışları (Tahsil Et / Veresiyeye Yaz / kısmi ödeme) FI-2'de.
+// ─── FI-2 — TAHSİLAT: bekleyen tahsil + veresiye v2 (defter/kısmi) + son ödemeler
+// Bekleyen rezervasyona dokun → Tahsil Et / Veresiyeye Yaz. Veresiye kişiye dokun
+// → hareket defteri + kısmi ödeme + WhatsApp.
 
 interface Props {
   summary: FinanceSummary;
   debtors: PitchDebtor[];
   readOnly: boolean;
   onAddDebtor: (d: { name: string; phone?: string; amount_owed: number }) => Promise<void>;
-  onResolveDebtor: (id: string) => Promise<void>;
+  onChanged: () => void;
+  notify: (msg: string, type?: 'success' | 'error' | 'warning') => void;
 }
 
-export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly, onAddDebtor, onResolveDebtor }) => {
+export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly, onAddDebtor, onChanged, notify }) => {
   const { income } = summary;
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', amount: '' });
+  const [collectBooking, setCollectBooking] = useState<PendingBooking | null>(null);
+  const [openDebtor, setOpenDebtor] = useState<PitchDebtor | null>(null);
 
   const amt = parseTRYAmount(form.amount);
   const canSubmit = !!form.name.trim() && Number.isFinite(amt) && amt > 0;
@@ -40,7 +45,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
 
   return (
     <div className="space-y-6">
-      {/* Bekleyen tahsilatlar */}
+      {/* Bekleyen tahsilatlar — dokun → Tahsil Et / Veresiyeye Yaz */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
           <h3 className="text-[10px] font-black text-gray-500 uppercase flex items-center gap-1.5"><Clock size={12} /> Bekleyen Tahsilatlar</h3>
@@ -49,17 +54,25 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
         {income.pending_bookings.length === 0 ? (
           <p className="text-sm text-gray-500 px-2">Bu ay bekleyen tahsilat yok — her rezervasyon tam ödendi. 👏</p>
         ) : income.pending_bookings.map((b) => (
-          <div key={b.id} className="bg-[#161B22] p-4 rounded-2xl border border-amber-500/15 flex justify-between items-center gap-3">
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => { if (readOnly) { notify('Salt okunur mod.', 'warning'); return; } setCollectBooking(b); }}
+            className="w-full bg-[#161B22] p-4 rounded-2xl border border-amber-500/15 flex justify-between items-center gap-3 text-left hover:border-amber-500/40 transition-colors"
+          >
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{b.customer_name ?? 'Müşteri'}</p>
               <p className="text-[10px] text-gray-500">{b.date} · {b.time} · {b.court ?? 'Saha'} · {money(b.paid)} / {money(b.price)}</p>
             </div>
-            <span className="text-amber-400 font-black shrink-0 tabular-nums">{money(b.balance)}</span>
-          </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-amber-400 font-black tabular-nums">{money(b.balance)}</span>
+              {!readOnly && <ChevronRight size={16} className="text-gray-600" />}
+            </div>
+          </button>
         ))}
       </div>
 
-      {/* Veresiye (v1 — kişi bazlı bakiye; hareket defteri + kısmi ödeme FI-2'de) */}
+      {/* Veresiye v2 — kişiye dokun → defter + kısmi ödeme + WhatsApp */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
           <h3 className="text-[10px] font-black text-gray-500 uppercase flex items-center gap-1.5">
@@ -78,7 +91,12 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
         {debtors.length === 0 ? (
           <p className="text-sm text-gray-500 px-2">Açık veresiye kaydı yok.</p>
         ) : debtors.map((d) => (
-          <div key={d.id} className="bg-[#161B22] p-4 rounded-2xl border border-red-500/20 flex justify-between items-center">
+          <button
+            key={d.id}
+            type="button"
+            onClick={() => setOpenDebtor(d)}
+            className="w-full bg-[#161B22] p-4 rounded-2xl border border-red-500/20 flex justify-between items-center text-left hover:border-red-500/40 transition-colors"
+          >
             <div className="min-w-0">
               <p className="text-sm font-bold text-white flex items-center gap-2">
                 <span className="truncate">{d.name}</span>
@@ -86,17 +104,11 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
               </p>
               <p className="text-[10px] text-gray-500">{d.phone ?? ''}</p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="text-red-400 font-black tabular-nums">{money(d.amount_owed)}</span>
-              <button
-                onClick={() => { if (!readOnly) onResolveDebtor(d.id); }}
-                disabled={readOnly}
-                className="text-[10px] font-bold text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded-lg disabled:opacity-40"
-              >
-                Kapat
-              </button>
+              <ChevronRight size={16} className="text-gray-600" />
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -115,6 +127,13 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
           </div>
         ))}
       </div>
+
+      {collectBooking && (
+        <CollectModal booking={collectBooking} onClose={() => setCollectBooking(null)} onChanged={onChanged} notify={notify} />
+      )}
+      {openDebtor && (
+        <DebtorSheet debtor={openDebtor} readOnly={readOnly} onClose={() => setOpenDebtor(null)} onChanged={onChanged} notify={notify} />
+      )}
 
       {/* Veresiye ekle modalı */}
       {addOpen && (
