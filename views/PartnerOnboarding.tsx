@@ -238,8 +238,10 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <Crown size={24} />
                   </div>
                   <div>
-                      <h4 className="font-bold text-white text-sm">Özel Davet Avantajı</h4>
-                      <p className="text-[10px] text-gray-400">İlk 30 Gün %0 Komisyon & OYNA Pro Sertifikası</p>
+                      <h4 className="font-bold text-white text-sm">Şeffaf Gelir Modeli</h4>
+                      {/* OP-P2-13: uygulanmayan "%0 ilk 30 gün" vaadi kaldırıldı; gerçek model
+                          yazıldı. (%0 intro + otomatik payout ileride devreye girince metin güncellenir.) */}
+                      <p className="text-[10px] text-gray-400">Abonelik/sabit ücret yok — yalnız işlem başına %10 komisyon</p>
                   </div>
               </div>
 
@@ -337,7 +339,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                               <div className="bg-green-900/20 border border-green-500/30 p-4 rounded-2xl flex items-start gap-3">
                                   <ShieldCheck className="text-green-500 shrink-0" />
                                   <p className="text-xs text-green-200">
-                                      Banka bilgileriniz 256-bit SSL sertifikası ile korunmaktadır. Ödemeler her Pazartesi hesabınıza geçer.
+                                      Banka bilgileriniz güvenle saklanır. Kazancınızı panelden çekim talebiyle IBAN'ınıza aktarabilirsiniz.
                                   </p>
                               </div>
                           </div>

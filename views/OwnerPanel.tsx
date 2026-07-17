@@ -25,7 +25,6 @@ import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerTo
 import { OwnerKpiGrid, OwnerCommandStrip, kpiIcons, type OwnerKpiItem } from './owner/components/OwnerKpiGrid';
 import { OwnerStatusBar, type OwnerStatusBanner } from './owner/components/OwnerStatusBar';
 import { OwnerBottomNav } from './owner/components/OwnerBottomNav';
-import { OwnerUpgradeGate } from './owner/components/OwnerUpgradeGate';
 import { OwnerHomeSkeleton } from './owner/components/OwnerHomeSkeleton';
 import {
   OwnerMenuView,
@@ -36,7 +35,6 @@ import {
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
   OwnerOperationsSettingsModal,
-  OwnerBillingSettingsModal,
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerLogoutModal,
@@ -921,11 +919,14 @@ const FinancialCalendarView: React.FC<{
                                         startTime,
                                         endTime,
                                         customerName: customerName.trim() || undefined,
+                                        // OP-P2-21: telefon yalnız customer_phone alanına yazılır;
+                                        // eskiden ayrıca note'a "Tel: …" olarak tekrar ediliyordu (not kirlenmesi).
                                         customerPhone: customerPhone.trim() || undefined,
-                                        note: customerPhone ? `Tel: ${customerPhone}` : undefined,
                                         source: 'OWNER_MANUAL',
                                     });
-                                    const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : 2000;
+                                    // OP-P3-25: ölü sihirli 2000 fallback'i kaldırıldı (isQuickCreateOpen
+                                    // bu handler'da daima truthy; sunucu-fiyatı getSlotPrice'tan gelir).
+                                    const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : 0;
                                     if (paymentStatus === 'PAID') {
                                         await recordBookingPayment(bookingId, rateVal, 'CASH');
                                     } else if (paymentStatus === 'PARTIAL') {
@@ -1531,7 +1532,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   });
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [showOperations, setShowOperations] = useState(false);
-  const [showBilling, setShowBilling] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [menuBalance, setMenuBalance] = useState<number | undefined>(undefined);
@@ -1883,7 +1883,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   useEffect(() => {
     if (activeTab !== 'MORE' || !realPitchId) return;
     if (realPitchId.startsWith('mock-')) {
-      setMenuBalance(12500);
+      // OP-P0-4/N-5: demo tesiste sahte ₺12.500 bakiye gösterme (çekilebilir gerçek
+      // para izlenimi verir). Demo'da bakiye 0.
+      setMenuBalance(0);
       return;
     }
     getOwnerBalance(realPitchId)
