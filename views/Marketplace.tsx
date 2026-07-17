@@ -18,7 +18,8 @@ import SkeletonList from '../components/ui/SkeletonList';
 import BottomSheet from '../components/ui/BottomSheet';
 import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
-import { createServiceRequest } from '../services/serviceRequestService';
+import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
+import { auth } from '../supabaseAuth';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -265,8 +266,15 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     );
 
     // ─── Kiralama akışı (FAZ 8A — tek yol: create_service_request) ───────────
+    // Yalnız KULLANICININ KENDİ maçları: adminMatches küresel ve filtresizdir
+    // (herkesin DRAFT/ACTIVE maçları store'da). Sahiplik süzgeci olmadan kaptan
+    // başkasının maçını seçip create_service_request'ten FORBIDDEN alıyordu.
     const myMatches = useMemo(() => {
-        return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);
+        const uid = auth.currentUser?.uid;
+        if (!uid) return [];
+        return adminMatches.filter(m =>
+            (m.creatorId === uid || (m as any).captainId === uid) &&
+            (m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status));
     }, [adminMatches]);
 
     const matchNeedsRole = useCallback((m: any) => (
@@ -310,6 +318,24 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         if (onSelect && chosen) onSelect(chosen);
     };
 
+    // Katmanın "bir adım geri" mantığı (Escape ve arka plan için tek kaynak).
+    const stepBackOverlay = useCallback(() => {
+        if (isHiring) return; // ödeme sürerken kapatma
+        if (showSuccessScreen) { finishSuccess(); return; }
+        if (showMatchSelection && matchPendingConfirm) { setMatchPendingConfirm(null); return; }
+        if (showMatchSelection) { setShowMatchSelection(false); return; }
+        setSelectedProfile(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isHiring, showSuccessScreen, showMatchSelection, matchPendingConfirm]);
+
+    // Erişilebilirlik: tam ekran katman açıkken Escape ile kapatma (a11y denetim bulgusu).
+    useEffect(() => {
+        if (!selectedProfile) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') stepBackOverlay(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [selectedProfile, stepBackOverlay]);
+
     const handleShare = async (p: Goalkeeper | Referee) => {
         const text = `${p.name} — OYNA'da ${roleLabel}. Maç başı ücret: ${p.fee}₺${p.rating > 0 ? `, puan: ${p.rating.toFixed(1)}` : ''}.`;
         try {
@@ -323,9 +349,11 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         } catch { /* kullanıcı paylaşımı iptal etti */ }
     };
 
-    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj + %10 komisyon
-    // + sağlayıcı onayı + bildirim). Maç kaydı doğrudan mutasyona uğratılmaz;
-    // sağlayıcı kabul edip tahsilat yapılınca backend gk_id/refereeId'yi yazar.
+    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj intenti + %10
+    // komisyon + bildirim) ARDINDAN fund_service_request (emanete alma). MatchJoin
+    // ile aynı iki-adımlı akış: sağlayıcı ancak FONLANMIŞ talebi kabul edebilir;
+    // fonlanmazsa talep sessizce askıda kalır (denetim bulgusu). Kabul + tahsilat
+    // sonrası backend gk_id/refereeId'yi yazar.
     const handleConfirmMatch = async (match: any) => {
         if (!selectedProfile || isHiring) return;
         setSelectedMatchForHire(match);
@@ -333,6 +361,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         setHireError(null);
         try {
             const result = await createServiceRequest(match.id, selectedProfile.id, type);
+            // Cüzdandan emanete al (MatchJoin ile paritede varsayılan WALLET).
+            await fundServiceRequest(result.requestId, 'WALLET');
             setHireResult({ fee: result.fee, providerAmount: result.providerAmount });
             setShowSuccessScreen(true);
             successTimerRef.current = setTimeout(finishSuccess, 6000);
@@ -592,6 +622,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
             <AnimatePresence>
                 {detail && (
                     <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={`${detail.name} — ${roleLabel} profili`}
                         initial={{ opacity: 0, y: 100 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 100 }}
@@ -642,7 +675,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[10px] font-black text-white/35 uppercase tracking-widest">Bloke Edilen Ücret</span>
+                                                <span className="text-[10px] font-black text-white/35 uppercase tracking-widest">Emanete Alınan Ücret</span>
                                                 <span className="text-base font-black font-numeric tabular-nums" style={{ color: theme.accent }}>
                                                     {hireResult?.fee ?? detail.fee} ₺
                                                 </span>
@@ -659,9 +692,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                     {/* Süreç adımları */}
                                     <div className="w-full flex items-center gap-2 px-1">
                                         {[
-                                            { icon: <Check size={11} />, label: 'Talep gönderildi', done: true },
+                                            { icon: <Check size={11} />, label: 'Ödeme emanette', done: true },
                                             { icon: <Hourglass size={11} />, label: `${roleLabel} onayı`, done: false },
-                                            { icon: <Wallet size={11} />, label: 'Maç sonrası ödeme', done: false },
+                                            { icon: <Wallet size={11} />, label: 'Maç sonrası aktarım', done: false },
                                         ].map((s, i) => (
                                             <React.Fragment key={s.label}>
                                                 {i > 0 && <div className="flex-1 h-px bg-white/10" />}
@@ -681,7 +714,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                     </div>
 
                                     <p className="text-[10px] text-white/30 font-semibold">
-                                        Ödeme yalnızca bloke edilir; onay ve maç kesinleşene kadar tahsil edilmez.
+                                        Ödemen emanete alındı; {roleLabel.toLocaleLowerCase('tr-TR')} onaylayıp maç kesinleşince aktarılır, gelmezse iade edilir.
                                     </p>
 
                                     <button
@@ -754,8 +787,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 <span className="text-xl font-black font-numeric tabular-nums text-white">{detail.fee}₺</span>
                                             </div>
                                             <p className="text-[10px] font-semibold text-white/45 mt-2 leading-relaxed">
-                                                Şimdi yalnızca <span className="text-white font-bold">bloke edilir</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
-                                                maç kesinleşince tahsil edilir. Sabit ücret; %10 platform komisyonu bedele dahildir.
+                                                Onaylayınca <span className="text-white font-bold">emanete alınır</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
+                                                maç kesinleşince sağlayıcıya aktarılır, gelmezse iade edilir. Sabit ücret; %10 platform komisyonu bedele dahildir.
                                             </p>
                                         </div>
 
