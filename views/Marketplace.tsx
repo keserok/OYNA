@@ -2,17 +2,24 @@
 import { LAUNCH_CITY } from '../utils/orduData';
 import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
-    ChevronLeft, ChevronRight, X, Minus, Plus, Zap, MessageSquare, Sparkles, Shield, Scale, Star, Navigation, Heart, Share2
+    ChevronLeft, ChevronRight, X, Search, SlidersHorizontal, Star, MapPin, Clock,
+    Share2, BadgeCheck, ShieldCheck, Zap, CheckCircle2, Check, Info, MessageSquare,
+    CalendarX, Hourglass, Wallet, Award
 } from 'lucide-react';
 import { Spinner } from '../components/ui/Spinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Referee, Goalkeeper } from '../types';
 import { useAppStore } from '../store';
-import { MarketplaceCard } from '../components/Marketplace/MarketplaceCard';
+import { MarketplaceCard, ROLE_THEME } from '../components/Marketplace/MarketplaceCard';
 import { EmptyState } from '../components/common/StatusState';
-import { createServiceRequest } from '../services/serviceRequestService';
+import SkeletonList from '../components/ui/SkeletonList';
+import BottomSheet from '../components/ui/BottomSheet';
+import Chip from '../components/ui/Chip';
+import { getInitials } from '../components/ui/Avatar';
+import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
+import { auth } from '../supabaseAuth';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -23,47 +30,149 @@ const getNormalizedDifficulty = (diff?: string): string => {
   return diff.charAt(0).toUpperCase() + diff.slice(1);
 };
 
+// "18:00 - 23:00" gibi bir aralıkta seçilen saatin kalıp kalmadığını kontrol eder.
+// Eski `includes('21:00')` yaklaşımı aralık içindeki saatleri kaçırıyordu (Plan §1.2/8).
+const hourInRange = (activeHours: string, hour: string): boolean => {
+  const m = activeHours.match(/(\d{1,2})[:.](\d{2})\s*[-–]\s*(\d{1,2})[:.](\d{2})/);
+  if (!m) return activeHours.includes(hour);
+  const start = Number(m[1]) * 60 + Number(m[2]);
+  let end = Number(m[3]) * 60 + Number(m[4]);
+  if (end <= start) end += 24 * 60; // gece yarısını aşan aralık (ör. 22:00 - 02:00)
+  const [hh, mm] = hour.split(':').map(Number);
+  let t = hh * 60 + (mm || 0);
+  if (t < start) t += 24 * 60;
+  return t >= start && t <= end;
+};
+
+const DAY_OPTIONS = [
+  { id: 'Pzt', label: 'Pazartesi' },
+  { id: 'Sal', label: 'Salı' },
+  { id: 'Çar', label: 'Çarşamba' },
+  { id: 'Per', label: 'Perşembe' },
+  { id: 'Cum', label: 'Cuma' },
+  { id: 'Cmt', label: 'Cumartesi' },
+  { id: 'Paz', label: 'Pazar' },
+];
+const HOUR_OPTIONS = ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+
+type SortKey = 'RECOMMENDED' | 'RATING' | 'FEE' | 'DISTANCE';
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'RECOMMENDED', label: 'Önerilen' },
+  { key: 'RATING', label: 'En Yüksek Puan' },
+  { key: 'FEE', label: 'En Uygun Ücret' },
+  { key: 'DISTANCE', label: 'En Yakın' },
+];
+
+interface FilterState {
+  district: string;
+  day: string;
+  time: string;
+}
+const EMPTY_FILTERS: FilterState = { district: 'Tümü', day: 'Tümü', time: 'Tümü' };
+
 interface MarketplaceProps {
     type: 'REF' | 'GK';
     onBack: () => void;
     onSelect?: (item: Goalkeeper | Referee) => void;
+    /** Boş "maçın yok" durumundan doğrudan maç oluşturmaya geçiş (çıkmaz sokak bırakma). */
+    onCreateMatch?: () => void;
 }
 
-const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
-    <div className="space-y-1">
-        <div className="flex justify-between items-center px-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{label}</span>
-            <span className="text-[10px] font-black text-white">{value}</span>
+// Bugünün kısa gün adı (workingHours.activeDays ile aynı sözlük: Pzt..Paz)
+const TODAY_SHORT = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][new Date().getDay()];
+
+// ─── Küçük yapı taşları ───────────────────────────────────────────────────────
+
+const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; right?: React.ReactNode }> = ({ icon, title, right }) => (
+    <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+            <span className="text-white/35">{icon}</span>
+            <h3 className="text-[13px] font-black text-white uppercase tracking-widest">{title}</h3>
         </div>
-        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        {right}
+    </div>
+);
+
+const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
+    <div className="space-y-1.5">
+        <div className="flex justify-between items-center">
+            <span className="text-[11px] font-bold text-white/50">{label}</span>
+            <span className="text-[11px] font-black text-white font-numeric tabular-nums">{value}</span>
+        </div>
+        <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${value}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className={`h-full ${color} rounded-full`}
+                animate={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: color }}
             />
         </div>
     </div>
 );
 
-const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, onSelect }) => {
-    const [activeTab, setActiveTab] = useState<'GK' | 'REF'>(initialType);
+// Küçük avatar — foto yoksa/yüklenemezse baş harfler (kırık görsel karesi görünmesin)
+const SafeAvatar: React.FC<{ src?: string | null; name: string; className?: string }> = ({ src, name, className = 'w-10 h-10 rounded-xl' }) => {
+    const [broken, setBroken] = React.useState(false);
+    React.useEffect(() => { setBroken(false); }, [src]);
+    return src && !broken ? (
+        <img
+            src={src}
+            alt={name}
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
+            className={`${className} object-cover bg-white/5 border border-white/10`}
+        />
+    ) : (
+        <div className={`${className} bg-white/[0.06] border border-white/10 flex items-center justify-center`}>
+            <span className="text-[11px] font-black text-white/70">{getInitials(name)}</span>
+        </div>
+    );
+};
+
+const StatTile: React.FC<{ label: string; value: React.ReactNode; sub?: string }> = ({ label, value, sub }) => (
+    <div className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-3 py-3.5 text-center">
+        <div className="text-lg font-black text-white font-numeric leading-none truncate">{value}</div>
+        <div className="text-[9px] font-black text-white/35 uppercase tracking-widest mt-1.5">{label}</div>
+        {sub && <div className="text-[9px] font-bold text-white/45 mt-0.5 truncate">{sub}</div>}
+    </div>
+);
+
+// ─── Ana bileşen ──────────────────────────────────────────────────────────────
+
+const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCreateMatch }) => {
+    const theme = ROLE_THEME[type];
+    const roleLabel = theme.label; // "Kaleci" | "Hakem"
+    const RoleIcon = theme.icon;
+
     const [selectedProfile, setSelectedProfile] = useState<Goalkeeper | Referee | null>(null);
     const [isHiring, setIsHiring] = useState(false);
     // FAZ 8A — gerçek talep sonucu (ücret/komisyon backend'den döner; pazarlık yok)
     const [hireResult, setHireResult] = useState<{ fee: number; providerAmount: number } | null>(null);
     const [hireError, setHireError] = useState<string | null>(null);
+    const [showMatchSelection, setShowMatchSelection] = useState(false);
+    // Onay adımı (Plan 8A.1): maça dokunmak talebi HEMEN göndermez; ücret dökümüyle
+    // açık onay istenir. Tek aktif maç varsa liste adımı tamamen atlanır.
+    const [matchPendingConfirm, setMatchPendingConfirm] = useState<any>(null);
+    const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
+    const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+    const [shareCopied, setShareCopied] = useState(false);
+    const [heroBroken, setHeroBroken] = useState(false);
+    const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); }, []);
 
-    // If initialType is provided, we might want to lock the tab or just default to it.
-    // The user said "yalnızca ... çıksın", so I'll hide the tabs if initialType is passed.
-    const isLocked = !!initialType;
+    const {
+        adminGoalkeepers, adminReferees, adminMatches,
+        activeRegion, selectedRegions, userLocation, initialLoadComplete,
+    } = useAppStore();
+    const profiles: (Goalkeeper | Referee)[] = type === 'GK' ? adminGoalkeepers : adminReferees;
 
-    const { adminGoalkeepers, adminReferees, adminMatches, activeRegion, selectedRegions, userLocation } = useAppStore();
-    const profiles = activeTab === 'GK' ? adminGoalkeepers : adminReferees;
-
-    const [filterDistrict, setFilterDistrict] = useState<string>('Tümü');
-    const [filterDay, setFilterDay] = useState<string>('Tümü');
-    const [filterTime, setFilterTime] = useState<string>('Tümü');
+    // ─── Arama / filtre / sıralama durumu ────────────────────────────────────
+    const [search, setSearch] = useState('');
+    const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+    const [sortKey, setSortKey] = useState<SortKey>('RECOMMENDED');
+    const [showFilterSheet, setShowFilterSheet] = useState(false);
+    const [draftFilters, setDraftFilters] = useState<FilterState>(EMPTY_FILTERS);
 
     // İlçe seçenekleri birincil (aktif) ile göre (sabit değil).
     const zoneCity = activeRegion?.city ?? LAUNCH_CITY;
@@ -80,8 +189,18 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
         [scopeCities, zoneCity],
     );
 
-    const filteredProfiles = useMemo(() => {
-        return profiles.filter(p => {
+    // Gerçek mesafe: kullanıcı konumu + sağlayıcı koordinatı; yoksa null (sahte fallback yok).
+    const distanceOf = useCallback((p: Goalkeeper | Referee): number | null => {
+        if (userLocation && p.coordinates?.lat && p.coordinates?.lng) {
+            return getHaversineDistance(userLocation.lat, userLocation.lng, p.coordinates.lat, p.coordinates.lng);
+        }
+        const parsed = parseFloat(p.distance ?? '');
+        return Number.isFinite(parsed) ? parsed : null;
+    }, [userLocation]);
+
+    const applyFilters = useCallback((list: (Goalkeeper | Referee)[], f: FilterState, q: string) => {
+        const query = q.trim().toLocaleLowerCase('tr-TR');
+        return list.filter(p => {
             // Seçili bölge kapsamı: sağlayıcının hizmet bölgeleri seçili illerden
             // biriyle ilgili mi? (bölgesizler hariç tutulmaz)
             const matchesRegion = scopeCities.length === 0 || !p.preferredZones || p.preferredZones.length === 0 ||
@@ -90,55 +209,163 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
                     return scopeCities.includes(parts[0]) || scopeCities.includes(z) || cityDistricts.includes(parts[parts.length - 1]);
                 });
             // "İl / İlçe" ve düz "İlçe" formatlarının ikisini de yakala.
-            const matchesDistrict = filterDistrict === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z => z === filterDistrict || z.split('/').pop()?.trim() === filterDistrict));
-            const matchesDay = filterDay === 'Tümü' || (p.workingHours && p.workingHours.activeDays && p.workingHours.activeDays.includes(filterDay));
-            const matchesTime = filterTime === 'Tümü' || (p.workingHours && p.workingHours.activeHours && p.workingHours.activeHours.includes(filterTime));
-            return matchesRegion && matchesDistrict && matchesDay && matchesTime;
+            const matchesDistrict = f.district === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z => z === f.district || z.split('/').pop()?.trim() === f.district));
+            // Gün/saat bilgisi girmemiş sağlayıcı "bilinmiyor" sayılır ve listede kalır
+            // (bilinmiyor ≠ müsait değil; likidite ilkesi — Plan §0).
+            const matchesDay = f.day === 'Tümü' || !p.workingHours?.activeDays?.length || p.workingHours.activeDays.includes(f.day);
+            const matchesTime = f.time === 'Tümü' || !p.workingHours?.activeHours || hourInRange(p.workingHours.activeHours, f.time);
+            const matchesSearch = !query || [
+                p.name,
+                typeof p.style === 'string' ? p.style : '',
+                ...(p.preferredZones || []),
+            ].some(t => (t || '').toLocaleLowerCase('tr-TR').includes(query));
+            return matchesRegion && matchesDistrict && matchesDay && matchesTime && matchesSearch;
         });
-    }, [profiles, filterDistrict, filterDay, filterTime, scopeCities, cityDistricts]);
+    }, [scopeCities, cityDistricts]);
 
+    const filteredProfiles = useMemo(
+        () => applyFilters(profiles, filters, search),
+        [profiles, filters, search, applyFilters],
+    );
+
+    // Plan 8A.6 — kullanıcı seçimli sıralama: Önerilen / Puan / Ücret / Yakınlık.
+    const sortedProfiles = useMemo(() => {
+        const arr = [...filteredProfiles];
+        switch (sortKey) {
+            case 'RATING':
+                return arr.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            case 'FEE':
+                return arr.sort((a, b) => (a.fee || 0) - (b.fee || 0));
+            case 'DISTANCE':
+                return arr.sort((a, b) => {
+                    const dA = distanceOf(a); const dB = distanceOf(b);
+                    if (dA == null && dB == null) return 0;
+                    if (dA == null) return 1;
+                    if (dB == null) return -1;
+                    return dA - dB;
+                });
+            default: // RECOMMENDED — müsait > elite > puan > deneyim
+                return arr.sort((a, b) =>
+                    Number(b.isAvailable !== false) - Number(a.isAvailable !== false) ||
+                    Number(!!b.isElite) - Number(!!a.isElite) ||
+                    (b.rating || 0) - (a.rating || 0) ||
+                    ((b as any).matchCount || 0) - ((a as any).matchCount || 0));
+        }
+    }, [filteredProfiles, sortKey, distanceOf]);
+
+    const activeFilterCount = (['district', 'day', 'time'] as const).filter(k => filters[k] !== 'Tümü').length;
+    const isLoading = !initialLoadComplete && profiles.length === 0;
+
+    const clearAll = () => { setFilters(EMPTY_FILTERS); setSearch(''); };
+
+    const openFilterSheet = () => { setDraftFilters(filters); setShowFilterSheet(true); };
+    const applyDraftFilters = () => { setFilters(draftFilters); setShowFilterSheet(false); };
+    const draftResultCount = useMemo(
+        () => (showFilterSheet ? applyFilters(profiles, draftFilters, search).length : 0),
+        [showFilterSheet, profiles, draftFilters, search, applyFilters],
+    );
+
+    // ─── Kiralama akışı (FAZ 8A — tek yol: create_service_request) ───────────
+    // Yalnız KULLANICININ KENDİ maçları: adminMatches küresel ve filtresizdir
+    // (herkesin DRAFT/ACTIVE maçları store'da). Sahiplik süzgeci olmadan kaptan
+    // başkasının maçını seçip create_service_request'ten FORBIDDEN alıyordu.
     const myMatches = useMemo(() => {
-        return adminMatches.filter(m => m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status);
+        const uid = auth.currentUser?.uid;
+        if (!uid) return [];
+        return adminMatches.filter(m =>
+            (m.creatorId === uid || (m as any).captainId === uid) &&
+            (m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status));
     }, [adminMatches]);
 
-    const [showMatchSelection, setShowMatchSelection] = useState(false);
-    const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
-    const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+    const matchNeedsRole = useCallback((m: any) => (
+        type === 'GK'
+            ? m.missingPositions?.some((pos: any) => pos.role === 'GK' && pos.count > 0)
+            : !m.refereeId
+    ), [type]);
+
+    // Rolü eksik olan maçlar önce gelsin — kaptan çoğu zaman onlar için burada.
+    const sortedMatches = useMemo(
+        () => [...myMatches].sort((a, b) => Number(matchNeedsRole(b)) - Number(matchNeedsRole(a))),
+        [myMatches, matchNeedsRole],
+    );
 
     const handleSelect = (p: Goalkeeper | Referee) => {
         setSelectedProfile(p);
         setShowMatchSelection(false);
+        setMatchPendingConfirm(null);
         setShowSuccessScreen(false);
         setHireError(null);
+        setShareCopied(false);
+        setHeroBroken(false);
     };
 
-    const handleDirectHire = () => {
+    // Detay CTA'sı: tek aktif maç varsa liste adımını atla, doğrudan onaya git (Plan 8A.1).
+    const openHireFlow = () => {
         setHireError(null);
+        setMatchPendingConfirm(sortedMatches.length === 1 ? sortedMatches[0] : null);
         setShowMatchSelection(true);
     };
 
-    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj + %10 komisyon
-    // + sağlayıcı onayı + bildirim). Maç kaydı doğrudan mutasyona uğratılmaz;
-    // sağlayıcı kabul edip tahsilat yapılınca backend gk_id/refereeId'yi yazar.
+    // Başarıyı kapat (Tamam butonu veya otomatik zamanlayıcı — hangisi önce gelirse).
+    const finishSuccess = () => {
+        if (successTimerRef.current) { clearTimeout(successTimerRef.current); successTimerRef.current = null; }
+        const chosen = selectedProfile;
+        setShowSuccessScreen(false);
+        setSelectedProfile(null);
+        setShowMatchSelection(false);
+        setMatchPendingConfirm(null);
+        setHireResult(null);
+        if (onSelect && chosen) onSelect(chosen);
+    };
+
+    // Katmanın "bir adım geri" mantığı (Escape ve arka plan için tek kaynak).
+    const stepBackOverlay = useCallback(() => {
+        if (isHiring) return; // ödeme sürerken kapatma
+        if (showSuccessScreen) { finishSuccess(); return; }
+        if (showMatchSelection && matchPendingConfirm) { setMatchPendingConfirm(null); return; }
+        if (showMatchSelection) { setShowMatchSelection(false); return; }
+        setSelectedProfile(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isHiring, showSuccessScreen, showMatchSelection, matchPendingConfirm]);
+
+    // Erişilebilirlik: tam ekran katman açıkken Escape ile kapatma (a11y denetim bulgusu).
+    useEffect(() => {
+        if (!selectedProfile) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') stepBackOverlay(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [selectedProfile, stepBackOverlay]);
+
+    const handleShare = async (p: Goalkeeper | Referee) => {
+        const text = `${p.name} — OYNA'da ${roleLabel}. Maç başı ücret: ${p.fee}₺${p.rating > 0 ? `, puan: ${p.rating.toFixed(1)}` : ''}.`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: `OYNA · ${p.name}`, text });
+            } else {
+                await navigator.clipboard.writeText(text);
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 1800);
+            }
+        } catch { /* kullanıcı paylaşımı iptal etti */ }
+    };
+
+    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj intenti + %10
+    // komisyon + bildirim) ARDINDAN fund_service_request (emanete alma). MatchJoin
+    // ile aynı iki-adımlı akış: sağlayıcı ancak FONLANMIŞ talebi kabul edebilir;
+    // fonlanmazsa talep sessizce askıda kalır (denetim bulgusu). Kabul + tahsilat
+    // sonrası backend gk_id/refereeId'yi yazar.
     const handleConfirmMatch = async (match: any) => {
         if (!selectedProfile || isHiring) return;
         setSelectedMatchForHire(match);
         setIsHiring(true);
         setHireError(null);
         try {
-            const result = await createServiceRequest(match.id, selectedProfile.id, activeTab);
+            const result = await createServiceRequest(match.id, selectedProfile.id, type);
+            // Cüzdandan emanete al (MatchJoin ile paritede varsayılan WALLET).
+            await fundServiceRequest(result.requestId, 'WALLET');
             setHireResult({ fee: result.fee, providerAmount: result.providerAmount });
             setShowSuccessScreen(true);
-
-            setTimeout(() => {
-                setShowSuccessScreen(false);
-                setSelectedProfile(null);
-                setShowMatchSelection(false);
-                setHireResult(null);
-                if (onSelect && selectedProfile) {
-                    onSelect(selectedProfile);
-                }
-            }, 3500);
+            successTimerRef.current = setTimeout(finishSuccess, 6000);
         } catch (err: any) {
             setHireError(err?.message || 'Talep oluşturulamadı. Lütfen tekrar dene.');
         } finally {
@@ -146,351 +373,834 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type: initialType, onBack, on
         }
     };
 
+    // ─── Detay için türetilmiş veriler ────────────────────────────────────────
+    const detail = selectedProfile;
+    const detailStats: any = (detail as any)?.stats || {};
+    const detailDistance = detail ? distanceOf(detail) : null;
+    const detailUnavailable = detail?.isAvailable === false;
+    const detailReviews = detail?.reviews || [];
+    // Çalışma günlerinden türetilmiş dürüst sinyal: bugün çalışıyor mu?
+    const detailAvailableToday = !detailUnavailable && !!detail?.workingHours?.activeDays?.includes(TODAY_SHORT);
+
+    const skillRows: { label: string; value: number }[] = useMemo(() => {
+        if (!detail) return [];
+        const rows = type === 'GK'
+            ? [
+                { label: 'Refleksler', value: detailStats.reflexes },
+                { label: 'Uçuş (Diving)', value: detailStats.diving },
+                { label: 'Pozisyon Alma', value: detailStats.positioning },
+                { label: 'Oyun Kurma', value: detailStats.distribution },
+                { label: 'Bire Bir', value: detailStats.oneOnOne },
+                { label: 'Hava Hakimiyeti', value: detailStats.aerialReach },
+            ]
+            : [
+                { label: 'Otorite', value: detailStats.authority },
+                { label: 'Kondisyon', value: detailStats.fitness },
+                { label: 'İletişim', value: detailStats.communication },
+            ];
+        // Yalnız gerçekten kayıtlı değerler — sahte/uydurma bar yok.
+        return rows.filter(r => typeof r.value === 'number' && r.value > 0);
+    }, [detail, detailStats, type]);
+
+    const factRows: { label: string; value: string }[] = useMemo(() => {
+        if (!detail) return [];
+        const present = (v: any) => v !== undefined && v !== null && v !== '';
+        // Çıplak sayı gelirse birimini ekle ("80" → "%80", "9.5" → "9.5 km") — kayıt formatı serbest.
+        const asPercent = (v: any) => (/^\d+([.,]\d+)?$/.test(String(v).trim()) ? `%${v}` : String(v));
+        const asKm = (v: any) => (/^\d+([.,]\d+)?$/.test(String(v).trim()) ? `${v} km` : String(v));
+        if (type === 'GK') {
+            return [
+                present(detailStats.savePercentage) && { label: 'Kurtarış', value: asPercent(detailStats.savePercentage) },
+                present(detailStats.cleanSheets) && { label: 'Gol Yemeden', value: `${detailStats.cleanSheets} maç` },
+                present(detailStats.penaltySaveRate) && { label: 'Penaltı Kurtarma', value: asPercent(detailStats.penaltySaveRate) },
+            ].filter(Boolean) as { label: string; value: string }[];
+        }
+        return [
+            present(detailStats.avgCards) && { label: 'Maç Başı Kart', value: String(detailStats.avgCards) },
+            present(detailStats.avgDistance) && { label: 'Maç Başı Koşu', value: asKm(detailStats.avgDistance) },
+            present(detailStats.varCallAccuracy) && { label: 'Karar İsabeti', value: asPercent(detailStats.varCallAccuracy) },
+        ].filter(Boolean) as { label: string; value: string }[];
+    }, [detail, detailStats, type]);
+
     return (
         <div className="min-h-screen bg-[#0A0E14] relative flex flex-col font-sans overflow-hidden">
 
-            {/* 1. Header */}
-            <header className="px-6 pt-6 pb-4 flex justify-between items-center bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
+            {/* 1. Başlık */}
+            <header className="px-5 pt-6 pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
                 <button
                     onClick={onBack}
-                    className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all"
+                    aria-label="Geri"
+                    className="w-11 h-11 shrink-0 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all"
                 >
                     <ChevronLeft size={20} />
                 </button>
-                <div className="flex flex-col items-center">
-                    <h1 className="text-sm font-black tracking-[0.2em] text-white uppercase font-display">
-                        {activeTab === 'GK' ? 'TRANSFER MARKET: KALECİ' : 'TRANSFER MARKET: HAKEM'}
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-base font-black tracking-tight text-white uppercase leading-tight">
+                        {type === 'GK' ? 'Kaleci Bul' : 'Hakem Kirala'}
                     </h1>
-                    <div className="flex items-center gap-1">
-                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${activeTab === 'GK' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-brand-primary shadow-[0_0_8px_rgba(250,204,21,0.5)]'}`}></div>
-                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Profesyonel Arama Aktif</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.accent, boxShadow: `0 0 8px ${theme.accent}80` }} />
+                        <span className="text-[10px] font-bold text-white/40">
+                            {isLoading ? 'Profiller yükleniyor…' : `${zoneCity} bölgesinde ${profiles.length} onaylı ${roleLabel.toLocaleLowerCase('tr-TR')}`}
+                        </span>
                     </div>
+                </div>
+                <div
+                    className="w-11 h-11 shrink-0 rounded-full flex items-center justify-center border"
+                    style={{ backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }}
+                >
+                    <RoleIcon size={18} />
                 </div>
             </header>
 
-            {/* 2. Tabs (Hidden if locked) */}
-            {!isLocked && (
-                <div className="px-6 py-4 bg-[#0A0E14]">
-                    <div className="bg-[#161B22] p-1.5 rounded-[24px] flex border border-white/5 shadow-inner">
+            {/* 2. Arama + Filtre */}
+            <div className="px-5 pt-4 pb-2 flex gap-2">
+                <div className="flex-1 relative">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="İsim, stil veya bölge ara"
+                        className="w-full h-11 bg-[#11161F] border border-white/[0.07] focus:border-white/20 rounded-2xl pl-10 pr-9 text-[13px] font-semibold text-white placeholder:text-white/25 outline-none transition-colors"
+                    />
+                    {search && (
                         <button
-                            onClick={() => setActiveTab('GK')}
-                            className={`flex-1 py-3.5 text-[10px] font-black rounded-[18px] transition-all flex items-center justify-center gap-2 ${activeTab === 'GK' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-900/20' : 'text-gray-500 hover:text-white'}`}
+                            onClick={() => setSearch('')}
+                            aria-label="Aramayı temizle"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50 hover:text-white"
                         >
-                            <Shield size={14} /> KALECİLER
+                            <X size={12} />
                         </button>
-                        <button
-                            onClick={() => setActiveTab('REF')}
-                            className={`flex-1 py-3.5 text-[10px] font-black rounded-[18px] transition-all flex items-center justify-center gap-2 ${activeTab === 'REF' ? 'bg-brand-primary text-black shadow-lg shadow-yellow-900/20' : 'text-gray-500 hover:text-white'}`}
-                        >
-                            <Scale size={14} /> HAKEMLER
-                        </button>
-                    </div>
+                    )}
                 </div>
-            )}
-
-            {/* Filters */}
-            <div className="px-6 pb-2 pt-2 bg-[#0A0E14] flex gap-2 overflow-x-auto custom-scrollbar">
-                <select 
-                    value={filterDistrict} 
-                    onChange={e => setFilterDistrict(e.target.value)}
-                    className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
+                <button
+                    onClick={openFilterSheet}
+                    aria-label="Filtreler"
+                    className="relative w-11 h-11 shrink-0 rounded-2xl border flex items-center justify-center transition-all active:scale-95"
+                    style={activeFilterCount > 0
+                        ? { backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }
+                        : { backgroundColor: '#11161F', borderColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)' }}
                 >
-                    <option value="Tümü" className="bg-[#161B22] text-white">Tüm İlçeler</option>
-                    {cityDistricts.map(d => <option key={d} value={d} className="bg-[#161B22] text-white">{d}</option>)}
-                </select>
-                <select 
-                    value={filterDay} 
-                    onChange={e => setFilterDay(e.target.value)}
-                    className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
-                >
-                    <option value="Tümü">Tüm Günler</option>
-                    <option value="Pzt">Pazartesi</option>
-                    <option value="Sal">Salı</option>
-                    <option value="Çar">Çarşamba</option>
-                    <option value="Per">Perşembe</option>
-                    <option value="Cum">Cuma</option>
-                    <option value="Cmt">Cumartesi</option>
-                    <option value="Paz">Pazar</option>
-                </select>
-                <select 
-                    value={filterTime} 
-                    onChange={e => setFilterTime(e.target.value)}
-                    className="bg-[#161B22] text-[11px] font-bold text-white px-3 py-2 rounded-xl border border-white/10 outline-none appearance-none min-w-[100px]"
-                >
-                    <option value="Tümü">Tüm Saatler</option>
-                    <option value="18:00">18:00</option>
-                    <option value="19:00">19:00</option>
-                    <option value="20:00">20:00</option>
-                    <option value="21:00">21:00</option>
-                    <option value="22:00">22:00</option>
-                    <option value="23:00">23:00</option>
-                </select>
+                    <SlidersHorizontal size={16} />
+                    {activeFilterCount > 0 && (
+                        <span
+                            className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] px-0.5 rounded-full text-[9px] font-black flex items-center justify-center text-black"
+                            style={{ backgroundColor: theme.accent }}
+                        >
+                            {activeFilterCount}
+                        </span>
+                    )}
+                </button>
             </div>
 
-            {/* 3. Main Content */}
+            {/* 3. Sıralama çipleri */}
+            <div className="pl-5 pr-2 pb-1 flex gap-2 overflow-x-auto no-scrollbar">
+                {SORT_OPTIONS.map(o => (
+                    <Chip
+                        key={o.key}
+                        label={o.label}
+                        selected={sortKey === o.key}
+                        onClick={() => setSortKey(o.key)}
+                    />
+                ))}
+            </div>
+
+            {/* 4. Sonuç sayacı */}
+            <div className="px-5 pt-2 pb-1 flex items-center justify-between">
+                <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">
+                    {isLoading ? ' ' : `${sortedProfiles.length} sonuç`}
+                </span>
+                {(activeFilterCount > 0 || search) && (
+                    <button
+                        onClick={clearAll}
+                        className="text-[10px] font-black uppercase tracking-widest transition-colors"
+                        style={{ color: theme.accent }}
+                    >
+                        Filtreleri Temizle
+                    </button>
+                )}
+            </div>
+
+            {/* 5. Liste */}
             <div className="flex-1 relative overflow-hidden">
-                <div className="h-full px-6 pb-24 overflow-y-auto custom-scrollbar">
-                    <div className="grid grid-cols-1 gap-6 pt-2">
-                        {filteredProfiles.length === 0 ? (
-                            <EmptyState title="Profil Bulunamadı" message="Bu kriterlere uygun bir profil bulunamadı." />
-                        ) : (
-                            filteredProfiles.map(p => (
+                <div className="h-full px-5 pb-24 overflow-y-auto custom-scrollbar">
+                    {isLoading ? (
+                        <SkeletonList rows={5} className="pt-2" />
+                    ) : sortedProfiles.length === 0 ? (
+                        <div className="pt-6">
+                            <EmptyState
+                                icon={<RoleIcon size={44} strokeWidth={1.2} />}
+                                title={`${roleLabel} Bulunamadı`}
+                                message={activeFilterCount > 0 || search
+                                    ? 'Bu kriterlere uyan profil yok. Filtreleri gevşetmeyi dene.'
+                                    : `Bölgende henüz onaylı ${roleLabel.toLocaleLowerCase('tr-TR')} yok. Yakında burada olacaklar.`}
+                            />
+                            {(activeFilterCount > 0 || search) && (
+                                <div className="flex justify-center">
+                                    <button
+                                        onClick={clearAll}
+                                        className="px-5 h-10 rounded-full text-[11px] font-black uppercase tracking-wider text-black active:scale-95 transition-transform"
+                                        style={{ backgroundColor: theme.accent }}
+                                    >
+                                        Filtreleri Temizle
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-3 pt-2">
+                            {sortedProfiles.map(p => (
                                 <MarketplaceCard
                                     key={p.id}
                                     item={p}
-                                    type={activeTab}
+                                    type={type}
+                                    distanceKm={distanceOf(p)}
                                     onClick={() => handleSelect(p)}
                                 />
-                            ))
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Detailed View Modal */}
+            {/* 6. Filtre paneli */}
+            <BottomSheet open={showFilterSheet} onClose={() => setShowFilterSheet(false)} ariaLabel="Filtreler">
+                <div className="pb-2">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-base font-black text-white uppercase tracking-tight">Filtreler</h2>
+                        <button
+                            onClick={() => setDraftFilters(EMPTY_FILTERS)}
+                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors"
+                        >
+                            Sıfırla
+                        </button>
+                    </div>
+
+                    <div className="space-y-5">
+                        <div>
+                            <p className="text-[10px] font-black text-white/35 uppercase tracking-widest mb-2">Hizmet Bölgesi</p>
+                            <div className="flex flex-wrap gap-2">
+                                <Chip label="Tümü" selected={draftFilters.district === 'Tümü'} onClick={() => setDraftFilters(f => ({ ...f, district: 'Tümü' }))} />
+                                {cityDistricts.map(d => (
+                                    <Chip key={d} label={d} selected={draftFilters.district === d} onClick={() => setDraftFilters(f => ({ ...f, district: d }))} />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-[10px] font-black text-white/35 uppercase tracking-widest mb-2">Gün</p>
+                            <div className="flex flex-wrap gap-2">
+                                <Chip label="Tümü" selected={draftFilters.day === 'Tümü'} onClick={() => setDraftFilters(f => ({ ...f, day: 'Tümü' }))} />
+                                {DAY_OPTIONS.map(d => (
+                                    <Chip key={d.id} label={d.label} selected={draftFilters.day === d.id} onClick={() => setDraftFilters(f => ({ ...f, day: d.id }))} />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-[10px] font-black text-white/35 uppercase tracking-widest mb-2">Maç Saati</p>
+                            <div className="flex flex-wrap gap-2">
+                                <Chip label="Tümü" selected={draftFilters.time === 'Tümü'} onClick={() => setDraftFilters(f => ({ ...f, time: 'Tümü' }))} />
+                                {HOUR_OPTIONS.map(h => (
+                                    <Chip key={h} label={h} selected={draftFilters.time === h} onClick={() => setDraftFilters(f => ({ ...f, time: h }))} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={applyDraftFilters}
+                        className="w-full h-13 min-h-[52px] rounded-2xl mt-6 text-xs font-black uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
+                        style={{ backgroundColor: theme.accent }}
+                    >
+                        {draftResultCount} Sonucu Göster
+                    </button>
+                </div>
+            </BottomSheet>
+
+            {/* 7. Detay / kiralama akışı */}
             <AnimatePresence>
-                {selectedProfile && (
+                {detail && (
                     <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={`${detail.name} — ${roleLabel} profili`}
                         initial={{ opacity: 0, y: 100 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 100 }}
+                        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                         className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col overflow-hidden"
                     >
                         {showSuccessScreen ? (
-                            /* Success Screen Overlay */
-                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#0A0E14] relative">
-                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 pointer-events-none" />
-                                
+                            /* ── Başarı ekranı — "talep gönderildi", "kiralandı" değil (sağlayıcı onayı gerçek) ── */
+                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative overflow-y-auto">
                                 <motion.div
-                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    initial={{ scale: 0.85, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ type: 'spring', delay: 0.1 }}
-                                    className="flex flex-col items-center gap-6 z-10"
+                                    className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto"
                                 >
-                                    <div className="w-20 h-20 rounded-full border-2 flex items-center justify-center shadow-lg bg-emerald-500/10 border-[#39FF14] text-[#39FF14] shadow-[0_0_25px_rgba(57,255,20,0.3)]">
-                                        <Sparkles size={38} className="animate-pulse" />
+                                    <div
+                                        className="w-20 h-20 rounded-full border-2 flex items-center justify-center"
+                                        style={{ backgroundColor: theme.soft, borderColor: theme.accent, color: theme.accent, boxShadow: `0 0 32px ${theme.accent}40` }}
+                                    >
+                                        <CheckCircle2 size={38} />
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[#39FF14]">
-                                            TALEP GÖNDERİLDİ
-                                        </h3>
-                                        
-                                        <div className="bg-[#161B22]/80 border border-white/5 rounded-3xl p-5 max-w-sm mx-auto space-y-3 text-left">
-                                            <div className="flex items-center gap-3">
-                                                <img src={selectedProfile.avatar} className="w-10 h-10 rounded-full object-cover border border-white/10" referrerPolicy="no-referrer" />
-                                                <div>
-                                                    <p className="text-xs font-black text-white uppercase">{selectedProfile.name}</p>
-                                                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-                                                        {activeTab === 'GK' ? 'Kaleci' : 'Hakem'}
-                                                    </p>
-                                                </div>
+                                    <div className="space-y-1">
+                                        <h3 className="text-2xl font-black uppercase tracking-tight text-white">Talep Gönderildi</h3>
+                                        <p className="text-[11px] font-bold text-white/40">
+                                            {detail.name} onaylayınca bildirim alacaksın
+                                        </p>
+                                    </div>
+
+                                    <div className="w-full bg-[#11161F] border border-white/[0.06] rounded-3xl p-5 space-y-4 text-left">
+                                        <div className="flex items-center gap-3">
+                                            <SafeAvatar src={detail.avatar} name={detail.name} className="w-11 h-11 rounded-xl" />
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-extrabold text-white truncate">{detail.name}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
                                             </div>
-                                            
-                                            <div className="w-full h-px bg-white/5" />
-                                            
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-white/40 uppercase tracking-wider">MAÇ DETAYI</p>
-                                                <p className="text-xs font-bold text-white uppercase">{selectedMatchForHire?.location}</p>
-                                                <p className="text-[10px] text-gray-400">{selectedMatchForHire?.date.toUpperCase()} • {selectedMatchForHire?.time}</p>
-                                            </div>
-                                            
-                                            <div className="w-full h-px bg-white/5" />
-                                            
+                                        </div>
+
+                                        <div className="h-px bg-white/[0.06]" />
+
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Maç</p>
+                                            <p className="text-[13px] font-bold text-white">{selectedMatchForHire?.location}</p>
+                                            <p className="text-[11px] font-semibold text-white/45">{selectedMatchForHire?.date} · {selectedMatchForHire?.time}</p>
+                                        </div>
+
+                                        <div className="h-px bg-white/[0.06]" />
+
+                                        <div className="space-y-1.5">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[9px] font-black text-white/40 uppercase">HİZMET BEDELİ</span>
-                                                <span className="text-sm font-black text-[#39FF14]">
-                                                    {hireResult?.fee ?? selectedProfile.fee} ₺
+                                                <span className="text-[10px] font-black text-white/35 uppercase tracking-widest">Emanete Alınan Ücret</span>
+                                                <span className="text-base font-black font-numeric tabular-nums" style={{ color: theme.accent }}>
+                                                    {hireResult?.fee ?? detail.fee} ₺
                                                 </span>
                                             </div>
                                             {hireResult && (
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[9px] font-black text-white/40 uppercase">SAĞLAYICININ NET KAZANCI</span>
-                                                    <span className="text-xs font-bold text-white/70">{hireResult.providerAmount} ₺</span>
+                                                    <span className="text-[10px] font-black text-white/35 uppercase tracking-widest">{roleLabel} Net Kazancı</span>
+                                                    <span className="text-xs font-bold text-white/60 font-numeric tabular-nums">{hireResult.providerAmount} ₺</span>
                                                 </div>
                                             )}
                                         </div>
-
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-4">
-                                            {activeTab === 'GK' ? 'Kaleci' : 'Hakem'} onayladığında bildirim alacaksın. Ödeme, onay ve maç kesinleşmesine kadar yalnızca bloke edilir.
-                                        </p>
                                     </div>
+
+                                    {/* Süreç adımları */}
+                                    <div className="w-full flex items-center gap-2 px-1">
+                                        {[
+                                            { icon: <Check size={11} />, label: 'Ödeme emanette', done: true },
+                                            { icon: <Hourglass size={11} />, label: `${roleLabel} onayı`, done: false },
+                                            { icon: <Wallet size={11} />, label: 'Maç sonrası aktarım', done: false },
+                                        ].map((s, i) => (
+                                            <React.Fragment key={s.label}>
+                                                {i > 0 && <div className="flex-1 h-px bg-white/10" />}
+                                                <div className="flex flex-col items-center gap-1.5 shrink-0">
+                                                    <span
+                                                        className="w-6 h-6 rounded-full flex items-center justify-center border"
+                                                        style={s.done
+                                                            ? { backgroundColor: theme.accent, borderColor: theme.accent, color: '#0A0E14' }
+                                                            : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)' }}
+                                                    >
+                                                        {s.icon}
+                                                    </span>
+                                                    <span className={`text-[8.5px] font-bold uppercase tracking-wide ${s.done ? 'text-white' : 'text-white/35'}`}>{s.label}</span>
+                                                </div>
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+
+                                    <p className="text-[10px] text-white/30 font-semibold">
+                                        Ödemen emanete alındı; {roleLabel.toLocaleLowerCase('tr-TR')} onaylayıp maç kesinleşince aktarılır, gelmezse iade edilir.
+                                    </p>
+
+                                    <button
+                                        onClick={finishSuccess}
+                                        className="w-full h-13 min-h-[52px] rounded-2xl text-xs font-black uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
+                                        style={{ backgroundColor: theme.accent }}
+                                    >
+                                        Tamam
+                                    </button>
                                 </motion.div>
                             </div>
                         ) : showMatchSelection ? (
-                            /* Match Selection Screen Overlay */
-                            <div className="flex-1 flex flex-col p-6 overflow-hidden relative">
-                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 pointer-events-none" />
-                                
-                                <div className="flex items-center justify-between mb-6 relative z-10">
-                                    <div>
-                                        <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">
-                                            SIRADAKİ MAÇLARIM
-                                        </h2>
-                                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">
-                                            Hangi maç için {activeTab === 'GK' ? 'kaleci' : 'hakem'} kiralamak istiyorsunuz?
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowMatchSelection(false)}
-                                        className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-
-                                {hireError && (
-                                    <div className="mb-4 p-3 rounded-2xl bg-red-500/10 border border-red-500/30 relative z-10">
-                                        <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide">{hireError}</p>
-                                    </div>
-                                )}
-
-                                <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24 relative z-10">
-                                    {isHiring ? (
-                                        <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                            <Spinner size={32} color="#FACC15" />
-                                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
-                                                İşlem gerçekleştiriliyor...
+                            matchPendingConfirm ? (
+                                /* ── Onay adımı — ücret dökümüyle açık onay (Plan 8A.1) ── */
+                                <div className="flex-1 flex flex-col overflow-hidden">
+                                    <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
+                                        <div className="min-w-0">
+                                            <h2 className="text-lg font-black uppercase tracking-tight text-white">Talebi Onayla</h2>
+                                            <p className="text-[11px] font-bold text-white/40 mt-0.5">
+                                                Göndermeden önce son kontrol
                                             </p>
                                         </div>
-                                    ) : myMatches.length === 0 ? (
-                                        <div className="text-center py-20 text-white/40 text-xs font-black uppercase tracking-widest">
-                                            PLANLANMIŞ VEYA AKTİF BİR MAÇINIZ BULUNMUYOR.
-                                        </div>
-                                    ) : (
-                                        myMatches.map(m => {
-                                            const needsThisRole = activeTab === 'GK' 
-                                                ? m.missingPositions?.some((pos: any) => pos.role === 'GK' && pos.count > 0)
-                                                : !m.refereeId;
-                                                
-                                            return (
-                                                <motion.div
-                                                    key={m.id}
-                                                    whileHover={{ scale: 1.015 }}
-                                                    whileTap={{ scale: 0.985 }}
-                                                    onClick={() => handleConfirmMatch(m)}
-                                                    className={`p-4 rounded-[20px] border transition-all cursor-pointer relative overflow-hidden ${
-                                                        needsThisRole 
-                                                            ? 'bg-yellow-500/5 border-yellow-500/30 hover:bg-yellow-500/10' 
-                                                            : 'bg-[#161B22]/60 border-white/5 hover:bg-[#161B22]/85'
-                                                    }`}
-                                                >
-                                                    {needsThisRole && (
-                                                        <div className="absolute top-4 right-4 px-2 py-0.5 rounded bg-yellow-500/20 border border-yellow-500/30">
-                                                            <span className="text-[7.5px] font-black text-yellow-400 uppercase tracking-widest">
-                                                                {activeTab === 'GK' ? 'KALECİ ARANIYOR' : 'HAKEM EKSİK'}
-                                                            </span>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex flex-col gap-1 pr-20">
-                                                        <span className="text-xs font-black text-white uppercase italic tracking-tight">
-                                                            {m.location.toUpperCase()}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-                                                            {m.date.toUpperCase()} • {m.time}
-                                                        </span>
-                                                        <div className="flex gap-2 mt-1.5">
-                                                            <span className="text-[8px] font-black bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-white/60">
-                                                                {m.format}
-                                                            </span>
-                                                            <span className="text-[8px] font-black bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-white/60">
-                                                                {getNormalizedDifficulty(m.difficulty)}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            /* Normal Profile Details */
-                            <>
-                                {/* Modal Header */}
-                                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-20">
-                                    <button onClick={() => setSelectedProfile(null)} className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 hover:bg-black/50 transition-colors">
-                                        <ChevronLeft size={24} />
-                                    </button>
-                                    <div className="flex gap-2">
-                                        <button className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 hover:bg-black/50 transition-colors">
-                                            <Share2 size={18} />
-                                        </button>
-                                        <button className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 hover:bg-black/50 transition-colors">
-                                            <Heart size={18} />
+                                        <button
+                                            onClick={() => { setShowMatchSelection(false); setMatchPendingConfirm(null); }}
+                                            aria-label="Kapat"
+                                            className="w-10 h-10 shrink-0 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
+                                        >
+                                            <X size={16} />
                                         </button>
                                     </div>
-                                </div>
 
-                                {/* Scrollable Content */}
-                                <div className="flex-1 overflow-y-auto custom-scrollbar pb-32">
-                                    {/* Edge to Edge Image */}
-                                    <div className="relative w-full h-[45vh]">
-                                        <img src={selectedProfile.avatar} className="w-full h-full object-cover" alt={selectedProfile.name} referrerPolicy="no-referrer" />
-                                        <div className={`absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/80 to-transparent`}></div>
-                                    </div>
-
-                                    <div className="px-6 -mt-16 relative z-10 mb-8">
-                                        <h1 className="text-[32px] font-bold text-white leading-tight">{selectedProfile.name}</h1>
-                                        <p className={`text-sm font-medium mt-1 ${activeTab === 'GK' ? 'text-[#39FF14]' : 'text-[#FACC15]'}`}>
-                                            {activeTab === 'GK' ? 'Profesyonel Kaleci' : 'Profesyonel Hakem'}
-                                        </p>
-                                        <div className="flex items-center gap-1.5 mt-3 text-white">
-                                            <Star size={14} className="fill-white" />
-                                            <span className="text-[15px] font-medium">{selectedProfile.rating}</span>
-                                            <span className="text-gray-400 text-[15px] mx-1">·</span>
-                                            <span className="text-[15px] text-gray-400">{selectedProfile.preferredZones?.[0] || LAUNCH_CITY}</span>
-                                            <span className="text-gray-400 text-[15px] mx-1">·</span>
-                                            <span className="text-[15px] text-gray-400">{
-                                                (userLocation && selectedProfile.coordinates)
-                                                    ? `${getHaversineDistance(userLocation.lat, userLocation.lng, selectedProfile.coordinates.lat, selectedProfile.coordinates.lng).toFixed(1)} km yakında`
-                                                    : (selectedProfile.distance ? `${selectedProfile.distance} km yakında` : 'Konumunu aç')
-                                            }</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Stats Grid */}
-                                    <div className="px-6 mb-8">
-                                        <h3 className="text-lg font-bold text-white mb-6">Performans Analizi</h3>
-                                        <div className="grid grid-cols-1 gap-5">
-                                            {activeTab === 'GK' ? (
-                                                <>
-                                                    <SkillBar label="Refleksler" value={(selectedProfile as Goalkeeper).stats.reflexes} color="bg-emerald-400" />
-                                                    <SkillBar label="Uçuş (Diving)" value={(selectedProfile as Goalkeeper).stats.diving} color="bg-emerald-500" />
-                                                    <SkillBar label="Pozisyon Alma" value={(selectedProfile as Goalkeeper).stats.positioning} color="bg-teal-400" />
-                                                    <SkillBar label="Oyun Kurma" value={(selectedProfile as Goalkeeper).stats.distribution} color="bg-emerald-600" />
-                                                    <SkillBar label="Bire Bir" value={(selectedProfile as Goalkeeper).stats.oneOnOne} color="bg-lime-400" />
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <SkillBar label="Otorite" value={(selectedProfile as Referee).stats.authority} color="bg-[#FACC15]" />
-                                                    <SkillBar label="Kondisyon" value={(selectedProfile as Referee).stats.fitness} color="bg-amber-400" />
-                                                    <SkillBar label="İletişim" value={(selectedProfile as Referee).stats.communication} color="bg-orange-400" />
-                                                    <SkillBar label="Kart Yönetimi" value={85} color="bg-yellow-500" />
-                                                    <SkillBar label="VAR Uyumu" value={95} color="bg-yellow-600" />
-                                                </>
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 space-y-3">
+                                        {/* Sağlayıcı */}
+                                        <div className="p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06] flex items-center gap-3">
+                                            <SafeAvatar src={detail.avatar} name={detail.name} className="w-11 h-11 rounded-xl" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[13px] font-extrabold text-white truncate">{detail.name}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
+                                            </div>
+                                            {detail.rating > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-[12px] font-black text-amber-400 shrink-0">
+                                                    <Star size={12} className="fill-amber-400" /> {detail.rating.toFixed(1)}
+                                                </span>
                                             )}
                                         </div>
+
+                                        {/* Maç */}
+                                        <div className="p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06]">
+                                            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Maç</p>
+                                            <p className="text-[13px] font-extrabold text-white">{matchPendingConfirm.location}</p>
+                                            <p className="text-[11px] font-semibold text-white/40 mt-0.5">
+                                                {matchPendingConfirm.date} · {matchPendingConfirm.time}
+                                            </p>
+                                            <div className="flex gap-1.5 mt-2">
+                                                {matchPendingConfirm.format && (
+                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                        {matchPendingConfirm.format}
+                                                    </span>
+                                                )}
+                                                <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                    {getNormalizedDifficulty(matchPendingConfirm.difficulty)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Ücret dökümü */}
+                                        <div className="p-4 rounded-2xl border" style={{ backgroundColor: theme.soft, borderColor: theme.border }}>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Hizmet Bedeli</span>
+                                                <span className="text-xl font-black font-numeric tabular-nums text-white">{detail.fee}₺</span>
+                                            </div>
+                                            <p className="text-[10px] font-semibold text-white/45 mt-2 leading-relaxed">
+                                                Onaylayınca <span className="text-white font-bold">emanete alınır</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
+                                                maç kesinleşince sağlayıcıya aktarılır, gelmezse iade edilir. Sabit ücret; %10 platform komisyonu bedele dahildir.
+                                            </p>
+                                        </div>
+
+                                        {hireError && (
+                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                                                <p className="text-[11px] font-bold text-red-400">{hireError}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="px-5 pt-3 pb-safe border-t border-white/5 space-y-2.5">
+                                        <button
+                                            onClick={() => handleConfirmMatch(matchPendingConfirm)}
+                                            disabled={isHiring}
+                                            className="w-full h-14 rounded-2xl text-xs font-black uppercase tracking-widest text-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                                            style={{ backgroundColor: theme.accent, boxShadow: `0 8px 24px ${theme.accent}30` }}
+                                        >
+                                            {isHiring ? (
+                                                <><Spinner size={16} color="#0A0E14" /> Gönderiliyor…</>
+                                            ) : (
+                                                <><Zap size={14} /> Onayla ve Talep Gönder</>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setMatchPendingConfirm(null)}
+                                            disabled={isHiring}
+                                            className="w-full h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white/50 bg-white/[0.04] border border-white/10 active:scale-[0.98] transition-transform disabled:opacity-40"
+                                        >
+                                            Farklı Maç Seç
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ── Maç seçim listesi ── */
+                                <div className="flex-1 flex flex-col overflow-hidden">
+                                    <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
+                                        <div className="min-w-0">
+                                            <h2 className="text-lg font-black uppercase tracking-tight text-white">Maçını Seç</h2>
+                                            <p className="text-[11px] font-bold text-white/40 mt-0.5">
+                                                Talep hangi maç için gönderilsin?
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowMatchSelection(false)}
+                                            aria-label="Kapat"
+                                            className="w-10 h-10 shrink-0 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+
+                                    {/* Seçilen sağlayıcı özeti */}
+                                    <div className="mx-5 mt-4 p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06] flex items-center gap-3">
+                                        <SafeAvatar src={detail.avatar} name={detail.name} className="w-10 h-10 rounded-xl" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-extrabold text-white truncate">{detail.name}</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-base font-black text-white font-numeric tabular-nums">{detail.fee}₺</p>
+                                            <p className="text-[9px] font-bold text-white/35 uppercase">maç başı</p>
+                                        </div>
+                                    </div>
+
+                                    {hireError && (
+                                        <div className="mx-5 mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                                            <p className="text-[11px] font-bold text-red-400">{hireError}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 space-y-2.5 pb-safe">
+                                        {sortedMatches.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center text-center py-16 gap-3">
+                                                <CalendarX size={40} strokeWidth={1.2} className="text-white/20" />
+                                                <p className="text-sm font-black text-white/70">Planlanmış maçın yok</p>
+                                                <p className="text-[11px] font-semibold text-white/35 max-w-[240px] leading-relaxed">
+                                                    {roleLabel} kiralamak için önce bir maç oluşturmalısın.
+                                                </p>
+                                                {onCreateMatch && (
+                                                    <button
+                                                        onClick={onCreateMatch}
+                                                        className="mt-2 px-6 h-11 rounded-full text-[11px] font-black uppercase tracking-wider text-black active:scale-95 transition-transform"
+                                                        style={{ backgroundColor: theme.accent }}
+                                                    >
+                                                        Maç Oluştur
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            sortedMatches.map(m => {
+                                                const needsThisRole = matchNeedsRole(m);
+                                                return (
+                                                    <motion.button
+                                                        key={m.id}
+                                                        type="button"
+                                                        whileTap={{ scale: 0.985 }}
+                                                        onClick={() => { setHireError(null); setMatchPendingConfirm(m); }}
+                                                        className="w-full text-left p-4 rounded-2xl border transition-colors relative overflow-hidden"
+                                                        style={needsThisRole
+                                                            ? { backgroundColor: theme.soft, borderColor: theme.border }
+                                                            : { backgroundColor: '#11161F', borderColor: 'rgba(255,255,255,0.06)' }}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div className="min-w-0 flex-1">
+                                                                {needsThisRole && (
+                                                                    <span
+                                                                        className="inline-block mb-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest text-black"
+                                                                        style={{ backgroundColor: theme.accent }}
+                                                                    >
+                                                                        {type === 'GK' ? 'Kaleci Aranıyor' : 'Hakem Eksik'}
+                                                                    </span>
+                                                                )}
+                                                                <p className="text-[13px] font-extrabold text-white truncate">{m.location}</p>
+                                                                <p className="text-[11px] font-semibold text-white/40 mt-0.5">{m.date} · {m.time}</p>
+                                                                <div className="flex gap-1.5 mt-2">
+                                                                    {m.format && (
+                                                                        <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                                            {m.format}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                                        {getNormalizedDifficulty(m.difficulty)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <ChevronRight size={18} className="shrink-0 text-white/25" />
+                                                        </div>
+                                                    </motion.button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        ) : (
+                            /* ── Profil detayı ── */
+                            <>
+                                {/* Üst bar */}
+                                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-20">
+                                    <button
+                                        onClick={() => setSelectedProfile(null)}
+                                        aria-label="Geri"
+                                        className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-colors"
+                                    >
+                                        <ChevronLeft size={22} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleShare(detail)}
+                                        aria-label="Paylaş"
+                                        className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-colors"
+                                    >
+                                        {shareCopied ? <Check size={16} style={{ color: theme.accent }} /> : <Share2 size={16} />}
+                                    </button>
+                                </div>
+
+                                {/* Kaydırılabilir içerik */}
+                                <div className="flex-1 overflow-y-auto custom-scrollbar pb-36">
+                                    {/* Kapak görseli / fallback */}
+                                    <div className="relative w-full h-[38vh] min-h-[260px]">
+                                        {detail.avatar && !heroBroken ? (
+                                            <img src={detail.avatar} className="w-full h-full object-cover" alt={detail.name} referrerPolicy="no-referrer" onError={() => setHeroBroken(true)} />
+                                        ) : (
+                                            <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-[#131A24] to-[#0A0E14] overflow-hidden">
+                                                {/* Rol filigranı + yumuşak parıltı — boş kapak ucuz görünmesin */}
+                                                <RoleIcon
+                                                    size={280}
+                                                    strokeWidth={0.6}
+                                                    className="absolute -right-14 -bottom-10 pointer-events-none"
+                                                    style={{ color: theme.accent, opacity: 0.05 }}
+                                                />
+                                                <div
+                                                    className="absolute -top-16 -left-16 w-56 h-56 rounded-full blur-[80px] pointer-events-none"
+                                                    style={{ backgroundColor: theme.accent, opacity: 0.07 }}
+                                                />
+                                                <div
+                                                    className="w-28 h-28 rounded-3xl flex items-center justify-center border text-3xl font-black relative"
+                                                    style={{ backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }}
+                                                >
+                                                    {getInitials(detail.name)}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/75 to-transparent" />
+                                    </div>
+
+                                    {/* Kimlik bloğu */}
+                                    <div className="px-5 -mt-16 relative z-10">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest"
+                                                style={detailUnavailable
+                                                    ? { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)' }
+                                                    : { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: 'rgba(34,197,94,0.35)', color: '#4ADE80' }}
+                                            >
+                                                <span className={`w-1.5 h-1.5 rounded-full ${detailUnavailable ? 'bg-white/30' : 'bg-[#4ADE80] animate-pulse'}`} />
+                                                {detailUnavailable ? 'Müsait Değil' : (detailAvailableToday ? 'Bugün Müsait' : 'Müsait')}
+                                            </span>
+                                            {detail.isElite && (
+                                                <span
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest"
+                                                    style={{ backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }}
+                                                >
+                                                    <BadgeCheck size={11} /> Elite
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <h1 className="text-[28px] font-black text-white leading-tight tracking-tight">{detail.name}</h1>
+                                        <p className="text-sm font-bold mt-0.5">
+                                            <span style={{ color: theme.accent }}>{roleLabel}</span>
+                                            {typeof detail.style === 'string' && detail.style && (
+                                                <span className="text-white/45"> · {detail.style}</span>
+                                            )}
+                                            {type === 'GK' && (detail as Goalkeeper).height && (
+                                                <span className="text-white/45"> · {(detail as Goalkeeper).height}</span>
+                                            )}
+                                        </p>
+
+                                        <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-2.5 text-[13px] text-white/60 font-semibold">
+                                            <span className="inline-flex items-center gap-1 text-white">
+                                                <Star size={13} className={detail.rating > 0 ? 'fill-amber-400 text-amber-400' : 'text-white/30'} />
+                                                {detail.rating > 0 ? detail.rating.toFixed(1) : 'Yeni'}
+                                            </span>
+                                            {detailReviews.length > 0 && <span className="text-white/35">({detailReviews.length} değerlendirme)</span>}
+                                            <span className="text-white/25">·</span>
+                                            <span className="inline-flex items-center gap-1 capitalize">
+                                                <MapPin size={12} className="text-white/35" />
+                                                {detail.preferredZones?.[0] || zoneCity}
+                                            </span>
+                                            <span className="text-white/25">·</span>
+                                            <span>{detailDistance != null ? `${detailDistance.toFixed(1)} km yakında` : 'Konumunu aç'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Özet karolar */}
+                                    <div className="px-5 mt-6 flex gap-2.5">
+                                        <StatTile
+                                            label="Puan"
+                                            value={detail.rating > 0
+                                                ? detail.rating.toFixed(1)
+                                                : <span className="text-sm leading-tight">Yeni</span>}
+                                            sub={detailReviews.length > 0
+                                                ? `${detailReviews.length} değerlendirme`
+                                                : (detail.rating > 0 ? 'genel ortalama' : 'ilk maçlarını bekliyor')}
+                                        />
+                                        <StatTile
+                                            label="Maç"
+                                            value={(detail as any).matchCount ?? 0}
+                                            sub="tamamlanan"
+                                        />
+                                        {type === 'GK' ? (
+                                            <StatTile
+                                                label="Yaş"
+                                                value={(detail as Goalkeeper).age ?? '—'}
+                                                sub={(detail as Goalkeeper).height || undefined}
+                                            />
+                                        ) : (
+                                            <StatTile
+                                                label="Seviye"
+                                                value={<span className="text-sm leading-tight">{(detail as Referee).level || '—'}</span>}
+                                                sub="klasman"
+                                            />
+                                        )}
+                                    </div>
+
+                                    {/* Hakkında */}
+                                    {detail.bio && (
+                                        <div className="px-5 mt-8">
+                                            <SectionTitle icon={<Info size={14} />} title="Hakkında" />
+                                            <p className="text-[13px] text-white/60 font-medium leading-relaxed">{detail.bio}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Performans — yalnız gerçek kayıtlı veriler */}
+                                    {(skillRows.length > 0 || factRows.length > 0) && (
+                                        <div className="px-5 mt-8">
+                                            <SectionTitle icon={<Award size={14} />} title="Performans" />
+                                            {factRows.length > 0 && (
+                                                <div className="flex gap-2.5 mb-5">
+                                                    {factRows.map(f => (
+                                                        <div key={f.label} className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-2 py-3 text-center">
+                                                            <div className="text-[13px] font-black text-white font-numeric truncate">{f.value}</div>
+                                                            <div className="text-[8.5px] font-black text-white/35 uppercase tracking-wider mt-1">{f.label}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {skillRows.length > 0 && (
+                                                <div className="space-y-3.5">
+                                                    {skillRows.map(r => (
+                                                        <SkillBar key={r.label} label={r.label} value={r.value} color={theme.accent} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Hizmet bölgeleri */}
+                                    {detail.preferredZones && detail.preferredZones.length > 0 && (
+                                        <div className="px-5 mt-8">
+                                            <SectionTitle icon={<MapPin size={14} />} title="Hizmet Bölgeleri" />
+                                            <div className="flex flex-wrap gap-2">
+                                                {detail.preferredZones.map(z => (
+                                                    <span key={z} className="px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-bold text-white/65 capitalize">
+                                                        {z}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Müsaitlik */}
+                                    {detail.workingHours && (detail.workingHours.activeDays?.length > 0 || detail.workingHours.activeHours) && (
+                                        <div className="px-5 mt-8">
+                                            <SectionTitle icon={<Clock size={14} />} title="Müsaitlik" />
+                                            {detail.workingHours.activeDays?.length > 0 && (
+                                                <div className="flex gap-1.5 mb-2.5">
+                                                    {DAY_OPTIONS.map(d => {
+                                                        const active = detail.workingHours!.activeDays.includes(d.id);
+                                                        return (
+                                                            <span
+                                                                key={d.id}
+                                                                className="flex-1 py-2 rounded-xl text-center text-[10px] font-black border"
+                                                                style={active
+                                                                    ? { backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }
+                                                                    : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.25)' }}
+                                                            >
+                                                                {d.id}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            {detail.workingHours.activeHours && (
+                                                <p className="text-[12px] font-bold text-white/50 inline-flex items-center gap-1.5">
+                                                    <Clock size={12} className="text-white/30" /> {detail.workingHours.activeHours} saatleri arası
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Değerlendirmeler */}
+                                    {detailReviews.length > 0 && (
+                                        <div className="px-5 mt-8">
+                                            <SectionTitle
+                                                icon={<MessageSquare size={14} />}
+                                                title="Değerlendirmeler"
+                                                right={<span className="text-[10px] font-black text-white/30">{detailReviews.length}</span>}
+                                            />
+                                            <div className="space-y-2.5">
+                                                {detailReviews.map(r => (
+                                                    <div key={r.id} className="bg-[#11161F] border border-white/[0.06] rounded-2xl p-4">
+                                                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                                                            <span className="text-[12px] font-extrabold text-white truncate">{r.author}</span>
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-400 shrink-0">
+                                                                <Star size={11} className="fill-amber-400" /> {r.rating}
+                                                            </span>
+                                                        </div>
+                                                        {r.comment && <p className="text-[12px] text-white/55 font-medium leading-relaxed">{r.comment}</p>}
+                                                        {r.date && <p className="text-[10px] font-semibold text-white/25 mt-2">{r.date}</p>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Güvenli kiralama */}
+                                    <div className="px-5 mt-8">
+                                        <div className="rounded-3xl border border-white/[0.07] bg-[#11161F] p-5">
+                                            <div className="flex items-center gap-2 mb-3.5">
+                                                <ShieldCheck size={16} style={{ color: theme.accent }} />
+                                                <h3 className="text-[13px] font-black text-white uppercase tracking-widest">Güvenli Kiralama</h3>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {[
+                                                    { icon: <Wallet size={13} />, text: 'Ücret önce kartında güvenle bloke edilir — anında tahsil edilmez.' },
+                                                    { icon: <Hourglass size={13} />, text: `${roleLabel} talebini görür ve onaylar; onaysız işlem yapılmaz.` },
+                                                    { icon: <CheckCircle2 size={13} />, text: 'Ödeme maç kesinleşince tahsil edilir; gelmezse ücretin iade edilir.' },
+                                                ].map((s, i) => (
+                                                    <div key={i} className="flex items-start gap-2.5">
+                                                        <span className="mt-0.5 shrink-0 text-white/35">{s.icon}</span>
+                                                        <p className="text-[11.5px] font-semibold text-white/55 leading-relaxed">{s.text}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p className="text-[10px] font-bold text-white/30 mt-4 pt-3 border-t border-white/[0.06]">
+                                                Sabit ücret · Pazarlık yok · %10 platform komisyonu şeffaftır
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Footer Action — tek yol: sabit ücretle talep gönder (pazarlık yok, Prensipler §4.3) */}
-                                <div className="absolute bottom-0 left-0 w-full p-6 bg-[#0A0E14]/90 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
-                                    <div className="flex flex-col items-start pr-2">
-                                        <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Hizmet Bedeli</span>
-                                        <span className="text-xl font-black text-white tabular-nums">{selectedProfile.fee}₺</span>
+                                {/* Alt aksiyon çubuğu — tek yol: sabit ücretle talep gönder (Prensipler §4.3) */}
+                                <div className="absolute bottom-0 left-0 w-full px-5 pt-4 pb-safe bg-[#0A0E14]/95 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
+                                    <div className="flex flex-col items-start pr-1 shrink-0">
+                                        <span className="text-[9px] font-black text-white/35 uppercase tracking-widest">Hizmet Bedeli</span>
+                                        <span className="text-xl font-black text-white font-numeric tabular-nums leading-tight">{detail.fee}₺</span>
+                                        <span className="text-[9px] font-bold text-white/30">maç başı</span>
                                     </div>
                                     <button
-                                        onClick={handleDirectHire}
-                                        className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest text-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-lg ${
-                                            activeTab === 'GK'
-                                                ? 'bg-[#39FF14] hover:bg-[#39FF14]/90 shadow-emerald-900/25'
-                                                : 'bg-[#FACC15] hover:bg-[#FACC15]/90 shadow-yellow-900/25'
-                                        }`}
+                                        onClick={openHireFlow}
+                                        disabled={detailUnavailable}
+                                        className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:active:scale-100"
+                                        style={detailUnavailable
+                                            ? { backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }
+                                            : { backgroundColor: theme.accent, color: '#0A0E14', boxShadow: `0 8px 24px ${theme.accent}30` }}
                                     >
-                                        <Zap size={14} />
-                                        KİRALA — TALEP GÖNDER
+                                        {detailUnavailable ? (
+                                            'Şu An Müsait Değil'
+                                        ) : (
+                                            <><Zap size={14} /> Maç Seç ve Talep Gönder</>
+                                        )}
                                     </button>
                                 </div>
                             </>

@@ -15,6 +15,7 @@ interface ServiceProfileProps {
 
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { useImageUpload } from '../hooks/useImageUpload';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -86,7 +87,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     userProfile?.coordinates ? [userProfile.coordinates.lat, userProfile.coordinates.lng] : defaultCenter
   );
-  const [radiusKm, setRadiusKm] = useState(15);
+  // Kayıtlı yarıçapı hidrate et — sabit 15 ile başlarsa her kayıtta settings.radiusKm 15'e sıfırlanıyordu.
+  const [radiusKm, setRadiusKm] = useState<number>((userProfile as any)?.settings?.radiusKm ?? 15);
   
   const MapEventsComponent = () => {
     useMapEvents({
@@ -111,10 +113,15 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           if (userProfile.fee) setFee(userProfile.fee);
           if (userProfile.style) setSelectedStyle(typeof userProfile.style === 'string' ? userProfile.style : 'Dengeli');
           if (userProfile.avatar) setCustomPhoto(userProfile.avatar);
+          const savedRadius = (userProfile as any).settings?.radiusKm;
+          if (typeof savedRadius === 'number') setRadiusKm(savedRadius);
       }
   }, [userProfile]);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Avatar'ı storage'a yükle (compress + public URL) — base64'ü DB kolonuna
+  // yazmak yerine (satır/pazaryeri yükünü şişiriyordu).
+  const { uploadImage, uploading: photoUploading } = useImageUpload('avatars', { minWidth: 200 });
 
 
 
@@ -142,7 +149,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         fee,
         name: displayName,
         style: selectedStyle,
-        avatar: customPhoto || userProfile.avatar,
+        // WYSIWYG: ekranda görünen fotoğrafı kaydet. Eski hâlde preset seçimi
+        // customPhoto=null bıraktığından hazır fotoğraf seçimi hiç kaydedilmiyordu.
+        avatar: currentPhoto || userProfile.avatar,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
         settings: { ...(userProfile as any).settings, radiusKm },
       });
@@ -156,15 +165,21 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCustomPhoto(ev.target?.result as string);
+    setSaveError(null);
+    try {
+      // compressImageForUpload tip/boyut doğrular + 1920px JPEG'e küçültür,
+      // ardından storage 'images/avatars'a yükler ve public URL döner.
+      const url = await uploadImage(file);
+      setCustomPhoto(url);
       setShowPhotoPicker(false);
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Fotoğraf yüklenemedi. Lütfen tekrar dene.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const stats = isRef
@@ -206,7 +221,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           className="px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-wider text-black flex items-center gap-1.5"
           style={{ background: saving ? '#22c55e' : accentColor, minWidth: 72 }}
         >
-          {saving ? <><Check size={14} /> Kaydedildi</> : 'KAYDET'}
+          {saving ? 'Kaydediliyor…' : 'KAYDET'}
         </motion.button>
       </div>
 
@@ -569,11 +584,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all"
+                disabled={photoUploading}
+                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all disabled:opacity-60"
                 style={{ borderColor: accentColor + '60', background: accentBg, color: accentColor }}
               >
                 <Upload size={20} />
-                CİHAZDAN FOTOĞRAF YÜKLE
+                {photoUploading ? 'YÜKLENİYOR…' : 'CİHAZDAN FOTOĞRAF YÜKLE'}
               </motion.button>
 
               {/* Preset grid */}

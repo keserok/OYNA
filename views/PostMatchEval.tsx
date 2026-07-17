@@ -427,7 +427,10 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             <motion.button 
               whileTap={{ scale: 0.96 }}
               onClick={() => {
-                showInfo('Skor itirazınız hakeme ve diğer kaptana iletildi.');
+                // Prensipler §3.4: skor itirazı ayrı bir özellik değil; sorunlar
+                // admin'e "Sorun Bildir" ile gider. Eskiden sahte "iletildi" toast'ı
+                // vardı (hiçbir kayıt/RPC yok) — gerçek kanalı söyle.
+                showInfo('Hakemin girdiği skor resmîdir. İtirazın varsa maç detayından "Sorun Bildir"i kullan.');
                 setShowHandshake(false);
               }}
               className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
