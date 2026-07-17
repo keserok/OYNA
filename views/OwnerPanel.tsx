@@ -521,7 +521,7 @@ const FinancialCalendarView: React.FC<{
     return (
         <div className="flex flex-col h-full bg-[#0A0E14] relative">
             <div className="sticky top-0 z-20 bg-[#0A0E14] border-b border-white/10 shadow-2xl">
-                <div className="grid grid-cols-3 gap-2 p-4 pb-2 border-b border-white/5 bg-[#161B22]">
+                <div className="grid grid-cols-3 gap-2 p-4 pb-2 pt-safe border-b border-white/5 bg-[#161B22]">
                     <div className="flex flex-col">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Tahsilat</span>
                         <span className="text-lg font-black text-emerald-400 tracking-tight font-mono">{dailyCollected}₺</span>
@@ -2064,7 +2064,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className="px-6 py-4 bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30">
+          <header className="px-6 py-4 pt-safe bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30">
               <div className="flex items-center gap-3">
                   <button onClick={() => onBack()} className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors">
                       <ArrowLeft size={20} />

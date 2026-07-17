@@ -31,7 +31,7 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4 pb-0 sm:pb-4"
       onClick={onClose}
       role="presentation"
     >
@@ -41,7 +41,7 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#161B22] w-full max-w-md rounded-t-3xl p-6 border border-white/10"
+        className="bg-[#161B22] w-full max-w-md rounded-t-3xl p-6 pb-safe-6 border border-white/10 max-h-[85dvh] overflow-y-auto custom-scrollbar"
       >
         <div className="flex justify-between mb-4">
           <h3 className="text-lg font-black text-white">{title}</h3>

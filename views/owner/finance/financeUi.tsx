@@ -33,10 +33,11 @@ export const GrowthBadge: React.FC<{ growth: GrowthResult; label?: string }> = (
 export const StatTile: React.FC<{ label: string; value: string; accent?: string; sub?: string }> = ({
   label, value, accent = 'text-white', sub,
 }) => (
-  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+  <div className="bg-white/5 p-3 sm:p-4 rounded-2xl border border-white/5 min-w-0">
     <p className="text-[10px] text-gray-500 font-black uppercase mb-1">{label}</p>
-    <p className={`text-xl font-black ${accent}`}>{value}</p>
-    {sub && <p className="text-[10px] text-gray-500 mt-1">{sub}</p>}
+    {/* MOB-M7: dar sütunda büyük tutar taşmasın — küçük ekranda ufalt + kırp. */}
+    <p className={`text-lg sm:text-xl font-black tabular-nums truncate ${accent}`} title={value}>{value}</p>
+    {sub && <p className="text-[10px] text-gray-500 mt-1 truncate">{sub}</p>}
   </div>
 );
 
@@ -106,7 +107,7 @@ export const DailyBars: React.FC<{ series: DayBar[]; monthLabelText: string }> =
             <button
               key={d.date}
               onClick={() => setSel((s) => (s?.date === d.date ? null : d))}
-              className="flex-1 h-full flex items-end min-w-0"
+              className="flex-1 h-full flex items-end min-w-0 touch-manipulation select-none"
               title={`${d.day} · ${money(d.collected)}`}
             >
               <div

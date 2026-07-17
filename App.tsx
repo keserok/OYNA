@@ -736,7 +736,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 flex items-center justify-between gap-3">
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
