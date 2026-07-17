@@ -109,14 +109,10 @@ const gradeToScore = (g?: string | null): number => {
 
 const mapDbPitchToUiPitch = (
   row: DbPitchRow,
-  flash?: { id: string; discount: number },
 ): Pitch => {
   const tariffs = mapDbTariffsToPitchTariffs(row.pitch_tariffs);
   const averagePrice =
     getAverageTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
-  const displayPrice = flash?.discount
-    ? Math.round(averagePrice * (1 - flash.discount / 100))
-    : averagePrice;
   const wh = row.working_hours;
   const courts: Court[] = (row.courts ?? [])
     .filter((c) => c.is_active !== false)
@@ -155,8 +151,12 @@ const mapDbPitchToUiPitch = (
     googleRating: row.google_rating ?? 0,
     googleReviews: row.google_review_count ?? 0,
     pricePerPerson: row.price_per_person ?? 0,
-    totalPrice: displayPrice,
-    originalPrice: flash?.discount ? averagePrice : undefined,
+    // V-3: flash indirim SLOT-ÖZEL (court_id/booking_date/start_time) bir kampanya;
+    // vitrinde tüm sahaya "indirimli fiyat" olarak yansıtmak yanıltıcıydı (rezervasyon
+    // TAM tarifeyi alıyordu — yem-değiştir). Kart artık GERÇEK ortalama fiyatı gösterir;
+    // doğru slot-özel indirim uygulaması OW-D'de (rezervasyon fiyatına).
+    totalPrice: averagePrice,
+    originalPrice: undefined,
     image: row.image ?? row.images?.[0] ?? '',
     images: row.images ?? (row.image ? [row.image] : []),
     description: row.description ?? '',
@@ -191,8 +191,9 @@ const mapDbPitchToUiPitch = (
           slotDuration: wh.slot_duration ?? wh.slotDuration ?? 60,
         }
       : { open: '08:00', close: '02:00', slotDuration: 60 },
-    flashDiscount: flash?.discount,
-    flashDealId: flash?.id,
+    // V-3: sahte pitch-geneli indirim rozeti/kimliği kaldırıldı (slot-özel doğru uygulama OW-D).
+    flashDiscount: undefined,
+    flashDealId: undefined,
     tariffs,
   };
 };
@@ -785,36 +786,20 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setPitchesLoading(true);
     setPitchesError(null);
     try {
-      const [pitchRes, dealRes] = await Promise.all([
-        supabase
-          .from('pitches')
-          .select('*, courts(id, name, court_type, surface, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity), pitch_tariffs(*)')
-          .eq('verification_status', 'approved')
-          .eq('is_open', true)
-          .eq('is_published', true),
-        supabase
-          .from('pitch_flash_deals')
-          .select('id, pitch_id, discount_percent, expires_at, is_claimed')
-          .eq('is_claimed', false)
-          .gt('expires_at', new Date().toISOString()),
-      ]);
+      // V-3: pitch_flash_deals SLOT-ÖZEL (court_id/booking_date/start_time). Vitrinde
+      // tüm sahaya indirim yansıtmak yem-değiştirdi; bu yüzden burada çekilmiyor. Doğru
+      // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
+      const pitchRes = await supabase
+        .from('pitches')
+        .select('*, courts(id, name, court_type, surface, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity), pitch_tariffs(*)')
+        .eq('verification_status', 'approved')
+        .eq('is_open', true)
+        .eq('is_published', true);
 
       if (pitchRes.error) throw pitchRes.error;
 
       const rows = (pitchRes.data ?? []) as unknown as DbPitchRow[];
-      const flashByPitch: Record<string, { id: string; discount: number }> = {};
-      ((dealRes.data ?? []) as { id: string; pitch_id: string; discount_percent: number }[]).forEach((d) => {
-        const existing = flashByPitch[d.pitch_id];
-        if (!existing || d.discount_percent > existing.discount) {
-          flashByPitch[d.pitch_id] = { id: d.id, discount: d.discount_percent };
-        }
-      });
-
-      // Flash rozet/indirimli fiyat YALNIZ admin flash_deals_enabled açtıysa
-      // vitrine yansır (aksi halde ham fiyat gösterilir, "İndirimli" filtresi saymaz).
-      const mapped = rows.map((r) =>
-        mapDbPitchToUiPitch(r, r.flash_deals_enabled === true ? flashByPitch[r.id] : undefined),
-      );
+      const mapped = rows.map((r) => mapDbPitchToUiPitch(r));
       setRealPitches(mapped);
       void loadTodayAvailability(mapped);
     } catch (err) {
