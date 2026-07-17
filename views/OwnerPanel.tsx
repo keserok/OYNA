@@ -1615,12 +1615,11 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
   const applyPitch = React.useCallback(async (pitch: OwnerPitch, demo: boolean, uid: string) => {
     const facilityCourts = (pitch.courts ?? []).filter((c) => c.is_active !== false);
-    const [paymentSettings, bankAccounts, account] = await Promise.all([
-      getPaymentSettings(pitch.id),
-      getBankAccounts(pitch.id),
-      getOrCreateOwnerAccount(uid),
-    ]);
-    setOwnerAccount(account);
+    // ── HIZLI YOL: kortlar, saatler ve tarifeler pitch objesinde hazır; ANINDA uygula.
+    // Ödeme/banka/hesap ayarları AYRI sorgulardan gelir. Bunları beklemek, yavaş
+    // bağlantıda kortları/takvimi gereksizce bloklar (owner "Saha ekleyin" görür
+    // — 4 kortu olmasına rağmen). Çekirdek operasyon ekranı bir saniye beklemez;
+    // finansal ayarlar arkada yüklenip facilityData'ya yamalanır.
     setRealPitchId(pitch.id);
     setIsDemoMode(demo || !!pitch.is_demo);
     setCourts(facilityCourts);
@@ -1640,19 +1639,42 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         price: Number(t.price_per_hour ?? 0),
         price_per_hour: Number(t.price_per_hour ?? 0),
       })),
-      bankAccounts,
+      bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
       district: pitch.district,
       city: pitch.city,
       address: pitch.address,
       verificationStatus: pitch.verification_status ?? 'pending',
       pricingMode: pitch.pricing_mode ?? 'FULL',
-      paymentOptions: paymentSettings.paymentOptions,
-      paramMerchantId: paymentSettings.paramMerchantId,
-      paramApiKey: paymentSettings.paramApiKey,
-      paramClientId: paymentSettings.paramClientId,
+      paymentOptions: { online: true, deposit: false, cash: true },
+      paramMerchantId: '',
+      paramApiKey: '',
+      paramClientId: '',
     });
-    await refreshDashboard(pitch.id, pitch.auto_approve_minutes ?? 35, facilityCourts);
+
+    // Rezervasyon özetleri (HOME) — kortlar zaten set edildi, bloklamadan yükle.
+    void refreshDashboard(pitch.id, pitch.auto_approve_minutes ?? 35, facilityCourts);
+
+    // ── YAVAŞ YOL: ödeme/banka/hesap ayarları — arkada yükle, facilityData'yı yamala.
+    // Bu yükleme başarısız olsa da kortlar/takvim/HOME çalışmaya devam eder.
+    try {
+      const [paymentSettings, bankAccounts, account] = await Promise.all([
+        getPaymentSettings(pitch.id),
+        getBankAccounts(pitch.id),
+        getOrCreateOwnerAccount(uid),
+      ]);
+      setOwnerAccount(account);
+      setFacilityData((prev: any) => (prev && prev.id === pitch.id ? {
+        ...prev,
+        bankAccounts,
+        paymentOptions: paymentSettings.paymentOptions,
+        paramMerchantId: paymentSettings.paramMerchantId,
+        paramApiKey: paymentSettings.paramApiKey,
+        paramClientId: paymentSettings.paramClientId,
+      } : prev));
+    } catch (e) {
+      console.warn('Ödeme/banka/hesap ayarları yüklenemedi (kortlar/takvim etkilenmez):', e);
+    }
   }, [refreshDashboard]);
 
   const switchFacility = async (pitchId: string) => {
