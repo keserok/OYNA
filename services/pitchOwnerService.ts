@@ -363,6 +363,65 @@ export async function createManualBooking(params: ManualBookingParams): Promise<
   }
 }
 
+// OP-P0-1: idempotency anahtarı — modern webview'de crypto.randomUUID; eski için yedek.
+function safeUuid(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  } catch { /* yedeğe düş */ }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+export interface OwnerManualBookingParams {
+  pitchId: string;
+  courtId: string;
+  bookingDate: string; // YYYY-MM-DD
+  startTime: string;   // HH:MM
+  endTime: string;     // HH:MM
+  customerName?: string;
+  customerPhone?: string;
+  paymentStatus?: 'PENDING' | 'PARTIAL' | 'PAID';
+  paidAmount?: number;
+  paymentMethod?: PaymentMethod;
+  /** Verilmezse üretilir. Ağ-retry'ında AYNI id gönderilirse ikinci rezervasyon yaratılmaz. */
+  clientRequestId?: string;
+}
+
+/**
+ * OP-P0-1: Atomik manuel rezervasyon — rezervasyon + nakit ödeme TEK sunucu
+ * transaction'ında (owner_create_manual_booking RPC). İki-adımlı akışın (RPC +
+ * ayrı recordBookingPayment) yarıda kesilme riskini kapatır. idempotent.
+ */
+export async function ownerCreateManualBooking(
+  p: OwnerManualBookingParams,
+): Promise<{ bookingId: string; paymentStatus: string }> {
+  try {
+    const { data, error } = await supabase.rpc('owner_create_manual_booking', {
+      p_pitch_id: p.pitchId,
+      p_court_id: p.courtId,
+      p_booking_date: p.bookingDate,
+      p_start_time: p.startTime,
+      p_end_time: p.endTime,
+      p_customer_name: p.customerName ?? null,
+      p_customer_phone: p.customerPhone ?? null,
+      p_payment_status: p.paymentStatus ?? 'PENDING',
+      p_paid_amount: p.paidAmount ?? 0,
+      p_payment_method: p.paymentMethod ?? 'CASH',
+      p_client_request_id: p.clientRequestId ?? safeUuid(),
+    });
+    if (error) throw error;
+    return {
+      bookingId: (data as { booking_id?: string })?.booking_id ?? '',
+      paymentStatus: (data as { payment_status?: string })?.payment_status ?? 'PENDING',
+    };
+  } catch (error) {
+    console.error('ownerCreateManualBooking:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 /** Bir slotu kapatır (bakım/özel etkinlik vb.) — pitch_availability_exceptions. */
 export async function closeSlot(params: {
   pitchId: string;

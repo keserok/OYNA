@@ -61,8 +61,7 @@ import {
   getPendingBookings,
   approveBooking,
   rejectBooking,
-  createManualBooking,
-  recordBookingPayment,
+  ownerCreateManualBooking,
   getSubscriptions,
   updateSubscriptionStatus,
   setSubscriptionAutoRenew,
@@ -912,26 +911,27 @@ const FinancialCalendarView: React.FC<{
                                     const startTime = isQuickCreateOpen.replace('.', ':');
                                     const hour = parseInt(startTime.split(':')[0], 10);
                                     const endTime = `${((hour + 1) % 24).toString().padStart(2, '0')}:00`;
-                                    const bookingId = await createManualBooking({
+                                    // OP-P3-25: sunucu-fiyatı getSlotPrice'tan (ölü 2000 fallback yok).
+                                    const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : 0;
+                                    const paidAmount =
+                                        paymentStatus === 'PAID' ? rateVal
+                                        : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25)
+                                        : 0;
+                                    // OP-P0-1: rezervasyon + nakit ödeme TEK atomik/idempotent RPC —
+                                    // "rezervasyon var ama tahsilat yok" tutarsızlığı biter. Telefon
+                                    // yalnız customer_phone'a yazılır (OP-P2-21; note tekrarı yok).
+                                    await ownerCreateManualBooking({
                                         pitchId,
                                         courtId: selectedCourtId,
                                         bookingDate: selectedDateISO,
                                         startTime,
                                         endTime,
                                         customerName: customerName.trim() || undefined,
-                                        // OP-P2-21: telefon yalnız customer_phone alanına yazılır;
-                                        // eskiden ayrıca note'a "Tel: …" olarak tekrar ediliyordu (not kirlenmesi).
                                         customerPhone: customerPhone.trim() || undefined,
-                                        source: 'OWNER_MANUAL',
+                                        paymentStatus,
+                                        paidAmount,
+                                        paymentMethod: 'CASH',
                                     });
-                                    // OP-P3-25: ölü sihirli 2000 fallback'i kaldırıldı (isQuickCreateOpen
-                                    // bu handler'da daima truthy; sunucu-fiyatı getSlotPrice'tan gelir).
-                                    const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : 0;
-                                    if (paymentStatus === 'PAID') {
-                                        await recordBookingPayment(bookingId, rateVal, 'CASH');
-                                    } else if (paymentStatus === 'PARTIAL') {
-                                        await recordBookingPayment(bookingId, Math.floor(rateVal * 0.25), 'CASH', 'Kapora');
-                                    }
                                     await loadBookings();
                                     setIsQuickCreateOpen(null);
                                     setCustomerName('');
