@@ -10,6 +10,7 @@ import {
 import { PageShell } from '../components/PageShell';
 import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
 import { FinanceReportPanel } from '../components/FinanceReportPanel';
+import { PaymentHealthPanel } from '../components/PaymentHealthPanel';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { useAdminToast } from '../context/AdminToastContext';
@@ -53,7 +54,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'report' | 'golive'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'report' | 'health' | 'golive'>('ledger');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
 
@@ -220,6 +221,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
     { id: 'report' as const, label: 'Finans Raporu' },
+    { id: 'health' as const, label: 'Ödeme Sağlığı' },
     { id: 'golive' as const, label: 'Go-Live & Mutabakat' },
   ]), [payouts.length]);
 
@@ -235,7 +237,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           <button
             type="button"
             onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'intents' || tab === 'payouts'}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'intents' || tab === 'payouts'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -285,7 +287,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
             </button>
           ))}
         </div>
-        {tab !== 'golive' && tab !== 'report' && (
+        {tab !== 'golive' && tab !== 'report' && tab !== 'health' && (
           <AdminSearchBar
             value={query}
             onChange={setQuery}
@@ -298,6 +300,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
       </div>
 
       {tab === 'report' && <FinanceReportPanel />}
+
+      {tab === 'health' && <PaymentHealthPanel />}
 
       {tab === 'golive' && <FinanceGoLivePanel />}
 
