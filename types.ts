@@ -1022,6 +1022,7 @@ export interface PitchExpense {
   created_by?: string | null;
   created_at?: string;
   is_demo?: boolean;
+  template_id?: string | null;
 }
 
 export interface PitchDebtor {

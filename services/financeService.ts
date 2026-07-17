@@ -117,6 +117,76 @@ function mapDebtorError(msg: string): string {
   return 'İşlem tamamlanamadı. Lütfen tekrar dene.';
 }
 
+// ─── FI-3 — Gider düzenle/sil + sabit gider şablonları ───────────────────────
+
+export interface ExpenseTemplate {
+  id: string;
+  title: string;
+  category: string;
+  amount: number;
+  is_active: boolean;
+}
+
+/** Gideri güncelle (başlık/tutar/kategori/tarih). RLS owner/admin. */
+export async function updateExpense(
+  id: string, patch: { title: string; amount: number; category: string; expense_date: string },
+): Promise<void> {
+  const { error } = await supabase.from('pitch_expenses').update(patch).eq('id', id);
+  if (error) throw new Error('Gider güncellenemedi.');
+}
+
+/** Gideri sil. */
+export async function deleteExpense(id: string): Promise<void> {
+  const { error } = await supabase.from('pitch_expenses').delete().eq('id', id);
+  if (error) throw new Error('Gider silinemedi.');
+}
+
+/** Tesisin aktif sabit gider şablonları. */
+export async function getExpenseTemplates(pitchId: string): Promise<ExpenseTemplate[]> {
+  const { data, error } = await supabase
+    .from('pitch_expense_templates')
+    .select('id, title, category, amount, is_active')
+    .eq('pitch_id', pitchId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error('Şablonlar yüklenemedi.');
+  return (data ?? []).map((t: any) => ({
+    id: String(t.id), title: t.title, category: t.category, amount: num(t.amount), is_active: !!t.is_active,
+  }));
+}
+
+export async function createExpenseTemplate(
+  pitchId: string, t: { title: string; category: string; amount: number },
+): Promise<void> {
+  const { error } = await supabase.from('pitch_expense_templates').insert({
+    pitch_id: pitchId, title: t.title, category: t.category, amount: t.amount,
+  });
+  if (error) throw new Error('Şablon eklenemedi.');
+}
+
+export async function deleteExpenseTemplate(id: string): Promise<void> {
+  // is_active=false ile pasifleştir (geçmiş giderlerin template_id bağı korunur).
+  const { error } = await supabase.from('pitch_expense_templates').update({ is_active: false }).eq('id', id);
+  if (error) throw new Error('Şablon kaldırılamadı.');
+}
+
+/** Şablonu belirli bir tarihte gider olarak uygula (ayda 1 — unique index korur). */
+export async function applyExpenseTemplate(
+  pitchId: string, t: ExpenseTemplate, expenseDateISO: string,
+): Promise<void> {
+  const { data: u } = await supabase.auth.getUser();
+  const { error } = await supabase.from('pitch_expenses').insert({
+    pitch_id: pitchId, title: t.title, category: t.category, amount: t.amount,
+    expense_date: expenseDateISO, template_id: t.id, created_by: u.user?.id ?? null,
+  });
+  if (error) {
+    if ((error as any).code === '23505' || (error.message || '').includes('duplicate')) {
+      throw new Error('Bu sabit gider bu ay zaten eklenmiş.');
+    }
+    throw new Error('Sabit gider eklenemedi.');
+  }
+}
+
 /** Tesisin bir aylık ('YYYY-MM') finans özeti. Yetki sunucuda (owner/admin). */
 export async function getPitchFinanceSummary(pitchId: string, month: string): Promise<FinanceSummary> {
   const { data, error } = await supabase.rpc('get_pitch_finance_summary', {

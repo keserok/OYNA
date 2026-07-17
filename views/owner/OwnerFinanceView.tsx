@@ -84,7 +84,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
     catch (err) { notify(toTurkishError(err), 'error'); throw err; }
   }, [pitchId, readOnly, load, notify]);
 
-  const onAddExpense = useCallback(async (e: { title: string; amount: number; category: string }) => {
+  const onAddExpense = useCallback(async (e: { title: string; amount: number; category: string; expense_date?: string }) => {
     if (readOnly) { notify('Salt okunur mod.', 'warning'); return; }
     try { await addExpense(pitchId, e); await load(); }
     catch (err) { notify(toTurkishError(err), 'error'); throw err; }
@@ -258,7 +258,16 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
           />
         )}
         {tab === 'EXPENSE' && (
-          <FinanceExpenseTab summary={summary} expenses={expenses} readOnly={readOnly} onAddExpense={onAddExpense} />
+          <FinanceExpenseTab
+            summary={summary}
+            expenses={expenses}
+            readOnly={readOnly}
+            pitchId={pitchId}
+            currentMonth={currentMonth}
+            onAddExpense={onAddExpense}
+            onChanged={load}
+            notify={notify}
+          />
         )}
         </>
         )}
