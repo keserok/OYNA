@@ -2015,6 +2015,25 @@ export async function forceRefundIntentAdmin(intentId: string, notes?: string): 
   if (error) throw new Error(error.message);
 }
 
+export interface ChargebackResult {
+  intent_id: string;
+  frozen_pending: number;
+  clawed_completed: number;
+  earning_owner: string | null;
+  earning_source: string;
+}
+
+/**
+ * [S4] Chargeback işaretle — intent'i chargeback olarak damgalar ve ilgili saha/
+ * hizmet kazancını dondurur (PENDING iptal, COMPLETED telafi). Kart sahibi
+ * bankasından itiraz ettiğinde platform çifte zarar etmesin diye.
+ */
+export async function markChargebackAdmin(intentId: string, reason?: string): Promise<ChargebackResult> {
+  const { data, error } = await supabase.rpc('admin_mark_chargeback', { p_intent_id: intentId, p_reason: reason ?? null });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_mark_chargeback RPC deploy edilmedi' : error.message);
+  return (data ?? {}) as ChargebackResult;
+}
+
 /**
  * ADMIN — maç kaporası (escrow) üzerinde TAM YETKİ: CAPTURE (tahsil) | VOID (serbest
  * bırak) | REFUND (iade). migration 20260716000001 → admin_match_deposit_action.
@@ -2048,6 +2067,7 @@ export interface PaymentIntentRow {
   provider: string | null;
   provider_ref: string | null;
   created_at: string;
+  chargeback_at?: string | null;
   total_count: number;
 }
 

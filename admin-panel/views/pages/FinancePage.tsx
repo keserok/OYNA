@@ -4,6 +4,7 @@ import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
   fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout,
   fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
+  markChargebackAdmin,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
   type PayoutRequestRow, type PaymentIntentRow,
 } from '../../services/adminService';
@@ -158,6 +159,38 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
       actionType: cfg.at, targetId: it.id, targetName: label,
       confirmPhrase: 'ONAYLA',
       onConfirm: () => void runIntentAction(cfg.run, cfg.ok, it.id),
+      onCancel: () => setIntentConfirm(null),
+    });
+  };
+
+  // [S4] Chargeback: intent'i işaretle + ilgili kazancı dondur
+  const runChargeback = async (it: PaymentIntentRow, reason?: string) => {
+    setIntentBusy(it.id);
+    try {
+      const r = await markChargebackAdmin(it.id, reason);
+      const parts: string[] = [];
+      if (Number(r.frozen_pending) > 0) parts.push(`${fmtTry(r.frozen_pending)} bekleyen kazanç donduruldu`);
+      if (Number(r.clawed_completed) > 0) parts.push(`${fmtTry(r.clawed_completed)} kazanç geri alındı`);
+      success(`Chargeback işaretlendi${parts.length ? ' — ' + parts.join(', ') : ' (ilgili kazanç bulunamadı)'}`);
+      setIntentConfirm(null);
+      await loadIntents(query);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setIntentBusy(null);
+    }
+  };
+
+  const askChargeback = (it: PaymentIntentRow) => {
+    const label = `${it.user_name || it.user_id?.slice(0, 8) || 'Ödeme'} • ${fmtTry(it.amount)}`;
+    const reason = window.prompt('Chargeback nedeni (opsiyonel, banka itiraz no vb.):') ?? undefined;
+    setIntentConfirm({
+      title: 'Chargeback işaretle',
+      description: `${fmtTry(it.amount)} ödeme chargeback olarak işaretlenecek ve ilgili saha/hizmet kazancı dondurulacak.`,
+      impactText: 'Kart sahibi bankasından itiraz etti sayılır → kullanıcıya İADE YAPILMAZ (parasını bankadan aldı). Yalnız ilgili kazanç geri alınır ki platform çifte zarar etmesin. Geri alınamaz.',
+      actionType: 'FORCE_CHARGEBACK', targetId: it.id, targetName: label,
+      confirmPhrase: 'ONAYLA',
+      onConfirm: () => void runChargeback(it, reason),
       onCancel: () => setIntentConfirm(null),
     });
   };
@@ -364,16 +397,23 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
               { header: 'Bağlam', render: (r: PaymentIntentRow) => <span className="text-[11px] text-gray-400">{r.related_entity_type === 'TOP_UP' ? 'Cüzdan Yükleme' : r.pitch_name || (r.match_id ? 'Maç' : INTENT_CONTEXT_LABELS[r.related_entity_type ?? ''] ?? r.related_entity_type ?? '—')}</span> },
               { header: 'Tutar', render: (r: PaymentIntentRow) => <span className="text-green-400 font-bold">{fmtTry(r.amount)}</span> },
               { header: 'Komisyon', render: (r: PaymentIntentRow) => <span className="text-[11px] text-amber-300">{fmtTry(r.commission_amount)}</span> },
-              { header: 'Durum', render: (r: PaymentIntentRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
+              { header: 'Durum', render: (r: PaymentIntentRow) => (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-bold text-gray-300">{r.status}</span>
+                  {r.chargeback_at && <span className="text-[9px] font-black text-red-400 uppercase">⚠ Chargeback</span>}
+                </div>
+              ) },
               { header: 'Müdahale', render: (r: PaymentIntentRow) => {
                 const s = (r.status || '').toUpperCase();
                 const canCV = s === 'BLOCKED' || s === 'PENDING';
                 const canR = s === 'CAPTURED' || s === 'PAID';
+                const canCB = (s === 'CAPTURED' || s === 'PAID') && !r.chargeback_at;
                 return (
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 flex-wrap">
                     <button type="button" disabled={intentBusy === r.id || !canCV} onClick={() => askIntent(r, 'capture')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-emerald-500/30 text-emerald-400 disabled:opacity-30">Tahsil</button>
                     <button type="button" disabled={intentBusy === r.id || !canCV} onClick={() => askIntent(r, 'void')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-amber-500/30 text-amber-400 disabled:opacity-30">Void</button>
                     <button type="button" disabled={intentBusy === r.id || !canR} onClick={() => askIntent(r, 'refund')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-red-500/30 text-red-400 disabled:opacity-30">İade</button>
+                    <button type="button" disabled={intentBusy === r.id || !canCB} onClick={() => askChargeback(r)} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-fuchsia-500/30 text-fuchsia-400 disabled:opacity-30">{r.chargeback_at ? 'CB ✓' : 'Chargeback'}</button>
                   </div>
                 );
               } },
