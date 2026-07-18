@@ -1405,6 +1405,53 @@ export async function ownerFinanceReport(
   }
 }
 
+// ----------------------------------------------------------------------------
+// [S2.6-FE] Saha iptal/iade politikası (owner override) — backend RPC hazır:
+//   preview_pitch_refund_policy / owner_set_pitch_refund_policy
+// ----------------------------------------------------------------------------
+export interface PitchRefundPolicy {
+  full_hours: number;   // bu saatten önce iptal → %100 iade
+  half_hours: number;   // bu saatten önce iptal → yarım iade
+  half_pct: number;     // yarım iade yüzdesi
+  is_custom: boolean;   // tesise özel override var mı (yoksa global varsayılan)
+}
+
+export async function getPitchRefundPolicy(pitchId: string): Promise<PitchRefundPolicy> {
+  try {
+    const { data, error } = await supabase.rpc('preview_pitch_refund_policy', { p_pitch_id: pitchId });
+    if (error) throw error;
+    const d = (data ?? {}) as Record<string, unknown>;
+    return {
+      full_hours: Number(d.full_hours ?? 24),
+      half_hours: Number(d.half_hours ?? 6),
+      half_pct: Number(d.half_pct ?? 50),
+      is_custom: Boolean(d.is_custom),
+    };
+  } catch (error) {
+    console.error('getPitchRefundPolicy:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Politikayı kaydeder. custom=false → override temizlenir (global varsayılana döner). */
+export async function setPitchRefundPolicy(
+  pitchId: string,
+  policy: { full_hours: number; half_hours: number; half_pct: number } | null,
+): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('owner_set_pitch_refund_policy', {
+      p_pitch_id: pitchId,
+      p_full_hours: policy ? policy.full_hours : null,
+      p_half_hours: policy ? policy.half_hours : null,
+      p_half_pct: policy ? policy.half_pct : null,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error('setPitchRefundPolicy:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 export async function deleteCourt(courtId: string): Promise<void> {
   try {
     const { error } = await supabase

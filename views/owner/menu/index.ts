@@ -5,6 +5,7 @@ export type { OwnerMenuViewProps } from './OwnerMenuView';
 export { OwnerFacilitySettingsModal } from './OwnerFacilitySettingsModal';
 export { OwnerWorkingHoursModal } from './OwnerWorkingHoursModal';
 export { OwnerPricingPolicyModal } from './OwnerPricingPolicyModal';
+export { OwnerCancellationPolicyModal } from './OwnerCancellationPolicyModal';
 export { OwnerPaymentSettingsModal } from './OwnerPaymentSettingsModal';
 export { OwnerWithdrawalsModal } from './OwnerWithdrawalsModal';
 export { OwnerWidgetSettingsModal } from './OwnerWidgetSettingsModal';
