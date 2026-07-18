@@ -130,7 +130,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
 
   const [showPast, setShowPast] = useState(false);
 
-  // ── Rezervasyon iptali (sunucu önizlemeli — MyBookings'ten birebir taşındı) ──
+  // ── Rezervasyon iptali — iade önizlemesi SUNUCUDAN gelir, FE formül uydurmaz ──
   const [cancelTarget, setCancelTarget] = useState<MyBooking | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);

@@ -192,7 +192,7 @@ interface AppState {
   isAuthReady: boolean;
   selectedMatch: MatchListing | null;
   // Lobi bağlamı: DISCOVER = Top Oyna'dan katılım (yönetim aksiyonları gizli),
-  // MANAGE = Sıradaki Maçlarım'dan (ödediğin slotlar + kaptanlık yetkileri).
+  // MANAGE = Maçlarım hub'ından (ödediğin slotlar + kaptanlık yetkileri).
   lobbyMode: 'DISCOVER' | 'MANAGE';
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)

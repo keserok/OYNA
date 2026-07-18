@@ -301,7 +301,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     userTeams, myTeams, setSelectedMatch,
     setNewMatchBadge, lobbyMode
   } = useAppStore();
-  // MANAGE = Sıradaki Maçlarım'dan; yönetim aksiyonları yalnız burada görünür.
+  // MANAGE = Maçlarım hub'ından; yönetim aksiyonları yalnız burada görünür.
   const isManageMode = lobbyMode === 'MANAGE';
 
   // Saha konumu: pitch_id (FK) tek otorite; store'daki isim eşleşmesi varsayılan
@@ -1211,7 +1211,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </>
                     )}
 
-                    {/* Yönetim aksiyonları — YALNIZ MANAGE (Sıradaki Maçlarım) */}
+                    {/* Yönetim aksiyonları — YALNIZ MANAGE (Maçlarım hub'ı) */}
                     {isManageMode && (
                       <div className="w-full mt-4 space-y-2">
                         {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
