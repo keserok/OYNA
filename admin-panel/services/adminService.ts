@@ -2232,6 +2232,25 @@ export async function fetchPayouts(status = 'PENDING', limit = 100): Promise<Pay
   return (data || []) as PayoutRequestRow[];
 }
 
+// [S4] Payout onayında TC/IBAN isim eşleşme kontrolü (admin_payout_identity_checks)
+export interface PayoutIdentityCheck {
+  payout_id: string;
+  requester_name: string | null;
+  iban_holder_name: string | null;
+  identity_status: string; // VERIFIED | PENDING | REJECTED | NONE
+  name_match: boolean | null;
+}
+
+/** Bekleyen çekim taleplerinin IBAN sahibi ↔ kayıtlı isim eşleşme + kimlik durumu. */
+export async function fetchPayoutIdentityChecks(status = 'PENDING', limit = 100): Promise<PayoutIdentityCheck[]> {
+  const { data, error } = await supabase.rpc('admin_payout_identity_checks', { p_status: status, p_limit: limit });
+  if (error) {
+    if (isRpcMissing(error)) return [];
+    throw new Error(error.message);
+  }
+  return (data || []) as PayoutIdentityCheck[];
+}
+
 /** Payout talebini işler: PROCESSING/COMPLETED/FAILED/CANCELLED (admin_process_payout). */
 export async function processPayout(
   payoutId: string,

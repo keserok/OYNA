@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '../components/DataTable';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
-  fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout,
+  fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout, fetchPayoutIdentityChecks,
   fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
   markChargebackAdmin,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
-  type PayoutRequestRow, type PaymentIntentRow,
+  type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
@@ -51,6 +51,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [payments, setPayments] = useState<BookingPaymentRow[]>([]);
   const [billing, setBilling] = useState<OwnerBillingEventRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequestRow[]>([]);
+  const [idChecks, setIdChecks] = useState<Record<string, PayoutIdentityCheck>>({});
   const [payoutBusy, setPayoutBusy] = useState<string | null>(null);
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -108,6 +109,10 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
       if (po.status === 'fulfilled') {
         setPayouts(po.value);
         po.value.forEach((r) => ids.add(r.user_id));
+        // [S4] Bekleyen çekimler için TC/IBAN isim eşleşme kontrolü (best-effort)
+        void fetchPayoutIdentityChecks('PENDING', PAGE_SIZE)
+          .then((checks) => setIdChecks(Object.fromEntries(checks.map((c) => [c.payout_id, c]))))
+          .catch(() => setIdChecks({}));
       }
       if (ids.size) setNameMap(await fetchProfileNameMap([...ids]));
       if (p.status === 'fulfilled') setPayments(p.value);
@@ -432,6 +437,25 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
             { header: 'Talep Eden', render: (r: PayoutRequestRow) => <span className="text-sm text-white">{nameMap[r.user_id] || r.user_id.slice(0, 8)}</span> },
             { header: 'Tip', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-blue-300">{r.payout_type === 'OWNER_BIWEEKLY' ? 'Saha Sahibi' : r.payout_type === 'PROVIDER_INSTANT' ? 'Kaleci/Hakem' : r.payout_type}</span> },
             { header: 'IBAN', render: (r: PayoutRequestRow) => <span className="text-[10px] font-mono text-gray-400">{r.iban_holder_name} · {r.iban}</span> },
+            { header: 'Kimlik Kontrol', render: (r: PayoutRequestRow) => {
+              const c = idChecks[r.id];
+              if (!c) return <span className="text-[10px] text-gray-600">—</span>;
+              const idLabel = c.identity_status === 'VERIFIED' ? 'TC ✓' : c.identity_status === 'NONE' ? 'TC yok' : c.identity_status;
+              const idTone = c.identity_status === 'VERIFIED' ? 'text-green-400' : 'text-amber-400';
+              return (
+                <div className="flex flex-col gap-0.5 min-w-[130px]">
+                  <span className="text-[10px] text-gray-400">Kayıtlı: <span className="text-gray-200">{c.requester_name || '—'}</span></span>
+                  <div className="flex items-center gap-2">
+                    {c.name_match === true
+                      ? <span className="text-[10px] font-black text-green-400">İsim ✓</span>
+                      : c.name_match === false
+                        ? <span className="text-[10px] font-black text-red-400">⚠ İsim farklı</span>
+                        : <span className="text-[10px] text-gray-500">İsim ?</span>}
+                    <span className={`text-[10px] font-bold ${idTone}`}>{idLabel}</span>
+                  </div>
+                </div>
+              );
+            } },
             { header: 'Tutar', render: (r: PayoutRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
             { header: 'Durum', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
             { header: 'İşlem', render: (r: PayoutRequestRow) => (
