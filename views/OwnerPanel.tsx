@@ -1548,11 +1548,15 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
  const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
   const notify = useOwnerToast();
-  const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles, staffPanelContext, setStaffPanelContext } = useAppStore();
+  const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles, setStaffPanelContext } = useAppStore();
   // STAFF-3: panel erişim seviyesi. staffPanelContext varsa personel/müdür,
-  // yoksa sahip (kendi paneli). accessLevel nav/eylem kapılarını sürer.
-  const [accessLevel, setAccessLevel] = useState<'OWNER' | 'MANAGER' | 'STAFF'>('OWNER');
-  const isStaffCtx = !!staffPanelContext;
+  // yoksa sahip (kendi paneli). Mount anında BİR KEZ yakalanır — StrictMode
+  // çift-mount'u veya store temizliği erişim seviyesini bozmasın.
+  const [staffCtx] = useState(() => useAppStore.getState().staffPanelContext);
+  const [accessLevel] = useState<'OWNER' | 'MANAGER' | 'STAFF'>(
+    () => useAppStore.getState().staffPanelContext?.accessLevel ?? 'OWNER',
+  );
+  const isStaffCtx = !!staffCtx;
   const isManagerLevel = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
   const isOwnerLevel = accessLevel === 'OWNER';
   const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
@@ -1592,8 +1596,6 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     if (!isManagerLevel) { notify('Bu işlem yalnızca sahip ve müdüre açık.', 'warning'); return false; }
     return effGuardWrite();
   };
-  // Panelden çıkışta personel bağlamını temizle → sahip yeniden girişte kendi panelini görür.
-  useEffect(() => () => { if (useAppStore.getState().staffPanelContext) setStaffPanelContext(null); }, [setStaffPanelContext]);
 
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
@@ -1772,20 +1774,26 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
         // STAFF-3: personel/müdür bağlamı — belirli tesisi id ile yükle; sahip
         // keşif yolu (getOwnerPitches/demo/onboarding) tamamen atlanır.
-        const staffCtx = useAppStore.getState().staffPanelContext;
+        // STAFF-3: personel/müdür bağlamı (mount'ta yakalanan staffCtx).
         if (staffCtx?.pitchId) {
-          const { data: sp } = await supabase
-            .from('pitches')
-            .select('*, courts(*), pitch_tariffs(*)')
-            .eq('id', staffCtx.pitchId)
-            .single();
+          // Zayıf bağlantıya dayanıklı: tesisi 3 denemeye kadar getir (owner
+          // keşif yolu gibi tek atışta bırakma — personel açılışı takılmasın).
+          let sp: any = null;
+          for (let attempt = 0; attempt < 3 && active; attempt++) {
+            const { data, error } = await supabase
+              .from('pitches')
+              .select('*, courts(*), pitch_tariffs(*)')
+              .eq('id', staffCtx.pitchId)
+              .maybeSingle();
+            if (data) { sp = data; break; }
+            if (!error) break; // veri yok (silinmiş/erişim yok) — tekrar deneme
+            await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          }
           if (!active) return;
           if (sp) {
-            setAccessLevel(staffCtx.accessLevel);
             await applyPitch(sp as unknown as OwnerPitch, false, uid, false);
           } else {
-            notify('Tesis yüklenemedi. Erişiminiz kaldırılmış olabilir.', 'error');
-            setStaffPanelContext(null);
+            notify('Tesis yüklenemedi. Bağlantını kontrol edip tekrar dene.', 'error');
           }
           if (active) setIsLoading(false);
           return;
@@ -2434,7 +2442,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         />
       )}
       {showLogoutConfirm && (
-        <OwnerLogoutModal onClose={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); (onLogout ?? onBack)(); }} />
+        <OwnerLogoutModal onClose={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); setStaffPanelContext(null); (onLogout ?? onBack)(); }} />
       )}
 
       {showRevenueModal && (
