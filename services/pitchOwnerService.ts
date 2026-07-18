@@ -260,10 +260,9 @@ export async function getPitchBookings(
 
 export async function approveBooking(bookingId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('pitch_bookings')
-      .update({ status: 'CONFIRMED', auto_approved_at: new Date().toISOString() })
-      .eq('id', bookingId);
+    // STAFF-2: kasa (sahip/müdür/personel) denetimli RPC ile onaylar — yalnız
+    // PENDING→CONFIRMED. Ham tablo yazımı artık personel için kapalı.
+    const { error } = await supabase.rpc('staff_approve_booking', { p_booking_id: bookingId });
     if (error) throw error;
   } catch (error) {
     console.error('approveBooking:', error);
@@ -273,22 +272,13 @@ export async function approveBooking(bookingId: string): Promise<void> {
 
 export async function rejectBooking(bookingId: string, reason: string): Promise<void> {
   try {
-    const uid = await getCurrentUserId();
-
-    const { error } = await supabase
-      .from('pitch_bookings')
-      .update({
-        status: 'CANCELLED',
-        cancellation_reason: reason,
-        cancelled_at: new Date().toISOString(),
-        cancelled_by: uid,
-      })
-      .eq('id', bookingId);
+    // STAFF-2: kasa denetimli RPC — yalnız PENDING reddi; cancelled_by sunucuda.
+    // Oyuncuya ret bildirimi DB trigger'ından gelir (notify_booking_events).
+    const { error } = await supabase.rpc('staff_reject_pending', {
+      p_booking_id: bookingId,
+      p_reason: reason,
+    });
     if (error) throw error;
-
-    // Oyuncuya ret bildirimi DB trigger'ından gelir (notify_booking_events,
-    // PENDING→CANCELLED dalı); notifications INSERT politikası client'ın başka
-    // kullanıcıya yazmasına artık izin vermez.
   } catch (error) {
     console.error('rejectBooking:', error);
     throw new Error(toTurkishError(error));
@@ -322,19 +312,17 @@ export async function recordBookingPayment(
   note?: string,
 ): Promise<void> {
   try {
-    const uid = await getCurrentUserId();
-    const { error } = await supabase.from('booking_payments').insert({
-      booking_id: bookingId,
-      amount,
-      payment_method: method,
-      note: note ?? null,
-      recorded_by: uid,
-      // A2: owner'ın elle girdiği ödeme OYNA'dan geçmez → cüzdana kredi YAZILMAZ.
-      // Trigger credit_owner_booking_earning bu damgayla owner-manuel kartı krediden çıkarır.
-      source: 'OWNER_MANUAL',
+    // STAFF-2: tahsilat denetimli RPC'den geçer — recorded_by SUNUCUDA damgalanır
+    // (kimse başkası adına yazamaz), aşırı tahsilat sunucuda reddedilir, source
+    // 'OWNER_MANUAL' zorlanır (A2: OYNA'dan geçmez → cüzdana kredi YAZILMAZ).
+    // pitch_bookings.paid_amount + payment_status DB trigger ile güncellenir.
+    const { error } = await supabase.rpc('staff_record_payment', {
+      p_booking_id: bookingId,
+      p_amount: amount,
+      p_method: method,
+      p_note: note ?? null,
     });
     if (error) throw error;
-    // pitch_bookings.paid_amount + payment_status DB trigger ile güncellenir.
   } catch (error) {
     console.error('recordBookingPayment:', error);
     throw new Error(toTurkishError(error));
@@ -1695,10 +1683,11 @@ export async function upsertStaffTask(
 
 export async function toggleStaffTaskStatus(taskId: string, completed: boolean): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('pitch_staff_tasks')
-      .update({ status: completed ? 'COMPLETED' : 'PENDING' })
-      .eq('id', taskId);
+    // STAFF-2: personel de görevini tamamlayabilsin — denetimli RPC (kasa yetkisi).
+    const { error } = await supabase.rpc('staff_toggle_task', {
+      p_task_id: taskId,
+      p_completed: completed,
+    });
     if (error) throw error;
   } catch (error) {
     console.error('toggleStaffTaskStatus:', error);
