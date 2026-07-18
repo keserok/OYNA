@@ -2215,6 +2215,10 @@ export interface PayoutRequestRow {
   id: string;
   user_id: string;
   amount: number;
+  /** [S2.1] WALLET_CASHOUT: kesinti tutarı (amount = fee + net). Diğer tiplerde 0. */
+  fee_amount?: number | null;
+  /** [S2.1] WALLET_CASHOUT: bankaya gönderilecek NET tutar. Diğer tiplerde null. */
+  net_amount?: number | null;
   iban: string;
   iban_holder_name: string;
   payout_type: string;
