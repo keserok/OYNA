@@ -57,7 +57,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                 onAddUser(user);
             } else if (roleType === 'KALECİLER') {
                 const coordinates = { lat: 40.9839, lng: 37.8764 };
-                const stats = { savePercentage: '80%', cleanSheets: 0, penaltySaveRate: '50%', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78 };
+                const stats = { savePercentage: '80', penaltySaveRate: '50', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78 };
                 const skills = { reflexes: 85, diving: 80, handling: 78, positioning: 80, kicking: 70, speed: 75 };
                 const equipment = { gloves: 'Standart', boots: 'Standart', jersey: 'Standart' };
                 const account = await createGoalkeeperAccountAdmin({
@@ -89,7 +89,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                 onAddGoalkeeper(gk);
             } else {
                 const coordinates = { lat: 40.9839, lng: 37.8764 };
-                const stats = { avgCards: 2.1, avgDistance: '8km', authority: 85, fitness: 80, communication: 90 };
+                const stats = { avgCards: 2.1, avgDistance: '8km', varCallAccuracy: '98', authority: 85, fitness: 80, communication: 90 };
                 const account = await createRefereeAccountAdmin({
                     email, password, fullName: name,
                     fee: Number(refFee), rating: Number(rating), level: refLevel,

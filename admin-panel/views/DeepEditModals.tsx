@@ -410,7 +410,6 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
     const handleGkStatChange = (key: string, value: number) => {
         const stats = edit.stats || {
             savePercentage: '85',
-            cleanSheets: 0,
             penaltySaveRate: '30',
             reflexes: 80,
             diving: 80,
@@ -567,6 +566,16 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                         </div>
                                     );
                                 })}
+
+                                {/* Gerçek maç istatistikleri (Marketplace "Performans" karoları) */}
+                                <div className="grid grid-cols-2 gap-4 mt-2">
+                                    <FI label="Kurtarış Yüzdesi (%)">
+                                        <I value={edit.stats?.savePercentage ?? ''} placeholder="85" onChange={e => setEdit({ ...edit, stats: { ...edit.stats, savePercentage: e.target.value } })} />
+                                    </FI>
+                                    <FI label="Penaltı Kurtarma (%)">
+                                        <I value={edit.stats?.penaltySaveRate ?? ''} placeholder="30" onChange={e => setEdit({ ...edit, stats: { ...edit.stats, penaltySaveRate: e.target.value } })} />
+                                    </FI>
+                                </div>
                             </div>
                         )}
 
@@ -601,6 +610,9 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                     </FI>
                                     <FI label="Ort. Koşu Mesafesi">
                                         <I value={edit.stats?.avgDistance || '10km'} onChange={e => setEdit({ ...edit, stats: { ...edit.stats, avgDistance: e.target.value } })} />
+                                    </FI>
+                                    <FI label="Karar İsabeti (%)">
+                                        <I value={edit.stats?.varCallAccuracy ?? ''} placeholder="98" onChange={e => setEdit({ ...edit, stats: { ...edit.stats, varCallAccuracy: e.target.value } })} />
                                     </FI>
                                 </div>
                             </div>
