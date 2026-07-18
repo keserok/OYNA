@@ -1548,7 +1548,13 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
 
  const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
   const notify = useOwnerToast();
-  const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles } = useAppStore();
+  const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles, staffPanelContext, setStaffPanelContext } = useAppStore();
+  // STAFF-3: panel erişim seviyesi. staffPanelContext varsa personel/müdür,
+  // yoksa sahip (kendi paneli). accessLevel nav/eylem kapılarını sürer.
+  const [accessLevel, setAccessLevel] = useState<'OWNER' | 'MANAGER' | 'STAFF'>('OWNER');
+  const isStaffCtx = !!staffPanelContext;
+  const isManagerLevel = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
+  const isOwnerLevel = accessLevel === 'OWNER';
   const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
   const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
   const [courts, setCourts] = useState<PitchCourt[]>([]);
@@ -1571,9 +1577,31 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   const [ownerAccount, setOwnerAccount] = useState<OwnerAccount | null>(null);
   const { isReadOnly, isPastDue, can, requireFeature, guardWrite, maxFacilities, maxCourts, maxStaff } =
     useOwnerEntitlements(ownerAccount, notify);
+  // STAFF-3: personel/müdür bağlamında abonelik-tabanlı salt-okuma UYGULANMAZ —
+  // tesisin planı sahibe bağlıdır; personelin kendi hesabında abonelik yoktur.
+  // Gerçek yetki sınırı sunucuda RLS + RPC'de (STAFF-2). effReadOnly bunu köprüler.
+  const effReadOnly = isStaffCtx ? false : isReadOnly;
+  // Abonelik-tabanlı yazma kilidi personel/müdür için uygulanmaz (sunucu RLS gerçek gate).
+  const effGuardWrite = React.useCallback(() => (isStaffCtx ? true : guardWrite()), [isStaffCtx, guardWrite]);
+  // Yalnız-sahip/müdür eylem kapıları — personel bunları açamaz (sunucu da reddeder).
+  const ownerOnlyGuard = () => {
+    if (!isOwnerLevel) { notify('Bu işlem yalnızca saha sahibine açık.', 'warning'); return false; }
+    return effGuardWrite();
+  };
+  const managerGuard = () => {
+    if (!isManagerLevel) { notify('Bu işlem yalnızca sahip ve müdüre açık.', 'warning'); return false; }
+    return effGuardWrite();
+  };
+  // Panelden çıkışta personel bağlamını temizle → sahip yeniden girişte kendi panelini görür.
+  useEffect(() => () => { if (useAppStore.getState().staffPanelContext) setStaffPanelContext(null); }, [setStaffPanelContext]);
 
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
+    // STAFF-3: personel Finans/Sahalar sekmesini açamaz (yönetim yetkisi ister).
+    if (accessLevel === 'STAFF' && (tab === 'FINANCE' || tab === 'PITCHES')) {
+      setActiveTab('HOME');
+      return;
+    }
     setActiveTab(tab);
   };
   const [showPricingPolicy, setShowPricingPolicy] = useState(false);
@@ -1641,7 +1669,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     }
   }, [courts, notify]);
 
-  const applyPitch = React.useCallback(async (pitch: OwnerPitch, demo: boolean, uid: string) => {
+  const applyPitch = React.useCallback(async (pitch: OwnerPitch, demo: boolean, uid: string, ownerScope: boolean = true) => {
     const facilityCourts = (pitch.courts ?? []).filter((c) => c.is_active !== false);
     // ── HIZLI YOL: kortlar, saatler ve tarifeler pitch objesinde hazır; ANINDA uygula.
     // Ödeme/banka/hesap ayarları AYRI sorgulardan gelir. Bunları beklemek, yavaş
@@ -1687,7 +1715,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     // applyPitch bunu beklemez; yükleme efekti isLoading'i çekirdek veri gelir
     // gelmez kapatır. Yavaş/bozuk bağlantıda 3 finansal-ayar sorgusu TÜM paneli
     // (HOME iskeleti) kilitlemesin. Başarısız olsa da kortlar/takvim/HOME çalışır.
-    void (async () => {
+    // STAFF-3: personel/müdür bağlamında ATLA — banka/ödeme/hesap sahip-only'dir
+    // (getOrCreateOwnerAccount personel için sahte owner hesabı YARATMASIN).
+    if (ownerScope) void (async () => {
       try {
         const [paymentSettings, bankAccounts, account] = await Promise.all([
           getPaymentSettings(pitch.id),
@@ -1739,6 +1769,28 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           if (active) setIsLoading(false);
           return;
         }
+
+        // STAFF-3: personel/müdür bağlamı — belirli tesisi id ile yükle; sahip
+        // keşif yolu (getOwnerPitches/demo/onboarding) tamamen atlanır.
+        const staffCtx = useAppStore.getState().staffPanelContext;
+        if (staffCtx?.pitchId) {
+          const { data: sp } = await supabase
+            .from('pitches')
+            .select('*, courts(*), pitch_tariffs(*)')
+            .eq('id', staffCtx.pitchId)
+            .single();
+          if (!active) return;
+          if (sp) {
+            setAccessLevel(staffCtx.accessLevel);
+            await applyPitch(sp as unknown as OwnerPitch, false, uid, false);
+          } else {
+            notify('Tesis yüklenemedi. Erişiminiz kaldırılmış olabilir.', 'error');
+            setStaffPanelContext(null);
+          }
+          if (active) setIsLoading(false);
+          return;
+        }
+
         const ownerPitches = await getOwnerPitches(uid);
         const owned = ownerPitches.filter((p) => !p.is_demo);
         setOwnedFacilities(owned);
@@ -1925,7 +1977,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   }, [facilityData, isFacilityOpen]);
 
   const toggleFacilityStatus = async () => {
-    if (!guardWrite()) return;
+    if (!effGuardWrite()) return;
     if (!facilityData?.id) return;
     if (!isDemoMode && facilityData.verificationStatus !== 'approved') {
       notify('Tesis admin onayından sonra yayına alınabilir.', 'warning');
@@ -2008,7 +2060,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   );
 
   const toggleAutoApprove = async () => {
-    if (!guardWrite()) return;
+    if (!effGuardWrite()) return;
     const next = !autoApprove;
     setAutoApprove(next);
     if (!realPitchId) return;
@@ -2021,7 +2073,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
   };
 
   const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
-      if (!guardWrite()) return;
+      if (!effGuardWrite()) return;
       setPendingRequests((prev: any[]) => prev.map(req =>
           req.id === id ? { ...req, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' } : req
       ));
@@ -2204,7 +2256,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           pitchId={facilityData?.id ?? ''}
           pricingPolicy={facilityData?.pricingPolicy}
           courts={courts}
-          readOnly={isReadOnly}
+          readOnly={effReadOnly}
           canFlashDeals={can.flashDeals}
           workingHours={facilityData?.workingHours}
           onNavigate={onNavigate}
@@ -2233,7 +2285,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           pitches={courts}
           onUpdatePitches={setCourts}
           onBack={() => setActiveTab('HOME')}
-          readOnly={isReadOnly}
+          readOnly={effReadOnly}
           maxCourts={maxCourts}
         />
       )}
@@ -2242,7 +2294,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         <OwnerFinanceView
           pitchId={realPitchId ?? facilityData?.id ?? ''}
           isDemoMode={isDemoMode}
-          readOnly={isReadOnly}
+          readOnly={effReadOnly}
           onOpenCalendar={() => setActiveTab('CALENDAR')}
         />
       )}
@@ -2250,8 +2302,9 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         <OwnerTeamView
           pitchId={realPitchId ?? facilityData?.id ?? ''}
           isDemoMode={isDemoMode}
-          readOnly={isReadOnly}
+          readOnly={effReadOnly}
           maxStaff={maxStaff}
+          accessLevel={accessLevel}
         />
       )}
       {activeTab === 'PENDING_ACTIONS' && (
@@ -2275,20 +2328,20 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           accountStatus={ownerAccount ? accountStatusLabel(ownerAccount.status) : 'Aktif'}
           stats={menuStats}
           onEditProfile={() => {
-            if (guardWrite()) setShowEditProfile(true);
+            if (managerGuard()) setShowEditProfile(true);
           }}
           onWorkingHours={() => {
-            if (guardWrite()) setShowWorkingHours(true);
+            if (managerGuard()) setShowWorkingHours(true);
           }}
           onOperations={() => {
-            if (guardWrite()) setShowOperations(true);
+            if (managerGuard()) setShowOperations(true);
           }}
           onBankAccounts={() => {
-            if (guardWrite()) setShowBankAccountList(true);
+            if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
-          onWithdrawals={() => setShowWithdrawals(true)}
+          onWithdrawals={() => { if (ownerOnlyGuard()) setShowWithdrawals(true); }}
           onPricingPolicy={() => {
-            if (guardWrite()) setShowPricingPolicy(true);
+            if (managerGuard()) setShowPricingPolicy(true);
           }}
           onSecurity={() => setShowSecurity(true)}
           onSupport={() => setShowSupport(true)}
@@ -2297,11 +2350,12 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
           onWidgetSettings={() => setShowWidgetSettings(true)}
           onPitches={() => {
-            if (guardWrite()) setActiveTab('PITCHES');
+            if (managerGuard()) setActiveTab('PITCHES');
           }}
           onSwitchRole={() => setIsRoleSwitcherOpen(true)}
           canSwitchRole={canSwitchRole}
-          isReadOnly={isReadOnly}
+          isReadOnly={effReadOnly}
+          accessLevel={accessLevel}
         />
       )}
 
@@ -2314,15 +2368,15 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
           onOpenCourts={() => {
             setShowEditProfile(false);
-            if (guardWrite()) setActiveTab('PITCHES');
+            if (effGuardWrite()) setActiveTab('PITCHES');
           }}
           onOpenPricing={() => {
             setShowEditProfile(false);
-            if (guardWrite()) setShowPricingPolicy(true);
+            if (effGuardWrite()) setShowPricingPolicy(true);
           }}
           onOpenHours={() => {
             setShowEditProfile(false);
-            if (guardWrite()) setShowWorkingHours(true);
+            if (effGuardWrite()) setShowWorkingHours(true);
           }}
         />
       )}
@@ -2353,14 +2407,14 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onUpdated={(accounts) =>
             setFacilityData((prev: any) => (prev ? { ...prev, bankAccounts: accounts } : prev))
           }
-          readOnly={isReadOnly}
+          readOnly={effReadOnly}
         />
       )}
       {showWithdrawals && (
         <OwnerWithdrawalsModal
           onClose={() => setShowWithdrawals(false)}
           facilityId={facilityData?.id}
-          readOnly={isReadOnly}
+          readOnly={effReadOnly}
         />
       )}
       {showPricingPolicy && (
@@ -2441,6 +2495,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
         pendingCount={pendingCount}
         financeLocked={false}
         teamLocked={false}
+        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE'] : []}
         onSelect={(tab) => {
           if (tab === 'MORE') setActiveTab('MORE');
           else handleTabSelect(tab);

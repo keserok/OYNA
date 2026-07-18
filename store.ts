@@ -451,6 +451,10 @@ interface AppState {
   // adminUsers yerine maç akışlarında kullanılır (KN-2 'Oyuncu' fallback'i).
   currentUserProfile: CurrentUserProfile | null;
   setCurrentUserProfile: (p: CurrentUserProfile | null) => void;
+  // STAFF-3: personel/müdür bir tesis paneline girdiğinde bağlam. null → sahip
+  // kendi panelini açar (varsayılan). Ayarlar→Tesis Paneli bunu doldurur.
+  staffPanelContext: { pitchId: string; pitchName: string; accessLevel: 'MANAGER' | 'STAFF' } | null;
+  setStaffPanelContext: (c: { pitchId: string; pitchName: string; accessLevel: 'MANAGER' | 'STAFF' } | null) => void;
   isSignupGateOpen: boolean;
   setIsSignupGateOpen: (open: boolean) => void;
   setIsRoleSwitcherOpen: (open: boolean) => void;
@@ -1252,6 +1256,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsGuest: (v) => set({ isGuest: v }),
   currentUserProfile: null,
   setCurrentUserProfile: (p) => set({ currentUserProfile: p }),
+  staffPanelContext: null,
+  setStaffPanelContext: (c) => set({ staffPanelContext: c }),
   isSignupGateOpen: false,
   setIsSignupGateOpen: (open) => set({ isSignupGateOpen: open }),
   myRoles: [],
