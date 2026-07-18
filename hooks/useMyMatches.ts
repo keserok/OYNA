@@ -3,9 +3,9 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import type { MatchListing } from '../types';
 
-const DEMO_UID = 'u1';
-
-const parseMatchDate = (date: string, time: string): Date | null => {
+// 'Bugün'/'Yarın' gibi eski serbest tarih metinlerini de ISO tarihleri de anlar.
+// useCountdown ve useMyAgenda tarafından da paylaşılır.
+export const parseMatchDate = (date: string, time: string): Date | null => {
   try {
     if (date.includes('-')) return new Date(`${date}T${time}:00`);
     const d = new Date();
@@ -28,17 +28,20 @@ export interface MyMatchesResult {
 
 export function useMyMatches(): MyMatchesResult {
   const { adminMatches } = useAppStore();
-  const currentUserUid = auth.currentUser?.uid || DEMO_UID;
+  // Demo 'u1' fallback'i YOK: oturum yoksa (misafir) liste boştur — başka
+  // kullanıcıların verisi asla "benim maçlarım" gibi görünmez.
+  const currentUserUid = auth.currentUser?.uid ?? '';
 
   const all = useMemo(() => {
-    // Yalnızca gerçek DB maçları: kullanıcının oyuncu olduğu maçlar + taslak/iptaller.
-    return adminMatches.filter(m => {
-      if (m.status === 'DRAFT' || m.status === 'CANCELLED') return true;
-      return (
-        m.slots?.some(s => s.player?.id === currentUserUid) ||
-        m.awaySlots?.some(s => s.player?.id === currentUserUid)
-      );
-    });
+    if (!currentUserUid) return [];
+    // Yalnızca KULLANICININ maçları: bir slotta oyuncu olduğu VEYA kendi
+    // oluşturduğu (kaptan yönetimi) maçlar. Taslak/iptaller de bu kurala tabi —
+    // başkalarının taslak/iptal maçları listeye sızmaz.
+    return adminMatches.filter(m =>
+      m.creatorId === currentUserUid ||
+      m.slots?.some(s => s.player?.id === currentUserUid) ||
+      m.awaySlots?.some(s => s.player?.id === currentUserUid)
+    );
   }, [adminMatches, currentUserUid]);
 
   const upcoming = useMemo(() => {

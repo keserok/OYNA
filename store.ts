@@ -341,6 +341,11 @@ interface AppState {
   setWalletInitialTab: (tab: WalletTab) => void;
   setWalletPendingDeposit: (pending: boolean) => void;
 
+  // Maçlarım hub'ının açılış segmenti (ör. kapora ödemesi sonrası 'BOOKINGS').
+  // Hub okuduğu anda temizler — yapışkan kalmaz.
+  myMatchesInitialSegment: 'ALL' | 'MATCHES' | 'BOOKINGS' | null;
+  setMyMatchesInitialSegment: (segment: 'ALL' | 'MATCHES' | 'BOOKINGS' | null) => void;
+
   // ─── Birleşik ödeme ekranı bağlamı + son ödeme hatası (cüzdan banner'ı) ──
   paymentContext: PaymentContext | null;
   setPaymentContext: (ctx: PaymentContext | null) => void;
@@ -571,6 +576,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   savedCards: [],
   walletInitialTab: 'MAIN',
   walletPendingDeposit: false,
+  myMatchesInitialSegment: null,
   paymentContext: null,
   lastPaymentError: null,
   reliabilityScore: 100,
@@ -799,6 +805,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSavedCards: (savedCards) => set({ savedCards }),
   setWalletInitialTab: (walletInitialTab) => set({ walletInitialTab }),
   setWalletPendingDeposit: (walletPendingDeposit) => set({ walletPendingDeposit }),
+  setMyMatchesInitialSegment: (myMatchesInitialSegment) => set({ myMatchesInitialSegment }),
   setPaymentContext: (paymentContext) => set({ paymentContext }),
   setLastPaymentError: (lastPaymentError) => set({ lastPaymentError }),
 

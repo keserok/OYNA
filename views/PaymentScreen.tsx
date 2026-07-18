@@ -609,7 +609,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         break;
       case 'PITCH_DEPOSIT':
       case 'BOOKING_DEPOSIT':
-        store.resetNavigation('MY_BOOKINGS');
+        // Maçlarım hub'ı Rezervasyonlar segmentiyle açılır (ödenen kapora görünür olsun).
+        store.setMyMatchesInitialSegment('BOOKINGS');
+        store.resetNavigation('MY_MATCHES');
         break;
       default:
         onViewTicket();

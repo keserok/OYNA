@@ -50,7 +50,7 @@ const SocialView = lazy(() => import('./views/SocialView'));
 const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
 const MatchCreate = lazy(() => import('./views/MatchCreate'));
-const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
+const MyMatchesHub = lazy(() => import('./views/MyMatchesHub'));
 const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
 const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
@@ -60,7 +60,6 @@ const GuardianConsentForm = lazy(() => import('./views/GuardianConsentForm'));
 const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
-const MyBookings = lazy(() => import('./views/MyBookings'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav } from './components/BottomNav';
@@ -543,8 +542,8 @@ const App: React.FC = () => {
         />;
       case 'MATCHES':
         return <MatchesView onBack={() => goBack('OWNER_PANEL')} matches={matches} />;
-      case 'UPCOMING_MATCHES':
-        return <UpcomingMatchesView onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+      case 'MY_MATCHES':
+        return <MyMatchesHub onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'DASHBOARD':
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
@@ -557,8 +556,6 @@ const App: React.FC = () => {
           onBack={() => goBack('DASHBOARD')}
           onNavigate={(v) => navigateTo(v as AppView)}
         />;
-      case 'MY_BOOKINGS':
-        return <MyBookings onBack={() => goBack('DASHBOARD')} />;
       case 'LEGAL':
         return <LegalScreen onBack={() => goBack('SETTINGS')} />;
       case 'MARKETPLACE_GK':
