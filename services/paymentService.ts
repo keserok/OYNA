@@ -33,6 +33,7 @@ const ERROR_MAP: [string, string][] = [
   ['NOT_FOUND', 'Rezervasyon bulunamadı.'],
   ['PROVIDER_NOT_CONFIGURED', 'Ödeme sağlayıcısı henüz yapılandırılmadı. Lütfen daha sonra tekrar dene.'],
   ['CONFIRM_DISABLED_IN_LIVE', 'Test onayı canlı modda kapalıdır.'],
+  ['RATE_LIMIT', 'Çok fazla başarısız ödeme denemesi. Güvenliğin için birkaç dakika bekleyip tekrar dene.'],
 ];
 
 export function toPaymentErrorMessage(error: unknown): string {
