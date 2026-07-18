@@ -104,7 +104,7 @@ Beklenen:
 
 **Hosted checkout ile uçtan uca test edilebilen yol: Saha kaporası (mevcut rezervasyon).**
 
-1. Uygulamada oyuncu olarak giriş → **Rezervasyonlarım** → kaporası ödenmemiş bir rezervasyon → **Kaporayı Öde**.
+1. Uygulamada oyuncu olarak giriş → **Maçlarım** (Rezervasyonlar segmenti) → kaporası ödenmemiş bir rezervasyon → **Kaporayı Öde**.
 2. Ödeme ekranında kart yöntemi seçilip ödeme başlatılınca, canlı (IYZICO) modda
    akış **iyzico hosted checkout sayfasına** yönlenir (`create-payment` → `checkoutUrl`).
 3. iyzico sandbox test kartını girin (aşağıda), 3DS ekranında OTP: **283126**.

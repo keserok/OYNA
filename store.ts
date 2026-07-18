@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
 import type { SavedCard } from './services/walletService';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
@@ -192,7 +192,7 @@ interface AppState {
   isAuthReady: boolean;
   selectedMatch: MatchListing | null;
   // Lobi bağlamı: DISCOVER = Top Oyna'dan katılım (yönetim aksiyonları gizli),
-  // MANAGE = Sıradaki Maçlarım'dan (ödediğin slotlar + kaptanlık yetkileri).
+  // MANAGE = Maçlarım hub'ından (ödediğin slotlar + kaptanlık yetkileri).
   lobbyMode: 'DISCOVER' | 'MANAGE';
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
@@ -270,10 +270,6 @@ interface AppState {
   showAnnouncementBanner: boolean;
 
   // Player Seek Announcements
-  playerSeekAds: PlayerSeekAnnouncement[];
-  addPlayerSeekAd: (ad: PlayerSeekAnnouncement) => void;
-  toggleJoinPlayerSeekAd: (adId: string, userId: string) => void;
-  acceptPlayerSeekAdRequest: (adId: string, userId: string) => void;
 
   // ─── Friend System ─────────────────────────────────────────────────
   friends: Friend[];
@@ -344,6 +340,11 @@ interface AppState {
   setSavedCards: (cards: SavedCard[]) => void;
   setWalletInitialTab: (tab: WalletTab) => void;
   setWalletPendingDeposit: (pending: boolean) => void;
+
+  // Maçlarım hub'ının açılış segmenti (ör. kapora ödemesi sonrası 'BOOKINGS').
+  // Hub okuduğu anda temizler — yapışkan kalmaz.
+  myMatchesInitialSegment: 'ALL' | 'MATCHES' | 'BOOKINGS' | null;
+  setMyMatchesInitialSegment: (segment: 'ALL' | 'MATCHES' | 'BOOKINGS' | null) => void;
 
   // ─── Birleşik ödeme ekranı bağlamı + son ödeme hatası (cüzdan banner'ı) ──
   paymentContext: PaymentContext | null;
@@ -575,6 +576,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   savedCards: [],
   walletInitialTab: 'MAIN',
   walletPendingDeposit: false,
+  myMatchesInitialSegment: null,
   paymentContext: null,
   lastPaymentError: null,
   reliabilityScore: 100,
@@ -678,35 +680,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
-  playerSeekAds: [],
-  addPlayerSeekAd: (ad) => set((state) => ({ playerSeekAds: [ad, ...state.playerSeekAds] })),
-  toggleJoinPlayerSeekAd: (adId, userId) => set((state) => ({
-    playerSeekAds: state.playerSeekAds.map(ad => {
-      if (ad.id === adId) {
-        const isJoined = ad.joinedPlayers?.includes(userId);
-        const joinedPlayers = isJoined 
-          ? (ad.joinedPlayers || []).filter(id => id !== userId)
-          : [...(ad.joinedPlayers || []), userId];
-        const acceptedPlayers = isJoined 
-          ? (ad.acceptedPlayers || []).filter(id => id !== userId)
-          : (ad.acceptedPlayers || []);
-        return { ...ad, joinedPlayers, acceptedPlayers };
-      }
-      return ad;
-    })
-  })),
-  acceptPlayerSeekAdRequest: (adId, userId) => set((state) => ({
-    playerSeekAds: state.playerSeekAds.map(ad => {
-      if (ad.id === adId) {
-        const isAccepted = ad.acceptedPlayers?.includes(userId);
-        const acceptedPlayers = isAccepted 
-          ? (ad.acceptedPlayers || [])
-          : [...(ad.acceptedPlayers || []), userId];
-        return { ...ad, acceptedPlayers };
-      }
-      return ad;
-    })
-  })),
   friends: [] as any[],
   addFriend: (friend) => set((state) => {
     const next = [...state.friends, friend];
@@ -832,6 +805,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSavedCards: (savedCards) => set({ savedCards }),
   setWalletInitialTab: (walletInitialTab) => set({ walletInitialTab }),
   setWalletPendingDeposit: (walletPendingDeposit) => set({ walletPendingDeposit }),
+  setMyMatchesInitialSegment: (myMatchesInitialSegment) => set({ myMatchesInitialSegment }),
   setPaymentContext: (paymentContext) => set({ paymentContext }),
   setLastPaymentError: (lastPaymentError) => set({ lastPaymentError }),
 

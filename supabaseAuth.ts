@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, setHasAccount } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { clearPushToken } from './notifications/pushService';
 
@@ -58,11 +58,16 @@ async function buildCurrentUser(user: {
 // ─── Session init ────────────────────────────────────────────────────────────
 supabase.auth.getSession().then(async ({ data: { session } }) => {
   if (session?.user) {
+    setHasAccount();
     auth.currentUser = await buildCurrentUser(session.user);
   }
 });
 
 supabase.auth.onAuthStateChange((_event, session) => {
+  // Cihaz-hesap bayrağı: her oturum olayı (kayıt, şifre/OTP girişi, OAuth dönüşü,
+  // INITIAL_SESSION restorasyonu) tek noktadan işaretlenir. Senkron çağrı —
+  // aşağıdaki kilit uyarısının kapsamı dışındadır.
+  if (session?.user) setHasAccount();
   // ÖNEMLİ: bu callback çalışırken supabase-js auth KİLİDİNİ tutar.
   // İçeride başka bir supabase çağrısını await etmek (buildCurrentUser →
   // profiles sorgusu) kilitlenme yaratır: oturumlu açılışta INITIAL_SESSION

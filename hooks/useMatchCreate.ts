@@ -95,7 +95,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   // Kullanıcı profilinden tek-seferlik otomatik ön-doldurma yapıldı mı?
   const [profilePrefilled, setProfilePrefilled] = useState(false);
 
-  // FAZ 3: Rezervasyon → Maça Çevir tohumu (MyBookings'ten gelir) — saha + saat ön-doldur
+  // FAZ 3: Rezervasyon → Maça Çevir tohumu (Maçlarım hub'ındaki rezervasyon kartından) — saha + saat ön-doldur
   useEffect(() => {
     if (!matchCreateSeed) return;
     setSelectedPitch({

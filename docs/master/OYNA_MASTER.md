@@ -193,7 +193,7 @@ Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, 
 
 **✅ Uygulandı:** onboarding (3 ekran, ilk açılışta bir kez) · misafir modu (`isGuest` + `SignupGate`; sahte `u1` yazımları kaldırıldı) · Android geri tuşu · zoom serbest · global toast (`GlobalToast`) + kritik catch'ler · hayalet `ROLE_SELECTION` fallback'leri temizlendi · KVKK opt-in · Apple çifte navigasyon · ödeme formu doğrulama (Luhn + SKT + CVV + `cc-*` autocomplete) · lazy import (386→57KB) · görsel optimizasyonu · 600 adet `#FFFF00`→marka sarısı `#FACC15` · yük taşıyan metinler 12px.
 
-**⏳ Bilinçli ertelenen:** sekme-başına geri yığını (büyük refactor) · liste sanallaştırma (gerçek cihaz testiyle) · UI kiti birleştirme (kademeli; yeni kod `AnimatedButton`) · kalan ~60 sessiz catch (altyapı hazır, kademeli) · iskelet standardizasyonu (şablon: `MyBookings` Loading/Error/Empty üçlüsü).
+**⏳ Bilinçli ertelenen:** sekme-başına geri yığını (büyük refactor) · liste sanallaştırma (gerçek cihaz testiyle) · UI kiti birleştirme (kademeli; yeni kod `AnimatedButton`) · kalan ~60 sessiz catch (altyapı hazır, kademeli) · iskelet standardizasyonu (şablon: `MyMatchesHub` Skeleton/Error/Empty üçlüsü).
 
 **Tasarım kararları:** Alt navigasyon 5 sekme: Ana Sayfa · Top Oyna · **Sosyal (Takımlar+Arkadaşlar)** · Harita/Sahalar · Profil. Renk semantiği: sarı `#FACC15` marka, yeşil `#39FF14` başarı/aksiyon. Dil: lansmanda yalnız Türkçe (i18n altyapısı lansman sonrası). Rol renkleri: oyuncu sarı / kaleci yeşil / hakem kırmızı / tesis mavi.
 > `UI_SONHAL_SORULARI.md`'deki 120 soruluk rol-bazlı cilalama seti **cevap bekliyor** — onaylananlar `feature/ui-*-polish` branch'lerine bölünecek.

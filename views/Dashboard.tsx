@@ -369,11 +369,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           </div>
         </div>
         <div className="flex gap-3 relative">
-          {/* Rezervasyonlarım — kısayol (bildirim zilinin solunda) */}
+          {/* Rezervasyonlar — kısayol: Maçlarım hub'ını Rezervasyonlar segmentiyle açar */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => onNavigate('MY_BOOKINGS')}
+            onClick={() => {
+              useAppStore.getState().setMyMatchesInitialSegment('BOOKINGS');
+              onNavigate('MY_MATCHES');
+            }}
             aria-label="Rezervasyonlarım"
             className="w-12 h-12 flex items-center justify-center rounded-full bg-[#161B22]/80 backdrop-blur-md border border-white/5 text-[#39FF14] relative hover:bg-white/10 transition-colors shadow-lg"
           >
@@ -403,8 +406,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack, selectedGk, s
           <motion.div
             onClick={() => {
               setNewMatchBadge(false);
-              // İlk-açılış: henüz maçın yoksa doğrudan "maç bul"a yönlen.
-              onNavigate(userMatches.length > 0 ? 'UPCOMING_MATCHES' : 'MATCH_DISCOVERY');
+              // Her zaman Maçlarım hub'ı: boş durumda hub'ın kendi "Top Oyna" CTA'sı yönlendirir.
+              onNavigate('MY_MATCHES');
             }}
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{

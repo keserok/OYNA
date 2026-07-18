@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, AlertTriangle, ShieldAlert, Wallet } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
+import { supabase, clearHasAccount } from '../../supabaseClient';
 import { MODAL_BACKDROP, MODAL_CARD } from './motion';
 
 // ─── İki adımlı hesap silme modal — hangi rolden açılırsa açılsın aynı akış ────
@@ -61,6 +61,9 @@ const DeleteAccountModal: React.FC<{
       setLoading(false);
       return;
     }
+    // Cihaz-hesap bayrağını temizle: bu cihaz artık kayıt-öncelikli auth ekranı
+    // görür. (Çıkışta temizlenmez; yalnızca silme talebinde.)
+    clearHasAccount();
     setToast({ message: `Silme talebiniz alındı. ${waitDays} gün içinde hesabınız silinecek.`, variant: 'success' });
     setTimeout(() => { onConfirmed(); }, 2000);
   };

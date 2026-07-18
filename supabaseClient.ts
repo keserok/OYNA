@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 // ─── Üretim yedeği (env enjeksiyonu kaçarsa "Failed to fetch"i kökten önler) ───
 // Sorun: env değişkeni herhangi bir build yolunda (ör. Vercel'de admin derlemesinde)
@@ -34,38 +36,93 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
   console.warn('[Supabase] VITE_SUPABASE_* env yok — gömülü üretim yedeği kullanılıyor.');
 }
 
-const REMEMBER_ME_KEY = 'oyna.auth.rememberMe';
 const hasWindow = typeof window !== 'undefined';
 
-// "Beni hatırla" tercihini okur. Varsayılan: true (yalnızca açıkça kapatılırsa false).
-export const getRememberMe = (): boolean => {
-  if (!hasWindow) return true;
+// ─── Cihaz-hesap bayrağı ─────────────────────────────────────────────────────
+// Bu cihazda daha önce en az bir kez oturum açıldı mı? AuthScreen'in ilk modunu
+// belirler: bayrak yoksa KAYIT, varsa GİRİŞ. Çıkışta TEMİZLENMEZ (çıkan kullanıcı
+// hesabı olan kullanıcıdır); yalnızca hesap silme talebinde temizlenir.
+const HAS_ACCOUNT_KEY = 'oyna.auth.hasAccount';
+
+export const getHasAccount = (): boolean => {
+  if (!hasWindow) return false;
   try {
-    return window.localStorage.getItem(REMEMBER_ME_KEY) !== 'false';
+    return window.localStorage.getItem(HAS_ACCOUNT_KEY) === 'true';
   } catch {
-    return true;
+    return false; // depo erişilemiyorsa güvenli varsayılan: kayıt modu
   }
 };
 
-// "Beni hatırla" tercihini kaydeder. Giriş yapmadan önce ayarlanmalıdır.
-export const setRememberMe = (remember: boolean): void => {
+export const setHasAccount = (): void => {
   if (!hasWindow) return;
   try {
-    window.localStorage.setItem(REMEMBER_ME_KEY, remember ? 'true' : 'false');
+    window.localStorage.setItem(HAS_ACCOUNT_KEY, 'true');
   } catch {
     /* sessizce yoksay */
   }
 };
 
-// Hibrit oturum deposu:
-// - "Beni hatırla" AÇIK  → localStorage (tarayıcı kapansa da oturum korunur)
-// - "Beni hatırla" KAPALI → sessionStorage (sekme/tarayıcı kapanınca oturum silinir)
-// Böylece kullanıcı çıkış yapana kadar aynı kimlikle işlem yapabilir.
-const hybridAuthStorage = {
-  getItem: (key: string): string | null => {
+export const clearHasAccount = (): void => {
+  if (!hasWindow) return;
+  try {
+    window.localStorage.removeItem(HAS_ACCOUNT_KEY);
+  } catch {
+    /* sessizce yoksay */
+  }
+};
+
+// ─── Kalıcı oturum deposu ────────────────────────────────────────────────────
+// Oturum HER ZAMAN kalıcıdır: kullanıcı çıkış yapana veya hesabını silene kadar
+// bu cihazda açık kalır ("Beni Hatırla" anahtarı kaldırıldı).
+// - getItem: localStorage'da yoksa sessionStorage'a bakar ve bulursa localStorage'a
+//   TAŞIR — eski sürümde "Beni Hatırla"yı kapatmış kullanıcılar bu geçişte tek bir
+//   oturum kaybı bile yaşamaz. Native'de son çare: Preferences aynasından geri yükle.
+// - setItem: localStorage yazılamıyorsa (ör. Safari gizli sekme) sessionStorage'a
+//   düşer; oturum en azından uygulama ömrü boyunca sürer, hiçbir yol hata fırlatmaz.
+// - Native ayna (iOS UserDefaults / Android SharedPreferences): WebView,
+//   localStorage'ı depolama baskısında tahliye edebilir; belirteç native depoda da
+//   tutulur ki "çıkış yapmadıkça asla giriş ekranı görme" garantisi OS tahliyesine
+//   de dayansın. supabase-js async storage'ı destekler (getItem Promise dönebilir).
+const isNativePlatform = (() => {
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+})();
+
+const persistentAuthStorage = {
+  getItem: async (key: string): Promise<string | null> => {
     if (!hasWindow) return null;
     try {
-      return window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key);
+      const stored = window.localStorage.getItem(key);
+      if (stored !== null) return stored;
+      const legacy = window.sessionStorage.getItem(key);
+      if (legacy !== null) {
+        try {
+          window.localStorage.setItem(key, legacy);
+          window.sessionStorage.removeItem(key);
+        } catch {
+          /* taşıyamazsak sessionStorage kopyasıyla devam */
+        }
+        return legacy;
+      }
+      if (isNativePlatform) {
+        try {
+          const { value } = await Preferences.get({ key });
+          if (value != null) {
+            try {
+              window.localStorage.setItem(key, value);
+            } catch {
+              /* localStorage yazılamasa da native kopya yeter */
+            }
+            return value;
+          }
+        } catch {
+          /* native depo erişilemedi — localStorage yoluyla devam */
+        }
+      }
+      return null;
     } catch {
       return null;
     }
@@ -73,27 +130,49 @@ const hybridAuthStorage = {
   setItem: (key: string, value: string): void => {
     if (!hasWindow) return;
     try {
-      if (getRememberMe()) {
-        window.localStorage.setItem(key, value);
-        window.sessionStorage.removeItem(key);
-      } else {
-        window.sessionStorage.setItem(key, value);
-        window.localStorage.removeItem(key);
-      }
+      window.localStorage.setItem(key, value);
+      window.sessionStorage.removeItem(key);
     } catch {
-      /* sessizce yoksay */
+      try {
+        window.sessionStorage.setItem(key, value);
+      } catch {
+        /* sessizce yoksay */
+      }
+    }
+    if (isNativePlatform) {
+      void Preferences.set({ key, value }).catch(() => {
+        /* native ayna yazılamadı — localStorage kopyası yeterli */
+      });
     }
   },
   removeItem: (key: string): void => {
     if (!hasWindow) return;
     try {
       window.localStorage.removeItem(key);
+    } catch {
+      /* sessizce yoksay */
+    }
+    try {
       window.sessionStorage.removeItem(key);
     } catch {
       /* sessizce yoksay */
     }
+    if (isNativePlatform) {
+      void Preferences.remove({ key }).catch(() => {
+        /* sessizce yoksay */
+      });
+    }
   },
 };
+
+// Eski "Beni Hatırla" tercihi artık okunmuyor; kalan anahtarı temizle.
+if (hasWindow) {
+  try {
+    window.localStorage.removeItem('oyna.auth.rememberMe');
+  } catch {
+    /* sessizce yoksay */
+  }
+}
 
 export const supabase = createClient(
   SUPABASE_URL,
@@ -103,7 +182,7 @@ export const supabase = createClient(
       detectSessionInUrl: true,
       persistSession: true,
       autoRefreshToken: true,
-      storage: hybridAuthStorage,
+      storage: persistentAuthStorage,
       storageKey: 'oyna.auth.token',
     },
   }

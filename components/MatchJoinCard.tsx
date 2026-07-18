@@ -1,9 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Clock, Calendar, ChevronRight } from 'lucide-react';
 import { MatchListing, PositionSlot } from '../types';
 import { useAppStore } from '../store';
 import { FORMATIONS, type SquadSize } from '../utils/formations';
+import { useCountdown } from '../hooks/useCountdown';
 
 // ── Shared helpers (subset from MatchJoin) ───────────────────────────────────
 
@@ -72,39 +73,6 @@ const DIFF_CONFIG: Record<string, { color: string; label: string }> = {
   'Ciddi':     { color: '#FF3B3B', label: 'CİDDİ'     },
   'Taktiksel': { color: '#FACC15', label: 'TAKTİKSEL' },
   'Rahat':     { color: '#39FF14', label: 'RAHAT'     },
-};
-
-// ── Countdown ────────────────────────────────────────────────────────────────
-
-const parseMatchDate = (date: string, time: string): Date | null => {
-  try {
-    if (date.includes('-')) return new Date(`${date}T${time}:00`);
-    const d = new Date();
-    const [h, m] = time.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-    if (date === 'Yarın') d.setDate(d.getDate() + 1);
-    return d;
-  } catch { return null; }
-};
-
-const useCountdown = (date: string, time: string): string => {
-  const [label, setLabel] = useState('');
-  useEffect(() => {
-    const tick = () => {
-      const target = parseMatchDate(date, time);
-      if (!target) { setLabel('Maç Başladı'); return; }
-      const diff = target.getTime() - Date.now();
-      if (diff <= 0) { setLabel('Maç Başladı'); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setLabel(h > 0 ? `${h}s ${m}dk` : `${m}dk ${s}sn`);
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [date, time]);
-  return label;
 };
 
 // ── MiniPitch ─────────────────────────────────────────────────────────────────
