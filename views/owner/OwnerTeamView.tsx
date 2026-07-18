@@ -17,6 +17,7 @@ import type { PitchStaffTask } from '../../types';
 import { useOwnerToast } from './components/useOwnerToast';
 import { OwnerDemoDataBar } from './components/OwnerDemoDataBar';
 import { BottomSheetModal } from './finance/BottomSheetModal';
+import { expiryText } from '../../shared/staffModel';
 
 interface OwnerTeamViewProps {
   pitchId: string;
@@ -45,17 +46,6 @@ const STATUS_META: Record<TeamMember['account_status'], { label: string; cls: st
 const avatarFor = (m: { name: string; avatar_url?: string | null; staff_role?: StaffRole }) =>
   m.avatar_url ||
   `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=${m.staff_role === 'MANAGER' ? '6366f1' : '8b5cf6'}&color=fff`;
-
-/** Davet kodu son kullanma → "36 saat" gibi kalan süre. */
-const expiryText = (iso: string | null): string => {
-  if (!iso) return '';
-  const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return 'süresi doldu';
-  const h = Math.floor(ms / 3_600_000);
-  if (h >= 24) return `${Math.floor(h / 24)} gün ${h % 24} saat geçerli`;
-  if (h >= 1) return `${h} saat geçerli`;
-  return `${Math.max(1, Math.floor(ms / 60_000))} dk geçerli`;
-};
 
 export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   pitchId, isDemoMode, readOnly = false, maxStaff = 10, accessLevel = 'OWNER',

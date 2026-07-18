@@ -1,4 +1,7 @@
 import { supabase } from '../supabaseClient';
+import { mapStaffError } from '../shared/staffModel';
+
+export { mapStaffError } from '../shared/staffModel';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PERSONEL (STAFF) VERİ KATMANI — davet yaşam döngüsü + ekip + panel girişi
@@ -50,21 +53,6 @@ export interface StaffPitch {
   access_level: StaffRole;   // MANAGER | STAFF (sahip zaten kendi paneline düşer)
   role_title: string;
   member_id: string;
-}
-
-// ── Hata eşleyici: RPC 'KOD: Türkçe mesaj' fırlatır; Türkçe kısmı çıkar ──────
-export function mapStaffError(err: unknown): string {
-  const raw = (err as { message?: string })?.message || String(err ?? '');
-  // 'INVALID_OR_EXPIRED: Kod geçersiz…' → ': ' sonrası Türkçe metin
-  const m = raw.match(/:\s*(.+)$/);
-  if (m && /[a-zçğıöşü]/i.test(m[1]) && m[1].length > 3) return m[1].trim();
-  if (/UNAUTHORIZED/.test(raw)) return 'Bu işlem için yetkiniz yok.';
-  if (/ALREADY_MEMBER/.test(raw)) return 'Bu sahada zaten kayıtlısınız.';
-  if (/INVALID_OR_EXPIRED/.test(raw)) return 'Kod geçersiz veya süresi dolmuş.';
-  if (/OWNER_CANNOT_JOIN/.test(raw)) return 'Kendi sahanıza personel olamazsınız.';
-  if (/LIMIT_REACHED/.test(raw)) return 'Ekip kaydı üst sınırına ulaşıldı.';
-  if (/network|fetch|Failed/i.test(raw)) return 'Bağlantı sorunu. Tekrar deneyin.';
-  return 'İşlem tamamlanamadı. Lütfen tekrar deneyin.';
 }
 
 // ── DAVET (SAHİP-only) ──────────────────────────────────────────────────────
