@@ -21,9 +21,12 @@ description: OYNA'yı sandbox'ta canlı Supabase'e karşı Playwright ile sür �
   (alan boş bırakılamaz — buton şifre ister). KVKK kutusu özel buton:
   koordinatla tıkla (~55,805) ya da `p:has-text("okudum")` kardeş butonu.
 - Girişin oturmasını `getByText('Sosyal').waitFor({timeout:40000})` ile bekle.
-- **Tuzak:** oturum tarayıcı yeniden başlatınca AUTH'a düşüyor (token
-  localStorage'da durduğu hâlde) → her koşuya giriş prelüdü koy. Eski/bozuk
-  profil dizini girişte YÜKLENİYOR'da takılabiliyor → profili sil, temiz aç.
+- Kalıcı oturum işi sonrası: oturum tarayıcı restartında da korunur
+  (persistentAuthStorage, daima localStorage) — aynı kalıcı profille yeniden
+  açınca auth ekranı görünmemeli; görünürse bu bir REGRESYONDUR. Temiz/yeni
+  profil doğal olarak kayıt-öncelikli AUTH'a düşer → koşuya giriş prelüdü koy.
+  Eski/bozuk profil dizini girişte YÜKLENİYOR'da takılabiliyor → profili sil,
+  temiz aç.
 
 ## Sürüş notları
 - Alt nav 'Sosyal' → kabuk; Takımlar→Takımlarım varsayılan.
