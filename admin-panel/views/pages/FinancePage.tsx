@@ -34,6 +34,14 @@ const LEDGER_TYPE_LABELS: Record<string, string> = {
   SERVICE_EARNING: 'Hizmet Kazancı',
   REFERRAL_BONUS: 'Referans Bonusu',
   WITHDRAWAL: 'IBAN Çekimi',
+  CHARGEBACK_REVERSAL: 'Chargeback Kesintisi',
+};
+
+const PAYOUT_TYPE_LABELS: Record<string, string> = {
+  OWNER_BIWEEKLY: 'Saha Sahibi',
+  PROVIDER_INSTANT: 'Kaleci/Hakem',
+  WALLET_CASHOUT: 'Cüzdan Çekimi',
+  MANUAL: 'Manuel',
 };
 
 const INTENT_CONTEXT_LABELS: Record<string, string> = {
@@ -200,9 +208,14 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     });
   };
 
-  const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED') => {
+  const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED', row?: PayoutRequestRow) => {
     if (status === 'FAILED' && !window.confirm('Bu payout talebi reddedilsin mi? Rezerve tutar sahibe iade edilir.')) return;
-    const ref = status === 'COMPLETED' ? (window.prompt('Banka / iyzico referansı (opsiyonel):') ?? undefined) : undefined;
+    // [S2.1] Cüzdan çekiminde bankaya NET tutar gönderilir (brüt − kesinti) — admin'e vurgula.
+    const isCashout = row?.payout_type === 'WALLET_CASHOUT' && row?.net_amount != null;
+    const refPrompt = isCashout
+      ? `Banka transfer referansı — bankaya NET ₺${Number(row!.net_amount).toLocaleString('tr')} gönderilmeli (brüt ₺${Number(row!.amount).toLocaleString('tr')} − kesinti ₺${Number(row!.fee_amount ?? 0).toLocaleString('tr')}):`
+      : 'Banka / iyzico referansı (opsiyonel):';
+    const ref = status === 'COMPLETED' ? (window.prompt(refPrompt) ?? undefined) : undefined;
     setPayoutBusy(id);
     try {
       await processPayout(id, status, ref);
@@ -435,7 +448,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           columns={[
             { header: 'Tarih', render: (r: PayoutRequestRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
             { header: 'Talep Eden', render: (r: PayoutRequestRow) => <span className="text-sm text-white">{nameMap[r.user_id] || r.user_id.slice(0, 8)}</span> },
-            { header: 'Tip', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-blue-300">{r.payout_type === 'OWNER_BIWEEKLY' ? 'Saha Sahibi' : r.payout_type === 'PROVIDER_INSTANT' ? 'Kaleci/Hakem' : r.payout_type}</span> },
+            { header: 'Tip', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-blue-300">{PAYOUT_TYPE_LABELS[r.payout_type] ?? r.payout_type}</span> },
             { header: 'IBAN', render: (r: PayoutRequestRow) => <span className="text-[10px] font-mono text-gray-400">{r.iban_holder_name} · {r.iban}</span> },
             { header: 'Kimlik Kontrol', render: (r: PayoutRequestRow) => {
               const c = idChecks[r.id];
@@ -456,7 +469,15 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                 </div>
               );
             } },
-            { header: 'Tutar', render: (r: PayoutRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
+            { header: 'Tutar', render: (r: PayoutRequestRow) => (
+              r.payout_type === 'WALLET_CASHOUT' && r.net_amount != null ? (
+                <div className="flex flex-col">
+                  {/* Bankaya giden NET tutar öne çıkar; brüt/kesinti iz için altta */}
+                  <span className="text-green-400 font-bold">Net ₺{Number(r.net_amount).toLocaleString('tr')}</span>
+                  <span className="text-[10px] text-gray-500">brüt ₺{Number(r.amount).toLocaleString('tr')} · kesinti ₺{Number(r.fee_amount ?? 0).toLocaleString('tr')}</span>
+                </div>
+              ) : <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span>
+            ) },
             { header: 'Durum', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
             { header: 'İşlem', render: (r: PayoutRequestRow) => (
               r.status === 'PENDING' || r.status === 'PROCESSING' ? (
@@ -464,7 +485,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                   <button
                     type="button"
                     disabled={payoutBusy === r.id}
-                    onClick={() => handlePayout(r.id, 'COMPLETED')}
+                    onClick={() => handlePayout(r.id, 'COMPLETED', r)}
                     className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25 disabled:opacity-40"
                   >
                     Tamamla
@@ -472,7 +493,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                   <button
                     type="button"
                     disabled={payoutBusy === r.id}
-                    onClick={() => handlePayout(r.id, 'FAILED')}
+                    onClick={() => handlePayout(r.id, 'FAILED', r)}
                     className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-40"
                   >
                     Reddet
