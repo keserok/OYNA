@@ -344,7 +344,7 @@ Bu muvafakatname, Kullanım Şartları madde 4'ün ayrılmaz ekidir.`,
 Bu politika, OYNA'nın web yüzeylerinde (oyna.app ve alt sayfaları, web uygulaması) kullanılan çerezleri ve tarayıcı depolama teknolojilerini açıklar. Mobil uygulamada çerez kullanılmaz; cihaz izinleri Gizlilik Politikası'nda ayrıca açıklanmıştır.
 
 1. ZORUNLU ÇEREZLER / DEPOLAMA
-Oturumunuzu açık tutmak ve güvenliğinizi sağlamak için gereklidir; devre dışı bırakılamaz ve rıza gerektirmez. (Supabase oturum belirteci — "Beni Hatırla" açıksa kalıcı, kapalıysa oturum sonuna kadar localStorage/sessionStorage'da tutulur.)
+Oturumunuzu açık tutmak ve güvenliğinizi sağlamak için gereklidir; devre dışı bırakılamaz ve rıza gerektirmez. (Supabase oturum belirteci — çıkış yapana veya hesabınızı silene kadar localStorage'da kalıcı olarak tutulur.)
 
 2. PERFORMANS VE ANALİTİK ÇEREZLERİ
 Yalnızca ilgili ölçüm servisi etkinleştirilmişse kullanılır: PostHog (kullanım analitiği, localStorage + çerez) ve Sentry (hata/çökme takibi, kimliklendirici alanlar temizlenerek). Bu tedarikçilerin sunucuları yurt dışında olabilir; aktarım koşulları Gizlilik Politikası'nın "Yurt Dışına Aktarım" bölümünde açıklanmıştır.
