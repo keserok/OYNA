@@ -754,8 +754,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   </AnimatedButton>
                 </div>
 
-                {/* ─── Demo hesap seçici (main'de aktif) ─── */}
-                {showDemoPicker && !isRegister && (
+                {/* ─── Demo hesap seçici — GEÇİCİ: kayıt ekranında da aktif (sonra kaldırılacak) ─── */}
+                {showDemoPicker && (
                   <div className="mt-4">
                     <button
                       type="button"
