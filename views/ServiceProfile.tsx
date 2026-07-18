@@ -5,7 +5,7 @@ import { UserRole } from '../types';
 import {
   ArrowLeft, Camera, Star, MapPin, Clock, Shield, Scale, Edit3,
   Check, X, Upload, Image as ImageIcon, Trash2,
-  Award, Target, Zap, Trophy
+  Award, Target, Zap
 } from 'lucide-react';
 
 interface ServiceProfileProps {
@@ -191,7 +191,6 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       ]
     : [
         { label: 'Maç', value: userProfile?.matchCount?.toString() || '42', icon: <Shield size={14} /> },
-        { label: 'CS', value: (userProfile as Goalkeeper)?.stats?.cleanSheets?.toString() || '12', icon: <Trophy size={14} /> },
         { label: 'Refleks %', value: (userProfile as Goalkeeper)?.stats?.savePercentage?.toString() || '94', icon: <Zap size={14} /> },
         { label: 'Puan', value: userProfile?.rating?.toString() || '9.2', icon: <Star size={14} /> },
       ];

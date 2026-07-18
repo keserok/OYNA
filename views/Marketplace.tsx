@@ -411,7 +411,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         if (type === 'GK') {
             return [
                 present(detailStats.savePercentage) && { label: 'Kurtarış', value: asPercent(detailStats.savePercentage) },
-                present(detailStats.cleanSheets) && { label: 'Gol Yemeden', value: `${detailStats.cleanSheets} maç` },
                 present(detailStats.penaltySaveRate) && { label: 'Penaltı Kurtarma', value: asPercent(detailStats.penaltySaveRate) },
             ].filter(Boolean) as { label: string; value: string }[];
         }
