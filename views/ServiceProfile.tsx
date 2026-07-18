@@ -126,6 +126,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   }, [userProfile]);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Avatar'ı storage'a yükle (compress + public URL) — base64'ü DB kolonuna
+  // yazmak yerine (satır/pazaryeri yükünü şişiriyordu).
+  const { uploadImage, uploading: photoUploading } = useImageUpload('avatars', { minWidth: 200 });
 
 
 
@@ -153,7 +156,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         fee,
         name: displayName,
         style: selectedStyle,
-        avatar: customPhoto || userProfile.avatar,
+        // WYSIWYG: ekranda görünen fotoğrafı kaydet. Eski hâlde preset seçimi
+        // customPhoto=null bıraktığından hazır fotoğraf seçimi hiç kaydedilmiyordu.
+        avatar: currentPhoto || userProfile.avatar,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
         settings: { ...(userProfile as any).settings, radiusKm },
       });
@@ -170,12 +175,11 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   // KD-8: fotoğraf base64 data-URL olarak goalkeepers.avatar'a yazılıyordu → satırı
   // ve HER find_providers/marketplace payload'ını şişiriyordu. Artık Storage'a
   // ('avatars') yüklenir, kalıcı public URL saklanır; hata kullanıcıya bildirilir.
-  const { uploadImage: uploadAvatar, uploading: avatarUploading } = useImageUpload('avatars', { minWidth: 200 });
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const url = await uploadAvatar(file);
+      const url = await uploadImage(file);
       setCustomPhoto(url);
       setShowPhotoPicker(false);
     } catch (err: any) {
@@ -621,11 +625,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all"
+                disabled={photoUploading}
+                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all disabled:opacity-60"
                 style={{ borderColor: accentColor + '60', background: accentBg, color: accentColor }}
               >
                 <Upload size={20} />
-                CİHAZDAN FOTOĞRAF YÜKLE
+                {photoUploading ? 'YÜKLENİYOR…' : 'CİHAZDAN FOTOĞRAF YÜKLE'}
               </motion.button>
 
               {/* Preset grid */}

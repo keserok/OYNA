@@ -274,6 +274,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   // B4: Kaptanın maçı iptali (yalnız MANAGE lobisinde görünür)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  // S2.4 — ayrılınca iade edilecek tutar (SUNUCUDAN; leave_public_match_slot ile birebir)
+  const [leaveRefund, setLeaveRefund] = useState<number | null>(null);
 
   // (Rakip davet/katıl modalları kaldırıldı — lobi sadeleştirmesi)
 
@@ -302,7 +304,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     userTeams, myTeams, setSelectedMatch,
     setNewMatchBadge, lobbyMode, currentUserProfile: storeCurrentUserProfile
   } = useAppStore();
-  // MANAGE = Sıradaki Maçlarım'dan; yönetim aksiyonları yalnız burada görünür.
+  // MANAGE = Maçlarım hub'ından; yönetim aksiyonları yalnız burada görünür.
   const isManageMode = lobbyMode === 'MANAGE';
 
   // Saha konumu: pitch_id (FK) tek otorite; store'daki isim eşleşmesi varsayılan
@@ -495,6 +497,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const mySlot = isAlreadyJoined
     ? [...enrichedSlots, ...enrichedAwaySlots].find(s => s?.player?.id === currentUserProfile?.id)
     : null;
+
+  // S2.4 — ayrılma modalı açılınca iade tutarını SUNUCUDAN çek (yedeklikte 0 döner).
+  useEffect(() => {
+    if (!showLeaveConfirm || !match?.id) { setLeaveRefund(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('preview_leave_match', { p_match_id: match.id });
+        if (alive) setLeaveRefund(Number((data as any)?.refundable) || 0);
+      } catch { if (alive) setLeaveRefund(null); }
+    })();
+    return () => { alive = false; };
+  }, [showLeaveConfirm, match?.id]);
 
   const assignedIds = (match.slots || []).filter(s => s?.player).map(s => s.player!.id);
   const filteredFriends = (friends || []).filter(f => {
@@ -1060,7 +1075,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const posLabel = { 'GK': 'KALECİ', 'DEF': 'DEFANS', 'MID': 'ORTA SAHA', 'FWD': 'FORVET' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'OYUNCU';
                 const c = playerCard;
                 const isSelf = !!c?.is_self;
-                const footTr = (f?: string | null) => f === 'SAG' ? 'SAĞ' : f === 'SOL' ? 'SOL' : '—';
                 // Bilgiler herkese açık; yalnız "birlikte maç" arkadaşlara özel.
                 const canShowTogether = !!c && !isSelf && c.matches_together != null;
                 const showHero = isSelf || canShowTogether;
@@ -1099,11 +1113,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             </div>
                           </div>
                         )}
-                        <div className={`w-full grid grid-cols-3 gap-2 ${showHero ? 'mt-3' : 'mt-5'}`}>
+                        <div className={`w-full grid grid-cols-2 gap-2 ${showHero ? 'mt-3' : 'mt-5'}`}>
                           {[
                             { l: 'YAŞ', v: c?.age != null ? String(c.age) : '—' },
                             { l: 'FAIR PLAY', v: c?.fair_play != null ? '%' + c.fair_play : '—' },
-                            { l: 'AYAK', v: footTr(c?.preferred_foot) },
                           ].map(s => (
                             <div key={s.l} className="bg-white/[0.04] border border-white/8 rounded-xl py-3 flex flex-col items-center gap-1">
                               <span className="text-[7px] font-black text-white/35 uppercase tracking-[0.15em]">{s.l}</span>
@@ -1130,7 +1143,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </>
                     )}
 
-                    {/* Yönetim aksiyonları — YALNIZ MANAGE (Sıradaki Maçlarım) */}
+                    {/* Yönetim aksiyonları — YALNIZ MANAGE (Maçlarım hub'ı) */}
                     {isManageMode && (
                       <div className="w-full mt-4 space-y-2">
                         {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
@@ -1197,21 +1210,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
               </h3>
               
-              <p className="text-sm text-gray-400 mb-3">
+              <p className="text-sm text-gray-400 mb-4">
                 {isAlreadyJoinedReserve
                   ? 'Yedek listesinden çıkmak istediğinize emin misiniz?'
                   : 'Maçtan ayrılmak istediğinize emin misiniz? Kadrodaki yeriniz boşaltılacaktır.'}
               </p>
-              {/* B5: para ayrılmadan önce KONUŞULUR — sunucu iade kredisini zaten
-                  işliyor (leave RPC); kullanıcı sonucu burada net görür. */}
-              {!isAlreadyJoinedReserve && (match.price || 0) > 0 && (
-                <p className="text-[11px] font-bold text-[#39FF14]/90 bg-[#39FF14]/[0.07] border border-[#39FF14]/20 rounded-xl px-3 py-2 mb-6">
-                  {[...(match.slots || []), ...(match.awaySlots || [])].some(
-                    (s: any) => s?.player?.id === currentUserProfile?.id && s?.player?.paymentStatus === 'PAID'
-                  )
-                    ? `Ödediğin ${formatTRYWithSymbol(match.price)} iade kredisi olarak cüzdanına dönecek.`
-                    : 'Ödeme yaptıysan tutar iade kredisi olarak cüzdanına döner.'}
-                </p>
+              {/* S2.4 — iade önizlemesi (SUNUCUDAN; gerçek iadeyle birebir) */}
+              {leaveRefund != null && leaveRefund > 0 && (
+                <div className="mb-6 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl px-4 py-3">
+                  <p className="text-[12.5px] text-gray-200 leading-relaxed">
+                    Ödediğin <span className="text-[#39FF14] font-black">{leaveRefund.toLocaleString('tr-TR')}₺</span> ayrılınca
+                    {' '}<span className="text-white font-semibold">iade kredisi</span> olarak cüzdanına eksiksiz döner.
+                  </p>
+                </div>
               )}
               
               <div className="flex gap-3">
@@ -2284,6 +2295,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <div className="absolute inset-0 bg-[#39FF14]/10" />
                           )}
                         </div>
+                        {/* C9 — split ödeme görünürlüğü: bu slotu SEN ödedin (oyuncu başkası) */}
+                        {!isMyOwnSlot && (slot as any).purchasedBy === currentUserProfile?.id && (
+                          <div className="absolute -top-1 -right-1 w-[15px] h-[15px] rounded-full bg-[#39FF14] border border-[#0A0E14] flex items-center justify-center z-30 pointer-events-none shadow-[0_0_8px_rgba(57,255,20,0.6)]"
+                               title="Bu slotu sen ödedin">
+                            <span className="text-[8px] font-black text-[#0A0E14] leading-none">₺</span>
+                          </div>
+                        )}
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md max-w-[64px] z-20 pointer-events-none">
                           <span className="text-[8px] font-black text-white whitespace-nowrap uppercase truncate block">
                             {isMyOwnSlot ? 'SEN' : (player.name || 'Oyuncu').split(' ')[0]}

@@ -91,7 +91,7 @@ const StepLocation: React.FC<StepLocationProps> = ({ phase, onSkip }) => {
           className="text-[13px]"
           style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
         >
-          Şimdilik atla
+          Konumsuz devam et
         </button>
       )}
     </div>

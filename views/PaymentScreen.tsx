@@ -166,6 +166,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const [summaryLoading, setSummaryLoading] = useState(true);
   // S1.2/C6 — 3 dk oturum tazelendi bildirimi (ince, kendiliğinden kaybolur).
   const [sessionRefreshed, setSessionRefreshed] = useState(false);
+  // S3 — tesis iptal/iade kademesi (SUNUCUDAN; tesis override veya global)
+  const [refundPolicy, setRefundPolicy] = useState<{ full_hours: number; half_hours: number; half_pct: number } | null>(null);
   // Uygulama-içi 3DS (banka SMS) sayfası — açıkken tam ekran sheet gösterilir
   const [threeDS, setThreeDS] = useState<{
     html: string; intentId: string; balanceApplied: number; cardAmount: number;
@@ -207,6 +209,29 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
     run();
     return () => { alive = false; };
   }, [setSavedCards]);
+
+  // S3 — kapora akışında tesis iptal/iade kademesini SUNUCUDAN çek (göster).
+  useEffect(() => {
+    const pid = (bookingPitch as any)?.id as string | undefined;
+    if (!ctx?.isDeposit || !pid) { setRefundPolicy(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('preview_pitch_refund_policy', { p_pitch_id: pid });
+        if (alive && data) setRefundPolicy({
+          full_hours: Number((data as any).full_hours) || 24,
+          half_hours: Number((data as any).half_hours) || 6,
+          half_pct: Number((data as any).half_pct) || 50,
+        });
+      } catch { if (alive) setRefundPolicy(null); }
+    })();
+    return () => { alive = false; };
+  }, [ctx?.isDeposit, (bookingPitch as any)?.id]);
+
+  // İptal kademesi kullanıcı-dostu metin (tesis politikasıyla birebir).
+  const refundTierText = refundPolicy
+    ? `İptalde iade: ${refundPolicy.full_hours} saat öncesi %100 · ${refundPolicy.half_hours}–${refundPolicy.full_hours} saat arası %${refundPolicy.half_pct} · sonrası iade yok.`
+    : null;
 
   // ─── Türetilen tutarlar (canlı güncellenir) ────────────────────────────────
   const amount = ctx?.amount ?? 0;
@@ -584,7 +609,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         break;
       case 'PITCH_DEPOSIT':
       case 'BOOKING_DEPOSIT':
-        store.resetNavigation('MY_BOOKINGS');
+        // Maçlarım hub'ı Rezervasyonlar segmentiyle açılır (ödenen kapora görünür olsun).
+        store.setMyMatchesInitialSegment('BOOKINGS');
+        store.resetNavigation('MY_MATCHES');
         break;
       default:
         onViewTicket();
@@ -699,6 +726,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
             <div className="h-px bg-white/8" />
             <SummaryRow label="İşlem No" value={(result?.intentId ?? '').slice(0, 8).toUpperCase() || '—'} dim mono />
           </motion.div>
+          {/* S3 — onay sayfasında iptal/iade koşulu (tesis politikasıyla birebir) */}
+          {ctx.isDeposit && refundTierText && (
+            <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.28 }}
+              className="w-full mt-3.5 bg-yellow-400/6 border border-yellow-400/20 rounded-2xl p-3.5 flex gap-2.5">
+              <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
+              <p className="text-[11.5px] text-gray-400 leading-relaxed">{refundTierText}</p>
+            </motion.div>
+          )}
           {ctx.infoNote && (
             <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
               className="w-full mt-3.5 bg-blue-500/8 border border-blue-400/20 rounded-2xl p-3.5 flex gap-2.5">
@@ -963,6 +998,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
           <div className="mx-5 flex gap-2.5 items-start px-1">
             <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
             <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
+          </div>
+        )}
+
+        {/* S3 — iptal/iade kademesi (ödemeden ÖNCE, tesis politikasıyla birebir) */}
+        {ctx.isDeposit && refundTierText && (
+          <div className="mx-5 bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
+            <Info size={15} className="text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-[11.5px] text-gray-300 leading-relaxed">{refundTierText}</p>
           </div>
         )}
 

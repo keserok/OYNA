@@ -7,15 +7,19 @@ import StepName from './onboarding/StepName';
 import StepStyle from './onboarding/StepStyle';
 import PlayerCardReveal from './onboarding/PlayerCardReveal';
 import {
-  AGE_RANGES, Gender, OnboardingPosition, PlayStyle, OnboardingDraft,
-  saveOnboardingDraft, clearOnboardingDraft,
+  AGE_RANGES, AgeRange, Gender, OnboardingPosition, PlayStyle, OnboardingDraft,
+  POSITION_CODE, splitFullName,
 } from './onboarding/onboardingShared';
+import { applyOnboarding } from '../services/onboardingService';
+import { useAppStore } from '../store';
+import { auth } from '../supabaseAuth';
+import { getFullUserProfile } from '../services/userService';
+import { fbUpdateUserLocation } from '../supabaseMutations';
+import { showToast } from '../components/common/GlobalToast';
 
 interface OnboardingProps {
-  /** "Kayıt Ol": taslağı kaydeder ve kayıt (AUTH) ekranına yönlendirir. */
+  /** Onboarding bitti (TAMAMLANDI veya ATLANDI) → çağıran uygulamaya/profile döner. */
   onComplete: () => void;
-  /** "Giriş yap": taslağı temizler ve giriş (AUTH) ekranına yönlendirir. */
-  onLogin: () => void;
 }
 
 type Phase = 'idle' | 'scanning' | 'found';
@@ -40,34 +44,95 @@ const KEYFRAMES = `
 @keyframes obKenBurns { 0% { transform: scale(1.06) translate(0,0); } 100% { transform: scale(1.2) translate(-2%,-2%); } }
 `;
 
-const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onLogin }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
   const [ageIndex, setAgeIndex] = useState(2); // 24-30
   const [ageTouched, setAgeTouched] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [gender, setGender] = useState<Gender>('erkek');
-  const [position, setPosition] = useState<OnboardingPosition>('orta');
+  // Cinsiyet ve pozisyon OPSİYONEL: kullanıcı seçmeden varsayılan yazma
+  // (atlama durumunda sahte "erkek/orta saha" verisi kaydını önler).
+  const [gender, setGender] = useState<Gender>('');
+  const [position, setPosition] = useState<OnboardingPosition>('');
   const [playStyle, setPlayStyle] = useState<PlayStyle>('');
   const [locationGranted, setLocationGranted] = useState(false);
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
   const timers = useRef<number[]>([]);
+  const { setUserLocation, setLocationPermissionStatus } = useAppStore();
 
   useEffect(() => () => { timers.current.forEach(clearTimeout); }, []);
 
+  // ─── Ön-dolum: kayıtta girilen ad soyad + (varsa) daha önce doldurulmuş
+  // alanlar. Önce oturum metadata'sından anında isim; sonra profilden düzeltme.
+  useEffect(() => {
+    let cancelled = false;
+    const meta = splitFullName(auth.currentUser?.displayName);
+    if (meta.firstName) setFirstName(meta.firstName);
+    if (meta.lastName) setLastName(meta.lastName);
+
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    (async () => {
+      try {
+        const p = await getFullUserProfile(uid);
+        if (cancelled || !p) return;
+        const split = splitFullName(p.full_name || auth.currentUser?.displayName || '');
+        setFirstName((prev) => (p.firstName?.trim() || split.firstName || prev));
+        setLastName((prev) => (p.lastName?.trim() || split.lastName || prev));
+        if (p.ageRange && (AGE_RANGES as readonly string[]).includes(p.ageRange)) {
+          setAgeIndex(AGE_RANGES.indexOf(p.ageRange as AgeRange));
+          setAgeTouched(true);
+        }
+        if (p.gender === 'kadin' || p.gender === 'erkek') setGender(p.gender);
+        if (p.playStyle === 'ciddi' || p.playStyle === 'taktiksel' || p.playStyle === 'rahat') setPlayStyle(p.playStyle);
+        if (p.position && POSITION_CODE[p.position]) setPosition(POSITION_CODE[p.position]);
+      } catch {
+        /* ön-dolum best-effort — hata akışı bozmaz */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ─── Konum: GERÇEK izin isteği (kayıt sonrası kullanıcı girişli) ───
   const startScan = useCallback(() => {
     if (phase !== 'idle') return;
     setPhase('scanning');
-    timers.current.push(window.setTimeout(() => {
-      setPhase('found');
-      setLocationGranted(true);
-      timers.current.push(window.setTimeout(() => {
+    const finish = (granted: boolean) => {
+      setLocationGranted(granted);
+      if (granted) {
+        setPhase('found');
+        timers.current.push(window.setTimeout(() => {
+          setPhase('idle');
+          setStep((s) => (s === 0 ? 1 : s));
+        }, 1000));
+      } else {
         setPhase('idle');
-        setStep((s) => (s === 0 ? 1 : s));
-      }, 1000));
-    }, 1600));
-  }, [phase]);
+      }
+    };
+    if (!navigator.geolocation) { finish(false); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationPermissionStatus('GRANTED');
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+          fbUpdateUserLocation(uid, pos.coords.latitude, pos.coords.longitude).catch((err) => {
+            console.error('[onboarding] konum DB kaydı başarısız:', err);
+          });
+        }
+        finish(true);
+      },
+      (err) => {
+        console.warn('[onboarding] konum alınamadı:', err?.message);
+        setLocationPermissionStatus('DENIED');
+        showToast('Konum izni verilmedi. Dilersen sonra Ayarlar’dan açabilirsin.');
+        finish(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  }, [phase, setUserLocation, setLocationPermissionStatus]);
 
   const goStep1FromSkip = useCallback(() => setStep(1), []);
 
@@ -104,24 +169,47 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onLogin }) => {
     setStep((s) => Math.max(0, s - 1));
   };
 
-  const handleRegister = () => {
-    const draft: OnboardingDraft = {
-      ageRange: AGE_RANGES[ageIndex],
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      gender,
-      position,
-      playStyle,
-      locationGranted,
-      completedAt: Date.now(),
-    };
-    saveOnboardingDraft(draft);
-    onComplete();
+  // Yalnızca kullanıcının GERÇEKTEN onayladığı alanları taşır. Yaş yalnızca
+  // seçici gerçekten dokunulduysa gönderilir → atlamada varsayılan yaş
+  // yazılmaz. RPC forward-only olduğundan boş alanlar mevcut değeri silmez.
+  const buildDraft = (): OnboardingDraft => ({
+    ageRange: ageTouched ? AGE_RANGES[ageIndex] : '',
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+    gender,
+    position,
+    playStyle,
+    locationGranted,
+    completedAt: Date.now(),
+  });
+
+  // ─── TAMAMLA: özet ekranındaki "Başla" — veriyi profile yazar (completed=true) ───
+  const handleComplete = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await applyOnboarding(buildDraft(), true);
+      onComplete();
+    } catch (e) {
+      console.error('[onboarding] tamamlama kaydı başarısız:', e);
+      showToast('Profilin kaydedilemedi. Lütfen tekrar dene.');
+      setSaving(false);
+    }
   };
 
-  const handleLogin = () => {
-    clearOnboardingDraft();
-    onLogin();
+  // ─── ATLA: girilen kısmi veriyi yazar ama "tamamlandı" işaretlemez ───
+  const handleSkip = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      // best-effort kısmi kayıt: boş alanlar sunucuda mevcut değeri silmez.
+      await applyOnboarding(buildDraft(), false);
+    } catch (e) {
+      console.error('[onboarding] atlama kısmi kaydı başarısız:', e);
+      // atlama kullanıcıyı bloke etmez — yine de devam ederiz
+    } finally {
+      onComplete();
+    }
   };
 
   const aura = AURAS[step];
@@ -154,7 +242,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onLogin }) => {
               }} />
             ))}
           </div>
-          <div style={{ width: 38, textAlign: 'right', fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.55)' }}>{step + 1}/4</div>
+          {/* Atla — TÜM onboarding'i atlar: kısmi veri yazılır, profil "tamamlanmadı" kalır */}
+          <button onClick={handleSkip} disabled={saving} style={{ width: 44, textAlign: 'right', fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer' }}>
+            Atla
+          </button>
         </div>
 
         {/* Kicker + başlık */}
@@ -188,13 +279,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onLogin }) => {
         >
           {ctaLabel}
         </button>
-
-        <button onClick={handleLogin} style={{ marginTop: 12, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', alignSelf: 'center' }}>
-          Zaten hesabın var mı? <span style={{ color: '#39FF14', fontWeight: 700 }}>Giriş yap</span>
-        </button>
       </div>
 
-      {/* Final oyuncu kartı */}
+      {/* Final özet (kartsız, "havada") */}
       {done && (
         <PlayerCardReveal
           firstName={firstName}
@@ -204,8 +291,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onLogin }) => {
           position={position}
           playStyle={playStyle}
           locationGranted={locationGranted}
-          onRegister={handleRegister}
-          onLogin={handleLogin}
+          busy={saving}
+          onStart={handleComplete}
           onBack={() => setDone(false)}
         />
       )}

@@ -1,18 +1,18 @@
 import { ORDU_DISTRICT_NAMES } from '../utils/orduData';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, MapPin, Clock, Shield, Circle,
-  Zap, ChevronRight, Target, CheckCircle2, Feather, Lock, ShieldAlert,
-  Check, KeyRound, Loader2
+  ArrowLeft, MapPin, Clock, Circle,
+  ChevronRight, ShieldAlert, KeyRound, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MatchListing, PlayerSeekAnnouncement } from '../types';
+import { MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
-import { parseMatchDateTime } from '../utils/matchDateTime';
+import { FilterDropdown } from '../components/ui/FilterDropdown';
+import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -20,30 +20,16 @@ interface MatchDiscoveryProps {
 }
 
 // ── OYUN DNA'SI SEÇENEKLERİ ──
+// Format/Mentalite/Pozisyon seçenekleri sabit liste DEĞİLDİR: yalnız listelenen
+// açık maçlarda fiilen bulunan değerlerden türetilir (utils/discoveryFilterOptions).
 const BUDGET_OPTIONS = ['Ücretsiz', '150₺ ve Altı', '150-250₺', '250-350₺', '350₺ ve Üzeri'];
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
-const FORMAT_OPTIONS = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
-
-const ROLE_OPTIONS = [
-  { id: 'HÜC', label: 'HÜCUM', color: '#ef4444' },
-  { id: 'ORT', label: 'ORTA', color: '#f97316' },
-  { id: 'SAV', label: 'SAVUNMA', color: '#3b82f6' },
-  { id: 'KL', label: 'KALECİ', color: '#10b981' }
-];
-
-const MENTALITY_OPTIONS = [
-  { id: 'ciddi', title: 'CİDDİ', subtitle: 'Rekabetçi', icon: Zap, color: '#FACC15' },
-  { id: 'taktiksel', title: 'TAKTİKSEL', subtitle: 'Sistem', icon: Target, color: '#3b82f6' },
-  { id: 'rahat', title: 'RAHAT', subtitle: 'Eğlence', icon: Feather, color: '#10b981' }
-];
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
-  const { 
-    adminMatches, 
-    adminUsers, 
-    playerSeekAds,
-    toggleJoinPlayerSeekAd,
+  const {
+    adminMatches,
+    adminUsers,
     navigateTo,
     userLocation,
     selectedRegions,
@@ -53,12 +39,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   const currentUserUid = auth.currentUser?.uid || 'u1';
   const currentUser = adminUsers.find(u => u.id === currentUserUid) || adminUsers[0];
   const trustScore = currentUser?.rating || 4.2;
-
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
-  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   // ── Özel maç (kodla katılım) ──
   const [showPrivateModal, setShowPrivateModal] = useState(false);
@@ -104,7 +84,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   };
 
   const [showWizard, setShowWizard] = useState(false);
-  const [activeSection, setActiveSection] = useState<'bireysel' | 'takim'>('bireysel');
+  // Format/Mentalite/Pozisyon dropdown'ları: aynı anda en fazla biri açık.
+  const [openDropdown, setOpenDropdown] = useState<'format' | 'mentality' | 'role' | null>(null);
   // Hızlı filtre çipleri (Q14): nearby (mesafeye göre sırala) / today / open / cheap
   const [quick, setQuick] = useState<string[]>([]);
   const [dna, setDna] = useState({
@@ -119,8 +100,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   });
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
-  // B15: yakın-maç sorgusu sürerken iskelet göster (boş↔stale titremesi ölür).
-  const [isNearbyLoading, setIsNearbyLoading] = useState(false);
 
   useEffect(() => {
     // Çoklu bölge: her seçili bölgenin merkezinden yakındaki maçları çek ve
@@ -134,12 +113,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
     if (centers.length === 0) {
       setNearbyMatches([]);
-      setIsNearbyLoading(false);
       return;
     }
 
     let cancelled = false;
-    setIsNearbyLoading(true);
     Promise.all(centers.map((c) => fetchNearbyMatches(c.lat, c.lng, searchRadius))).then((perCenter) => {
       if (cancelled) return;
       // get_nearby_matches HAM matches satırı döndürür (SETOF matches); satırı
@@ -153,32 +130,24 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         }
       });
       setNearbyMatches(Array.from(byId.values()));
-      setIsNearbyLoading(false);
-    }).catch(() => { if (!cancelled) setIsNearbyLoading(false); });
+    });
     return () => { cancelled = true; };
   }, [userLocation, selectedRegions, searchRadius]);
 
   const enhancedMatches = useMemo(() => {
     const hasScope = selectedRegions.length > 0 || !!userLocation;
-    // B10: kapsam (konum/bölge) varken yakın-sonuç 0 ise TÜM maçlara SESSİZCE
-    // düşme — 0 sonuç gerçek 0'dır; boş durum kartı "çapı genişlet" önerir.
-    const sourceMatches = hasScope ? nearbyMatches : adminMatches;
+    const sourceMatches = (hasScope && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
-    const now = Date.now();
-    const activeMatches = sourceMatches.filter(m => {
-      if (!(!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') || m.visibility === 'PRIVATE') return false;
-      // B8: başlamış/geçmiş maç vitrinde KALMAZ (tarih çözülemiyorsa gösterilir).
-      const dt = parseMatchDateTime(m.date, m.time);
-      return !dt || dt.getTime() > now;
-    });
-    return activeMatches.map((m) => {
-      // B9: fiyat YALNIZ gerçek veriden — eski kod dizin-indeksinden fiyat
-      // uyduruyordu (i===2?0:200) ve bütçe filtresi bu sahte değerle çalışıyordu.
-      const price = Number(m.price) || 0;
-      // Difficulty DB'de Türkçe zorluk (Kolay/Orta/Zor) ya da mantalite
-      // (Ciddi/Taktiksel/Rahat) olarak gelebilir. Tek bir mantalite uzayına
-      // normalize et ki hem kartta görünen rozet hem de MANTALİTE filtresi
+    const activeMatches = sourceMatches.filter(
+      m => (!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
+    );
+    return activeMatches.map((m, i) => {
+      // Demo price adjustment for index 2 if not set, else keep DB price
+      const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
+      // Difficulty DB'de Türkçe zorluk (Kolay/Orta/Zor) ya da mentalite
+      // (Ciddi/Taktiksel/Rahat) olarak gelebilir. Tek bir mentalite uzayına
+      // normalize et ki hem kartta görünen rozet hem de MENTALİTE filtresi
       // tutarlı ve doğru çalışsın.
       const diffStr = (m.difficulty || '').toLowerCase().trim();
       let normalizedMentality: 'Ciddi' | 'Taktiksel' | 'Rahat';
@@ -220,10 +189,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
       return {
         ...m,
-        // KN-6: sahte tarih/saat fallback'i YOK — veri yoksa boş kalır
-        // (countdown parseMatchDateTime null → sessizce gizlenir).
-        date: m.date || '',
-        time: m.time || '',
+        date: m.date || '18.05.2026',
+        time: m.time || '22:00 - 23:00',
         missingPositions: mappedMissingPositions,
         price,
         difficulty: normalizedMentality,
@@ -241,6 +208,35 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   const isFilterActive = useMemo(() => {
     return !!(dna.format || dna.budget || dna.duration || (dna.age && dna.age !== 'Tümü') || dna.gender || dna.role || dna.mentality || dna.district);
   }, [dna]);
+
+  // Dropdown seçenekleri: yalnız listelenen açık maçlarda fiilen bulunan değerler.
+  // matchingMatches değil enhancedMatches üzerinden türetilir ki bir seçim diğer
+  // dropdown'ların seçenek kümesini çökertmesin.
+  const filterOptions = useMemo(() => deriveDiscoveryFilterOptions(enhancedMatches), [enhancedMatches]);
+
+  // Realtime güncellemeyle seçili değer seçeneklerden düşerse sessizce Tümü'ye dön;
+  // açık panelin listesi boşaldıysa paneli kapat.
+  useEffect(() => {
+    setDna(prev => {
+      const next = { ...prev };
+      let changed = false;
+      if (prev.format && !filterOptions.formats.some(f => f.toLowerCase() === prev.format.toLowerCase())) {
+        next.format = ''; changed = true;
+      }
+      if (prev.mentality && !filterOptions.mentalities.some(v => v.toLowerCase() === prev.mentality.toLowerCase())) {
+        next.mentality = ''; changed = true;
+      }
+      if (prev.role && !filterOptions.roles.includes(prev.role)) {
+        next.role = ''; changed = true;
+      }
+      return changed ? next : prev;
+    });
+    setOpenDropdown(prev => {
+      if (!prev) return prev;
+      const list = prev === 'format' ? filterOptions.formats : prev === 'mentality' ? filterOptions.mentalities : filterOptions.roles;
+      return list.length === 0 ? null : prev;
+    });
+  }, [filterOptions]);
 
   const checkMatchFilters = (match: any) => {
     if (dna.format && match.format && match.format.toLowerCase() !== dna.format.toLowerCase()) {
@@ -273,20 +269,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
     if (dna.gender && match.gender && match.gender.toLowerCase() !== dna.gender.toLowerCase()) {
       return false;
     }
-    if (dna.role) {
-      const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
-      const targetRole = roleMap[dna.role];
-      const isOutfield = dna.role !== 'KL';
-      const hasMissingSlot = match.missingPositions?.some((p: any) => {
-        if (Number(p.count) <= 0) return false;
-        if (p.role === targetRole) return true;
-        // Generic 'OYUNCU' (PLAYER) slotu herhangi bir saha oyuncusu pozisyonunu karşılar.
-        if (isOutfield && p.role === 'OYUNCU') return true;
-        return false;
-      });
-      if (!hasMissingSlot) {
-        return false;
-      }
+    if (dna.role && !roleHasOpenSlot(match, dna.role)) {
+      return false;
     }
     if (dna.mentality) {
       if (!match.difficulty || match.difficulty.toLowerCase() !== dna.mentality.toLowerCase()) {
@@ -338,8 +322,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
 
   const wizardCount = isFilterActive ? matchingMatches.length : enhancedMatches.length;
   const wizardLabel = wizardCount > 0 ? `${wizardCount} MAÇI GÖSTER` : 'EŞLEŞEN MAÇ YOK';
-
-  const ROLE_LABEL_MAP: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
 
   return (
     <div className="min-h-screen max-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans selection:bg-[#FACC15] selection:text-black">
@@ -421,25 +403,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   </div>
                 )}
 
-                {/* Takım Formatı */}
-                <div className="space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Takım Formatı</p>
-                  <div className="flex flex-wrap gap-2">
-                    {FORMAT_OPTIONS.map(f => (
-                      <button
-                        key={f}
-                        onClick={() => setDna({ ...dna, format: dna.format === f ? '' : f })}
-                        className={`px-3 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all backdrop-blur-md border ${
-                          dna.format === f 
-                            ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
-                            : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Takım Formatı / Pozisyon / Mentalite bu panelde YOK: her filtrenin
+                    tek evi var — liste üstündeki üç dropdown (FilterDropdown). */}
 
                 {/* Bütçe */}
                 <div className="space-y-2">
@@ -518,57 +483,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                 </div>
               </div>
 
-              {/* POZİSYON */}
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Pozisyon Tercihi</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {ROLE_OPTIONS.map(role => (
-                    <button
-                      key={role.id}
-                      onClick={() => setDna({ ...dna, role: dna.role === role.id ? '' : role.id })}
-                      className={`h-16 rounded-2xl border flex flex-col items-center justify-center transition-all backdrop-blur-xl ${
-                        dna.role === role.id 
-                          ? 'bg-[#39FF14]/10 border-[#39FF14]/60 shadow-[0_0_25px_rgba(57,255,20,0.25)]' 
-                          : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      <span className={`text-[12px] font-black uppercase tracking-widest ${dna.role === role.id ? 'text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.8)]' : 'text-white'}`}>
-                        {role.id}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* MENTALİTE */}
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Oyun Ruhun</p>
-                <div className="flex flex-col gap-2">
-                  {MENTALITY_OPTIONS.map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setDna({ ...dna, mentality: dna.mentality === m.id ? '' : m.id })}
-                      className={`h-12 w-full rounded-2xl px-4 flex items-center justify-between border transition-all backdrop-blur-xl overflow-hidden ${
-                        dna.mentality === m.id 
-                          ? 'border-transparent' 
-                          : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.06] hover:border-white/20'
-                      }`}
-                      style={dna.mentality === m.id ? { backgroundColor: `${m.color}15`, borderColor: `${m.color}60`, boxShadow: `0 0 30px ${m.color}20` } : {}}
-                    >
-                      <div className="flex items-center gap-3">
-                        <m.icon size={16} className="text-white" style={dna.mentality === m.id ? { color: m.color, filter: `drop-shadow(0 0 5px ${m.color})` } : {}} />
-                        <span className={`text-base font-black italic uppercase tracking-tighter ${dna.mentality === m.id ? 'text-white drop-shadow-md' : 'text-white'}`}>
-                          {m.title}
-                        </span>
-                      </div>
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${dna.mentality === m.id ? 'border-transparent' : 'border-white/40'}`} style={dna.mentality === m.id ? { backgroundColor: m.color } : {}}>
-                        {dna.mentality === m.id && <CheckCircle2 size={10} className="text-black" />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
             </div>
 
             {/* ANA BUTON (SABİT ALT) */}
@@ -632,7 +546,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   <KeyRound size={13} />
                   <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">Kodla Katıl</span>
                 </button>
-                <button onClick={() => setShowWizard(true)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all">
+                <button onClick={() => { setOpenDropdown(null); setShowWizard(true); }} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all">
                   <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">Filtre</span>
                   {isFilterActive && (
                     <span className="w-2 h-2 bg-[#FACC15] rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
@@ -652,7 +566,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
               )}
               {dna.mentality && (
                 <button onClick={() => setDna({ ...dna, mentality: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
-                  {dna.mentality.toUpperCase()} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                  {dna.mentality.toLocaleUpperCase('tr-TR')} <span className="text-white/40 text-[11px] leading-none">✕</span>
                 </button>
               )}
               {dna.role && (
@@ -672,7 +586,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
               )}
               {dna.gender && (
                 <button onClick={() => setDna({ ...dna, gender: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
-                  {dna.gender.toUpperCase()} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                  {dna.gender.toLocaleUpperCase('tr-TR')} <span className="text-white/40 text-[11px] leading-none">✕</span>
                 </button>
               )}
               {dna.age && dna.age !== 'Tümü' && (
@@ -682,112 +596,63 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
               )}
               {dna.district && (
                 <button onClick={() => setDna({ ...dna, district: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[10px] font-black uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
-                  {dna.district.toUpperCase()} <span className="text-white/40 text-[11px] leading-none">✕</span>
+                  {dna.district.toLocaleUpperCase('tr-TR')} <span className="text-white/40 text-[11px] leading-none">✕</span>
                 </button>
               )}
             </div>
           )}
 
-          {/* TAB SELECTION */}
-          <div className="flex px-5 py-2.5 bg-black/20 backdrop-blur-md border-b border-white/5 gap-3 shrink-0">
-            <button 
-              onClick={() => setActiveSection('bireysel')}
-              className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                activeSection === 'bireysel' 
-                  ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-white shadow-[0_0_20px_rgba(57,255,20,0.1)]' 
-                  : 'bg-white/[0.02] border-white/5 text-white/50 hover:bg-white/5'
-              }`}
-            >
-              Bireysel Maç Bul
-            </button>
-            <button 
-              onClick={() => setActiveSection('takim')}
-              className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                activeSection === 'takim' 
-                  ? 'bg-[#FACC15]/10 border-[#FACC15]/50 text-white shadow-[0_0_20px_rgba(250,204,21,0.1)]' 
-                  : 'bg-white/[0.02] border-white/5 text-white/50 hover:bg-white/5'
-              }`}
-            >
-              Takıma Katıl
-            </button>
-          </div>
-
-          {/* QUICK FILTERS */}
-          {activeSection === 'bireysel' && (
-            <div className="relative shrink-0">
-            <div className="flex overflow-x-auto no-scrollbar gap-3 px-5 py-3 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md">
-              <div className="flex gap-2 items-center shrink-0">
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FACC15]/70 mr-1">FORMAT</span>
-                {['Tümü', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'].map(f => {
-                  const isSelected = (f === 'Tümü' && !dna.format) || (dna.format === f);
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => setDna({ ...dna, format: f === 'Tümü' ? '' : f })}
-                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all border ${
-                        isSelected 
-                          ? 'bg-[#39FF14]/15 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.2)]' 
-                          : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="w-px h-4 bg-white/10 shrink-0 self-center" />
-
-              <div className="flex gap-2 items-center shrink-0">
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FACC15]/70 mr-1">MANTALİTE</span>
-                {['Tümü', 'Ciddi', 'Taktiksel', 'Rahat'].map(m => {
-                  const isSelected = (m === 'Tümü' && !dna.mentality) || (dna.mentality.toLowerCase() === m.toLowerCase());
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => setDna({ ...dna, mentality: m === 'Tümü' ? '' : m })}
-                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all border ${
-                        isSelected 
-                          ? 'bg-[#FACC15]/15 border-[#FACC15]/50 text-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' 
-                          : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
-                      }`}
-                    >
-                      {m.toUpperCase()}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="w-px h-4 bg-white/10 shrink-0 self-center" />
-
-              <div className="flex gap-2 items-center shrink-0">
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#FACC15]/70 mr-1">POZİSYON</span>
-                {['Tümü', 'KL', 'SAV', 'ORT', 'HÜC'].map(r => {
-                  const isSelected = (r === 'Tümü' && !dna.role) || (dna.role === r);
-                  return (
-                    <button
-                      key={r}
-                      onClick={() => setDna({ ...dna, role: r === 'Tümü' ? '' : r })}
-                      className={`px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all border ${
-                        isSelected 
-                          ? 'bg-[#39FF14]/15 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.2)]' 
-                          : 'bg-white/[0.02] border-white/10 text-white/70 hover:bg-white/5'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="absolute right-0 top-0 bottom-0 w-11 pointer-events-none bg-gradient-to-l from-[#0A0E14] to-transparent" />
-            </div>
+          {/* Dropdown açıkken dışarı-tıkla-kapat katmanı: liste (z-10) üstünde,
+              dropdown satırı (z-30) ve sticky başlık (z-50) altında. */}
+          {openDropdown && (
+            <div className="absolute inset-0 z-20" onClick={() => setOpenDropdown(null)} aria-hidden="true" />
           )}
+
+          {/* ── FORMAT · MENTALİTE · POZİSYON — üç simetrik dropdown, tek satır ──
+              overflow-* YOK: paneller satırın altına doğru (yukarıdan aşağıya) açılır. */}
+          <div className="relative shrink-0 z-30 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md">
+            <div className="flex gap-2 px-5 py-3">
+              <FilterDropdown
+                label="FORMAT"
+                value={dna.format}
+                options={filterOptions.formats.map(f => ({ value: f, label: f }))}
+                onChange={(v) => setDna({ ...dna, format: v })}
+                open={openDropdown === 'format'}
+                onOpenChange={(o) => setOpenDropdown(o ? 'format' : null)}
+                disabled={filterOptions.formats.length === 0}
+                accent="#39FF14"
+              />
+              <FilterDropdown
+                label="MENTALİTE"
+                value={dna.mentality}
+                options={filterOptions.mentalities.map(v => ({ value: v, label: v.toLocaleUpperCase('tr-TR') }))}
+                onChange={(v) => setDna({ ...dna, mentality: v })}
+                open={openDropdown === 'mentality'}
+                onOpenChange={(o) => setOpenDropdown(o ? 'mentality' : null)}
+                disabled={filterOptions.mentalities.length === 0}
+                accent="#FACC15"
+              />
+              <FilterDropdown
+                label="POZİSYON"
+                value={dna.role}
+                options={filterOptions.roles.map(r => ({ value: r, label: r, panelLabel: `${r} — ${ROLE_LABEL_MAP[r]}` }))}
+                onChange={(v) => setDna({ ...dna, role: v })}
+                open={openDropdown === 'role'}
+                onOpenChange={(o) => setOpenDropdown(o ? 'role' : null)}
+                disabled={filterOptions.roles.length === 0}
+                accent="#39FF14"
+              />
+            </div>
+            {enhancedMatches.length === 0 && (
+              <p className="px-5 pb-2.5 -mt-1 text-[9px] font-bold uppercase tracking-widest text-white/35">
+                Şu an açık maç yok — filtreler maç geldiğinde aktifleşir.
+              </p>
+            )}
+          </div>
 
           {/* MATCH CARDS (POSTERS) */}
           <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 relative z-10 custom-scrollbar">
-            {activeSection === 'bireysel' && (
-              <>
+            <>
                 {/* Hızlı filtre çipleri (Q14) */}
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                   {[
@@ -884,29 +749,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                         </h2>
                     )}
                     {otherMatches.length === 0 ? (
-                      isNearbyLoading ? (
-                        /* B15: yükleme sürerken iskelet kartlar — "boş" ile karışmaz */
-                        <div className="space-y-6" aria-busy="true">
-                          {[0, 1].map((i) => (
-                            <div key={i} className="w-full min-h-[400px] rounded-[32px] border border-white/5 bg-white/[0.03] animate-pulse" />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
-                          {/* B10: dürüst boş durum + çapı genişletme CTA'sı */}
-                          {userLocation && (
-                            <div className="flex justify-center">
-                              <button
-                                onClick={() => setSearchRadius(Math.min(searchRadius + 5, 50))}
-                                className="px-5 py-2.5 rounded-full bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/40 text-[10px] font-black uppercase tracking-widest text-[#39FF14] transition-all active:scale-95"
-                              >
-                                Çapı Genişlet ({Math.min(searchRadius + 5, 50)} km)
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
+                      <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
                     ) : (
                       otherMatches.map((match, index) => (
                         <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
@@ -915,151 +758,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   </div>
                 )}
               </>
-            )}
-
-            {activeSection === 'takim' && (
-              <div className="space-y-6">
-                {playerSeekAds.length === 0 ? (
-                  <EmptyState title="Aktif Oyuncu İlanı Bulunamadı" message="Şu an takım arayan bir oyuncu ilanı yok." />
-                ) : (
-                  playerSeekAds.map((ad, index) => {
-                    const isJoined = ad.joinedPlayers?.includes(currentUserUid);
-                    const isAccepted = ad.acceptedPlayers?.includes(currentUserUid);
-                    let accentColor = '#FACC15'; // Neon Yellow for Ciddi
-                    if (ad.difficulty === 'Taktiksel') accentColor = '#3b82f6';
-                    if (ad.difficulty === 'Rahat') accentColor = '#10b981';
-
-                    return (
-                      <motion.div
-                        key={ad.id}
-                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ duration: 0.5, delay: index * 0.05, type: 'spring', damping: 25 }}
-                        className="relative w-full bg-[#161B22]/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-6 shadow-2xl overflow-hidden group"
-                      >
-                        {/* Dynamic background glow */}
-                        <div className="absolute top-0 right-0 w-32 h-32 opacity-10 blur-3xl pointer-events-none rounded-full" style={{ backgroundColor: accentColor }} />
-                        
-                        {/* Inner Glow Border */}
-                        <div className="absolute inset-0 border-[1.5px] rounded-[32px] pointer-events-none transition-all duration-500" style={{ borderColor: `${accentColor}20` }} />
-
-                        <div className="flex items-start justify-between gap-4">
-                          {/* Captain Info */}
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <img src={ad.creatorAvatar} className="w-12 h-12 rounded-full border-2 border-white/10 shadow-lg object-cover" alt={ad.creatorName} referrerPolicy="no-referrer" />
-                              <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-[#FACC15] to-yellow-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full border border-black uppercase tracking-wider">
-                                KPT
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-black text-white uppercase italic tracking-tight">{ad.creatorName}</h4>
-                              <p className="text-[9px] text-[#39FF14] font-black tracking-widest uppercase">Kaptan Bildirisi</p>
-                            </div>
-                          </div>
-
-                          {/* Difficulty / Mentality Indicator */}
-                          <div className="px-3.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest" style={{ borderColor: `${accentColor}40`, backgroundColor: `${accentColor}10`, color: accentColor }}>
-                            {ad.difficulty}
-                          </div>
-                        </div>
-
-                        {/* Middle Match Details */}
-                        <div className="mt-6 space-y-3">
-                          <h3 className="text-xl font-black text-white italic uppercase leading-none tracking-tighter">
-                            {ad.pitchName}
-                          </h3>
-                          
-                          <div className="flex items-center gap-4 text-xs font-black text-white/60 tracking-wider">
-                            <span className="flex items-center gap-1.5">
-                              <Clock size={12} className="text-[#39FF14]" />
-                              18.05.2026 • 22:00 - 23:00
-                            </span>
-                          </div>
-
-                          {/* Positions Needed badges */}
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {ad.positionsNeeded.map((pos, i) => {
-                              let mappedPos = pos;
-                              if (['GK', 'KALECİ'].includes(mappedPos)) mappedPos = 'KALECİ';
-                              else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK'].includes(mappedPos)) mappedPos = 'SAVUNMA';
-                              else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(mappedPos)) mappedPos = 'ORTA SAHA';
-                              else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(mappedPos)) mappedPos = 'HÜCUM';
-                              
-                              return (
-                                <span key={i} className="px-3 py-1.5 bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.1)]">
-                                  <Circle size={10} className="text-red-500 animate-pulse" /> {mappedPos} ARANIYOR
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Rules Pill Grid */}
-                        <div className="flex items-center gap-1.5 flex-wrap mt-5 border-t border-white/5 pt-4">
-                          <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                            {ad.format} FORMAT
-                          </span>
-                          <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                            {ad.duration}
-                          </span>
-                          <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                            {ad.gender}
-                          </span>
-                          {ad.ageGroup && ad.ageGroup !== 'Tümü' && (
-                            <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                              {ad.ageGroup} YAŞ
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Request/Join Action */}
-                        <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
-                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                            {ad.joinedPlayers?.length || 0} OYUNCU TALEPTE BULUNDU
-                          </span>
-
-                          {isAccepted ? (
-                            <span
-                              className="px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-gradient-to-r from-emerald-500 to-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.5)] border-2 border-white/30 flex items-center gap-1.5"
-                            >
-                              <Check size={12} /> KADROYA KABUL EDİLDİ
-                            </span>
-                          ) : (
-                            <motion.button
-                              whileHover={{ scale: 1.03 }}
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                // B6: sahte otomatik onay YOK — talep durumu dürüst
-                                // kalır ('Talep gönderildi'); kabul yalnız kaptanın
-                                // gerçek aksiyonuyla olur (DB-destekli akış: B6-full/S3).
-                                toggleJoinPlayerSeekAd(ad.id, currentUserUid);
-                                if (!isJoined) {
-                                  showToast('Talebin iletildi — kaptan onayı bekleniyor.', 'info');
-                                }
-                              }}
-                              className={`px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer ${
-                                isJoined 
-                                  ? 'bg-emerald-500/10 border border-emerald-500/50 text-[#39FF14] shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
-                                  : 'bg-[#FACC15] hover:bg-yellow-300 text-black shadow-[0_0_20px_rgba(250,204,21,0.3)]'
-                              }`}
-                            >
-                              {isJoined ? (
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle2 size={12} /> TALEP GÖNDERİLDİ
-                                </span>
-                              ) : (
-                                'KATILMA TALEBİ GÖNDER'
-                              )}
-                            </motion.button>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            )}
           </div>
         </motion.div>
       )}
@@ -1123,31 +821,39 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         )}
       </AnimatePresence>
 
-      {/* Premium Toast Overlay */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl border border-[#39FF14]/30 bg-[#0A0E14]/90 backdrop-blur-xl shadow-[0_8px_32px_rgba(57,255,20,0.25)]"
-          >
-            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-[#39FF14] flex items-center justify-center text-xs font-black">
-              ✓
-            </div>
-            <p className="text-white text-xs font-bold tracking-wide">{toast.message}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
-// B13/B8: tek ayrıştırma kaynağı (utils/matchDateTime) — ISO, gün.ay.yıl,
-// TR gün adları ve "22:00 - 23:00" saat aralıklarını güvenle çözer; belirsizse
-// null (eski yerel sürüm bileşik saatte NaN, dd.mm.yyyy'de yanlış gün üretiyordu).
-const getMatchTargetDate = (dateStr: string, timeStr: string): Date | null =>
-  parseMatchDateTime(dateStr, timeStr);
+const getMatchTargetDate = (dateStr: string, timeStr: string): Date => {
+  const now = new Date();
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  
+  let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+  
+  const cleanDateStr = dateStr.toLowerCase().trim();
+  if (cleanDateStr === 'yarın') {
+    targetDate.setDate(targetDate.getDate() + 1);
+  } else if (cleanDateStr !== 'bugün') {
+    const daysOfWeek: Record<string, number> = {
+      'pazartesi': 1,
+      'salı': 2,
+      'çarşamba': 3,
+      'perşembe': 4,
+      'cuma': 5,
+      'cumartesi': 6,
+      'pazar': 0
+    };
+    const targetDayNum = daysOfWeek[cleanDateStr];
+    if (targetDayNum !== undefined) {
+      const currentDayNum = now.getDay();
+      let diff = targetDayNum - currentDayNum;
+      if (diff <= 0) diff += 7; // Next occurrence
+      targetDate.setDate(targetDate.getDate() + diff);
+    }
+  }
+  return targetDate;
+};
 
 const MatchCard: React.FC<{
   match: any;
@@ -1185,13 +891,11 @@ const MatchCard: React.FC<{
 
   useEffect(() => {
     const target = getMatchTargetDate(match.date, match.time);
-    // Tarih çözülemiyorsa countdown gösterme (eski kod NaN üretiyordu).
-    if (!target) { setTimeLeft(''); setIsUrgentTime(false); return; }
-
+    
     const updateTimer = () => {
       const now = new Date().getTime();
       const diff = target.getTime() - now;
-
+      
       setIsUrgentTime(diff > 0 && diff < 2 * 60 * 60 * 1000);
       if (diff <= 0) {
         setTimeLeft('BAŞLADI');
@@ -1228,12 +932,9 @@ const MatchCard: React.FC<{
       transition={{ duration: 0.5, delay: index * 0.05, type: 'spring', damping: 25 }}
       onClick={() => {
         if (isLocked) return; // Kilitliyse tıklanamaz
-        // B8: başlamış maça vitrinden katılım yolu kapalı (savunma katmanı —
-        // liste filtresi dakika hassasiyetinde geç kalabilir).
-        if (timeLeft === 'BAŞLADI') return;
         onSelect(match);
       }}
-      className={`relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden group shadow-2xl border border-white/5 ${timeLeft === 'BAŞLADI' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+      className="relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
     >
       {/* Arka Plan Posteri (saha fotoğrafı) — yoksa sahanın rengiyle zemin */}
       {hasPoster ? (

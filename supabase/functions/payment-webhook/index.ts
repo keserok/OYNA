@@ -143,5 +143,5 @@ Deno.serve(async (req: Request) => {
   }
 
   return resultPage(true, 'Ödemen Alındı!',
-    'Kapora ödemen başarıyla tamamlandı. Rezervasyonun güvence altında — uygulamada Rezervasyonlarım ekranından görebilirsin.')
+    'Kapora ödemen başarıyla tamamlandı. Rezervasyonun güvence altında — uygulamada Maçlarım ekranından görebilirsin.')
 })

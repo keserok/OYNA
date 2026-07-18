@@ -2,13 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '../components/DataTable';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
-  fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout,
+  fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout, fetchPayoutIdentityChecks,
   fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
+  markChargebackAdmin,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
-  type PayoutRequestRow, type PaymentIntentRow,
+  type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
+import { FinanceReportPanel } from '../components/FinanceReportPanel';
+import { PaymentHealthPanel } from '../components/PaymentHealthPanel';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { useAdminToast } from '../context/AdminToastContext';
@@ -31,6 +34,14 @@ const LEDGER_TYPE_LABELS: Record<string, string> = {
   SERVICE_EARNING: 'Hizmet Kazancı',
   REFERRAL_BONUS: 'Referans Bonusu',
   WITHDRAWAL: 'IBAN Çekimi',
+  CHARGEBACK_REVERSAL: 'Chargeback Kesintisi',
+};
+
+const PAYOUT_TYPE_LABELS: Record<string, string> = {
+  OWNER_BIWEEKLY: 'Saha Sahibi',
+  PROVIDER_INSTANT: 'Kaleci/Hakem',
+  WALLET_CASHOUT: 'Cüzdan Çekimi',
+  MANUAL: 'Manuel',
 };
 
 const INTENT_CONTEXT_LABELS: Record<string, string> = {
@@ -48,11 +59,12 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [payments, setPayments] = useState<BookingPaymentRow[]>([]);
   const [billing, setBilling] = useState<OwnerBillingEventRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequestRow[]>([]);
+  const [idChecks, setIdChecks] = useState<Record<string, PayoutIdentityCheck>>({});
   const [payoutBusy, setPayoutBusy] = useState<string | null>(null);
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'golive'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'report' | 'health' | 'golive'>('ledger');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
 
@@ -105,6 +117,10 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
       if (po.status === 'fulfilled') {
         setPayouts(po.value);
         po.value.forEach((r) => ids.add(r.user_id));
+        // [S4] Bekleyen çekimler için TC/IBAN isim eşleşme kontrolü (best-effort)
+        void fetchPayoutIdentityChecks('PENDING', PAGE_SIZE)
+          .then((checks) => setIdChecks(Object.fromEntries(checks.map((c) => [c.payout_id, c]))))
+          .catch(() => setIdChecks({}));
       }
       if (ids.size) setNameMap(await fetchProfileNameMap([...ids]));
       if (p.status === 'fulfilled') setPayments(p.value);
@@ -160,9 +176,46 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     });
   };
 
-  const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED') => {
+  // [S4] Chargeback: intent'i işaretle + ilgili kazancı dondur
+  const runChargeback = async (it: PaymentIntentRow, reason?: string) => {
+    setIntentBusy(it.id);
+    try {
+      const r = await markChargebackAdmin(it.id, reason);
+      const parts: string[] = [];
+      if (Number(r.frozen_pending) > 0) parts.push(`${fmtTry(r.frozen_pending)} bekleyen kazanç donduruldu`);
+      if (Number(r.clawed_completed) > 0) parts.push(`${fmtTry(r.clawed_completed)} kazanç geri alındı`);
+      success(`Chargeback işaretlendi${parts.length ? ' — ' + parts.join(', ') : ' (ilgili kazanç bulunamadı)'}`);
+      setIntentConfirm(null);
+      await loadIntents(query);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setIntentBusy(null);
+    }
+  };
+
+  const askChargeback = (it: PaymentIntentRow) => {
+    const label = `${it.user_name || it.user_id?.slice(0, 8) || 'Ödeme'} • ${fmtTry(it.amount)}`;
+    const reason = window.prompt('Chargeback nedeni (opsiyonel, banka itiraz no vb.):') ?? undefined;
+    setIntentConfirm({
+      title: 'Chargeback işaretle',
+      description: `${fmtTry(it.amount)} ödeme chargeback olarak işaretlenecek ve ilgili saha/hizmet kazancı dondurulacak.`,
+      impactText: 'Kart sahibi bankasından itiraz etti sayılır → kullanıcıya İADE YAPILMAZ (parasını bankadan aldı). Yalnız ilgili kazanç geri alınır ki platform çifte zarar etmesin. Geri alınamaz.',
+      actionType: 'FORCE_CHARGEBACK', targetId: it.id, targetName: label,
+      confirmPhrase: 'ONAYLA',
+      onConfirm: () => void runChargeback(it, reason),
+      onCancel: () => setIntentConfirm(null),
+    });
+  };
+
+  const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED', row?: PayoutRequestRow) => {
     if (status === 'FAILED' && !window.confirm('Bu payout talebi reddedilsin mi? Rezerve tutar sahibe iade edilir.')) return;
-    const ref = status === 'COMPLETED' ? (window.prompt('Banka / iyzico referansı (opsiyonel):') ?? undefined) : undefined;
+    // [S2.1] Cüzdan çekiminde bankaya NET tutar gönderilir (brüt − kesinti) — admin'e vurgula.
+    const isCashout = row?.payout_type === 'WALLET_CASHOUT' && row?.net_amount != null;
+    const refPrompt = isCashout
+      ? `Banka transfer referansı — bankaya NET ₺${Number(row!.net_amount).toLocaleString('tr')} gönderilmeli (brüt ₺${Number(row!.amount).toLocaleString('tr')} − kesinti ₺${Number(row!.fee_amount ?? 0).toLocaleString('tr')}):`
+      : 'Banka / iyzico referansı (opsiyonel):';
+    const ref = status === 'COMPLETED' ? (window.prompt(refPrompt) ?? undefined) : undefined;
     setPayoutBusy(id);
     try {
       await processPayout(id, status, ref);
@@ -218,6 +271,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     { id: 'intents' as const, label: 'Ödeme Müdahale' },
     { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
+    { id: 'report' as const, label: 'Finans Raporu' },
+    { id: 'health' as const, label: 'Ödeme Sağlığı' },
     { id: 'golive' as const, label: 'Go-Live & Mutabakat' },
   ]), [payouts.length]);
 
@@ -233,7 +288,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           <button
             type="button"
             onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'intents' || tab === 'payouts'}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'intents' || tab === 'payouts'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -283,7 +338,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
             </button>
           ))}
         </div>
-        {tab !== 'golive' && (
+        {tab !== 'golive' && tab !== 'report' && tab !== 'health' && (
           <AdminSearchBar
             value={query}
             onChange={setQuery}
@@ -294,6 +349,10 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           />
         )}
       </div>
+
+      {tab === 'report' && <FinanceReportPanel />}
+
+      {tab === 'health' && <PaymentHealthPanel />}
 
       {tab === 'golive' && <FinanceGoLivePanel />}
 
@@ -356,16 +415,23 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
               { header: 'Bağlam', render: (r: PaymentIntentRow) => <span className="text-[11px] text-gray-400">{r.related_entity_type === 'TOP_UP' ? 'Cüzdan Yükleme' : r.pitch_name || (r.match_id ? 'Maç' : INTENT_CONTEXT_LABELS[r.related_entity_type ?? ''] ?? r.related_entity_type ?? '—')}</span> },
               { header: 'Tutar', render: (r: PaymentIntentRow) => <span className="text-green-400 font-bold">{fmtTry(r.amount)}</span> },
               { header: 'Komisyon', render: (r: PaymentIntentRow) => <span className="text-[11px] text-amber-300">{fmtTry(r.commission_amount)}</span> },
-              { header: 'Durum', render: (r: PaymentIntentRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
+              { header: 'Durum', render: (r: PaymentIntentRow) => (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-bold text-gray-300">{r.status}</span>
+                  {r.chargeback_at && <span className="text-[9px] font-black text-red-400 uppercase">⚠ Chargeback</span>}
+                </div>
+              ) },
               { header: 'Müdahale', render: (r: PaymentIntentRow) => {
                 const s = (r.status || '').toUpperCase();
                 const canCV = s === 'BLOCKED' || s === 'PENDING';
                 const canR = s === 'CAPTURED' || s === 'PAID';
+                const canCB = (s === 'CAPTURED' || s === 'PAID') && !r.chargeback_at;
                 return (
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 flex-wrap">
                     <button type="button" disabled={intentBusy === r.id || !canCV} onClick={() => askIntent(r, 'capture')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-emerald-500/30 text-emerald-400 disabled:opacity-30">Tahsil</button>
                     <button type="button" disabled={intentBusy === r.id || !canCV} onClick={() => askIntent(r, 'void')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-amber-500/30 text-amber-400 disabled:opacity-30">Void</button>
                     <button type="button" disabled={intentBusy === r.id || !canR} onClick={() => askIntent(r, 'refund')} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-red-500/30 text-red-400 disabled:opacity-30">İade</button>
+                    <button type="button" disabled={intentBusy === r.id || !canCB} onClick={() => askChargeback(r)} className="text-[10px] font-bold py-1 px-2 rounded-lg border border-fuchsia-500/30 text-fuchsia-400 disabled:opacity-30">{r.chargeback_at ? 'CB ✓' : 'Chargeback'}</button>
                   </div>
                 );
               } },
@@ -382,9 +448,36 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           columns={[
             { header: 'Tarih', render: (r: PayoutRequestRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
             { header: 'Talep Eden', render: (r: PayoutRequestRow) => <span className="text-sm text-white">{nameMap[r.user_id] || r.user_id.slice(0, 8)}</span> },
-            { header: 'Tip', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-blue-300">{r.payout_type === 'OWNER_BIWEEKLY' ? 'Saha Sahibi' : r.payout_type === 'PROVIDER_INSTANT' ? 'Kaleci/Hakem' : r.payout_type}</span> },
+            { header: 'Tip', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-blue-300">{PAYOUT_TYPE_LABELS[r.payout_type] ?? r.payout_type}</span> },
             { header: 'IBAN', render: (r: PayoutRequestRow) => <span className="text-[10px] font-mono text-gray-400">{r.iban_holder_name} · {r.iban}</span> },
-            { header: 'Tutar', render: (r: PayoutRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
+            { header: 'Kimlik Kontrol', render: (r: PayoutRequestRow) => {
+              const c = idChecks[r.id];
+              if (!c) return <span className="text-[10px] text-gray-600">—</span>;
+              const idLabel = c.identity_status === 'VERIFIED' ? 'TC ✓' : c.identity_status === 'NONE' ? 'TC yok' : c.identity_status;
+              const idTone = c.identity_status === 'VERIFIED' ? 'text-green-400' : 'text-amber-400';
+              return (
+                <div className="flex flex-col gap-0.5 min-w-[130px]">
+                  <span className="text-[10px] text-gray-400">Kayıtlı: <span className="text-gray-200">{c.requester_name || '—'}</span></span>
+                  <div className="flex items-center gap-2">
+                    {c.name_match === true
+                      ? <span className="text-[10px] font-black text-green-400">İsim ✓</span>
+                      : c.name_match === false
+                        ? <span className="text-[10px] font-black text-red-400">⚠ İsim farklı</span>
+                        : <span className="text-[10px] text-gray-500">İsim ?</span>}
+                    <span className={`text-[10px] font-bold ${idTone}`}>{idLabel}</span>
+                  </div>
+                </div>
+              );
+            } },
+            { header: 'Tutar', render: (r: PayoutRequestRow) => (
+              r.payout_type === 'WALLET_CASHOUT' && r.net_amount != null ? (
+                <div className="flex flex-col">
+                  {/* Bankaya giden NET tutar öne çıkar; brüt/kesinti iz için altta */}
+                  <span className="text-green-400 font-bold">Net ₺{Number(r.net_amount).toLocaleString('tr')}</span>
+                  <span className="text-[10px] text-gray-500">brüt ₺{Number(r.amount).toLocaleString('tr')} · kesinti ₺{Number(r.fee_amount ?? 0).toLocaleString('tr')}</span>
+                </div>
+              ) : <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span>
+            ) },
             { header: 'Durum', render: (r: PayoutRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
             { header: 'İşlem', render: (r: PayoutRequestRow) => (
               r.status === 'PENDING' || r.status === 'PROCESSING' ? (
@@ -392,7 +485,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                   <button
                     type="button"
                     disabled={payoutBusy === r.id}
-                    onClick={() => handlePayout(r.id, 'COMPLETED')}
+                    onClick={() => handlePayout(r.id, 'COMPLETED', r)}
                     className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25 disabled:opacity-40"
                   >
                     Tamamla
@@ -400,7 +493,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                   <button
                     type="button"
                     disabled={payoutBusy === r.id}
-                    onClick={() => handlePayout(r.id, 'FAILED')}
+                    onClick={() => handlePayout(r.id, 'FAILED', r)}
                     className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-40"
                   >
                     Reddet

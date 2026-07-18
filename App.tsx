@@ -22,8 +22,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
-import { isOnboardingEnabled, hasSeenOnboarding, markOnboardingSeen } from './views/onboarding/onboardingShared';
-import { flushOnboardingDraft } from './services/onboardingService';
+import { isOnboardingEnabled } from './views/onboarding/onboardingShared';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -52,7 +51,7 @@ const SocialView = lazy(() => import('./views/SocialView'));
 const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
 const MatchCreate = lazy(() => import('./views/MatchCreate'));
-const UpcomingMatchesView = lazy(() => import('./views/UpcomingMatchesView'));
+const MyMatchesHub = lazy(() => import('./views/MyMatchesHub'));
 const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
 const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
 const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
@@ -62,7 +61,6 @@ const GuardianConsentForm = lazy(() => import('./views/GuardianConsentForm'));
 const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const MatchesView = lazy(() => import('./views/MatchesView'));
-const MyBookings = lazy(() => import('./views/MyBookings'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav } from './components/BottomNav';
@@ -209,18 +207,20 @@ const App: React.FC = () => {
               showToast('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
             } else if (!profile) {
               // ── GERÇEKTEN yeni kullanıcı (insert başarılı) ──
-              // Onboarding taslağını (yaş aralığı, ad, cinsiyet, pozisyon, stil) yeni
-              // profile yaz. is_minor + guardian_consent_status SUNUCUDA (apply_onboarding)
-              // hesaplanır. Taslak yoksa sessizce geçer.
-              await flushOnboardingDraft();
-              // KVKK + Sözleşme kabulünü sunucuya denetlenebilir kaydet (best-effort).
+              // KVKK Aydınlatma + Kullanıcı Sözleşmesi kabulünü sunucuya
+              // denetlenebilir şekilde kaydet — TÜM kayıt yolları (e-posta +
+              // Google/Apple) buradan geçer. best-effort: akışı bloke etmez.
               recordUserConsents(['KVKK', 'TERMS']).catch(() => {});
               setRole(UserRole.PLAYER);
               useAppStore.getState().setMyRoles([UserRole.PLAYER]);
               identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
               trackEvent('user_registered', { role: UserRole.PLAYER });
-              // Yeni kayıtta bir kez bağlamsal konum izni sor — atlanabilir, sonra Dashboard.
-              resetNavigation('LOCATION_PROMPT');
+              // Yeni kayıt → oyuncu onboarding'i (kayıt SONRASI, kullanıcı
+              // girişliyken): ad soyad ön-dolu gelir, veriler doğrudan DB'ye
+              // yazılır. Onboarding kendi konum adımını içerdiğinden ayrı
+              // LOCATION_PROMPT'a gerek yok. Kill-switch kapalıysa eski
+              // bağlamsal konum istemine düşülür.
+              resetNavigation(isOnboardingEnabled() ? 'ONBOARDING' : 'LOCATION_PROMPT');
             }
           }
 
@@ -530,21 +530,21 @@ const App: React.FC = () => {
     switch (view) {
       case 'SPLASH':
         return <SplashScreen ready={authResolved} onStart={() => {
-          // Yeni model: rol seçimi yok. Oturum yoksa yeni kullanıcı akışı;
-          // oturum varsa role göre panel. Rolü store'dan TAZE oku (kapanıştaki
-          // `role` eski/PLAYER olabilir → kaleci/hakem yanlış panele düşerdi).
+          // Yeni model: onboarding artık kayıt SONRASINDA. Oturum yoksa
+          // doğrudan Giriş/Kayıt ekranına; oturum varsa role göre panele.
+          // Rolü store'dan TAZE oku (kapanıştaki `role` eski/PLAYER olabilir).
           if (!auth.currentUser) {
-            // Yeni kullanıcı → oyuncu onboarding'i (kayıttan önce). Daha önce
-            // görülmüşse veya kill-switch kapalıysa doğrudan Giriş'e düş.
-            resetNavigation(isOnboardingEnabled() && !hasSeenOnboarding() ? 'ONBOARDING' : 'AUTH');
+            resetNavigation('AUTH');
             return;
           }
           resetNavigation(navigateBasedOnRole(useAppStore.getState().role));
         }} />;
       case 'ONBOARDING':
+        // Kayıt sonrası (girişli) onboarding. Bitince (tamamlandı VEYA atlandı)
+        // goBack: profil "Tamamla" ile gelindiyse profile döner; yeni kayıt
+        // akışında yığın boş → role göre panele (Dashboard) düşer.
         return <Onboarding
-          onComplete={() => { markOnboardingSeen(); resetNavigation('AUTH'); }}
-          onLogin={() => { markOnboardingSeen(); resetNavigation('AUTH'); }}
+          onComplete={() => goBack(navigateBasedOnRole(useAppStore.getState().role))}
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
@@ -565,17 +565,17 @@ const App: React.FC = () => {
         />;
       case 'PENDING_VERIFICATION':
         return <PendingVerificationView
-          onApproved={() => {
-            // KA-3: Onay geldiğinde DOĞRU panele git. In-session başvuruda
-            // store.role hâlâ PLAYER olabilir (FieldRolePage yalnız serviceAppRole
-            // kurar, setRole çağırmaz) → eski kodda onaylı kaleci oyuncu Dashboard'ına
-            // düşerdi. serviceAppRole onaylanan sağlayıcı rolünü taşır; session'ı da
-            // eşitle ki RoleSwitcher/segment tutarlı olsun.
+          onApproved={async () => {
+            // KA-3 + main birleşimi: onay geldiğinde DOĞRU panele git. In-session
+            // başvuruda store.role hâlâ PLAYER olabilir (serviceAppRole onaylanan
+            // sağlayıcı rolünü taşır). Rol listesine ekle + sunucuda da kalıcılaştır
+            // (setActiveRole) ki RoleSwitcher/segment/RLS tutarlı kalsın.
             const approvedRole = serviceAppRole || role;
             setRole(approvedRole);
             useAppStore.getState().setMyRoles(
               Array.from(new Set([...(myRoles || []), approvedRole]))
             );
+            try { await setActiveRole(approvedRole); } catch { /* yine de yönlendir */ }
             resetNavigation(navigateBasedOnRole(approvedRole));
           }}
           onLogout={() => resetNavigation('AUTH')}
@@ -615,8 +615,8 @@ const App: React.FC = () => {
         />;
       case 'MATCHES':
         return <MatchesView onBack={() => goBack('OWNER_PANEL')} matches={matches} />;
-      case 'UPCOMING_MATCHES':
-        return <UpcomingMatchesView onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+      case 'MY_MATCHES':
+        return <MyMatchesHub onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'DASHBOARD':
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
@@ -627,8 +627,6 @@ const App: React.FC = () => {
           onBack={() => goBack('DASHBOARD')}
           onNavigate={(v) => navigateTo(v as AppView)}
         />;
-      case 'MY_BOOKINGS':
-        return <MyBookings onBack={() => goBack('DASHBOARD')} />;
       case 'LEGAL':
         return <LegalScreen onBack={() => goBack('SETTINGS')} />;
       case 'MARKETPLACE_GK':
@@ -639,6 +637,7 @@ const App: React.FC = () => {
             setSelectedGk(gk as Goalkeeper);
             goBack('DASHBOARD');
           }}
+          onCreateMatch={() => navigateTo('MATCH_CREATE')}
         />;
       case 'MARKETPLACE_REF':
         return <Marketplace
@@ -648,6 +647,7 @@ const App: React.FC = () => {
             setSelectedRef(ref as Referee);
             goBack('DASHBOARD');
           }}
+          onCreateMatch={() => navigateTo('MATCH_CREATE')}
         />;
       case 'PAYMENT':
         return <PaymentScreen

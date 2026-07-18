@@ -8,7 +8,7 @@ import {
   signInWithEmailPassword, signUpWithPassword, requestPasswordReset, confirmPasswordReset,
 } from '../supabaseAuth';
 import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
-import { setRememberMe } from '../supabaseClient';
+import { getHasAccount } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
 import { useAppStore } from '../store';
 import { AnimatedButton } from '../components/AnimatedButton';
@@ -167,7 +167,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   // Giriş: Google/Apple + e-posta&şifre (birincil); "kod ile giriş" (OTP) ikincil.
   // Aşamalar: input (giriş/kayıt) · otp (kod ile giriş) · forgot (kod iste) · reset (yeni şifre)
   const [stage, setStage] = useState<'input' | 'otp' | 'forgot' | 'reset'>('input');
-  const [isRegister, setIsRegister] = useState(false);
+  // Kayıt-öncelikli akış: bu cihazda daha önce hiç oturum açılmadıysa KAYIT,
+  // açıldıysa (çıkış yapmış kullanıcı) GİRİŞ ekranıyla başla.
+  const [isRegister, setIsRegister] = useState(() => !getHasAccount());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -176,7 +178,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const [otp, setOtp] = useState('');
   // Yasal onay OPT-IN olmalı: kutu önceden işaretli gelemez (KVKK/mağaza incelemesi)
   const [agreed, setAgreed] = useState(false);
-  const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState<
     'send' | 'verify' | 'guest' | 'google' | 'apple' | 'password' | 'register' | 'forgot' | 'reset' | null
   >(null);
@@ -193,10 +194,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const showDemoPicker = isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
   const contactValid = isValidEmail(email) || isDemoLoginInput(email);
   const contactLabel = email.trim();
-
-  useEffect(() => {
-    setRememberMe(remember);
-  }, [remember]);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -218,7 +215,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     if (demoMode && isDemoLoginInput(email)) {
       setIsLoading('send');
       try {
-        setRememberMe(remember);
         await demoLogin(email.trim());
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
@@ -230,7 +226,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     }
     setIsLoading('send');
     try {
-      setRememberMe(remember);
       await requestOtp();
       setStage('otp');
       setOtp('');
@@ -286,7 +281,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     if (demoMode && isDemoLoginInput(email)) {
       setIsLoading('password');
       try {
-        setRememberMe(remember);
         await demoLogin(email.trim());
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
@@ -298,7 +292,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     }
     setIsLoading('password');
     try {
-      setRememberMe(remember);
       await signInWithEmailPassword(email.trim(), password);
       // onSuccess() ÇAĞIRMA: yerel `role` hâlâ eski (PLAYER) olduğundan kaleci/
       // hakem/tesis'i yanlışlıkla oyuncu Dashboard'ına düşürür (dinleyici sonra
@@ -320,7 +313,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     setInfo(null);
     setIsLoading('register');
     try {
-      setRememberMe(remember);
       const res = await signUpWithPassword(email.trim(), password, name.trim());
       if (res?.session) {
         // Oturum açıldı → navigasyonu App'teki onAuthStateChanged dinleyicisine bırak:
@@ -336,7 +328,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     } catch (err: any) {
       const m = String(err?.message || '').toLowerCase();
       if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
-        setError('Bu e-posta zaten kayıtlı. Giriş yapmayı ya da şifreni sıfırlamayı dene.');
+        // Ölü uç bırakma: e-postası korunmuş hâlde giriş moduna geçir.
+        setIsRegister(false);
+        setInfo('Bu e-posta zaten kayıtlı — şifrenle giriş yapabilirsin.');
       } else {
         setError(err?.message || 'Kayıt başarısız. Lütfen tekrar dene.');
       }
@@ -394,7 +388,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     setError(null);
     setIsLoading('google');
     try {
-      setRememberMe(remember);
       await loginWithGoogle();
     } catch (err: any) {
       console.error('[Auth] Google hatası:', err);
@@ -409,7 +402,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     setError(null);
     setIsLoading('apple');
     try {
-      setRememberMe(remember);
       await loginWithApple();
       // Navigasyonu global auth listener'a bırak (Google ile aynı yol);
       // onSuccess() burada da çağrılırsa çifte yönlendirme/flaş oluşur.
@@ -435,7 +427,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
     setInfo(null);
     setDemoLoggingIn(emailAddr);
     try {
-      setRememberMe(remember);
       await loginDemoAccount(emailAddr, password);
       // navigasyon auth dinleyicisinde
     } catch (err: any) {
@@ -660,25 +651,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   </p>
                 )}
 
-                {/* Beni Hatırla */}
-                <button
-                  type="button"
-                  onClick={() => setRemember((v) => !v)}
-                  className="flex items-center justify-between w-full mt-4 px-1 group outline-none"
-                >
-                  <span className="text-xs font-bold text-gray-300">Beni Hatırla</span>
-                  <span
-                    className="relative w-11 h-6 rounded-full transition-colors shrink-0"
-                    style={{ background: remember ? color : 'rgba(255,255,255,0.12)' }}
-                  >
-                    <span
-                      className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform"
-                      style={{ transform: remember ? 'translateX(20px)' : 'translateX(0)' }}
-                    />
-                  </span>
-                </button>
-                <p className="text-[10px] text-gray-500 mt-1 px-1">
-                  Açık olduğunda çıkış yapana kadar bu cihazda kimliğinle oturumun açık kalır.
+                {/* Oturum daima kalıcı — "Beni Hatırla" anahtarı kaldırıldı */}
+                <p className="text-[10px] text-gray-500 mt-3 px-1">
+                  Çıkış yapana kadar oturumun bu cihazda açık kalır.
                 </p>
 
                 {info && (
@@ -765,24 +740,22 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                     {isRegister ? 'Zaten hesabın var mı? Giriş yap' : 'Hesabın yok mu? Kayıt ol'}
                   </button>
 
-                  {/* Önce göz at — kayıt olmadan keşfet (değer-kapısı modeli) */}
-                  {!isRegister && (
-                    <AnimatedButton
-                      id="guest-login-button"
-                      onClick={handleGuestLogin}
-                      disabled={guestDisabled}
-                      isLoading={isLoading === 'guest'}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full h-12 text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white"
-                    >
-                      ÖNCE MAÇLARA GÖZ AT
-                    </AnimatedButton>
-                  )}
+                  {/* Önce göz at — kayıt olmadan keşfet (değer-kapısı modeli; iki modda da görünür) */}
+                  <AnimatedButton
+                    id="guest-login-button"
+                    onClick={handleGuestLogin}
+                    disabled={guestDisabled}
+                    isLoading={isLoading === 'guest'}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-12 text-gray-400 border border-white/10 hover:bg-white/5 hover:text-white"
+                  >
+                    ÖNCE MAÇLARA GÖZ AT
+                  </AnimatedButton>
                 </div>
 
-                {/* ─── Demo hesap seçici (main'de aktif) ─── */}
-                {showDemoPicker && !isRegister && (
+                {/* ─── Demo hesap seçici — GEÇİCİ: kayıt ekranında da aktif (sonra kaldırılacak) ─── */}
+                {showDemoPicker && (
                   <div className="mt-4">
                     <button
                       type="button"

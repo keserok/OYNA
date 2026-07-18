@@ -2015,6 +2015,25 @@ export async function forceRefundIntentAdmin(intentId: string, notes?: string): 
   if (error) throw new Error(error.message);
 }
 
+export interface ChargebackResult {
+  intent_id: string;
+  frozen_pending: number;
+  clawed_completed: number;
+  earning_owner: string | null;
+  earning_source: string;
+}
+
+/**
+ * [S4] Chargeback işaretle — intent'i chargeback olarak damgalar ve ilgili saha/
+ * hizmet kazancını dondurur (PENDING iptal, COMPLETED telafi). Kart sahibi
+ * bankasından itiraz ettiğinde platform çifte zarar etmesin diye.
+ */
+export async function markChargebackAdmin(intentId: string, reason?: string): Promise<ChargebackResult> {
+  const { data, error } = await supabase.rpc('admin_mark_chargeback', { p_intent_id: intentId, p_reason: reason ?? null });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_mark_chargeback RPC deploy edilmedi' : error.message);
+  return (data ?? {}) as ChargebackResult;
+}
+
 /**
  * ADMIN — maç kaporası (escrow) üzerinde TAM YETKİ: CAPTURE (tahsil) | VOID (serbest
  * bırak) | REFUND (iade). migration 20260716000001 → admin_match_deposit_action.
@@ -2048,6 +2067,7 @@ export interface PaymentIntentRow {
   provider: string | null;
   provider_ref: string | null;
   created_at: string;
+  chargeback_at?: string | null;
   total_count: number;
 }
 
@@ -2199,6 +2219,10 @@ export interface PayoutRequestRow {
   id: string;
   user_id: string;
   amount: number;
+  /** [S2.1] WALLET_CASHOUT: kesinti tutarı (amount = fee + net). Diğer tiplerde 0. */
+  fee_amount?: number | null;
+  /** [S2.1] WALLET_CASHOUT: bankaya gönderilecek NET tutar. Diğer tiplerde null. */
+  net_amount?: number | null;
   iban: string;
   iban_holder_name: string;
   payout_type: string;
@@ -2214,6 +2238,25 @@ export async function fetchPayouts(status = 'PENDING', limit = 100): Promise<Pay
   const { data, error } = await supabase.rpc('admin_fetch_payouts', { p_status: status, p_limit: limit });
   if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_payouts RPC deploy edilmedi' : error.message);
   return (data || []) as PayoutRequestRow[];
+}
+
+// [S4] Payout onayında TC/IBAN isim eşleşme kontrolü (admin_payout_identity_checks)
+export interface PayoutIdentityCheck {
+  payout_id: string;
+  requester_name: string | null;
+  iban_holder_name: string | null;
+  identity_status: string; // VERIFIED | PENDING | REJECTED | NONE
+  name_match: boolean | null;
+}
+
+/** Bekleyen çekim taleplerinin IBAN sahibi ↔ kayıtlı isim eşleşme + kimlik durumu. */
+export async function fetchPayoutIdentityChecks(status = 'PENDING', limit = 100): Promise<PayoutIdentityCheck[]> {
+  const { data, error } = await supabase.rpc('admin_payout_identity_checks', { p_status: status, p_limit: limit });
+  if (error) {
+    if (isRpcMissing(error)) return [];
+    throw new Error(error.message);
+  }
+  return (data || []) as PayoutIdentityCheck[];
 }
 
 /** Payout talebini işler: PROCESSING/COMPLETED/FAILED/CANCELLED (admin_process_payout). */
@@ -2263,6 +2306,68 @@ export async function fetchReconciliationSummary(from?: string, to?: string): Pr
   const { data, error } = await supabase.rpc('admin_reconciliation_summary', params);
   if (error) throw new Error(isRpcMissing(error) ? 'admin_reconciliation_summary RPC deploy edilmedi' : error.message);
   return (data || {}) as ReconciliationSummary;
+}
+
+// ─── [S4] Tarih aralıklı + gün kırılımlı finans raporu (admin_finance_report) ─
+export interface FinanceReportDay {
+  day: string;
+  gross: number;
+  commission: number;
+  owner_share: number;
+  refunded: number;
+  topups: number;
+  count: number;
+}
+
+export interface AdminFinanceReport {
+  from: string;
+  to: string;
+  totals: {
+    gross_captured: number;
+    commission: number;
+    owner_share: number;
+    refunded: number;
+    count: number;
+  };
+  topups: number;
+  cashouts: { net: number; fee: number; count: number };
+  payouts_completed: number;
+  days: FinanceReportDay[];
+}
+
+/**
+ * Seçilen tarih aralığında tüm platformun gün-gün finans raporu. Kullanıcı isteği:
+ * "tüm ödemelerin seçilen tarih aralıklarında ve günlerde dahi analiz edilebilmesi."
+ */
+export async function fetchAdminFinanceReport(from: string, to: string): Promise<AdminFinanceReport> {
+  const { data, error } = await supabase.rpc('admin_finance_report', { p_from: from, p_to: to });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_finance_report RPC deploy edilmedi' : error.message);
+  return (data || {}) as AdminFinanceReport;
+}
+
+// ─── [S4] Ödeme sağlığı — tespit katmanı (admin_payment_health) ──────────────
+export interface PaymentHealthAlert { level: 'WARN' | 'CRITICAL'; key: string; message: string; }
+export interface PaymentHealth {
+  window_hours: number;
+  succeeded: number;
+  failed: number;
+  success_rate: number | null;
+  pending_now: number;
+  blocked_now: number;
+  stale_pending: number;
+  avg_capture_seconds: number | null;
+  sweeper_enabled: boolean;
+  invariants: { ok: boolean; invariants: Record<string, number>; info: Record<string, number> };
+  status: 'OK' | 'WARN' | 'CRITICAL';
+  alerts: PaymentHealthAlert[];
+  checked_at: string;
+}
+
+/** Son N saatlik ödeme sağlığı: başarı oranı, askıda, tahsilat süresi, değişmezler, süpürücü. */
+export async function fetchPaymentHealth(windowHours = 24): Promise<PaymentHealth> {
+  const { data, error } = await supabase.rpc('admin_payment_health', { p_window_hours: windowHours });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_payment_health RPC deploy edilmedi' : error.message);
+  return (data || {}) as PaymentHealth;
 }
 
 // ─── Wave 12: Toplu bildirim geçmişi + şablon editörü ───────────────────────

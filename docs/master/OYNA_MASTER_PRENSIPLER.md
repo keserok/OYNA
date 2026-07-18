@@ -96,7 +96,7 @@
 - **Müsaitlik:** Gerçek zamanlı takvim = tarife + rezervasyon + **abonelik + istisna (kapalı saat)** birleşik. *(Kodda abonelik/istisna müsaitliğe DAHİL DEĞİL → eklenecek; çifte rezervasyon önlenir.)*
 - **Saha detayı:** Foto galeri + olanaklar + kort & fiyat + **çalışma saatleri** + **yol tarifi (harita linki)** + saha puanı. *(Çalışma saati & yol tarifi eklenecek.)*
 - **Saha puanı/yorumu:** Yalnızca **rezervasyon/maç tamamlamış** kişi verebilir. *(Kodda puan veriliyor ama yorum ekranı + kısıt YOK → eklenecek.)*
-- **"Rezervasyonlarım":** İptal (**24s + kademeli**, admin ayarlı — **koddaki 48s/%90 buna hizalanacak**) + **yol tarifi** + **tekrar rezerve** + **maça çevir**.
+- **"Maçlarım" (rezervasyon kartları — eski "Rezervasyonlarım" birleşti):** İptal (**24s + kademeli**, admin ayarlı — **koddaki 48s/%90 buna hizalanacak**) + **yol tarifi** + **tekrar rezerve** + **maça çevir**.
 - **Filtreler:** İlçe, **tarih, saat**, kort tipi, fiyat. *(Tarih/saat ana listeye eklenecek — kodda yalnız detayda.)*
 
 ## 3.6 Harita Markalaşması ("Harita")

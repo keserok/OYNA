@@ -137,6 +137,9 @@ export function toTurkishError(error: unknown): string {
   if (raw.includes('INVALID_SCORE')) return 'Girilen skor geçersiz.';
   if (raw.includes('INVALID_SOURCE')) return 'Geçersiz rezervasyon kaynağı.';
   if (raw.includes('UNAUTHORIZED')) return 'Bu işlem için yetkiniz yok.';
+  if (raw.includes('FORBIDDEN')) return 'Yalnız kendi sahanızın raporunu görebilirsiniz.';
+  if (raw.includes('RANGE_TOO_LARGE')) return 'En fazla 366 günlük aralık seçebilirsiniz.';
+  if (raw.includes('INVALID_RANGE')) return 'Bitiş tarihi başlangıçtan önce olamaz.';
   if (raw.includes('exclusion') || raw.includes('overlap'))
     return 'Bu saat dilimi başka bir rezervasyonla çakışıyor.';
   if (raw.includes('duplicate key') || raw.includes('unique'))
@@ -1394,6 +1397,101 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
     // sanıp gerçek bir arızayı fark etmiyordu. Artık fırlat; OwnerFinanceView
     // bunu yakalayıp görünür hata (toast) gösterir.
     console.error('getFinanceDashboard:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// ----------------------------------------------------------------------------
+// [S4] Tarih aralıklı + gün kırılımlı finans raporu (owner_finance_report RPC)
+// Kullanıcı: "tüm ödemelerin seçilen tarih aralıklarında ve günlerde dahi
+// analiz edilebilmesi. Tam profesyonellik." → tesis sahibi kendi sahasının
+// gerçek uygulama tahsilatını gün-gün görebilir + CSV indirebilir.
+// ----------------------------------------------------------------------------
+export interface FinanceReportDay {
+  day: string;          // YYYY-MM-DD
+  gross: number;        // brüt tahsilat
+  commission: number;   // OYNA komisyonu
+  owner_net: number;    // sahaya kalan net
+  refunded: number;     // iade edilen
+  count: number;        // ödeme adedi
+}
+
+export interface OwnerFinanceReport {
+  pitch_id: string;
+  from: string;
+  to: string;
+  totals: {
+    gross_captured: number;
+    commission: number;
+    owner_net: number;
+    refunded: number;
+    count: number;
+  };
+  days: FinanceReportDay[];
+}
+
+export async function ownerFinanceReport(
+  pitchId: string,
+  from: string,
+  to: string,
+): Promise<OwnerFinanceReport> {
+  try {
+    const { data, error } = await supabase.rpc('owner_finance_report', {
+      p_pitch_id: pitchId,
+      p_from: from,
+      p_to: to,
+    });
+    if (error) throw error;
+    return data as OwnerFinanceReport;
+  } catch (error) {
+    console.error('ownerFinanceReport:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// ----------------------------------------------------------------------------
+// [S2.6-FE] Saha iptal/iade politikası (owner override) — backend RPC hazır:
+//   preview_pitch_refund_policy / owner_set_pitch_refund_policy
+// ----------------------------------------------------------------------------
+export interface PitchRefundPolicy {
+  full_hours: number;   // bu saatten önce iptal → %100 iade
+  half_hours: number;   // bu saatten önce iptal → yarım iade
+  half_pct: number;     // yarım iade yüzdesi
+  is_custom: boolean;   // tesise özel override var mı (yoksa global varsayılan)
+}
+
+export async function getPitchRefundPolicy(pitchId: string): Promise<PitchRefundPolicy> {
+  try {
+    const { data, error } = await supabase.rpc('preview_pitch_refund_policy', { p_pitch_id: pitchId });
+    if (error) throw error;
+    const d = (data ?? {}) as Record<string, unknown>;
+    return {
+      full_hours: Number(d.full_hours ?? 24),
+      half_hours: Number(d.half_hours ?? 6),
+      half_pct: Number(d.half_pct ?? 50),
+      is_custom: Boolean(d.is_custom),
+    };
+  } catch (error) {
+    console.error('getPitchRefundPolicy:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Politikayı kaydeder. custom=false → override temizlenir (global varsayılana döner). */
+export async function setPitchRefundPolicy(
+  pitchId: string,
+  policy: { full_hours: number; half_hours: number; half_pct: number } | null,
+): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('owner_set_pitch_refund_policy', {
+      p_pitch_id: pitchId,
+      p_full_hours: policy ? policy.full_hours : null,
+      p_half_hours: policy ? policy.half_hours : null,
+      p_half_pct: policy ? policy.half_pct : null,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error('setPitchRefundPolicy:', error);
     throw new Error(toTurkishError(error));
   }
 }

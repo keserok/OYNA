@@ -14,6 +14,7 @@ import { localDateISO } from './ownerCalendarHelpers';
 import { growthPercent, monthLabel, shiftMonth, isMonthAfter, methodLabel, buildFinanceCsv, type CsvRow } from '../../shared/financeModel';
 import { money, StatTile, GrowthBadge } from './finance/financeUi';
 import { FinanceSummaryTab } from './finance/FinanceSummaryTab';
+import { FinanceRangeReport } from './finance/FinanceRangeReport';
 import { FinanceCollectTab } from './finance/FinanceCollectTab';
 import { FinanceExpenseTab } from './finance/FinanceExpenseTab';
 
@@ -297,7 +298,13 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         </div>
 
         {/* key={month}: ay değişince ÖZET içi seçili gün/yöntem durumu sıfırlansın. */}
-        {tab === 'SUMMARY' && <FinanceSummaryTab key={month} summary={summary} onOpenCalendarWeek={onOpenCalendar} />}
+        {tab === 'SUMMARY' && (
+          <div className="space-y-6">
+            <FinanceSummaryTab key={month} summary={summary} onOpenCalendarWeek={onOpenCalendar} />
+            {/* [S4 portu] Serbest tarih aralığı raporu — aylık özetin tamamlayıcısı. */}
+            <FinanceRangeReport pitchId={pitchId} notify={notify} />
+          </div>
+        )}
         {tab === 'COLLECT' && (
           <FinanceCollectTab
             summary={summary}

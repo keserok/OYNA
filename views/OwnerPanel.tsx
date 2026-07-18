@@ -33,6 +33,7 @@ import {
   OwnerFacilitySettingsModal,
   OwnerWorkingHoursModal,
   OwnerPricingPolicyModal,
+  OwnerCancellationPolicyModal,
   OwnerPaymentSettingsModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
@@ -1607,6 +1608,7 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     setActiveTab(tab);
   };
   const [showPricingPolicy, setShowPricingPolicy] = useState(false);
+  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showPaymentSettings, setShowPaymentSettings] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
@@ -2351,6 +2353,10 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onPricingPolicy={() => {
             if (managerGuard()) setShowPricingPolicy(true);
           }}
+          onCancellationPolicy={() => {
+            // Karar: iade politikası yönetim ayarı — sahip + müdür düzenler.
+            if (managerGuard()) setShowCancellationPolicy(true);
+          }}
           onSecurity={() => setShowSecurity(true)}
           onSupport={() => setShowSupport(true)}
           onLogout={() => setShowLogoutConfirm(true)}
@@ -2430,6 +2436,13 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
           onClose={() => setShowPricingPolicy(false)}
           facilityId={facilityData?.id}
           onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
+        />
+      )}
+      {showCancellationPolicy && (
+        <OwnerCancellationPolicyModal
+          onClose={() => setShowCancellationPolicy(false)}
+          facilityId={facilityData?.id ?? ''}
+          readOnly={isReadOnly}
         />
       )}
       {showSecurity && <OwnerSecurityModal onClose={() => setShowSecurity(false)} />}

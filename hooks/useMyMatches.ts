@@ -7,8 +7,8 @@ import { parseMatchDateTime } from '../utils/matchDateTime';
 const DEMO_UID = 'u1';
 
 // Tek ayrıştırma kaynağı: ISO + gün.ay.yıl + TR gün adları + saat aralıkları,
-// asla NaN. (Eski yerel parseMatchDate yalnız ISO/"Yarın" tanıyordu.)
-const parseMatchDate = (date: string, time: string): Date | null =>
+// asla NaN (İP-14 SSOT). EXPORT: useCountdown ve useMyAgenda da buradan kullanır.
+export const parseMatchDate = (date: string, time: string): Date | null =>
   parseMatchDateTime(date, time);
 
 export interface MyMatchesResult {
@@ -21,19 +21,21 @@ export interface MyMatchesResult {
 
 export function useMyMatches(): MyMatchesResult {
   const { adminMatches } = useAppStore();
-  const currentUserUid = auth.currentUser?.uid || DEMO_UID;
+  // Demo 'u1' fallback'i YOK: oturum yoksa (misafir) liste boştur — başka
+  // kullanıcıların verisi asla "benim maçlarım" gibi görünmez.
+  const currentUserUid = auth.currentUser?.uid ?? '';
 
   const all = useMemo(() => {
-    // Yalnızca gerçek DB maçları: kullanıcının oyuncu olduğu maçlar + taslak/iptaller.
-    return adminMatches.filter(m => {
-      if (m.status === 'DRAFT' || m.status === 'CANCELLED') return true;
-      return (
-        m.slots?.some(s => s.player?.id === currentUserUid) ||
-        m.awaySlots?.some(s => s.player?.id === currentUserUid) ||
-        // B14: yalnız YEDEK listesinde olan oyuncu da maçını görebilmeli.
-        m.reservePlayers?.some(p => p?.id === currentUserUid)
-      );
-    });
+    if (!currentUserUid) return [];
+    // Yalnızca KULLANICININ maçları: bir slotta oyuncu olduğu, kendi oluşturduğu
+    // (kaptan yönetimi — taslak/iptal dahil) VEYA yedek listesinde olduğu (B14)
+    // maçlar. Başkalarının taslak/iptal maçları listeye sızmaz (main düzeltmesi).
+    return adminMatches.filter(m =>
+      m.creatorId === currentUserUid ||
+      m.slots?.some(s => s.player?.id === currentUserUid) ||
+      m.awaySlots?.some(s => s.player?.id === currentUserUid) ||
+      m.reservePlayers?.some(p => p?.id === currentUserUid)
+    );
   }, [adminMatches, currentUserUid]);
 
   const upcoming = useMemo(() => {

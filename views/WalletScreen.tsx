@@ -12,6 +12,7 @@ import { formatTRY, formatTRYInt } from '../utils/formatTRY';
 import {
   getWalletSummary, listSavedCards, deleteSavedCard, setDefaultSavedCard,
   getOwnerEarningsSummary, EarningsSummary, WalletSummary, SavedCard,
+  previewWalletCashout, requestWalletCashout, getPayoutMethods, addPayoutMethod,
 } from '../services/walletService';
 import { startInAppCardPayment } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
@@ -55,7 +56,7 @@ interface PayoutRequest {
   created_at: string;
 }
 
-type View = 'MAIN' | 'TOPUP' | 'CARDS' | 'ADD_CARD' | 'HISTORY' | 'PAYOUT_FORM';
+type View = 'MAIN' | 'TOPUP' | 'CARDS' | 'ADD_CARD' | 'HISTORY' | 'PAYOUT_FORM' | 'CASHOUT';
 type HistoryFilter = 'ALL' | 'TOPUP' | 'PAYMENT' | 'REFUND' | 'EARNING';
 
 // C10 — para biçimi tek kaynaktan (utils/formatTRY).
@@ -142,6 +143,16 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [payoutBusy, setPayoutBusy] = useState(false);
   const [payoutError, setPayoutError] = useState('');
   const [payoutDone, setPayoutDone] = useState(false);
+
+  // S2.1 — Cüzdandan çekim (düşük görünürlük; kesinti/net SUNUCUDAN, şeffaf)
+  const [cashoutAmount, setCashoutAmount] = useState('');
+  const [cashoutIban, setCashoutIban] = useState('');
+  const [cashoutHolder, setCashoutHolder] = useState('');
+  const [cashoutBusy, setCashoutBusy] = useState(false);
+  const [cashoutError, setCashoutError] = useState('');
+  const [cashoutDone, setCashoutDone] = useState<{ net: number; iban_last4: string } | null>(null);
+  const [cashoutPreview, setCashoutPreview] = useState<import('../services/walletService').CashoutPreview | null>(null);
+  const cashoutBusyRef = useRef(false);
 
   // Geçmiş filtresi
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('ALL');
@@ -306,6 +317,53 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const retryPayment = () => {
     setLastPaymentError(null);
     if (paymentContext) useAppStore.getState().navigateTo('PAYMENT');
+  };
+
+  // S2.1 — cashout canlı önizleme: kesinti/net her zaman SUNUCUDAN (FE hesaplamaz)
+  useEffect(() => {
+    if (view !== 'CASHOUT') return;
+    const g = parseFloat(cashoutAmount) || 0;
+    let alive = true;
+    const t = setTimeout(() => {
+      previewWalletCashout(g).then(pv => { if (alive) setCashoutPreview(pv); }).catch(() => {});
+    }, 250);
+    return () => { alive = false; clearTimeout(t); };
+  }, [cashoutAmount, view]);
+
+  const handleRequestCashout = async () => {
+    if (cashoutBusyRef.current) return;
+    setCashoutError('');
+    const g = parseFloat(cashoutAmount);
+    const pv = cashoutPreview;
+    if (!g || g <= 0) { setCashoutError('Geçerli bir tutar girin.'); return; }
+    if (pv && g < pv.min) { setCashoutError(`En az ${fmtInt(pv.min)}₺ çekebilirsin.`); return; }
+    if (pv && g > pv.topup_balance) { setCashoutError('Çekilebilir bakiyeni aşıyor.'); return; }
+    if (!validateIBAN(cashoutIban)) { setCashoutError('Geçerli bir IBAN girin (TR + 24 hane).'); return; }
+    if (!cashoutHolder.trim()) { setCashoutError('IBAN sahibi adı zorunludur.'); return; }
+    cashoutBusyRef.current = true;
+    setCashoutBusy(true);
+    try {
+      // IBAN'ı kayıtlı yönteme çöz (varsa kullan; yoksa ekle) — request method_id ister.
+      const cleanIban = cashoutIban.replace(/\s/g, '').toUpperCase();
+      const norm = (s?: string | null) => (s ?? '').replace(/\s/g, '').toUpperCase();
+      let methods = await getPayoutMethods();
+      let m = methods.find(x => x.kind === 'IBAN' && norm(x.iban) === cleanIban);
+      if (!m) {
+        await addPayoutMethod({ kind: 'IBAN', holderName: cashoutHolder.trim(), iban: cleanIban });
+        methods = await getPayoutMethods();
+        m = methods.find(x => x.kind === 'IBAN' && norm(x.iban) === cleanIban);
+      }
+      if (!m) throw new Error('IBAN kaydedilemedi.');
+      const res = await requestWalletCashout(g, m.id);
+      setCashoutDone({ net: res.net, iban_last4: res.iban_last4 });
+      setCashoutAmount('');
+      fetchData();
+    } catch (e) {
+      setCashoutError((e instanceof Error ? e.message : 'Çekim talebi oluşturulamadı.').replace(/^[A-Z_]+: /, ''));
+    } finally {
+      cashoutBusyRef.current = false;
+      setCashoutBusy(false);
+    }
   };
 
   // ─── ALT EKRAN: Kart ekle (paylaşılan bileşen — edge üzerinden kayıt) ─────
@@ -684,6 +742,118 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     );
   }
 
+  // ─── ALT EKRAN: Cüzdandan çekim (S2.1 — düşük görünürlük, şeffaf kesinti) ──
+  if (view === 'CASHOUT') {
+    const pv = cashoutPreview;
+    const g = parseFloat(cashoutAmount) || 0;
+    const blockedByIdentity = !!pv && pv.identity_required && !pv.identity_ok;
+    const disabled = !!pv && !pv.enabled;
+    const canSubmit = !cashoutBusy && !blockedByIdentity && !disabled
+      && g > 0 && (!pv || (g >= pv.min && g <= pv.topup_balance))
+      && validateIBAN(cashoutIban) && !!cashoutHolder.trim();
+    return (
+      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+        <SubHeader title="Bakiyeni Çek" subtitle="Yüklediğin bakiyeyi hesabına aktar"
+          onBack={() => { setView('MAIN'); setCashoutError(''); setCashoutDone(null); }} />
+        <main className="flex-1 overflow-y-auto p-5 space-y-4">
+          {cashoutDone ? (
+            <div className="text-center py-10">
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#39FF14]/15 border-2 border-[#39FF14]/40 flex items-center justify-center mb-5">
+                <CheckCircle2 size={30} className="text-[#39FF14]" />
+              </div>
+              <p className="text-white font-black text-lg">Çekim talebin alındı</p>
+              <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+                <span className="text-[#39FF14] font-bold">{fmt(cashoutDone.net)}₺</span> net tutar,
+                onay sonrası <span className="font-numeric">•••• {cashoutDone.iban_last4}</span> IBAN'ına geçer.
+                Genellikle 1–2 iş günü sürer.
+              </p>
+              <button onClick={() => { setCashoutDone(null); setView('MAIN'); }}
+                className="mt-6 px-6 py-3 bg-[#161B22] border border-white/10 rounded-2xl text-white font-bold text-sm">
+                Cüzdana Dön
+              </button>
+            </div>
+          ) : disabled ? (
+            <div className="bg-[#0f1419] border border-yellow-400/20 rounded-2xl p-4 flex gap-2.5">
+              <Info size={16} className="text-yellow-400 shrink-0 mt-0.5" />
+              <p className="text-[12.5px] text-gray-300 leading-relaxed">
+                Bakiye çekme şu anda geçici olarak kapalı. Yüklediğin bakiyeyi uygulama içi ödemelerde kullanmaya devam edebilirsin.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="text-center py-2">
+                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir (Yüklenen) Bakiye</p>
+                <p className="text-[38px] font-black leading-none text-white font-numeric">{fmt(pv?.topup_balance ?? topupBalance)}₺</p>
+                <p className="text-[10.5px] text-gray-500 mt-2">İade kredisi ve kazanç bu tutara dahil değildir.</p>
+              </div>
+
+              {blockedByIdentity && (
+                <div className="bg-[#0f1419] border border-blue-400/25 rounded-2xl p-3.5 flex gap-2.5">
+                  <Shield size={15} className="text-blue-400 shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-gray-300 leading-relaxed">
+                    Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekir. Profil ayarlarından kimliğini doğrulayabilirsin.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Çekilecek Tutar</label>
+                <div className="bg-[#161B22] border border-white/12 rounded-[14px] px-4 py-4 flex items-center justify-between">
+                  <input value={cashoutAmount} onChange={e => setCashoutAmount(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
+                    inputMode="decimal" placeholder="0" disabled={blockedByIdentity}
+                    className="bg-transparent text-white font-black text-[26px] font-numeric outline-none w-full placeholder:text-gray-600 disabled:opacity-50" />
+                  <span className="text-xl font-extrabold text-gray-500">₺</span>
+                </div>
+              </div>
+
+              {/* ŞEFFAF kesinti/net — rakam SUNUCUDAN (preview_wallet_cashout) */}
+              {g > 0 && pv && (
+                <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-4 space-y-2">
+                  <div className="flex justify-between text-[13px]"><span className="text-gray-500">Çekilecek</span><span className="text-white font-bold font-numeric">{fmt(pv.gross)}₺</span></div>
+                  <div className="flex justify-between text-[13px]"><span className="text-gray-500">Kesinti (%{pv.fee_pct})</span><span className="text-red-300 font-bold font-numeric">−{fmt(pv.fee)}₺</span></div>
+                  <div className="h-px bg-white/8" />
+                  <div className="flex justify-between text-[14px]"><span className="text-gray-300 font-semibold">Hesabına geçecek</span><span className="text-[#39FF14] font-black font-numeric">{fmt(pv.net)}₺</span></div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Hedef IBAN (kendi adına)</label>
+                <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-3.5 flex items-center gap-3">
+                  <span className="w-[34px] h-[34px] rounded-[10px] bg-white/5 flex items-center justify-center text-gray-300 shrink-0"><Landmark size={16} /></span>
+                  <input value={cashoutIban} onChange={e => setCashoutIban(formatIBAN(e.target.value))}
+                    placeholder="TR00 0000 0000 0000 0000 0000 00" autoCapitalize="characters"
+                    className="flex-1 bg-transparent text-white font-bold font-numeric text-[13px] tracking-wider outline-none placeholder:text-gray-600 min-w-0" />
+                  {validateIBAN(cashoutIban) && <Check size={16} className="text-[#39FF14] shrink-0" />}
+                </div>
+                <input value={cashoutHolder} onChange={e => setCashoutHolder(e.target.value.toLocaleUpperCase('tr-TR'))}
+                  placeholder="IBAN SAHİBİ AD SOYAD"
+                  className="mt-2.5 w-full bg-[#161B22] border border-white/8 rounded-[14px] px-4 py-3.5 text-white font-bold text-sm outline-none placeholder:text-gray-600" />
+              </div>
+
+              {cashoutError && (
+                <div className="bg-red-900/20 border border-red-500/30 rounded-2xl p-3 flex gap-2">
+                  <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-red-300 text-sm">{cashoutError}</p>
+                </div>
+              )}
+            </>
+          )}
+        </main>
+        {!cashoutDone && !disabled && (
+          <div className="p-5 pb-safe border-t border-white/5">
+            <button disabled={!canSubmit} onClick={handleRequestCashout}
+              className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                canSubmit ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+              }`}>
+              {cashoutBusy ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
+              {cashoutBusy ? 'GÖNDERİLİYOR...' : (g > 0 && pv ? `${fmt(pv.net)}₺ AL` : 'ÇEKİM TALEP ET')}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ─── ANA EKRAN ────────────────────────────────────────────────────────────
   const recentTx = txList.slice(0, 6);
 
@@ -864,6 +1034,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 <List size={20} /> Geçmiş
               </button>
             </div>
+
+            {/* S2.1 — düşük görünürlüklü çekim girişi (yalnız yüklenen bakiyesi olan oyuncu) */}
+            {topupBalance > 0 && (
+              <button onClick={() => { setCashoutError(''); setCashoutDone(null); setCashoutAmount(''); setView('CASHOUT'); }}
+                className="w-full text-center text-[11px] text-gray-500 hover:text-gray-300 font-semibold py-0.5 transition-colors">
+                Bakiyeni geri çek
+              </button>
+            )}
 
             {/* Koşullu kazanç satırı — tasarım geliştirmesi: referral vb. kazanç
                 varsa gizlenmez, yoksa hiç görünmez (oyuncuda kazanç yok kuralı) */}

@@ -24,7 +24,7 @@ import { monthLabel, shiftMonth, isMonthAfter, methodLabel } from '../../../shar
 import { money, BreakdownList } from '../../../views/owner/finance/financeUi';
 import { localDateISO } from '../../../views/owner/ownerCalendarHelpers';
 import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
-import { getTariffs, saveTariffs, type TariffInput } from '../../../services/pitchOwnerService';
+import { getTariffs, saveTariffs, getPitchRefundPolicy, setPitchRefundPolicy, type TariffInput } from '../../../services/pitchOwnerService';
 import { setPitchPublished, setPitchShowcaseFlags, type PitchShowcaseFlags } from '../../../services/pitchContentService';
 import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
 import PhotoManager from '../../../components/pitch-editor/PhotoManager';
@@ -148,6 +148,14 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [financeLoading, setFinanceLoading] = useState(false);
   const [financeError, setFinanceError] = useState<string | null>(null);
 
+  // ── [S2.6/K6] İptal/iade politikası (saha override; admin de yönetebilir) ──
+  const [refundCustom, setRefundCustom] = useState(false);
+  const [refundFull, setRefundFull] = useState(24);
+  const [refundHalf, setRefundHalf] = useState(6);
+  const [refundPct, setRefundPct] = useState(50);
+  const [refundLoaded, setRefundLoaded] = useState(false);
+  const [savingRefund, setSavingRefund] = useState(false);
+
   // ── Vitrin ──
   const [isPublished, setIsPublished] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
@@ -258,8 +266,39 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     if (activeTab === 'tariffs' && id) {
       if (!tariffsLoaded) void loadTariffs();
       if (!courtsLoaded) void loadCourts(); // tarife → kort seçimi için
+      if (!refundLoaded) {
+        setRefundLoaded(true);
+        getPitchRefundPolicy(id)
+          .then((p) => {
+            setRefundCustom(p.is_custom);
+            setRefundFull(p.full_hours);
+            setRefundHalf(p.half_hours);
+            setRefundPct(p.half_pct);
+          })
+          .catch(() => { /* politika okunamadı — global varsayılan gösterilir */ });
+      }
     }
-  }, [activeTab, id, courtsLoaded, tariffsLoaded, loadCourts, loadTariffs]);
+  }, [activeTab, id, courtsLoaded, tariffsLoaded, refundLoaded, loadCourts, loadTariffs]);
+
+  // [K6] Saha iptal/iade politikası kaydet — owner_set_pitch_refund_policy admin'e de açık.
+  const handleSaveRefundPolicy = async () => {
+    if (!id) return;
+    if (refundCustom && refundHalf > refundFull) {
+      toastError('Yarım-iade saati tam-iade saatinden büyük olamaz.');
+      return;
+    }
+    setSavingRefund(true);
+    try {
+      await setPitchRefundPolicy(id, refundCustom
+        ? { full_hours: refundFull, half_hours: refundHalf, half_pct: refundPct }
+        : null);
+      success(refundCustom ? 'İptal politikası kaydedildi.' : 'Global varsayılana dönüldü.');
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setSavingRefund(false);
+    }
+  };
 
   // Takvim & Doluluk sekmesi: get_facility_schedule (admin yetkili). Salt-okuma.
   const loadSchedule = useCallback(async () => {
@@ -858,6 +897,58 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* [K6] Saha bazlı iptal/iade politikası — oyuncunun ödeme/iptal ekranı buradan beslenir (SSOT) */}
+                  <div className="bg-black/30 border border-white/[0.08] rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white uppercase tracking-wide">İptal / İade Politikası</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                          Kapalıyken OYNA varsayılanı: ≥24s %100 · 6-24s %50 · &lt;6s iade yok. Oyuncu bu koşulları ödeme ve iptal ekranında görür.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRefundCustom((v) => !v)}
+                        className={`shrink-0 w-12 h-7 rounded-full relative transition-colors ${refundCustom ? 'bg-emerald-500' : 'bg-gray-600'}`}
+                        title="Özel politika"
+                      >
+                        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${refundCustom ? 'translate-x-5' : ''}`} />
+                      </button>
+                    </div>
+                    {refundCustom && (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className={labelCls}>Tam iade (saat)</label>
+                          <input type="number" min={0} max={720} value={refundFull} onChange={(e) => setRefundFull(Number(e.target.value) || 0)} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white font-mono" />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Yarım iade (saat)</label>
+                          <input type="number" min={0} max={720} value={refundHalf} onChange={(e) => setRefundHalf(Number(e.target.value) || 0)} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white font-mono" />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Yarım iade (%)</label>
+                          <input type="number" min={0} max={100} value={refundPct} onChange={(e) => setRefundPct(Number(e.target.value) || 0)} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white font-mono" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] text-gray-600">
+                        {refundCustom
+                          ? `≥${refundFull}s → %100 · ${refundHalf}-${refundFull}s → %${refundPct} · <${refundHalf}s → iade yok`
+                          : 'Global varsayılan kullanılıyor.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveRefundPolicy()}
+                        disabled={savingRefund}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[11px] font-bold rounded-xl disabled:opacity-50"
+                      >
+                        {savingRefund ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                        Politikayı Kaydet
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

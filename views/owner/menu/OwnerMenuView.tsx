@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   RefreshCw,
+  RotateCcw,
   Settings,
   Shield,
   Tag,
@@ -32,6 +33,7 @@ export interface OwnerMenuViewProps {
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onPricingPolicy: () => void;
+  onCancellationPolicy: () => void;
   onLogout: () => void;
   onSecurity: () => void;
   onSupport: () => void;
@@ -110,6 +112,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onBankAccounts,
   onWithdrawals,
   onPricingPolicy,
+  onCancellationPolicy,
   onLogout,
   onSecurity,
   onSupport,
@@ -280,6 +283,11 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               label="Fiyatlandırma Politikası"
               badge={<StatusBadge label={`${stats.tariffCount} tarife`} tone="info" />}
               onClick={onPricingPolicy}
+            />
+            <MenuRow
+              icon={<RotateCcw size={18} />}
+              label="İptal / İade Politikası"
+              onClick={onCancellationPolicy}
             />
           </div>
         </section>

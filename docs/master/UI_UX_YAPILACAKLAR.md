@@ -5,7 +5,7 @@
 
 > ## ✅ UYGULAMA DURUMU (aynı gün — bu branch'te)
 > - **Yapıldı:** #1 onboarding (3 ekran, ilk açılışta bir kez, `views/OnboardingView.tsx`) · #2 misafir modu (`isGuest` + MATCH_DISCOVERY yönlendirmesi + `SignupGate` değer kapısı; `u1` sahte kullanıcı yazımları kaldırıldı, joinMatch/ödeme oturumsuzken kapıya takılır) · #3 Android geri tuşu (yığında geri, kökte minimize) · #4 zoom serbest · #5+#6 global toast (`components/common/GlobalToast.tsx`, kritik catch'ler bağlandı) · #9 hayalet ROLE_SELECTION fallback'leri role-göre açılışa çevrildi · #10 LOCATION_PROMPT yeni kayıt akışına bağlandı · #12 KVKK kutusu artık opt-in · #13 Apple çifte navigasyon giderildi · #14 ödeme formu (Luhn + SKT + CVV doğrulama, `autoComplete="cc-*"`, inline hatalar) · #15 Dashboard/MatchDiscovery/MatchJoin lazy (ana paket 386KB→57KB) · #17 player_card_photo 439KB→57KB, kopya silindi · #7 kısmi: 600 adet `#FFFF00`→marka sarısı `#FACC15`, bildirim ikonu turuncu→sarı (yeşil `#39FF14` "başarı/aksiyon" semantiği olarak kaldı) · #8 kısmi: yük taşıyan metinler (BottomNav, ödeme notu, OTP sayaç, hata mesajları) 12px'e · #20 kısmi: paylaşılan bileşenlerdeki ikon-butonlar etiketlendi.
-> - **Bilinçli ertelenen:** #11 sekme-başına geri yığını (mevcut "sekme değişince sıfırla" davranışı Android'de yaygın kalıp; per-tab stack büyük refactor) · #16 liste sanallaştırma (kart yükseklikleri değişken, görsel regresyon riski — gerçek cihaz testiyle birlikte yapılmalı) · #19 UI kiti birleştirme (kademeli; yeni kod `AnimatedButton` kullanmalı) · #5 kalan ~60 sessiz catch (altyapı hazır: `showToast` import edip bağlanacak, kademeli) · #18 kalan ekranların iskelet standardizasyonu (şablon: MyBookings).
+> - **Bilinçli ertelenen:** #11 sekme-başına geri yığını (mevcut "sekme değişince sıfırla" davranışı Android'de yaygın kalıp; per-tab stack büyük refactor) · #16 liste sanallaştırma (kart yükseklikleri değişken, görsel regresyon riski — gerçek cihaz testiyle birlikte yapılmalı) · #19 UI kiti birleştirme (kademeli; yeni kod `AnimatedButton` kullanmalı) · #5 kalan ~60 sessiz catch (altyapı hazır: `showToast` import edip bağlanacak, kademeli) · #18 kalan ekranların iskelet standardizasyonu (şablon: MyMatchesHub).
 
 ## 🔴 Kritik — yeni kullanıcıyı ve mağaza incelemesini doğrudan etkiler
 
@@ -38,13 +38,13 @@
 
 ## ⚪ Düşük — tutarlılık ve cila
 
-18. **Yükleme stilleri karışık.** Kimi ekran iskelet (skeleton), kimi çıplak spinner, `WalletScreen.tsx:380` tek pulse çubuğu. `MyBookings.tsx:145-149` doğru örnek (Loading/Error/Empty üçlüsü) — diğer listeler onu kopyalamalı.
+18. **Yükleme stilleri karışık.** Kimi ekran iskelet (skeleton), kimi çıplak spinner, `WalletScreen.tsx:380` tek pulse çubuğu. `MyMatchesHub.tsx` doğru örnek (Skeleton/satır-içi Error/Empty üçlüsü) — diğer listeler onu kopyalamalı.
 19. **İki yarım UI kiti.** `NeonButton`/`GlassCard` yalnız ~3 dosyada; fiili standart `AnimatedButton` + bolca ham `<button>`. → tek kit seçilip yayılmalı.
 20. **Erişilebilirlik etiketleri seyrek.** BottomNav/PageLayout iyi (aria-label + ≥48px dokunma alanı var) ama ikon-butonların çoğunda aria-label yok (~40 view'da toplam ~15 aria kullanımı).
 
 ## Korunması gereken iyi örnekler
 - `index.css:45-56` merkezi safe-area değişkenleri ve `.pb-safe-nav` — doğru.
-- `MyBookings` ekranının Loading/Error/Empty yapısı — diğer listeler için şablon.
+- `MyMatchesHub` ekranının Skeleton/Error/Empty yapısı — diğer listeler için şablon.
 - `PaymentScreen`'in `ProcessingView` yükleme durumu; BottomNav'ın erişilebilir dokunma hedefleri.
 
 ## Önerilen sıra (hızlı kazanç → büyük iş)

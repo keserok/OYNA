@@ -174,7 +174,6 @@ export interface FriendPlayerCard {
   is_self: boolean;
   name?: string;
   age?: number | null;
-  preferred_foot?: string | null;
   fair_play?: number | null;
   matches_together?: number;
   total_matches?: number;

@@ -57,12 +57,12 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
 
   const { adminGoalkeepers, adminReferees, updateOwnProvider, myRoles, setIsRoleSwitcherOpen } = useAppStore();
   const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
-  // KD-4: gerçek uid store'da yoksa BAŞKA sağlayıcıya ([0]) düşme — hesap özeti +
-  // toggle başlangıçları yanlış kişinin verisini gösteriyordu (yazımlar auth.uid()'e
-  // gittiğinden görünen ≠ kaydedilen). Artık yalnız gerçek kayıt; yoksa güvenli
-  // varsayılanlar (aşağıda savedSettings={} → toggle default'ları).
-  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => x.id === auth.currentUser?.uid);
-
+  // Kendi sağlayıcı kaydı: authUid VEYA id ile (ServiceProfile ile tutarlı).
+  // Bulunamazsa dizinin İLK sağlayıcısına düşmek yanlış kişinin ayarlarını
+  // gösterip düzenletiyordu — undefined bırak, updateSettings zaten !me'de erken döner.
+  const uid = auth.currentUser?.uid;
+  const me = (isRef ? adminReferees : adminGoalkeepers).find(x => (x as any).authUid === uid || x.id === uid);
+  
   const savedSettings = me?.settings || {};
 
   const [openSection, setOpenSection] = useState<SectionKey>(null);
