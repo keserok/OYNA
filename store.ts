@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
 import type { SavedCard } from './services/walletService';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
@@ -270,10 +270,6 @@ interface AppState {
   showAnnouncementBanner: boolean;
 
   // Player Seek Announcements
-  playerSeekAds: PlayerSeekAnnouncement[];
-  addPlayerSeekAd: (ad: PlayerSeekAnnouncement) => void;
-  toggleJoinPlayerSeekAd: (adId: string, userId: string) => void;
-  acceptPlayerSeekAdRequest: (adId: string, userId: string) => void;
 
   // ─── Friend System ─────────────────────────────────────────────────
   friends: Friend[];
@@ -678,35 +674,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
-  playerSeekAds: [],
-  addPlayerSeekAd: (ad) => set((state) => ({ playerSeekAds: [ad, ...state.playerSeekAds] })),
-  toggleJoinPlayerSeekAd: (adId, userId) => set((state) => ({
-    playerSeekAds: state.playerSeekAds.map(ad => {
-      if (ad.id === adId) {
-        const isJoined = ad.joinedPlayers?.includes(userId);
-        const joinedPlayers = isJoined 
-          ? (ad.joinedPlayers || []).filter(id => id !== userId)
-          : [...(ad.joinedPlayers || []), userId];
-        const acceptedPlayers = isJoined 
-          ? (ad.acceptedPlayers || []).filter(id => id !== userId)
-          : (ad.acceptedPlayers || []);
-        return { ...ad, joinedPlayers, acceptedPlayers };
-      }
-      return ad;
-    })
-  })),
-  acceptPlayerSeekAdRequest: (adId, userId) => set((state) => ({
-    playerSeekAds: state.playerSeekAds.map(ad => {
-      if (ad.id === adId) {
-        const isAccepted = ad.acceptedPlayers?.includes(userId);
-        const acceptedPlayers = isAccepted 
-          ? (ad.acceptedPlayers || [])
-          : [...(ad.acceptedPlayers || []), userId];
-        return { ...ad, acceptedPlayers };
-      }
-      return ad;
-    })
-  })),
   friends: [] as any[],
   addFriend: (friend) => set((state) => {
     const next = [...state.friends, friend];

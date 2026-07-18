@@ -854,26 +854,6 @@ export interface FriendRequest {
   timestamp: string;
 }
 
-export interface PlayerSeekAnnouncement {
-  id: string;
-  creatorId: string;
-  creatorName: string;
-  creatorAvatar: string;
-  pitchName: string;
-  date: string;
-  time: string;
-  positionsNeeded: string[];
-  difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
-  format: string;
-  duration: string;
-  gender: string;
-  ageGroup: string;
-  status: 'ACTIVE' | 'CLOSED';
-  joinedPlayers?: string[]; // IDs of users who clicked to join/requested
-  acceptedPlayers?: string[]; // IDs of users whose requests were accepted by captain
-  createdAt?: string;
-}
-
 // ==============================================// OWNER SAAS & UI CONFIGURATION (PATRON PANELİ)
 // ============================================================================
 
