@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 // ─── Üretim yedeği (env enjeksiyonu kaçarsa "Failed to fetch"i kökten önler) ───
 // Sorun: env değişkeni herhangi bir build yolunda (ör. Vercel'de admin derlemesinde)
@@ -74,11 +76,23 @@ export const clearHasAccount = (): void => {
 // bu cihazda açık kalır ("Beni Hatırla" anahtarı kaldırıldı).
 // - getItem: localStorage'da yoksa sessionStorage'a bakar ve bulursa localStorage'a
 //   TAŞIR — eski sürümde "Beni Hatırla"yı kapatmış kullanıcılar bu geçişte tek bir
-//   oturum kaybı bile yaşamaz.
+//   oturum kaybı bile yaşamaz. Native'de son çare: Preferences aynasından geri yükle.
 // - setItem: localStorage yazılamıyorsa (ör. Safari gizli sekme) sessionStorage'a
 //   düşer; oturum en azından uygulama ömrü boyunca sürer, hiçbir yol hata fırlatmaz.
+// - Native ayna (iOS UserDefaults / Android SharedPreferences): WebView,
+//   localStorage'ı depolama baskısında tahliye edebilir; belirteç native depoda da
+//   tutulur ki "çıkış yapmadıkça asla giriş ekranı görme" garantisi OS tahliyesine
+//   de dayansın. supabase-js async storage'ı destekler (getItem Promise dönebilir).
+const isNativePlatform = (() => {
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+})();
+
 const persistentAuthStorage = {
-  getItem: (key: string): string | null => {
+  getItem: async (key: string): Promise<string | null> => {
     if (!hasWindow) return null;
     try {
       const stored = window.localStorage.getItem(key);
@@ -91,8 +105,24 @@ const persistentAuthStorage = {
         } catch {
           /* taşıyamazsak sessionStorage kopyasıyla devam */
         }
+        return legacy;
       }
-      return legacy;
+      if (isNativePlatform) {
+        try {
+          const { value } = await Preferences.get({ key });
+          if (value != null) {
+            try {
+              window.localStorage.setItem(key, value);
+            } catch {
+              /* localStorage yazılamasa da native kopya yeter */
+            }
+            return value;
+          }
+        } catch {
+          /* native depo erişilemedi — localStorage yoluyla devam */
+        }
+      }
+      return null;
     } catch {
       return null;
     }
@@ -109,6 +139,11 @@ const persistentAuthStorage = {
         /* sessizce yoksay */
       }
     }
+    if (isNativePlatform) {
+      void Preferences.set({ key, value }).catch(() => {
+        /* native ayna yazılamadı — localStorage kopyası yeterli */
+      });
+    }
   },
   removeItem: (key: string): void => {
     if (!hasWindow) return;
@@ -121,6 +156,11 @@ const persistentAuthStorage = {
       window.sessionStorage.removeItem(key);
     } catch {
       /* sessizce yoksay */
+    }
+    if (isNativePlatform) {
+      void Preferences.remove({ key }).catch(() => {
+        /* sessizce yoksay */
+      });
     }
   },
 };
