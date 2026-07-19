@@ -33,8 +33,11 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
     if (!validPay) return;
     setBusy('pay');
     try {
-      await recordBookingPayment(booking.id, amount, method, 'Elle tahsilat');
-      notify('Tahsilat kaydedildi.', 'success');
+      const { queued } = await recordBookingPayment(booking.id, amount, method, 'Elle tahsilat');
+      // P-OFFLINE: ağ yoksa kuyruğa alınır — dürüst mesaj (henüz sunucuda değil).
+      notify(queued
+        ? 'İnternet yok — tahsilat kuyruğa alındı, bağlantı gelince otomatik işlenecek.'
+        : 'Tahsilat kaydedildi.', queued ? 'warning' : 'success');
       onChanged(); onClose();
     } catch (e: any) {
       notify(e?.message || 'Tahsilat kaydedilemedi.', 'error');

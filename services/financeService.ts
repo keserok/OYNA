@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { enqueueOrRun } from './offline/outbox';
 
 // ─── FI-1 — Finans veri katmanı ──────────────────────────────────────────────
 // get_pitch_finance_summary RPC'sinin (owner-veya-admin yetkili) tek çağrılık
@@ -80,15 +81,21 @@ export async function createDebtor(
   return String(data);
 }
 
-/** Kısmi/tam ödeme al. Yeni bakiyeyi döner. */
+/** Kısmi/tam ödeme al. {queued:false} ise yeni bakiye bilinir; {queued:true}
+ *  ise işlem çevrimdışı kuyruğa alındı — bakiye bağlantı gelince güncellenir. */
 export async function debtorAddPayment(
   debtorId: string, amount: number, method: string, note?: string,
-): Promise<number> {
-  const { data, error } = await supabase.rpc('debtor_add_payment', {
-    p_debtor_id: debtorId, p_amount: amount, p_method: method, p_note: note ?? null,
-  });
-  if (error) throw new Error(mapDebtorError(error.message));
-  return num(data);
+): Promise<{ queued: boolean }> {
+  try {
+    // P-OFFLINE: outbox — client_request_id ile idempotent; ağ yoksa kuyruk.
+    return await enqueueOrRun(
+      'DEBTOR_PAYMENT',
+      { debtorId, amount, method, note: note ?? null },
+      `Veresiye ödemesi · ${amount}₺`,
+    );
+  } catch (error) {
+    throw new Error(mapDebtorError((error as Error).message));
+  }
 }
 
 /** Bekleyen rezervasyon bakiyesini veresiyeye taşı. Debtor id döner. */

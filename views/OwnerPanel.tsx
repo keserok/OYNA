@@ -27,6 +27,8 @@ import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerTo
 import { OwnerKpiGrid, OwnerCommandStrip, kpiIcons, type OwnerKpiItem } from './owner/components/OwnerKpiGrid';
 import { OwnerStatusBar, type OwnerStatusBanner } from './owner/components/OwnerStatusBar';
 import { OwnerBottomNav } from './owner/components/OwnerBottomNav';
+import { OutboxBadge } from './owner/components/OutboxBadge';
+import { installOutboxAutoFlush, setOutboxDropNotifier } from '../services/offline/outbox';
 import { OwnerHomeSkeleton } from './owner/components/OwnerHomeSkeleton';
 import {
   OwnerMenuView,
@@ -1598,6 +1600,17 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
     return effGuardWrite();
   };
 
+  // P-OFFLINE: panel açıkken çevrimdışı kuyruk otomatik boşalır (online olayı +
+  // periyodik + görünürlük). Kalıcı hatayla düşen işlem KULLANICIYA söylenir —
+  // para işlemi sessizce kaybolmaz.
+  useEffect(() => {
+    installOutboxAutoFlush();
+    setOutboxDropNotifier((item, err) => {
+      notify(`Bekleyen işlem gönderilemedi (${item.label}): ${err}`, 'error');
+    });
+    return () => setOutboxDropNotifier(null);
+  }, [notify]);
+
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
     // STAFF-3: personel Finans/Sahalar sekmesini açamaz (yönetim yetkisi ister).
@@ -2165,13 +2178,17 @@ const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests
                       )}
                   </div>
               </div>
-              <button 
-                onClick={() => setIsNotificationsOpen(true)}
-                className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 relative"
-              >
-                  <Bell size={20} />
-                  {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
-              </button>
+              <div className="flex items-center gap-2">
+                  {/* P-OFFLINE: bekleyen kasa işlemleri (kuyruk boşken görünmez) */}
+                  <OutboxBadge />
+                  <button
+                    onClick={() => setIsNotificationsOpen(true)}
+                    className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 relative"
+                  >
+                      <Bell size={20} />
+                      {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
+                  </button>
+              </div>
           </header>
       )}
 

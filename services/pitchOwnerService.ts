@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { supabase } from '../supabaseClient';
+import { enqueueOrRun } from './offline/outbox';
 import { localDateISO } from '../views/owner/ownerCalendarHelpers';
 import type {
   OwnerPitch,
@@ -313,19 +314,18 @@ export async function recordBookingPayment(
   amount: number,
   method: PaymentMethod,
   note?: string,
-): Promise<void> {
+): Promise<{ queued: boolean }> {
   try {
-    // STAFF-2: tahsilat denetimli RPC'den geçer — recorded_by SUNUCUDA damgalanır
-    // (kimse başkası adına yazamaz), aşırı tahsilat sunucuda reddedilir, source
-    // 'OWNER_MANUAL' zorlanır (A2: OYNA'dan geçmez → cüzdana kredi YAZILMAZ).
-    // pitch_bookings.paid_amount + payment_status DB trigger ile güncellenir.
-    const { error } = await supabase.rpc('staff_record_payment', {
-      p_booking_id: bookingId,
-      p_amount: amount,
-      p_method: method,
-      p_note: note ?? null,
-    });
-    if (error) throw error;
+    // STAFF-2: tahsilat denetimli RPC'den geçer — recorded_by SUNUCUDA damgalanır,
+    // aşırı tahsilat sunucuda reddedilir, source 'OWNER_MANUAL' zorlanır.
+    // P-OFFLINE: outbox üzerinden — her denemeye client_request_id verilir
+    // (sunucu idempotent: tekrar gönderim çift kayıt üretmez). Ağ yoksa kuyruğa
+    // alınır ve bağlantı gelince otomatik işlenir → {queued:true} döner.
+    return await enqueueOrRun(
+      'RECORD_PAYMENT',
+      { bookingId, amount, method, note: note ?? null },
+      `Tahsilat · ${amount}₺ ${method === 'CASH' ? 'nakit' : method.toLowerCase()}`,
+    );
   } catch (error) {
     console.error('recordBookingPayment:', error);
     throw new Error(toTurkishError(error));

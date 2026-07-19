@@ -50,13 +50,21 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
     if (!validPay) return;
     setBusy(true);
     try {
-      const newBal = await debtorAddPayment(debtor.id, amount, method, 'Veresiye ödemesi');
-      setBalance(newBal);
-      setAmountStr(String(Math.round(newBal)));
-      setPayOpen(false);
-      loadEntries();
-      onChanged();
-      notify(newBal <= 0 ? 'Veresiye kapandı.' : 'Ödeme alındı.', 'success');
+      const { queued } = await debtorAddPayment(debtor.id, amount, method, 'Veresiye ödemesi');
+      if (queued) {
+        // P-OFFLINE: sunucuya ulaşmadı — bakiyeyi YEREL tahminle DEĞİŞTİRME
+        // (para dürüstlüğü: görünen bakiye her zaman sunucu gerçeği).
+        setPayOpen(false);
+        notify('İnternet yok — ödeme kuyruğa alındı, bağlantı gelince otomatik işlenecek.', 'warning');
+      } else {
+        const newBal = Math.max(0, balance - amount);
+        setBalance(newBal);
+        setAmountStr(String(Math.round(newBal)));
+        setPayOpen(false);
+        loadEntries();
+        onChanged();
+        notify(newBal <= 0 ? 'Veresiye kapandı.' : 'Ödeme alındı.', 'success');
+      }
     } catch (e: any) {
       notify(e?.message || 'Ödeme alınamadı.', 'error');
     } finally { setBusy(false); }
