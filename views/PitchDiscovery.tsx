@@ -4,7 +4,7 @@ import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
-  LocateFixed, Loader2, Navigation2,
+  LocateFixed, Loader2, Navigation2, MapPinOff, Bell, Send, Check, Plus,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
@@ -23,6 +23,7 @@ import { Toast } from '../components/common/Toast';
 import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
 import { resolveWorkingHoursForDate } from '../shared/workingHours';
+import { recordDemandSignal, mapDemandError, type DemandSignalType } from '../services/demandService';
 import {
   derivePitchFilterOptions,
   filterAndSortPitches,
@@ -909,6 +910,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [showFilters, setShowFilters] = useState(false);
+
+  // ── COLD-START talep sinyali (boş şehir "haberdar et / saha öner") ──────────
+  const [demandModal, setDemandModal] = useState<DemandSignalType | null>(null);
+  const [demandCity, setDemandCity] = useState('');
+  const [demandDistrict, setDemandDistrict] = useState('');
+  const [demandPitchName, setDemandPitchName] = useState('');
+  const [demandContact, setDemandContact] = useState('');
+  const [demandSending, setDemandSending] = useState(false);
+  const [demandDone, setDemandDone] = useState<null | { type: DemandSignalType; duplicate: boolean }>(null);
+  const [demandError, setDemandError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -968,6 +979,49 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setSortOrder('DEFAULT');
     setOnlyDiscounted(false);
   }, []);
+
+  // ── COLD-START talep sinyali gönderimi ──────────────────────────────────────
+  const openDemandModal = useCallback((type: DemandSignalType) => {
+    setDemandModal(type);
+    setDemandDone(null);
+    setDemandError(null);
+    // Bölge bağlamı biliniyorsa ilçeyi ön-doldur (dürüst, zorlamasız).
+    setDemandDistrict((prev) => prev || (filters.district !== 'Tümü' ? filters.district : ''));
+  }, [filters.district]);
+
+  const closeDemandModal = useCallback(() => {
+    setDemandModal(null);
+    setDemandError(null);
+    setDemandSending(false);
+  }, []);
+
+  const submitDemand = useCallback(async () => {
+    if (!demandModal || demandSending) return;
+    if (demandModal === 'SUGGEST' && !demandPitchName.trim()) {
+      setDemandError('Lütfen önerdiğin sahanın adını yaz.');
+      return;
+    }
+    setDemandSending(true);
+    setDemandError(null);
+    try {
+      const res = await recordDemandSignal({
+        type: demandModal,
+        city: demandCity,
+        district: demandDistrict,
+        pitchName: demandPitchName,
+        contact: demandContact,
+      });
+      setDemandDone({ type: demandModal, duplicate: res.duplicate });
+      setDemandModal(null);
+      // Alanları temizle (öneri sonrası; haberdar-et için şehir/ilçe kalabilir).
+      setDemandPitchName('');
+      setDemandContact('');
+    } catch (err) {
+      setDemandError(mapDemandError(err));
+    } finally {
+      setDemandSending(false);
+    }
+  }, [demandModal, demandSending, demandCity, demandDistrict, demandPitchName, demandContact]);
 
   // Header'daki filtre rozetinde gösterilen aktif filtre sayısı (sıralama hariç).
   const activeFilterCount = useMemo(() => {
@@ -1429,7 +1483,49 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             ) : pitchesError ? (
               <ErrorState message={pitchesError} onRetry={fetchPitches} />
             ) : filteredPitches.length === 0 ? (
-              favOnly && favorites.size === 0 ? (
+              sourcePitches.length === 0 ? (
+                /* COLD-START — bölgede HİÇ onaylı saha yok. "Sonuç yok" demek
+                   yerine gerçek talep sinyali (haberdar et / saha öner). */
+                <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                  <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
+                    <MapPinOff size={32} className="text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-black italic text-white">BÖLGENDE HENÜZ SAHA YOK</h3>
+                  <p className="text-gray-400 text-[12.5px] mt-2 leading-relaxed max-w-xs">
+                    Yeni açılıyoruz — bölgende saha eklenince ilk sen haberdar ol.
+                    İyi bir halı saha biliyorsan öner; ekibimiz iletişime geçsin.
+                  </p>
+
+                  {demandDone && (
+                    <div className="mt-6 w-full max-w-xs bg-[#0F1A12] border border-[#39FF14]/25 rounded-2xl px-4 py-4 flex items-start gap-3 text-left">
+                      <Check size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
+                      <p className="text-[12.5px] text-white/85 leading-relaxed">
+                        {demandDone.type === 'NOTIFY'
+                          ? (demandDone.duplicate
+                              ? 'Zaten haberdar listesindesin — bölgende saha açılınca sana bildireceğiz.'
+                              : 'Kaydettik! Bölgende saha açılınca sana bildireceğiz.')
+                          : 'Önerin bize ulaştı — teşekkürler! Ekibimiz sahayı değerlendirecek.'}
+                      </p>
+                    </div>
+                  )}
+                  {/* Butonlar her zaman açık: kullanıcı hem haberdar olmak HEM de
+                      saha önermek isteyebilir (biri diğerini gizlemez). */}
+                  <div className="mt-4 flex flex-col gap-3 w-full max-w-xs">
+                    <button
+                      onClick={() => openDemandModal('NOTIFY')}
+                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-black active:scale-[0.98] transition-transform"
+                    >
+                      <Bell size={16} /> Beni haberdar et
+                    </button>
+                    <button
+                      onClick={() => openDemandModal('SUGGEST')}
+                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#161B22] border border-white/10 text-white text-[13px] font-bold active:scale-[0.98] transition-transform"
+                    >
+                      <Plus size={16} /> Saha öner
+                    </button>
+                  </div>
+                </div>
+              ) : favOnly && favorites.size === 0 ? (
                 /* Boş favori durumu (tasarım 1a) */
                 <div className="flex flex-col items-center justify-center py-20 text-center px-6">
                   <Star size={40} strokeWidth={1.6} className="text-white/25" />
@@ -2097,6 +2193,91 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── COLD-START talep sinyali modalı (haberdar et / saha öner) ──────── */}
+      <AnimatePresence>
+        {demandModal && (
+          <div className="fixed inset-0 z-[110] flex items-end justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeDemandModal}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+              className="relative w-full max-w-md bg-[#161B22] border-t border-white/10 rounded-t-[36px] shadow-2xl p-7 pb-9"
+            >
+              <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mb-5" />
+              <div className="flex items-center gap-2.5 mb-1.5">
+                {demandModal === 'NOTIFY'
+                  ? <Bell size={20} className="text-[#FFFF00]" />
+                  : <Plus size={20} className="text-[#FFFF00]" />}
+                <h2 className="text-xl font-black text-white italic tracking-tight uppercase">
+                  {demandModal === 'NOTIFY' ? 'HABERDAR OL' : 'SAHA ÖNER'}
+                </h2>
+              </div>
+              <p className="text-[12.5px] text-gray-400 leading-relaxed mb-5">
+                {demandModal === 'NOTIFY'
+                  ? 'Bölgende saha açılınca sana bildirelim. Şehir/ilçe yazman, doğru bölgeye eklememizi sağlar.'
+                  : 'İyi bir halı saha biliyorsan yaz; ekibimiz iletişime geçip OYNA’ya davet etsin.'}
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <input
+                    value={demandCity}
+                    onChange={(e) => setDemandCity(e.target.value)}
+                    placeholder="Şehir (ör. Ordu)"
+                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                  />
+                  <input
+                    value={demandDistrict}
+                    onChange={(e) => setDemandDistrict(e.target.value)}
+                    placeholder="İlçe (ops.)"
+                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                  />
+                </div>
+                {demandModal === 'SUGGEST' && (
+                  <>
+                    <input
+                      value={demandPitchName}
+                      onChange={(e) => setDemandPitchName(e.target.value)}
+                      placeholder="Saha adı (zorunlu)"
+                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                    />
+                    <input
+                      value={demandContact}
+                      onChange={(e) => setDemandContact(e.target.value)}
+                      placeholder="Sahanın telefonu/iletişimi (ops.)"
+                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                    />
+                  </>
+                )}
+              </div>
+
+              {demandError && (
+                <p className="text-[12px] text-red-400 mt-3 font-semibold">{demandError}</p>
+              )}
+
+              <button
+                onClick={submitDemand}
+                disabled={demandSending}
+                className="mt-6 w-full py-3.5 rounded-2xl bg-[#FFFF00] text-black text-[14px] font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {demandSending
+                  ? <Loader2 size={17} className="animate-spin" />
+                  : <Send size={16} />}
+                {demandSending ? 'Gönderiliyor…' : (demandModal === 'NOTIFY' ? 'Haberdar et' : 'Öneriyi gönder')}
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
