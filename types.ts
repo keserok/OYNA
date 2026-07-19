@@ -536,7 +536,6 @@ export interface Goalkeeper {
   coordinates: { lat: number; lng: number };
   stats: {
     savePercentage: string;
-    cleanSheets: number;
     penaltySaveRate: string;
     reflexes: number;
     diving: number;

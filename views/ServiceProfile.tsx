@@ -5,7 +5,7 @@ import { UserRole } from '../types';
 import {
   ArrowLeft, Camera, Star, MapPin, Clock, Shield, Scale, Edit3,
   Check, X, Upload, Image as ImageIcon, Trash2,
-  Award, Target, Zap, Trophy
+  Award, Target, Zap
 } from 'lucide-react';
 
 interface ServiceProfileProps {
@@ -207,8 +207,10 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         { label: 'Sarı Kart Ort.', value: numOrDash((userProfile as Referee)?.stats?.avgCards), icon: <Award size={14} /> },
       ]
     : [
+        // #107 cleanSheets'i kaldırdı (tip + tüm katmanlar); HS-serisi dürüst
+        // değerleri (matchDisplay/strOrDash/ratingDisplay — sahte 42/94/9.2 yok)
+        // korunur. İki niyet birleşti: CS satırı gitti, dürüstlük kaldı.
         { label: 'Maç', value: matchDisplay, icon: <Shield size={14} /> },
-        { label: 'CS', value: numOrDash((userProfile as Goalkeeper)?.stats?.cleanSheets), icon: <Trophy size={14} /> },
         { label: 'Refleks %', value: strOrDash((userProfile as Goalkeeper)?.stats?.savePercentage), icon: <Zap size={14} /> },
         { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
       ];
