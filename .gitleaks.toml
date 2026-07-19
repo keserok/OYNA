@@ -1,0 +1,18 @@
+# ─── gitleaks yapılandırması ──────────────────────────────────────────────────
+# Varsayılan kurallar AYNEN geçerli (useDefault). Tek istisna: Supabase
+# "anon" (publishable) anahtarı. Bu anahtar TASARIM GEREĞİ halka açıktır —
+# her istemci bundle'ında gemiye biner; veriyi koruyan RLS'tir, anahtarın
+# gizliliği değildir (Supabase belgeleri). gitleaks'in genel "jwt" kuralı
+# bunu sahte-pozitif işaretliyordu (tests/*.mjs, supabaseClient.ts).
+# service_role veya başka HERHANGİ bir gizli anahtar allowlist'te DEĞİLDİR
+# ve işaretlenmeye devam eder.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Supabase public anon key (role=anon, ref=iikvzgyccvgcybzdfwlv) — halka açık, gizli değil"
+regexTarget = "secret"
+regexes = [
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa3Z6Z3ljY3ZnY3liemRmd2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NjM0NDAsImV4cCI6MjA5NTAzOTQ0MH0\.T7P_7lYp07zcXrioKkMqZENoYoi-D9aPmjhNAfihMvM''',
+]
