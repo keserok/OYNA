@@ -9,7 +9,7 @@ import {
     Swords, UserPlus,
     MessageSquare, Zap, ShieldAlert,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
-    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, Flame
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -39,9 +39,6 @@ import type {
 import { ARCHETYPES, INSTRUCTIONS, DEFAULT_TEMPO, normalizeTempo, tempoSpeedFactor } from './studio/types';
 // Hafif geometri/sekans yardımcıları — çekirdekte kalır
 import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
-// Atak Kütüphanesi (SSOT) — dizilişe uyarlanan hazır atak şablonları
-import { ATTACK_PRESETS, outfieldCount } from './studio/attackPresets';
-import type { AttackPreset } from './studio/attackPresets';
 // BİZ/RAKİP katman anahtarı — aktif taraf önde, pasif taraf arkada ve kilitli
 import { isLayerEditing, markerLayer, lineIsMuted } from './studio/layering';
 
@@ -154,7 +151,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Faz 3 — etkileşim & animasyon motoru
     const [hideLines, setHideLines] = useState(false);              // "Sadece Hareket" (S12)
     const [showClearSheet, setShowClearSheet] = useState(false);    // granüler temizle (S13)
-    const [showAttackSheet, setShowAttackSheet] = useState(false);  // Atak Kütüphanesi
     const [undoStack, setUndoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [redoStack, setRedoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [selectedEl, setSelectedEl] = useState<{ type: 'slot' | 'opponent' | 'line'; id: string } | null>(null);
@@ -1312,28 +1308,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
     const clearAllScene = () => { pushHistory(); setIsSimulating(false); setActiveTactic({ ...activeTactic, opponents: [], drawings: [] }); setShowClearSheet(false); setSelectedEl(null); showToast('Tahta temizlendi · GERİ AL ile dön'); };
 
-    // ── Atak Kütüphanesi: şablonu MEVCUT dizilişe uyarla, sahaya çiz ve sıralı oynat ──
-    // Şablon aktif planın çizimlerinin yerine geçer; pushHistory ile GERİ AL'a bağlıdır.
-    const applyAttackPreset = async (preset: AttackPreset) => {
-        const built = preset.build(activeTactic.slots);
-        if (!built) { showToast('Bu atak mevcut dizilişe uyarlanamadı.', 'error'); return; }
-        pushHistory();
-        setIsSimulating(false);
-        setActiveTactic({ ...activeTactic, drawings: built });
-        setShowAttackSheet(false);
-        setTool('move');
-        setDrawSide('US');
-        setPlayMode('SEQ');
-        setSelectedEl(null);
-        await loadAdvancedAnimation();
-        if (advancedAnimApiRef.current) {
-            setShowBall(true);
-            // yeni çizimler commit olduktan sonra oynat (replayPresent ile aynı desen)
-            requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true)));
-        }
-        showToast(`${preset.name} çizildi — GERİ AL ile eski çizimlerine dönebilirsin.`);
-    };
-
 
 
     const isSquadComplete = activeTactic.slots.every(s => !!s.player);
@@ -1671,14 +1645,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         title="Pas Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"></path></svg> PAS
-                    </button>
-                    {/* Atak Kütüphanesi — hazır atak şablonları (dizilişe uyarlanır, çizilir, sıralı oynar) */}
-                    <button
-                        onClick={() => setShowAttackSheet(true)}
-                        title="Hazır atak şablonları — sahaya çiz ve oynat"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30 hover:from-amber-500/30 hover:to-orange-500/30"
-                    >
-                        <Flame size={14} /> ATAKLAR
                     </button>
                     {/* Rakip takımı sahaya diz (ayna) + rakip düzenleme moduna geç */}
                     <button
@@ -3204,58 +3170,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 Vazgeç
                             </button>
                             <p className="text-[10px] text-gray-600 text-center mt-2">Sildikten sonra <b className="text-gray-400">GERİ AL</b> ile dönebilirsin.</p>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Atak Kütüphanesi sheet — şablon seç: dizilişe uyarlanır, çizilir, sıralı oynar */}
-            <AnimatePresence>
-                {showAttackSheet && (
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-                        onClick={() => setShowAttackSheet(false)}
-                    >
-                        <motion.div
-                            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-                            onClick={e => e.stopPropagation()}
-                            className="w-full max-w-sm bg-[#0E1420] border border-white/10 rounded-[24px] p-5 shadow-2xl max-h-[80vh] overflow-y-auto no-scrollbar"
-                        >
-                            <div className="flex items-center gap-2 mb-1">
-                                <Flame size={18} className="text-amber-400" />
-                                <h3 className="text-sm font-black text-white uppercase tracking-widest">Atak Kütüphanesi</h3>
-                            </div>
-                            <p className="text-[11px] text-gray-500 mb-4">Şablon, sahadaki dizilişine uyarlanır; çizilir ve adım adım oynatılır.</p>
-                            <div className="space-y-2">
-                                {ATTACK_PRESETS.map(preset => {
-                                    const enough = outfieldCount(activeTactic.slots) >= preset.minOutfield;
-                                    return (
-                                        <button
-                                            key={preset.id}
-                                            onClick={() => void applyAttackPreset(preset)}
-                                            disabled={!enough}
-                                            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all text-left disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <span className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-base shrink-0">{preset.icon}</span>
-                                            <span className="flex-1 min-w-0">
-                                                <span className="block text-sm font-bold text-white">{preset.name}</span>
-                                                <span className="block text-[10px] text-gray-500 leading-snug">
-                                                    {enough ? preset.description : `En az ${preset.minOutfield + 1} kişilik kadro gerekir.`}
-                                                </span>
-                                            </span>
-                                            <span className="text-[9px] font-black text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-full px-2 py-0.5 shrink-0">{preset.steps} ADIM</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <button
-                                onClick={() => setShowAttackSheet(false)}
-                                className="w-full mt-3 py-3 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
-                            >
-                                Vazgeç
-                            </button>
-                            <p className="text-[10px] text-gray-600 text-center mt-2">Şablon mevcut çizimlerin yerine geçer — <b className="text-gray-400">GERİ AL</b> ile dönebilirsin.</p>
                         </motion.div>
                     </motion.div>
                 )}
