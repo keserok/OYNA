@@ -1839,6 +1839,53 @@ export interface OwnerScoreMatch {
   status: string;
   courtName: string;
   hasScore: boolean;
+  homeScore?: number | null;
+  awayScore?: number | null;
+}
+
+/**
+ * Tesiste kiralanan TÜM maçlar (kaynağa bakılmaksızın match_id bağlı her
+ * rezervasyon). Tesis-bazlı sorgu: sahibin yanı sıra MÜDÜR de görebilir
+ * (pitch_bookings RLS'i can_staff_pitch ile personele okuma verir).
+ */
+export async function getPitchScoreMatches(pitchId: string): Promise<OwnerScoreMatch[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_bookings')
+      .select('match_id, booking_date, start_time, courts(name), matches(id, title, status, date, time, "homeScore", "awayScore")')
+      .eq('pitch_id', pitchId)
+      .not('match_id', 'is', null)
+      .neq('status', 'CANCELLED')
+      .order('booking_date', { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    const seen = new Set<string>();
+    const rows: OwnerScoreMatch[] = [];
+    for (const r of (data ?? []) as Record<string, unknown>[]) {
+      const m = r.matches as Record<string, unknown> | null;
+      const matchId = String((m?.id as string) ?? (r.match_id as string) ?? '');
+      if (!matchId || seen.has(matchId)) continue;
+      seen.add(matchId);
+      const bookingDate = String(r.booking_date ?? '');
+      const startTime = String(r.start_time ?? '').slice(0, 5);
+      const homeScore = (m?.homeScore as number | null | undefined) ?? null;
+      const awayScore = (m?.awayScore as number | null | undefined) ?? null;
+      rows.push({
+        matchId,
+        title: String((m?.title as string) ?? 'Oyuncu Maçı'),
+        when: `${String((m?.date as string) ?? bookingDate)} ${String((m?.time as string) ?? startTime)}`.trim(),
+        status: String((m?.status as string) ?? 'ACTIVE'),
+        courtName: String((r.courts as { name?: string } | null)?.name ?? 'Saha'),
+        hasScore: homeScore != null && awayScore != null,
+        homeScore,
+        awayScore,
+      });
+    }
+    return rows;
+  } catch (error) {
+    console.error('getPitchScoreMatches:', error);
+    throw new Error(toTurkishError(error));
+  }
 }
 
 /**

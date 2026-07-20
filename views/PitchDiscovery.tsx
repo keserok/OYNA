@@ -97,6 +97,7 @@ interface DbPitchRow {
   flash_deals_enabled?: boolean | null;
   show_availability_badge?: boolean | null;
   map_label?: string | null;
+  booking_disabled_by_admin?: boolean | null;
   working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
   courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
@@ -203,6 +204,7 @@ const mapDbPitchToUiPitch = (
     isFeatured: row.is_featured === true,
     showAvailabilityBadge: row.show_availability_badge === true,
     mapLabel: row.map_label?.trim() || undefined,
+    bookingDisabledByAdmin: row.booking_disabled_by_admin === true,
     // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
     // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
     workingHoursRaw: wh ?? null,
@@ -1409,6 +1411,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return selectedPitch?.images ?? [];
   }, [selectedCourt, selectedPitch]);
 
+  // Admin tesis bazlı online rezervasyon kapatması (sunucu BOOKING_DISABLED ile
+  // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
+  const bookingDisabled = selectedPitch?.bookingDisabledByAdmin === true;
+
   const amenitySplit = useMemo(() => splitAmenities(selectedPitch?.amenities ?? []), [selectedPitch]);
 
   return (
@@ -2027,6 +2033,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
               )}
 
+              {/* Admin rezervasyon kapatması: net bilgilendirme (Saat Seç kilitli) */}
+              {bookingDisabled && (
+                <div className="mx-6 mt-7 p-4 rounded-[18px] bg-amber-500/[0.08] border border-amber-500/25">
+                  <p className="text-[13px] font-extrabold text-amber-300">Online rezervasyon geçici olarak kapalı</p>
+                  <p className="text-[11px] font-medium text-amber-200/70 mt-1 leading-relaxed">
+                    Bu tesis için uygulama üzerinden rezervasyon şu an alınamıyor. Tesisle iletişime geçebilir veya daha sonra tekrar deneyebilirsin.
+                  </p>
+                </div>
+              )}
+
               {/* Tarih Seç: hızlı 5 gün + tam takvim (Karar #12) */}
               <div className="px-6 mt-8">
                 <div className="flex items-center justify-between mb-3">
@@ -2168,7 +2184,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     return (
                       <button
                         key={slot.label}
-                        disabled={isBooked || isOwnerClosed}
+                        disabled={isBooked || isOwnerClosed || bookingDisabled}
                         onClick={() => {
                           setSelectedSlot(slot.label);
                           if (navigator.vibrate) navigator.vibrate(12);
@@ -2231,7 +2247,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
                 {isSelectionMode ? (
                   <button
-                    disabled={!selectedSlot || !selectedCourtId}
+                    disabled={!selectedSlot || !selectedCourtId || bookingDisabled}
                     onClick={() => {
                       if (selectedPitch && selectedCourt && selectedSlot && onSelectTime) {
                         const date = new Date();
@@ -2249,7 +2265,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   </button>
                 ) : (
                   <button
-                    disabled={!selectedSlot || !selectedCourtId}
+                    disabled={!selectedSlot || !selectedCourtId || bookingDisabled}
                     onClick={handlePayDeposit}
                     className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-black italic uppercase tracking-wide whitespace-nowrap transition-all ${
                       selectedSlot && selectedCourtId

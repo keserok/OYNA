@@ -38,6 +38,7 @@ import {
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
   OwnerOperationsSettingsModal,
+  OwnerMatchesModal,
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerLogoutModal,
@@ -192,6 +193,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   });
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [showOperations, setShowOperations] = useState(false);
+  const [showMatches, setShowMatches] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [menuBalance, setMenuBalance] = useState<number | undefined>(undefined);
@@ -916,6 +918,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onOperations={() => {
             if (managerGuard()) setShowOperations(true);
           }}
+          onMatches={() => {
+            if (managerGuard()) setShowMatches(true);
+          }}
           onBankAccounts={() => {
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
@@ -972,6 +977,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onToggleOpen={toggleFacilityStatus}
           initialHours={facilityData?.workingHours}
           onSave={(hours) => setFacilityData((prev: any) => ({ ...prev, workingHours: hours }))}
+        />
+      )}
+      {showMatches && (
+        <OwnerMatchesModal
+          pitchId={realPitchId ?? facilityData?.id ?? ''}
+          readOnly={effReadOnly}
+          onClose={() => setShowMatches(false)}
         />
       )}
       {showOperations && (

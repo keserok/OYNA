@@ -30,6 +30,7 @@ export interface OwnerMenuViewProps {
   onEditProfile: () => void;
   onWorkingHours: () => void;
   onOperations: () => void;
+  onMatches: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onPricingPolicy: () => void;
@@ -109,6 +110,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onEditProfile,
   onWorkingHours,
   onOperations,
+  onMatches,
   onBankAccounts,
   onWithdrawals,
   onPricingPolicy,
@@ -241,7 +243,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               icon={<Trophy size={18} />}
               iconClass="text-blue-400"
               label="Maçlar"
-              onClick={() => onNavigate('MATCHES')}
+              onClick={onMatches}
             />
           </div>
         </section>

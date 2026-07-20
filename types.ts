@@ -445,6 +445,8 @@ export interface Pitch {
   isFeatured?: boolean;
   /** Admin kontrollü: harita pininde fiyat yerine gösterilecek kısa isim (boşsa tam ad) */
   mapLabel?: string;
+  /** Admin panelden tesis bazlı online rezervasyon kapatma (sunucu: BOOKING_DISABLED). */
+  bookingDisabledByAdmin?: boolean;
   /** Admin kontrollü: "Bugün X saat müsait" rozeti gösterilsin mi */
   showAvailabilityBadge?: boolean;
   /** Bugün için müsait saat sayısı (liste rozetinde, tek toplu sorgudan) */
