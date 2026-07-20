@@ -19,8 +19,6 @@ import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
 import { OwnerFlashDealModal } from './owner/OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from './owner/OwnerCloseSlotModal';
 import { OwnerBookingDetailModal } from './owner/OwnerBookingDetailModal';
-import { OwnerFacilityScheduleView } from './owner/OwnerFacilityScheduleView';
-import { OwnerFacilityWeekView } from './owner/OwnerFacilityWeekView';
 import { OwnerSpecialPriceModal } from './owner/OwnerSpecialPriceModal';
 import { useOwnerEntitlements } from '../hooks/useOwnerEntitlements';
 import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerToast';
@@ -50,7 +48,6 @@ import {
   findFlashDealForSlot,
   isSlotClosed,
   localDateISO,
-  resolveHourlyPrice,
 } from './owner/ownerCalendarHelpers';
 import { getOrCreateOwnerAccount, planTierLabel, accountStatusLabel } from '../services/ownerAccountService';
 import type { OwnerAccount } from '../types';

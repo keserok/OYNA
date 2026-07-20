@@ -35,7 +35,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
   const [durationMonths, setDurationMonths] = useState<number>(3);
   const [price, setPrice] = useState(() => {
     const hour = parseInt((timeSlots[18] ?? '18.00').split('.')[0], 10);
-    return resolveHourlyPrice(hour, pricingPolicy);
+    return resolveHourlyPrice(hour, pricingPolicy) ?? 0;
   });
   const [notes, setNotes] = useState('');
   const [autoRenew, setAutoRenew] = useState(true);
@@ -45,7 +45,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
   const handleTimeChange = (t: string) => {
     setTimeSlot(t);
     const hour = parseInt(t.split('.')[0], 10);
-    setPrice(resolveHourlyPrice(hour, pricingPolicy));
+    setPrice(resolveHourlyPrice(hour, pricingPolicy) ?? 0);
   };
 
   const handleSubmit = async () => {

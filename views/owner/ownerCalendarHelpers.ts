@@ -18,23 +18,25 @@ export function normalizeTime(t: string): string {
   return `${h}:${m}`;
 }
 
-export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number {
-  if (pricingPolicy?.length) {
-    const matched = pricingPolicy.find((p) => {
-      // Bozuk/eksik tarife satırı (startTime/endTime yoksa) render'ı ÇÖKERTMEMELİ.
-      if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
-      const startH = parseInt(p.startTime.split(':')[0], 10);
-      let endH = parseInt(p.endTime.split(':')[0], 10);
-      if (Number.isNaN(startH) || Number.isNaN(endH)) return false;
-      if (endH === 0) endH = 24;
-      if (startH <= endH) return hour >= startH && hour < endH;
-      return hour >= startH || hour < endH;
-    });
-    if (matched) return matched.price ?? matched.price_per_hour ?? 2000;
-  }
-  if (hour >= 18 && hour < 23) return 3200;
-  if (hour >= 13 && hour < 16) return 2000;
-  return 2000;
+/**
+ * Saatin fiyatını GERÇEK tarifeden çözer. Eşleşen tarife yoksa null döner —
+ * uydurma varsayılan fiyat (eski 3200/2000 fallback'i) bilinçli olarak yok:
+ * tarifesiz saat arayüzde "Tarife yok" olarak gösterilmelidir.
+ */
+export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number | null {
+  if (!pricingPolicy?.length) return null;
+  const matched = pricingPolicy.find((p) => {
+    // Bozuk/eksik tarife satırı (startTime/endTime yoksa) render'ı ÇÖKERTMEMELİ.
+    if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
+    const startH = parseInt(p.startTime.split(':')[0], 10);
+    let endH = parseInt(p.endTime.split(':')[0], 10);
+    if (Number.isNaN(startH) || Number.isNaN(endH)) return false;
+    if (endH === 0) endH = 24;
+    if (startH <= endH) return hour >= startH && hour < endH;
+    return hour >= startH || hour < endH;
+  });
+  if (!matched) return null;
+  return matched.price ?? matched.price_per_hour ?? null;
 }
 
 export function findFlashDealForSlot(
