@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ClipboardList, Plus, Users, CheckCircle2, Circle, AlertTriangle,
   UserPlus, Copy, Share2, RefreshCw, Crown, KeyRound, Trash2, Check, Clock,
-  Shield,
+  Shield, MessageCircle,
 } from 'lucide-react';
 import { LoadingState } from '../../components/common/StatusState';
 import {
@@ -94,10 +94,16 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
     try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600); }
     catch { notify('Kod kopyalanamadı, elle girin.', 'warning'); }
   };
+  const inviteText = (r: InviteResult) =>
+    `OYNA tesis davet kodun: ${r.invite_code}\nUygulamada "Tesise Katıl" bölümüne gir, 72 saat içinde bu kodu yaz.`;
   const shareCode = async (r: InviteResult) => {
-    const text = `OYNA tesis davet kodun: ${r.invite_code}\nUygulamada "Tesise Katıl" bölümüne gir, 72 saat içinde bu kodu yaz.`;
+    const text = inviteText(r);
     if (navigator.share) { try { await navigator.share({ title: 'OYNA Personel Daveti', text }); } catch { /* iptal */ } }
     else copyCode(r.invite_code);
+  };
+  // Halı saha ekiplerinin fiili kanalı WhatsApp — tek dokunuşla hazır mesaj.
+  const whatsappCode = (r: InviteResult) => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(inviteText(r))}`, '_blank', 'noopener');
   };
 
   const handleToggleDuty = async (m: TeamMember) => {
@@ -297,7 +303,11 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
               <p className="text-4xl font-black text-white tracking-[0.3em] tabular-nums font-mono">{codeSheet.invite_code}</p>
               <p className="text-[11px] text-gray-500 mt-2 flex items-center justify-center gap-1"><Clock size={11} /> {expiryText(codeSheet.expires_at)}</p>
             </div>
-            <div className="flex gap-2">
+            <button type="button" onClick={() => whatsappCode(codeSheet)}
+              className="w-full py-3.5 rounded-2xl bg-[#25D366] text-black font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+              <MessageCircle size={16} /> WhatsApp ile Gönder
+            </button>
+            <div className="flex gap-2 mt-2">
               <button type="button" onClick={() => copyCode(codeSheet.invite_code)}
                 className="flex-1 py-3.5 rounded-2xl bg-white/5 text-white font-black text-sm flex items-center justify-center gap-2 border border-white/10">
                 {copied ? <><Check size={16} className="text-emerald-400" /> Kopyalandı</> : <><Copy size={16} /> Kopyala</>}

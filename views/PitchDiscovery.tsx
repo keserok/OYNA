@@ -985,9 +985,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setDemandModal(type);
     setDemandDone(null);
     setDemandError(null);
-    // Bölge bağlamı biliniyorsa ilçeyi ön-doldur (dürüst, zorlamasız).
-    setDemandDistrict((prev) => prev || (filters.district !== 'Tümü' ? filters.district : ''));
-  }, [filters.district]);
+    // Bilinen bağlamdan ön-doldur (düzenlenebilir kalır): kullanıcının seçili
+    // birincil bölgesi (activeRegion) → aktif ilçe filtresi. Boş şehirdeki
+    // kararsız kullanıcıya yazı yazdırmamak dönüşümü belirgin artırır.
+    setDemandCity((prev) => prev || activeRegion?.city || '');
+    setDemandDistrict((prev) =>
+      prev || activeRegion?.district || (filters.district !== 'Tümü' ? filters.district : ''));
+  }, [activeRegion, filters.district]);
 
   const closeDemandModal = useCallback(() => {
     setDemandModal(null);
