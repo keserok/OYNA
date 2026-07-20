@@ -33,20 +33,23 @@ export const getPathLength = (points: { x: number, y: number }[]): number => {
  * Sekans haritasını hesaplar: her çizgi için başlangıç zamanı + süre,
  * ve sıralı oynatma için toplam süre. Çekirdek tarafından da gelişmiş modül
  * tarafından da kullanılabilir; hesap hafiftir (sadece path uzunluğu).
+ *
+ * `speed`: oynatma hız çarpanı (plan temposundan gelir; 1 = temel hız).
+ * Tüm süreler çarpana bölünür — SIRALI ve EŞZAMANLI mod birlikte etkilenir.
  */
-export const computeSeqMap = (drawings: DrawingLine[]): SeqComputation => {
+export const computeSeqMap = (drawings: DrawingLine[], speed = 1): SeqComputation => {
     const seqMap = new Map<string, { startTime: number, duration: number }>();
     let totalSeqDuration = 0;
 
     const steps = Array.from(new Set(drawings.map(d => d.seqStep || 1))).sort((a: any, b: any) => a - b);
+    const durOf = (d: DrawingLine) => Math.max(1, getPathLength(d.points) / 30) / speed;
 
     steps.forEach(stepIdx => {
         const linesInStep = drawings.filter(d => (d.seqStep || 1) === stepIdx);
-        const maxDurInStep = Math.max(...linesInStep.map(d => Math.max(1, getPathLength(d.points) / 30)));
+        const maxDurInStep = Math.max(...linesInStep.map(durOf));
 
         linesInStep.forEach(d => {
-            const dDur = Math.max(1, getPathLength(d.points) / 30);
-            seqMap.set(d.id, { startTime: totalSeqDuration, duration: dDur });
+            seqMap.set(d.id, { startTime: totalSeqDuration, duration: durOf(d) });
         });
 
         totalSeqDuration += maxDurInStep;

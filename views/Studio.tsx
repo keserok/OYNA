@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import {
     ChevronLeft, Users, Save, Plus, Trash2, Minus,
-    Shield, Target, Info, Brain, Activity,
-    TrendingUp, Send, SaveAll, Star, X, Check,
+    Shield, Brain,
+    SaveAll, Star, X, Check,
     PenTool, MousePointer2, Eye, EyeOff, Layout, Copy,
-    Search, MapPin, UserCheck, Calendar,
-    Swords, Type, UserPlus, GripHorizontal, Settings2,
-    MessageSquare, Zap, ShieldAlert, Flag, Dumbbell,
-    Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Hash, Loader2,
+    Search, UserCheck,
+    Swords, UserPlus,
+    MessageSquare, Zap, ShieldAlert,
+    Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
     ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
@@ -36,9 +36,11 @@ import type {
     Player, GameIdentity, Archetype, Slot, SquadSize, FormationType,
     TacticState, DrawingLine, StudioTool, PlayMode
 } from './studio/types';
-import { ARCHETYPES, INSTRUCTIONS } from './studio/types';
+import { ARCHETYPES, INSTRUCTIONS, DEFAULT_TEMPO, normalizeTempo, tempoSpeedFactor } from './studio/types';
 // Hafif geometri/sekans yardımcıları — çekirdekte kalır
 import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
+// BİZ/RAKİP katman anahtarı — aktif taraf önde, pasif taraf arkada ve kilitli
+import { isLayerEditing, markerLayer, lineIsMuted } from './studio/layering';
 
 // ⚡ GELİŞMİŞ ANİMASYON MODÜLÜ — on-demand (lazy) indirilir.
 // Bu chunk yalnız kullanıcı "Gelişmiş Animasyon" butonuna basınca yüklenir,
@@ -122,7 +124,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         notes: 'Taktiksel analiz',
         opponents: [],
         mentality: 'Balanced',
-        tempo: 'Normal',
+        tempo: DEFAULT_TEMPO,
         identity: 'BALANCED'
     }]);
     const [activePlanIndex, setActivePlanIndex] = useState(0);
@@ -191,32 +193,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [showExportModal, setShowExportModal] = useState(false);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     
-    // Custom Player Creation (Farazi)
-    const [customPlayerName, setCustomPlayerName] = useState('');
-    const [customPlayerRole, setCustomPlayerRole] = useState('-');
-
     // S26 — yedek tepsisinden sahaya yerleştir/takas: "elde tutulan" yedek oyuncu id'si
     const [heldSub, setHeldSub] = useState<string | null>(null);
-    // S24 — birleşik oyuncu araması (arkadaş + takım kadrosu tek kutuda süzülür)
+    // S24 — birleşik oyuncu araması; isim yazınca aynı kutu MANUEL EKLE kapısıdır
     const [playerSearch, setPlayerSearch] = useState('');
-    // Modal selection tabs & groups state
-    const [modalTab, setModalTab] = useState<'FRIENDS' | 'TEAMS' | 'CUSTOM'>('FRIENDS');
+    // Oyuncu Seç kaynak filtresi: 'Tümü' | 'Favorilerim' | liste adı | 'team:<id>'
     const [selectedGroup, setSelectedGroup] = useState('Tümü');
-    const [selectedTeamRosterId, setSelectedTeamRosterId] = useState<string | null>(null);
     // Gerçek arkadaş verisi (get_friends RPC) + kişisel listeler (friend_lists)
     const [studioFriends, setStudioFriends] = useState<FriendRow[]>([]);
     const [studioFriendLists, setStudioFriendLists] = useState<FriendList[]>([]);
-    // Grup çipleri: Tümü + Favorilerim + kullanıcının gerçek listeleri
-    const friendGroups = ['Tümü', 'Favorilerim', ...studioFriendLists.map(l => l.name)];
-    // Seçili gruba + aramaya göre süzülmüş gerçek arkadaşlar
-    const selectedListId = studioFriendLists.find(l => l.name === selectedGroup)?.id;
-    const visibleFriends = studioFriends.filter(f => {
-        const q = playerSearch.trim().toLowerCase();
-        if (q && !f.full_name.toLowerCase().includes(q)) return false;
-        if (selectedGroup === 'Tümü') return true;
-        if (selectedGroup === 'Favorilerim') return f.is_favorite;
-        return selectedListId ? f.list_ids.includes(selectedListId) : true;
-    });
 
 
 
@@ -311,7 +296,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         notes: d.notes || '',
         opponents: JSON.parse(d.opponents || '[]'),
         mentality: d.mentality || 'Balanced',
-        tempo: d.tempo || 'Normal',
+        tempo: normalizeTempo(d.tempo),
         identity: d.identity || 'BALANCED',
         drawings: JSON.parse(d.drawings || '[]'),
         status: d.status || undefined,
@@ -486,7 +471,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const applyResumeDraft = () => {
         if (!resumeDraft) return;
-        setPlans(resumeDraft.plans);
+        // Eski taslaklar tempo'yu Slow/Normal/Fast taşıyabilir — tek kapıdan normalize et
+        setPlans(resumeDraft.plans.map(p => ({ ...p, tempo: normalizeTempo(p.tempo) })));
         setActivePlanIndex(Math.min(resumeDraft.activePlanIndex || 0, resumeDraft.plans.length - 1));
         setResumeDraft(null);
         showToast('Taslak geri yüklendi.');
@@ -596,8 +582,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
-    const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
+    // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer).
+    // Oynatma hızı plan temposundan gelir: tempo 5 = 1.0x, 1 = 0.6x, 10 = 1.5x.
+    const { seqMap, totalSeqDuration } = computeSeqMap(drawings, tempoSpeedFactor(activeTactic.tempo));
+
+    // ── BİZ/RAKİP katman anahtarı: düzenlemede aktif taraf önde, pasif arkada ──
+    const layerEditing = isLayerEditing(isSimulating, presentMode);
+    const usLayer = markerLayer('US', drawSide, layerEditing);
+    const oppLayer = markerLayer('OPP', drawSide, layerEditing);
+    // Pasif tarafın çizgileri: soluk + sekans rozetleri kilitli
+    const mutedLineIds = drawings.filter(d => lineIsMuted(d.color, drawSide, layerEditing)).map(d => d.id);
 
     // --- Common Handlers ---
     const preservePlayersAndSubs = (newSlots: Slot[], currentSubs: Player[]) => {
@@ -690,6 +684,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setTimeout(() => setToast(null), 3000);
     };
 
+    // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
+    const setTempo = (value: number) => {
+        const tempo = normalizeTempo(value);
+        if (tempo === normalizeTempo(activeTactic.tempo)) return;
+        setActiveTactic({ ...activeTactic, tempo });
+        if (navigator.vibrate) navigator.vibrate(8);
+    };
+
     // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
     const handleCustomFormation = () => {
         const res = generateFormationFromPattern(activeTactic.size, customPattern);
@@ -764,6 +766,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     // ── S26 — elde tutulan yedeği mevkiye yerleştir; doluysa oyuncuları TAKAS et ──
     const placeHeldSub = (slotId: string) => {
+        if (drawSide === 'OPP') return; // RAKİP katmanı önde — bizim mevkiler kilitli
         if (!heldSub) return;
         const incoming = activeTactic.subs.find(p => p.id === heldSub);
         if (!incoming) { setHeldSub(null); return; }
@@ -874,7 +877,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             notes: 'Taktiksel analiz',
             opponents: [],
             mentality: 'Balanced',
-            tempo: 'Normal',
+            tempo: DEFAULT_TEMPO,
             identity: 'BALANCED'
         }]);
         setActivePlanIndex(0);
@@ -991,20 +994,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    // --- Farazi Mode Handlers ---
-    const handleCreateCustomPlayer = () => {
-        if (!customPlayerName.trim() || !showPlayerSelect) return;
+    // ── Oyuncu Seç yaşam döngüsü: açılışta filtreleri sıfırla + kadroları tembel yükle ──
+    useEffect(() => {
+        if (!showPlayerSelect) return;
+        setPlayerSearch('');
+        setSelectedGroup('Tümü');
+        studioTeams.forEach(t => { void ensureSquad(t.team_id); });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showPlayerSelect]);
 
-        const newPlayer: Player = {
-            id: `custom_${Date.now()}`,
-            name: customPlayerName,
-            role: customPlayerRole,
-            rating: 99,
-            isCustom: true
-        };
+    const closePlayerSelect = () => { setShowPlayerSelect(null); setPlayerSearch(''); };
 
+    // Manuel ekle: aramaya yazılan isim tek dokunuşla oyuncuya dönüşür (mevki sorulmaz;
+    // mevkiyi bırakılan slot belirler, genel akışta ilk boş slota oturur).
+    const handleManualAdd = () => {
+        const name = playerSearch.trim().slice(0, 20);
+        if (name.length < 2) return;
+        const newPlayer: Player = { id: `custom_${Date.now()}`, name, role: '-', rating: 70, isCustom: true };
         handleSelectPlayer(newPlayer);
-        setCustomPlayerName('');
+        setPlayerSearch('');
     };
 
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -1112,6 +1120,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
         setDrawSide('OPP');
         setSelectedEl(null);
+        setHeldSub(null); // yedek yerleştirme bizim takıma ait — rakip katmanında bırakılır
+        setSelectedSeqBadge(null);
     };
 
     // Rakip: İSİM (player.name, maks 14) + NOT (instruction, maks 10 karakter).
@@ -1318,6 +1328,45 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         ...activeTactic.slots.filter(s => s.player).map(s => ({ ...s, type: 'slot' as const })),
         ...activeTactic.opponents.map(o => ({ ...o, type: 'opponent' as const }))
     ];
+
+    // ── Oyuncu Seç veri hazırlığı: tek akışlı liste (arkadaş + takım kadroları + manuel) ──
+    const takenPlayerIds = new Set<string>([
+        ...activeTactic.slots.filter(s => s.player).map(s => s.player!.id),
+        ...activeTactic.subs.map(p => p.id),
+    ]);
+    const pickQuery = playerSearch.trim();
+    const pickMatches = (name: string) => !pickQuery || name.toLowerCase().includes(pickQuery.toLowerCase());
+    const pickTeamFilterId = selectedGroup.startsWith('team:') ? selectedGroup.slice(5) : null;
+    const pickListId = studioFriendLists.find(l => l.name === selectedGroup)?.id;
+    // Arkadaşlar: favoriler önde; grup/liste ve arama süzer (takım çipi seçiliyse gizli)
+    const pickFriends = pickTeamFilterId ? [] : studioFriends
+        .filter(f => pickMatches(f.full_name))
+        .filter(f => {
+            if (selectedGroup === 'Tümü') return true;
+            if (selectedGroup === 'Favorilerim') return f.is_favorite;
+            return pickListId ? f.list_ids.includes(pickListId) : true;
+        })
+        .sort((a, b) => Number(b.is_favorite) - Number(a.is_favorite));
+    const pickFriendIds = new Set(pickFriends.map(f => f.friend_id));
+    // Takım kadroları: Tümü görünümünde hepsi (arkadaş olarak listelenenler yinelenmez),
+    // takım çipi seçiliyse yalnız o takımın tam kadrosu
+    const pickTeamGroups = (pickTeamFilterId
+        ? studioTeams.filter(t => t.team_id === pickTeamFilterId)
+        : (selectedGroup === 'Tümü' ? studioTeams : []))
+        .map(team => ({
+            team,
+            loaded: !!squadsByTeam[team.team_id],
+            members: (squadsByTeam[team.team_id] || [])
+                .filter(m => pickMatches(m.full_name))
+                .filter(m => (pickTeamFilterId ? true : !pickFriendIds.has(m.user_id))),
+        }));
+    const pickHasMatches = pickFriends.length > 0 || pickTeamGroups.some(g => g.members.length > 0);
+    const canManualAdd = pickQuery.length >= 2;
+    const ROLE_TR: Record<string, string> = { GK: 'KALECİ', DEF: 'DEFANS', MID: 'ORTA SAHA', FWD: 'FORVET' };
+    const pickContextLabel = !showPlayerSelect ? ''
+        : showPlayerSelect.type === 'slot'
+            ? `${ROLE_TR[activeTactic.slots.find(s => s.id === showPlayerSelect.slotId)?.role ?? ''] ?? 'MEVKİ'} mevkisi için seç`
+            : showPlayerSelect.type === 'sub' ? 'Yedeklere ekle' : 'Kadroya ekle';
 
     return (
         <MotionConfig reducedMotion="user">
@@ -1608,12 +1657,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {/* BİZ / RAKİP — hangi takımı DÜZENLİYORUM (taşıma/isim/çizim yalnız o tarafta) */}
                     <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
                         <button
-                            onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); }}
+                            onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); setSelectedSeqBadge(null); }}
                             title="Bizim takımı düzenle"
                             className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
                         >BİZ</button>
                         <button
-                            onClick={() => { setDrawSide('OPP'); setSelectedEl(null); }}
+                            onClick={() => { setDrawSide('OPP'); setSelectedEl(null); setHeldSub(null); setSelectedSeqBadge(null); }}
                             title="Rakibi düzenle"
                             className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
@@ -1790,7 +1839,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     markerEnd={line.color === '#ef4444' ? 'url(#arrowhead-opp)' : 'url(#arrowhead)'}
-                                    opacity={isSimulating ? "0.3" : (selectedEl?.type === 'line' && selectedEl.id === line.id ? '1' : '0.8')}
+                                    opacity={isSimulating ? '0.3' : (lineIsMuted(line.color, drawSide, layerEditing) ? '0.22' : (selectedEl?.type === 'line' && selectedEl.id === line.id ? '1' : '0.8'))}
                                     className="transition-opacity duration-500"
                                 />
                             ))}
@@ -1818,13 +1867,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <motion.div 
                             key={opp.id}
                             onPointerDown={(e) => handleDragStart('opponent', opp.id, e)}
-                            className={`absolute w-10 h-10 z-20 ${tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto'} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${drawSide === 'US' ? 'opacity-40' : ''}`}
+                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
                             animate={anim ? anim.animate : {
                                 left: `${opp.x}%`,
                                 top: `${opp.y}%`
                             }}
                             transition={anim ? anim.transition as any : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : 20 }}
+                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : oppLayer.z }}
                         >
                             <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-lg bg-red-900/80 text-white transition-all ${selectedEl?.type === 'opponent' && selectedEl.id === opp.id ? 'border-white ring-2 ring-white/70 scale-110' : 'border-red-500'}`}>
                                 <Swords size={16} />
@@ -1863,8 +1912,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }
                             }}
                             onClick={() => { if (heldSub) placeHeldSub(slot.id); }}
-                            className={`absolute w-12 h-12 z-20 ${tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${drawSide === 'OPP' ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : 20 }}
+                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
+                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
                         >
                             {slot.player ? (
                                 <motion.div 
@@ -1887,10 +1936,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     )}
                                 </motion.div>
                             ) : (
-                                <motion.button 
+                                <motion.button
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => heldSub ? placeHeldSub(slot.id) : setShowPlayerSelect({ type: 'slot', slotId: slot.id })}
+                                    aria-label="Mevkiye oyuncu ekle"
+                                    onClick={() => {
+                                        if (drawSide === 'OPP') return; // RAKİP katmanı önde — bizim mevkiler kilitli
+                                        if (heldSub) placeHeldSub(slot.id); else setShowPlayerSelect({ type: 'slot', slotId: slot.id });
+                                    }}
                                     className={`relative w-full h-full rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors ${slot.role === 'GK' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-[#39FF14]/50 text-[#39FF14]/70 hover:border-[#39FF14] hover:text-[#39FF14]'}`}
                                 >
                                     <Plus size={20} />
@@ -1898,7 +1951,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             )}
                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
                                 {slot.player && (
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded text-white whitespace-nowrap ${slot.player?.isCustom ? 'bg-purple-600/80 border border-purple-400/50' : 'bg-black/60'}`}>
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded text-white whitespace-nowrap bg-black/60`}>
                                         {slot.player.name}
                                     </span>
                                 )}
@@ -1930,6 +1983,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 setCustomSeqValue={setCustomSeqValue}
                                 setDrawings={setDrawings}
                                 hideLines={hideLines}
+                                mutedLineIds={mutedLineIds}
                             />
                         </Suspense>
                     )}
@@ -2016,7 +2070,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         )}
 
                         <button
-                            onClick={() => { setModalTab('FRIENDS'); setShowPlayerSelect({ type: 'any' }); }}
+                            onClick={() => setShowPlayerSelect({ type: 'any' })}
                             className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-black text-[10px] tracking-widest uppercase hover:bg-white/10 hover:border-[#39FF14]/40 active:scale-[0.98] transition-all"
                         >
                             <UserPlus size={16} className="text-[#39FF14]" />
@@ -2069,8 +2123,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <div key={sub.id} className={`flex-shrink-0 flex items-center gap-2 rounded-full pl-1 pr-2 py-1 border transition-all ${held ? 'bg-[#39FF14]/15 border-[#39FF14] ring-2 ring-[#39FF14]/40' : 'bg-white/5 border-white/10'}`}>
                             <button
                                 onClick={() => setHeldSub(held ? null : sub.id)}
-                                title={held ? 'Bir mevkiye dokunarak yerleştir' : 'Sahaya yerleştir / takas et'}
-                                className="flex items-center gap-2 min-h-[36px]"
+                                disabled={drawSide === 'OPP'}
+                                title={drawSide === 'OPP' ? 'Yedekler bizim takıma ait — BİZ moduna geç' : (held ? 'Bir mevkiye dokunarak yerleştir' : 'Sahaya yerleştir / takas et')}
+                                className="flex items-center gap-2 min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-black text-white">{sub.name.charAt(0)}</span>
                                 <span className={`text-[11px] font-bold max-w-[90px] truncate ${held ? 'text-[#39FF14]' : 'text-white'}`}>{sub.name}</span>
@@ -2090,26 +2145,51 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
             {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
             {!presentMode && (<>
-            {/* Tempo — tek ayar (mentalite kaldırıldı) */}
+            {/* Tempo — plana özel 1-10; oynatma hızını da sürer (5 = temel hız) */}
             <div className="px-6 pb-6 mt-8">
                 <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
-                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
-                        <Gauge size={14} className="text-blue-400" /> TEMPO
-                    </h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {(['Slow', 'Normal', 'Fast'] as const).map(t => (
-                            <button
-                                key={t}
-                                onClick={() => setActiveTactic({ ...activeTactic, tempo: t })}
-                                className={`w-full py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                                    activeTactic.tempo === t
-                                        ? 'bg-blue-400/10 border-blue-400/50 text-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.2)]'
-                                        : 'bg-white/5 border-transparent text-white hover:bg-white/10'
-                                }`}
-                            >
-                                {t === 'Slow' ? 'YAVAŞ' : t === 'Normal' ? 'NORMAL' : 'HIZLI'}
-                            </button>
-                        ))}
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <Gauge size={14} className="text-blue-400" /> TEMPO
+                        </h3>
+                        <div className="flex items-baseline gap-0.5">
+                            <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
+                            <span className="text-[10px] font-bold text-gray-500">/10</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) - 1)}
+                            disabled={normalizeTempo(activeTactic.tempo) <= 1}
+                            aria-label="Tempoyu azalt"
+                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                        >
+                            <Minus size={16} />
+                        </button>
+                        <div className="flex-1">
+                            <input
+                                type="range"
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={normalizeTempo(activeTactic.tempo)}
+                                onChange={(e) => setTempo(Number(e.target.value))}
+                                aria-label="Tempo (1-10)"
+                                className="w-full h-2 cursor-pointer accent-blue-400"
+                            />
+                            <div className="flex justify-between mt-1 px-0.5">
+                                <span className="text-[9px] font-bold text-gray-600 font-mono">1</span>
+                                <span className="text-[9px] font-bold text-gray-600 font-mono">10</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) + 1)}
+                            disabled={normalizeTempo(activeTactic.tempo) >= 10}
+                            aria-label="Tempoyu artır"
+                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                        >
+                            <Plus size={16} />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2142,7 +2222,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             <div className="flex items-center gap-2">
                                                 <h4 className="text-white font-bold text-sm">{item.player?.name}</h4>
                                                 {item.type === 'opponent' && <span className="bg-red-500/20 text-red-400 text-[8px] px-1.5 py-0.5 rounded border border-red-500/30">RAKİP</span>}
-                                                {item.player?.isCustom && <span className="bg-purple-500/20 text-purple-400 text-[8px] px-1.5 py-0.5 rounded border border-purple-500/30">HAYALİ</span>}
+                                                {item.player?.isCustom && <span className="bg-white/10 text-gray-300 text-[8px] px-1.5 py-0.5 rounded border border-white/20">MANUEL</span>}
                                                 {activeTactic.captainId === item.player?.id && <span className="bg-yellow-400/20 text-yellow-400 text-[8px] px-1.5 py-0.5 rounded border border-yellow-400/30">KAPTAN</span>}
                                             </div>
                                             <p className="text-[10px] text-gray-500 font-bold mt-0.5">
@@ -2327,269 +2407,228 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 )}
             </AnimatePresence>
 
-            {/* Player Selection Modal */}
+            {/* Oyuncu Seç — tam ekran; tek akışlı liste: arkadaşlar + takım kadroları + manuel ekle.
+                Üst bölge (bağlam + arama) sabittir; klavye açıkken de görünür kalır. */}
             <AnimatePresence>
                 {showPlayerSelect && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex flex-col"
+                        className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex flex-col"
                     >
-                        <div className="flex-1 overflow-y-auto p-6 pt-20 max-w-md mx-auto w-full">
-                            <div className="flex justify-between items-center mb-6">
-                                <div>
+                        {/* Sabit üst bölge: bağlam başlığı + kapat + arama */}
+                        <div className="pt-safe px-6 pb-3 max-w-md mx-auto w-full shrink-0">
+                            <div className="flex justify-between items-center mb-4 pt-4 gap-3">
+                                <div className="min-w-0">
                                     <h2 className="text-xl font-black text-white uppercase tracking-widest italic">Oyuncu Seç</h2>
-                                    <p className={`text-[10px] font-bold uppercase tracking-widest text-[#39FF14]`}>
-                                        Kayıtlı Arkadaşlar & Takımlar
-                                    </p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#39FF14] truncate">{pickContextLabel}</p>
                                 </div>
                                 <button
-                                    onClick={() => {
-                                        setShowPlayerSelect(null);
-                                        setSelectedTeamRosterId(null);
-                                        setPlayerSearch('');
-                                    }}
-                                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+                                    onClick={closePlayerSelect}
+                                    aria-label="Kapat"
+                                    className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 shrink-0"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
-
-                            {/* Navigation Tabs (Friends / Teams / Custom) */}
-                            <div className="flex bg-black/40 backdrop-blur-md rounded-2xl p-1 border border-white/10 mb-6 relative z-10">
-                                {[
-                                  { id: 'FRIENDS', label: 'Arkadaşlarım', icon: Users },
-                                  { id: 'TEAMS', label: 'Takımlarım', icon: Swords },
-                                  { id: 'CUSTOM', label: 'Hayali', icon: Type }
-                                ].map(tab => {
-                                  const Icon = tab.icon;
-                                  return (
-                                    <button 
-                                      key={tab.id}
-                                      onClick={() => setModalTab(tab.id as any)}
-                                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all relative ${modalTab === tab.id ? 'text-[#39FF14]' : 'text-gray-500 hover:text-gray-300'}`}
-                                    >
-                                      {modalTab === tab.id && (
-                                        <motion.div layoutId="modalNav" className="absolute inset-0 bg-white/10 border border-white/5 rounded-xl" />
-                                      )}
-                                      <Icon size={14} className="relative z-10" />
-                                      <span className="relative z-10">{tab.label}</span>
+                            <div className="relative">
+                                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                <input
+                                    value={playerSearch}
+                                    onChange={(e) => setPlayerSearch(e.target.value)}
+                                    placeholder="Ara ya da isim yazıp manuel ekle…"
+                                    maxLength={20}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-sm text-white placeholder:text-gray-600 focus:border-[#39FF14]/50 focus:outline-none"
+                                />
+                                {playerSearch && (
+                                    <button onClick={() => setPlayerSearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white">
+                                        <X size={13} />
                                     </button>
-                                  );
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Kaydırılan liste */}
+                        <div className="flex-1 overflow-y-auto px-6 max-w-md mx-auto w-full pb-safe">
+                            {/* Kaynak çipleri: arkadaş grupları + takımlar tek şeritte */}
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-3 items-center">
+                                {['Tümü', 'Favorilerim', ...studioFriendLists.map(l => l.name)].map(group => {
+                                    const emoji = studioFriendLists.find(l => l.name === group)?.emoji;
+                                    const sel = selectedGroup === group;
+                                    return (
+                                        <button
+                                            key={group}
+                                            onClick={() => setSelectedGroup(group)}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                        >
+                                            {group === 'Favorilerim' && <Star size={11} fill={sel ? 'black' : 'currentColor'} className={sel ? 'text-black' : 'text-[#FACC15]'} />}
+                                            {emoji && <span className="text-[11px] leading-none">{emoji}</span>}
+                                            {group}
+                                        </button>
+                                    );
+                                })}
+                                {studioTeams.length > 0 && <div className="w-px h-5 bg-white/10 shrink-0" />}
+                                {studioTeams.map(team => {
+                                    const key = `team:${team.team_id}`;
+                                    const sel = selectedGroup === key;
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => setSelectedGroup(sel ? 'Tümü' : key)}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                        >
+                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                            </span>
+                                            {team.short_name || team.name}
+                                        </button>
+                                    );
                                 })}
                             </div>
 
-                            {/* S24 — birleşik arama (aktif kaynağı ada göre süzer) */}
-                            {modalTab !== 'CUSTOM' && (
-                                <div className="relative mb-4">
-                                    <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-                                    <input
-                                        value={playerSearch}
-                                        onChange={(e) => setPlayerSearch(e.target.value)}
-                                        placeholder="Oyuncu ara…"
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-sm text-white placeholder:text-gray-600 focus:border-[#39FF14]/50 focus:outline-none"
-                                    />
-                                    {playerSearch && (
-                                        <button onClick={() => setPlayerSearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white">
-                                            <X size={13} />
-                                        </button>
-                                    )}
-                                </div>
+                            {/* Manuel ekle — eşleşme yokken üstte, öneri olarak */}
+                            {canManualAdd && !pickHasMatches && (
+                                <button
+                                    onClick={handleManualAdd}
+                                    className="w-full bg-[#39FF14]/10 border border-dashed border-[#39FF14]/40 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-[#39FF14]/15 active:scale-[0.99] transition-all text-left mb-2.5"
+                                >
+                                    <span className="w-11 h-11 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><UserPlus size={18} /></span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-bold text-white truncate">“{pickQuery}” adıyla manuel ekle</span>
+                                        <span className="block text-[10px] text-gray-500 mt-0.5">Kayıtsız oyuncu — yalnız bu taktik tahtasında yaşar.</span>
+                                    </span>
+                                </button>
                             )}
 
-                            {/* TAB 1: FRIENDS */}
-                            {modalTab === 'FRIENDS' && (
-                                <div className="space-y-4">
-                                    {/* Grup çipleri — Tümü + Favorilerim + gerçek listeler (getFriendLists) */}
-                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
-                                        {friendGroups.map(group => {
-                                            const emoji = studioFriendLists.find(l => l.name === group)?.emoji;
-                                            const sel = selectedGroup === group;
-                                            return (
-                                                <button
-                                                    key={group}
-                                                    onClick={() => setSelectedGroup(group)}
-                                                    className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
-                                                >
-                                                    {group === 'Favorilerim' && <Star size={11} fill={sel ? 'black' : 'currentColor'} className={sel ? 'text-black' : 'text-[#FACC15]'} />}
-                                                    {emoji && <span className="text-[11px] leading-none">{emoji}</span>}
-                                                    {group}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Gerçek arkadaş listesi — stüdyo kart dili */}
-                                    <div className="grid gap-2.5">
-                                        {visibleFriends.length === 0 ? (
-                                            <div className="text-center py-10 bg-[#161B22]/60 border border-white/5 rounded-2xl flex flex-col items-center gap-2">
-                                                <Users size={22} className="text-gray-600" />
-                                                <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">
-                                                    {studioFriends.length === 0 ? 'Henüz arkadaşın yok' : 'Eşleşen arkadaş yok'}
-                                                </p>
-                                                <p className="text-gray-600 text-[10px]">Sosyal'den arkadaş ekle, burada görünsün.</p>
+                            {/* Arkadaşlar (favoriler önde) */}
+                            <div className="grid gap-2.5">
+                                {pickFriends.map(friend => {
+                                    const inSquad = takenPlayerIds.has(friend.friend_id);
+                                    return (
+                                        <button
+                                            key={friend.friend_id}
+                                            onClick={() => handleSelectPlayer({ id: friend.friend_id, name: friend.full_name, role: friend.pos || 'CM', rating: friend.fp ?? 70, isCustom: false })}
+                                            disabled={inSquad}
+                                            className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-[#39FF14]/50 enabled:hover:bg-[#39FF14]/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0 pointer-events-none">
+                                                <div className="relative w-11 h-11 shrink-0">
+                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
+                                                        {friend.full_name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    {friend.avatar_url && (
+                                                        <img src={friend.avatar_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-11 h-11 rounded-2xl object-cover border border-white/10 shadow-lg" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h4 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-[#39FF14] transition-colors">
+                                                        {friend.full_name}
+                                                        {friend.is_favorite && <Star size={12} className="text-[#FACC15] shrink-0" fill="#FACC15" />}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        {friend.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
+                                                        <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
+                                                            <Users size={10} /> {friend.matches_together} maç birlikte
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            visibleFriends.map(friend => (
-                                                <button
-                                                    key={friend.friend_id}
-                                                    onClick={() => handleSelectPlayer({ id: friend.friend_id, name: friend.full_name, role: friend.pos || 'CM', rating: friend.fp ?? 70, isCustom: false })}
-                                                    className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between hover:border-[#39FF14]/50 hover:bg-[#39FF14]/[0.04] transition-all text-left group"
-                                                >
-                                                    <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                                                        {/* Avatar: baş harf altta; görsel yüklenirse üstüne biner, hata olursa harfe düşer */}
-                                                        <div className="relative w-11 h-11 shrink-0">
-                                                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
-                                                                {friend.full_name.charAt(0).toUpperCase()}
-                                                            </div>
-                                                            {friend.avatar_url && (
-                                                                <img src={friend.avatar_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-11 h-11 rounded-2xl object-cover border border-white/10 shadow-lg" />
-                                                            )}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <h4 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-[#39FF14] transition-colors">
-                                                                {friend.full_name}
-                                                                {friend.is_favorite && <Star size={12} className="text-[#FACC15] shrink-0" fill="#FACC15" />}
-                                                            </h4>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                {friend.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
-                                                                <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
-                                                                    <Users size={10} /> {friend.matches_together} maç birlikte
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
-                                                        <Plus size={16} />
-                                                    </div>
-                                                </button>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* TAB 2: TEAMS */}
-                            {modalTab === 'TEAMS' && (
-                                <div className="space-y-4">
-                                    {selectedTeamRosterId === null ? (
-                                        <div className="grid gap-3">
-                                            {studioTeams.length === 0 ? (
-                                                <div className="text-center py-8 bg-[#161B22]/50 border border-white/5 rounded-2xl">
-                                                    <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">Takım Bulunamadı</p>
-                                                </div>
+                                            {inSquad ? (
+                                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
                                             ) : (
-                                                studioTeams.map(team => (
-                                                    <div
-                                                        key={team.team_id}
-                                                        onClick={() => { setSelectedTeamRosterId(team.team_id); void ensureSquad(team.team_id); }}
-                                                        className="bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:border-[#39FF14]/50 hover:bg-[#39FF14]/[0.04] transition-all group"
-                                                    >
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-black text-lg shadow-lg shrink-0 transition-transform group-hover:scale-105" style={{ backgroundColor: team.color1 || '#10B981' }}>
-                                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <h3 className="text-sm font-black text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{team.name}</h3>
-                                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1"><Users size={10} /> {team.member_count} oyuncu{team.city ? ` • ${team.city}` : ''}</p>
-                                                            </div>
-                                                        </div>
-                                                        <ChevronRight size={18} className="text-gray-500 group-hover:text-[#39FF14] group-hover:translate-x-1 transition-all shrink-0" />
-                                                    </div>
-                                                ))
+                                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
+                                                    <Plus size={16} />
+                                                </div>
                                             )}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3 animate-fade-blur-in">
-                                            <button
-                                                onClick={() => setSelectedTeamRosterId(null)}
-                                                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 border border-white/10 px-3 py-1.5 rounded-xl bg-white/5 w-max"
-                                            >
-                                                <ChevronLeft size={16} />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Takımlara Dön</span>
-                                            </button>
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                                            <h3 className="text-[10px] font-black text-[#39FF14] mb-3 uppercase tracking-widest">
-                                                {studioTeams.find(t => t.team_id === selectedTeamRosterId)?.name} KADROSU
-                                            </h3>
-
-                                            {/* GERÇEK kadro (get_team_squad) — hayalet roster öldü */}
-                                            {!squadsByTeam[selectedTeamRosterId] ? (
-                                                <div className="py-8 flex justify-center">
-                                                    <Spinner size={20} color="rgba(255,255,255,0.4)" glow={false} />
-                                                </div>
-                                            ) : (
-                                                squadsByTeam[selectedTeamRosterId].filter(m => !playerSearch.trim() || m.full_name.toLowerCase().includes(playerSearch.trim().toLowerCase())).map(m => (
-                                                    <button
-                                                        key={m.user_id}
-                                                        onClick={() => handleSelectPlayer(squadRowToPlayer(m))}
-                                                        className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between hover:border-[#39FF14]/50 hover:bg-[#39FF14]/[0.04] transition-all text-left group"
-                                                    >
-                                                        <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                                                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
-                                                                {m.full_name.charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <h4 className="text-sm font-black text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
-                                                                <div className="flex items-center gap-2 mt-0.5">
-                                                                    {m.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
-                                                                    {m.jersey_number != null && <span className="text-[10px] font-bold text-gray-500 font-mono">#{m.jersey_number}</span>}
+                            {/* Takım kadroları (başlıklı bölümler; kadro tembel yüklenir) */}
+                            {pickTeamGroups.map(({ team, loaded, members }) => (
+                                (loaded && members.length === 0) ? null : (
+                                    <div key={team.team_id} className="mt-4">
+                                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-2">
+                                            <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                            </span>
+                                            {team.name}
+                                        </h4>
+                                        {!loaded ? (
+                                            <div className="py-4 flex justify-center"><Spinner size={18} color="rgba(255,255,255,0.4)" glow={false} /></div>
+                                        ) : (
+                                            <div className="grid gap-2.5">
+                                                {members.map(m => {
+                                                    const inSquad = takenPlayerIds.has(m.user_id);
+                                                    return (
+                                                        <button
+                                                            key={m.user_id}
+                                                            onClick={() => handleSelectPlayer(squadRowToPlayer(m))}
+                                                            disabled={inSquad}
+                                                            className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-[#39FF14]/50 enabled:hover:bg-[#39FF14]/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0 pointer-events-none">
+                                                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
+                                                                    {m.full_name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <h4 className="text-sm font-black text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
+                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                        {m.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
+                                                                        {m.jersey_number != null && <span className="text-[10px] font-bold text-gray-500 font-mono">#{m.jersey_number}</span>}
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
-                                                            <Plus size={16} />
-                                                        </div>
-                                                    </button>
-                                                ))
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* TAB 3: CUSTOM PLAYER */}
-                            {modalTab === 'CUSTOM' && (
-                                <div className="space-y-4">
-                                    <div className="bg-purple-900/20 border border-purple-500/30 rounded-[24px] p-5">
-                                        <h3 className="text-sm font-black text-purple-400 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                                            <Type size={16} /> Hayali Oyuncu Yarat
-                                        </h3>
-                                        <p className="text-xs text-purple-300/70 mb-4 leading-relaxed">
-                                            Taktik tahtasında simüle etmek istediğiniz herhangi bir hayali oyuncuyu adlandırın ve mevkisini seçin.
-                                        </p>
-                                        <div className="flex gap-2 mb-3">
-                                            <input 
-                                                type="text"
-                                                placeholder="Oyuncu Adı (Örn: X Oyuncusu)"
-                                                value={customPlayerName}
-                                                onChange={(e) => setCustomPlayerName(e.target.value)}
-                                                className="flex-1 bg-[#161B22] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
-                                            />
-                                            <select 
-                                                value={customPlayerRole}
-                                                onChange={(e) => setCustomPlayerRole(e.target.value)}
-                                                className="bg-[#161B22] border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
-                                            >
-                                                <option value="-">-</option>
-                                                <option value="FWD">FWD</option>
-                                                <option value="MID">MID</option>
-                                                <option value="DEF">DEF</option>
-                                                <option value="GK">GK</option>
-                                            </select>
-                                        </div>
-                                        <button 
-                                            onClick={handleCreateCustomPlayer}
-                                            disabled={!customPlayerName.trim()}
-                                            className="w-full bg-purple-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-purple-700 active:scale-95 transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-                                        >
-                                            <UserPlus size={16} /> Yarat ve Ekle
-                                        </button>
+                                                            {inSquad ? (
+                                                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
+                                                                    <Plus size={16} />
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
+                                )
+                            ))}
+
+                            {/* Boş durum — arama yok ve hiç kaynak yoksa yönlendir */}
+                            {!pickHasMatches && !canManualAdd && (
+                                <div className="text-center py-10 bg-[#161B22]/60 border border-white/5 rounded-2xl flex flex-col items-center gap-2 mt-1">
+                                    <Users size={22} className="text-gray-600" />
+                                    <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">
+                                        {pickQuery ? 'Eşleşen oyuncu yok' : 'Listelenecek oyuncu yok'}
+                                    </p>
+                                    <p className="text-gray-600 text-[10px] px-6">İsim yazarsan manuel ekleyebilirsin; arkadaş eklersen burada görünür.</p>
                                 </div>
                             )}
 
+                            {/* Manuel ekle — eşleşmeler varken listenin altında */}
+                            {canManualAdd && pickHasMatches && (
+                                <button
+                                    onClick={handleManualAdd}
+                                    className="w-full bg-[#39FF14]/10 border border-dashed border-[#39FF14]/40 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-[#39FF14]/15 active:scale-[0.99] transition-all text-left mt-2.5"
+                                >
+                                    <span className="w-11 h-11 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><UserPlus size={18} /></span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-bold text-white truncate">“{pickQuery}” adıyla manuel ekle</span>
+                                        <span className="block text-[10px] text-gray-500 mt-0.5">Kayıtsız oyuncu — yalnız bu taktik tahtasında yaşar.</span>
+                                    </span>
+                                </button>
+                            )}
+
+                            {/* Başparmak bölgesi: vazgeç */}
+                            <button
+                                onClick={closePlayerSelect}
+                                className="w-full mt-4 mb-6 py-3.5 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                            >
+                                Vazgeç
+                            </button>
                         </div>
                     </motion.div>
                 )}

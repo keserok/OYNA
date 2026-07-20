@@ -41,7 +41,8 @@ export interface TacticState {
     notes: string;
     opponents: Slot[];
     mentality: 'Defensive' | 'Balanced' | 'Attacking';
-    tempo: 'Slow' | 'Normal' | 'Fast';
+    /** 1-10 tempo (5 = varsayılan). Eski kayıtlardaki Slow/Normal/Fast okuma yolunda eşlenir. */
+    tempo: number;
     identity: GameIdentity;
     groupColor?: 'DEFAULT' | 'RED' | 'NAVY' | 'GREEN';
     drawings?: DrawingLine[];
@@ -90,3 +91,24 @@ export const ARCHETYPES: Record<Archetype, { label: string, icon: string, hint: 
 };
 
 export const INSTRUCTIONS = ['Hücuma Çık', 'Geride Kal', 'Serbest', 'Markaj', 'Oyun Kurucu', 'Pres Yap'];
+
+// --- Tempo (1-10) ---
+
+export const DEFAULT_TEMPO = 5;
+
+/**
+ * Tempoyu 1-10 aralığına normalize eder. Eski kayıtlar (Slow/Normal/Fast) ve
+ * DB'den text gelen sayısal değerler tek kapıdan eşlenir; tanınmayan değer
+ * varsayılana düşer.
+ */
+export const normalizeTempo = (v: unknown): number => {
+    if (v === 'Slow') return 3;
+    if (v === 'Normal') return DEFAULT_TEMPO;
+    if (v === 'Fast') return 8;
+    const n = typeof v === 'number' ? v : parseFloat(String(v));
+    if (!Number.isFinite(n)) return DEFAULT_TEMPO;
+    return Math.min(10, Math.max(1, Math.round(n)));
+};
+
+/** Tempo → oynatma hız çarpanı: 5 = 1.0x (bugünkü hız), 1 = 0.6x, 10 = 1.5x. */
+export const tempoSpeedFactor = (tempo: number): number => 0.5 + normalizeTempo(tempo) * 0.1;

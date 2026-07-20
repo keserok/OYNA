@@ -20,12 +20,16 @@ import { Play, Square, Check, X, Trash2, Plus } from 'lucide-react';
 import type { DrawingLine, PlayMode, SeqInfo } from './types';
 
 // --- Ağır animasyon zamanlama hesabı (framer-motion keyframe üretimi) ---
+// fadeOutsideWindow: yalnız TOP markörü için — SIRALI oynatmada top, kendi pas
+// penceresi dışında gizlenir (sahada aynı anda tek top hissi). Oyuncu markörleri
+// bu bayrağı GEÇMEZ; koşu bitince oldukları yerde görünür kalırlar.
 export const getAnimationProps = (
     path: DrawingLine,
     isSimulating: boolean,
     playMode: PlayMode,
     seqInfo: SeqInfo,
-    totalSeqDur: number
+    totalSeqDur: number,
+    fadeOutsideWindow = false
 ) => {
     if (!isSimulating || !path) return { animate: {}, transition: {} };
     const pathDur = seqInfo.duration;
@@ -35,15 +39,29 @@ export const getAnimationProps = (
     let times: number[] = [];
     let lefts: string[] = [];
     let tops: string[] = [];
+    const opacities: number[] = [];
 
     if (playMode === 'SEQ') {
         const normalizedStart = startTime / totalCycle;
         const normalizedEnd = (startTime + pathDur) / totalCycle;
+        const EPS = 0.015; // ani belirme/kaybolma için pencere kenarı payı
+        const startLeft = `${path.points[0].x}%`;
+        const startTop = `${path.points[0].y}%`;
+        const endLeft = `${path.points[path.points.length - 1].x}%`;
+        const endTop = `${path.points[path.points.length - 1].y}%`;
 
         if (normalizedStart > 0) {
             times.push(0);
-            lefts.push(`${path.points[0].x}%`);
-            tops.push(`${path.points[0].y}%`);
+            lefts.push(startLeft);
+            tops.push(startTop);
+            opacities.push(0);
+            if (fadeOutsideWindow && normalizedStart > EPS) {
+                // pencere açılana dek görünmez kal (yumuşak sızma yerine anlık belirme)
+                times.push(normalizedStart - EPS);
+                lefts.push(startLeft);
+                tops.push(startTop);
+                opacities.push(0);
+            }
         }
 
         path.points.forEach((p, idx) => {
@@ -51,12 +69,20 @@ export const getAnimationProps = (
             times.push(normalizedStart + fraction * (normalizedEnd - normalizedStart));
             lefts.push(`${p.x}%`);
             tops.push(`${p.y}%`);
+            opacities.push(1);
         });
 
         if (normalizedEnd < 1) {
+            if (fadeOutsideWindow && normalizedEnd + EPS < 1) {
+                times.push(normalizedEnd + EPS);
+                lefts.push(endLeft);
+                tops.push(endTop);
+                opacities.push(0);
+            }
             times.push(1);
-            lefts.push(`${path.points[path.points.length - 1].x}%`);
-            tops.push(`${path.points[path.points.length - 1].y}%`);
+            lefts.push(endLeft);
+            tops.push(endTop);
+            opacities.push(fadeOutsideWindow ? 0 : 1);
         }
     } else {
         lefts = path.points.map(p => `${p.x}%`);
@@ -64,7 +90,11 @@ export const getAnimationProps = (
     }
 
     return {
-        animate: { left: lefts, top: tops },
+        animate: {
+            left: lefts,
+            top: tops,
+            ...(fadeOutsideWindow && playMode === 'SEQ' ? { opacity: opacities } : {})
+        },
         transition: {
             duration: totalCycle,
             ease: "linear",
@@ -131,20 +161,22 @@ interface AdvancedAnimationModuleProps {
     setCustomSeqValue: (v: string) => void;
     setDrawings: (fn: (prev: DrawingLine[]) => DrawingLine[]) => void;
     hideLines?: boolean;
+    /** BİZ/RAKİP katmanı: pasif tarafın çizgileri — rozetleri soluk ve kilitli. */
+    mutedLineIds?: string[];
 }
 
 const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
     drawings, isSimulating, showBall, playMode,
     seqMap, totalSeqDuration, selectedSeqBadge, setSelectedSeqBadge,
     isCustomSeqInputOpen, setIsCustomSeqInputOpen, customSeqValue, setCustomSeqValue,
-    setDrawings, hideLines
+    setDrawings, hideLines, mutedLineIds
 }) => {
     return (
         <>
-            {/* Pas topları animasyonu */}
+            {/* Pas topları animasyonu — SIRALI modda top yalnız kendi penceresinde görünür */}
             {isSimulating && showBall && drawings.filter(d => d.type === 'arrow').map(path => {
                 if (!seqMap.get(path.id)) return null;
-                const anim = getAnimationProps(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration);
+                const anim = getAnimationProps(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration, true);
                 return (
                     <motion.div
                         key={`ball-${path.id}`}
@@ -158,26 +190,30 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                 );
             })}
 
-            {/* Sekans Rozetleri (timeline sıralama editörü) — "Sadece Hareket" açıkken gizlenir */}
+            {/* Sekans Rozetleri (timeline sıralama editörü) — "Sadece Hareket" açıkken gizlenir.
+                Pasif katmanın (BİZ/RAKİP) rozetleri soluk ve kilitli: genel adım akışı okunur
+                ama düzenleme yalnız aktif tarafta yapılır. */}
             {playMode === 'SEQ' && !hideLines && drawings.map((line) => {
                 const midIdx = Math.floor(line.points.length / 2);
                 const midPoint = line.points[midIdx];
                 if (!midPoint) return null;
-                const isSelected = selectedSeqBadge === line.id;
+                const isMuted = !!mutedLineIds?.includes(line.id);
+                const isSelected = !isMuted && selectedSeqBadge === line.id;
                 return (
                     <div
                         key={`badge-${line.id}`}
-                        className="absolute z-[70]"
+                        className={`absolute z-[70] ${isMuted ? 'opacity-40' : ''}`}
                         style={{ left: `${midPoint.x}%`, top: `${midPoint.y}%`, transform: 'translate(-50%, -50%)' }}
                     >
                         <div
                             onPointerDown={(e) => {
                                 e.stopPropagation();
+                                if (isMuted) return;
                                 setSelectedSeqBadge(isSelected ? null : line.id);
                                 setIsCustomSeqInputOpen(false);
                             }}
-                            className={`bg-indigo-500 text-white font-black rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] cursor-pointer pointer-events-auto transition-all ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}
-                            title="Sırayı Ayarla"
+                            className={`bg-indigo-500 text-white font-black rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] transition-all ${isMuted ? 'pointer-events-none' : `cursor-pointer pointer-events-auto ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}`}
+                            title={isMuted ? undefined : 'Sırayı Ayarla'}
                         >
                             {line.seqStep || 1}
                         </div>
