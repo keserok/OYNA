@@ -6,7 +6,7 @@
  */
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
-import { compressImageForUpload } from '../utils/imageCompression';
+import { compressImageForUpload, SHOWCASE_ASPECT_RATIO } from '../utils/imageCompression';
 
 export type PitchMediaLabel = 'saha_ici' | 'soyunma' | 'kafeterya' | 'gece' | 'dis_gorunum' | 'diger';
 
@@ -67,7 +67,8 @@ export async function uploadPitchMedia(
   pitchId: string,
   opts: { courtId?: string | null; label?: PitchMediaLabel | null; sortOrder?: number } = {},
 ): Promise<PitchMediaItem> {
-  const compressed = await compressImageForUpload(file);
+  // Vitrin görselleri TEK TİP 16:9 — merkezden kırpılır (oyuncu kartı/galeri standardı).
+  const compressed = await compressImageForUpload(file, { aspectRatio: SHOWCASE_ASPECT_RATIO });
   const ext = compressed.name.split('.').pop() || 'jpg';
   const folder = opts.courtId ? `pitches/${pitchId}/courts/${opts.courtId}` : `pitches/${pitchId}`;
   const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
