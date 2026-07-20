@@ -7,7 +7,7 @@ import {
     PenTool, MousePointer2, Eye, EyeOff, Layout, Copy,
     Search, UserCheck,
     Swords, UserPlus,
-    MessageSquare, Zap, ShieldAlert,
+    MessageSquare, ShieldAlert,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
     ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles
 } from 'lucide-react';
@@ -42,9 +42,9 @@ import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
 // BİZ/RAKİP katman anahtarı — aktif taraf önde, pasif taraf arkada ve kilitli
 import { isLayerEditing, markerLayer, lineIsMuted } from './studio/layering';
 
-// ⚡ GELİŞMİŞ ANİMASYON MODÜLÜ — on-demand (lazy) indirilir.
-// Bu chunk yalnız kullanıcı "Gelişmiş Animasyon" butonuna basınca yüklenir,
-// böylece ilk yük hafif kalır (düşük telefonlar yorulmasın).
+// ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
+// ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
+// araç çubuğunda her zaman doğrudan görünür, ayrıca bir "indir" kapısı yoktur.
 const AdvancedAnimationModule = lazy(() => import('./studio/AdvancedAnimationModule'));
 const AnimationToolbar = lazy(() =>
     import('./studio/AdvancedAnimationModule').then(m => ({ default: m.AnimationToolbar }))
@@ -72,6 +72,8 @@ const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444',
 // Faz 9 — kalıcılık & mobil deneyim anahtarları
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
 const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
+// OYNAT başına oynatma turu sayısı — modüldeki `repeat: 1` (ilk + 1 tekrar) ile eş.
+const PLAY_TIMES = 2;
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
 const exampleForSize = (size: SquadSize): string => {
@@ -151,6 +153,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Faz 3 — etkileşim & animasyon motoru
     const [hideLines, setHideLines] = useState(false);              // "Sadece Hareket" (S12)
     const [showClearSheet, setShowClearSheet] = useState(false);    // granüler temizle (S13)
+    const [showTempoSheet, setShowTempoSheet] = useState(false);    // tempo ayar sayfası (araç çubuğu çipi)
     const [undoStack, setUndoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [redoStack, setRedoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [selectedEl, setSelectedEl] = useState<{ type: 'slot' | 'opponent' | 'line'; id: string } | null>(null);
@@ -185,6 +188,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             setIsLoadingAdvancedAnim(false);
         }
     };
+    // Animasyon modülü stüdyo açılışında arka planda indirilir (kapı butonu öldü).
+    useEffect(() => {
+        void loadAdvancedAnimation();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [selectedSeqBadge, setSelectedSeqBadge] = useState<string | null>(null);
     const [isCustomSeqInputOpen, setIsCustomSeqInputOpen] = useState(false);
     const [customSeqValue, setCustomSeqValue] = useState<string>('');
@@ -585,6 +594,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer).
     // Oynatma hızı plan temposundan gelir: tempo 5 = 1.0x, 1 = 0.6x, 10 = 1.5x.
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings, tempoSpeedFactor(activeTactic.tempo));
+
+    // ── OYNAT = İKİ tur: taktik iki kez oynar, sonra kendiliğinden durur; tekrar
+    // izlemek için yeniden OYNAT gerekir. (Modüldeki repeat: 1 ile uyumlu.)
+    const playCycleSeconds = playMode === 'SEQ'
+        ? totalSeqDuration
+        : drawings.reduce((mx, d) => Math.max(mx, seqMap.get(d.id)?.duration || 0), 0);
+    useEffect(() => {
+        if (!isSimulating || playCycleSeconds <= 0) return;
+        const t = setTimeout(
+            () => setIsSimulating(false),
+            Math.round((playCycleSeconds * PLAY_TIMES + 0.25) * 1000),
+        );
+        return () => clearTimeout(t);
+    }, [isSimulating, playCycleSeconds]);
 
     // ── BİZ/RAKİP katman anahtarı: düzenlemede aktif taraf önde, pasif arkada ──
     const layerEditing = isLayerEditing(isSimulating, presentMode);
@@ -1667,38 +1690,30 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
                     </div>
+                    {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
+                    <button
+                        onClick={() => setShowTempoSheet(true)}
+                        title="Oynatma temposu (plana özel, 1-10)"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
+                    >
+                        <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
+                    </button>
+                    {/* Oynatma kontrolleri — kapı butonu yok; modül açılışta arka planda yüklenir */}
                     {drawings.length > 0 && (
-                        !isAdvancedAnimLoaded ? (
-                            // ⚡ Modül henüz indirilmedi: on-demand indirme butonu
-                            <button
-                                onClick={loadAdvancedAnimation}
-                                disabled={isLoadingAdvancedAnim}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105 disabled:opacity-60"
-                                title="Gelişmiş animasyon motorunu indir ve oynat"
-                            >
-                                {isLoadingAdvancedAnim ? (
-                                    <><Loader2 size={14} className="animate-spin" /> MODÜL İNDİRİLİYOR...</>
-                                ) : (
-                                    <><Zap size={14} className="fill-current" /> GELİŞMİŞ ANİMASYON</>
-                                )}
-                            </button>
-                        ) : (
-                            // Modül indirildi: lazy toolbar kontrolleri
-                            <Suspense fallback={
-                                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-white/5 text-gray-400 whitespace-nowrap">
-                                    <Loader2 size={14} className="animate-spin" /> Gelişmiş animasyon modülü indiriliyor...
-                                </div>
-                            }>
-                                <AnimationToolbar
-                                    isSimulating={isSimulating}
-                                    setIsSimulating={setIsSimulating}
-                                    showBall={showBall}
-                                    setShowBall={setShowBall}
-                                    playMode={playMode}
-                                    setPlayMode={setPlayMode}
-                                />
-                            </Suspense>
-                        )
+                        <Suspense fallback={
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-white/5 text-gray-400 whitespace-nowrap">
+                                <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor...
+                            </div>
+                        }>
+                            <AnimationToolbar
+                                isSimulating={isSimulating}
+                                setIsSimulating={setIsSimulating}
+                                showBall={showBall}
+                                setShowBall={setShowBall}
+                                playMode={playMode}
+                                setPlayMode={setPlayMode}
+                            />
+                        </Suspense>
                     )}
                     <div className="w-px h-8 bg-white/10 mx-1"></div>
                     {/* Geri Al / Yinele (S14) */}
@@ -2143,56 +2158,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             </div>
             )}
 
-            {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
+            {/* Oyuncu talimatları — yalnız Düzenle modu (S42). Tempo araç çubuğu çipine taşındı. */}
             {!presentMode && (<>
-            {/* Tempo — plana özel 1-10; oynatma hızını da sürer (5 = temel hız) */}
-            <div className="px-6 pb-6 mt-8">
-                <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                            <Gauge size={14} className="text-blue-400" /> TEMPO
-                        </h3>
-                        <div className="flex items-baseline gap-0.5">
-                            <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
-                            <span className="text-[10px] font-bold text-gray-500">/10</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) - 1)}
-                            disabled={normalizeTempo(activeTactic.tempo) <= 1}
-                            aria-label="Tempoyu azalt"
-                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-                        >
-                            <Minus size={16} />
-                        </button>
-                        <div className="flex-1">
-                            <input
-                                type="range"
-                                min={1}
-                                max={10}
-                                step={1}
-                                value={normalizeTempo(activeTactic.tempo)}
-                                onChange={(e) => setTempo(Number(e.target.value))}
-                                aria-label="Tempo (1-10)"
-                                className="w-full h-2 cursor-pointer accent-blue-400"
-                            />
-                            <div className="flex justify-between mt-1 px-0.5">
-                                <span className="text-[9px] font-bold text-gray-600 font-mono">1</span>
-                                <span className="text-[9px] font-bold text-gray-600 font-mono">10</span>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) + 1)}
-                            disabled={normalizeTempo(activeTactic.tempo) >= 10}
-                            aria-label="Tempoyu artır"
-                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             {/* Section Specific Content */}
             {/* Player List & Instructions Panel */}
@@ -3170,6 +3137,74 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 Vazgeç
                             </button>
                             <p className="text-[10px] text-gray-600 text-center mt-2">Sildikten sonra <b className="text-gray-400">GERİ AL</b> ile dönebilirsin.</p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Tempo ayar sayfası — araç çubuğundaki TEMPO çipinden açılır (plana özel) */}
+            <AnimatePresence>
+                {showTempoSheet && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+                        onClick={() => setShowTempoSheet(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full max-w-sm bg-[#0E1420] border border-white/10 rounded-[24px] p-5 shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                    <Gauge size={16} className="text-blue-400" /> TEMPO
+                                </h3>
+                                <div className="flex items-baseline gap-0.5">
+                                    <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
+                                    <span className="text-[10px] font-bold text-gray-500">/10</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setTempo(normalizeTempo(activeTactic.tempo) - 1)}
+                                    disabled={normalizeTempo(activeTactic.tempo) <= 1}
+                                    aria-label="Tempoyu azalt"
+                                    className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                >
+                                    <Minus size={16} />
+                                </button>
+                                <div className="flex-1">
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                        value={normalizeTempo(activeTactic.tempo)}
+                                        onChange={(e) => setTempo(Number(e.target.value))}
+                                        aria-label="Tempo (1-10)"
+                                        className="w-full h-2 cursor-pointer accent-blue-400"
+                                    />
+                                    <div className="flex justify-between mt-1 px-0.5">
+                                        <span className="text-[9px] font-bold text-gray-600 font-mono">1</span>
+                                        <span className="text-[9px] font-bold text-gray-600 font-mono">10</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setTempo(normalizeTempo(activeTactic.tempo) + 1)}
+                                    disabled={normalizeTempo(activeTactic.tempo) >= 10}
+                                    aria-label="Tempoyu artır"
+                                    className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                >
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-gray-600 mt-3">Bu ayar yalnız <b className="text-gray-400">aktif planın</b> temposudur; oynatma hızını sürer (5 = temel hız).</p>
+                            <button
+                                onClick={() => setShowTempoSheet(false)}
+                                className="w-full mt-3 py-3 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                            >
+                                Tamam
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}

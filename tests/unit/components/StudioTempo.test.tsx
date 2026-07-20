@@ -68,27 +68,33 @@ vi.mock('../../../services/socialService', () => ({
 
 import Studio from '../../../views/Studio';
 
-// ─── Tempo kartı — 1-10 slider + −/+ ─────────────────────────────────────────
+// ─── Tempo — araç çubuğu çipi + ayar sayfası (plana özel) ────────────────────
 
 const renderStudio = () => render(<Studio onBack={vi.fn()} onNavigate={vi.fn()} />);
+const tempoChip = () => screen.getByTitle('Oynatma temposu (plana özel, 1-10)');
+const openSheet = () => fireEvent.click(tempoChip());
 const slider = () => screen.getByLabelText('Tempo (1-10)') as HTMLInputElement;
 
-describe('Studio — Tempo (1-10)', () => {
-  it('varsayılan 5/10 gösterir', () => {
+describe('Studio — Tempo çipi ve ayar sayfası', () => {
+  it('çip araç çubuğunda her zaman görünür ve varsayılan 5 gösterir; indirme kapısı yok', () => {
     renderStudio();
-    expect(slider().value).toBe('5');
-    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(tempoChip().textContent).toContain('TEMPO 5');
+    expect(screen.queryByText('GELİŞMİŞ ANİMASYON')).not.toBeInTheDocument();
   });
 
-  it('slider değeri değiştirir', () => {
+  it('çipe dokununca sayfa açılır; slider değeri değiştirir ve çip günceller', () => {
     renderStudio();
+    openSheet();
+    expect(slider().value).toBe('5');
     fireEvent.change(slider(), { target: { value: '9' } });
     expect(slider().value).toBe('9');
-    expect(screen.getByText('9')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tamam' }));
+    expect(tempoChip().textContent).toContain('TEMPO 9');
   });
 
-  it('− / + butonları kademeli ayarlar ve uçlarda kilitlenir', () => {
+  it('− / + kademeli ayarlar ve uçlarda kilitlenir', () => {
     renderStudio();
+    openSheet();
     const dec = screen.getByLabelText('Tempoyu azalt');
     const inc = screen.getByLabelText('Tempoyu artır');
 
@@ -100,5 +106,28 @@ describe('Studio — Tempo (1-10)', () => {
 
     fireEvent.change(slider(), { target: { value: '1' } });
     expect(dec).toBeDisabled();
+  });
+
+  it('tempo plana özeldir: her plan kendi değerini taşır', () => {
+    renderStudio();
+    // Plan A: 9 yap
+    openSheet();
+    fireEvent.change(slider(), { target: { value: '9' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Tamam' }));
+    expect(tempoChip().textContent).toContain('TEMPO 9');
+
+    // Yeni plan (B): aktif planın temposunu kopyalar, sonra 3'e çekilir
+    fireEvent.click(screen.getByTitle('Yeni plan (kadro & diziliş korunur)'));
+    expect(tempoChip().textContent).toContain('TEMPO 9');
+    openSheet();
+    fireEvent.change(slider(), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Tamam' }));
+    expect(tempoChip().textContent).toContain('TEMPO 3');
+
+    // Plan A'ya dön: kendi değeri (9) korunur
+    fireEvent.click(screen.getByText('Plan A'));
+    expect(tempoChip().textContent).toContain('TEMPO 9');
+    fireEvent.click(screen.getByText('Plan B'));
+    expect(tempoChip().textContent).toContain('TEMPO 3');
   });
 });
