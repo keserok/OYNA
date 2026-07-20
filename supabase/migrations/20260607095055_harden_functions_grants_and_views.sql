@@ -32,4 +32,11 @@ REVOKE EXECUTE ON FUNCTION public.cancel_subscription(uuid)                     
 REVOKE EXECUTE ON FUNCTION public.update_user_skill_rating()                                         FROM anon, public;
 
 -- 4) profiles_public view: run with caller's RLS (profiles already has public SELECT)
-ALTER VIEW public.profiles_public SET (security_invoker = on);
+-- Replay-güvenlik guard'ı: bu legacy view sıfırdan kurulumda hiç yaratılmaz
+-- (üretimde de 20260613091500 ile düşürüldü); varsa ALTER edilir, yoksa atlanır
+-- (20260616000000'ın kendi guard'ıyla aynı desen).
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_views WHERE viewname = 'profiles_public' AND schemaname = 'public') THEN
+    EXECUTE 'ALTER VIEW public.profiles_public SET (security_invoker = on)';
+  END IF;
+END $$;

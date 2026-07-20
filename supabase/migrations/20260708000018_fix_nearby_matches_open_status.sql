@@ -30,7 +30,19 @@ RETURNS TABLE(
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp', 'extensions'
 AS $function$
-  SELECT m.*,
+  -- Replay/gelecek-güvenlik: `m.*` yerine AÇIK kolon listesi — matches'e sonradan
+  -- eklenen kolonlar (image_auto, deposit_* …) RETURNS TABLE ile uyuşmazlık
+  -- yaratıp fonksiyonu KIRIYORDU (canlıda 42P13 olarak yakalandı, 2026-07-20).
+  SELECT m.id, m.title, m.location, m."time", m.date, m.price, m.difficulty,
+         m."minRating", m.image, m.badges, m."missingPositions", m.slots,
+         m.status, m."creatorId", m."communityId", m.format, m.duration,
+         m.gender, m."ageGroup", m."refereeId", m."homeTeamId", m."awayTeamId",
+         m."homeScore", m."awayScore", m."scoreEnteredAt", m.captain_id,
+         m."isDemo", m.cancel_reason, m.refund_status, m.created_at,
+         m."awaySlots", m."reservePlayers", m."chatMessages", m.pitch_id,
+         m.visibility, m.private_code, m.is_successful, m.confirmed_at,
+         m.starts_at, m.gk_id, m.reminder_24h_sent, m.reminder_1h_sent,
+         m.commission_model,
          earth_distance(ll_to_earth(p_lat, p_lon), ll_to_earth(pt.latitude, pt.longitude))          AS distance_meters,
          earth_distance(ll_to_earth(p_lat, p_lon), ll_to_earth(pt.latitude, pt.longitude)) / 1000.0 AS distance_km
   FROM public.matches m
