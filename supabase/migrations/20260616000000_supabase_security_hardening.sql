@@ -79,10 +79,18 @@ ALTER TABLE public.friendships ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Friendships are viewable by everyone" ON public.friendships;
 DROP POLICY IF EXISTS "Users view own friendships" ON public.friendships;
-CREATE POLICY "Users view own friendships" ON public.friendships
-  FOR SELECT TO authenticated USING (
-    auth.uid() = user_id1 OR auth.uid() = user_id2
-  );
+-- Replay-güvenlik guard'ı: user_id1/user_id2 eski şekil — hiçbir migration bu
+-- kolonları yaratmaz (tarihte repo-dışı vardı, sonra sender/receiver'a evrildi).
+-- Kolonlar varsa politika aynen kurulur, yoksa atlanır.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='public' AND table_name='friendships' AND column_name='user_id1') THEN
+    EXECUTE 'CREATE POLICY "Users view own friendships" ON public.friendships
+      FOR SELECT TO authenticated USING (
+        auth.uid() = user_id1 OR auth.uid() = user_id2
+      )';
+  END IF;
+END $$;
 
 
 -- 6) SECURITY DEFINER Fonksiyonların anon ve public İzinlerinin Kaldırılması (Kritik Yetki Azaltımı)
@@ -105,14 +113,16 @@ BEGIN
     END IF;
 
     -- send_match_invite
-    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'send_match_invite') THEN
+    -- Replay-güvenlik: isim-bazlı guard imza-özel REVOKE ile eşleşmiyordu
+    -- (2-arg overload yalnız tarihte vardı; bugünkü 4-arg). İmza-bazlı guard.
+    IF to_regprocedure('public.send_match_invite(uuid, uuid)') IS NOT NULL THEN
         REVOKE EXECUTE ON FUNCTION public.send_match_invite(uuid, uuid) FROM anon, public;
         ALTER FUNCTION public.send_match_invite(uuid, uuid) SET search_path = public, pg_temp;
         GRANT EXECUTE ON FUNCTION public.send_match_invite(uuid, uuid) TO authenticated;
     END IF;
 
-    -- update_player_diamond
-    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_player_diamond') THEN
+    -- update_player_diamond (imza-bazlı guard — 2-arg overload yalnız tarihte)
+    IF to_regprocedure('public.update_player_diamond(uuid, integer)') IS NOT NULL THEN
         REVOKE EXECUTE ON FUNCTION public.update_player_diamond(uuid, integer) FROM anon, public;
         ALTER FUNCTION public.update_player_diamond(uuid, integer) SET search_path = public, pg_temp;
     END IF;
