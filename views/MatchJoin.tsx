@@ -20,7 +20,7 @@ import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
-import { normalizeRole, inferSquadSize, applyCanonicalCoords } from '../shared/lobbyEnrichment';
+import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveHiredGkView, findHiredGkSlotId } from '../shared/lobbyEnrichment';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -288,7 +288,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // FAZ 3: pazarda seçilen sağlayıcının dikey detaylı kartı (yetenek barları + istatistik)
   const [marketDetailProvider, setMarketDetailProvider] = useState<ProviderSuggestion | null>(null);
 
-  // FAZ 2: maça ATANMIŞ kaleci/hakem — lobide HERKESE (salt-okunur) gösterilir.
+  // FAZ 2: maça ATANMIŞ kaleci/hakem. Hakem lobide HERKESE gösterilir;
+  // kaleci ise YALNIZ kiralayan tarafın üyelerine (altta kart + sahada kalede).
   const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
   const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
   // Atanmış kaleci/hakem dikey detay kartı (herkese) — hangi sağlayıcı + tür.
@@ -496,6 +497,26 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const mySlot = isAlreadyJoined
     ? [...enrichedSlots, ...enrichedAwaySlots].find(s => s?.player?.id === currentUserProfile?.id)
+    : null;
+
+  // ── Kiralık kaleci: taraf tespiti + görünürlük (SSOT: shared/lobbyEnrichment) ──
+  // Kiralayan tarafın üyesi miyim? (kaptan / sahaya katılmış / takım rosterımda —
+  // userTeams yalnız KENDİ takımlarımı içerir, çözülmesi üyelik kanıtıdır.)
+  const isHomeSideMember = isHomeCaptain || isAlreadyJoinedHome || !!homeTeam;
+  const isAwaySideMember = isAwayCaptain || isAlreadyJoinedAway || !!awayTeam;
+  const { gkSide, viewerOnGkSide } = resolveHiredGkView({
+    gkId: assignedGkId,
+    requests: serviceRequests,
+    creatorId: match.creatorId,
+    awayCaptainIds: [awayTeam?.captain, ...(awayTeam?.captains || [])],
+    viewerIsHomeMember: isHomeSideMember,
+    viewerIsAwayMember: isAwaySideMember,
+  });
+  const canSeeHiredGk = !!assignedGoalkeeper && viewerOnGkSide;
+  // Sahada kalede gösterim: kiralayan tarafın İLK boş GK slotu (gerçek bir
+  // oyuncunun aldığı GK slotu asla ezilmez — kaleci o durumda yalnız altta kalır).
+  const hiredGkSlotId = (canSeeHiredGk && pitchSide === gkSide)
+    ? findHiredGkSlotId(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots)
     : null;
 
   // S2.4 — ayrılma modalı açılınca iade tutarını SUNUCUDAN çek (yedeklikte 0 döner).
@@ -2254,6 +2275,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               const isMyOwnSlot = player?.id === currentUserProfile?.id;
               const inviteStatus = invitesSent[slot.id] || 'NONE';
               const invitedName = invitedFriendNames[slot.id];
+              const isHiredGkHere = slot.id === hiredGkSlotId;
 
               return (
                 <div
@@ -2261,7 +2283,38 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   className="absolute w-12 h-12 flex items-center justify-center z-10"
                   style={{ left: `${slot.x}%`, top: `${slot.y}%`, transform: 'translate(-50%, -50%)' }}
                 >
-                  {isTaken && player ? (
+                  {isHiredGkHere && assignedGoalkeeper ? (
+                    /* ── Kiralık Kaleci (kalede — yalnız kiralayan tarafın üyeleri görür) ── */
+                    <button
+                      onClick={() => setProviderDetail({ p: assignedGoalkeeper, isRef: false })}
+                      className="w-full h-full rounded-full focus:outline-none cursor-pointer"
+                    >
+                      <motion.div whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.93 }}
+                        className="relative w-full h-full flex flex-col items-center justify-center">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-[#FF9F43] shadow-[0_0_16px_rgba(255,159,67,0.6)]">
+                          {isRealPhoto(assignedGoalkeeper.avatar) ? (
+                            <img
+                              src={assignedGoalkeeper.avatar!}
+                              alt={assignedGoalkeeper.name}
+                              className="w-full h-full object-cover bg-[#0A0E14]"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-black text-[15px] tracking-tight bg-orange-950/60 text-orange-300">
+                              {getInitials(assignedGoalkeeper.name)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute -top-1 -right-1 p-0.5 rounded-md bg-[#FF9F43] border border-black z-20 pointer-events-none">
+                          <Hand size={9} className="text-black" />
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md max-w-[64px] z-20 pointer-events-none">
+                          <span className="text-[8px] font-black text-[#FF9F43] whitespace-nowrap uppercase truncate block">
+                            {(assignedGoalkeeper.name || 'Kaleci').split(' ')[0]}
+                          </span>
+                        </div>
+                      </motion.div>
+                    </button>
+                  ) : isTaken && player ? (
                     /* ── Dolu Slot ──────────────────────────────── */
                     <button
                       onClick={() => handleSlotClick(slot)}
@@ -2635,13 +2688,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
         )}
 
-        {/* ── MAÇ GÖREVLİLERİ (HERKESE görünür, salt-okunur) ──────────────────── */}
-        {/* Atanmış kaleci/hakem gerçek verilerle; kaleci basınca dikey detay kartı. */}
-        {(assignedGoalkeeper || assignedReferee) && (
+        {/* ── MAÇ GÖREVLİLERİ (salt-okunur) ───────────────────────────────────── */}
+        {/* Hakem HERKESE görünür; kiralık kaleci YALNIZ kiralayan tarafın        */}
+        {/* üyelerine (canSeeHiredGk) — rakip takım kalecinin kartını görmez.     */}
+        {((assignedGoalkeeper && canSeeHiredGk) || assignedReferee) && (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
 
-            {assignedGoalkeeper && (
+            {assignedGoalkeeper && canSeeHiredGk && (
               <button
                 onClick={() => setProviderDetail({ p: assignedGoalkeeper, isRef: false })}
                 className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
@@ -2680,7 +2734,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             )}
 
             {/* Kaptan: kaleci maça gelmediyse no-show bildir (ceza → teminattan) */}
-            {assignedGoalkeeper && isManageMode && isCaptain && capturedGkRequest && (
+            {assignedGoalkeeper && canSeeHiredGk && isManageMode && isCaptain && capturedGkRequest && (
               <button
                 onClick={() => setShowNoShowConfirm(true)}
                 className="w-full py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-red-400 bg-red-950/25 border border-red-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">

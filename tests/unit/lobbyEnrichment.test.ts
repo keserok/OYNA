@@ -5,6 +5,8 @@ import {
   applyCanonicalCoords,
   normalizeRole,
   avatarFor,
+  resolveHiredGkView,
+  findHiredGkSlotId,
 } from '../../shared/lobbyEnrichment';
 import type { PositionSlot } from '../../types';
 
@@ -179,5 +181,96 @@ describe('enrichSlots', () => {
     const slots = makeSlots(7, ['u1', 'u2']);
     const result = enrichSlots(slots, users, '7v7');
     expect(result).toHaveLength(7);
+  });
+});
+
+// ─── resolveHiredGkView + findHiredGkSlotId ──────────────────────────────────
+//
+// Kiralık kaleci görünürlük politikası: kaleci YALNIZ kiralayan takımın
+// üyelerine görünür (altta kart + sahada kalede); rakip takım ve dış
+// izleyici görmez. service_requests RLS'i satırı yalnız talep eden kaptana
+// okuttuğundan, talep okunamadığında taraf 'home' varsayılır (bugünkü
+// backend'de yalnız maç sahibi/kaptan kiralayabilir; kurucu = ev sahibi).
+
+describe('resolveHiredGkView — kiralık kaleci görünürlüğü', () => {
+  const GK = 'gk-provider-1';
+  const CREATOR = 'captain-home';
+  const AWAY_CAPTAIN = 'captain-away';
+  const baseReq = { providerId: GK, providerType: 'GK', status: 'CAPTURED', requestedBy: CREATOR };
+
+  it('gkId yoksa kimse görmez (taraf home varsayılır)', () => {
+    const r = resolveHiredGkView({
+      gkId: null, requests: [baseReq], creatorId: CREATOR,
+      viewerIsHomeMember: true, viewerIsAwayMember: true,
+    });
+    expect(r.viewerOnGkSide).toBe(false);
+    expect(r.gkSide).toBe('home');
+  });
+
+  it('talep okunamıyorsa (RLS → boş liste) taraf home; yalnız ev sahibi üyesi görür', () => {
+    const home = resolveHiredGkView({ gkId: GK, requests: [], creatorId: CREATOR, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    const away = resolveHiredGkView({ gkId: GK, requests: [], creatorId: CREATOR, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    const outsider = resolveHiredGkView({ gkId: GK, requests: [], creatorId: CREATOR, viewerIsHomeMember: false, viewerIsAwayMember: false });
+    expect(home).toEqual({ gkSide: 'home', viewerOnGkSide: true });
+    expect(away).toEqual({ gkSide: 'home', viewerOnGkSide: false });
+    expect(outsider).toEqual({ gkSide: 'home', viewerOnGkSide: false });
+  });
+
+  it('kurucu (ev sahibi kaptanı) kiralamışsa taraf home', () => {
+    const r = resolveHiredGkView({
+      gkId: GK, requests: [baseReq], creatorId: CREATOR,
+      awayCaptainIds: [AWAY_CAPTAIN],
+      viewerIsHomeMember: true, viewerIsAwayMember: false,
+    });
+    expect(r).toEqual({ gkSide: 'home', viewerOnGkSide: true });
+  });
+
+  it('away kaptanı kiralamışsa taraf away; yalnız away üyesi görür', () => {
+    const req = { ...baseReq, requestedBy: AWAY_CAPTAIN };
+    const awayViewer = resolveHiredGkView({
+      gkId: GK, requests: [req], creatorId: CREATOR, awayCaptainIds: [AWAY_CAPTAIN],
+      viewerIsHomeMember: false, viewerIsAwayMember: true,
+    });
+    const homeViewer = resolveHiredGkView({
+      gkId: GK, requests: [req], creatorId: CREATOR, awayCaptainIds: [AWAY_CAPTAIN],
+      viewerIsHomeMember: true, viewerIsAwayMember: false,
+    });
+    expect(awayViewer).toEqual({ gkSide: 'away', viewerOnGkSide: true });
+    expect(homeViewer).toEqual({ gkSide: 'away', viewerOnGkSide: false });
+  });
+
+  it('atama üretmeyen statüler (REJECTED/PENDING) ve farklı sağlayıcı talepleri yok sayılır', () => {
+    const noise = [
+      { ...baseReq, requestedBy: AWAY_CAPTAIN, status: 'REJECTED' },
+      { ...baseReq, requestedBy: AWAY_CAPTAIN, status: 'PENDING' },
+      { ...baseReq, requestedBy: AWAY_CAPTAIN, providerId: 'other-gk' },
+      { ...baseReq, requestedBy: AWAY_CAPTAIN, providerType: 'REF' },
+    ];
+    const r = resolveHiredGkView({
+      gkId: GK, requests: noise, creatorId: CREATOR, awayCaptainIds: [AWAY_CAPTAIN],
+      viewerIsHomeMember: true, viewerIsAwayMember: false,
+    });
+    // Eşleşen talep yok → home varsayımı korunur.
+    expect(r).toEqual({ gkSide: 'home', viewerOnGkSide: true });
+  });
+});
+
+describe('findHiredGkSlotId — kalede gösterilecek slot', () => {
+  const slot = (id: string, role: string, status: 'OPEN' | 'TAKEN' | 'LOCKED'): PositionSlot =>
+    ({ id, role, status, x: 50, y: 90 } as PositionSlot);
+
+  it('ilk BOŞ GK slotunu döndürür (KL kısaltması dahil)', () => {
+    expect(findHiredGkSlotId([slot('a', 'DEF', 'OPEN'), slot('b', 'GK', 'OPEN')])).toBe('b');
+    expect(findHiredGkSlotId([slot('kl1', 'KL', 'OPEN')])).toBe('kl1');
+  });
+
+  it('GK slotu gerçek oyuncu tarafından alınmışsa ezmez → null', () => {
+    expect(findHiredGkSlotId([slot('g', 'GK', 'TAKEN'), slot('m', 'MID', 'OPEN')])).toBeNull();
+  });
+
+  it('GK slotu hiç yoksa veya liste boşsa null', () => {
+    expect(findHiredGkSlotId([slot('m', 'MID', 'OPEN')])).toBeNull();
+    expect(findHiredGkSlotId([])).toBeNull();
+    expect(findHiredGkSlotId([null, undefined])).toBeNull();
   });
 });

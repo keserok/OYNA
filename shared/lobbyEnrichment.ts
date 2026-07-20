@@ -113,3 +113,58 @@ export function collectAssignedIds(...groups: (PositionSlot[] | undefined)[]): S
   for (const g of groups) for (const s of g || []) { const uid = slotUserId(s); if (uid) ids.add(uid); }
   return ids;
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// KİRALIK KALECİ GÖRÜNÜRLÜK POLİTİKASI (SSOT)
+// Kural: kiralık kaleci YALNIZ kiralayan takımın üyelerine gösterilir
+// (altta "Maç Görevlileri" kartı + sahada kalede). Rakip takım ve dış
+// izleyiciler kaleciyi görmez. Hakem bu politikanın DIŞINDADIR: iki
+// takımın ekranında da altta görünür.
+// ════════════════════════════════════════════════════════════════════════
+
+/** service_requests satırının bu politika için gereken alt kümesi. */
+export interface HiredGkRequestLite {
+  providerId: string;
+  providerType: string;
+  status: string;
+  requestedBy: string;
+}
+
+/** gk_id'yi üretmiş sayılan talep durumları (capture gk_id'yi yazar). */
+const GK_ASSIGNED_STATUSES = ['ACCEPTED', 'CAPTURED', 'COMPLETED'];
+
+/**
+ * Kiralık kalecinin TARAFINI ve görüntüleyene GÖRÜNÜRLÜĞÜNÜ çözer.
+ * Taraf tespiti: talepteki requested_by (away kaptanıysa 'away').
+ * service_requests RLS'i satırı yalnız talep eden kaptan + sağlayıcıya
+ * okuttuğundan, satır okunamadığında 'home' varsayılır — bugünkü backend'de
+ * create_service_request yalnız maç sahibi/kaptana açık ve kurucu ev sahibi
+ * tarafı olduğundan bu varsayım mevcut tüm veriyle tutarlıdır.
+ */
+export function resolveHiredGkView(params: {
+  gkId?: string | null;
+  requests: HiredGkRequestLite[];
+  creatorId?: string | null;
+  awayCaptainIds?: (string | null | undefined)[];
+  viewerIsHomeMember: boolean;
+  viewerIsAwayMember: boolean;
+}): { gkSide: 'home' | 'away'; viewerOnGkSide: boolean } {
+  const { gkId, requests, creatorId, awayCaptainIds = [], viewerIsHomeMember, viewerIsAwayMember } = params;
+  if (!gkId) return { gkSide: 'home', viewerOnGkSide: false };
+  const req = (requests || []).find(r =>
+    r.providerType === 'GK' && r.providerId === gkId && GK_ASSIGNED_STATUSES.includes(r.status));
+  const hiredByAway = !!req &&
+    req.requestedBy !== creatorId &&
+    awayCaptainIds.filter(Boolean).includes(req.requestedBy);
+  const gkSide: 'home' | 'away' = hiredByAway ? 'away' : 'home';
+  return { gkSide, viewerOnGkSide: gkSide === 'home' ? viewerIsHomeMember : viewerIsAwayMember };
+}
+
+/**
+ * Kiralık kalecinin sahada işgal edeceği slot: İLK boş GK slotu.
+ * Gerçek bir oyuncunun aldığı (TAKEN) GK slotu asla ezilmez — o durumda
+ * kaleci sahada gösterilmez (yalnız alttaki kartta kalır).
+ */
+export function findHiredGkSlotId(slots: (PositionSlot | null | undefined)[]): string | null {
+  return (slots || []).find(s => s && s.status === 'OPEN' && normalizeRole(s.role) === 'GK')?.id ?? null;
+}
