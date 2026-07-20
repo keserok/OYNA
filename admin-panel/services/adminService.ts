@@ -1908,6 +1908,25 @@ export async function assignMatchGoalkeeperAdmin(matchId: string, goalkeeperId: 
   if (error) throw new Error(error.message);
 }
 
+// İki taraflı kaleci: admin ev sahibi (HOME) veya deplasman (AWAY) kalecisini atar.
+export async function assignMatchGoalkeeperSideAdmin(
+  matchId: string,
+  goalkeeperId: string | null,
+  side: 'HOME' | 'AWAY',
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_assign_match_goalkeeper_side', {
+    p_match_id: matchId, p_goalkeeper_id: goalkeeperId, p_side: side,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Bir maçın atanmış kalecilerini (iki taraf) doğrudan matches'ten okur (public SELECT). */
+export async function fetchMatchGoalkeepers(matchId: string): Promise<{ gkId: string | null; awayGkId: string | null }> {
+  const { data, error } = await supabase.from('matches').select('gk_id, away_gk_id').eq('id', matchId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return { gkId: (data as any)?.gk_id ?? null, awayGkId: (data as any)?.away_gk_id ?? null };
+}
+
 export interface MatchTimelineRow {
   source: string;
   event_type: string;

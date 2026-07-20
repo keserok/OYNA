@@ -975,7 +975,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // ── Sağlayıcı-başlatan başvurular (kaleci/hakem maça başvurdu → kaptan yönetir) ──
   const [reqActionId, setReqActionId] = useState<string | null>(null);
-  const providerApplications = serviceRequests.filter(r => r.status === 'APPLIED' && r.initiatedBy === 'PROVIDER');
+  // Sağlayıcı başvuruları İKİ kaptana da görünür (RLS); ancak her kaptana yalnız
+  // KENDİ tarafı için kabul edilebilir olanları göster (dolu tarafta SLOT_FILLED
+  // hatası çıkmasın). GK: benim tarafımın kalecisi boşsa; REF: hakem boşsa.
+  const mySideGkAssigned = myCaptainSide === 'away' ? !!match.awayGkId : !!match.gkId;
+  const providerApplications = serviceRequests.filter(r => {
+    if (r.status !== 'APPLIED' || r.initiatedBy !== 'PROVIDER') return false;
+    if (r.providerType === 'REF') return !match.refereeId && !getActiveRequestForType('REF');
+    return !mySideGkAssigned && !getActiveRequestForType('GK');
+  });
   const captainConfirmPending = serviceRequests.filter(
     r => r.status === 'CAPTURED' && r.initiatedBy === 'PROVIDER' && !r.captainConfirmed && !r.payoutReleased
   );

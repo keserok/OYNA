@@ -411,12 +411,20 @@ BEGIN
   )
   RETURNING * INTO v_req;
 
+  -- İKİ tarafın da kaptanına bildir (simetri): her ikisi de kendi tarafı için
+  -- kabul edebilir. Away takım yoksa/kaptanı home ile aynıysa yalnız home alır.
   INSERT INTO public.notifications (user_id, title, body, type_key, match_id)
-  VALUES (v_captain,
+  SELECT DISTINCT cap,
     CASE WHEN p_provider_type='GK' THEN 'Yeni kaleci başvurusu' ELSE 'Yeni hakem başvurusu' END,
     'Maçına bir ' || CASE WHEN p_provider_type='GK' THEN 'kaleci' ELSE 'hakem' END ||
       ' başvurdu. Kabul edersen ücret bloke edilir.',
-    'service_request_applied', p_match_id);
+    'service_request_applied', p_match_id
+  FROM (
+    SELECT v_captain AS cap
+    UNION
+    SELECT captain_id FROM public.teams WHERE id = v_match."awayTeamId"
+  ) caps
+  WHERE cap IS NOT NULL AND cap <> v_uid;
 
   RETURN jsonb_build_object('request_id', v_req.id, 'status', 'APPLIED',
     'fee', v_fee, 'provider_amount', v_prov_amt);
@@ -491,8 +499,12 @@ BEGIN
   )
   RETURNING * INTO v_intent;
 
+  -- requested_by = KABUL EDEN kaptan: ödemeyi o yapar → iade/no-show/onay hep
+  -- ona gider (simetri; away kaptan kabul ederse away kaptana). RLS de bu satırı
+  -- artık yalnız kabul eden kaptana açar (home kaptan başkasının tarafını yönetemez).
   UPDATE public.service_requests
-    SET status = 'ACCEPTED', accepted_at = now(), payment_intent_id = v_intent.id, team_side = v_side
+    SET status = 'ACCEPTED', accepted_at = now(), payment_intent_id = v_intent.id,
+        team_side = v_side, requested_by = v_uid
     WHERE id = p_request_id;
 
   -- Diğer bekleyen başvuruları reddet:
@@ -654,6 +666,72 @@ BEGIN
 END; $function$;
 REVOKE ALL ON FUNCTION public.captain_report_no_show(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.captain_report_no_show(uuid, text) TO authenticated;
+
+-- ─── 11. decline_provider_application — away kaptanı da reddedebilsin ────────
+CREATE OR REPLACE FUNCTION public.decline_provider_application(p_request_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE v_uid uuid := auth.uid(); v_req public.service_requests;
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
+  SELECT * INTO v_req FROM public.service_requests WHERE id = p_request_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND'; END IF;
+  IF v_req.status <> 'APPLIED' THEN RAISE EXCEPTION 'INVALID_STATE'; END IF;
+  IF v_req.requested_by IS DISTINCT FROM v_uid
+     AND public._hire_side_for(v_req.match_id, v_uid) IS NULL
+     AND NOT public.is_platform_admin() THEN
+    RAISE EXCEPTION 'FORBIDDEN';
+  END IF;
+  UPDATE public.service_requests SET status='REJECTED', cancelled_at=now() WHERE id=p_request_id;
+  INSERT INTO public.notifications (user_id, title, body, type_key, match_id)
+  VALUES (v_req.provider_id, 'Başvurun kabul edilmedi', 'Kaptan başka bir tercih yaptı.',
+    'service_request_declined', v_req.match_id);
+  RETURN jsonb_build_object('request_id', p_request_id, 'status', 'REJECTED');
+END;
+$$;
+REVOKE ALL ON FUNCTION public.decline_provider_application(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.decline_provider_application(uuid) TO authenticated;
+
+-- ─── 12. RLS: APPLIED başvurular İKİ kaptana da görünür ─────────────────────
+-- Aktif (PENDING/ACCEPTED/CAPTURED) satırlar taraf-sahibine (requested_by) kapalı
+-- kalır; yalnız APPLIED başvurular her iki kaptana açılır ki away kaptanı da
+-- kendi tarafı için kabul edebilsin. (Sağlayıcı + talep sahibi + admin zaten görür.)
+DROP POLICY IF EXISTS "Parties view service_requests" ON public.service_requests;
+CREATE POLICY "Parties view service_requests"
+  ON public.service_requests FOR SELECT TO authenticated
+  USING (provider_id = (SELECT auth.uid())
+      OR requested_by = (SELECT auth.uid())
+      OR (status = 'APPLIED' AND public._hire_side_for(match_id, (SELECT auth.uid())) IS NOT NULL)
+      OR public.is_platform_admin());
+
+-- ─── 13. admin_assign_match_goalkeeper_side — admin İKİ tarafı da atayabilsin ─
+-- Mevcut admin_assign_match_goalkeeper (ev sahibi) korunur; bu yeni RPC taraf alır.
+-- RBAC kapısı gövde içinde (rbac_wrappers sonrası eklendiği için sarmalayıcı yok).
+CREATE OR REPLACE FUNCTION public.admin_assign_match_goalkeeper_side(
+  p_match_id uuid, p_goalkeeper_id uuid, p_side text
+)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+DECLARE v_gk uuid := NULLIF(p_goalkeeper_id::text, '')::uuid;
+BEGIN
+  IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
+  PERFORM public.require_admin_role(ARRAY['MODERATOR']);
+  IF p_side NOT IN ('HOME','AWAY') THEN RAISE EXCEPTION 'INVALID_SIDE'; END IF;
+  IF p_side = 'AWAY' THEN
+    UPDATE public.matches SET away_gk_id = v_gk WHERE id = p_match_id;
+  ELSE
+    UPDATE public.matches SET gk_id = v_gk WHERE id = p_match_id;
+  END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Maç bulunamadı'; END IF;
+  PERFORM public.log_admin_action('MATCH_ASSIGN_GK', 'match', p_match_id,
+    COALESCE(p_goalkeeper_id::text,'') || ' (' || p_side || ')', NULL, NULL);
+  RETURN TRUE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.admin_assign_match_goalkeeper_side(uuid, uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_assign_match_goalkeeper_side(uuid, uuid, text) TO authenticated;
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- NOT: matches SELECT zaten herkese açık (matches_select_public) → away_gk_id

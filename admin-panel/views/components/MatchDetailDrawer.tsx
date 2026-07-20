@@ -4,7 +4,8 @@ import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, Message
 import { useAppStore } from '../../../store';
 import {
   assignMatchRefereeAdmin,
-  assignMatchGoalkeeperAdmin,
+  assignMatchGoalkeeperSideAdmin,
+  fetchMatchGoalkeepers,
   assignToSlotAdmin,
   swapSlotsAdmin,
   cancelMatchAdmin,
@@ -87,11 +88,25 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const [serviceReqsLoading, setServiceReqsLoading] = useState(false);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
+  // İki taraflı kaleci: matches'ten (public SELECT) doğrudan okunur — admin_fetch_matches
+  // bu kolonları döndürmüyor, drawer açılınca tazelenir.
+  const [homeGkId, setHomeGkId] = useState<string>('');
+  const [awayGkId, setAwayGkId] = useState<string>('');
   const [notifyTitle, setNotifyTitle] = useState('');
   const [notifyBody, setNotifyBody] = useState('');
   const [confirm, setConfirm] = useState<ActionConfirmOptions | null>(null);
 
   useEffect(() => { setLocal(match); setTab('kadro'); }, [match]);
+
+  // Atanmış kalecileri (ev sahibi + deplasman) matches'ten tazele.
+  useEffect(() => {
+    if (!match?.id) { setHomeGkId(''); setAwayGkId(''); return; }
+    let alive = true;
+    fetchMatchGoalkeepers(match.id)
+      .then(({ gkId, awayGkId }) => { if (alive) { setHomeGkId(gkId || ''); setAwayGkId(awayGkId || ''); } })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [match?.id]);
 
   const matchId = local?.id;
 
@@ -219,13 +234,14 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     }
   };
 
-  const handleGoalkeeper = async (gkId: string) => {
+  const handleGoalkeeperSide = async (gkId: string, side: 'HOME' | 'AWAY') => {
     if (!local) return;
     setBusy(true);
     try {
-      await assignMatchGoalkeeperAdmin(local.id, gkId || null);
-      setLocal({ ...local, gkId: gkId || undefined });
-      success('Kaleci ataması güncellendi');
+      await assignMatchGoalkeeperSideAdmin(local.id, gkId || null, side);
+      if (side === 'AWAY') { setAwayGkId(gkId); }
+      else { setHomeGkId(gkId); setLocal({ ...local, gkId: gkId || undefined }); }
+      success(side === 'AWAY' ? 'Deplasman kaleci ataması güncellendi' : 'Ev sahibi kaleci ataması güncellendi');
       onUpdated();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -525,11 +541,23 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Kaleci</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Kaleci · Ev Sahibi</label>
                     <select
-                      value={local.gkId || ''}
+                      value={homeGkId}
                       disabled={busy}
-                      onChange={(e) => void handleGoalkeeper(e.target.value)}
+                      onChange={(e) => void handleGoalkeeperSide(e.target.value, 'HOME')}
+                      className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white"
+                    >
+                      <option value="">Atanmadı</option>
+                      {adminGoalkeepers.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Kaleci · Deplasman</label>
+                    <select
+                      value={awayGkId}
+                      disabled={busy}
+                      onChange={(e) => void handleGoalkeeperSide(e.target.value, 'AWAY')}
                       className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-xs text-white"
                     >
                       <option value="">Atanmadı</option>
