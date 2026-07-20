@@ -366,6 +366,12 @@ export interface Court {
   type: 'OPEN' | 'CLOSED';
   /** Zemin tipi: 'TURF' | 'GRASS' | 'PARQUET' | 'TARTAN' */
   surface?: string;
+  /** Saha ölçüsü, ör. "30x50" (metre) */
+  size?: string;
+  /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) */
+  capacity?: number;
+  /** Tesis içi sıralama (owner panelindeki sıra ile aynı) */
+  sortOrder?: number;
   price: number;
   slots: { time: string; status: 'available' | 'booked' | 'selected' }[];
   description?: string;
