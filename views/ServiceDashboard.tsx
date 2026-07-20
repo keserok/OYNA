@@ -154,9 +154,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const myUpcomingMatches = useMemo(() => {
       if (!userProfile) return [];
       const upcoming = adminMatches.filter((m: any) => {
-          const isMyMatch = isRef 
-              ? m.refereeId === userProfile.id 
-              : (m.gkId === userProfile.id || m.gk_id === userProfile.id);
+          const isMyMatch = isRef
+              ? m.refereeId === userProfile.id
+              : (m.gkId === userProfile.id || m.gk_id === userProfile.id
+                 || m.awayGkId === userProfile.id || m.away_gk_id === userProfile.id);
           return isMyMatch && (m.status === 'CONFIRMED' || m.status === 'LIVE' || m.status === 'ACTIVE' || !m.status);
       // KB-7: TR tarih/saat stringlerini (ör. "Bugün 21:00", "dd.mm.yyyy") güvenle
       // ayrıştır — ham new Date(`${date} ${time}`) bunlarda Invalid Date veriyordu.
@@ -334,7 +335,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       // YOK → eskiden kartlar undefined/UUID gösteriyordu). Ayrıca yalnız bu
       // sağlayıcı rolünü henüz doldurmamış maçları göster (kaleci/hakem aranıyor).
       const jobs = matches
-        .filter((m: any) => (role === UserRole.GOALKEEPER ? !m.gk_id : !m.refereeId && !m.ref_id))
+        // İki taraflı kaleci: en az bir taraf boşsa iş açıktır (ev sahibi VEYA deplasman).
+        .filter((m: any) => (role === UserRole.GOALKEEPER ? (!m.gk_id || !m.away_gk_id) : !m.refereeId && !m.ref_id))
         .map((m: any) => {
           const slots = Array.isArray(m.slots) ? m.slots : [];
           const filled = slots.filter((s: any) => s?.player || s?.userId).length;

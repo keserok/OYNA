@@ -120,44 +120,29 @@ export function collectAssignedIds(...groups: (PositionSlot[] | undefined)[]): S
 // (altta "Maç Görevlileri" kartı + sahada kalede). Rakip takım ve dış
 // izleyiciler kaleciyi görmez. Hakem bu politikanın DIŞINDADIR: iki
 // takımın ekranında da altta görünür.
+//
+// İki taraflı kaleci: taraf, HANGİ matches kolonunun dolu olduğundan okunur
+// (gk_id = ev sahibi, away_gk_id = deplasman). Bu herkese açık (matches SELECT
+// public) → kaptan-olmayan takım üyeleri de kendi kalecisini görür; RLS-kısıtlı
+// service_requests'e bağımlılık yoktur.
 // ════════════════════════════════════════════════════════════════════════
 
-/** service_requests satırının bu politika için gereken alt kümesi. */
-export interface HiredGkRequestLite {
-  providerId: string;
-  providerType: string;
-  status: string;
-  requestedBy: string;
-}
-
-/** gk_id'yi üretmiş sayılan talep durumları (capture gk_id'yi yazar). */
-const GK_ASSIGNED_STATUSES = ['ACCEPTED', 'CAPTURED', 'COMPLETED'];
-
 /**
- * Kiralık kalecinin TARAFINI ve görüntüleyene GÖRÜNÜRLÜĞÜNÜ çözer.
- * Taraf tespiti: talepteki requested_by (away kaptanıysa 'away').
- * service_requests RLS'i satırı yalnız talep eden kaptan + sağlayıcıya
- * okuttuğundan, satır okunamadığında 'home' varsayılır — bugünkü backend'de
- * create_service_request yalnız maç sahibi/kaptana açık ve kurucu ev sahibi
- * tarafı olduğundan bu varsayım mevcut tüm veriyle tutarlıdır.
+ * Görüntüleyenin hangi tarafın kalecisini görebileceğini çözer.
+ * Her taraf için: o tarafın kalecisi atanmış (id dolu) VE görüntüleyen o
+ * tarafın üyesi → görünür. Taraflar bağımsız değerlenir (bir kişi iki tarafın
+ * da üyesiyse ikisini de görebilir; tipik durumda tek taraf).
  */
-export function resolveHiredGkView(params: {
-  gkId?: string | null;
-  requests: HiredGkRequestLite[];
-  creatorId?: string | null;
-  awayCaptainIds?: (string | null | undefined)[];
+export function resolveGkVisibility(params: {
+  homeGkId?: string | null;
+  awayGkId?: string | null;
   viewerIsHomeMember: boolean;
   viewerIsAwayMember: boolean;
-}): { gkSide: 'home' | 'away'; viewerOnGkSide: boolean } {
-  const { gkId, requests, creatorId, awayCaptainIds = [], viewerIsHomeMember, viewerIsAwayMember } = params;
-  if (!gkId) return { gkSide: 'home', viewerOnGkSide: false };
-  const req = (requests || []).find(r =>
-    r.providerType === 'GK' && r.providerId === gkId && GK_ASSIGNED_STATUSES.includes(r.status));
-  const hiredByAway = !!req &&
-    req.requestedBy !== creatorId &&
-    awayCaptainIds.filter(Boolean).includes(req.requestedBy);
-  const gkSide: 'home' | 'away' = hiredByAway ? 'away' : 'home';
-  return { gkSide, viewerOnGkSide: gkSide === 'home' ? viewerIsHomeMember : viewerIsAwayMember };
+}): { canSeeHome: boolean; canSeeAway: boolean } {
+  return {
+    canSeeHome: !!params.homeGkId && params.viewerIsHomeMember,
+    canSeeAway: !!params.awayGkId && params.viewerIsAwayMember,
+  };
 }
 
 /**

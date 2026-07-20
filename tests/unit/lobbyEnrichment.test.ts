@@ -5,7 +5,7 @@ import {
   applyCanonicalCoords,
   normalizeRole,
   avatarFor,
-  resolveHiredGkView,
+  resolveGkVisibility,
   findHiredGkSlotId,
 } from '../../shared/lobbyEnrichment';
 import type { PositionSlot } from '../../types';
@@ -184,74 +184,51 @@ describe('enrichSlots', () => {
   });
 });
 
-// ─── resolveHiredGkView + findHiredGkSlotId ──────────────────────────────────
+// ─── resolveGkVisibility + findHiredGkSlotId ─────────────────────────────────
 //
-// Kiralık kaleci görünürlük politikası: kaleci YALNIZ kiralayan takımın
-// üyelerine görünür (altta kart + sahada kalede); rakip takım ve dış
-// izleyici görmez. service_requests RLS'i satırı yalnız talep eden kaptana
-// okuttuğundan, talep okunamadığında taraf 'home' varsayılır (bugünkü
-// backend'de yalnız maç sahibi/kaptan kiralayabilir; kurucu = ev sahibi).
+// İki taraflı kiralık kaleci görünürlüğü: taraf, HANGİ matches kolonunun dolu
+// olduğundan okunur (gk_id = ev sahibi, away_gk_id = deplasman). Kaleci YALNIZ
+// kendi takımının üyelerine görünür; rakip ve dış izleyici görmez. Hakem bu
+// politikanın dışında (iki takıma da görünür). Taraflar bağımsız değerlenir.
 
-describe('resolveHiredGkView — kiralık kaleci görünürlüğü', () => {
-  const GK = 'gk-provider-1';
-  const CREATOR = 'captain-home';
-  const AWAY_CAPTAIN = 'captain-away';
-  const baseReq = { providerId: GK, providerType: 'GK', status: 'CAPTURED', requestedBy: CREATOR };
+describe('resolveGkVisibility — iki taraflı kaleci görünürlüğü', () => {
+  const HOME_GK = 'gk-home';
+  const AWAY_GK = 'gk-away';
 
-  it('gkId yoksa kimse görmez (taraf home varsayılır)', () => {
-    const r = resolveHiredGkView({
-      gkId: null, requests: [baseReq], creatorId: CREATOR,
+  it('kolon boşsa o taraf görünmez', () => {
+    const r = resolveGkVisibility({
+      homeGkId: null, awayGkId: null,
       viewerIsHomeMember: true, viewerIsAwayMember: true,
     });
-    expect(r.viewerOnGkSide).toBe(false);
-    expect(r.gkSide).toBe('home');
+    expect(r).toEqual({ canSeeHome: false, canSeeAway: false });
   });
 
-  it('talep okunamıyorsa (RLS → boş liste) taraf home; yalnız ev sahibi üyesi görür', () => {
-    const home = resolveHiredGkView({ gkId: GK, requests: [], creatorId: CREATOR, viewerIsHomeMember: true, viewerIsAwayMember: false });
-    const away = resolveHiredGkView({ gkId: GK, requests: [], creatorId: CREATOR, viewerIsHomeMember: false, viewerIsAwayMember: true });
-    const outsider = resolveHiredGkView({ gkId: GK, requests: [], creatorId: CREATOR, viewerIsHomeMember: false, viewerIsAwayMember: false });
-    expect(home).toEqual({ gkSide: 'home', viewerOnGkSide: true });
-    expect(away).toEqual({ gkSide: 'home', viewerOnGkSide: false });
-    expect(outsider).toEqual({ gkSide: 'home', viewerOnGkSide: false });
+  it('ev sahibi kalecisini yalnız ev sahibi üyesi görür (rakip görmez)', () => {
+    const homeViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: null, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    const awayViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: null, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    const outsider  = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: null, viewerIsHomeMember: false, viewerIsAwayMember: false });
+    expect(homeViewer).toEqual({ canSeeHome: true, canSeeAway: false });
+    expect(awayViewer).toEqual({ canSeeHome: false, canSeeAway: false });
+    expect(outsider).toEqual({ canSeeHome: false, canSeeAway: false });
   });
 
-  it('kurucu (ev sahibi kaptanı) kiralamışsa taraf home', () => {
-    const r = resolveHiredGkView({
-      gkId: GK, requests: [baseReq], creatorId: CREATOR,
-      awayCaptainIds: [AWAY_CAPTAIN],
-      viewerIsHomeMember: true, viewerIsAwayMember: false,
-    });
-    expect(r).toEqual({ gkSide: 'home', viewerOnGkSide: true });
+  it('deplasman kalecisini yalnız deplasman üyesi görür', () => {
+    const awayViewer = resolveGkVisibility({ homeGkId: null, awayGkId: AWAY_GK, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    const homeViewer = resolveGkVisibility({ homeGkId: null, awayGkId: AWAY_GK, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    expect(awayViewer).toEqual({ canSeeHome: false, canSeeAway: true });
+    expect(homeViewer).toEqual({ canSeeHome: false, canSeeAway: false });
   });
 
-  it('away kaptanı kiralamışsa taraf away; yalnız away üyesi görür', () => {
-    const req = { ...baseReq, requestedBy: AWAY_CAPTAIN };
-    const awayViewer = resolveHiredGkView({
-      gkId: GK, requests: [req], creatorId: CREATOR, awayCaptainIds: [AWAY_CAPTAIN],
-      viewerIsHomeMember: false, viewerIsAwayMember: true,
-    });
-    const homeViewer = resolveHiredGkView({
-      gkId: GK, requests: [req], creatorId: CREATOR, awayCaptainIds: [AWAY_CAPTAIN],
-      viewerIsHomeMember: true, viewerIsAwayMember: false,
-    });
-    expect(awayViewer).toEqual({ gkSide: 'away', viewerOnGkSide: true });
-    expect(homeViewer).toEqual({ gkSide: 'away', viewerOnGkSide: false });
+  it('iki taraf da kiralamışsa: ev sahibi üyesi yalnız kendi kalecisini görür (rakibinkini değil)', () => {
+    const homeViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: AWAY_GK, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    const awayViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: AWAY_GK, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    expect(homeViewer).toEqual({ canSeeHome: true, canSeeAway: false });
+    expect(awayViewer).toEqual({ canSeeHome: false, canSeeAway: true });
   });
 
-  it('atama üretmeyen statüler (REJECTED/PENDING) ve farklı sağlayıcı talepleri yok sayılır', () => {
-    const noise = [
-      { ...baseReq, requestedBy: AWAY_CAPTAIN, status: 'REJECTED' },
-      { ...baseReq, requestedBy: AWAY_CAPTAIN, status: 'PENDING' },
-      { ...baseReq, requestedBy: AWAY_CAPTAIN, providerId: 'other-gk' },
-      { ...baseReq, requestedBy: AWAY_CAPTAIN, providerType: 'REF' },
-    ];
-    const r = resolveHiredGkView({
-      gkId: GK, requests: noise, creatorId: CREATOR, awayCaptainIds: [AWAY_CAPTAIN],
-      viewerIsHomeMember: true, viewerIsAwayMember: false,
-    });
-    // Eşleşen talep yok → home varsayımı korunur.
-    expect(r).toEqual({ gkSide: 'home', viewerOnGkSide: true });
+  it('her iki tarafın da üyesi (nadir) her iki kaleciyi de görür', () => {
+    const r = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: AWAY_GK, viewerIsHomeMember: true, viewerIsAwayMember: true });
+    expect(r).toEqual({ canSeeHome: true, canSeeAway: true });
   });
 });
 
