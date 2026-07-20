@@ -9,8 +9,11 @@ export function mapAdminPitchRowToUi(row: AdminPitchRow): Pitch {
     city: row.city || '',
     location: row.district || row.city || '',
     distance: '—',
-    rating: Number(row.google_rating ?? 4.5),
-    googleRating: Number(row.google_rating ?? 4.5),
+    // V-6: sahte 4.5 varsayılanı kaldırıldı. Google yorumu yoksa puan 0
+    // (kart "Yeni" gösterir); admin satırında platform rating_count yok.
+    rating: Number(row.google_review_count ?? 0) > 0 ? Number(row.google_rating ?? 0) : 0,
+    ratingCount: 0,
+    googleRating: Number(row.google_rating ?? 0),
     googleReviews: Number(row.google_review_count ?? 0),
     pricePerPerson: Math.round(Number(row.price_per_match ?? 0) / 14) || 200,
     totalPrice: Number(row.price_per_match ?? 0),

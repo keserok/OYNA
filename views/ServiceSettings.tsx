@@ -12,6 +12,7 @@ import { useAppStore } from '../store';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { APP_VERSION } from '../utils/appVersion';
 import DeleteAccountModal from '../components/common/DeleteAccountModal';
+import { showToast } from '../components/common/GlobalToast';
 
 const CONTACT_EMAIL = 'destek@oyna.app';
 
@@ -114,13 +115,37 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
     }
   };
 
-  // FAZ 8A — ayarlar self-servis RPC ile DB'ye gerçekten yazılır
-  const updateSettings = (key: string, value: any) => {
+  // KD-4: sağlayıcı kaydı (ve settings) mount'tan SONRA yüklenirse toggle
+  // başlangıçları default'ta kalmasın — yüklenince gerçek ayarlarla senkronla (bir kez).
+  useEffect(() => {
     if (!me) return;
-    const newSettings = { ...savedSettings, [key]: value };
-    updateOwnProvider(isRef ? 'REF' : 'GK', { id: me.id, settings: newSettings })
-      .catch((err: any) => console.error('Ayar kaydedilemedi:', err?.message));
-  };
+    const s = me.settings || {};
+    setNotifNewOffer(s.notifNewOffer ?? true);
+    setNotifReminder(s.notifReminder ?? true);
+    setNotifPayment(s.notifPayment ?? true);
+    setNotifMarketing(s.notifMarketing ?? false);
+    setNotifWeekly(s.notifWeekly ?? true);
+    setShowProfile(s.showProfile ?? true);
+    setShowRating(s.showRating ?? true);
+    setHidePhone(s.hidePhone ?? false);
+    setAllowOffer(s.allowOffer ?? true);
+    setDarkMode(s.darkMode ?? true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.id]);
+
+  // KD-5: ayar yazımı fire-and-forget DEĞİL — hata olursa toggle GERİ ALINIR + toast
+  // (eskiden yalnız console.error; toggle "açık" görünüp hiçbir şey kalıcı olmuyordu).
+  const persistToggle = useCallback((key: string, current: boolean, setter: (v: boolean) => void) => {
+    const next = !current;
+    setter(next); // optimistik
+    if (!me) { setter(current); showToast('Ayarların henüz yüklenmedi, birazdan tekrar dene.'); return; }
+    updateOwnProvider(isRef ? 'REF' : 'GK', { id: me.id, settings: { ...(me.settings || {}), [key]: next } })
+      .catch((err: any) => {
+        setter(current); // geri al
+        console.error('Ayar kaydedilemedi:', err?.message);
+        showToast('Ayar kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
+      });
+  }, [me, isRef, updateOwnProvider]);
 
   // Apply dark/light mode to document
   useEffect(() => {
@@ -264,15 +289,15 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           color="#f59e0b"
         >
           <ToggleRow label="Yeni Teklif" desc="Kaptanlardan gelen tekliflerde bildir"
-            checked={notifNewOffer} onChange={() => { setNotifNewOffer(!notifNewOffer); updateSettings('notifNewOffer', !notifNewOffer); }} accentColor={accentColor} />
+            checked={notifNewOffer} onChange={() => persistToggle('notifNewOffer', notifNewOffer, setNotifNewOffer)} accentColor={accentColor} />
           <ToggleRow label="Maç Hatırlatıcı" desc="Maçtan 2 saat önce bildir"
-            checked={notifReminder} onChange={() => { setNotifReminder(!notifReminder); updateSettings('notifReminder', !notifReminder); }} accentColor={accentColor} />
+            checked={notifReminder} onChange={() => persistToggle('notifReminder', notifReminder, setNotifReminder)} accentColor={accentColor} />
           <ToggleRow label="Ödeme Bildirimi" desc="Para transferlerinde anında bildir"
-            checked={notifPayment} onChange={() => { setNotifPayment(!notifPayment); updateSettings('notifPayment', !notifPayment); }} accentColor={accentColor} />
+            checked={notifPayment} onChange={() => persistToggle('notifPayment', notifPayment, setNotifPayment)} accentColor={accentColor} />
           <ToggleRow label="Haftalık Rapor" desc="Kazanç ve performans özeti"
-            checked={notifWeekly} onChange={() => { setNotifWeekly(!notifWeekly); updateSettings('notifWeekly', !notifWeekly); }} accentColor={accentColor} />
+            checked={notifWeekly} onChange={() => persistToggle('notifWeekly', notifWeekly, setNotifWeekly)} accentColor={accentColor} />
           <ToggleRow label="Kampanyalar" desc="Özel fırsatlar ve duyurular"
-            checked={notifMarketing} onChange={() => { setNotifMarketing(!notifMarketing); updateSettings('notifMarketing', !notifMarketing); }} accentColor="#6b7280" />
+            checked={notifMarketing} onChange={() => persistToggle('notifMarketing', notifMarketing, setNotifMarketing)} accentColor="#6b7280" />
         </SectionCard>
 
         {/* Gizlilik */}
@@ -283,14 +308,14 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           subtitle="Profil görünürlük ayarları"
           color="#8b5cf6"
         >
-          <ToggleRow label="Profilimi Göster" desc="Kaptanlar profilini görebilir"
-            checked={showProfile} onChange={() => { setShowProfile(!showProfile); updateSettings('showProfile', !showProfile); }} accentColor={accentColor} />
-          <ToggleRow label="Puan Görünsün" desc="Reyting puanını herkese göster"
-            checked={showRating} onChange={() => { setShowRating(!showRating); updateSettings('showRating', !showRating); }} accentColor={accentColor} />
-          <ToggleRow label="Telefon Gizle" desc="Telefon numarasını sakla"
-            checked={hidePhone} onChange={() => { setHidePhone(!hidePhone); updateSettings('hidePhone', !hidePhone); }} accentColor={accentColor} />
-          <ToggleRow label="Direkt Teklif Al" desc="Kaptanlar sana doğrudan teklif gönderebilir"
-            checked={allowOffer} onChange={() => { setAllowOffer(!allowOffer); updateSettings('allowOffer', !allowOffer); }} accentColor={accentColor} />
+          <ToggleRow label="Profilimi Göster" desc="Kapalıyken vitrinde listelenmezsin"
+            checked={showProfile} onChange={() => persistToggle('showProfile', showProfile, setShowProfile)} accentColor={accentColor} />
+          <ToggleRow label="Puan Görünsün" desc="Kapalıyken reyting puanın gizlenir"
+            checked={showRating} onChange={() => persistToggle('showRating', showRating, setShowRating)} accentColor={accentColor} />
+          <ToggleRow label="Telefon Gizle" desc="Telefon numaranı kaptanlardan sakla"
+            checked={hidePhone} onChange={() => persistToggle('hidePhone', hidePhone, setHidePhone)} accentColor={accentColor} />
+          <ToggleRow label="Direkt Teklif Al" desc="Kapalıyken kaptanlar sana doğrudan teklif gönderemez"
+            checked={allowOffer} onChange={() => persistToggle('allowOffer', allowOffer, setAllowOffer)} accentColor={accentColor} />
         </SectionCard>
 
         {/* Görünüm */}
@@ -307,7 +332,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               <p className="text-[10px] text-gray-500">{darkMode ? 'Koyu tema aktif' : 'Açık tema aktif'}</p>
             </div>
             <button
-              onClick={() => { setDarkMode(!darkMode); updateSettings('darkMode', !darkMode); }}
+              onClick={() => persistToggle('darkMode', darkMode, setDarkMode)}
               className="shrink-0 w-14 h-7 rounded-full relative transition-colors duration-400 focus:outline-none"
               style={{ background: darkMode ? '#3b82f6' : '#e5e7eb' }}
             >

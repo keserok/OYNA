@@ -23,6 +23,7 @@ const mk = (over: Partial<Pitch> = {}): Pitch => ({
   location: '',
   distance: '',
   rating: over.rating ?? 4.0,
+  ratingCount: over.ratingCount ?? 0,
   googleRating: 0,
   googleReviews: 0,
   pricePerPerson: 0,
@@ -129,8 +130,15 @@ describe('filterAndSortPitches — filtreler', () => {
     expect(ids(out).sort()).toEqual([ps[0].id, ps[1].id, ps[3].id].sort());
   });
 
-  it('minRating: puansız/düşük saha elenir', () => {
-    const ps = [mk({ rating: 4.6 }), mk({ rating: 3.2 }), mk({ rating: 0 })];
+  it('minRating: puansız (sahte 5.0 default dahil) ve düşük saha elenir', () => {
+    // V-2: yalnız GERÇEK değerlendirmesi (ratingCount>0) olan saha puan filtresine
+    // girer. pitches.rating DEFAULT 5.0 olduğundan ratingCount=0 sahte 5.0 elenmeli.
+    const ps = [
+      mk({ rating: 4.6, ratingCount: 12 }), // gerçek 4.6 → geçer
+      mk({ rating: 3.2, ratingCount: 5 }),  // gerçek ama düşük → elenir
+      mk({ rating: 0, ratingCount: 0 }),    // puansız → elenir
+      mk({ rating: 5.0, ratingCount: 0 }),  // sahte 5.0 default → elenir
+    ];
     const out = filterAndSortPitches(baseInput(ps, {
       filters: { district: 'Tümü', minRating: 4.0, maxPrice: null, hasAmenities: [], type: 'Tümü' },
     }));

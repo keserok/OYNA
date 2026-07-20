@@ -10,13 +10,14 @@ import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, h
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import { startPresenceHeartbeat, stopPresenceHeartbeat } from './services/socialService';
-import { identifyUser, resetUser, trackEvent } from './utils/observability';
+import { identifyUser, resetUser, trackEvent, captureException } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
 import OfflineBanner from './components/OfflineBanner';
 import { GlobalToast, showToast } from './components/common/GlobalToast';
 import SignupGate from './components/common/SignupGate';
 import { Spinner } from './components/ui/Spinner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
@@ -133,52 +134,98 @@ const App: React.FC = () => {
         if (user) {
           // Gerçek oturum açıldı → misafir modu biter
           useAppStore.getState().setIsGuest(false);
-          const { data: profile } = await supabase
+          const selectProfile = () => supabase
             .from('profiles')
-            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email')
+            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
             .eq('id', user.uid)
             .single();
+          let { data: profile, error: profileErr } = await selectProfile();
+          // A2: geçici okuma hatasını (ağ/timeout/RLS) "kayıt yok" ile KARIŞTIRMA.
+          // Gerçek "satır yok" yalnız PGRST116; diğer hatalarda bir kez daha dene.
+          if (!profile && profileErr && profileErr.code !== 'PGRST116') {
+            await new Promise((r) => setTimeout(r, 800));
+            ({ data: profile, error: profileErr } = await selectProfile());
+          }
 
-          if (!profile) {
-            // ─── YENİ KULLANICI (kayıt) ───────────────────────────────────────
+          // KA-4 (mevcut-kullanıcı koruması): `.single()` geçici/boş yanıtta PGRST116
+          // ("satır yok") üretebilir → mevcut sağlayıcı yanlışlıkla "yeni kullanıcı"
+          // sanılıp PLAYER'a düşürülür (role + roles sıfırlanır = VERİ KAYBI). Satır-yok
+          // sinyalinde, maybeSingle ile bir kez daha YETKİLİ bak (0 satırı temiz null
+          // döndürür, PGRST116 üretmez). Satır varsa mevcut kullanıcıdır → downgrade yok.
+          if (!profile && (!profileErr || profileErr.code === 'PGRST116')) {
+            const { data: recheck } = await supabase
+              .from('profiles')
+              .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
+              .eq('id', user.uid)
+              .maybeSingle();
+            if (recheck) profile = recheck;
+          }
+
+          if (!profile && profileErr && profileErr.code !== 'PGRST116') {
+            // Hâlâ hata → mevcut kullanıcıyı ASLA "yeni kayıt" sanıp PLAYER'a
+            // düşürme/onboarding'e atma. Oturumu koru, açıkla, çık.
+            captureException(profileErr, { where: 'onAuthStateChanged.profileFetch' });
+            showToast('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+          } else if (!profile) {
+            // ─── YENİ KULLANICI (kayıt) — ama önce KESİN doğrula ──────────────
             // Yeni model: KAYIT OLAN HERKES OYUNCU. Kaleci/Hakem/Tesis rolleri
             // sonradan Profil'den opt-in başvuru + admin onayı ile eklenir; kayıt
             // öncesinde rol seçimi yoktur.
             const fallbackName = user.displayName
               || (user.email ? user.email.split('@')[0] : '')
               || (user.phone ? user.phone : '');
-            try {
-              await supabase.from('profiles').insert({
-                id: user.uid,
-                email: user.email ?? null,
-                phone: user.phone ?? null,
-                full_name: fallbackName,
-                role: UserRole.PLAYER,
-                roles: [UserRole.PLAYER],
-                verification_status: 'approved',
-                last_active_at: new Date().toISOString(),
-              });
-            } catch (insertError) {
+            // KA-4: `.insert()` hata FIRLATMAZ, `{error}` döndürür (eski try/catch
+            // etkisizdi). Sonuç, "yeni mi mevcut mu" sorusunun KESİN kaynağıdır:
+            // başarılı insert = gerçekten yeni; çakışma (23505) = satır ZATEN VAR =
+            // MEVCUT kullanıcı (yukarıdaki okumalar geçici boş dönmüş) → PLAYER'a
+            // DÜŞÜRME (role+roles sıfırlama = veri kaybı), mevcut olarak yönlendir.
+            const { error: insertError } = await supabase.from('profiles').insert({
+              id: user.uid,
+              email: user.email ?? null,
+              phone: user.phone ?? null,
+              full_name: fallbackName,
+              role: UserRole.PLAYER,
+              roles: [UserRole.PLAYER],
+              verification_status: 'approved',
+              last_active_at: new Date().toISOString(),
+            });
+            const isConflict = !!insertError && (insertError.code === '23505'
+              || /duplicate key|already exists/i.test(insertError.message || ''));
+            if (isConflict) {
+              // 23505 = satır KESİN var → kullanıcı mevcut. Profili çek; okuma da
+              // başarısız olsa bile ASLA yeni-kullanıcı downgrade'ine düşme.
+              const { data: after } = await selectProfile();
+              if (after) profile = after; // aşağıdaki MEVCUT-kullanıcı bloğuna düşer
+            } else if (insertError) {
               console.error('[App] Error creating user profile:', insertError);
               showToast('Profilin oluşturulurken bir sorun oluştu. Lütfen tekrar giriş yapmayı dene.');
             }
-            // KVKK Aydınlatma + Kullanıcı Sözleşmesi kabulünü sunucuya
-            // denetlenebilir şekilde kaydet — TÜM kayıt yolları (e-posta +
-            // Google/Apple) buradan geçer. Ayrı ayrı kaydedilir (bundle değil).
-            // best-effort: kayıt akışını bloke etmez.
-            recordUserConsents(['KVKK', 'TERMS']).catch(() => {});
-            setRole(UserRole.PLAYER);
-            useAppStore.getState().setMyRoles([UserRole.PLAYER]);
-            identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
-            trackEvent('user_registered', { role: UserRole.PLAYER });
-            // Yeni kayıt → oyuncu onboarding'i (kayıt SONRASI, kullanıcı
-            // girişliyken): ad soyad ön-dolu gelir, veriler doğrudan DB'ye
-            // yazılır. Onboarding kendi konum adımını içerdiğinden ayrı
-            // LOCATION_PROMPT'a gerek yok. Kill-switch kapalıysa eski
-            // bağlamsal konum istemine düşülür.
-            resetNavigation(isOnboardingEnabled() ? 'ONBOARDING' : 'LOCATION_PROMPT');
-          } else {
-            // ─── MEVCUT KULLANICI (giriş) ─────────────────────────────────────
+
+            if (!profile && isConflict) {
+              // Mevcut kullanıcı ama profil şu an okunamadı (ağ) → downgrade YOK;
+              // oturumu koru, açıkla. Bir sonraki auth olayı/yenileme düzeltir.
+              showToast('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+            } else if (!profile) {
+              // ── GERÇEKTEN yeni kullanıcı (insert başarılı) ──
+              // KVKK Aydınlatma + Kullanıcı Sözleşmesi kabulünü sunucuya
+              // denetlenebilir şekilde kaydet — TÜM kayıt yolları (e-posta +
+              // Google/Apple) buradan geçer. best-effort: akışı bloke etmez.
+              recordUserConsents(['KVKK', 'TERMS']).catch(() => {});
+              setRole(UserRole.PLAYER);
+              useAppStore.getState().setMyRoles([UserRole.PLAYER]);
+              identifyUser(user.uid, { role: UserRole.PLAYER, is_admin: false });
+              trackEvent('user_registered', { role: UserRole.PLAYER });
+              // Yeni kayıt → oyuncu onboarding'i (kayıt SONRASI, kullanıcı
+              // girişliyken): ad soyad ön-dolu gelir, veriler doğrudan DB'ye
+              // yazılır. Onboarding kendi konum adımını içerdiğinden ayrı
+              // LOCATION_PROMPT'a gerek yok. Kill-switch kapalıysa eski
+              // bağlamsal konum istemine düşülür.
+              resetNavigation(isOnboardingEnabled() ? 'ONBOARDING' : 'LOCATION_PROMPT');
+            }
+          }
+
+          if (profile) {
+            // ─── MEVCUT KULLANICI (giriş) — çakışma-kurtarması da buraya düşer ─
             const primaryRole = (profile.role as UserRole) || UserRole.PLAYER;
             // FAZ 7.5: sahip olunan roller — çoklu rol geçişi + açılış rolü seçimi.
             // Güvenlik payı: roles ∪ aktif rol. Eski owner hesaplarında profiles.roles
@@ -188,6 +235,16 @@ const App: React.FC = () => {
               primaryRole,
             ]));
             useAppStore.getState().setMyRoles(ownedRoles);
+
+            // KN-2: giriş yapan oyuncunun gerçek kimliğini store'a yaz — maç
+            // akışları admin-only adminUsers yerine bunu kullanır ("Oyuncu" +
+            // rastgele pravatar fallback'i ortadan kalkar).
+            useAppStore.getState().setCurrentUserProfile({
+              id: user.uid,
+              name: (profile.full_name as string) || user.displayName || 'Oyuncu',
+              avatar: (profile.avatar_url as string) || user.photoURL || '',
+              rating: 0, // puan ayrı kaynaktan; burada kritik değil (join fallback'i 4.5)
+            });
 
             // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
             // TOKEN_REFRESHED + yeniden INITIAL_SESSION…). Açılış-rolü OVERRIDE'ı
@@ -269,7 +326,22 @@ const App: React.FC = () => {
                 }
               }
 
-              resetNavigation(navigateBasedOnRole(landingRole));
+              // KA-1/KA-2: Sağlayıcı (kaleci/hakem) rolü ONAYLANMADIYSA panele
+              // DEĞİL bekleme/red ekranına yönlendir. verification_status SELECT
+              // ediliyordu ama landing'de hiç okunmuyordu → onaysız/red sağlayıcı
+              // doğrudan SERVICE_DASHBOARD'a düşüp red notunu/"Tekrar Başvur"u hiç
+              // görmüyordu (takılı kalırdı). Bu kapı token yenilemesinde de çalışır
+              // (isEntering PENDING_VERIFICATION'ı içerir) → ~1 saat sonra gelen
+              // arka-plan yenilemesi onaysız kullanıcıyı panele bounce edemez.
+              const providerRole = landingRole === UserRole.GOALKEEPER || landingRole === UserRole.REFEREE;
+              const vstatus = (profile.verification_status as string | null) ?? null;
+              if (providerRole && (vstatus === 'pending' || vstatus === 'rejected')) {
+                // Tekrar-başvuru akışının doğru rolü hedeflemesi için serviceAppRole'ü kur.
+                useAppStore.getState().setServiceAppRole(landingRole);
+                resetNavigation('PENDING_VERIFICATION');
+              } else {
+                resetNavigation(navigateBasedOnRole(landingRole));
+              }
             }
           }
         } else {
@@ -279,6 +351,7 @@ const App: React.FC = () => {
           // doğrudan giriş (AUTH) ekranına düşülür.
           resetNavigation(prevView === 'SPLASH' ? 'SPLASH' : 'AUTH');
           resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
+          useAppStore.getState().setCurrentUserProfile(null); // KN-2: kimlik temizlenir
           stopPresenceHeartbeat(); // çıkışta heartbeat durur (Spec F34)
         }
       } catch (error: any) {
@@ -493,17 +566,17 @@ const App: React.FC = () => {
       case 'PENDING_VERIFICATION':
         return <PendingVerificationView
           onApproved={async () => {
-            // Aktif rol başvuru boyunca PLAYER kalıyor; onay sonrası başvurulan
-            // sağlayıcı rolüne (serviceAppRole) geçip ServiceDashboard'a yönlendir.
-            // Aksi hâlde re-login'e kadar oyuncu Dashboard'una düşülüyordu.
-            const applied = useAppStore.getState().serviceAppRole;
-            if (applied) {
-              useAppStore.getState().setRole(applied);
-              try { await setActiveRole(applied); } catch { /* yine de yönlendir */ }
-              resetNavigation(navigateBasedOnRole(applied));
-            } else {
-              resetNavigation(navigateBasedOnRole(role));
-            }
+            // KA-3 + main birleşimi: onay geldiğinde DOĞRU panele git. In-session
+            // başvuruda store.role hâlâ PLAYER olabilir (serviceAppRole onaylanan
+            // sağlayıcı rolünü taşır). Rol listesine ekle + sunucuda da kalıcılaştır
+            // (setActiveRole) ki RoleSwitcher/segment/RLS tutarlı kalsın.
+            const approvedRole = serviceAppRole || role;
+            setRole(approvedRole);
+            useAppStore.getState().setMyRoles(
+              Array.from(new Set([...(myRoles || []), approvedRole]))
+            );
+            try { await setActiveRole(approvedRole); } catch { /* yine de yönlendir */ }
+            resetNavigation(navigateBasedOnRole(approvedRole));
           }}
           onLogout={() => resetNavigation('AUTH')}
           onReapply={(note) => { setVerificationNote(note); navigateTo('SERVICE_APPLICATION'); }}
@@ -548,8 +621,6 @@ const App: React.FC = () => {
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
           onBack={() => goBack(navigateBasedOnRole(role))}
-          selectedGk={selectedGk}
-          selectedRef={selectedRef}
         />;
       case 'PITCH_DISCOVERY':
         return <PitchDiscovery
@@ -665,7 +736,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 flex items-center justify-between gap-3">
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
@@ -690,9 +761,35 @@ const App: React.FC = () => {
           {...PAGE_TRANSITION}
           className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : 'pb-safe'}`}
         >
-          <Suspense fallback={<ViewLoader />}>
-            {renderView()}
-          </Suspense>
+          {/* A5: Görünüm-seviyesi hata sınırı. Bir görünüm çökse de (ör. lazy
+              chunk ağ hatası, render exception) uygulama kabuğu + alt menü ayakta
+              kalır; kullanıcı beyaz ekranda kilitlenmez. fullScreen={false} → yalnız
+              içerik alanını kaplar. Üst motion.div key={view} olduğundan sınır her
+              görünüm değişiminde yeniden kurulur (otomatik sıfırlama). "Geri Dön":
+              yığında önceki görünüm varsa oraya döner (taze sınır kurulur). AÇILIŞ
+              görünümü çöktüyse (yığın boş → goBack aynı yere döner) React.lazy reddi
+              önbellekte olduğundan yeniden render kurtarmaz; ayrıca GK/hakem/tesis
+              açılışları (SERVICE_DASHBOARD/OWNER_PANEL) alt menüsüzdür → başka çıkış
+              yoktur. Bu durumda tam yeniden yükleme chunk'ı yeniden çeker + geçici
+              bozuk store durumunu sıfırlar (gerçek kurtarma yolu). */}
+          <ErrorBoundary
+            fullScreen={false}
+            title="Bu bölüm yüklenemedi"
+            message="Bağlantı ya da geçici bir sorun olabilir. Geri dönüp tekrar deneyebilirsin."
+            onBack={() => {
+              // Yığın boşsa (açılış görünümü) geri gidilecek ekran yok ve chunk
+              // reddi önbellektedir → yeniden yükleme tek gerçek kurtarma.
+              if (useAppStore.getState().navigationStack.length === 0) {
+                if (typeof window !== 'undefined') window.location.reload();
+                return;
+              }
+              goBack(navigateBasedOnRole(role));
+            }}
+          >
+            <Suspense fallback={<ViewLoader />}>
+              {renderView()}
+            </Suspense>
+          </ErrorBoundary>
         </motion.div>
       </AnimatePresence>
 

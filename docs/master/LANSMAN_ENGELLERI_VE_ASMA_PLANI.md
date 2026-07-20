@@ -7,6 +7,38 @@
 
 ---
 
+## ⓪ GÜNCEL DURUM MUTABAKATI (19 Temmuz 2026) — Aşama 1 kod P0'ları
+
+> Bu belgenin gövdesi 4 Temmuz fotoğrafıdır. O tarihten bu yana ödeme sprint'i
+> (S1–S5), pazaryeri, personel/offline işleri main'e ve bu branch'e girdi.
+> **Sonuç: Aşama 1'in KOD P0'ları büyük ölçüde KAPANDI.** Kalan gerçek engel
+> kodda değil, **kurucu tedarikinde** (iyzico sözleşmesi, mağaza hesapları,
+> anahtarlar, Ordu sahaları, avukat). Aşağıdaki tablo §2.1 ve §7'yi günceller;
+> her satır canlı doğrulandı.
+
+| Aşama-1 kod P0 (4 Tmz) | Güncel durum | Kanıt / not |
+|---|---|---|
+| Profil PII (`public_profiles` view) | ✅ **ÇÖZÜLDÜ** | Canlı impersonation: başka kullanıcının `profiles` satırı 0 satır döner; `public_profiles` yalnız güvenli sütunlar (e-posta/telefon/konum/cüzdan yok). |
+| Yasal ünvan + public URL + iade metni | ✅ **ÇÖZÜLDÜ** | `LegalScreen` şirket bilgisi dolu (Miraç Kerem Çürüksulu · Kartal VD 2650883645 · adres); `public/gizlilik.html`, `hesap-silme.html`, `cerez-politikasi.html` hazır; iade metni motorla birebir (≥24s %100 / 6–24s %50 / <6s yok). |
+| Ödeme gerçek (iyzico) | ✅ **KOD HAZIR** — anahtar bekliyor | `create-payment` tam iyzico entegrasyonu (IYZWSv2 HMAC, 3DS, tokenizasyon); `PAYMENT_PROVIDER=SIMULATION` bayrağı canlı anahtar gelene kadar. Sözleşme = **kurucu tedariki**. |
+| QR bilet gerçek | ✅ **ÇÖZÜLDÜ** | `MatchTicket` gerçek `qrcode` kütüphanesi + gerçek rezervasyon kaydı + dürüst durum (statik ikon/sabit ID kaldırıldı). |
+| iOS push `production` | ✅ **DÜZELTİLDİ** (bu branch) | `App.entitlements` `aps-environment=production`. |
+| Uydurma doluluk % | ✅ **ÇÖZÜLDÜ** | V-2/V-3: rating_count kapısı + slot-özel indirim vitrinden kaldırıldı. |
+| Cold-start boş-durum affordance | ✅ **EKLENDİ** (bu branch) | Boş şehirde "haberdar et / saha öner" (gerçek `pitch_demand_signals` + idempotent RPC). |
+| Offline-first ön büro (kasa) | ✅ **P-OFFLINE** | Çevrimdışı outbox + idempotent tahsilat (kasa çekirdeği). |
+| Reviewer/demo hesabı | 🟡 **MEKANİZMA HAZIR** | E-posta+şifre girişi çalışır; demo-giriş üretimde güvenle KAPALI. Kurucu bir inceleme hesabı açar → `docs/master/APP_REVIEW_NOTLARI.md` şablonu hazır. |
+
+**Kalan kurucu-tedarik P0'ları (kod bunları hızlandıramaz — §2.2):**
+iyzico pazaryeri sözleşmesi + KYC + `PAYMENT_PROVIDER=IYZICO` canlı anahtarlar ·
+kurumsal Google Play + Apple Developer hesapları · APNs `.p8` + FCM
+`google-services.json` · `public/*.html`'i canlı public URL'de yayınlama ·
+Ordu 4 saha gerçek anlaşma + fiyat/takvim · avukat onayı (öneri).
+
+**Küçük kalan kod işleri (P2, mağaza reddi değil):** misafir gezinme onay
+kapısını işlem anına taşıma; telefon-OTP girişi (opsiyon).
+
+---
+
 ## 0. Yönetici Özeti — 30 Saniyede Tablo
 
 Engeller üç katmanda toplanıyor. **İyi haber:** teknik mağaza engellerinin kod tarafı büyük ölçüde çözülmüş durumda (PR #28 main'de). **Kötü haber:** asıl zorluk kodda değil, **üç adet insan/güven denklemi**nde:

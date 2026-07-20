@@ -368,7 +368,10 @@ export const getFriendsWithStats = async (userId: string): Promise<(Player & { o
 
   const { data: profiles, error: pErr } = await supabase
     .from('public_profiles')
-    .select('id, full_name, avatar_url, stats')
+    // E4: `stats` kolonu public_profiles view'inde YOK → eski select 400
+    // veriyor, fonksiyon hep [] dönüyordu (takım kurma arkadaşsız!). Gerçek
+    // kolonlar: skill_rating (0-5) + match_count.
+    .select('id, full_name, avatar_url, skill_rating, match_count')
     .in('id', friendIds);
 
   if (pErr) {
@@ -377,12 +380,17 @@ export const getFriendsWithStats = async (userId: string): Promise<(Player & { o
   }
 
   return (profiles || []).map((p: any) => {
-    const rating = Number((p.stats as any)?.rating ?? 5);
+    // Gerçek yetenek puanı (0-5). Eskiden default 5 → herkes OVR 100 →
+    // "Akıllı Dengeleme" anlamsızdı.
+    const rating = typeof p.skill_rating === 'number' ? p.skill_rating : 0;
+    const matchCount = Number(p.match_count ?? 0);
     return {
       id: p.id as string,
       name: (p.full_name as string) || 'Oyuncu',
       avatar: (p.avatar_url as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`,
       rating,
+      matchCount,
+      isRookie: matchCount <= 0,
       position: 'OYUNCU',
       x: 0,
       y: 0,

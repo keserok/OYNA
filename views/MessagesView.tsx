@@ -8,9 +8,14 @@ import {
 import { auth } from '../supabaseAuth';
 import {
   getMyConversations, getMessages, sendMessage, markConversationRead,
-  blockUser, subscribeToConversation,
+  subscribeToConversation,
   ConversationSummary, Message,
 } from '../services/messageService';
+// F2/F3: DM engelleme/şikayet artık sosyal katmanın GÜÇLÜ makinesine bağlı —
+// blockUserFully (arkadaşlığı da düşürür, profil sheet'iyle aynı) + gerçek
+// reportUser (user_reports'a yazar). Eski messageService.blockUser sadece
+// user_blocks'a upsert edip arkadaşlığı koruyordu (tutarsız semantik).
+import { blockUserFully, reportUser } from '../services/socialService';
 import {
   getTeamChatOverview, getTeamMessages, sendTeamMessage, markTeamChatRead,
   setTeamChatMuted, subscribeTeamChat, parseTacticMessage,
@@ -227,6 +232,7 @@ const ChatView: React.FC<{
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false); // F1: bu kullanıcıyı engelledim
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -308,18 +314,30 @@ const ChatView: React.FC<{
   const handleBlock = useCallback(async () => {
     setMenuOpen(false);
     setError(null);
+    if (!conversation.otherId) { setError('Bu kullanıcı engellenemiyor.'); return; }
     try {
-      await blockUser(conversation.otherId, true);
-      setActionInfo(`${name} engellendi.`);
+      await blockUserFully(myUid, conversation.otherId);
+      // F1: blok sonrası sohbet AÇIK kalmasın — kompozer kilitlenir + net durum.
+      setBlocked(true);
+      setActionInfo(`${name} engellendi. Artık mesajlaşamazsınız.`);
     } catch (e: any) {
       setError(e?.message || 'Kullanıcı engellenemedi.');
     }
-  }, [conversation.otherId, name]);
+  }, [conversation.otherId, name, myUid]);
 
-  const handleReport = useCallback(() => {
+  const handleReport = useCallback(async () => {
     setMenuOpen(false);
-    setActionInfo('Şikayetin alındı, ekibimiz inceleyecek.');
-  }, []);
+    setError(null);
+    if (!conversation.otherId) { setError('Bu kullanıcı şikayet edilemiyor.'); return; }
+    try {
+      // F3: gerçek şikayet — user_reports'a yazar (eskiden yalnız "alındı" diyip
+      // hiçbir şey kaydetmiyordu).
+      await reportUser(myUid, conversation.otherId, 'HARASSMENT');
+      setActionInfo('Şikayetin alındı, ekibimiz inceleyecek.');
+    } catch (e: any) {
+      setError(e?.message || 'Şikayet gönderilemedi.');
+    }
+  }, [conversation.otherId, myUid]);
 
   return (
     <div className="flex flex-col h-full">
@@ -441,7 +459,14 @@ const ChatView: React.FC<{
         )}
       </AnimatePresence>
 
-      {/* ── Mesaj Girişi ── */}
+      {/* ── Mesaj Girişi (F1: engellendiyse kompozer kilitli) ── */}
+      {blocked ? (
+        <div className="flex-shrink-0 px-4 py-4 border-t border-white/8 bg-[#070B10]/80 backdrop-blur-xl pb-safe text-center">
+          <p className="text-[12px] font-bold text-gray-400">
+            Bu kullanıcıyı engelledin — mesajlaşma kapalı.
+          </p>
+        </div>
+      ) : (
       <div className="flex-shrink-0 px-4 py-3 border-t border-white/8 flex items-end gap-2 bg-[#070B10]/80 backdrop-blur-xl pb-safe">
         <textarea
           value={draft}
@@ -466,6 +491,7 @@ const ChatView: React.FC<{
             : <Send size={18} className="text-white" />}
         </button>
       </div>
+      )}
     </div>
   );
 };

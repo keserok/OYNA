@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Banknote, Clock, Wallet, X } from 'lucide-react';
-import { getOwnerBalance, requestWithdrawal, toTurkishError } from '../../../services/pitchOwnerService';
+import { getOwnerBalance, getBankAccounts, requestWithdrawal, toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 
 interface Props {
@@ -26,7 +26,8 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
   useEffect(() => {
     let active = true;
     if (!isRealPitch) {
-      setAvailableBalance(12500);
+      // OP-P0-4/N-5: demo tesiste sahte ₺12.500 çekilebilir bakiye gösterme.
+      setAvailableBalance(0);
       return;
     }
     getOwnerBalance(facilityId)
@@ -39,6 +40,16 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
       .catch(() => {
         if (active) setAvailableBalance(0);
       });
+    // N-3: kayıtlı birincil banka hesabını (IBAN + sahip) çekim formuna ön-doldur —
+    // owner her çekimde IBAN'ı elle yazmasın (kurulumdaki IBAN ölü veri olmasın).
+    getBankAccounts(facilityId)
+      .then((accts) => {
+        if (!active || accts.length === 0) return;
+        const primary = accts[0]; // is_primary DESC sıralı
+        if (primary?.iban) setIban(primary.iban);
+        if (primary?.account_holder) setIbanHolder(primary.account_holder);
+      })
+      .catch(() => { /* ön-doldurma başarısızsa form boş kalır, akış bozulmaz */ });
     return () => {
       active = false;
     };

@@ -151,9 +151,21 @@ export interface PlayerStat {
   videoUrl: string | null;
 }
 
+// Giriş yapmış oyuncunun hafif, reaktif kimliği (ad/avatar/puan). Maça katılım
+// gibi akışlar bunu admin-only `adminUsers` listesi yerine kullanır — böylece
+// oyuncuda "Oyuncu" + rastgele pravatar fallback'i oluşmaz (KN-2).
+export interface CurrentUserProfile {
+  id: string;
+  name: string;
+  avatar: string;
+  rating: number;
+}
+
 export interface PlayerCardData {
   overall: number;
   tier: 'gold' | 'silver' | 'bronze';
+  /** Henüz maç oynamamış (rookie) → kart OVR yerine "—" ve nötr tema gösterir. */
+  isRookie?: boolean;
   isStatsVerified: boolean;
   diamondValue: number;
   flatModifier?: number; // Opanel admin override katsayısı
@@ -376,6 +388,7 @@ export interface Pitch {
   location: string; // Full address
   distance: string;
   rating: number;
+  ratingCount: number; // Platform değerlendirme sayısı; 0 ise puan gösterilmez ("Yeni")
   googleRating: number;
   googleReviews: number;
   pricePerPerson: number;
@@ -988,6 +1001,7 @@ export interface PitchExpense {
   created_by?: string | null;
   created_at?: string;
   is_demo?: boolean;
+  template_id?: string | null;
 }
 
 export interface PitchDebtor {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, MapPin, Bell, Lock, AlertCircle, Download, Trash2, Repeat, ShieldCheck,
+  Building2, KeyRound, Crown, X, Check,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
@@ -20,6 +21,7 @@ import RegionPickerPage from '../components/settings/RegionPickerPage';
 import ProfileInfoPage from '../components/settings/ProfileInfoPage';
 import FieldRolePage from '../components/settings/FieldRolePage';
 import { APP_VERSION } from '../utils/appVersion';
+import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -38,6 +40,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [exportError, setExportError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [subPage, setSubPage] = useState<SubPage>(null);
+  // STAFF-3: kullanıcının personel/müdür olduğu tesisler + davet kodu kullan
+  const [staffPitches, setStaffPitches] = useState<StaffPitch[]>([]);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   const showToast = (message: string) => {
     setToastMsg(message);
@@ -47,7 +52,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const {
     setUserLocation, setLocationPermissionStatus, activeRegion, setActiveRegion,
     selectedRegions, searchRadius, setSearchRadius, notificationPreferences, myRoles,
+    setStaffPanelContext,
   } = useAppStore();
+
+  // STAFF-3: personel/müdür olunan tesisleri yükle (panel girişi için)
+  const loadStaffPitches = React.useCallback(async () => {
+    try { setStaffPitches(await getMyStaffPitches()); } catch { /* sessiz — giriş noktası opsiyonel */ }
+  }, []);
+  useEffect(() => { loadStaffPitches(); }, [loadStaffPitches]);
+
+  const openStaffPanel = (p: StaffPitch) => {
+    setStaffPanelContext({ pitchId: p.pitch_id, pitchName: p.pitch_name, accessLevel: p.access_level });
+    onNavigate('OWNER_PANEL');
+  };
   const hasMultipleRoles = myRoles.length > 1;
 
   const enabledNotifCount = Object.values(notificationPreferences).filter(
@@ -242,6 +259,40 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <ChevronRight size={18} className="text-[#3b82f6]" />
         </button>
 
+        {/* İşletme — personel/müdür panel girişi + davet kodu kullanma */}
+        <section className="space-y-3">
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-1 ml-2">İşletme</h3>
+          {staffPitches.map((p) => (
+            <button
+              key={p.member_id}
+              onClick={() => openStaffPanel(p)}
+              className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-indigo-500/20 rounded-2xl hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                  {p.access_level === 'MANAGER' ? <Crown size={18} /> : <Building2 size={18} />}
+                </div>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-white block">{p.pitch_name}</span>
+                  <span className="text-[11px] text-gray-400">Tesis paneli · {p.access_level === 'MANAGER' ? 'Müdür' : 'Personel'}</span>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-indigo-400" />
+            </button>
+          ))}
+          <button
+            onClick={() => setShowJoinModal(true)}
+            className="w-full flex items-center gap-3 p-4 bg-[#161B22] border border-white/8 rounded-2xl hover:bg-white/5 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 text-gray-300"><KeyRound size={18} /></div>
+            <div className="text-left flex-1">
+              <span className="text-sm font-bold text-white block">Tesise Katıl</span>
+              <span className="text-[11px] text-gray-400">Sana verilen 6 haneli davet koduyla tesis ekibine katıl</span>
+            </div>
+            <ChevronRight size={18} className="text-gray-500" />
+          </button>
+        </section>
+
         {/* Hesap */}
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Hesap</h3>
@@ -424,6 +475,66 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           />
         )}
       </AnimatePresence>
+
+      {showJoinModal && (
+        <JoinFacilityModal
+          onClose={() => setShowJoinModal(false)}
+          onJoined={async (name) => {
+            setShowJoinModal(false);
+            showToast(`${name} ekibine katıldın! "İşletme" bölümünden panele girebilirsin.`);
+            await loadStaffPitches();
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// ── Tesise Katıl — 6 haneli davet kodu kullanma ─────────────────────────────
+const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: string) => void }> = ({ onClose, onJoined }) => {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const clean = code.replace(/\D/g, '').slice(0, 6);
+
+  const submit = async () => {
+    if (clean.length !== 6) { setError('Kod 6 haneli olmalı.'); return; }
+    setBusy(true); setError(null);
+    try {
+      const r = await staffAcceptInvite(clean);
+      onJoined(r.pitch_name);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-end sm:items-center justify-center p-4" onClick={onClose} role="presentation">
+      <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-black text-white">Tesise Katıl</h3>
+          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-gray-400" /></button>
+        </div>
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-indigo-500/15 flex items-center justify-center mb-3"><KeyRound size={26} className="text-indigo-400" /></div>
+        <p className="text-sm text-gray-400 text-center mb-4">Tesis sahibinin verdiği 6 haneli davet kodunu gir.</p>
+        <input
+          value={clean}
+          onChange={(e) => { setCode(e.target.value); setError(null); }}
+          inputMode="numeric"
+          placeholder="______"
+          autoFocus
+          className="w-full text-center text-3xl font-black tracking-[0.4em] font-mono bg-[#0A0E14] border border-white/10 rounded-2xl p-4 text-white placeholder:text-gray-700"
+        />
+        {error && <p className="text-xs text-red-400 mt-2 text-center">{error}</p>}
+        <button
+          type="button"
+          disabled={busy || clean.length !== 6}
+          onClick={submit}
+          className="w-full mt-4 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {busy ? 'Katılınıyor…' : <><Check size={16} /> Katıl</>}
+        </button>
+      </div>
     </div>
   );
 };

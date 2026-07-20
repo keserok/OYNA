@@ -13,8 +13,16 @@ import 'leaflet/dist/leaflet.css';
 import {
   X, MapPin, Building2, Clock, LayoutGrid, Wallet, Image as ImageIcon,
   Sparkles, Check, Eye, Star, Lock, Loader2, Plus, Trash2, ShieldCheck, Percent,
+  CalendarClock, ChevronLeft, ChevronRight, RefreshCcw, Coins, AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
+import { getFacilitySchedule, type FacilitySchedule } from '../../../services/facilitySchedule';
+import { buildFacilityDayGrid } from '../../../shared/facilityScheduleModel';
+import { FacilityScheduleGrid } from '../../../shared/FacilityScheduleGrid';
+import { getPitchFinanceSummary, type FinanceSummary } from '../../../services/financeService';
+import { monthLabel, shiftMonth, isMonthAfter, methodLabel } from '../../../shared/financeModel';
+import { money, BreakdownList } from '../../../views/owner/finance/financeUi';
+import { localDateISO } from '../../../views/owner/ownerCalendarHelpers';
 import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
 import { getTariffs, saveTariffs, getPitchRefundPolicy, setPitchRefundPolicy, type TariffInput } from '../../../services/pitchOwnerService';
 import { setPitchPublished, setPitchShowcaseFlags, type PitchShowcaseFlags } from '../../../services/pitchContentService';
@@ -37,7 +45,7 @@ interface PitchStudioProps {
   onSaved: () => void;
 }
 
-type StudioTab = 'identity' | 'amenities' | 'hours' | 'courts' | 'tariffs' | 'photos' | 'showcase';
+type StudioTab = 'identity' | 'amenities' | 'hours' | 'courts' | 'tariffs' | 'photos' | 'showcase' | 'schedule' | 'finance';
 
 const DESC_MIN = 40;
 const DESC_MAX = 500;
@@ -127,6 +135,18 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [tariffs, setTariffs] = useState<TariffRow[]>([]);
   const [tariffsLoaded, setTariffsLoaded] = useState(false);
   const [savingTariffs, setSavingTariffs] = useState(false);
+
+  // ── Takvim & Doluluk (admin gözetim, salt-okuma) ──
+  const [scheduleDateISO, setScheduleDateISO] = useState(() => localDateISO());
+  const [schedule, setSchedule] = useState<FacilitySchedule | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  // ── Finans (admin gözetim, salt-okuma; get_pitch_finance_summary owner/admin) ──
+  const [financeMonth, setFinanceMonth] = useState(() => localDateISO().slice(0, 7));
+  const [finance, setFinance] = useState<FinanceSummary | null>(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeError, setFinanceError] = useState<string | null>(null);
 
   // ── [S2.6/K6] İptal/iade politikası (saha override; admin de yönetebilir) ──
   const [refundCustom, setRefundCustom] = useState(false);
@@ -279,6 +299,55 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       setSavingRefund(false);
     }
   };
+
+  // Takvim & Doluluk sekmesi: get_facility_schedule (admin yetkili). Salt-okuma.
+  const loadSchedule = useCallback(async () => {
+    if (!id) return;
+    setScheduleLoading(true); setScheduleError(null);
+    try {
+      setSchedule(await getFacilitySchedule(id, scheduleDateISO, scheduleDateISO));
+    } catch (e) {
+      setScheduleError(toTurkishAdminError(e));
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, [id, scheduleDateISO]);
+
+  useEffect(() => {
+    if (activeTab === 'schedule' && id) void loadSchedule();
+  }, [activeTab, id, loadSchedule]);
+
+  // Finans sekmesi: get_pitch_finance_summary (admin yetkili). Salt-okuma.
+  const loadFinance = useCallback(async () => {
+    if (!id) return;
+    setFinanceLoading(true); setFinanceError(null);
+    try {
+      setFinance(await getPitchFinanceSummary(id, financeMonth));
+    } catch (e) {
+      setFinanceError(toTurkishAdminError(e));
+    } finally {
+      setFinanceLoading(false);
+    }
+  }, [id, financeMonth]);
+
+  useEffect(() => {
+    if (activeTab === 'finance' && id) void loadFinance();
+  }, [activeTab, id, loadFinance]);
+
+  const scheduleGrid = useMemo(
+    () => (schedule ? buildFacilityDayGrid(schedule, scheduleDateISO) : null),
+    [schedule, scheduleDateISO],
+  );
+
+  const stepScheduleDate = (deltaDays: number) => {
+    const d = new Date(scheduleDateISO + 'T00:00:00');
+    d.setDate(d.getDate() + deltaDays);
+    setScheduleDateISO(localDateISO(d));
+  };
+  const scheduleDateLabel = useMemo(() => {
+    const d = new Date(scheduleDateISO + 'T00:00:00');
+    return d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
+  }, [scheduleDateISO]);
 
   const descLen = description.trim().length;
   const identityValid = name.trim().length >= 3 && district.trim().length >= 2 && address.trim().length >= 5;
@@ -448,6 +517,8 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     { id: 'hours', label: 'Çalışma Saatleri', icon: Clock, requiresId: false },
     { id: 'courts', label: 'Kortlar', icon: LayoutGrid, requiresId: true },
     { id: 'tariffs', label: 'Tarifeler & Fiyat', icon: Wallet, requiresId: true },
+    { id: 'schedule', label: 'Takvim & Doluluk', icon: CalendarClock, requiresId: true },
+    { id: 'finance', label: 'Finans', icon: Coins, requiresId: true },
     { id: 'photos', label: 'Fotoğraflar', icon: ImageIcon, requiresId: true },
     { id: 'showcase', label: 'Vitrin & Yayın', icon: Eye, requiresId: true },
   ];
@@ -1029,6 +1100,166 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                       else if (key === 'tariff') setActiveTab('tariffs');
                     }}
                   />
+                </>
+              )}
+
+              {activeTab === 'schedule' && id && (
+                <>
+                  {/* Gün gezgini */}
+                  <div className="flex items-center justify-between bg-black/30 border border-white/[0.06] rounded-2xl px-3 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => stepScheduleDate(-1)}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center justify-center transition-colors"
+                      aria-label="Önceki gün"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <div className="text-center min-w-0">
+                      <p className="text-sm font-black text-white capitalize truncate">{scheduleDateLabel}</p>
+                      {scheduleDateISO !== localDateISO() && (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleDateISO(localDateISO())}
+                          className="text-[10px] font-bold text-red-400 hover:text-red-300"
+                        >
+                          Bugüne dön
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => stepScheduleDate(1)}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center justify-center transition-colors"
+                      aria-label="Sonraki gün"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  {scheduleLoading ? (
+                    <div className="flex items-center justify-center py-16 text-gray-500"><Loader2 size={18} className="animate-spin" /></div>
+                  ) : scheduleError ? (
+                    <div className="py-10 text-center">
+                      <p className="text-sm text-red-400 font-bold mb-3">{scheduleError}</p>
+                      <button onClick={() => void loadSchedule()} className="text-xs text-red-400 font-bold inline-flex items-center gap-1.5"><RefreshCcw size={12} /> Tekrar dene</button>
+                    </div>
+                  ) : !scheduleGrid || scheduleGrid.courts.length === 0 ? (
+                    <div className="py-12 text-center text-gray-500 text-sm">Bu tesiste aktif kort yok. Önce “Kortlar” sekmesinden ekleyin.</div>
+                  ) : scheduleGrid.closed ? (
+                    <div className="py-12 text-center text-gray-500 text-sm flex flex-col items-center gap-2"><Lock size={20} /> Tesis bu gün kapalı.</div>
+                  ) : (
+                    <div className="bg-black/20 border border-white/[0.06] rounded-2xl p-3">
+                      <FacilityScheduleGrid grid={scheduleGrid} interactive={false} />
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-600 leading-relaxed px-1">
+                    Yalnız gözetim: rezervasyonlar, doluluk, kapanışlar ve canlı hold'lar burada görüntülenir.
+                    Değişiklik owner panelinden yapılır.
+                  </p>
+                </>
+              )}
+
+              {activeTab === 'finance' && id && (
+                <>
+                  {/* Ay gezgini */}
+                  <div className="flex items-center justify-between bg-black/30 border border-white/[0.06] rounded-2xl px-3 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setFinanceMonth((m) => shiftMonth(m, -1))}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center justify-center transition-colors"
+                      aria-label="Önceki ay"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <div className="text-center min-w-0">
+                      <p className="text-sm font-black text-white truncate">{monthLabel(financeMonth)}</p>
+                      {financeMonth !== localDateISO().slice(0, 7) && (
+                        <button
+                          type="button"
+                          onClick={() => setFinanceMonth(localDateISO().slice(0, 7))}
+                          className="text-[10px] font-bold text-red-400 hover:text-red-300"
+                        >
+                          Bu aya dön
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { const n = shiftMonth(financeMonth, 1); if (!isMonthAfter(n, localDateISO().slice(0, 7))) setFinanceMonth(n); }}
+                      disabled={isMonthAfter(shiftMonth(financeMonth, 1), localDateISO().slice(0, 7))}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center justify-center transition-colors disabled:opacity-30"
+                      aria-label="Sonraki ay"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  {financeLoading ? (
+                    <div className="flex items-center justify-center py-16 text-gray-500"><Loader2 size={18} className="animate-spin" /></div>
+                  ) : financeError ? (
+                    <div className="py-10 text-center">
+                      <p className="text-sm text-red-400 font-bold mb-3">{financeError}</p>
+                      <button onClick={() => void loadFinance()} className="text-xs text-red-400 font-bold inline-flex items-center gap-1.5"><RefreshCcw size={12} /> Tekrar dene</button>
+                    </div>
+                  ) : finance ? (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { label: 'Tahsilat', value: money(finance.income.collected_total), cls: 'text-emerald-400' },
+                          { label: 'Gider', value: money(finance.expenses.total), cls: 'text-red-400' },
+                          { label: 'Dönem Bakiyesi', value: money(finance.income.collected_total - finance.expenses.total), cls: 'text-white' },
+                          { label: 'Bekleyen + Veresiye', value: `${money(finance.income.pending_total)} + ${money(finance.debt.open_total)}`, cls: 'text-amber-400' },
+                        ].map((s) => (
+                          <div key={s.label} className="bg-black/30 border border-white/[0.06] rounded-2xl p-4">
+                            <p className="text-[10px] text-gray-500 font-black uppercase mb-1">{s.label}</p>
+                            <p className={`text-lg font-black ${s.cls}`}>{s.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {finance.income.mismatch_count > 0 && (
+                        <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3">
+                          <AlertTriangle size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-300 font-bold">
+                            {finance.income.mismatch_count} rezervasyonda tahsilat–ödeme kaydı uyuşmuyor (paid_amount ≠ Σ ödemeler).
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5">
+                          <p className="text-[10px] text-gray-500 font-black uppercase mb-3">Ödeme Yöntemi</p>
+                          <BreakdownList
+                            rows={finance.income.by_method.map((m) => ({ key: m.method, label: methodLabel(m.method), amount: m.amount, count: m.count }))}
+                            total={finance.income.collected_total}
+                            color="#EF4444"
+                            emptyText="Bu ay tahsilat yok."
+                          />
+                        </div>
+                        <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5">
+                          <p className="text-[10px] text-gray-500 font-black uppercase mb-3">Son Ödemeler</p>
+                          {finance.income.recent_payments.length === 0 ? (
+                            <p className="text-sm text-gray-500">Bu ay ödeme kaydı yok.</p>
+                          ) : (
+                            <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                              {finance.income.recent_payments.map((p) => (
+                                <div key={p.id} className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-300 truncate">{p.customer_name ?? 'Müşteri'}<span className="text-gray-600"> · {p.booking_date}</span></span>
+                                  <span className="text-white font-bold tabular-nums shrink-0">{money(p.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-gray-600 leading-relaxed px-1">
+                        Yalnız gözetim: aynı get_pitch_finance_summary RPC'si (owner ile tek doğruluk kaynağı).
+                        Kayıt düzenleme owner panelinden yapılır.
+                      </p>
+                    </>
+                  ) : null}
                 </>
               )}
             </div>

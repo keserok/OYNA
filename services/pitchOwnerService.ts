@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { supabase } from '../supabaseClient';
+import { enqueueOrRun } from './offline/outbox';
 import { localDateISO } from '../views/owner/ownerCalendarHelpers';
 import type {
   OwnerPitch,
@@ -169,9 +170,12 @@ function todayISO(): string {
 }
 
 function addDaysISO(base: string, days: number): string {
+  // N-1: toISOString() UTC'ye çevirip TR'de (UTC+3) bir gün geri kaydırıyordu
+  // (yerel gece yarısı → önceki gün 21:00Z). getWeeklyRevenue kovaları bir gün
+  // geri kayıyor, bugünün cirosu hiçbir kovaya düşmüyordu. Yerel bileşenle biçimle.
   const d = new Date(base + 'T00:00:00');
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateISO(d);
 }
 
 // ----------------------------------------------------------------------------
@@ -260,10 +264,9 @@ export async function getPitchBookings(
 
 export async function approveBooking(bookingId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('pitch_bookings')
-      .update({ status: 'CONFIRMED', auto_approved_at: new Date().toISOString() })
-      .eq('id', bookingId);
+    // STAFF-2: kasa (sahip/müdür/personel) denetimli RPC ile onaylar — yalnız
+    // PENDING→CONFIRMED. Ham tablo yazımı artık personel için kapalı.
+    const { error } = await supabase.rpc('staff_approve_booking', { p_booking_id: bookingId });
     if (error) throw error;
   } catch (error) {
     console.error('approveBooking:', error);
@@ -273,22 +276,13 @@ export async function approveBooking(bookingId: string): Promise<void> {
 
 export async function rejectBooking(bookingId: string, reason: string): Promise<void> {
   try {
-    const uid = await getCurrentUserId();
-
-    const { error } = await supabase
-      .from('pitch_bookings')
-      .update({
-        status: 'CANCELLED',
-        cancellation_reason: reason,
-        cancelled_at: new Date().toISOString(),
-        cancelled_by: uid,
-      })
-      .eq('id', bookingId);
+    // STAFF-2: kasa denetimli RPC — yalnız PENDING reddi; cancelled_by sunucuda.
+    // Oyuncuya ret bildirimi DB trigger'ından gelir (notify_booking_events).
+    const { error } = await supabase.rpc('staff_reject_pending', {
+      p_booking_id: bookingId,
+      p_reason: reason,
+    });
     if (error) throw error;
-
-    // Oyuncuya ret bildirimi DB trigger'ından gelir (notify_booking_events,
-    // PENDING→CANCELLED dalı); notifications INSERT politikası client'ın başka
-    // kullanıcıya yazmasına artık izin vermez.
   } catch (error) {
     console.error('rejectBooking:', error);
     throw new Error(toTurkishError(error));
@@ -320,21 +314,18 @@ export async function recordBookingPayment(
   amount: number,
   method: PaymentMethod,
   note?: string,
-): Promise<void> {
+): Promise<{ queued: boolean }> {
   try {
-    const uid = await getCurrentUserId();
-    const { error } = await supabase.from('booking_payments').insert({
-      booking_id: bookingId,
-      amount,
-      payment_method: method,
-      note: note ?? null,
-      recorded_by: uid,
-      // A2: owner'ın elle girdiği ödeme OYNA'dan geçmez → cüzdana kredi YAZILMAZ.
-      // Trigger credit_owner_booking_earning bu damgayla owner-manuel kartı krediden çıkarır.
-      source: 'OWNER_MANUAL',
-    });
-    if (error) throw error;
-    // pitch_bookings.paid_amount + payment_status DB trigger ile güncellenir.
+    // STAFF-2: tahsilat denetimli RPC'den geçer — recorded_by SUNUCUDA damgalanır,
+    // aşırı tahsilat sunucuda reddedilir, source 'OWNER_MANUAL' zorlanır.
+    // P-OFFLINE: outbox üzerinden — her denemeye client_request_id verilir
+    // (sunucu idempotent: tekrar gönderim çift kayıt üretmez). Ağ yoksa kuyruğa
+    // alınır ve bağlantı gelince otomatik işlenir → {queued:true} döner.
+    return await enqueueOrRun(
+      'RECORD_PAYMENT',
+      { bookingId, amount, method, note: note ?? null },
+      `Tahsilat · ${amount}₺ ${method === 'CASH' ? 'nakit' : method.toLowerCase()}`,
+    );
   } catch (error) {
     console.error('recordBookingPayment:', error);
     throw new Error(toTurkishError(error));
@@ -359,6 +350,65 @@ export async function createManualBooking(params: ManualBookingParams): Promise<
     return data as string;
   } catch (error) {
     console.error('createManualBooking:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+// OP-P0-1: idempotency anahtarı — modern webview'de crypto.randomUUID; eski için yedek.
+function safeUuid(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  } catch { /* yedeğe düş */ }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+export interface OwnerManualBookingParams {
+  pitchId: string;
+  courtId: string;
+  bookingDate: string; // YYYY-MM-DD
+  startTime: string;   // HH:MM
+  endTime: string;     // HH:MM
+  customerName?: string;
+  customerPhone?: string;
+  paymentStatus?: 'PENDING' | 'PARTIAL' | 'PAID';
+  paidAmount?: number;
+  paymentMethod?: PaymentMethod;
+  /** Verilmezse üretilir. Ağ-retry'ında AYNI id gönderilirse ikinci rezervasyon yaratılmaz. */
+  clientRequestId?: string;
+}
+
+/**
+ * OP-P0-1: Atomik manuel rezervasyon — rezervasyon + nakit ödeme TEK sunucu
+ * transaction'ında (owner_create_manual_booking RPC). İki-adımlı akışın (RPC +
+ * ayrı recordBookingPayment) yarıda kesilme riskini kapatır. idempotent.
+ */
+export async function ownerCreateManualBooking(
+  p: OwnerManualBookingParams,
+): Promise<{ bookingId: string; paymentStatus: string }> {
+  try {
+    const { data, error } = await supabase.rpc('owner_create_manual_booking', {
+      p_pitch_id: p.pitchId,
+      p_court_id: p.courtId,
+      p_booking_date: p.bookingDate,
+      p_start_time: p.startTime,
+      p_end_time: p.endTime,
+      p_customer_name: p.customerName ?? null,
+      p_customer_phone: p.customerPhone ?? null,
+      p_payment_status: p.paymentStatus ?? 'PENDING',
+      p_paid_amount: p.paidAmount ?? 0,
+      p_payment_method: p.paymentMethod ?? 'CASH',
+      p_client_request_id: p.clientRequestId ?? safeUuid(),
+    });
+    if (error) throw error;
+    return {
+      bookingId: (data as { booking_id?: string })?.booking_id ?? '',
+      paymentStatus: (data as { payment_status?: string })?.payment_status ?? 'PENDING',
+    };
+  } catch (error) {
+    console.error('ownerCreateManualBooking:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -1104,7 +1154,7 @@ export function computeOverallOccupancy(
   courtCount: number,
   operatingHours = DEFAULT_OPERATING_HOURS,
 ): number {
-  if (courtCount <= 0) return 0;
+  if (courtCount <= 0 || operatingHours <= 0) return 0; // kapalı gün / geçersiz pencere
   const totalSlots = courtCount * operatingHours;
   // B4: rezervasyon SAYISI yerine kapladığı SAAT toplamı (gerçek doluluk).
   const booked = bookings
@@ -1238,15 +1288,6 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashboardData> {
-  const empty: FinanceDashboardData = {
-    monthCollected: 0,
-    monthRevenue: 0,
-    weeklyRevenue: [],
-    paymentMethods: [],
-    recentTransactions: [],
-    subscriptionRatio: { subscription: 0, regular: 0 },
-    hourlyIntensity: [],
-  };
   try {
   const month = todayISO().slice(0, 7);
   const monthStart = `${month}-01`;
@@ -1352,8 +1393,11 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
     hourlyIntensity,
   };
   } catch (error) {
+    // OP-P2-16: hatayı YUTMA. Eskiden boş dashboard dönüyordu → owner "veri yok"
+    // sanıp gerçek bir arızayı fark etmiyordu. Artık fırlat; OwnerFinanceView
+    // bunu yakalayıp görünür hata (toast) gösterir.
     console.error('getFinanceDashboard:', error);
-    return empty;
+    throw new Error(toTurkishError(error));
   }
 }
 
@@ -1737,10 +1781,11 @@ export async function upsertStaffTask(
 
 export async function toggleStaffTaskStatus(taskId: string, completed: boolean): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('pitch_staff_tasks')
-      .update({ status: completed ? 'COMPLETED' : 'PENDING' })
-      .eq('id', taskId);
+    // STAFF-2: personel de görevini tamamlayabilsin — denetimli RPC (kasa yetkisi).
+    const { error } = await supabase.rpc('staff_toggle_task', {
+      p_task_id: taskId,
+      p_completed: completed,
+    });
     if (error) throw error;
   } catch (error) {
     console.error('toggleStaffTaskStatus:', error);

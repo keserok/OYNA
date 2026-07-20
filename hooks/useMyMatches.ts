@@ -2,21 +2,14 @@ import { useMemo } from 'react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import type { MatchListing } from '../types';
+import { parseMatchDateTime } from '../utils/matchDateTime';
 
-// 'Bugün'/'Yarın' gibi eski serbest tarih metinlerini de ISO tarihleri de anlar.
-// useCountdown ve useMyAgenda tarafından da paylaşılır.
-export const parseMatchDate = (date: string, time: string): Date | null => {
-  try {
-    if (date.includes('-')) return new Date(`${date}T${time}:00`);
-    const d = new Date();
-    const [h, m] = time.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-    if (date === 'Yarın') d.setDate(d.getDate() + 1);
-    return d;
-  } catch {
-    return null;
-  }
-};
+const DEMO_UID = 'u1';
+
+// Tek ayrıştırma kaynağı: ISO + gün.ay.yıl + TR gün adları + saat aralıkları,
+// asla NaN (İP-14 SSOT). EXPORT: useCountdown ve useMyAgenda da buradan kullanır.
+export const parseMatchDate = (date: string, time: string): Date | null =>
+  parseMatchDateTime(date, time);
 
 export interface MyMatchesResult {
   all: MatchListing[];
@@ -34,13 +27,14 @@ export function useMyMatches(): MyMatchesResult {
 
   const all = useMemo(() => {
     if (!currentUserUid) return [];
-    // Yalnızca KULLANICININ maçları: bir slotta oyuncu olduğu VEYA kendi
-    // oluşturduğu (kaptan yönetimi) maçlar. Taslak/iptaller de bu kurala tabi —
-    // başkalarının taslak/iptal maçları listeye sızmaz.
+    // Yalnızca KULLANICININ maçları: bir slotta oyuncu olduğu, kendi oluşturduğu
+    // (kaptan yönetimi — taslak/iptal dahil) VEYA yedek listesinde olduğu (B14)
+    // maçlar. Başkalarının taslak/iptal maçları listeye sızmaz (main düzeltmesi).
     return adminMatches.filter(m =>
       m.creatorId === currentUserUid ||
       m.slots?.some(s => s.player?.id === currentUserUid) ||
-      m.awaySlots?.some(s => s.player?.id === currentUserUid)
+      m.awaySlots?.some(s => s.player?.id === currentUserUid) ||
+      m.reservePlayers?.some(p => p?.id === currentUserUid)
     );
   }, [adminMatches, currentUserUid]);
 

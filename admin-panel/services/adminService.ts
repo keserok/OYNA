@@ -2113,8 +2113,8 @@ export interface AdminPitchRow {
   name: string;
   district: string | null;
   city: string | null;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   price_per_match: number;
   google_rating: number | null;
   google_review_count: number | null;
@@ -2127,16 +2127,20 @@ export interface AdminPitchRow {
 }
 
 export function buildPitchPayloadFromUi(pitch: Partial<import('../../types').Pitch>): Record<string, unknown> {
+  // V-6: sahte varsayılan basma. Koordinat/Google puanı yalnız GERÇEKTEN
+  // sağlandıysa payload'a girer — hem uydurma Ordu-merkez/4.5 önlenir hem de
+  // güncellemede mevcut gerçek değerin null/sabitle EZİLMESİ (veri kaybı) önlenir.
   return {
     id: pitch.id,
     name: pitch.name,
     district: pitch.district,
     city: pitch.city ?? pitch.district,
-    latitude: pitch.coordinates?.lat ?? 40.9839,
-    longitude: pitch.coordinates?.lng ?? 37.8764,
+    ...(pitch.coordinates?.lat != null && pitch.coordinates?.lng != null
+      ? { latitude: pitch.coordinates.lat, longitude: pitch.coordinates.lng }
+      : {}),
     price_per_match: pitch.totalPrice ?? pitch.pricePerPerson ?? 0,
-    google_rating: pitch.googleRating ?? 4.5,
-    google_review_count: pitch.googleReviews ?? 0,
+    ...(pitch.googleRating != null ? { google_rating: pitch.googleRating } : {}),
+    ...(pitch.googleReviews != null ? { google_review_count: pitch.googleReviews } : {}),
     verification_status: pitch.isApproved === false ? 'pending' : 'approved',
     image: pitch.image,
     isDemo: (pitch as { isDemo?: boolean }).isDemo ?? false,
@@ -2174,10 +2178,10 @@ export async function fetchPitchesAdmin(opts?: {
         name: String(p.name || ''),
         district: (p.district as string) ?? null,
         city: (p.district as string) ?? null,
-        latitude: Number((p.coordinates as { lat?: number })?.lat ?? 40.9839),
-        longitude: Number((p.coordinates as { lng?: number })?.lng ?? 37.8764),
+        latitude: (p.coordinates as { lat?: number })?.lat != null ? Number((p.coordinates as { lat?: number }).lat) : null,
+        longitude: (p.coordinates as { lng?: number })?.lng != null ? Number((p.coordinates as { lng?: number }).lng) : null,
         price_per_match: Number(p.totalPrice ?? 0),
-        google_rating: Number(p.googleRating ?? 4.5),
+        google_rating: p.googleRating != null ? Number(p.googleRating) : null,
         google_review_count: Number(p.googleReviews ?? 0),
         verification_status: p.isApproved === false ? 'pending' : 'approved',
         owner_id: null,

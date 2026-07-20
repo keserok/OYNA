@@ -99,7 +99,12 @@ export const submitServiceApplication = async (
         bio: data.bio.trim(),
         style: data.style,
         preferredZones: data.preferredZones,
-        matchCount: data.experienceYears ?? 0,
+        // HR-C: matchCount = platformda yönetilen maç sayısıdır, YENİ hakemde 0
+        // olmalı (kaleci dalıyla aynı). Başvurudaki "deneyim yılı" bir platform
+        // istatistiği DEĞİL — self-report; onu stats.experienceYears'a yazıyoruz,
+        // matchCount'u sahte şişirmiyoruz. Sıralama/rozetler dürüst kalır.
+        matchCount: 0,
+        stats: { experienceYears: data.experienceYears ?? 0 },
         rating: 0,
       },
       { onConflict: 'id' },

@@ -54,8 +54,11 @@ describe('buildAgenda — birleşik kronolojik sıralama', () => {
   });
 
   it('tarihi çözülemeyen öğe listenin sonuna gider', () => {
+    // Not: SSOT ayrıştırıcı (İP-14 parseMatchDateTime) 'Cumartesi' gibi TR gün
+    // adlarını GERÇEKTEN çözer — o artık "çözülemez" örneği değil. Gerçekten
+    // çözülemez girdi kullanılır.
     const { upcoming } = buildAgenda(
-      [m({ id: 'm-nodate', date: 'Cumartesi', time: 'saat yok' }), m({ id: 'm-ok', date: '2026-07-19', time: '09:00' })],
+      [m({ id: 'm-nodate', date: 'tarih yok', time: 'saat yok' }), m({ id: 'm-ok', date: '2026-07-19', time: '09:00' })],
       [],
       NOW
     );

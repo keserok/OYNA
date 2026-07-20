@@ -5,12 +5,14 @@ import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } fro
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
-import { fetchFriends, fetchUserTeams } from '../services/friendService';
+import { fetchFriends } from '../services/friendService';
+import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
 import type { ShortcutItem } from '../components/profile';
 import { OynaLogo } from '../components/OynaLogo';
+import { ratingToOverall, tierForOverall } from '../utils/ratingScale';
 import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from './onboarding/onboardingShared';
 
 const POSITION_ORDER = ['kaleci', 'defans', 'orta', 'forvet'] as const;
@@ -26,14 +28,21 @@ const buildCardData = (profile: OynaUser | null, wins: number, total: number): P
     if (pc && pc.stats && typeof pc.overall === 'number') {
         return pc as PlayerCardData;
     }
-    const overall = Math.round((profile?.stats?.rating ?? 5) * 20);
+    // Rookie ayrımı: hiç maç oynamamış oyuncu için sahte OVR göstermeyiz.
+    // Maç sayısı için GÜVENİLİR sinyal profiles.match_count (stats.matchesPlayed);
+    // matchHistory.length maç kayıtları linklenmemişse veterana "0" derdi.
+    const matchesForCard = profile?.stats?.matchesPlayed ?? total;
+    const overallOrNull = ratingToOverall(profile?.stats?.rating, matchesForCard);
+    const rookie = overallOrNull === null;
+    const overall = overallOrNull ?? 0;
     return {
         overall,
-        tier: overall >= 80 ? 'gold' : overall >= 65 ? 'silver' : 'bronze',
+        isRookie: rookie,
+        tier: rookie ? 'bronze' : (tierForOverall(overallOrNull) as 'gold' | 'silver' | 'bronze'),
         isStatsVerified: false,
         diamondValue: 0,
         winCount: wins,
-        totalMatches: total,
+        totalMatches: matchesForCard,
         stats: {
             pace: { ...DEFAULT_CARD_STAT },
             shooting: { ...DEFAULT_CARD_STAT },
@@ -77,6 +86,8 @@ interface ProfileScreenProps {
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı
     const [showEditModal, setShowEditModal] = useState(false);
+    // D5: görsel yükleme hatası (HEIC/boyut/çok küçük/offline) kullanıcıya gösterilir.
+    const [photoError, setPhotoError] = useState<string | null>(null);
     const [editPos, setEditPos] = useState('');
     const [editBio, setEditBio] = useState('');
     const [editAvatar, setEditAvatar] = useState('');
@@ -116,17 +127,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 getFullUserProfile(uid),
                 getMatchHistory(uid),
             ]);
+            // D2: giriş yapmış kullanıcının profili null ise bu bir YÜKLEME
+            // HATASIDIR (getFullUserProfile hatayı yutup null döndürüyor) —
+            // düzenlenebilir boş "Oyuncu" profili gösterip gerçek profili ezme
+            // riski yaratmak yerine hata durumu + Yeniden Dene göster.
+            if (!profileData) {
+                setError('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+                return;
+            }
             setProfile(profileData);
             setMatchHistory(history);
             // FAZ 7.5: rol değiştirici için güncel rolleri store'a yansıt
             if (profileData?.roles?.length) setMyRoles(profileData.roles);
             // Kısayol sayıları en-iyi-çaba: biri düşerse profil yine açılır.
             const [teamsRes, friendsRes] = await Promise.allSettled([
-                fetchUserTeams(uid),
+                // E2: Sosyal ile TEK kaynak (get_my_teams) — Profil eskiden
+                // fetchUserTeams (arşivi de sayan) kullanıp Sosyal ile çelişiyordu.
+                getMyTeams(),
                 fetchFriends(uid),
             ]);
             if (teamsRes.status === 'fulfilled') {
-                setTeamsCount(teamsRes.value.captainTeams.length + teamsRes.value.memberTeams.length);
+                setTeamsCount(teamsRes.value.filter(t => !t.is_archived).length);
             }
             if (friendsRes.status === 'fulfilled') {
                 setFriendsCount(friendsRes.value.length);
@@ -145,6 +166,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     }, [uid]);
 
     const openEdit = () => {
+        setPhotoError(null);
         setEditPos(profile?.position || '');
         setEditBio(profile?.bio || '');
         setEditAvatar(profile?.avatar_url || '');
@@ -156,11 +178,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPhotoError(null);
         try {
             const url = await uploadImage(file);
             setEditAvatar(url);
-        } catch (err) {
+        } catch (err: any) {
+            // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
+            // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
             console.error('Fotoğraf yükleme hatası:', err);
+            setPhotoError(err?.message || 'Fotoğraf yüklenemedi. Farklı bir görsel dene (JPG/PNG, en fazla 10MB).');
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
@@ -193,7 +219,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
     const cardData = (() => {
         const c = buildCardData(profile, wins, total);
-        return profile?.cardTier ? { ...c, tier: profile.cardTier } : c;
+        // Admin açıkça tier atadıysa rookie durumunu geçersiz kıl (o kartı göster).
+        return profile?.cardTier ? { ...c, tier: profile.cardTier, isRookie: false } : c;
     })();
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.
@@ -388,6 +415,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-black text-primary uppercase tracking-widest disabled:opacity-60">
                                 Fotoğrafı Değiştir
                             </button>
+                            {photoError && (
+                                <p className="text-[11px] font-bold text-red-400 text-center max-w-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                                    {photoError}
+                                </p>
+                            )}
                             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
                         </div>
                         <div>

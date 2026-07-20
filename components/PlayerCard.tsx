@@ -75,6 +75,26 @@ const TIERS = {
     holo: false,
     stamp: '#8a5c28',
   },
+  // Rookie: henüz maç oynamamış oyuncu. Nötr cyber-slate — "kanıtlanmamış"
+  // hissi; OVR "—" gösterilir, sahte "gold 100" yok.
+  rookie: {
+    cardBg: 'linear-gradient(160deg, #0e1420 0%, #16202e 35%, #080c14 100%)',
+    border: '#3d5566',
+    glow: '0 0 40px rgba(80,120,150,0.22), 0 0 90px rgba(50,80,110,0.1)',
+    overall: '#9db4c4',
+    pos: '#7f97a8',
+    posTag: 'rgba(120,160,190,0.12)',
+    name: '#dce6ee',
+    label: '#5c7385',
+    value: '#9db4c4',
+    bar: 'linear-gradient(90deg, #3d5566, #5c7f96, #9db4c4)',
+    barGlow: 'rgba(100,140,170,0.55)',
+    track: 'rgba(100,140,170,0.1)',
+    sep: 'rgba(80,120,150,0.35)',
+    shine: 'rgba(180,210,230,0.18)',
+    holo: false,
+    stamp: '#5c7385',
+  },
 } satisfies Record<string, TierTheme>;
 
 // ── Stat Row with bar ─────────────────────────────────────────────────────
@@ -110,7 +130,8 @@ const StatRow: React.FC<StatRowProps> = ({ label, value, theme }) => {
 export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 'OS', cardData, onShare }) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const tier = (cardData.tier in TIERS ? cardData.tier : 'bronze') as keyof typeof TIERS;
+  // Rookie (hiç maç yok) → nötr tema, OVR "—". Aksi hâlde admin/hesaplanan tier.
+  const tier = (cardData.isRookie ? 'rookie' : (cardData.tier in TIERS ? cardData.tier : 'bronze')) as keyof typeof TIERS;
   const t = TIERS[tier] as unknown as TierTheme;
 
   // 3D tilt
@@ -140,7 +161,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
     { key: 'defense', label: 'DEF', stat: cardData.stats.defense },
   ];
 
-  const overall = cardData.overall;
+  // Rookie'de sayısal OVR yok — "—" gösterilir (sahte 100 değil).
+  const overall = cardData.isRookie ? '—' : cardData.overall;
 
   return (
     <>

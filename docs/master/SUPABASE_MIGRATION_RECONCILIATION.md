@@ -40,6 +40,41 @@ Doğrulama (2026-07-05, canlı DB'de sorgulandı — hepsi mevcut):
 
 ---
 
+## 1.2 DURUM GÜNCELLEMESİ (2026-07-19) — kısmi onarım + parolasız kalıcı çözüm keşfi
+
+**Bu branch'te yapılan (PG16 sıfırdan-replay harness'ı ile doğrulandı):**
+
+| Onarım | Dosya | Not |
+|---|---|---|
+| `public.matches` baseline | `20260529100000_baseline_public_matches.sql` | Canlı şemadan birebir (49 kolon + PK); hiçbir migration yaratmıyordu, 20260530000002'den itibaren onlarca dosya başvuruyor. Üretimde no-op (IF NOT EXISTS; RLS'in zaten açık olduğu doğrulandı). |
+| `teams`/`team_members`/`courts` baseline | `20260530090000_baseline_teams_members_courts.sql` | 20260713000001'deki kanonik tanımların DOĞRU sıraya (ilk referans 20260531'den önce) kopyası + hiç yaratılmayan `courts` (canlı introspection). Temmuz dosyası IF NOT EXISTS ile no-op'a düşer. |
+| `pitch_slots` ölü referans guard'ı | `20260531_rls_complete.sql` (düzenlendi) | Tablo üretimde YOK ve hiçbir migration yaratmıyor; blok to_regclass guard'ına alındı (#107'nin service_offers deseniyle aynı). |
+
+Sonuç: sıfırdan replay **4 → 9 dosya** ilerliyor; yeni kırılma noktası
+`20260531_security_hardening.sql` (`public.settings` — defter-kapsamı eksiği).
+
+**Önemli tasarım kararı:** Bu baseline'lar üretim defterine `apply_migration` ile
+KAYDEDİLMEDİ — bilerek. Üretimde tamamen no-op'lar ve defter onları bugünün
+timestamp'iyle kaydederse regen aracı onları YANLIŞ sıraya ihraç eder (replay
+yine kırılır). Bunlar "replay-only baseline" dosyalarıdır (Supabase squash
+baseline pratiğiyle aynı statü).
+
+**Kalan eksikler elle dövülMEmeli:** settings, friendships, tactics,
+pitch_subscriptions, owner_accounts + bir dizi fonksiyon (`replace_template_vars`,
+`update_player_diamond`, `notify_booking_events`, `get_pitch_availability`…)
+defterdeki repo-dışı kayıtların konusudur; elle yeniden üretmek üretimden sapma
+riski taşır. Doğrusu Bölüm 6'daki ledger-regen.
+
+**🔓 Yeni keşif — regen için kurucu parolası GEREKMEZ:** Defter MCP
+`execute_sql` ile okunabiliyor (2026-07-19 doğrulaması: **313 kayıt, 312'sinde
+`statements[]` dolu**, v20260606112849…v20260719133152). Yani
+`regenerate-migrations-from-ledger.mjs`'nin veri kaynağı bu ortamdan erişilebilir;
+regen ayrı ve odaklı bir PR olarak buradan yürütülebilir (bkz. Bölüm 6 —
+tek fark: `pg` bağlantısı yerine MCP'den çekilen kayıtlar). 1 kaydın
+`statements` alanı boş — regen sırasında tek tek incelenmeli.
+
+---
+
 ## 2. Rakamlarla drift
 
 | Ölçüt | Değer |

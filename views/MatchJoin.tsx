@@ -15,7 +15,8 @@ import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
-import { checkMatchThreshold } from '../services/matchLifecycleService';
+import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
+import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -271,6 +272,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  // B4: Kaptanın maçı iptali (yalnız MANAGE lobisinde görünür)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   // S2.4 — ayrılınca iade edilecek tutar (SUNUCUDAN; leave_public_match_slot ile birebir)
   const [leaveRefund, setLeaveRefund] = useState<number | null>(null);
 
@@ -297,9 +300,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
-    adminUsers, friends, updateMatch, addUserNotification, adminPitches,
+    adminUsers, friends, updateMatch, applyMatchLocal, addUserNotification, adminPitches,
     userTeams, myTeams, setSelectedMatch,
-    setNewMatchBadge, lobbyMode
+    setNewMatchBadge, lobbyMode, currentUserProfile: storeCurrentUserProfile
   } = useAppStore();
   // MANAGE = Maçlarım hub'ından; yönetim aksiyonları yalnız burada görünür.
   const isManageMode = lobbyMode === 'MANAGE';
@@ -321,7 +324,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!originalMatch?.id) return;
     let alive = true;
     getMatchDetails(originalMatch.id).then((full) => {
-      if (alive && full) updateMatch({ ...originalMatch, ...full } as MatchListing);
+      // KN-3: hidrasyon SALT-OKUR — DB'den okunan veri DB'ye GERİ yazılmaz
+      // (eski updateMatch her lobi açılışında gereksiz tam yazım yapıyordu).
+      if (alive && full) applyMatchLocal({ ...originalMatch, ...full } as MatchListing);
     }).catch(() => { /* sessiz: prop verisiyle devam */ });
     return () => { alive = false; };
   }, [originalMatch?.id]);
@@ -348,7 +353,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         privateCode: (updatedMatch as any).private_code || (updatedMatch as any).privateCode || (originalMatch as any).privateCode,
         pitchId: (updatedMatch as any).pitch_id || (updatedMatch as any).pitchId || (originalMatch as any).pitchId,
       };
-      updateMatch({ ...originalMatch, ...mapped } as MatchListing);
+      // KN-3a: realtime SALT-OKUR — gelen veri DB'ye GERİ YAZILMAZ.
+      // (Eski updateMatch çağrısı her tick'te player_update_match tetikleyip
+      // yankı döngüsü + eşzamanlı katılımcıları ezme üretiyordu.)
+      applyMatchLocal({ ...originalMatch, ...mapped } as MatchListing);
     });
     return () => { unsubscribe(); };
   }, [originalMatch?.id]);
@@ -454,8 +462,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır;
   // katılma aksiyonu store.joinMatch içindeki kayıt kapısına takılır.
   const currentUserUid = auth.currentUser?.uid ?? 'guest';
-  const currentUserProfile = (adminUsers || []).find(u => u?.id === currentUserUid)
-    || { id: currentUserUid, name: auth.currentUser ? 'Oyuncu' : 'Misafir', avatar: '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
+  // Gerçek profil (store) önce; admin-only adminUsers yalnız admin oturumunda dolu.
+  const currentUserProfile = storeCurrentUserProfile
+    || (adminUsers || []).find(u => u?.id === currentUserUid)
+    || { id: currentUserUid, name: auth.currentUser ? (auth.currentUser.displayName || 'Oyuncu') : 'Misafir', avatar: auth.currentUser?.photoURL || '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
 
   // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
   const isCaptain = match.creatorId === currentUserProfile?.id;
@@ -581,51 +591,22 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       if (error) throw error;
 
-      const joinedPlayer: Player = {
-        id: currentUserProfile.id,
-        name: currentUserProfile.name,
-        avatar: currentUserProfile.avatar || '',
-        rating: currentUserProfile.rating || 4.5,
-        position: targetSlot.role || 'OYUNCU',
-        x: targetSlot.x,
-        y: targetSlot.y,
-        paymentStatus: 'UNPAID',
-      };
-
-      let updatedSlots = [...(match.slots || [])];
-      let updatedAwaySlots = [...(match.awaySlots || [])];
-
-      if (isAway) {
-        updatedAwaySlots = updatedAwaySlots.map(s =>
-          s?.id === selectedSlotId
-            ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-            : s
-        );
-      } else {
-        updatedSlots = updatedSlots.map(s =>
-          s?.id === selectedSlotId
-            ? { ...s, status: 'TAKEN' as const, player: joinedPlayer }
-            : s
-        );
-      }
-
-      const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-
-      await updateMatch({
-        ...match,
-        slots: updatedSlots,
-        awaySlots: updatedAwaySlots,
-        status: nextStatus
-      });
-
       // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
       try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
+
+      // KN-3b: bayat tam-dizi yazımı YOK. Sunucu (RPC) tek otorite; taze durumu
+      // çekip YEREL uygula — eşzamanlı katılımcılar birbirini ezemez, LIVE
+      // geçişi de (threshold sonrası) anında yansır.
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
 
       setSelectedSlotId(null);
       setNewMatchBadge(true);
     } catch (e: any) {
       console.error('Join error:', e);
-      showActionError('Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
+      showActionError((e?.message || '').includes('MIN_RATING')
+        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
+        : 'Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -673,19 +654,23 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       });
       if (error) throw error;
 
-      // Sunucudan TAZE durumu çek (eşzamanlı değişiklikleri ezmemek için — lost-update'i önler).
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) await updateMatch({ ...match, ...(fresh as any) });
-
       // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
       try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
+
+      // KN-3b: taze durumu çek, YEREL uygula (DB'ye geri yazma — eski kod
+      // fresh'i updateMatch ile geri yazıyordu: gereksiz yazım + yarış).
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
 
       setSelectedSlotIds([]);
       setSelectedSlotId(null);
       setNewMatchBadge(true);
     } catch (e: any) {
       console.error('Buy slots error:', e);
-      showActionError((e?.message || '').includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
+      const msg = e?.message || '';
+      showActionError(msg.includes('MIN_RATING')
+        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
+        : msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -739,22 +724,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       if (error) throw error;
 
-      const reservePlayer: Player = {
-        id: currentUserProfile.id,
-        name: currentUserProfile.name,
-        avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-        rating: currentUserProfile.rating || 4.5,
-        position: 'YEDEK',
-        x: 50,
-        y: 50,
-        paymentStatus: 'UNPAID',
-      };
-
-      const updatedReserves = [...(match.reservePlayers || []), reservePlayer];
-      await updateMatch({ ...match, reservePlayers: updatedReserves });
+      // KN-3b: yedek listesi sunucuda güncellendi; taze çek, yerel uygula.
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
     } catch (e: any) {
       console.error('Join reserve error:', e);
-      showActionError('Yedek olarak katılırken bir hata oluştu.');
+      showActionError((e?.message || '').includes('MIN_RATING')
+        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
+        : 'Yedek olarak katılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false);
     }
@@ -772,11 +749,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       if (error) throw error;
 
-      const updatedReserves = (match.reservePlayers || []).filter(
-        p => p.id !== currentUserProfile.id
-      );
-
-      await updateMatch({ ...match, reservePlayers: updatedReserves });
+      // KN-3b: sunucu çıkardı; taze çek, yerel uygula.
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
       setShowLeaveConfirm(false);
     } catch (e: any) {
       console.error('Leave reserves error:', e);
@@ -801,7 +776,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         });
         if (error) throw error;
         const fresh = await getMatchDetails(match.id);
-        if (fresh) await updateMatch({ ...match, ...(fresh as any) });
+        if (fresh) applyMatchLocal(fresh); // KN-3b
         showActionSuccess(`${friend.name || 'Arkadaşın'} bu slota davet edildi.`);
       } catch (e: any) {
         console.error('assign slot error', e);
@@ -838,7 +813,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const { data, error } = await supabase.rpc('player_make_slot_code', { p_match_id: match.id, p_slot_id: slotId });
       if (error) throw error;
       const fresh = await getMatchDetails(match.id);
-      if (fresh) await updateMatch({ ...match, ...(fresh as any) });
+      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
       showActionSuccess(`Devralma kodu: ${data} — arkadaşına gönder.`);
     } catch (e: any) {
       console.error('make slot code error', e);
@@ -854,7 +829,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const { error } = await supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId });
       if (error) throw error;
       const fresh = await getMatchDetails(match.id);
-      if (fresh) await updateMatch({ ...match, ...(fresh as any) });
+      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
       showActionSuccess('Slotu kabul ettin — kadrodasın! ⚽');
     } catch (e: any) {
@@ -867,40 +842,32 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
 
+  // Kaptan bir oyuncuyu kadrodan çıkarır. Özel bir kick RPC'si YOK; bu nedenle
+  // KN-3b asgari güvenliği uygulanır: önce SUNUCUDAN taze durum çekilir,
+  // değişiklik taze veri üstüne uygulanır, öyle yazılır (bayat-dizi penceresi
+  // daralır). Kalıcı çözüm (dar player_kick_slot RPC'si) S3 backlog'da.
   const handleRemovePlayer = async (slotId: string) => {
-    const isHomeSlot = (match.slots || []).some(s => s.id === slotId);
-    const reserves = match.reservePlayers || [];
+    try {
+      const base = (await getMatchDetails(match.id)) ?? match;
+      const isHomeSlot = (base.slots || []).some(s => s?.id === slotId);
+      const reserves = base.reservePlayers || [];
 
-    if (isHomeSlot) {
-      const { updatedSlots, remainingReserves } = fillVacatedSlot(match.slots || [], reserves, slotId);
-      const nextStatus = checkAndGetStatus(updatedSlots, match.awaySlots);
-      try {
-        await updateMatch({
-          ...match,
-          slots: updatedSlots,
-          reservePlayers: remainingReserves,
-          status: nextStatus
-        });
-        setActivePlayerSlotId(null);
-      } catch (e) {
-        console.error(e);
-        showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
-      }
-    } else {
-      const { updatedSlots, remainingReserves } = fillVacatedSlot(match.awaySlots || [], reserves, slotId);
-      const nextStatus = checkAndGetStatus(match.slots || [], updatedSlots);
-      try {
-        await updateMatch({
-          ...match,
-          awaySlots: updatedSlots,
-          reservePlayers: remainingReserves,
-          status: nextStatus
-        });
-        setActivePlayerSlotId(null);
-      } catch (e) {
-        console.error(e);
-        showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
-      }
+      const src = isHomeSlot ? (base.slots || []) : (base.awaySlots || []);
+      const { updatedSlots, remainingReserves } = fillVacatedSlot(src, reserves, slotId);
+      const nextStatus = isHomeSlot
+        ? checkAndGetStatus(updatedSlots, base.awaySlots)
+        : checkAndGetStatus(base.slots || [], updatedSlots);
+
+      await updateMatch({
+        ...base,
+        ...(isHomeSlot ? { slots: updatedSlots } : { awaySlots: updatedSlots }),
+        reservePlayers: remainingReserves,
+        status: nextStatus,
+      });
+      setActivePlayerSlotId(null);
+    } catch (e) {
+      console.error(e);
+      showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
     }
   };
 
@@ -916,81 +883,46 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       if (error) throw error;
 
-      const reserves = match.reservePlayers || [];
-      const isHomePlayer = (match.slots || []).some(s => s.player?.id === currentUserProfile.id);
-      const isAwayPlayer = (match.awaySlots || []).some(s => s.player?.id === currentUserProfile.id);
+      // KN-3b (kritik silme): leave_public_match_slot SUNUCUDA zaten her şeyi
+      // yapıyor — slotu boşaltma, ilk yedeği terfi ettirme, kaptan ayrılıyorsa
+      // yeni kaptan atama (migration 20260717000003). Buradaki eski client
+      // kopyası (fillVacatedSlot + reliabilityScore halef hesabı, hiç
+      // yüklenmeyen adminUsers ile herkes=100) sunucunun DOĞRU sonucunu bayat
+      // tam-dizi yazımıyla eziyordu. Taze çek, yerel uygula, çık.
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
 
-      let updatedSlots = match.slots || [];
-      let updatedAwaySlots = match.awaySlots || [];
-      let remainingReserves = reserves;
-
-      if (isHomePlayer) {
-        const slotId = (match.slots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
-        if (slotId) {
-          const res = fillVacatedSlot(match.slots || [], remainingReserves, slotId);
-          updatedSlots = res.updatedSlots;
-          remainingReserves = res.remainingReserves;
-        }
-      } else if (isAwayPlayer) {
-        const slotId = (match.awaySlots || []).find(s => s.player?.id === currentUserProfile.id)?.id;
-        if (slotId) {
-          const res = fillVacatedSlot(match.awaySlots || [], remainingReserves, slotId);
-          updatedAwaySlots = res.updatedSlots;
-          remainingReserves = res.remainingReserves;
-        }
-      }
-
-      // Halef Kaptan Belirleme Mantığı (Reliability Score Tabanlı)
-      let newCreatorId = match.creatorId;
-      const isCreatorLeaving = match.creatorId === currentUserProfile.id;
-      if (isCreatorLeaving) {
-        const remainingPlayers = updatedSlots
-          .map(s => s?.player)
-          .filter((p): p is Player => !!p && p.id !== currentUserProfile.id);
-        if (remainingPlayers.length > 0) {
-          let bestScore = -1;
-          let bestPlayerId = remainingPlayers[0].id;
-          remainingPlayers.forEach(p => {
-            const dbUser = (adminUsers || []).find(u => u?.id === p.id);
-            const score = dbUser?.reliabilityScore ?? 100;
-            if (score > bestScore) {
-              bestScore = score;
-              bestPlayerId = p.id;
-            }
-          });
-          newCreatorId = bestPlayerId;
-          
-          // Notify new captain
-          addUserNotification({
-            id: `succ_${newCreatorId}_${Date.now()}`,
-            type: 'system',
-            title: '👑 Yeni Kaptan Sensin!',
-            desc: `Eski kaptan ayrıldığı için yüksek güvenilirlik skorunla bu maçın yeni kaptanı seçildin.`,
-            time: 'Şimdi',
-            iconName: 'Award',
-            color: '#39FF14',
-            textColor: '#39FF14',
-            read: false,
-          });
-        }
-      }
-
-      const nextStatus = checkAndGetStatus(updatedSlots, updatedAwaySlots);
-
-      await updateMatch({
-        ...match,
-        slots: updatedSlots,
-        awaySlots: updatedAwaySlots,
-        reservePlayers: remainingReserves,
-        creatorId: newCreatorId,
-        status: nextStatus
-      });
-      
       setShowLeaveConfirm(false);
       onBack();
     } catch (e: any) {
       console.error('Leave match error:', e);
       showActionError('Maçtan ayrılırken bir hata oluştu.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // B4: Kurucu maçı iptal eder — sunucu 24s kuralını uygular
+  // (≥24s: katılımcı ödemeleri iade / <24s: no-show politikası).
+  const handleCancelMatch = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const res = await cancelMatchByCaptain(match.id);
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
+      showActionSuccess(
+        res?.outcome && String(res.outcome).toUpperCase().includes('REFUND')
+          ? 'Maç iptal edildi — katılımcı ödemeleri iade edildi.'
+          : 'Maç iptal edildi.'
+      );
+      setShowCancelConfirm(false);
+      setTimeout(() => onBack(), 900);
+    } catch (e: any) {
+      console.error('Cancel match error:', e);
+      showActionError((e?.message || '').includes('UNAUTHORIZED')
+        ? 'Bu maçı yalnız kurucusu iptal edebilir.'
+        : 'Maç iptal edilemedi. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false);
     }
@@ -1305,6 +1237,47 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   disabled={isProcessing}
                   className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
                   {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'AYRIL'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── B4: Maçı İptal Onay Modalı (kurucu) ─────────────────────────────── */}
+      <AnimatePresence>
+        {showCancelConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="bg-[#161B22] border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} className="text-red-500" />
+              </div>
+              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">Maçı İptal Et</h3>
+              <p className="text-sm text-gray-400 mb-3">
+                Bu maçı iptal etmek istediğine emin misin? Tüm kadro bilgilendirilir ve maç vitrinden kaldırılır.
+              </p>
+              {/* Kademeli iade özeti — sunucu 24s kuralıyla birebir */}
+              <p className="text-[11px] font-bold text-amber-300/90 bg-amber-400/[0.07] border border-amber-400/20 rounded-xl px-3 py-2 mb-6 text-left">
+                • Maça <b>24 saatten fazla</b> varsa: katılımcı ödemeleri iade edilir.<br />
+                • <b>24 saatten az</b> kaldıysa: geç iptal — iade yapılmaz ve fair-play puanın etkilenebilir.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  disabled={isProcessing}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                  VAZGEÇ
+                </button>
+                <button
+                  onClick={handleCancelMatch}
+                  disabled={isProcessing}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
+                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'MAÇI İPTAL ET'}
                 </button>
               </div>
             </motion.div>
@@ -1937,6 +1910,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           )}
         </div>
 
+        {/* ── B4: Maçı İptal Et (yalnız kurucu, yönetim lobisi) ── */}
+        {isManageMode && isCaptain && match.status !== 'CANCELLED' && match.status !== 'COMPLETED' && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-red-500/[0.06] border border-red-500/25 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/15 active:scale-[0.98] transition-all"
+            >
+              <AlertCircle size={13} /> Maçı İptal Et
+            </button>
+          </div>
+        )}
+
         {/* ── Özel Maç Kodu (yalnız kaptana) ── */}
         {match.visibility === 'PRIVATE' && match.privateCode && isCaptain && (
           <div className="px-4 pb-3">
@@ -2146,8 +2131,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 onClick={async () => {
                   try {
                     setIsProcessing(true);
+                    // KN-3b taze-önce: kaptan skoru yazarken kadronun son hâli
+                    // ezilmesin (bayat match yerine sunucudan taze taban).
+                    const base = (await getMatchDetails(match.id)) ?? match;
                     await updateMatch({
-                      ...match,
+                      ...base,
                       homeScore: scoreEntry.home,
                       awayScore: scoreEntry.away,
                       scoreEnteredAt: new Date().toISOString(),
@@ -2449,30 +2437,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         const sizeVal = pitchSide === 'home' ? squadSize : inferSquadSize(match.awaySlots?.length || match.slots.length);
                         const coords = FORMATIONS[sizeVal]?.[fName];
                         if (coords) {
+                          // KN-3b taze-önce: diziliş koordinatları sunucudan
+                          // çekilen TAZE kadro üstüne uygulanır (bayat match
+                          // yazımı eşzamanlı katılanı ezmesin).
+                          const base = (await getMatchDetails(match.id)) ?? match;
+                          const mapCoords = (s: PositionSlot, index: number) => {
+                            const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
+                            return {
+                              ...s,
+                              x: coord.x,
+                              y: coord.y,
+                              role: coord.role,
+                              player: s.player ? { ...s.player, position: coord.role, x: coord.x, y: coord.y } : undefined
+                            };
+                          };
                           if (pitchSide === 'home') {
-                            const updatedSlots = (match.slots || []).map((s, index) => {
-                              const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
-                              return {
-                                ...s,
-                                x: coord.x,
-                                y: coord.y,
-                                role: coord.role,
-                                player: s.player ? { ...s.player, position: coord.role, x: coord.x, y: coord.y } : undefined
-                              };
-                            });
-                            await updateMatch({ ...match, slots: updatedSlots });
+                            await updateMatch({ ...base, slots: (base.slots || []).map(mapCoords) });
                           } else {
-                            const updatedAwaySlots = (match.awaySlots || []).map((s, index) => {
-                              const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
-                              return {
-                                ...s,
-                                x: coord.x,
-                                y: coord.y,
-                                role: coord.role,
-                                player: s.player ? { ...s.player, position: coord.role, x: coord.x, y: coord.y } : undefined
-                              };
-                            });
-                            await updateMatch({ ...match, awaySlots: updatedAwaySlots });
+                            await updateMatch({ ...base, awaySlots: (base.awaySlots || []).map(mapCoords) });
                           }
                           if (navigator.vibrate) navigator.vibrate(30);
                         }
