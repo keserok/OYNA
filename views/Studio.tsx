@@ -36,7 +36,7 @@ import type {
     Player, GameIdentity, Archetype, Slot, SquadSize, FormationType,
     TacticState, DrawingLine, StudioTool, PlayMode
 } from './studio/types';
-import { ARCHETYPES, INSTRUCTIONS } from './studio/types';
+import { ARCHETYPES, INSTRUCTIONS, DEFAULT_TEMPO, normalizeTempo, tempoSpeedFactor } from './studio/types';
 // Hafif geometri/sekans yardımcıları — çekirdekte kalır
 import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
 // Atak Kütüphanesi (SSOT) — dizilişe uyarlanan hazır atak şablonları
@@ -127,7 +127,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         notes: 'Taktiksel analiz',
         opponents: [],
         mentality: 'Balanced',
-        tempo: 'Normal',
+        tempo: DEFAULT_TEMPO,
         identity: 'BALANCED'
     }]);
     const [activePlanIndex, setActivePlanIndex] = useState(0);
@@ -317,7 +317,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         notes: d.notes || '',
         opponents: JSON.parse(d.opponents || '[]'),
         mentality: d.mentality || 'Balanced',
-        tempo: d.tempo || 'Normal',
+        tempo: normalizeTempo(d.tempo),
         identity: d.identity || 'BALANCED',
         drawings: JSON.parse(d.drawings || '[]'),
         status: d.status || undefined,
@@ -492,7 +492,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     const applyResumeDraft = () => {
         if (!resumeDraft) return;
-        setPlans(resumeDraft.plans);
+        // Eski taslaklar tempo'yu Slow/Normal/Fast taşıyabilir — tek kapıdan normalize et
+        setPlans(resumeDraft.plans.map(p => ({ ...p, tempo: normalizeTempo(p.tempo) })));
         setActivePlanIndex(Math.min(resumeDraft.activePlanIndex || 0, resumeDraft.plans.length - 1));
         setResumeDraft(null);
         showToast('Taslak geri yüklendi.');
@@ -602,8 +603,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
-    const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
+    // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer).
+    // Oynatma hızı plan temposundan gelir: tempo 5 = 1.0x, 1 = 0.6x, 10 = 1.5x.
+    const { seqMap, totalSeqDuration } = computeSeqMap(drawings, tempoSpeedFactor(activeTactic.tempo));
 
     // ── BİZ/RAKİP katman anahtarı: düzenlemede aktif taraf önde, pasif arkada ──
     const layerEditing = isLayerEditing(isSimulating, presentMode);
@@ -701,6 +703,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
+    };
+
+    // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
+    const setTempo = (value: number) => {
+        const tempo = normalizeTempo(value);
+        if (tempo === normalizeTempo(activeTactic.tempo)) return;
+        setActiveTactic({ ...activeTactic, tempo });
+        if (navigator.vibrate) navigator.vibrate(8);
     };
 
     // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
@@ -888,7 +898,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             notes: 'Taktiksel analiz',
             opponents: [],
             mentality: 'Balanced',
-            tempo: 'Normal',
+            tempo: DEFAULT_TEMPO,
             identity: 'BALANCED'
         }]);
         setActivePlanIndex(0);
@@ -2142,26 +2152,51 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
             {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
             {!presentMode && (<>
-            {/* Tempo — tek ayar (mentalite kaldırıldı) */}
+            {/* Tempo — plana özel 1-10; oynatma hızını da sürer (5 = temel hız) */}
             <div className="px-6 pb-6 mt-8">
                 <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
-                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2 mb-4">
-                        <Gauge size={14} className="text-blue-400" /> TEMPO
-                    </h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {(['Slow', 'Normal', 'Fast'] as const).map(t => (
-                            <button
-                                key={t}
-                                onClick={() => setActiveTactic({ ...activeTactic, tempo: t })}
-                                className={`w-full py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                                    activeTactic.tempo === t
-                                        ? 'bg-blue-400/10 border-blue-400/50 text-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.2)]'
-                                        : 'bg-white/5 border-transparent text-white hover:bg-white/10'
-                                }`}
-                            >
-                                {t === 'Slow' ? 'YAVAŞ' : t === 'Normal' ? 'NORMAL' : 'HIZLI'}
-                            </button>
-                        ))}
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <Gauge size={14} className="text-blue-400" /> TEMPO
+                        </h3>
+                        <div className="flex items-baseline gap-0.5">
+                            <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
+                            <span className="text-[10px] font-bold text-gray-500">/10</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) - 1)}
+                            disabled={normalizeTempo(activeTactic.tempo) <= 1}
+                            aria-label="Tempoyu azalt"
+                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                        >
+                            <Minus size={16} />
+                        </button>
+                        <div className="flex-1">
+                            <input
+                                type="range"
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={normalizeTempo(activeTactic.tempo)}
+                                onChange={(e) => setTempo(Number(e.target.value))}
+                                aria-label="Tempo (1-10)"
+                                className="w-full h-2 cursor-pointer accent-blue-400"
+                            />
+                            <div className="flex justify-between mt-1 px-0.5">
+                                <span className="text-[9px] font-bold text-gray-600 font-mono">1</span>
+                                <span className="text-[9px] font-bold text-gray-600 font-mono">10</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) + 1)}
+                            disabled={normalizeTempo(activeTactic.tempo) >= 10}
+                            aria-label="Tempoyu artır"
+                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                        >
+                            <Plus size={16} />
+                        </button>
                     </div>
                 </div>
             </div>

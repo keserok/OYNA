@@ -128,7 +128,7 @@ export interface TacticSavePayload {
   captainId: string | null;
   notes: string;
   mentality: string;
-  tempo: string;
+  tempo: number; // 1-10 (DB kolonu text; RPC değeri olduğu gibi taşır)
   identity: string;
 }
 
