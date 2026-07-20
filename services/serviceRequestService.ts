@@ -68,6 +68,17 @@ export const uploadProviderIdPhoto = async (file: File): Promise<string> => {
  * Kaleci/Hakem onboarding başvurusunu gönderir (admin OPERASYON onayına düşer).
  * Önkoşul: `submitServiceApplication` (serviceProviderService) ile rol+profil kurulmuş olmalı.
  */
+/**
+ * KC-4: Şu an BOOKINGLENEBİLİR (approved + is_available) sağlayıcı id'leri.
+ * Marketplace bunları kullanıp uygun-olmayan sağlayıcıları listeden çıkarır.
+ * is_available profiles'ta; goalkeepers/referees'te olmadığından RPC ile gelir.
+ */
+export const getAvailableProviderIds = async (type: 'GK' | 'REF'): Promise<string[]> => {
+  const { data, error } = await supabase.rpc('get_available_provider_ids', { p_type: type });
+  if (error) throw new Error(error.message);
+  return (data as string[] | null) ?? [];
+};
+
 export const submitProviderApplication = async (params: {
   role: 'GOALKEEPER' | 'REFEREE';
   idPhotoPath: string;

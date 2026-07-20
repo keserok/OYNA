@@ -84,7 +84,7 @@ export interface BasicMatchRecord {
 export type Match = BasicMatchRecord;
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_BOOKINGS' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'UPCOMING_MATCHES' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
 
 export interface SavedPaymentCard {
   id: string;
@@ -151,9 +151,21 @@ export interface PlayerStat {
   videoUrl: string | null;
 }
 
+// Giriş yapmış oyuncunun hafif, reaktif kimliği (ad/avatar/puan). Maça katılım
+// gibi akışlar bunu admin-only `adminUsers` listesi yerine kullanır — böylece
+// oyuncuda "Oyuncu" + rastgele pravatar fallback'i oluşmaz (KN-2).
+export interface CurrentUserProfile {
+  id: string;
+  name: string;
+  avatar: string;
+  rating: number;
+}
+
 export interface PlayerCardData {
   overall: number;
   tier: 'gold' | 'silver' | 'bronze';
+  /** Henüz maç oynamamış (rookie) → kart OVR yerine "—" ve nötr tema gösterir. */
+  isRookie?: boolean;
   isStatsVerified: boolean;
   diamondValue: number;
   flatModifier?: number; // Opanel admin override katsayısı
@@ -376,6 +388,7 @@ export interface Pitch {
   location: string; // Full address
   distance: string;
   rating: number;
+  ratingCount: number; // Platform değerlendirme sayısı; 0 ise puan gösterilmez ("Yeni")
   googleRating: number;
   googleReviews: number;
   pricePerPerson: number;
@@ -523,7 +536,6 @@ export interface Goalkeeper {
   coordinates: { lat: number; lng: number };
   stats: {
     savePercentage: string;
-    cleanSheets: number;
     penaltySaveRate: string;
     reflexes: number;
     diving: number;
@@ -854,26 +866,6 @@ export interface FriendRequest {
   timestamp: string;
 }
 
-export interface PlayerSeekAnnouncement {
-  id: string;
-  creatorId: string;
-  creatorName: string;
-  creatorAvatar: string;
-  pitchName: string;
-  date: string;
-  time: string;
-  positionsNeeded: string[];
-  difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
-  format: string;
-  duration: string;
-  gender: string;
-  ageGroup: string;
-  status: 'ACTIVE' | 'CLOSED';
-  joinedPlayers?: string[]; // IDs of users who clicked to join/requested
-  acceptedPlayers?: string[]; // IDs of users whose requests were accepted by captain
-  createdAt?: string;
-}
-
 // ==============================================// OWNER SAAS & UI CONFIGURATION (PATRON PANELİ)
 // ============================================================================
 
@@ -1009,6 +1001,7 @@ export interface PitchExpense {
   created_by?: string | null;
   created_at?: string;
   is_demo?: boolean;
+  template_id?: string | null;
 }
 
 export interface PitchDebtor {

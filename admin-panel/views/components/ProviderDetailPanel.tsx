@@ -14,17 +14,28 @@ interface ProviderDetailPanelProps {
   onClose: () => void;
 }
 
-const StatBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
-  <div>
-    <div className="flex justify-between text-[10px] mb-1">
-      <span className="text-gray-500 font-bold uppercase">{label}</span>
-      <span className="text-white font-mono">{value}</span>
+// HR-G: bilinmeyen istatistik sahte 80 ile doldurulmaz; değeri yoksa "—" ve
+// boş bar gösterilir (dürüst boşluk).
+const statNum = (v: unknown): number | null => {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v);
+  return null;
+};
+
+const StatBar: React.FC<{ label: string; value: number | null }> = ({ label, value }) => {
+  const known = value !== null;
+  return (
+    <div>
+      <div className="flex justify-between text-[10px] mb-1">
+        <span className="text-gray-500 font-bold uppercase">{label}</span>
+        <span className="text-white font-mono">{known ? value : '—'}</span>
+      </div>
+      <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-red-500 to-purple-600 rounded-full" style={{ width: known ? `${Math.min(100, value as number)}%` : '0%' }} />
+      </div>
     </div>
-    <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-      <div className="h-full bg-gradient-to-r from-red-500 to-purple-600 rounded-full" style={{ width: `${Math.min(100, value)}%` }} />
-    </div>
-  </div>
-);
+  );
+};
 
 const DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
@@ -155,7 +166,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             </div>
             <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
               {isGk ? <Shield size={12} className="text-green-400" /> : <Scale size={12} className="text-yellow-400" />}
-              {isGk ? (gk.style || 'Kaleci') : (ref.level || 'Hakem')} • {Number(provider.rating || 0).toFixed(1)}★
+              {isGk ? (gk.style || 'Kaleci') : (ref.level || 'Hakem')} • {Number(provider.rating) > 0 ? `${Number(provider.rating).toFixed(1)}★` : '—'}
             </p>
             <p className="text-[10px] font-mono text-gray-600 mt-1">ID: {provider.id.slice(0, 8)}…</p>
           </div>
@@ -211,16 +222,16 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
               <div className="space-y-2">
                 {isGk ? (
                   <>
-                    <StatBar label="Refleks" value={Number(skills.reflexes ?? stats.reflexes ?? 80)} />
-                    <StatBar label="Dalış" value={Number(skills.diving ?? stats.diving ?? 80)} />
-                    <StatBar label="Pozisyon" value={Number(skills.positioning ?? stats.positioning ?? 80)} />
+                    <StatBar label="Refleks" value={statNum(skills.reflexes ?? stats.reflexes)} />
+                    <StatBar label="Dalış" value={statNum(skills.diving ?? stats.diving)} />
+                    <StatBar label="Pozisyon" value={statNum(skills.positioning ?? stats.positioning)} />
                     <p className="text-[10px] text-gray-500 mt-2">Kurtarış %: {stats.savePercentage ?? '—'} • Penaltı: {stats.penaltySaveRate ?? '—'}</p>
                   </>
                 ) : (
                   <>
-                    <StatBar label="Otorite" value={Number(stats.authority ?? 80)} />
-                    <StatBar label="Kondisyon" value={Number(stats.fitness ?? 80)} />
-                    <StatBar label="İletişim" value={Number(stats.communication ?? 80)} />
+                    <StatBar label="Otorite" value={statNum(stats.authority)} />
+                    <StatBar label="Kondisyon" value={statNum(stats.fitness)} />
+                    <StatBar label="İletişim" value={statNum(stats.communication)} />
                     <p className="text-[10px] text-gray-500 mt-2">Ort. kart: {stats.avgCards ?? '—'}</p>
                   </>
                 )}

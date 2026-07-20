@@ -45,23 +45,36 @@ FOR DELETE USING (
 
 
 -- PITCH_SLOTS tablosu RLS
-ALTER TABLE public.pitch_slots ENABLE ROW LEVEL SECURITY;
+-- Replay-güvenlik guard'ı: pitch_slots hiçbir migration'da yaratılmıyor ve
+-- üretimde de YOK (ölü referans — muhtemelen repo-dışı silindi). Sıfırdan
+-- kurulumda (Preview/db reset) bu blok patlıyordu; tablo varsa aynen çalışır,
+-- yoksa atlanır. (#107'nin service_offers guard'ı ile aynı desen.)
+DO $pitch_slots_guard$
+BEGIN
+  IF to_regclass('public.pitch_slots') IS NULL THEN
+    RAISE NOTICE 'pitch_slots yok — RLS bloğu atlandı (replay-güvenli)';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Pitch slots are viewable by everyone" ON public.pitch_slots;
-CREATE POLICY "Pitch slots are viewable by everyone" ON public.pitch_slots
-FOR SELECT USING (true);
+  EXECUTE 'ALTER TABLE public.pitch_slots ENABLE ROW LEVEL SECURITY';
 
-DROP POLICY IF EXISTS "Pitch owners can manage slots" ON public.pitch_slots;
-CREATE POLICY "Pitch owners can manage slots" ON public.pitch_slots
-FOR ALL USING (
-  auth.uid() IN (SELECT owner_id FROM public.pitches WHERE id = pitch_id)
-  OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'ADMIN'
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Pitch slots are viewable by everyone" ON public.pitch_slots';
+  EXECUTE 'CREATE POLICY "Pitch slots are viewable by everyone" ON public.pitch_slots
+    FOR SELECT USING (true)';
 
-DROP POLICY IF EXISTS "Authenticated users can book slots" ON public.pitch_slots;
-CREATE POLICY "Authenticated users can book slots" ON public.pitch_slots
-FOR UPDATE USING (auth.role() = 'authenticated')
-WITH CHECK (auth.role() = 'authenticated');
+  EXECUTE 'DROP POLICY IF EXISTS "Pitch owners can manage slots" ON public.pitch_slots';
+  EXECUTE 'CREATE POLICY "Pitch owners can manage slots" ON public.pitch_slots
+    FOR ALL USING (
+      auth.uid() IN (SELECT owner_id FROM public.pitches WHERE id = pitch_id)
+      OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = ''ADMIN''
+    )';
+
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can book slots" ON public.pitch_slots';
+  EXECUTE 'CREATE POLICY "Authenticated users can book slots" ON public.pitch_slots
+    FOR UPDATE USING (auth.role() = ''authenticated'')
+    WITH CHECK (auth.role() = ''authenticated'')';
+END
+$pitch_slots_guard$;
 
 
 -- NOTIFICATIONS tablosu RLS

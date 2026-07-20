@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole, AppView, PlayerCardData } from '../types';
-import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil } from 'lucide-react';
+import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
-import { fetchFriends, fetchUserTeams } from '../services/friendService';
+import { fetchFriends } from '../services/friendService';
+import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
 import type { ShortcutItem } from '../components/profile';
 import { OynaLogo } from '../components/OynaLogo';
+import { ratingToOverall, tierForOverall } from '../utils/ratingScale';
+import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from './onboarding/onboardingShared';
+
+const POSITION_ORDER = ['kaleci', 'defans', 'orta', 'forvet'] as const;
+const GENDER_ORDER = ['kadin', 'erkek'] as const;
+const PLAY_STYLE_ORDER = ['ciddi', 'taktiksel', 'rahat'] as const;
 
 const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
 
@@ -21,14 +28,21 @@ const buildCardData = (profile: OynaUser | null, wins: number, total: number): P
     if (pc && pc.stats && typeof pc.overall === 'number') {
         return pc as PlayerCardData;
     }
-    const overall = Math.round((profile?.stats?.rating ?? 5) * 20);
+    // Rookie ayrımı: hiç maç oynamamış oyuncu için sahte OVR göstermeyiz.
+    // Maç sayısı için GÜVENİLİR sinyal profiles.match_count (stats.matchesPlayed);
+    // matchHistory.length maç kayıtları linklenmemişse veterana "0" derdi.
+    const matchesForCard = profile?.stats?.matchesPlayed ?? total;
+    const overallOrNull = ratingToOverall(profile?.stats?.rating, matchesForCard);
+    const rookie = overallOrNull === null;
+    const overall = overallOrNull ?? 0;
     return {
         overall,
-        tier: overall >= 80 ? 'gold' : overall >= 65 ? 'silver' : 'bronze',
+        isRookie: rookie,
+        tier: rookie ? 'bronze' : (tierForOverall(overallOrNull) as 'gold' | 'silver' | 'bronze'),
         isStatsVerified: false,
         diamondValue: 0,
         winCount: wins,
-        totalMatches: total,
+        totalMatches: matchesForCard,
         stats: {
             pace: { ...DEFAULT_CARD_STAT },
             shooting: { ...DEFAULT_CARD_STAT },
@@ -51,8 +65,6 @@ const ageFromBirthdate = (birthdate?: string | null): number | null => {
     return age >= 5 && age < 120 ? age : null;
 };
 
-const FOOT_LABELS: Record<'SAG' | 'SOL' | 'CIFT', string> = { SAG: 'Sağ', SOL: 'Sol', CIFT: 'Çift' };
-
 // Eski/seed verideki enum-biçimli mevkileri okunur hale getirir ("SAG_KANAT" → "Sağ Kanat").
 const POSITION_WORDS: Record<string, string> = {
     SAG: 'Sağ', SOL: 'Sol', KANAT: 'Kanat', ORTA: 'Orta', SAHA: 'Saha',
@@ -74,11 +86,14 @@ interface ProfileScreenProps {
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı
     const [showEditModal, setShowEditModal] = useState(false);
+    // D5: görsel yükleme hatası (HEIC/boyut/çok küçük/offline) kullanıcıya gösterilir.
+    const [photoError, setPhotoError] = useState<string | null>(null);
     const [editPos, setEditPos] = useState('');
     const [editBio, setEditBio] = useState('');
     const [editAvatar, setEditAvatar] = useState('');
     const [editBirthdate, setEditBirthdate] = useState('');
-    const [editFoot, setEditFoot] = useState<'SAG' | 'SOL' | 'CIFT' | null>(null);
+    const [editGender, setEditGender] = useState('');
+    const [editStyle, setEditStyle] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
@@ -112,17 +127,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 getFullUserProfile(uid),
                 getMatchHistory(uid),
             ]);
+            // D2: giriş yapmış kullanıcının profili null ise bu bir YÜKLEME
+            // HATASIDIR (getFullUserProfile hatayı yutup null döndürüyor) —
+            // düzenlenebilir boş "Oyuncu" profili gösterip gerçek profili ezme
+            // riski yaratmak yerine hata durumu + Yeniden Dene göster.
+            if (!profileData) {
+                setError('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+                return;
+            }
             setProfile(profileData);
             setMatchHistory(history);
             // FAZ 7.5: rol değiştirici için güncel rolleri store'a yansıt
             if (profileData?.roles?.length) setMyRoles(profileData.roles);
             // Kısayol sayıları en-iyi-çaba: biri düşerse profil yine açılır.
             const [teamsRes, friendsRes] = await Promise.allSettled([
-                fetchUserTeams(uid),
+                // E2: Sosyal ile TEK kaynak (get_my_teams) — Profil eskiden
+                // fetchUserTeams (arşivi de sayan) kullanıp Sosyal ile çelişiyordu.
+                getMyTeams(),
                 fetchFriends(uid),
             ]);
             if (teamsRes.status === 'fulfilled') {
-                setTeamsCount(teamsRes.value.captainTeams.length + teamsRes.value.memberTeams.length);
+                setTeamsCount(teamsRes.value.filter(t => !t.is_archived).length);
             }
             if (friendsRes.status === 'fulfilled') {
                 setFriendsCount(friendsRes.value.length);
@@ -141,21 +166,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     }, [uid]);
 
     const openEdit = () => {
+        setPhotoError(null);
         setEditPos(profile?.position || '');
         setEditBio(profile?.bio || '');
         setEditAvatar(profile?.avatar_url || '');
         setEditBirthdate(profile?.birthdate || '');
-        setEditFoot(profile?.preferredFoot ?? null);
+        setEditGender(profile?.gender || '');
+        setEditStyle(profile?.playStyle || '');
         setShowEditModal(true);
     };
     const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPhotoError(null);
         try {
             const url = await uploadImage(file);
             setEditAvatar(url);
-        } catch (err) {
+        } catch (err: any) {
+            // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
+            // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
             console.error('Fotoğraf yükleme hatası:', err);
+            setPhotoError(err?.message || 'Fotoğraf yüklenemedi. Farklı bir görsel dene (JPG/PNG, en fazla 10MB).');
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
@@ -168,7 +199,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 position: editPos.trim(),
                 bio: editBio.trim(),
                 birthdate: editBirthdate || null,
-                preferred_foot: editFoot,
+                gender: editGender || null,
+                play_style: editStyle || null,
                 ...(editAvatar && editAvatar !== profile?.avatar_url ? { avatar_url: editAvatar } : {}),
             });
             setShowEditModal(false);
@@ -187,7 +219,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
     const cardData = (() => {
         const c = buildCardData(profile, wins, total);
-        return profile?.cardTier ? { ...c, tier: profile.cardTier } : c;
+        // Admin açıkça tier atadıysa rookie durumunu geçersiz kıl (o kartı göster).
+        return profile?.cardTier ? { ...c, tier: profile.cardTier, isRookie: false } : c;
     })();
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.
@@ -275,6 +308,23 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     </div>
                 )}
 
+                {/* ═══ PROFİL TAMAMLANMADI ŞERİDİ — onboarding'i atlayan kayıtlı kullanıcı ═══ */}
+                {!isGuest && profile && profile.hasCompletedOnboarding === false && (
+                    <button
+                        onClick={() => onNavigate && onNavigate('ONBOARDING')}
+                        className="w-full mb-4 text-left bg-[#FACC15]/[0.07] border border-[#FACC15]/30 rounded-3xl p-4 flex items-center gap-3 active:scale-[0.99] transition-all shadow-[0_8px_30px_rgba(0,0,0,0.35)]"
+                    >
+                        <div className="w-10 h-10 rounded-2xl bg-[#FACC15]/15 flex items-center justify-center shrink-0">
+                            <AlertCircle size={20} className="text-[#FACC15]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-black text-white">Profil tamamlanmadı</p>
+                            <p className="text-[11px] text-gray-400 leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
+                        </div>
+                        <span className="text-[11px] font-black text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
+                    </button>
+                )}
+
                 {/* ═══ KİMLİK KARTI ═══ */}
                 <ProfileHero
                     name={profile?.full_name || (isGuest ? 'Misafir' : 'Oyuncu')}
@@ -282,7 +332,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     verified={!isGuest && profile?.verification_status === 'approved'}
                     position={formatPosition(profile?.position)}
                     age={ageFromBirthdate(profile?.birthdate)}
-                    footLabel={profile?.preferredFoot ? FOOT_LABELS[profile.preferredFoot] : null}
+                    ageRange={profile?.ageRange}
+                    gender={profile?.gender}
+                    playStyle={profile?.playStyle}
                     matches={total}
                     winRate={winRate}
                     mvp={null /* MVP oylaması kayıt altına alınınca bağlanacak */}
@@ -363,11 +415,34 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-black text-primary uppercase tracking-widest disabled:opacity-60">
                                 Fotoğrafı Değiştir
                             </button>
+                            {photoError && (
+                                <p className="text-[11px] font-bold text-red-400 text-center max-w-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                                    {photoError}
+                                </p>
+                            )}
                             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
                         </div>
                         <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Mevki</label>
-                            <input value={editPos} onChange={(e) => setEditPos(e.target.value)} placeholder="Örn: Orta Saha" className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40" />
+                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Pozisyon</label>
+                            <div className="mt-1.5 grid grid-cols-4 gap-2">
+                                {POSITION_ORDER.map((code) => {
+                                    const label = POSITION_LABEL[code];
+                                    const sel = editPos === label;
+                                    return (
+                                        <button
+                                            key={code}
+                                            type="button"
+                                            onClick={() => setEditPos(sel ? '' : label)}
+                                            className={`py-2.5 rounded-2xl border transition-all active:scale-95 flex flex-col items-center gap-0.5 ${
+                                                sel ? 'bg-primary text-black border-primary' : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
+                                            }`}
+                                        >
+                                            <span className="text-[13px] font-black">{POSITION_ABBR[code]}</span>
+                                            <span className="text-[8px] font-bold opacity-80">{label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                         <div>
                             <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Doğum Tarihi</label>
@@ -380,22 +455,45 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Kullandığın Ayak</label>
+                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Cinsiyet</label>
                             <div className="mt-1.5 flex gap-2">
-                                {(Object.keys(FOOT_LABELS) as Array<'SAG' | 'SOL' | 'CIFT'>).map((f) => (
-                                    <button
-                                        key={f}
-                                        type="button"
-                                        onClick={() => setEditFoot(editFoot === f ? null : f)}
-                                        className={`flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95 ${
-                                            editFoot === f
-                                                ? 'bg-primary text-black border-primary'
-                                                : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
-                                        }`}
-                                    >
-                                        {FOOT_LABELS[f]}
-                                    </button>
-                                ))}
+                                {GENDER_ORDER.map((g) => {
+                                    const sel = editGender === g;
+                                    return (
+                                        <button
+                                            key={g}
+                                            type="button"
+                                            onClick={() => setEditGender(sel ? '' : g)}
+                                            className={`flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95 ${
+                                                sel ? 'bg-primary text-black border-primary' : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
+                                            }`}
+                                        >
+                                            {g === 'kadin' ? '♀' : '♂'} {GENDER_LABEL[g]}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Oyun Stili</label>
+                            <div className="mt-1.5 grid grid-cols-3 gap-2">
+                                {PLAY_STYLE_ORDER.map((s) => {
+                                    const sel = editStyle === s;
+                                    const meta = PLAY_STYLE_META[s];
+                                    return (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => setEditStyle(sel ? '' : s)}
+                                            className="py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95"
+                                            style={sel
+                                                ? { color: '#000', backgroundColor: meta.color, borderColor: meta.color }
+                                                : { color: 'rgba(255,255,255,0.6)', backgroundColor: '#161B22', borderColor: 'rgba(255,255,255,0.1)' }}
+                                        >
+                                            {meta.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                         <div>

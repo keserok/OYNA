@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   RefreshCw,
+  RotateCcw,
   Settings,
   Shield,
   Tag,
@@ -32,6 +33,7 @@ export interface OwnerMenuViewProps {
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onPricingPolicy: () => void;
+  onCancellationPolicy: () => void;
   onLogout: () => void;
   onSecurity: () => void;
   onSupport: () => void;
@@ -44,6 +46,8 @@ export interface OwnerMenuViewProps {
   onSwitchRole?: () => void;
   /** Kullanıcı birden çok role sahip mi? (yalnız o zaman rol geçişi anlamlı) */
   canSwitchRole?: boolean;
+  /** STAFF-3: panel erişim seviyesi — menü öğelerini yetkiye göre gizler. */
+  accessLevel?: 'OWNER' | 'MANAGER' | 'STAFF';
 }
 
 function StatusBadge({
@@ -108,6 +112,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onBankAccounts,
   onWithdrawals,
   onPricingPolicy,
+  onCancellationPolicy,
   onLogout,
   onSecurity,
   onSupport,
@@ -118,7 +123,10 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   isReadOnly = false,
   onSwitchRole,
   canSwitchRole = false,
+  accessLevel = 'OWNER',
 }) => {
+  const isOwnerLvl = accessLevel === 'OWNER';
+  const isManagerLvl = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
   const verificationLabel =
     stats.verificationStatus === 'approved'
       ? 'Onaylı'
@@ -133,7 +141,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         : 'warning';
 
   return (
-    <div className="p-6 pb-32 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
+    <div className="p-6 pb-32 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
       <div className="flex items-center gap-4 mb-8">
         <div className="relative">
           {facilityImage ? (
@@ -187,6 +195,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
       )}
 
       <div className="space-y-6">
+        {isManagerLvl && (
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">İşletme Yönetimi</h3>
           <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
@@ -236,40 +245,53 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
             />
           </div>
         </section>
+        )}
 
+        {isManagerLvl && (
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Finansal</h3>
           <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
-            <MenuRow
-              icon={<Building2 size={18} />}
-              iconClass="text-emerald-400"
-              label="Banka Hesapları"
-              badge={<StatusBadge label={`${stats.bankAccountCount} hesap`} tone="neutral" />}
-              onClick={onBankAccounts}
-            />
-            <MenuRow
-              icon={<Banknote size={18} />}
-              label="Para Çekme"
-              badge={
-                <StatusBadge
-                  label={
-                    stats.availableBalance != null
-                      ? `₺${stats.availableBalance.toLocaleString('tr-TR')}`
-                      : 'Bakiye'
-                  }
-                  tone="success"
-                />
-              }
-              onClick={onWithdrawals}
-            />
+            {/* Banka + Para Çekme SAHİP-only (para-güvenliği); müdür/personel görmez. */}
+            {isOwnerLvl && (
+              <MenuRow
+                icon={<Building2 size={18} />}
+                iconClass="text-emerald-400"
+                label="Banka Hesapları"
+                badge={<StatusBadge label={`${stats.bankAccountCount} hesap`} tone="neutral" />}
+                onClick={onBankAccounts}
+              />
+            )}
+            {isOwnerLvl && (
+              <MenuRow
+                icon={<Banknote size={18} />}
+                label="Para Çekme"
+                badge={
+                  <StatusBadge
+                    label={
+                      stats.availableBalance != null
+                        ? `₺${stats.availableBalance.toLocaleString('tr-TR')}`
+                        : 'Bakiye'
+                    }
+                    tone="success"
+                  />
+                }
+                onClick={onWithdrawals}
+              />
+            )}
             <MenuRow
               icon={<Tag size={18} />}
               label="Fiyatlandırma Politikası"
               badge={<StatusBadge label={`${stats.tariffCount} tarife`} tone="info" />}
               onClick={onPricingPolicy}
             />
+            <MenuRow
+              icon={<RotateCcw size={18} />}
+              label="İptal / İade Politikası"
+              onClick={onCancellationPolicy}
+            />
           </div>
         </section>
+        )}
 
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Uygulama</h3>

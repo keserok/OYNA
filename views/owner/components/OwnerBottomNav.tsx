@@ -8,6 +8,8 @@ interface OwnerBottomNavProps {
   pendingCount?: number;
   financeLocked?: boolean;
   teamLocked?: boolean;
+  /** STAFF-3: yetkiye göre tamamen gizlenen sekmeler (ör. personel için Finans). */
+  hiddenTabs?: OwnerNavTab[];
   onSelect: (tab: OwnerNavTab) => void;
 }
 
@@ -24,15 +26,17 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
   pendingCount = 0,
   financeLocked,
   teamLocked,
+  hiddenTabs = [],
   onSelect,
 }) => {
   const highlightTab =
     activeTab === 'PENDING_ACTIONS' || activeTab === 'PITCHES' ? 'HOME' : activeTab;
+  const shownTabs = tabs.filter((t) => !hiddenTabs.includes(t.id));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#1A1F2C]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
       <div className="flex justify-around items-center max-w-lg mx-auto">
-        {tabs.map((tab) => {
+        {shownTabs.map((tab) => {
           const isActive = highlightTab === tab.id;
           const locked =
             (tab.id === 'FINANCE' && financeLocked) || (tab.id === 'TEAM' && teamLocked);

@@ -4,7 +4,7 @@ import {
   ArrowLeft, Search, Filter, MapPin, Star, Layers,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
-  LocateFixed, Loader2, Navigation2,
+  LocateFixed, Loader2, Navigation2, MapPinOff, Bell, Send, Check, Plus,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
@@ -23,6 +23,7 @@ import { Toast } from '../components/common/Toast';
 import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
 import { resolveWorkingHoursForDate } from '../shared/workingHours';
+import { recordDemandSignal, mapDemandError, type DemandSignalType } from '../services/demandService';
 import {
   derivePitchFilterOptions,
   filterAndSortPitches,
@@ -76,6 +77,7 @@ interface DbPitchRow {
   district: string | null;
   address: string | null;
   rating: number | null;
+  rating_count: number | null;
   google_rating: number | null;
   google_review_count: number | null;
   price_per_person: number | null;
@@ -108,14 +110,10 @@ const gradeToScore = (g?: string | null): number => {
 
 const mapDbPitchToUiPitch = (
   row: DbPitchRow,
-  flash?: { id: string; discount: number },
 ): Pitch => {
   const tariffs = mapDbTariffsToPitchTariffs(row.pitch_tariffs);
   const averagePrice =
     getAverageTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
-  const displayPrice = flash?.discount
-    ? Math.round(averagePrice * (1 - flash.discount / 100))
-    : averagePrice;
   const wh = row.working_hours;
   const courts: Court[] = (row.courts ?? [])
     .filter((c) => c.is_active !== false)
@@ -142,12 +140,24 @@ const mapDbPitchToUiPitch = (
     district: row.district ?? row.city ?? '',
     location: row.address ?? [row.district, row.city].filter(Boolean).join(', '),
     distance: '',
-    rating: row.rating ?? row.google_rating ?? 0,
+    // V-2: puansız saha sahte "5.0" göstermesin. Platform değerlendirmesi varsa
+    // onu, yoksa Google yorumu varsa onu; ikisi de yoksa 0 (kart "Yeni" gösterir).
+    // (pitches.rating DEFAULT 5.0 olduğundan rating_count kapısı ŞART.)
+    rating: (row.rating_count ?? 0) > 0
+      ? (row.rating ?? 0)
+      : (row.google_review_count ?? 0) > 0
+        ? (row.google_rating ?? 0)
+        : 0,
+    ratingCount: row.rating_count ?? 0,
     googleRating: row.google_rating ?? 0,
     googleReviews: row.google_review_count ?? 0,
     pricePerPerson: row.price_per_person ?? 0,
-    totalPrice: displayPrice,
-    originalPrice: flash?.discount ? averagePrice : undefined,
+    // V-3: flash indirim SLOT-ÖZEL (court_id/booking_date/start_time) bir kampanya;
+    // vitrinde tüm sahaya "indirimli fiyat" olarak yansıtmak yanıltıcıydı (rezervasyon
+    // TAM tarifeyi alıyordu — yem-değiştir). Kart artık GERÇEK ortalama fiyatı gösterir;
+    // doğru slot-özel indirim uygulaması OW-D'de (rezervasyon fiyatına).
+    totalPrice: averagePrice,
+    originalPrice: undefined,
     image: row.image ?? row.images?.[0] ?? '',
     images: row.images ?? (row.image ? [row.image] : []),
     description: row.description ?? '',
@@ -156,9 +166,9 @@ const mapDbPitchToUiPitch = (
     grassQuality: 0,
     lockerRoomQuality: 0,
     goalQuality: 0,
-    occupancy: row.rating
-      ? Math.min(95, Math.max(40, Math.round(row.rating * 16 + ((row.google_review_count ?? 0) % 20))))
-      : 75,
+    // V-8: puandan uydurma doluluk türetme kaldırıldı; gerçek doluluk keşif
+    // tarafında hesaplanmıyor → 0 (bilinmiyor). Sahte veri modelde taşınmaz.
+    occupancy: 0,
     // Koordinat yoksa sahte varsayılan basma — undefined bırak (haritada gizlenir).
     coordinates:
       row.latitude != null && row.longitude != null
@@ -182,8 +192,9 @@ const mapDbPitchToUiPitch = (
           slotDuration: wh.slot_duration ?? wh.slotDuration ?? 60,
         }
       : { open: '08:00', close: '02:00', slotDuration: 60 },
-    flashDiscount: flash?.discount,
-    flashDealId: flash?.id,
+    // V-3: sahte pitch-geneli indirim rozeti/kimliği kaldırıldı (slot-özel doğru uygulama OW-D).
+    flashDiscount: undefined,
+    flashDealId: undefined,
     tariffs,
   };
 };
@@ -698,10 +709,17 @@ const PitchCard: React.FC<{
       <div className="flex items-start justify-between mt-3 gap-3">
         <h3 className="text-lg font-black italic uppercase tracking-tight leading-none text-white">{pitch.name}</h3>
         <div className="flex items-center gap-1 shrink-0">
-          <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
-          <span className="text-sm font-extrabold text-white">{pitch.rating.toFixed(1)}</span>
-          {pitch.googleReviews > 0 && (
-            <span className="text-xs font-medium text-white/45">({pitch.googleReviews})</span>
+          {/* V-2: gerçek değerlendirme (platform veya Google) yoksa "5.0" değil "Yeni". */}
+          {(pitch.ratingCount > 0 || pitch.googleReviews > 0) ? (
+            <>
+              <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
+              <span className="text-sm font-extrabold text-white">{pitch.rating.toFixed(1)}</span>
+              {pitch.googleReviews > 0 && (
+                <span className="text-xs font-medium text-white/45">({pitch.googleReviews})</span>
+              )}
+            </>
+          ) : (
+            <span className="text-[11px] font-black uppercase tracking-wide text-white/40">Yeni</span>
           )}
         </div>
       </div>
@@ -769,36 +787,20 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setPitchesLoading(true);
     setPitchesError(null);
     try {
-      const [pitchRes, dealRes] = await Promise.all([
-        supabase
-          .from('pitches')
-          .select('*, courts(id, name, court_type, surface, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity), pitch_tariffs(*)')
-          .eq('verification_status', 'approved')
-          .eq('is_open', true)
-          .eq('is_published', true),
-        supabase
-          .from('pitch_flash_deals')
-          .select('id, pitch_id, discount_percent, expires_at, is_claimed')
-          .eq('is_claimed', false)
-          .gt('expires_at', new Date().toISOString()),
-      ]);
+      // V-3: pitch_flash_deals SLOT-ÖZEL (court_id/booking_date/start_time). Vitrinde
+      // tüm sahaya indirim yansıtmak yem-değiştirdi; bu yüzden burada çekilmiyor. Doğru
+      // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
+      const pitchRes = await supabase
+        .from('pitches')
+        .select('*, courts(id, name, court_type, surface, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity), pitch_tariffs(*)')
+        .eq('verification_status', 'approved')
+        .eq('is_open', true)
+        .eq('is_published', true);
 
       if (pitchRes.error) throw pitchRes.error;
 
       const rows = (pitchRes.data ?? []) as unknown as DbPitchRow[];
-      const flashByPitch: Record<string, { id: string; discount: number }> = {};
-      ((dealRes.data ?? []) as { id: string; pitch_id: string; discount_percent: number }[]).forEach((d) => {
-        const existing = flashByPitch[d.pitch_id];
-        if (!existing || d.discount_percent > existing.discount) {
-          flashByPitch[d.pitch_id] = { id: d.id, discount: d.discount_percent };
-        }
-      });
-
-      // Flash rozet/indirimli fiyat YALNIZ admin flash_deals_enabled açtıysa
-      // vitrine yansır (aksi halde ham fiyat gösterilir, "İndirimli" filtresi saymaz).
-      const mapped = rows.map((r) =>
-        mapDbPitchToUiPitch(r, r.flash_deals_enabled === true ? flashByPitch[r.id] : undefined),
-      );
+      const mapped = rows.map((r) => mapDbPitchToUiPitch(r));
       setRealPitches(mapped);
       void loadTodayAvailability(mapped);
     } catch (err) {
@@ -823,21 +825,25 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       const today = todayISO();
       const rows = await fetchShowcaseAvailability(today);
 
-      // Saha → saat(HH:MM) → dolu kort sayısı  ve  saha → tümüyle kapatılmış saatler
-      const bookedByPitch: Record<string, Record<string, number>> = {};
-      const closedByPitch: Record<string, Set<string>> = {};
+      // V-4/V-5: kapanış ve rezervasyonlar KORT-BAZLI ve SAAT-ARALIĞI olarak
+      // tutulur. court_id null = tesis geneli; CLOSURE start_time null = tüm gün.
+      type Span = { startH: number; endH: number; court: string | null; allDay: boolean };
+      const bookingsByPitch: Record<string, Span[]> = {};
+      const closuresByPitch: Record<string, Span[]> = {};
+      const hourSpan = (r: (typeof rows)[number]): { startH: number; endH: number } => {
+        const startH = parseInt((r.start_time as string).split(':')[0], 10);
+        const endRaw = r.end_time ? parseInt(r.end_time.split(':')[0], 10) : startH + 1;
+        return { startH, endH: endRaw > startH ? endRaw : startH + 1 };
+      };
       rows.forEach((r) => {
         if (r.kind === 'BOOKING') {
-          const t = r.start_time;
-          (bookedByPitch[r.pitch_id] ??= {})[t] = (bookedByPitch[r.pitch_id]?.[t] ?? 0) + 1;
+          if (!r.start_time) return; // rezervasyonda saat yoksa atla
+          const { startH, endH } = hourSpan(r);
+          (bookingsByPitch[r.pitch_id] ??= []).push({ startH, endH, court: r.court_id, allDay: false });
         } else {
-          // Kapanış: court_id null ise TÜM kortlar kapalı → o saati tümüyle işaretle
-          const start = parseInt(r.start_time.split(':')[0], 10);
-          const end = r.end_time ? parseInt(r.end_time.split(':')[0], 10) : start + 1;
-          const set = (closedByPitch[r.pitch_id] ??= new Set<string>());
-          for (let h = start; h < (end > start ? end : start + 1); h++) {
-            set.add(`${String(h % 24).padStart(2, '0')}:00`);
-          }
+          const allDay = !r.start_time; // start_time null = TÜM GÜN kapalı
+          const { startH, endH } = allDay ? { startH: 0, endH: 0 } : hourSpan(r);
+          (closuresByPitch[r.pitch_id] ??= []).push({ startH, endH, court: r.court_id, allDay });
         }
       });
 
@@ -852,18 +858,39 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         );
         if (wh.closed) { result[p.id] = 0; return; }
         const ranges = generateSlotRanges(wh);
-        const booked = bookedByPitch[p.id] ?? {};
-        const closed = closedByPitch[p.id];
+        // V-7: gece-sarkması sabit "h<6" yerine çalışma penceresinden türetilir.
+        // Pencere gece yarısını aşıyorsa (kapanış ≤ açılış) açılış saatinin altındaki
+        // slotlar ertesi güne sarkan (gelecek) slotlardır.
+        const openHour = parseInt(wh.open.slice(0, 2), 10);
+        const bookings = bookingsByPitch[p.id] ?? [];
+        const closures = closuresByPitch[p.id] ?? [];
         result[p.id] = ranges.filter((r) => {
           const [h, m] = r.startTime.split(':').map(Number);
-          // Gece yarısını aşan pencerede (ör. 09:00-02:00) küçük saatler ertesi güne
-          // sarkar; onları "geçmiş" sayma. Aynı-gün saatte başlangıç geçmişse ele.
           const slotMin = h * 60 + m;
-          const isNightWrap = h < 6;
+          const isNightWrap = h < openHour;
           const isFuture = isNightWrap || slotMin >= nowMinutes;
           if (!isFuture) return false;
-          if (closed?.has(r.startTime)) return false;
-          return (booked[r.startTime] ?? 0) < courtCount;
+
+          const covers = (s: Span) => s.allDay || (h >= s.startH && h < s.endH);
+          // Kapanışlar: tesis-geneli (court null) → o saat tümüyle kapalı;
+          // kort-özel → yalnız o kort meşgul.
+          let pitchWideClosed = false;
+          const busyCourts = new Set<string>();
+          let busyNullCourt = 0;
+          for (const c of closures) {
+            if (!covers(c)) continue;
+            if (c.court == null) { pitchWideClosed = true; break; }
+            busyCourts.add(c.court);
+          }
+          if (pitchWideClosed) return false;
+          // Rezervasyonlar da kort meşgul eder (kort null ise legacy tek-kort sayımı).
+          for (const b of bookings) {
+            if (!covers(b)) continue;
+            if (b.court == null) busyNullCourt++;
+            else busyCourts.add(b.court);
+          }
+          const occupied = busyCourts.size + busyNullCourt;
+          return occupied < courtCount; // en az bir kort boşsa müsait
         }).length;
       });
       setTodayAvailability(result);
@@ -883,6 +910,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [showFilters, setShowFilters] = useState(false);
+
+  // ── COLD-START talep sinyali (boş şehir "haberdar et / saha öner") ──────────
+  const [demandModal, setDemandModal] = useState<DemandSignalType | null>(null);
+  const [demandCity, setDemandCity] = useState('');
+  const [demandDistrict, setDemandDistrict] = useState('');
+  const [demandPitchName, setDemandPitchName] = useState('');
+  const [demandContact, setDemandContact] = useState('');
+  const [demandSending, setDemandSending] = useState(false);
+  const [demandDone, setDemandDone] = useState<null | { type: DemandSignalType; duplicate: boolean }>(null);
+  const [demandError, setDemandError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -942,6 +979,53 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setSortOrder('DEFAULT');
     setOnlyDiscounted(false);
   }, []);
+
+  // ── COLD-START talep sinyali gönderimi ──────────────────────────────────────
+  const openDemandModal = useCallback((type: DemandSignalType) => {
+    setDemandModal(type);
+    setDemandDone(null);
+    setDemandError(null);
+    // Bilinen bağlamdan ön-doldur (düzenlenebilir kalır): kullanıcının seçili
+    // birincil bölgesi (activeRegion) → aktif ilçe filtresi. Boş şehirdeki
+    // kararsız kullanıcıya yazı yazdırmamak dönüşümü belirgin artırır.
+    setDemandCity((prev) => prev || activeRegion?.city || '');
+    setDemandDistrict((prev) =>
+      prev || activeRegion?.district || (filters.district !== 'Tümü' ? filters.district : ''));
+  }, [activeRegion, filters.district]);
+
+  const closeDemandModal = useCallback(() => {
+    setDemandModal(null);
+    setDemandError(null);
+    setDemandSending(false);
+  }, []);
+
+  const submitDemand = useCallback(async () => {
+    if (!demandModal || demandSending) return;
+    if (demandModal === 'SUGGEST' && !demandPitchName.trim()) {
+      setDemandError('Lütfen önerdiğin sahanın adını yaz.');
+      return;
+    }
+    setDemandSending(true);
+    setDemandError(null);
+    try {
+      const res = await recordDemandSignal({
+        type: demandModal,
+        city: demandCity,
+        district: demandDistrict,
+        pitchName: demandPitchName,
+        contact: demandContact,
+      });
+      setDemandDone({ type: demandModal, duplicate: res.duplicate });
+      setDemandModal(null);
+      // Alanları temizle (öneri sonrası; haberdar-et için şehir/ilçe kalabilir).
+      setDemandPitchName('');
+      setDemandContact('');
+    } catch (err) {
+      setDemandError(mapDemandError(err));
+    } finally {
+      setDemandSending(false);
+    }
+  }, [demandModal, demandSending, demandCity, demandDistrict, demandPitchName, demandContact]);
 
   // Header'daki filtre rozetinde gösterilen aktif filtre sayısı (sıralama hariç).
   const activeFilterCount = useMemo(() => {
@@ -1403,7 +1487,49 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             ) : pitchesError ? (
               <ErrorState message={pitchesError} onRetry={fetchPitches} />
             ) : filteredPitches.length === 0 ? (
-              favOnly && favorites.size === 0 ? (
+              sourcePitches.length === 0 ? (
+                /* COLD-START — bölgede HİÇ onaylı saha yok. "Sonuç yok" demek
+                   yerine gerçek talep sinyali (haberdar et / saha öner). */
+                <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                  <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
+                    <MapPinOff size={32} className="text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-black italic text-white">BÖLGENDE HENÜZ SAHA YOK</h3>
+                  <p className="text-gray-400 text-[12.5px] mt-2 leading-relaxed max-w-xs">
+                    Yeni açılıyoruz — bölgende saha eklenince ilk sen haberdar ol.
+                    İyi bir halı saha biliyorsan öner; ekibimiz iletişime geçsin.
+                  </p>
+
+                  {demandDone && (
+                    <div className="mt-6 w-full max-w-xs bg-[#0F1A12] border border-[#39FF14]/25 rounded-2xl px-4 py-4 flex items-start gap-3 text-left">
+                      <Check size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
+                      <p className="text-[12.5px] text-white/85 leading-relaxed">
+                        {demandDone.type === 'NOTIFY'
+                          ? (demandDone.duplicate
+                              ? 'Zaten haberdar listesindesin — bölgende saha açılınca sana bildireceğiz.'
+                              : 'Kaydettik! Bölgende saha açılınca sana bildireceğiz.')
+                          : 'Önerin bize ulaştı — teşekkürler! Ekibimiz sahayı değerlendirecek.'}
+                      </p>
+                    </div>
+                  )}
+                  {/* Butonlar her zaman açık: kullanıcı hem haberdar olmak HEM de
+                      saha önermek isteyebilir (biri diğerini gizlemez). */}
+                  <div className="mt-4 flex flex-col gap-3 w-full max-w-xs">
+                    <button
+                      onClick={() => openDemandModal('NOTIFY')}
+                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-black active:scale-[0.98] transition-transform"
+                    >
+                      <Bell size={16} /> Beni haberdar et
+                    </button>
+                    <button
+                      onClick={() => openDemandModal('SUGGEST')}
+                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#161B22] border border-white/10 text-white text-[13px] font-bold active:scale-[0.98] transition-transform"
+                    >
+                      <Plus size={16} /> Saha öner
+                    </button>
+                  </div>
+                </div>
+              ) : favOnly && favorites.size === 0 ? (
                 /* Boş favori durumu (tasarım 1a) */
                 <div className="flex flex-col items-center justify-center py-20 text-center px-6">
                   <Star size={40} strokeWidth={1.6} className="text-white/25" />
@@ -1727,12 +1853,22 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <div className="px-6 -mt-6 relative z-10">
                 <h1 className="text-[26px] font-black italic uppercase tracking-[-0.03em] leading-[0.95] text-white pr-4">{selectedPitch.name}</h1>
                 <div className="flex items-center gap-1.5 mt-2.5 text-[13.5px] text-white/65 font-medium">
-                  <Star size={13} className="fill-white text-white" />
-                  <span className="text-white font-bold">{selectedPitch.rating}</span>
-                  <span className="opacity-50">·</span>
-                  {selectedPitch.googleReviews > 0 && (
+                  {/* V-2: gerçek değerlendirme yoksa sahte puan yerine "Yeni". */}
+                  {(selectedPitch.ratingCount > 0 || selectedPitch.googleReviews > 0) ? (
                     <>
-                      <span className="underline">{selectedPitch.googleReviews} değerlendirme</span>
+                      <Star size={13} className="fill-white text-white" />
+                      <span className="text-white font-bold">{selectedPitch.rating.toFixed(1)}</span>
+                      <span className="opacity-50">·</span>
+                      {selectedPitch.googleReviews > 0 && (
+                        <>
+                          <span className="underline">{selectedPitch.googleReviews} değerlendirme</span>
+                          <span className="opacity-50">·</span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-white/50 font-bold uppercase tracking-wide">Yeni</span>
                       <span className="opacity-50">·</span>
                     </>
                   )}
@@ -2061,6 +2197,91 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── COLD-START talep sinyali modalı (haberdar et / saha öner) ──────── */}
+      <AnimatePresence>
+        {demandModal && (
+          <div className="fixed inset-0 z-[110] flex items-end justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeDemandModal}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+              className="relative w-full max-w-md bg-[#161B22] border-t border-white/10 rounded-t-[36px] shadow-2xl p-7 pb-9"
+            >
+              <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mb-5" />
+              <div className="flex items-center gap-2.5 mb-1.5">
+                {demandModal === 'NOTIFY'
+                  ? <Bell size={20} className="text-[#FFFF00]" />
+                  : <Plus size={20} className="text-[#FFFF00]" />}
+                <h2 className="text-xl font-black text-white italic tracking-tight uppercase">
+                  {demandModal === 'NOTIFY' ? 'HABERDAR OL' : 'SAHA ÖNER'}
+                </h2>
+              </div>
+              <p className="text-[12.5px] text-gray-400 leading-relaxed mb-5">
+                {demandModal === 'NOTIFY'
+                  ? 'Bölgende saha açılınca sana bildirelim. Şehir/ilçe yazman, doğru bölgeye eklememizi sağlar.'
+                  : 'İyi bir halı saha biliyorsan yaz; ekibimiz iletişime geçip OYNA’ya davet etsin.'}
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <input
+                    value={demandCity}
+                    onChange={(e) => setDemandCity(e.target.value)}
+                    placeholder="Şehir (ör. Ordu)"
+                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                  />
+                  <input
+                    value={demandDistrict}
+                    onChange={(e) => setDemandDistrict(e.target.value)}
+                    placeholder="İlçe (ops.)"
+                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                  />
+                </div>
+                {demandModal === 'SUGGEST' && (
+                  <>
+                    <input
+                      value={demandPitchName}
+                      onChange={(e) => setDemandPitchName(e.target.value)}
+                      placeholder="Saha adı (zorunlu)"
+                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                    />
+                    <input
+                      value={demandContact}
+                      onChange={(e) => setDemandContact(e.target.value)}
+                      placeholder="Sahanın telefonu/iletişimi (ops.)"
+                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                    />
+                  </>
+                )}
+              </div>
+
+              {demandError && (
+                <p className="text-[12px] text-red-400 mt-3 font-semibold">{demandError}</p>
+              )}
+
+              <button
+                onClick={submitDemand}
+                disabled={demandSending}
+                className="mt-6 w-full py-3.5 rounded-2xl bg-[#FFFF00] text-black text-[14px] font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {demandSending
+                  ? <Loader2 size={17} className="animate-spin" />
+                  : <Send size={16} />}
+                {demandSending ? 'Gönderiliyor…' : (demandModal === 'NOTIFY' ? 'Haberdar et' : 'Öneriyi gönder')}
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

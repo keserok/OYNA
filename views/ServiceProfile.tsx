@@ -5,7 +5,7 @@ import { UserRole } from '../types';
 import {
   ArrowLeft, Camera, Star, MapPin, Clock, Shield, Scale, Edit3,
   Check, X, Upload, Image as ImageIcon, Trash2,
-  Award, Target, Zap, Trophy
+  Award, Target, Zap
 } from 'lucide-react';
 
 interface ServiceProfileProps {
@@ -15,6 +15,8 @@ interface ServiceProfileProps {
 
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { showToast } from '../components/common/GlobalToast';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -63,12 +65,13 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       }
   }, [adminGoalkeepers, adminReferees, currentUser, isRef]);
 
-  const defaultName = userProfile?.name || (isRef ? 'CÜNEYT A.' : 'UĞURCAN Ç.');
-  const defaultBio = userProfile?.bio || (isRef
-      ? 'FIFA lisanslı hakem. 150+ maç deneyimi. Pozisyon odaklı, diyalog temelli yaklaşım.'
-      : 'Saha kalecisi. Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40.');
-  const defaultFee = userProfile?.fee || (isRef ? 350 : 250);
-  const defaultStyle = typeof userProfile?.style === 'string' ? userProfile.style : (isRef ? 'Otoriter' : 'Panter');
+  // KD-9/KD-M1: sahte demo default'ları ("UĞURCAN Ç." / "penaltı kurtarma %40" /
+  // fee 250 / "Panter") kaldırıldı — profil yüklenene kadar boş; render'da yükleme
+  // guard'ı sahte-düzenlenebilir profili engelliyor.
+  const defaultName = userProfile?.name || '';
+  const defaultBio = userProfile?.bio || '';
+  const defaultFee = userProfile?.fee || 0;
+  const defaultStyle = typeof userProfile?.style === 'string' ? userProfile.style : '';
 
   const [photoIndex, setPhotoIndex] = useState(0);
   const [customPhoto, setCustomPhoto] = useState<string | null>(userProfile?.avatar || null);
@@ -86,7 +89,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     userProfile?.coordinates ? [userProfile.coordinates.lat, userProfile.coordinates.lng] : defaultCenter
   );
-  const [radiusKm, setRadiusKm] = useState(15);
+  // KD-6: radius yalnız yazılıp hiç GERİ OKUNMUYORDU → her açılışta 15'e dönüyordu.
+  // Artık kayıtlı settings.radiusKm'den başlatılır + yüklenince senkronlanır (effect).
+  const [radiusKm, setRadiusKm] = useState<number>(() => {
+    const r = (userProfile as any)?.settings?.radiusKm;
+    return typeof r === 'number' && Number.isFinite(r) ? r : 15;
+  });
   
   const MapEventsComponent = () => {
     useMapEvents({
@@ -111,10 +119,16 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           if (userProfile.fee) setFee(userProfile.fee);
           if (userProfile.style) setSelectedStyle(typeof userProfile.style === 'string' ? userProfile.style : 'Dengeli');
           if (userProfile.avatar) setCustomPhoto(userProfile.avatar);
+          // KD-6: kayıtlı radius'u geri oku (mount'tan sonra yüklenirse de senkronla).
+          const r = (userProfile as any).settings?.radiusKm;
+          if (typeof r === 'number' && Number.isFinite(r)) setRadiusKm(r);
       }
   }, [userProfile]);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Avatar'ı storage'a yükle (compress + public URL) — base64'ü DB kolonuna
+  // yazmak yerine (satır/pazaryeri yükünü şişiriyordu).
+  const { uploadImage, uploading: photoUploading } = useImageUpload('avatars', { minWidth: 200 });
 
 
 
@@ -142,7 +156,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         fee,
         name: displayName,
         style: selectedStyle,
-        avatar: customPhoto || userProfile.avatar,
+        // WYSIWYG: ekranda görünen fotoğrafı kaydet. Eski hâlde preset seçimi
+        // customPhoto=null bıraktığından hazır fotoğraf seçimi hiç kaydedilmiyordu.
+        avatar: currentPhoto || userProfile.avatar,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
         settings: { ...(userProfile as any).settings, radiusKm },
       });
@@ -156,30 +172,63 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // KD-8: fotoğraf base64 data-URL olarak goalkeepers.avatar'a yazılıyordu → satırı
+  // ve HER find_providers/marketplace payload'ını şişiriyordu. Artık Storage'a
+  // ('avatars') yüklenir, kalıcı public URL saklanır; hata kullanıcıya bildirilir.
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCustomPhoto(ev.target?.result as string);
+    try {
+      const url = await uploadImage(file);
+      setCustomPhoto(url);
       setShowPhotoPicker(false);
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error('Foto yükleme hatası:', err);
+      showToast(err?.message || 'Fotoğraf yüklenemedi. JPG/PNG dene (en fazla ~10MB).');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
   };
 
+  // Dürüstlük (KS0/KD-3): eksik veri sahte sayıya (42/12/94/9.2/4.9) düşürülmez;
+  // gerçek değer yoksa "—". Puan 0-10 ölçeğinde ve yalnız >0 ise gösterilir.
+  const ratingDisplay =
+    typeof userProfile?.rating === 'number' && userProfile.rating > 0
+      ? userProfile.rating.toFixed(1)
+      : '—';
+  const matchDisplay = userProfile?.matchCount != null ? String(userProfile.matchCount) : '—';
+  const numOrDash = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : '—');
+  const strOrDash = (v: unknown) => (typeof v === 'string' && v.trim() ? v : '—');
   const stats = isRef
     ? [
-        { label: 'Yönetim', value: (userProfile as Referee)?.stats?.authority?.toString() || '95', icon: <Scale size={14} /> },
-        { label: 'VAR %', value: (userProfile as Referee)?.stats?.varCallAccuracy || '98', icon: <Target size={14} /> },
-        { label: 'Puan', value: userProfile?.rating?.toString() || '4.9', icon: <Star size={14} /> },
-        { label: 'Sarı Kart Ort.', value: (userProfile as Referee)?.stats?.avgCards?.toString() || '2.1', icon: <Award size={14} /> },
+        { label: 'Yönetim', value: numOrDash((userProfile as Referee)?.stats?.authority), icon: <Scale size={14} /> },
+        { label: 'VAR %', value: strOrDash((userProfile as Referee)?.stats?.varCallAccuracy), icon: <Target size={14} /> },
+        { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
+        { label: 'Sarı Kart Ort.', value: numOrDash((userProfile as Referee)?.stats?.avgCards), icon: <Award size={14} /> },
       ]
     : [
-        { label: 'Maç', value: userProfile?.matchCount?.toString() || '42', icon: <Shield size={14} /> },
-        { label: 'CS', value: (userProfile as Goalkeeper)?.stats?.cleanSheets?.toString() || '12', icon: <Trophy size={14} /> },
-        { label: 'Refleks %', value: (userProfile as Goalkeeper)?.stats?.savePercentage?.toString() || '94', icon: <Zap size={14} /> },
-        { label: 'Puan', value: userProfile?.rating?.toString() || '9.2', icon: <Star size={14} /> },
+        // #107 cleanSheets'i kaldırdı (tip + tüm katmanlar); HS-serisi dürüst
+        // değerleri (matchDisplay/strOrDash/ratingDisplay — sahte 42/94/9.2 yok)
+        // korunur. İki niyet birleşti: CS satırı gitti, dürüstlük kaldı.
+        { label: 'Maç', value: matchDisplay, icon: <Shield size={14} /> },
+        { label: 'Refleks %', value: strOrDash((userProfile as Goalkeeper)?.stats?.savePercentage), icon: <Zap size={14} /> },
+        { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
       ];
+
+  // KD-9: profil store'a düşmeden SAHTE düzenlenebilir default'ları gösterme. Yükleme
+  // durumu + "Geri Dön" ile kullanıcı boş/sahte formu düzenleyip "kaydedilemedi"
+  // hatasına düşmez (eski davranış: UĞURCAN Ç./fee 250 fake formu düzenlenebiliyordu).
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-[#060A12] text-white flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-12 h-12 rounded-full border-2 border-white/10 border-t-[#22c55e] animate-spin mb-4" />
+        <p className="text-sm text-gray-400 font-bold">Profilin yükleniyor…</p>
+        <button onClick={onBack} className="mt-6 h-11 px-5 rounded-2xl bg-white/5 border border-white/10 text-sm font-black text-white/80 active:scale-95">
+          Geri Dön
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#060A12] text-white relative overflow-x-hidden">
@@ -205,8 +254,11 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           onClick={handleSave}
           className="px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-wider text-black flex items-center gap-1.5"
           style={{ background: saving ? '#22c55e' : accentColor, minWidth: 72 }}
+          disabled={saving}
         >
-          {saving ? <><Check size={14} /> Kaydedildi</> : 'KAYDET'}
+          {/* KD-7: yazım sürerken "Kaydedildi" demek yanlıştı (henüz kaydedilmedi,
+              hata bile bilinmiyor). Doğrusu "Kaydediliyor…". */}
+          {saving ? 'Kaydediliyor…' : 'KAYDET'}
         </motion.button>
       </div>
 
@@ -289,14 +341,18 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
-                      style={{ background: accentColor }}
-                    >
-                      {isRef ? 'FIFA LİSANSLI' : 'ELİT KALECİ'}
-                    </span>
+                    {/* "Elit/FIFA" rozeti yalnız gerçekten elit sağlayıcıda (isElite);
+                        herkese "ELİT KALECİ" demek dürüst değil (KS0). */}
+                    {userProfile?.isElite && (
+                      <span
+                        className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
+                        style={{ background: accentColor }}
+                      >
+                        {isRef ? 'FIFA LİSANSLI' : 'ELİT KALECİ'}
+                      </span>
+                    )}
                     <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                      <Star size={9} className="text-yellow-400" fill="currentColor" /> 4.9
+                      <Star size={9} className="text-yellow-400" fill="currentColor" /> {ratingDisplay}
                     </span>
                   </div>
                 </div>
@@ -357,7 +413,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   className="flex-1 py-2.5 rounded-xl text-black text-xs font-black"
                   style={{ background: accentColor }}
                 >
-                  KAYDET
+                  {/* KD-7: bu buton yalnız düzenlemeyi onaylar; DB'ye yazan üstteki
+                      KAYDET'tir → "KAYDET" yerine "TAMAM" (yanıltıcı çift-kaydet yok). */}
+                  TAMAM
                 </button>
               </div>
             </div>
@@ -569,11 +627,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all"
+                disabled={photoUploading}
+                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all disabled:opacity-60"
                 style={{ borderColor: accentColor + '60', background: accentBg, color: accentColor }}
               >
                 <Upload size={20} />
-                CİHAZDAN FOTOĞRAF YÜKLE
+                {photoUploading ? 'YÜKLENİYOR…' : 'CİHAZDAN FOTOĞRAF YÜKLE'}
               </motion.button>
 
               {/* Preset grid */}

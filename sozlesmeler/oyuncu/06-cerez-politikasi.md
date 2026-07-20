@@ -15,7 +15,7 @@ Oturumunuzu açık tutmak ve güvenliğinizi sağlamak için gereklidir; devre d
 
 | Ad / Amaç | Tür | Süre |
 |---|---|---|
-| Supabase oturum belirteci — girişinizi hatırlar | localStorage / sessionStorage | "Beni Hatırla" açıksa kalıcı, kapalıysa oturum sonuna kadar |
+| Supabase oturum belirteci — girişinizi hatırlar | localStorage | Kalıcı — çıkış yapana veya hesabınızı silene kadar |
 
 ### 2. Performans ve Analitik Çerezleri
 Yalnızca ilgili ölçüm servisi etkinleştirilmişse (dağıtıma göre değişir) kullanılır; uygulamanın kararlılığını izlemek ve iyileştirmek amacıyladır.

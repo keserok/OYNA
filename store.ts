@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, PlayerSeekAnnouncement, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo } from './types';
+import { AppView, UserRole, MatchListing, Goalkeeper, Referee, Pitch, OpponentListing, Team, AdminUser, Player, AdminLog, WalletTab, Court, OynaLocation, PaymentContext, PaymentErrorInfo, CurrentUserProfile } from './types';
 import type { SavedCard } from './services/walletService';
 import * as FB from './supabaseMutations';
 import * as TeamService from './services/teamService';
@@ -192,7 +192,7 @@ interface AppState {
   isAuthReady: boolean;
   selectedMatch: MatchListing | null;
   // Lobi bağlamı: DISCOVER = Top Oyna'dan katılım (yönetim aksiyonları gizli),
-  // MANAGE = Sıradaki Maçlarım'dan (ödediğin slotlar + kaptanlık yetkileri).
+  // MANAGE = Maçlarım hub'ından (ödediğin slotlar + kaptanlık yetkileri).
   lobbyMode: 'DISCOVER' | 'MANAGE';
   selectedDiaryId: string | null;
   // FAZ 6: Mesajlaşma → başlangıç konuşması (SocialView'den doğrudan sohbet açma)
@@ -270,10 +270,6 @@ interface AppState {
   showAnnouncementBanner: boolean;
 
   // Player Seek Announcements
-  playerSeekAds: PlayerSeekAnnouncement[];
-  addPlayerSeekAd: (ad: PlayerSeekAnnouncement) => void;
-  toggleJoinPlayerSeekAd: (adId: string, userId: string) => void;
-  acceptPlayerSeekAdRequest: (adId: string, userId: string) => void;
 
   // ─── Friend System ─────────────────────────────────────────────────
   friends: Friend[];
@@ -345,6 +341,11 @@ interface AppState {
   setWalletInitialTab: (tab: WalletTab) => void;
   setWalletPendingDeposit: (pending: boolean) => void;
 
+  // Maçlarım hub'ının açılış segmenti (ör. kapora ödemesi sonrası 'BOOKINGS').
+  // Hub okuduğu anda temizler — yapışkan kalmaz.
+  myMatchesInitialSegment: 'ALL' | 'MATCHES' | 'BOOKINGS' | null;
+  setMyMatchesInitialSegment: (segment: 'ALL' | 'MATCHES' | 'BOOKINGS' | null) => void;
+
   // ─── Birleşik ödeme ekranı bağlamı + son ödeme hatası (cüzdan banner'ı) ──
   paymentContext: PaymentContext | null;
   setPaymentContext: (ctx: PaymentContext | null) => void;
@@ -380,7 +381,10 @@ interface AppState {
   updateReferee: (ref: Referee) => Promise<void>;
   deleteReferee: (id: string) => Promise<void>;
   loadServices: () => Promise<void>;
-  
+  /** KC-7: son loadServices başarısız oldu mu? Marketplace boş-durumu yükleme
+   * hatasından ayırt edip retry sunar (sessiz "profil yok" yerine). */
+  servicesError: boolean;
+
   // ─── Owner (SaaS) Data Load ─────────────────────────────────────
   loadOwnerData: (facilityId?: string) => Promise<void>;
 
@@ -391,6 +395,10 @@ interface AppState {
   // ─── Match CRUD ────────────────────────────────────────────────
   addMatch: (match: MatchListing) => Promise<string | undefined>;
   updateMatch: (match: MatchListing) => Promise<void>;
+  // KN-3: YEREL-only maç güncellemesi — RPC ÇAĞIRMAZ. Realtime'dan gelen veri
+  // ve RPC-sonrası re-fetch sonuçları bununla uygulanır; updateMatch (DB yazan)
+  // realtime handler'dan ASLA çağrılmamalı (yankı döngüsü + lost-update).
+  applyMatchLocal: (match: MatchListing) => void;
   deleteMatch: (id: string) => Promise<void>;
 
   // ─── User CRUD ─────────────────────────────────────────────────
@@ -440,6 +448,14 @@ interface AppState {
   // Misafir modu: oturum açmadan gezinme. Yazma aksiyonlarında kayıt kapısı açılır.
   isGuest: boolean;
   setIsGuest: (v: boolean) => void;
+  // Giriş yapmış oyuncunun gerçek profili (ad/avatar/puan) — admin-only
+  // adminUsers yerine maç akışlarında kullanılır (KN-2 'Oyuncu' fallback'i).
+  currentUserProfile: CurrentUserProfile | null;
+  setCurrentUserProfile: (p: CurrentUserProfile | null) => void;
+  // STAFF-3: personel/müdür bir tesis paneline girdiğinde bağlam. null → sahip
+  // kendi panelini açar (varsayılan). Ayarlar→Tesis Paneli bunu doldurur.
+  staffPanelContext: { pitchId: string; pitchName: string; accessLevel: 'MANAGER' | 'STAFF' } | null;
+  setStaffPanelContext: (c: { pitchId: string; pitchName: string; accessLevel: 'MANAGER' | 'STAFF' } | null) => void;
   isSignupGateOpen: boolean;
   setIsSignupGateOpen: (open: boolean) => void;
   setIsRoleSwitcherOpen: (open: boolean) => void;
@@ -575,6 +591,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   savedCards: [],
   walletInitialTab: 'MAIN',
   walletPendingDeposit: false,
+  myMatchesInitialSegment: null,
   paymentContext: null,
   lastPaymentError: null,
   reliabilityScore: 100,
@@ -661,6 +678,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminPitches: [],
   adminGoalkeepers: [],
   adminReferees: [],
+  servicesError: false,
   adminMatches: [],
   adminUsers: [],
   adminNotifications: [],
@@ -678,35 +696,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
-  playerSeekAds: [],
-  addPlayerSeekAd: (ad) => set((state) => ({ playerSeekAds: [ad, ...state.playerSeekAds] })),
-  toggleJoinPlayerSeekAd: (adId, userId) => set((state) => ({
-    playerSeekAds: state.playerSeekAds.map(ad => {
-      if (ad.id === adId) {
-        const isJoined = ad.joinedPlayers?.includes(userId);
-        const joinedPlayers = isJoined 
-          ? (ad.joinedPlayers || []).filter(id => id !== userId)
-          : [...(ad.joinedPlayers || []), userId];
-        const acceptedPlayers = isJoined 
-          ? (ad.acceptedPlayers || []).filter(id => id !== userId)
-          : (ad.acceptedPlayers || []);
-        return { ...ad, joinedPlayers, acceptedPlayers };
-      }
-      return ad;
-    })
-  })),
-  acceptPlayerSeekAdRequest: (adId, userId) => set((state) => ({
-    playerSeekAds: state.playerSeekAds.map(ad => {
-      if (ad.id === adId) {
-        const isAccepted = ad.acceptedPlayers?.includes(userId);
-        const acceptedPlayers = isAccepted 
-          ? (ad.acceptedPlayers || [])
-          : [...(ad.acceptedPlayers || []), userId];
-        return { ...ad, acceptedPlayers };
-      }
-      return ad;
-    })
-  })),
   friends: [] as any[],
   addFriend: (friend) => set((state) => {
     const next = [...state.friends, friend];
@@ -832,6 +821,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSavedCards: (savedCards) => set({ savedCards }),
   setWalletInitialTab: (walletInitialTab) => set({ walletInitialTab }),
   setWalletPendingDeposit: (walletPendingDeposit) => set({ walletPendingDeposit }),
+  setMyMatchesInitialSegment: (myMatchesInitialSegment) => set({ myMatchesInitialSegment }),
   setPaymentContext: (paymentContext) => set({ paymentContext }),
   setLastPaymentError: (lastPaymentError) => set({ lastPaymentError }),
 
@@ -986,9 +976,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./admin-panel/services/adminService');
       const [gks, refs] = await Promise.all([fetchGoalkeepersAdmin(), fetchRefereesAdmin()]);
-      set({ adminGoalkeepers: gks || [], adminReferees: refs || [] });
+      set({ adminGoalkeepers: gks || [], adminReferees: refs || [], servicesError: false });
     } catch (err) {
       console.error('Error loading services', err);
+      set({ servicesError: true }); // KC-7: boş-durumu hatadan ayırt et
     }
   },
 
@@ -1014,6 +1005,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (error) throw error;
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
+  // KN-3: RPC'siz yerel uygulama. adminMatches + (açık lobi varsa) selectedMatch
+  // birlikte senkronlanır — MatchJoin selectedMatch'ten beslendiği için şart.
+  applyMatchLocal: (match) => set((s) => ({
+    adminMatches: s.adminMatches.map(m => m.id === match.id ? match : m),
+    selectedMatch: s.selectedMatch?.id === match.id ? match : s.selectedMatch,
+  })),
   deleteMatch: async (id) => {
     const prev = get().adminMatches;
     set({ adminMatches: prev.filter(m => m.id !== id) });
@@ -1038,11 +1035,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     const currentUserUid = auth.currentUser.uid;
-    const currentUserProfile = state.adminUsers.find(u => u.id === currentUserUid) || state.adminUsers[0] || { id: currentUserUid, name: 'Oyuncu', avatar: 'https://i.pravatar.cc/150' };
+    // Gerçek profil (bootstrap'ta profiles'tan yazılır) önce; admin-only
+    // adminUsers yalnız admin oturumunda dolu olduğundan oyuncuda son çare.
+    const currentUserProfile = state.currentUserProfile
+      || state.adminUsers.find(u => u.id === currentUserUid)
+      || { id: currentUserUid, name: auth.currentUser.displayName || 'Oyuncu', avatar: auth.currentUser.photoURL || `https://i.pravatar.cc/150?u=${currentUserUid}` };
 
     const joinedPlayer: Player = {
       id: currentUserProfile.id || currentUserUid,
-      name: currentUserProfile.name || 'Oyuncu',
+      name: currentUserProfile.name || auth.currentUser.displayName || 'Oyuncu',
       avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
       rating: (currentUserProfile as any).rating || 4.5,
       position: role,
@@ -1227,6 +1228,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
   isGuest: false,
   setIsGuest: (v) => set({ isGuest: v }),
+  currentUserProfile: null,
+  setCurrentUserProfile: (p) => set({ currentUserProfile: p }),
+  staffPanelContext: null,
+  setStaffPanelContext: (c) => set({ staffPanelContext: c }),
   isSignupGateOpen: false,
   setIsSignupGateOpen: (open) => set({ isSignupGateOpen: open }),
   myRoles: [],

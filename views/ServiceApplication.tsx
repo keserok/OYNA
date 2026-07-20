@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Scale, User, Smartphone, FileText, MapPin,
@@ -7,8 +7,11 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { submitServiceApplication, ServiceApplicationData } from '../services/serviceProviderService';
 import { uploadProviderIdPhoto, submitProviderApplication } from '../services/serviceRequestService';
+import { getMyGuardianState } from '../services/guardianService';
+import { useAppStore } from '../store';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { TURKEY_REGIONS, districtsOfCity } from '../data/turkeyRegions';
@@ -86,10 +89,10 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const { color, glow } = theme;
   const isGk = role === UserRole.GOALKEEPER;
 
-  const seedName = useMemo(() => {
-    const u = auth.currentUser;
-    return u?.displayName || (u?.email ? u.email.split('@')[0] : '') || '';
-  }, []);
+  // KA-M4: yalnız GERÇEK görünen ad ön-doldurulur. E-posta ön-eki (ör. "kaleci1")
+  // gerçek ad gibi görünüp değiştirilmezse profiles.full_name / goalkeepers.name'e
+  // sızıyordu — artık ad yoksa alan boş kalır, kullanıcı kendi adını girer.
+  const seedName = useMemo(() => auth.currentUser?.displayName || '', []);
 
   const [fullName, setFullName] = useState(seedName);
   const [countryCode, setCountryCode] = useState('+90');
@@ -118,6 +121,31 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
+  // KA-5/KA-6 ön-kontrol (mount'ta sunucudan): onaylıyken tekrar başvuru sessizce
+  // pending'e düşürürdü (KA-5); reşit-olmayan veli onayı olmadan sağlayıcı olamaz
+  // (KA-6, karar: başvuruda blokla). null = henüz yükleniyor.
+  const [preflight, setPreflight] = useState<{ alreadyApproved: boolean; minorBlocked: boolean } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) { if (alive) setPreflight({ alreadyApproved: false, minorBlocked: false }); return; }
+      try {
+        const [{ data: prof }, guardian] = await Promise.all([
+          supabase.from('profiles').select('role, verification_status').eq('id', uid).maybeSingle(),
+          getMyGuardianState().catch(() => null),
+        ]);
+        const alreadyApproved = prof?.role === role && prof?.verification_status === 'approved';
+        const minorBlocked = !!guardian?.isMinor && guardian.status !== 'ACTIVE';
+        if (alive) setPreflight({ alreadyApproved, minorBlocked });
+      } catch {
+        if (alive) setPreflight({ alreadyApproved: false, minorBlocked: false });
+      }
+    })();
+    return () => { alive = false; };
+  }, [role]);
+  const preflightBlocked = !!preflight && (preflight.alreadyApproved || preflight.minorBlocked);
+
   const markTouched = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
 
   const toggleZone = (z: string) => {
@@ -138,15 +166,33 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     height: isGk && !(Number(height) >= 140) ? 'Boy en az 140 cm olmalı' : null,
     age: isGk && !(Number(age) >= 14) ? 'Yaş en az 14 olmalı' : null,
     level: !isGk && level.length === 0 ? 'Lisans seviyesi seçmelisin' : null,
+    // HR-D: hakem deneyimi (yıl) — dürüst, sınırlı tam sayı. Boş/negatif/ondalık
+    // ya da mantıksız (>60) değerler engellenir; bu değer matchCount'a DEĞİL,
+    // stats.experienceYears'a yazılır (serviceProviderService).
+    experience: !isGk && (
+      experienceYears.trim() === '' ||
+      !/^\d+$/.test(experienceYears.trim()) ||
+      Number(experienceYears) > 60
+    ) ? 'Deneyimini 0-60 yıl arası tam sayı gir' : null,
   };
 
   const isFieldVisible = (field: keyof typeof fieldErrors) => touched[field] || submitAttempted;
   const visibleError = (field: keyof typeof fieldErrors) => (isFieldVisible(field) ? fieldErrors[field] : null);
 
-  const canSubmit = Object.values(fieldErrors).every((e) => !e) && !submitting;
+  const canSubmit = Object.values(fieldErrors).every((e) => !e) && !submitting && !preflightBlocked;
 
   const handleSubmit = async () => {
     if (submitting) return;
+    // KA-5: onaylıyken tekrar başvuru sunucuda pending'e düşürüp ikinci kayıt açardı.
+    if (preflight?.alreadyApproved) {
+      setError('Bu rol için başvurun zaten onaylı — yeniden başvuru gerekmiyor.');
+      return;
+    }
+    // KA-6: reşit-olmayan, veli onayı olmadan sağlayıcı olamaz (karar: başvuruda blokla).
+    if (preflight?.minorBlocked) {
+      setError('18 yaşından küçüksün — başvuru için önce veli onayı gerekiyor.');
+      return;
+    }
     if (!canSubmit) {
       setSubmitAttempted(true);
       if (navigator.vibrate) navigator.vibrate(80);
@@ -155,6 +201,12 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     setError(null);
     setSubmitting(true);
     try {
+      // KA-4 (orphan önleme): kimlik fotoğrafını ÖNCE yükle — yalnız storage'a
+      // dokunur; hata olursa HİÇBİR profil/rol provizyonu yapılmadan temiz çıkılır
+      // (eski sırada provizyon önce yapılıp foto/kuyruk sonra gelince, kuyruk
+      // başarısız olursa admin'e görünmeyen "pending ama başvuru yok" orphan kalırdı).
+      const idPhotoPath = await uploadProviderIdPhoto(idPhoto!);
+
       const payload: ServiceApplicationData = {
         fullName: fullName.trim(),
         phone: `${countryCode}${phoneDigits}`,
@@ -166,17 +218,29 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           ? { height: `${height} cm`, age: Number(age) }
           : { level, experienceYears: Number(experienceYears) || 0 }),
       };
+      // Rol + profil provizyonu (submit_provider_application ön-koşulu: rol kurulmuş olmalı).
       await submitServiceApplication(role, payload);
 
-      // Kaleci/Hakem onboarding: kimlik foto + niyet mektubu → admin onay kuyruğu
-      const idPhotoPath = await uploadProviderIdPhoto(idPhoto!);
-      await submitProviderApplication({
-        role,
-        idPhotoPath,
-        phone: `${countryCode}${phoneDigits}`,
-        intentLetter: intentLetter.trim(),
-        ...(isGk ? {} : { level }),
-      });
+      // Admin onay kuyruğu (provider_applications). Geçici hatada birkaç kez dene →
+      // "provizyonlu ama kuyruğa düşmemiş" orphan penceresi daralır.
+      let queueErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await submitProviderApplication({
+            role,
+            idPhotoPath,
+            phone: `${countryCode}${phoneDigits}`,
+            intentLetter: intentLetter.trim(),
+            ...(isGk ? {} : { level }),
+          });
+          queueErr = null;
+          break;
+        } catch (e) {
+          queueErr = e;
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        }
+      }
+      if (queueErr) throw queueErr;
 
       if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
       onSubmitted();
@@ -408,16 +472,20 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 </div>
                 {visibleError('level') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.level}</p>}
               </div>
-              <Field label="Deneyim (Yıl)" icon={<Calendar size={20} />} color={color}>
+              <Field label="Deneyim (Yıl)" icon={<Calendar size={20} />} color={color} error={visibleError('experience')}>
                 <input
                   type="number"
                   inputMode="numeric"
+                  min={0}
+                  max={60}
                   value={experienceYears}
-                  onChange={(e) => setExperienceYears(e.target.value)}
+                  onChange={(e) => setExperienceYears(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                  onBlur={() => markTouched('experience')}
                   className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
                   placeholder="5"
                 />
               </Field>
+              {visibleError('experience') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.experience}</p>}
             </>
           )}
 
@@ -619,6 +687,32 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
 
           {error && <p className="text-[11px] text-red-400 font-bold px-1">{error}</p>}
         </motion.div>
+
+        {/* ─── KA-5/KA-6 engel bandı ─── */}
+        {preflight?.alreadyApproved && (
+          <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-4">
+            <p className="text-[13px] font-black text-emerald-300">Zaten onaylısın 🎉</p>
+            <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
+              Bu rol için başvurun onaylanmış durumda — yeniden başvurman gerekmiyor.
+            </p>
+          </div>
+        )}
+        {preflight?.minorBlocked && (
+          <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4">
+            <p className="text-[13px] font-black text-amber-300">Önce veli onayı gerekiyor</p>
+            <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
+              18 yaşından küçük hesaplar sağlayıcı (kaleci/hakem) olmadan önce veli onayı
+              tamamlamalı. Onay verildikten sonra başvurabilirsin.
+            </p>
+            <button
+              type="button"
+              onClick={() => useAppStore.getState().navigateTo('GUARDIAN_CHILD')}
+              className="mt-3 h-10 px-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-[12px] font-black active:scale-95 transition-transform"
+            >
+              Veli Onayına Git
+            </button>
+          </div>
+        )}
 
         {/* ─── Gönder ─── */}
         <div className="pt-5">

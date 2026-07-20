@@ -5,6 +5,7 @@ import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { submitServiceRating } from '../services/serviceRequestService';
+import { getPendingScoreProposal, approveMatchScore, type ScoreProposal } from '../services/scoreService';
 import type { PositionSlot } from '../types';
 
 // FAZ 5: Maça atanmış kaleci/hakem hakkında değerlendirme ekranında gösterilecek bilgi
@@ -133,8 +134,12 @@ const ServiceRatingCard: React.FC<{
 
 const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => {
   const { selectedMatch } = useAppStore();
+  // Gerçek (UUID) maç mı? Mock/demo yollarını tek yerden kapılar (G1/G2).
+  const isRealMatch = !!selectedMatch?.id && /^[0-9a-f-]{36}$/i.test(selectedMatch.id);
 
-  // Gerçek katılımcıları maçın kadrosundan türet; yoksa demo kadroya düş
+  // Gerçek katılımcıları maçın kadrosundan türet; demo maçta örnek kadro,
+  // gerçek-ama-katılımcısız maçta BOŞ (G2: mock oyuncuları gerçek RPC'ye
+  // puanlamak reddediliyordu).
   const PLAYERS = useMemo<EvalPlayer[]>(() => {
     if (!selectedMatch) return MOCK_PLAYERS;
     const uid = auth.currentUser?.uid;
@@ -152,12 +157,21 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         color: '#c5cef5',
         tier: 'silver',
       }));
-    return real.length > 0 ? real : MOCK_PLAYERS;
-  }, [selectedMatch]);
+    if (real.length > 0) return real;
+    return isRealMatch ? [] : MOCK_PLAYERS;
+  }, [selectedMatch, isRealMatch]);
 
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(1);
-  const [showHandshake, setShowHandshake] = useState(true);
+  // G1: skor onayı YALNIZ gerçek bir bekleyen öneri varsa gösterilir (sabit
+  // 5-3 sahte ekranı öldü). Varsayılan kapalı; effect gerçek öneriyi bulunca açar.
+  const [showHandshake, setShowHandshake] = useState(false);
+  const [scoreProposal, setScoreProposal] = useState<ScoreProposal | null>(null);
+  const [approvingScore, setApprovingScore] = useState(false);
+  // G3: organizasyon yorumu artık YAKALANIR (eskiden state'e bağlı değildi,
+  // sessizce yok oluyordu). Kalıcı depolama backend follow-up (submit_match_
+  // evaluation'a p_note kolonu) — plan §6.6.
+  const [orgComment, setOrgComment] = useState('');
   const [playerCardIdx, setPlayerCardIdx] = useState(0);
   const [fairPlay, setFairPlay] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -209,12 +223,34 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     setTimeout(() => setInfoToast(null), 3500);
   };
 
+  // G1: gerçek maç için bekleyen skor önerisini çek; varsa onay ekranını aç.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isRealMatch || !selectedMatch?.id) return;
+    getPendingScoreProposal(selectedMatch.id)
+      .then((p) => { if (!cancelled && p) { setScoreProposal(p); setShowHandshake(true); } })
+      .catch(() => { /* öneri yoksa onay ekranı gösterilmez */ });
+    return () => { cancelled = true; };
+  }, [isRealMatch, selectedMatch?.id]);
+
+  const handleApproveScore = async () => {
+    if (!scoreProposal || approvingScore) { setShowHandshake(false); return; }
+    setApprovingScore(true);
+    try {
+      await approveMatchScore(scoreProposal.id);
+      showInfo('Skoru onayladın.');
+    } catch (e: any) {
+      showInfo(e?.message || 'Skor onaylanamadı.');
+    } finally {
+      setApprovingScore(false);
+      setShowHandshake(false);
+    }
+  };
+
   // Değerlendirmeyi kalıcılaştır: oyuncu puanları + maçı sonlandır ("başarılı maç" sinyali)
   const persistEvaluation = async () => {
     if (submitting) return;
-    // Bug C: demo-maç kapısı UUID kontrolüne bağlandı. Sadece gerçek UUID
-    // olmayan id'lerde (demo maçlar) sunucu çağrılarını atla.
-    const isRealMatch = !!selectedMatch?.id && /^[0-9a-f-]{36}$/i.test(selectedMatch.id);
+    // Demo (UUID olmayan) maçta sunucu çağrılarını atla; gerçek maçta kaydet.
     if (!isRealMatch) {
       // Gerçek (UUID) maç değil → yalnız sonuç ekranını göster (demo)
       setShowResult(true);
@@ -248,7 +284,10 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       // Oyuncu-değerlendirme/finalize başarısız → kullanıcıyı bilgilendir ama
       // servis puanlamasını engelleme (return etme).
       console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
-      showInfo('Değerlendirme kaydedilemedi, tekrar deneyin.');
+      const em = String((err as any)?.message || '');
+      showInfo(/already|zaten|duplicate/i.test(em)
+        ? 'Bu maçı zaten değerlendirdin.'
+        : 'Değerlendirme kaydedilemedi, tekrar deneyin.');
     }
 
     // FAZ 5: Kaleci/Hakem 1-10 puanlaması — sağlayıcı rating'ini günceller + payout serbest.
@@ -402,37 +441,41 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             <Trophy size={32} className="text-blue-400" />
           </div>
           <h2 className="text-2xl font-black uppercase italic tracking-tight text-white mb-2">SKOR ONAYI</h2>
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">Hakem Maç Skorunu Girdi</p>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">Maç Skoru Girildi — Onayla</p>
 
           <div className="flex items-center justify-center gap-6 mb-8 w-full">
             <div className="text-center flex-1">
-              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">SİZİN TAKIM</span>
-              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">5</div>
+              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">EV</span>
+              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.homeScore ?? 0}</div>
             </div>
             <div className="text-3xl font-black text-gray-700">-</div>
             <div className="text-center flex-1">
-              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">RAKİP</span>
-              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">3</div>
+              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">DEP</span>
+              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.awayScore ?? 0}</div>
             </div>
           </div>
 
           <div className="w-full space-y-3">
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => setShowHandshake(false)}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2"
+              disabled={approvingScore}
+              onClick={handleApproveScore}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <ShieldCheck size={18} /> SKORU ONAYLA
+              <ShieldCheck size={18} /> {approvingScore ? 'ONAYLANIYOR…' : 'SKORU ONAYLA'}
             </motion.button>
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => {
-                showInfo('Skor itirazınız hakeme ve diğer kaptana iletildi.');
+                // Prensipler §3.4: skor itirazı ayrı bir özellik değil; sorunlar
+                // admin'e "Sorun Bildir" ile gider. Eskiden sahte "iletildi" toast'ı
+                // vardı (hiçbir kayıt/RPC yok) — gerçek kanalı söyle.
+                showInfo('Hakemin girdiği skor resmîdir. İtirazın varsa maç detayından "Sorun Bildir"i kullan.');
                 setShowHandshake(false);
               }}
               className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
             >
-              SKORA İTİRAZ ET
+              KATILMIYORUM
             </motion.button>
           </div>
         </motion.div>
@@ -583,6 +626,24 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
 
           {/* ─ STEP 2: PLAYER RATINGS — kart kart hızlı puanla ─ */}
           {step === 2 && (() => {
+            // G2: gerçek maçta değerlendirilecek katılımcı yoksa boş-durum +
+            // devam (mock oyuncu göstermek yerine dürüst atlama).
+            if (PLAYERS.length === 0) {
+              return (
+                <motion.div key="s2-empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto">
+                    <Users size={28} className="text-gray-500" />
+                  </div>
+                  <p className="text-sm font-bold text-gray-400 max-w-xs mx-auto">
+                    Bu maçta değerlendirilecek başka bir oyuncu yok. Yorum ve hizmet puanlarına geçebilirsin.
+                  </p>
+                  <button onClick={() => setStep(3)}
+                    className="px-6 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
+                    Devam Et →
+                  </button>
+                </motion.div>
+              );
+            }
             const p = PLAYERS[playerCardIdx];
             if (!p) return null;
             const isMotm = motm === p.id;
@@ -759,6 +820,9 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ORGANİZASYON YORUMU (İSTEĞE BAĞLI)</span>
                 </div>
                 <textarea
+                  value={orgComment}
+                  onChange={(e) => setOrgComment(e.target.value)}
+                  maxLength={500}
                   className="w-full bg-black/40 border border-white/8 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 min-h-[96px] resize-none placeholder-gray-700 font-bold focus:shadow-[0_0_15px_rgba(57,255,20,0.05)] transition-all"
                   placeholder="Hakem kararları veya saha detayları hakkında eklemek istedikleriniz..."
                 />

@@ -11,8 +11,6 @@
 
 ## 🚀 Öne Çıkan Özellikler & Modüller
 
-### 1. ⚽ Oyuncu & Takım Dünyası (Gamification)
-* **FIFA Ultimate Team (FUT) Kartları:** Her oyuncu için hız, şut, pas, fizik, top sürme ve defans niteliklerini barındıran animasyonlu [FifaCard](components/FifaCard.tsx) tasarımı. Maç sonlarında **MOTM (Maçın Oyuncusu)** seçilenlerin özel animasyonlu kart açılışları.
 * **Taktik Stüdyosu ([Studio.tsx](views/Studio.tsx)):** 5+1, 6+1 ve 7+1 formasyon desteği (`2-3-1`, `3-2-1` vb.). `framer-motion` tabanlı interaktif sürükle-bırak dizilim sahası ([TeamLineupBoard.tsx](components/TeamLineupBoard.tsx)) ve gerçek zamanlı taktik tahtası.
 * **Takım Kurma & Yönetimi ([MyTeam.tsx](views/MyTeam.tsx)):** Kulüp oluşturma, kadro yönetimi ve Supabase ile anlık senkronizasyon.
 
@@ -29,7 +27,7 @@
 * **Güvenli Ödeme Havuzu (Split Payment):** Maç kiralama bedelinin oyuncular arasında bölüştürülmesi. Kaptan garantörlüğü (`Safety Net`) ile rezervasyon güvencesi.
 * **QR Kodlu Dijital Bilet ([MatchTicket.tsx](views/MatchTicket.tsx)):** Ödeme sonrası oluşturulan, tesis girişinde okutulabilir dinamik QR kod.
 
-### 4. 💼 B2B Tesis Yönetim Paneli (OPanel)
+### 4. 💼 B2B Tesis Yönetim Paneli
 * **SaaS Altyapısı:** Saha sahiplerinin fiyatlandırma, doluluk, takvim rezervasyonları, tesis fotoğrafları ve menü ayarlarını doğrudan yönettiği gelişmiş yönetim portalı ([OwnerPanel.tsx](views/OwnerPanel.tsx)).
 * **Rezervasyon Onaylama / Reddetme:** Gelen kiralama taleplerinin yönetimi.
 * **Payout & Finans (Faz 4):** Saha sahibi ↔ admin ödeme süreçleri tek kaynakta (`payout_requests`) birleştirilmiş; tutarlı finans ve ekip yönetim ekranları.

@@ -1,9 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Plus, Calendar, MapPin, Clock, Users, ArrowRight, Search, Key, LayoutGrid, X } from 'lucide-react';
-import { AppView } from '../types';
+import { AppView, MatchListing } from '../types';
 import { useAppStore } from '../store';
+import { useMyMatches } from '../hooks/useMyMatches';
+import { parseMatchDateTime } from '../utils/matchDateTime';
+import { resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 
 interface MatchCalendarProps {
   onBack: () => void;
@@ -19,57 +22,48 @@ interface UpcomingMatch {
   timeLeftSeconds: number;
   playersCount: number;
   maxPlayers: number;
+  listing: MatchListing; // gerçek kayıt — lobiye geçişte setSelectedMatch için
 }
 
 const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => {
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [showJoinCodeInput, setShowJoinCodeInput] = useState(false);
   const [joinCode, setJoinCode] = useState('');
+  const [joinCodeError, setJoinCodeError] = useState<string | null>(null);
+  const [joinCodeLoading, setJoinCodeLoading] = useState(false);
 
-  // Mock upcoming matches
-  const [matches, setMatches] = useState<UpcomingMatch[]>([
-    {
-      id: 'm1',
-      title: 'Akşam Kapışması',
-      pitchName: 'Arena Sport Center',
-      time: '21:00',
-      date: 'Bugün • 02.11.2026',
-      timeLeftSeconds: 3600 * 2, // 2 hours
-      playersCount: 12,
-      maxPlayers: 14
-    },
-    {
-      id: 'm2',
-      title: 'Haftalık Rutin',
-      pitchName: 'Vadi Spor Tesisleri',
-      time: '20:00',
-      date: 'Yarın • 03.11.2026',
-      timeLeftSeconds: 3600 * 24 + 3600 * 1, // 25 hours
-      playersCount: 10,
-      maxPlayers: 14
-    },
-    {
-      id: 'm3',
-      title: 'Derbi Maçı',
-      pitchName: 'Yıldız Halı Saha',
-      time: '22:00',
-      date: 'Cuma • 06.11.2026',
-      timeLeftSeconds: 3600 * 48 + 3600 * 3, // ~51 hours
-      playersCount: 14,
-      maxPlayers: 14
-    }
-  ]);
-
-  // Update time left every second
+  // KN-6: mock liste ÖLDÜ — takvim, kullanıcının GERÇEK yaklaşan maçlarından
+  // beslenir (useMyMatches: katıldığı/kurduğu/yedeği olduğu maçlar).
+  const { upcoming } = useMyMatches();
+  const [nowTs, setNowTs] = useState(() => Date.now());
   useEffect(() => {
-    const timer = setInterval(() => {
-      setMatches(prev => prev.map(m => ({
-        ...m,
-        timeLeftSeconds: Math.max(0, m.timeLeftSeconds - 1)
-      })));
-    }, 1000);
+    const timer = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const matches: UpcomingMatch[] = useMemo(() => {
+    return upcoming
+      .map((m) => {
+        const dt = parseMatchDateTime(m.date, m.time);
+        const allSlots = [...(m.slots || []), ...(m.awaySlots || [])];
+        return {
+          id: m.id,
+          title: m.title || m.location || 'Maç',
+          pitchName: m.location || '—',
+          time: m.time || '',
+          date: m.date || '',
+          timeLeftSeconds: dt ? Math.max(0, Math.floor((dt.getTime() - nowTs) / 1000)) : 0,
+          playersCount: allSlots.filter((s: any) => s?.status === 'TAKEN').length,
+          maxPlayers: allSlots.length,
+          listing: m,
+        };
+      })
+      // Geçmiş maçlar takvimde tutulmaz (tarih çözülemeyenler gösterilir).
+      .filter((m) => {
+        const dt = parseMatchDateTime(m.date, m.time);
+        return !dt || dt.getTime() > nowTs;
+      });
+  }, [upcoming, nowTs]);
 
   // Calculate pulse speed based on time left
   // Closer = faster. 
@@ -115,7 +109,14 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            onClick={() => { useAppStore.getState().setLobbyMode('DISCOVER'); onNavigate('MATCH_JOIN'); }}
+            onClick={() => {
+              // KN-6: gerçek maça, YÖNETİM lobisi olarak gir (kendi maçların) —
+              // eski kod selectedMatch set etmeden gidiyordu → boş ekran.
+              const store = useAppStore.getState();
+              store.setSelectedMatch(match.listing);
+              store.setLobbyMode('MANAGE');
+              onNavigate('MATCH_JOIN');
+            }}
             className="group relative bg-[#161B22]/60 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden cursor-pointer hover:border-[#FACC15]/30 transition-all duration-500"
           >
             {/* Dynamic Pulse Strip */}
@@ -329,18 +330,35 @@ const MatchCalendar: React.FC<MatchCalendarProps> = ({ onBack, onNavigate }) => 
                   className="w-full h-16 bg-[#0A0E14] border border-white/10 rounded-2xl text-center text-2xl font-black tracking-[0.5em] text-[#FACC15] outline-none focus:border-[#FACC15]/50 transition-all"
                 />
 
-                <button 
-                  onClick={() => {
-                    if (joinCode.length === 6) {
+                {joinCodeError && (
+                  <p className="text-[11px] font-bold text-red-400 text-center">{joinCodeError}</p>
+                )}
+                <button
+                  onClick={async () => {
+                    // KN-6: kod GERÇEKTEN çözümlenir — eski kod doğrulamadan boş
+                    // lobiye gidiyordu. Desen: MatchDiscovery.handleJoinPrivate.
+                    if (joinCode.length !== 6 || joinCodeLoading) return;
+                    setJoinCodeLoading(true);
+                    setJoinCodeError(null);
+                    try {
+                      const resolved = await resolvePrivateMatch(joinCode.trim().toUpperCase());
+                      const found = await getMatchDetails(resolved.matchId);
+                      if (!found) throw new Error('NOT_FOUND');
+                      const store = useAppStore.getState();
+                      store.setSelectedMatch(found);
+                      store.setLobbyMode('DISCOVER');
                       setShowJoinCodeInput(false);
-                      useAppStore.getState().setLobbyMode('DISCOVER');
                       onNavigate('MATCH_JOIN');
+                    } catch (e: any) {
+                      setJoinCodeError(toPrivateMatchErrorMessage(e));
+                    } finally {
+                      setJoinCodeLoading(false);
                     }
                   }}
-                  disabled={joinCode.length !== 6}
-                  className={`w-full h-16 rounded-2xl font-black text-sm tracking-widest transition-all ${joinCode.length === 6 ? 'bg-[#FACC15] text-black shadow-[0_10px_30px_rgba(250,204,21,0.2)]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                  disabled={joinCode.length !== 6 || joinCodeLoading}
+                  className={`w-full h-16 rounded-2xl font-black text-sm tracking-widest transition-all ${joinCode.length === 6 && !joinCodeLoading ? 'bg-[#FACC15] text-black shadow-[0_10px_30px_rgba(250,204,21,0.2)]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                 >
-                  MAÇA GİT
+                  {joinCodeLoading ? 'KONTROL EDİLİYOR…' : 'MAÇA GİT'}
                 </button>
               </div>
             </motion.div>

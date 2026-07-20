@@ -60,6 +60,32 @@ export const approveMatchScore = async (proposalId: string): Promise<ScoreAction
   };
 };
 
+/**
+ * HR-A — Atanmış HAKEM resmi maç skorunu kaydeder (finalize_match RPC).
+ * Hakem tarafsız otorite: skoru KESİN olarak yazar, oyuncu onay döngüsü YOK.
+ * Sunucu tarafında yalnız o maça atanmış hakem (refereeId=auth.uid()) / admin
+ * yetkilidir; yetkisiz çağrı UNAUTHORIZED döner.
+ */
+export const submitRefereeMatchScore = async (
+  matchId: string,
+  home: number,
+  away: number,
+): Promise<{ status: string; homeScore: number; awayScore: number }> => {
+  if (!Number.isInteger(home) || !Number.isInteger(away) || home < 0 || away < 0) {
+    throw new Error('Geçersiz skor. Skorlar 0 veya daha büyük tam sayı olmalı.');
+  }
+  const { data, error } = await supabase.rpc('finalize_match', {
+    p_match_id: matchId, p_home_score: home, p_away_score: away,
+  });
+  if (error) {
+    const msg = error.message || '';
+    if (msg.includes('UNAUTHORIZED')) throw new Error('Bu maçın skorunu yalnızca atanmış hakem girebilir.');
+    if (msg.includes('NOT_FOUND')) throw new Error('Maç bulunamadı.');
+    throw new Error('Skor kaydedilemedi. Lütfen tekrar dene.');
+  }
+  return { status: data?.status ?? 'COMPLETED', homeScore: home, awayScore: away };
+};
+
 /** Bir maçın bekleyen skor önerisini getir (varsa). */
 export const getPendingScoreProposal = async (matchId: string): Promise<ScoreProposal | null> => {
   const { data, error } = await supabase

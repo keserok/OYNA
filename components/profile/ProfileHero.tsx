@@ -5,6 +5,7 @@ import { PlayerCardData } from '../../types';
 import { PlayerCard } from '../PlayerCard';
 import { PlayerCardBack } from './PlayerCardBack';
 import { MatchHistorySummary } from '../../services/userService';
+import { PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
 
 export interface ProfileHeroProps {
     name: string;
@@ -12,7 +13,12 @@ export interface ProfileHeroProps {
     verified?: boolean;
     position?: string | null;
     age?: number | null;
-    footLabel?: string | null;
+    /** Doğum tarihi yoksa yaş rozetinde gösterilecek onboarding yaş aralığı (ör. "24-30"). */
+    ageRange?: string | null;
+    /** Onboarding cinsiyet kodu: 'kadin' | 'erkek'. */
+    gender?: string | null;
+    /** Onboarding oyun stili kodu: 'ciddi' | 'taktiksel' | 'rahat'. */
+    playStyle?: string | null;
     matches: number;
     /** 0–100 */
     winRate: number;
@@ -32,26 +38,42 @@ export interface ProfileHeroProps {
 const initialsOf = (name: string) =>
     name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toLocaleUpperCase('tr-TR');
 
-const Chip: React.FC<{ children: React.ReactNode; accent?: boolean }> = ({ children, accent }) => (
-    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold border ${
-        accent
-            ? 'font-black text-primary bg-primary/10 border-primary/40'
-            : 'text-white/55 bg-white/5 border-white/10'
-    }`}>
-        {children}
-    </span>
-);
+const Chip: React.FC<{ children: React.ReactNode; accent?: boolean; color?: string }> = ({ children, accent, color }) => {
+    if (color) {
+        // Özel vurgu rengi (ör. oyun stili) — inline stil.
+        return (
+            <span className="px-2.5 py-1 rounded-lg text-[9px] font-black border" style={{ color, backgroundColor: `${color}1A`, borderColor: `${color}66` }}>
+                {children}
+            </span>
+        );
+    }
+    return (
+        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold border ${
+            accent
+                ? 'font-black text-primary bg-primary/10 border-primary/40'
+                : 'text-white/55 bg-white/5 border-white/10'
+        }`}>
+            {children}
+        </span>
+    );
+};
 
 /**
  * Profil kimlik kartı: sade görünüm (isim + rozetler + avatar) ile
  * premium FIFA kart görünümü arasında geçiş; altta Maç/Galibiyet(/MVP) şeridi.
  */
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
-    name, avatarUrl, verified, position, age, footLabel,
+    name, avatarUrl, verified, position, age, ageRange, gender, playStyle,
     matches, winRate, mvp = null,
     cardAvailable = false, cardData, cardBackMatches = [],
     onEditAvatar, onShareCard,
 }) => {
+    // Onboarding rozetleri (üst bar): Oyun Stili · Yaş · Cinsiyet · Pozisyon.
+    const styleMeta = playStyle ? PLAY_STYLE_META[playStyle as keyof typeof PLAY_STYLE_META] : undefined;
+    const ageText = age != null ? `${age} yaş` : (ageRange ? ageRange.replace('-', '–') : null);
+    const genderText = gender === 'kadin' || gender === 'erkek'
+        ? `${gender === 'kadin' ? '♀' : '♂'} ${GENDER_LABEL[gender]}`
+        : null;
     const [cardMode, setCardMode] = useState(false);
     const [isFlipped, setIsFlipped] = useState(false);
     // Avatar yüklenemezse (kırık URL / erişilemeyen host) baş harflere düş.
@@ -98,9 +120,10 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                                 )}
                             </h1>
                             <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
-                                <Chip accent>{position || 'Mevki belirtilmedi'}</Chip>
-                                {age != null && <Chip>{age} yaş</Chip>}
-                                {footLabel && <Chip>{footLabel}</Chip>}
+                                {styleMeta && <Chip color={styleMeta.color}>{styleMeta.label}</Chip>}
+                                {ageText && <Chip>{ageText}</Chip>}
+                                {genderText && <Chip>{genderText}</Chip>}
+                                {position && <Chip accent>{position}</Chip>}
                             </div>
                         </div>
                         <div className="relative shrink-0">
@@ -148,9 +171,10 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                                 </div>
                             </motion.div>
                         </div>
-                        <div className="flex gap-2 mt-3">
-                            {age != null && <Chip>Yaş {age}</Chip>}
-                            {footLabel && <Chip>{footLabel} Ayak</Chip>}
+                        <div className="flex gap-2 mt-3 flex-wrap justify-center">
+                            {styleMeta && <Chip color={styleMeta.color}>{styleMeta.label}</Chip>}
+                            {ageText && <Chip>{ageText}</Chip>}
+                            {genderText && <Chip>{genderText}</Chip>}
                         </div>
                     </div>
                 )}
