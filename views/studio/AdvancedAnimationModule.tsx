@@ -161,13 +161,15 @@ interface AdvancedAnimationModuleProps {
     setCustomSeqValue: (v: string) => void;
     setDrawings: (fn: (prev: DrawingLine[]) => DrawingLine[]) => void;
     hideLines?: boolean;
+    /** BİZ/RAKİP katmanı: pasif tarafın çizgileri — rozetleri soluk ve kilitli. */
+    mutedLineIds?: string[];
 }
 
 const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
     drawings, isSimulating, showBall, playMode,
     seqMap, totalSeqDuration, selectedSeqBadge, setSelectedSeqBadge,
     isCustomSeqInputOpen, setIsCustomSeqInputOpen, customSeqValue, setCustomSeqValue,
-    setDrawings, hideLines
+    setDrawings, hideLines, mutedLineIds
 }) => {
     return (
         <>
@@ -188,26 +190,30 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                 );
             })}
 
-            {/* Sekans Rozetleri (timeline sıralama editörü) — "Sadece Hareket" açıkken gizlenir */}
+            {/* Sekans Rozetleri (timeline sıralama editörü) — "Sadece Hareket" açıkken gizlenir.
+                Pasif katmanın (BİZ/RAKİP) rozetleri soluk ve kilitli: genel adım akışı okunur
+                ama düzenleme yalnız aktif tarafta yapılır. */}
             {playMode === 'SEQ' && !hideLines && drawings.map((line) => {
                 const midIdx = Math.floor(line.points.length / 2);
                 const midPoint = line.points[midIdx];
                 if (!midPoint) return null;
-                const isSelected = selectedSeqBadge === line.id;
+                const isMuted = !!mutedLineIds?.includes(line.id);
+                const isSelected = !isMuted && selectedSeqBadge === line.id;
                 return (
                     <div
                         key={`badge-${line.id}`}
-                        className="absolute z-[70]"
+                        className={`absolute z-[70] ${isMuted ? 'opacity-40' : ''}`}
                         style={{ left: `${midPoint.x}%`, top: `${midPoint.y}%`, transform: 'translate(-50%, -50%)' }}
                     >
                         <div
                             onPointerDown={(e) => {
                                 e.stopPropagation();
+                                if (isMuted) return;
                                 setSelectedSeqBadge(isSelected ? null : line.id);
                                 setIsCustomSeqInputOpen(false);
                             }}
-                            className={`bg-indigo-500 text-white font-black rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] cursor-pointer pointer-events-auto transition-all ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}
-                            title="Sırayı Ayarla"
+                            className={`bg-indigo-500 text-white font-black rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] transition-all ${isMuted ? 'pointer-events-none' : `cursor-pointer pointer-events-auto ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}`}
+                            title={isMuted ? undefined : 'Sırayı Ayarla'}
                         >
                             {line.seqStep || 1}
                         </div>

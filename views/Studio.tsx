@@ -42,6 +42,8 @@ import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
 // Atak Kütüphanesi (SSOT) — dizilişe uyarlanan hazır atak şablonları
 import { ATTACK_PRESETS, outfieldCount } from './studio/attackPresets';
 import type { AttackPreset } from './studio/attackPresets';
+// BİZ/RAKİP katman anahtarı — aktif taraf önde, pasif taraf arkada ve kilitli
+import { isLayerEditing, markerLayer, lineIsMuted } from './studio/layering';
 
 // ⚡ GELİŞMİŞ ANİMASYON MODÜLÜ — on-demand (lazy) indirilir.
 // Bu chunk yalnız kullanıcı "Gelişmiş Animasyon" butonuna basınca yüklenir,
@@ -603,6 +605,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Sekans haritası (hafif hesap — çekirdekte kalır, gelişmiş modüle de geçer)
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
 
+    // ── BİZ/RAKİP katman anahtarı: düzenlemede aktif taraf önde, pasif arkada ──
+    const layerEditing = isLayerEditing(isSimulating, presentMode);
+    const usLayer = markerLayer('US', drawSide, layerEditing);
+    const oppLayer = markerLayer('OPP', drawSide, layerEditing);
+    // Pasif tarafın çizgileri: soluk + sekans rozetleri kilitli
+    const mutedLineIds = drawings.filter(d => lineIsMuted(d.color, drawSide, layerEditing)).map(d => d.id);
+
     // --- Common Handlers ---
     const preservePlayersAndSubs = (newSlots: Slot[], currentSubs: Player[]) => {
         const currentPlayers = activeTactic.slots.filter(s => s.player).map(s => s.player);
@@ -768,6 +777,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     // ── S26 — elde tutulan yedeği mevkiye yerleştir; doluysa oyuncuları TAKAS et ──
     const placeHeldSub = (slotId: string) => {
+        if (drawSide === 'OPP') return; // RAKİP katmanı önde — bizim mevkiler kilitli
         if (!heldSub) return;
         const incoming = activeTactic.subs.find(p => p.id === heldSub);
         if (!incoming) { setHeldSub(null); return; }
@@ -1116,6 +1126,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
         setDrawSide('OPP');
         setSelectedEl(null);
+        setHeldSub(null); // yedek yerleştirme bizim takıma ait — rakip katmanında bırakılır
+        setSelectedSeqBadge(null);
     };
 
     // Rakip: İSİM (player.name, maks 14) + NOT (instruction, maks 10 karakter).
@@ -1642,12 +1654,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {/* BİZ / RAKİP — hangi takımı DÜZENLİYORUM (taşıma/isim/çizim yalnız o tarafta) */}
                     <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
                         <button
-                            onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); }}
+                            onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); setSelectedSeqBadge(null); }}
                             title="Bizim takımı düzenle"
                             className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
                         >BİZ</button>
                         <button
-                            onClick={() => { setDrawSide('OPP'); setSelectedEl(null); }}
+                            onClick={() => { setDrawSide('OPP'); setSelectedEl(null); setHeldSub(null); setSelectedSeqBadge(null); }}
                             title="Rakibi düzenle"
                             className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
@@ -1824,7 +1836,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     markerEnd={line.color === '#ef4444' ? 'url(#arrowhead-opp)' : 'url(#arrowhead)'}
-                                    opacity={isSimulating ? "0.3" : (selectedEl?.type === 'line' && selectedEl.id === line.id ? '1' : '0.8')}
+                                    opacity={isSimulating ? '0.3' : (lineIsMuted(line.color, drawSide, layerEditing) ? '0.22' : (selectedEl?.type === 'line' && selectedEl.id === line.id ? '1' : '0.8'))}
                                     className="transition-opacity duration-500"
                                 />
                             ))}
@@ -1852,13 +1864,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <motion.div 
                             key={opp.id}
                             onPointerDown={(e) => handleDragStart('opponent', opp.id, e)}
-                            className={`absolute w-10 h-10 z-20 ${tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto'} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${drawSide === 'US' ? 'opacity-40' : ''}`}
+                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
                             animate={anim ? anim.animate : {
                                 left: `${opp.x}%`,
                                 top: `${opp.y}%`
                             }}
                             transition={anim ? anim.transition as any : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : 20 }}
+                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : oppLayer.z }}
                         >
                             <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-lg bg-red-900/80 text-white transition-all ${selectedEl?.type === 'opponent' && selectedEl.id === opp.id ? 'border-white ring-2 ring-white/70 scale-110' : 'border-red-500'}`}>
                                 <Swords size={16} />
@@ -1897,8 +1909,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }
                             }}
                             onClick={() => { if (heldSub) placeHeldSub(slot.id); }}
-                            className={`absolute w-12 h-12 z-20 ${tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${drawSide === 'OPP' ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : 20 }}
+                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
+                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
                         >
                             {slot.player ? (
                                 <motion.div 
@@ -1921,10 +1933,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     )}
                                 </motion.div>
                             ) : (
-                                <motion.button 
+                                <motion.button
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => heldSub ? placeHeldSub(slot.id) : setShowPlayerSelect({ type: 'slot', slotId: slot.id })}
+                                    aria-label="Mevkiye oyuncu ekle"
+                                    onClick={() => {
+                                        if (drawSide === 'OPP') return; // RAKİP katmanı önde — bizim mevkiler kilitli
+                                        if (heldSub) placeHeldSub(slot.id); else setShowPlayerSelect({ type: 'slot', slotId: slot.id });
+                                    }}
                                     className={`relative w-full h-full rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors ${slot.role === 'GK' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-[#39FF14]/50 text-[#39FF14]/70 hover:border-[#39FF14] hover:text-[#39FF14]'}`}
                                 >
                                     <Plus size={20} />
@@ -1964,6 +1980,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 setCustomSeqValue={setCustomSeqValue}
                                 setDrawings={setDrawings}
                                 hideLines={hideLines}
+                                mutedLineIds={mutedLineIds}
                             />
                         </Suspense>
                     )}
@@ -2103,8 +2120,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <div key={sub.id} className={`flex-shrink-0 flex items-center gap-2 rounded-full pl-1 pr-2 py-1 border transition-all ${held ? 'bg-[#39FF14]/15 border-[#39FF14] ring-2 ring-[#39FF14]/40' : 'bg-white/5 border-white/10'}`}>
                             <button
                                 onClick={() => setHeldSub(held ? null : sub.id)}
-                                title={held ? 'Bir mevkiye dokunarak yerleştir' : 'Sahaya yerleştir / takas et'}
-                                className="flex items-center gap-2 min-h-[36px]"
+                                disabled={drawSide === 'OPP'}
+                                title={drawSide === 'OPP' ? 'Yedekler bizim takıma ait — BİZ moduna geç' : (held ? 'Bir mevkiye dokunarak yerleştir' : 'Sahaya yerleştir / takas et')}
+                                className="flex items-center gap-2 min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-black text-white">{sub.name.charAt(0)}</span>
                                 <span className={`text-[11px] font-bold max-w-[90px] truncate ${held ? 'text-[#39FF14]' : 'text-white'}`}>{sub.name}</span>
