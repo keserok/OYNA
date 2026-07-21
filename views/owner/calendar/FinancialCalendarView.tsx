@@ -113,6 +113,9 @@ export const FinancialCalendarView: React.FC<{
     const { confirm, confirmElement } = useConfirmSheet();
     const dayStrip = useMemo(() => buildDayStrip(), []);
     const dayStripRef = useRef<HTMLDivElement | null>(null);
+    // Gün şeridi kaydırma konumu — kenar fade'lerini (keşfedilebilirlik) yönetir.
+    const [stripAtStart, setStripAtStart] = useState(true);
+    const [stripAtEnd, setStripAtEnd] = useState(false);
     const dayScrollRef = useRef<HTMLDivElement | null>(null);
 
     // Seçili gün artık ISO tarih — 30 günlük şerit ve aylık görünüm aynı state'i sürer.
@@ -387,30 +390,47 @@ export const FinancialCalendarView: React.FC<{
                 </div>
 
                 <div className="p-4 pt-2 space-y-3">
-                    {/* 30 günlük kaydırılabilir gün şeridi (bugünden ileri) */}
-                    <div ref={dayStripRef} className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x">
-                        {dayStrip.map((d, i) => {
-                            const iso = formatDateISO(d);
-                            const isSel = iso === selectedDateISO;
-                            const isToday = iso === todayISO();
-                            const showMonth = i === 0 || d.getDate() === 1;
-                            return (
-                                <button
-                                    key={iso}
-                                    data-date={iso}
-                                    onClick={() => selectDay(iso)}
-                                    className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
-                                >
-                                    <span className={`text-[9px] font-black uppercase ${isToday && !isSel ? 'text-[#FACC15]' : ''}`}>
-                                        {isToday ? 'Bugün' : d.toLocaleDateString('tr-TR', { weekday: 'short' })}
-                                    </span>
-                                    <span className="text-sm font-bold">{d.getDate()}</span>
-                                    <span className="text-[8px] font-bold uppercase text-gray-600 h-2.5 leading-none">
-                                        {showMonth ? d.toLocaleDateString('tr-TR', { month: 'short' }) : ''}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                    {/* 30 günlük kaydırılabilir gün şeridi (bugünden ileri).
+                        Kenar fade'leri "kaydır, daha çok gün var" sinyali verir; touch-action:pan-x
+                        yatay swipe'ı garanti eder (dikey kaydırmaya takılmaz). */}
+                    <div className="relative">
+                        <div
+                            ref={dayStripRef}
+                            style={{ touchAction: 'pan-x' }}
+                            onScroll={(e) => {
+                                const el = e.currentTarget;
+                                setStripAtStart(el.scrollLeft < 8);
+                                setStripAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 8);
+                            }}
+                            className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x scroll-smooth overscroll-x-contain"
+                        >
+                            {dayStrip.map((d, i) => {
+                                const iso = formatDateISO(d);
+                                const isSel = iso === selectedDateISO;
+                                const isToday = iso === todayISO();
+                                const showMonth = i === 0 || d.getDate() === 1;
+                                return (
+                                    <button
+                                        key={iso}
+                                        data-date={iso}
+                                        onClick={() => selectDay(iso)}
+                                        className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
+                                    >
+                                        <span className={`text-[9px] font-black uppercase ${isToday && !isSel ? 'text-[#FACC15]' : ''}`}>
+                                            {isToday ? 'Bugün' : d.toLocaleDateString('tr-TR', { weekday: 'short' })}
+                                        </span>
+                                        <span className="text-sm font-bold">{d.getDate()}</span>
+                                        <span className="text-[8px] font-bold uppercase text-gray-600 h-2.5 leading-none">
+                                            {showMonth ? d.toLocaleDateString('tr-TR', { month: 'short' }) : ''}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {/* sol fade — yalnız kaydırılmışken */}
+                        <div className={`pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#0A0E14] to-transparent transition-opacity ${stripAtStart ? 'opacity-0' : 'opacity-100'}`} />
+                        {/* sağ fade — devamında gün olduğunu gösterir */}
+                        <div className={`pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0A0E14] to-transparent transition-opacity ${stripAtEnd ? 'opacity-0' : 'opacity-100'}`} />
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -458,6 +478,13 @@ export const FinancialCalendarView: React.FC<{
                                         className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
                                     >
                                         <ChevronRight size={16} />
+                                    </button>
+                                    {/* Takvim 2: aylık gezinirken hızlı bugüne dönüş — bugünün gün ekranını açar. */}
+                                    <button
+                                        onClick={() => { const now = new Date(); setMonthCursor({ y: now.getFullYear(), m: now.getMonth() }); selectDay(todayISO()); }}
+                                        className="ml-1 px-2.5 h-8 rounded-lg bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-black uppercase tracking-wide hover:bg-[#FACC15]/20 transition-colors"
+                                    >
+                                        Bugün
                                     </button>
                                 </div>
                                 <button
@@ -939,7 +966,7 @@ export const FinancialCalendarView: React.FC<{
                     booking={selectedBooking}
                     readOnly={readOnly}
                     onClose={() => setSelectedBooking(null)}
-                    onCancelled={loadBookings}
+                    onChanged={loadBookings}
                     onNavigateQr={() => onNavigate?.('QR_SCANNER')}
                 />
             )}

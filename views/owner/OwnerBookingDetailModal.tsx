@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { MessageSquare, QrCode, X, XCircle } from 'lucide-react';
-import { cancelConfirmedBooking, toTurkishError } from '../../services/pitchOwnerService';
+import { Banknote, MessageSquare, QrCode, XCircle } from 'lucide-react';
+import { cancelConfirmedBooking, recordBookingPayment, type PaymentMethod, toTurkishError } from '../../services/pitchOwnerService';
+import { parseTRYAmount } from '../../shared/financeModel';
 import { useOwnerToast } from './components/useOwnerToast';
 import { useConfirmSheet } from './components/useConfirmSheet';
+import { OwnerBottomSheet } from './components/OwnerBottomSheet';
+import { Spinner } from '../../components/ui/Spinner';
 
 export interface BookingDetailData {
   id: string;
@@ -19,25 +22,43 @@ interface OwnerBookingDetailModalProps {
   booking: BookingDetailData;
   readOnly?: boolean;
   onClose: () => void;
-  onCancelled: () => void;
+  /** Takvimi yenile — hem iptal hem tahsilat sonrası. */
+  onChanged: () => void;
   onNavigateQr?: () => void;
 }
+
+const METHODS: { id: PaymentMethod; label: string }[] = [
+  { id: 'CASH', label: 'Nakit' },
+  { id: 'CARD', label: 'Kart' },
+  { id: 'BANK_TRANSFER', label: 'Havale' },
+];
 
 export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = ({
   booking,
   readOnly = false,
   onClose,
-  onCancelled,
+  onChanged,
   onNavigateQr,
 }) => {
   const notify = useOwnerToast();
   const { confirm, confirmElement } = useConfirmSheet();
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [mode, setMode] = useState<'view' | 'cancel' | 'collect'>('view');
   const [cancelReason, setCancelReason] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const balance = Math.max(0, Math.round((booking.price ?? 0) - (booking.paid ?? 0)));
+  const [amountStr, setAmountStr] = useState(String(balance));
+  const [method, setMethod] = useState<PaymentMethod>('CASH');
+  const amount = parseTRYAmount(amountStr);
+  const validPay = Number.isFinite(amount) && amount > 0 && amount <= balance + 0.001;
 
   const statusLabel =
     booking.status === 'PAID' ? 'ÖDENDİ' : booking.status === 'PARTIAL' ? 'KISMİ' : 'BEKLEYEN';
+  const statusCls =
+    booking.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400'
+    : booking.status === 'PARTIAL' ? 'bg-yellow-500/20 text-yellow-400'
+    : 'bg-red-500/20 text-red-400';
+  const isManual = booking.type === 'PHONE' || booking.type === 'DAILY';
 
   const handleCancel = async () => {
     if (!cancelReason.trim()) {
@@ -51,129 +72,176 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       destructive: true,
     });
     if (!ok) return;
-    setIsCancelling(true);
+    setBusy(true);
     try {
       await cancelConfirmedBooking(booking.id, cancelReason.trim());
-      onCancelled();
+      onChanged();
       onClose();
     } catch (err) {
       notify(toTurkishError(err), 'error');
     } finally {
-      setIsCancelling(false);
+      setBusy(false);
     }
   };
 
+  const handleCollect = async () => {
+    if (!validPay) {
+      notify(balance <= 0 ? 'Bu rezervasyon tamamen tahsil edilmiş.' : 'Geçerli bir tutar girin.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { queued } = await recordBookingPayment(booking.id, amount, method, 'Takvimden tahsilat');
+      notify(queued ? 'Tahsilat kuyruğa alındı (çevrimdışı).' : 'Tahsilat kaydedildi.', 'success');
+      onChanged();
+      onClose();
+    } catch (err) {
+      notify(toTurkishError(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const footer = readOnly ? null : mode === 'collect' ? (
+    <div className="flex gap-3">
+      <button type="button" onClick={() => setMode('view')} disabled={busy}
+        className="flex-1 h-12 rounded-2xl bg-white/5 text-white font-bold active:scale-[0.98] transition-transform disabled:opacity-40">
+        Vazgeç
+      </button>
+      <button type="button" onClick={handleCollect} disabled={busy || !validPay}
+        className="flex-[1.5] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
+        {busy ? <Spinner size={18} color="currentColor" glow={false} /> : <>Tahsil Et · {amount > 0 ? amount : 0}₺</>}
+      </button>
+    </div>
+  ) : mode === 'cancel' ? (
+    <div className="flex gap-3">
+      <button type="button" onClick={() => setMode('view')} disabled={busy}
+        className="flex-1 h-12 rounded-2xl bg-white/5 text-white font-bold active:scale-[0.98] transition-transform disabled:opacity-40">
+        Vazgeç
+      </button>
+      <button type="button" onClick={handleCancel} disabled={busy}
+        className="flex-[1.5] h-12 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
+        {busy ? <Spinner size={18} color="currentColor" glow={false} /> : 'İptali Onayla'}
+      </button>
+    </div>
+  ) : (
+    <div className="flex gap-3">
+      <button type="button" onClick={() => setMode('cancel')}
+        className="flex-1 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+        <XCircle size={16} /> İptal Et
+      </button>
+      {balance > 0 && (
+        <button type="button" onClick={() => setMode('collect')}
+          className="flex-[1.5] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+          <Banknote size={18} /> Tahsilat Al
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-      <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-xl font-black text-white">{booking.user}</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              {booking.time} • {booking.type === 'APP' ? 'Uygulama Rezervasyonu' : 'Manuel Rezervasyon'}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
-            <X size={20} />
-          </button>
+    <OwnerBottomSheet
+      open
+      onClose={busy ? () => {} : onClose}
+      title={booking.user}
+      subtitle={`${booking.time} • ${booking.type === 'APP' ? 'Uygulama Rezervasyonu' : 'Manuel Rezervasyon'}`}
+      footer={footer}
+    >
+      {/* Durum kartı */}
+      <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 space-y-3">
+        <div className="flex justify-between items-center">
+          <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Durum</span>
+          <span className={`text-[0.6875rem] font-black px-2 py-1 rounded ${statusCls}`}>{statusLabel}</span>
         </div>
-
-        <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6 space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Durum</span>
-            <span
-              className={`text-[10px] font-black px-2 py-1 rounded ${
-                booking.status === 'PAID'
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : booking.status === 'PARTIAL'
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'bg-red-500/20 text-red-400'
-              }`}
-            >
-              {statusLabel}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Tutar</span>
-            <span className="text-lg font-black text-white font-mono">{booking.price}₺</span>
-          </div>
-          {booking.paid > 0 && (
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] text-gray-500 font-bold uppercase">Tahsil edilen</span>
-              <span className="text-sm font-black text-emerald-400 font-mono">{booking.paid}₺</span>
-            </div>
-          )}
-          {booking.note && (
-            <p className="text-xs text-gray-400 border-t border-white/5 pt-2">{booking.note}</p>
-          )}
+        <div className="flex justify-between items-center">
+          <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tutar</span>
+          <span className="text-lg font-black text-white font-mono tabular-nums">{booking.price}₺</span>
         </div>
-
-        {!showCancelForm ? (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <button
-              type="button"
-              onClick={() => notify('Kaptan mesajlaşması yakında aktif olacak.', 'info')}
-              className="py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[11px] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
-            >
-              <MessageSquare size={16} /> Kaptana Mesaj
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onNavigateQr?.();
-              }}
-              className="py-3 bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] rounded-xl text-[11px] font-black hover:bg-[#10B981]/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
-            >
-              <QrCode size={16} /> QR Check-in
-            </button>
-          </div>
-        ) : (
-          <div className="mb-4 space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">İptal nedeni</label>
-            <textarea
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              rows={2}
-              placeholder="Örn: Hava koşulları, bakım çalışması"
-              className="w-full bg-[#0A0E14] border border-white/5 p-4 rounded-2xl text-white text-sm outline-none resize-none"
-            />
+        {booking.paid > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tahsil edilen</span>
+            <span className="text-sm font-black text-emerald-400 font-mono tabular-nums">{booking.paid}₺</span>
           </div>
         )}
-
-        {!readOnly && (
-          <div className="flex gap-3">
-            {!showCancelForm ? (
-              <button
-                type="button"
-                onClick={() => setShowCancelForm(true)}
-                className="flex-1 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-[11px] font-black hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 uppercase"
-              >
-                <XCircle size={16} /> Rezervasyonu İptal Et
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setShowCancelForm(false)}
-                  className="flex-1 py-3 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-[11px] font-black"
-                >
-                  VAZGEÇ
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={isCancelling}
-                  className="flex-[2] py-3 bg-red-600 text-white rounded-xl text-[11px] font-black disabled:opacity-50"
-                >
-                  {isCancelling ? 'İPTAL EDİLİYOR...' : 'İPTALİ ONAYLA'}
-                </button>
-              </>
-            )}
+        {balance > 0 && (
+          <div className="flex justify-between items-center border-t border-white/5 pt-2">
+            <span className="text-[0.6875rem] text-amber-400 font-bold uppercase">Bekleyen</span>
+            <span className="text-sm font-black text-amber-400 font-mono tabular-nums">{balance}₺</span>
           </div>
+        )}
+        {booking.note && (
+          <p className="text-xs text-gray-400 border-t border-white/5 pt-2">{booking.note}</p>
         )}
       </div>
+
+      {/* COLLECT modu: tutar + yöntem */}
+      {mode === 'collect' && (
+        <div className="mt-4 space-y-3">
+          <label className="text-[0.6875rem] font-black text-gray-500 uppercase tracking-widest">Tahsil edilecek tutar</label>
+          <div className="flex gap-2">
+            <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-2xl px-4 flex items-center focus-within:border-emerald-500/50">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                className="w-full bg-transparent text-white font-black text-xl py-3 outline-none tabular-nums"
+                autoFocus
+              />
+              <span className="text-gray-500 font-bold">₺</span>
+            </div>
+            <button type="button" onClick={() => setAmountStr(String(balance))}
+              className="px-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-black uppercase active:scale-95">
+              Tümü
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {METHODS.map((m) => (
+              <button key={m.id} type="button" onClick={() => setMethod(m.id)}
+                className={`min-h-[44px] py-2.5 rounded-xl border text-xs font-black transition-colors ${method === m.id ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-[#0A0E14] border-white/5 text-gray-400 hover:text-white'}`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[0.6875rem] text-gray-500">Tahsilat denetimli ve idempotent kaydedilir; kalan tutar kadar tahsil edebilirsin.</p>
+        </div>
+      )}
+
+      {/* CANCEL modu: neden */}
+      {mode === 'cancel' && (
+        <div className="mt-4 space-y-2">
+          <label className="text-[0.6875rem] font-black text-gray-500 uppercase tracking-widest">İptal nedeni</label>
+          <textarea
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            rows={2}
+            placeholder="Örn: Hava koşulları, bakım çalışması"
+            className="w-full bg-[#0A0E14] border border-white/5 p-4 rounded-2xl text-white text-sm outline-none resize-none focus:border-red-500/40"
+            autoFocus
+          />
+        </div>
+      )}
+
+      {/* VIEW modu: hızlı aksiyonlar */}
+      {mode === 'view' && (
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <button
+            type="button"
+            onClick={() => notify('Kaptan mesajlaşması yakında aktif olacak.', 'info')}
+            className="min-h-[52px] py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[0.6875rem] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
+          >
+            <MessageSquare size={16} /> Kaptana Mesaj
+          </button>
+          <button
+            type="button"
+            onClick={() => { onClose(); onNavigateQr?.(); }}
+            className="min-h-[52px] py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-[0.6875rem] font-black hover:bg-emerald-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
+          >
+            <QrCode size={16} /> QR Check-in
+          </button>
+        </div>
+      )}
       {confirmElement}
-    </div>
+    </OwnerBottomSheet>
   );
 };
