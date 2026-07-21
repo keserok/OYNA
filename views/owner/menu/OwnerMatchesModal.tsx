@@ -55,6 +55,7 @@ export const OwnerMatchesModal: React.FC<{
   const notify = useOwnerToast();
   const [matches, setMatches] = useState<OwnerScoreMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'ALL' | 'PENDING'>('ALL');
   const [scoreEntryId, setScoreEntryId] = useState<string | null>(null);
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
@@ -101,9 +102,22 @@ export const OwnerMatchesModal: React.FC<{
     <OwnerFullscreenModal title="Maçlar" onClose={onClose}>
       <div className="max-w-md mx-auto space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Tesiste kiralanan maçlar
-          </p>
+          <div className="flex gap-1.5">
+            {([['ALL', 'Tümü'], ['PENDING', 'Skor Bekleyen']] as const).map(([key, label]) => {
+              const count = key === 'PENDING' ? matches.filter((m) => !m.hasScore).length : matches.length;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border transition-colors ${
+                    filter === key ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5'
+                  }`}
+                >
+                  {label}{count > 0 ? ` (${count})` : ''}
+                </button>
+              );
+            })}
+          </div>
           <button
             onClick={load}
             className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white"
@@ -117,16 +131,18 @@ export const OwnerMatchesModal: React.FC<{
           <div className="flex items-center justify-center py-16 text-gray-500">
             <Loader2 size={22} className="animate-spin" />
           </div>
-        ) : matches.length === 0 ? (
+        ) : (filter === 'PENDING' ? matches.filter((m) => !m.hasScore) : matches).length === 0 ? (
           <div className="bg-[#161B22] border border-white/5 rounded-3xl p-8 text-center">
             <Trophy size={28} className="mx-auto text-gray-600" />
-            <p className="text-sm font-bold text-gray-400 mt-3">Henüz maç yok.</p>
+            <p className="text-sm font-bold text-gray-400 mt-3">
+              {filter === 'PENDING' ? 'Skor bekleyen maç yok.' : 'Henüz maç yok.'}
+            </p>
             <p className="text-[11px] text-gray-600 mt-1">
               Uygulama üzerinden sahanda kurulan maçlar burada listelenir.
             </p>
           </div>
         ) : (
-          matches.map((m) => {
+          (filter === 'PENDING' ? matches.filter((m) => !m.hasScore) : matches).map((m) => {
             const st = STATUS_LABELS[m.status] ?? { label: m.status, cls: 'text-gray-400 bg-white/5 border-white/10' };
             const isEntering = scoreEntryId === m.matchId;
             return (

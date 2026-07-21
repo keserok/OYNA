@@ -1883,38 +1883,44 @@ export interface OwnerScoreMatch {
  */
 export async function getPitchScoreMatches(pitchId: string): Promise<OwnerScoreMatch[]> {
   try {
+    // Maçlar tesise matches.pitch_id ile bağlı (rezervasyona değil).
     const { data, error } = await supabase
-      .from('pitch_bookings')
-      .select('match_id, booking_date, start_time, courts(name), matches(id, title, status, date, time, "homeScore", "awayScore")')
+      .from('matches')
+      .select('id, title, status, date, time, starts_at, court_id, "homeScore", "awayScore"')
       .eq('pitch_id', pitchId)
-      .not('match_id', 'is', null)
       .neq('status', 'CANCELLED')
-      .order('booking_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(60);
     if (error) throw error;
-    const seen = new Set<string>();
-    const rows: OwnerScoreMatch[] = [];
-    for (const r of (data ?? []) as Record<string, unknown>[]) {
-      const m = r.matches as Record<string, unknown> | null;
-      const matchId = String((m?.id as string) ?? (r.match_id as string) ?? '');
-      if (!matchId || seen.has(matchId)) continue;
-      seen.add(matchId);
-      const bookingDate = String(r.booking_date ?? '');
-      const startTime = String(r.start_time ?? '').slice(0, 5);
-      const homeScore = (m?.homeScore as number | null | undefined) ?? null;
-      const awayScore = (m?.awayScore as number | null | undefined) ?? null;
-      rows.push({
-        matchId,
-        title: String((m?.title as string) ?? 'Oyuncu Maçı'),
-        when: `${String((m?.date as string) ?? bookingDate)} ${String((m?.time as string) ?? startTime)}`.trim(),
-        status: String((m?.status as string) ?? 'ACTIVE'),
-        courtName: String((r.courts as { name?: string } | null)?.name ?? 'Saha'),
+    const rows = (data ?? []) as Record<string, unknown>[];
+    // Saha adlarını tek sorguda çöz (matches.court_id → courts.name).
+    const courtIds = Array.from(
+      new Set(rows.map((r) => r.court_id).filter((v): v is string => typeof v === 'string')),
+    );
+    const courtNames = new Map<string, string>();
+    if (courtIds.length) {
+      const { data: courts } = await supabase.from('courts').select('id, name').in('id', courtIds);
+      (courts ?? []).forEach((c: { id: string; name: string }) => courtNames.set(c.id, c.name));
+    }
+    return rows.map((m) => {
+      const homeScore = (m.homeScore as number | null | undefined) ?? null;
+      const awayScore = (m.awayScore as number | null | undefined) ?? null;
+      const startsAt = m.starts_at ? new Date(String(m.starts_at)) : null;
+      const when = startsAt
+        ? startsAt.toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : `${String(m.date ?? '')} ${String(m.time ?? '')}`.trim();
+      const courtId = typeof m.court_id === 'string' ? m.court_id : null;
+      return {
+        matchId: String(m.id),
+        title: String((m.title as string) ?? 'Oyuncu Maçı'),
+        when,
+        status: String((m.status as string) ?? 'ACTIVE'),
+        courtName: courtId ? (courtNames.get(courtId) ?? 'Saha') : 'Tesis geneli',
         hasScore: homeScore != null && awayScore != null,
         homeScore,
         awayScore,
-      });
-    }
-    return rows;
+      };
+    });
   } catch (error) {
     console.error('getPitchScoreMatches:', error);
     throw new Error(toTurkishError(error));

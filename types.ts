@@ -297,6 +297,7 @@ export interface MatchListing {
   title: string;
   location: string;
   pitchName?: string; // Saha adı etiketi (servis panelleri için)
+  courtName?: string; // Maçın oynandığı saha (court) adı — "Tesis · Saha"
   time: string;
   date: string;
   price: number;

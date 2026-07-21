@@ -984,7 +984,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {showMatches && (
         <OwnerMatchesModal
           pitchId={realPitchId ?? facilityData?.id ?? ''}
-          readOnly={effReadOnly}
+          /* Karar #26: skor girişi yalnız SAHİP + MÜDÜR; PERSONEL salt-okunur. */
+          readOnly={effReadOnly || !isManagerLevel}
           onClose={() => setShowMatches(false)}
         />
       )}

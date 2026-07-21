@@ -2016,7 +2016,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             <button onClick={() => setShowMapModal(true)}
               className="flex items-center gap-1 text-[10px] font-bold text-white/50 hover:text-[#39FF14] transition-colors min-w-0 flex-1">
               <MapPin size={9} className="text-[#39FF14] shrink-0" />
-              <span className="truncate">{match.location || 'Konum'}</span>
+              <span className="truncate">
+                {match.location || 'Konum'}
+                {(match as { courtName?: string }).courtName ? ` · ${(match as { courtName?: string }).courtName}` : ''}
+              </span>
             </button>
             <div className="flex items-center gap-1 text-[10px] font-bold text-white/40 shrink-0">
               <Calendar size={9} />
