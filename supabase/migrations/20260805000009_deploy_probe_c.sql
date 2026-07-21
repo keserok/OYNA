@@ -1,0 +1,12 @@
+-- ============================================================================
+-- DEPLOY PROBE C (2026-07-21) — normalizasyon SONRASI dolu-remote artımlı kanıt
+-- ----------------------------------------------------------------------------
+-- Kurulum: Preview defteri 290 satır (5 sürüm 14 haneye normalize edilmiş,
+-- 48 adet 17 haneli seri ve 20260803/20260805 çift serisi dahil) ≡ repo.
+-- Bu no-op dosyanın artımlı push'u YEŞİLSE: kanıtlanmış kırıcı olan
+-- standart-dışı (8/11/15 hane) sürümlerin temizlenmesiyle dolu-remote
+-- karşılaştırmasının düzeldiği ve 17 haneli serinin kırıcı OLMADIĞI kanıtlanır.
+-- KIRMIZIYSA: 17 haneli seri de şüpheli listesine döner (bkz. Probe A/B raporu).
+-- Şema üzerinde hiçbir etkisi yoktur.
+-- ============================================================================
+SELECT 1;
