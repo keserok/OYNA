@@ -470,16 +470,9 @@ export async function getAvailabilityExceptions(
 
 export async function saveTariffs(pitchId: string, tariffs: TariffInput[]): Promise<void> {
   try {
-    const { error: delError } = await supabase
-      .from('pitch_tariffs')
-      .delete()
-      .eq('pitch_id', pitchId);
-    if (delError) throw delError;
-
-    if (tariffs.length === 0) return;
-
+    // Atomik değişim (owner_replace_tariffs RPC): DELETE+INSERT tek transaction.
+    // Eski ayrı delete+insert, insert patlarsa TÜM tarifeleri silebiliyordu.
     const rows = tariffs.map((t, idx) => ({
-      pitch_id: pitchId,
       name: t.name,
       tariff_type: t.tariff_type,
       applies_to_days: t.applies_to_days,
@@ -491,9 +484,11 @@ export async function saveTariffs(pitchId: string, tariffs: TariffInput[]): Prom
       is_active: t.is_active ?? true,
       court_id: t.court_id ?? null,
     }));
-
-    const { error: insError } = await supabase.from('pitch_tariffs').insert(rows);
-    if (insError) throw insError;
+    const { error } = await supabase.rpc('owner_replace_tariffs', {
+      p_pitch_id: pitchId,
+      p_tariffs: rows,
+    });
+    if (error) throw error;
   } catch (error) {
     console.error('saveTariffs:', error);
     throw new Error(toTurkishError(error));
