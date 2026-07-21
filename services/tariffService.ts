@@ -11,6 +11,8 @@ export interface TariffLike {
   deposit_amount?: number | null;
   is_active?: boolean | null;
   sort_order?: number | null;
+  /** null/undefined = tesis geneli; dolu = yalnız o sahaya (court) özel tarife. */
+  court_id?: string | null;
 }
 
 const TARIFF_PRIORITY: Record<string, number> = {
@@ -56,22 +58,35 @@ export interface SlotTariffQuote {
   tariffId?: string;
 }
 
-/** Belirli tarih + saat dilimi için geçerli tarife (DB get_current_tariff_price ile aynı mantık). */
+/**
+ * Belirli tarih + saat dilimi için geçerli tarife. Sunucudaki
+ * get_current_tariff_price ile BİREBİR aynı mantık: saha-özel tarife
+ * (court_id = courtId) tesis-geneline (court_id null) üstün gelir; aynı kapsam
+ * içinde tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL) uygulanır.
+ * courtId verilmezse yalnız tesis-geneli tarifeler dikkate alınır.
+ */
 export function resolveTariffForSlot(
   tariffs: TariffLike[] | null | undefined,
   bookingDateISO: string,
-  startTime: string
+  startTime: string,
+  courtId?: string | null
 ): SlotTariffQuote | null {
   if (!tariffs?.length) return null;
   const dow = isoDayOfWeek(bookingDateISO);
-  const active = tariffs.filter((t) => t.is_active !== false);
-  const matches = active
+  const isCourtSpecific = (t: TariffLike) => t.court_id != null && t.court_id === courtId;
+  const matches = tariffs
+    .filter((t) => t.is_active !== false)
+    .filter((t) => t.court_id == null || (courtId != null && t.court_id === courtId))
     .filter((t) => (t.applies_to_days ?? []).includes(dow))
     .filter((t) => timeMatchesTariff(startTime, t))
-    .sort(
-      (a, b) =>
-        (TARIFF_PRIORITY[a.tariff_type] ?? 9) - (TARIFF_PRIORITY[b.tariff_type] ?? 9)
-    );
+    .sort((a, b) => {
+      // 1) Saha-özel önce, 2) tarife tipi önceliği, 3) deterministik tiebreak (id).
+      const courtRank = (isCourtSpecific(a) ? 0 : 1) - (isCourtSpecific(b) ? 0 : 1);
+      if (courtRank !== 0) return courtRank;
+      const typeRank = (TARIFF_PRIORITY[a.tariff_type] ?? 9) - (TARIFF_PRIORITY[b.tariff_type] ?? 9);
+      if (typeRank !== 0) return typeRank;
+      return String(a.id ?? '').localeCompare(String(b.id ?? ''));
+    });
 
   if (matches.length === 0) return null;
   const hit = matches[0];
@@ -86,6 +101,7 @@ export function mapDbTariffsToPitchTariffs(rows: TariffLike[] | null | undefined
   return (rows ?? []).map((t, idx) => ({
     id: t.id ?? `tariff-${idx}`,
     pitch_id: '',
+    court_id: t.court_id ?? null,
     name: t.name ?? 'Tarife',
     tariff_type: (t.tariff_type as PitchTariff['tariff_type']) ?? 'WEEKDAY',
     applies_to_days: t.applies_to_days ?? [],

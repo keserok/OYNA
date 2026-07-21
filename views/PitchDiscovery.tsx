@@ -20,7 +20,7 @@ import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
-import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability } from '../services/pitchBookingService';
+import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability, type ShowcaseAvailabilityRow } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
 import { resolveWorkingHoursForDate } from '../shared/workingHours';
 import { recordDemandSignal, mapDemandError, type DemandSignalType } from '../services/demandService';
@@ -38,6 +38,8 @@ import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchF
 import { recordPitchView } from '../services/pitchShowcaseService';
 import { reportPitchContent } from '../services/pitchMediaService';
 import { splitAmenities } from '../shared/amenities';
+import { courtFeatureLabel, normalizeCourtFeatures } from '../shared/courtFeatures';
+import { surfaceLabel } from '../shared/courtSurface';
 import { transformedImageUrl } from '../utils/imageTransform';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
@@ -59,6 +61,7 @@ interface DbCourtRow {
   name: string;
   court_type: string | null;
   surface?: string | null;
+  size?: string | null;
   price: number | null;
   is_active: boolean | null;
   description?: string | null;
@@ -68,6 +71,8 @@ interface DbCourtRow {
   locker_grade?: string | null;
   grades_status?: string | null;
   capacity?: number | null;
+  sort_order?: number | null;
+  features?: string[] | null;
 }
 
 interface DbPitchRow {
@@ -95,6 +100,7 @@ interface DbPitchRow {
   flash_deals_enabled?: boolean | null;
   show_availability_badge?: boolean | null;
   map_label?: string | null;
+  booking_disabled_by_admin?: boolean | null;
   working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
   courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
@@ -108,6 +114,16 @@ const gradeToScore = (g?: string | null): number => {
   return 0;
 };
 
+// Saha zemini etiketleri artık tek kaynaktan (shared/courtSurface) gelir —
+// oyuncu, owner (PitchManager) ve admin paneli birebir aynı sözlüğü kullanır.
+
+/** capacity=14 → "7v7"; tek sayıysa "13 oyuncu" */
+const formatCapacity = (capacity?: number): string | null => {
+  if (!capacity || capacity <= 0) return null;
+  if (capacity % 2 === 0) return `${capacity / 2}v${capacity / 2}`;
+  return `${capacity} oyuncu`;
+};
+
 const mapDbPitchToUiPitch = (
   row: DbPitchRow,
 ): Pitch => {
@@ -117,22 +133,27 @@ const mapDbPitchToUiPitch = (
   const wh = row.working_hours;
   const courts: Court[] = (row.courts ?? [])
     .filter((c) => c.is_active !== false)
-    .map((c) => ({
+    .map((c): Court => ({
       id: c.id,
       name: c.name,
       type: c.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
       surface: c.surface ?? 'TURF',
+      size: c.size ?? undefined,
+      capacity: c.capacity ?? undefined,
       price: c.price ?? averagePrice,
       slots: [],
       description: c.description ?? undefined,
       images: (c.images as string[] | undefined) ?? undefined,
+      features: Array.isArray(c.features) ? (c.features as string[]) : undefined,
       lighting: gradeToScore(c.lighting_grade),
       grassQuality: gradeToScore(c.grass_grade),
       lockerRoomQuality: gradeToScore(c.locker_grade),
       lightingGrade: c.lighting_grade ?? null,
       grassGrade: c.grass_grade ?? null,
       gradesStatus: (c.grades_status as Court['gradesStatus']) ?? 'approved',
-    }));
+      sortOrder: c.sort_order ?? 0,
+    }))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   return {
     id: row.id,
     name: row.name,
@@ -182,6 +203,7 @@ const mapDbPitchToUiPitch = (
     isFeatured: row.is_featured === true,
     showAvailabilityBadge: row.show_availability_badge === true,
     mapLabel: row.map_label?.trim() || undefined,
+    bookingDisabledByAdmin: row.booking_disabled_by_admin === true,
     // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
     // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
     workingHoursRaw: wh ?? null,
@@ -792,7 +814,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
       const pitchRes = await supabase
         .from('pitches')
-        .select('*, courts(id, name, court_type, surface, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity), pitch_tariffs(*)')
+        .select('*, courts(id, name, court_type, surface, size, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity, sort_order, features), pitch_tariffs(*)')
         .eq('verification_status', 'approved')
         .eq('is_open', true)
         .eq('is_published', true);
@@ -1132,10 +1154,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
     setIsDetailOpen(true);
-    const placements = new Set((pitch.courts ?? []).map(c => c.type));
-    const initialPlacement: 'OPEN' | 'CLOSED' = placements.has('CLOSED') ? 'CLOSED' : 'OPEN';
-    setSelectedPlacement(initialPlacement);
-    setSelectedCourtId(pitch.courts?.find(c => c.type === initialPlacement)?.id ?? pitch.courts?.[0]?.id ?? null);
+    // Kök tutarlılık kararı: her saha (court) ayrı seçilir — owner panelindeki
+    // sıralamayla ilk saha varsayılan gelir, tip otomatik sahadan türer.
+    const firstCourt = pitch.courts?.[0] ?? null;
+    setSelectedPlacement(firstCourt?.type ?? 'OPEN');
+    setSelectedCourtId(firstCourt?.id ?? null);
     setSelectedSlot(null);
     setSelectedDate(0);
     setCalendarOpen(false);
@@ -1146,19 +1169,19 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     void recordPitchView(pitch.id);
   };
 
-  // ── Kapalı/Açık gruplaması (Karar #10): tip seçilir, kort otomatik atanır ──
-  const courtsByPlacement = useMemo(() => {
-    const groups: Record<'OPEN' | 'CLOSED', Court[]> = { OPEN: [], CLOSED: [] };
-    (selectedPitch?.courts ?? []).forEach(c => groups[c.type].push(c));
-    return groups;
-  }, [selectedPitch]);
-
-  const placementCourts = courtsByPlacement[selectedPlacement];
+  const detailCourts = selectedPitch?.courts ?? [];
 
   const selectedCourt = useMemo(() => {
     if (!selectedPitch || !selectedCourtId) return null;
     return selectedPitch.courts?.find(c => c.id === selectedCourtId) || null;
   }, [selectedPitch, selectedCourtId]);
+
+  const selectCourt = (court: Court) => {
+    setSelectedCourtId(court.id);
+    setSelectedPlacement(court.type);
+    setSelectedSlot(null);
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
 
   const selectedDateISO = useMemo(() => {
     const dateObj = new Date();
@@ -1166,52 +1189,94 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return toISODate(dateObj);
   }, [selectedDate]);
 
+  // Sahibin kapattığı saatler (pitch_availability_exceptions) oyuncuya da
+  // "KAPALI" olarak görünür — tekrarlayan kapanışlar sunucuda çözülür.
+  const [dayClosures, setDayClosures] = useState<ShowcaseAvailabilityRow[]>([]);
+  useEffect(() => {
+    if (!selectedPitch || !isDetailOpen) { setDayClosures([]); return; }
+    let active = true;
+    fetchShowcaseAvailability(selectedDateISO)
+      .then(rows => {
+        if (!active) return;
+        setDayClosures(rows.filter(r => r.pitch_id === selectedPitch.id && r.kind === 'CLOSURE'));
+      })
+      .catch(() => { if (active) setDayClosures([]); });
+    return () => { active = false; };
+  }, [selectedPitch, selectedDateISO, isDetailOpen]);
+
   /**
-   * Seçili gün + saha tipi için birleşik slot listesi: bir saat, o tipteki
-   * kortlardan en az biri boşsa müsait; müsait ilk kort o saate otomatik atanır.
+   * Seçili gün + SEÇİLİ SAHA için slot listesi: müsaitlik, fiyat ve kapanışlar
+   * sahanın kendi verisinden gelir (owner panel ↔ oyuncu birebir aynı kaynak).
    */
-  const mergedSlots = useMemo(() => {
-    if (!selectedPitch || placementCourts.length === 0) return [];
-    const perCourt = placementCourts.map(court => ({
-      court,
-      slots: computeAvailability(selectedPitch, selectedDateISO, bookings, court.id),
-    }));
-    const base = perCourt[0].slots;
-    return base.map((slot, idx) => {
-      const freeEntry = perCourt.find(pc => pc.slots[idx]?.status === 'available');
-      const anyPending = perCourt.some(pc => pc.slots[idx]?.status === 'pending');
+  const courtSlots = useMemo(() => {
+    if (!selectedPitch || !selectedCourt) return [];
+    const base = computeAvailability(selectedPitch, selectedDateISO, bookings, selectedCourt.id);
+    const toMins = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + (m || 0);
+    };
+    return base.map(slot => {
+      const closure = dayClosures.find(c => {
+        if (c.court_id && c.court_id !== selectedCourt.id) return false;
+        if (!c.start_time || !c.end_time) return true; // tüm gün kapalı
+        return toMins(slot.startTime) < toMins(c.end_time) && toMins(slot.endTime) > toMins(c.start_time);
+      });
       return {
         label: slot.label,
         startTime: slot.startTime,
-        price: freeEntry?.slots[idx]?.price ?? slot.price,
-        deposit: freeEntry?.slots[idx]?.deposit ?? slot.deposit,
-        status: freeEntry ? 'available' : (anyPending ? 'pending' : slot.status === 'closed' ? 'closed' : 'booked'),
-        assignedCourtId: freeEntry?.court.id ?? null,
+        price: slot.price,
+        deposit: slot.deposit,
+        status: closure && slot.status === 'available' ? ('closed' as const) : slot.status,
+        // 'closed' iki anlama gelir: çalışma saati dışı (gizlenir) vs sahibin
+        // kapattığı saat (gri "KAPALI" görünür) — ayrımı bu bayrak taşır.
+        closedByOwner: Boolean(closure) && slot.status !== 'booked' && slot.status !== 'pending',
       };
     });
-  }, [selectedPitch, placementCourts, selectedDateISO, bookings]);
+  }, [selectedPitch, selectedCourt, selectedDateISO, bookings, dayClosures]);
 
-  const filteredSlots = useMemo(() => mergedSlots.filter(s => {
+  const filteredSlots = useMemo(() => courtSlots.filter(s => {
     const hour = parseInt(s.startTime.split(':')[0], 10);
     if (timeFilter === 'GUNDUZ') return hour >= 6 && hour < 18;
     if (timeFilter === 'GECE') return hour >= 18 || hour < 6;
     return true;
-  }), [mergedSlots, timeFilter]);
+  }), [courtSlots, timeFilter]);
 
   const selectedSlotQuote = useMemo(() => {
     if (!selectedPitch || !selectedSlot) return null;
     const { startTime } = parseSlotLabel(selectedSlot);
-    const fromTariff = resolveTariffForSlot(selectedPitch.tariffs, selectedDateISO, startTime);
+    const fromTariff = resolveTariffForSlot(selectedPitch.tariffs, selectedDateISO, startTime, selectedCourt?.id);
     // Karar #16: işletmenin tarifedeki kaporası öncelikli; yoksa %30 (10₺'ye yuvarlı)
     const fallbackDeposit = (price: number) => Math.round(price * 0.3 / 10) * 10;
     if (fromTariff) {
       return { ...fromTariff, deposit: fromTariff.deposit > 0 ? fromTariff.deposit : fallbackDeposit(fromTariff.price) };
     }
-    const hit = mergedSlots.find((s) => s.label === selectedSlot);
+    const hit = courtSlots.find((s) => s.label === selectedSlot);
     const price = hit?.price ?? selectedCourt?.price ?? selectedPitch.totalPrice;
     const deposit = hit?.deposit && hit.deposit > 0 ? hit.deposit : fallbackDeposit(price);
     return { price, deposit };
-  }, [selectedPitch, selectedSlot, selectedDateISO, mergedSlots, selectedCourt]);
+  }, [selectedPitch, selectedSlot, selectedDateISO, courtSlots, selectedCourt]);
+
+  // Faz 5: seçili gün çalışma saatlerine göre kapalı mı (oyuncuya net durum).
+  const selectedDayClosed = useMemo(() => {
+    if (!selectedPitch) return false;
+    const resolved = resolveWorkingHoursForDate(
+      (selectedPitch as { workingHoursRaw?: unknown }).workingHoursRaw ?? selectedPitch.workingHours,
+      selectedDateISO,
+    );
+    return resolved.closed === true;
+  }, [selectedPitch, selectedDateISO]);
+
+  // Faz 5: "X sahadan Y müsait" özet şeridi — seçili gün için boş sahası olan kort sayısı.
+  const facilityDayAvailability = useMemo(() => {
+    const courts = selectedPitch?.courts ?? [];
+    if (!selectedPitch || courts.length === 0) return { total: 0, free: 0 };
+    let free = 0;
+    courts.forEach((c) => {
+      const slots = computeAvailability(selectedPitch, selectedDateISO, bookings, c.id);
+      if (slots.some((s) => s.status === 'available')) free += 1;
+    });
+    return { total: courts.length, free };
+  }, [selectedPitch, selectedDateISO, bookings]);
 
   const persistBookingSelection = () => {
     if (!selectedPitch || !selectedCourt || !selectedSlot || !selectedSlotQuote) return;
@@ -1350,12 +1415,26 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return d;
   }, [selectedDate]);
 
-  // Onaylı kalite notları (Karar #2, #11): seçili tipteki ilk onaylı korttan
+  // Onaylı kalite notları (Karar #2, #11): SEÇİLİ sahanın kendi notları;
+  // seçili sahada onaylı not yoksa tesisteki ilk onaylı sahadan gösterilir.
   const approvedGrades = useMemo(() => {
-    const graded = placementCourts.find(c => c.gradesStatus === 'approved' && (c.lightingGrade || c.grassGrade));
+    const pick = (c?: Court | null) =>
+      c && c.gradesStatus === 'approved' && (c.lightingGrade || c.grassGrade) ? c : null;
+    const graded = pick(selectedCourt) ?? detailCourts.map(c => pick(c)).find(Boolean) ?? null;
     if (!graded) return null;
     return { lighting: graded.lightingGrade, grass: graded.grassGrade };
-  }, [placementCourts]);
+  }, [selectedCourt, detailCourts]);
+
+  // Galeri: seçili sahanın KENDİ görselleri varsa onlar, yoksa tesis görselleri.
+  const galleryImages = useMemo(() => {
+    const courtImages = (selectedCourt?.images ?? []).filter(Boolean);
+    if (courtImages.length > 0) return courtImages;
+    return selectedPitch?.images ?? [];
+  }, [selectedCourt, selectedPitch]);
+
+  // Admin tesis bazlı online rezervasyon kapatması (sunucu BOOKING_DISABLED ile
+  // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
+  const bookingDisabled = selectedPitch?.bookingDisabledByAdmin === true;
 
   const amenitySplit = useMemo(() => splitAmenities(selectedPitch?.amenities ?? []), [selectedPitch]);
 
@@ -1830,19 +1909,24 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-44">
-              {/* Galeri */}
+              {/* Galeri — seçili sahanın kendi görselleri öncelikli */}
               <div className="relative w-full h-[35vh]">
-                <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                  {(selectedPitch.images.length > 0 ? selectedPitch.images : ['']).map((img, idx) => (
+                <div key={selectedCourtId ?? 'pitch'} className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                  {(galleryImages.length > 0 ? galleryImages : ['']).map((img, idx) => (
                     <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                      <SafeImage src={img} alt={`${selectedPitch.name} ${idx + 1}`} className="w-full h-full object-cover" variant="detail" />
+                      <SafeImage src={img} alt={`${selectedCourt?.name ?? selectedPitch.name} ${idx + 1}`} className="w-full h-full object-cover" variant="detail" />
                     </div>
                   ))}
                 </div>
                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none"></div>
-                {selectedPitch.images.length > 1 && (
+                {(selectedCourt?.images ?? []).filter(Boolean).length > 0 && (
+                  <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[10px] font-extrabold text-white/85">
+                    {selectedCourt?.name}
+                  </span>
+                )}
+                {galleryImages.length > 1 && (
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                    {selectedPitch.images.map((_, idx) => (
+                    {galleryImages.map((_, idx) => (
                       <div key={idx} className={`h-1.5 rounded-full backdrop-blur-md ${idx === 0 ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}></div>
                     ))}
                   </div>
@@ -1901,41 +1985,69 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
               )}
 
-              {/* Saha Tipi — Kapalı/Açık seçici, kort otomatik atanır (Karar #10) */}
-              {selectedPitch.courts && selectedPitch.courts.length > 0 && (
+              {/* Sahalar — her saha kendi verisiyle (görsel, fiyat, zemin, kapasite)
+                  ayrı seçilir; owner panelindeki "Sahalarım" ile birebir aynı kayıtlar. */}
+              {detailCourts.length > 0 && (
                 <div className="px-6 mt-8">
-                  <h3 className="text-base font-extrabold tracking-tight mb-3">Saha Tipi</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-base font-extrabold tracking-tight">
+                      Sahalar{detailCourts.length > 1 ? ` (${detailCourts.length})` : ''}
+                    </h3>
+                    {facilityDayAvailability.total > 1 && !selectedDayClosed && (
+                      <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full ${facilityDayAvailability.free > 0 ? 'bg-[#39FF14]/10 text-[#39FF14]' : 'bg-red-500/10 text-red-400'}`}>
+                        {facilityDayAvailability.free > 0
+                          ? `${facilityDayAvailability.total} sahadan ${facilityDayAvailability.free}'i müsait`
+                          : 'Bugün dolu'}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-col gap-2.5">
-                    {(['CLOSED', 'OPEN'] as const).map(placement => {
-                      const courts = courtsByPlacement[placement];
-                      if (courts.length === 0) return null;
-                      const isSel = selectedPlacement === placement;
-                      const price = courts[0].price || selectedPitch.totalPrice;
-                      const capacityInfo = courts[0].description?.trim() || '6v6 / 7v7 oynanabilir';
+                    {detailCourts.map(court => {
+                      const isSel = selectedCourtId === court.id;
+                      const price = court.price || selectedPitch.totalPrice;
+                      const thumb = court.images?.find(Boolean) ?? selectedPitch.image;
+                      const meta = [
+                        court.type === 'CLOSED' ? 'Kapalı' : 'Açık',
+                        surfaceLabel(court.surface),
+                        court.size ? `${court.size} m` : null,
+                        formatCapacity(court.capacity),
+                      ].filter(Boolean).join(' · ');
                       return (
                         <button
-                          key={placement}
-                          onClick={() => {
-                            setSelectedPlacement(placement);
-                            setSelectedCourtId(courts[0].id);
-                            setSelectedSlot(null);
-                          }}
-                          className={`flex items-center justify-between p-4 rounded-[20px] text-left transition-all border ${isSel ? 'bg-[#39FF14]/[0.06] border-[#39FF14]/50' : 'bg-[#161B22] border-white/5'}`}
+                          key={court.id}
+                          onClick={() => selectCourt(court)}
+                          className={`flex items-center justify-between p-3 pr-4 rounded-[20px] text-left transition-all border ${isSel ? 'bg-[#39FF14]/[0.06] border-[#39FF14]/50' : 'bg-[#161B22] border-white/5'}`}
                         >
-                          <div className="flex items-center gap-3.5">
-                            <div className={`w-11 h-11 rounded-[14px] bg-black/40 border border-white/10 flex items-center justify-center ${isSel ? 'text-[#39FF14]' : 'text-white/70'}`}>
-                              {placement === 'CLOSED' ? <Thermometer size={21} /> : <Wind size={21} />}
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="relative w-[52px] h-[52px] rounded-[14px] overflow-hidden bg-black/40 border border-white/10 flex-shrink-0">
+                              {thumb ? (
+                                <SafeImage src={thumb} alt={court.name} className="w-full h-full object-cover" variant="thumb" />
+                              ) : (
+                                <div className={`w-full h-full flex items-center justify-center ${isSel ? 'text-[#39FF14]' : 'text-white/70'}`}>
+                                  {court.type === 'CLOSED' ? <Thermometer size={21} /> : <Wind size={21} />}
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <div className="text-[15px] font-extrabold text-white">{placement === 'CLOSED' ? 'Kapalı Saha' : 'Açık Saha'}</div>
-                              <div className="text-[11px] font-semibold text-white/50 mt-0.5">
-                                {capacityInfo}{courts.length > 1 ? ` · ${courts.length} kort` : ''}
-                              </div>
+                            <div className="min-w-0">
+                              <div className="text-[15px] font-extrabold text-white truncate">{court.name}</div>
+                              <div className="text-[11px] font-semibold text-white/50 mt-0.5 truncate">{meta}</div>
+                              {normalizeCourtFeatures(court.features).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[9px] font-bold text-[#39FF14]/90">
+                                      {courtFeatureLabel(fv)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {court.description?.trim() && (
+                                <div className="text-[10px] font-medium text-white/35 mt-0.5 truncate">{court.description.trim()}</div>
+                              )}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0 pl-3">
                             <div className={`text-base font-black ${isSel ? 'text-[#39FF14]' : 'text-white'}`}>₺{price}</div>
-                            <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">ort. / saat</div>
+                            <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">/ saat</div>
                           </div>
                         </button>
                       );
@@ -1956,6 +2068,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Admin rezervasyon kapatması: net bilgilendirme (Saat Seç kilitli) */}
+              {bookingDisabled && (
+                <div className="mx-6 mt-7 p-4 rounded-[18px] bg-amber-500/[0.08] border border-amber-500/25">
+                  <p className="text-[13px] font-extrabold text-amber-300">Online rezervasyon geçici olarak kapalı</p>
+                  <p className="text-[11px] font-medium text-amber-200/70 mt-1 leading-relaxed">
+                    Bu tesis için uygulama üzerinden rezervasyon şu an alınamıyor. Tesisle iletişime geçebilir veya daha sonra tekrar deneyebilirsin.
+                  </p>
                 </div>
               )}
 
@@ -2092,16 +2214,17 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 <div className="grid grid-cols-3 gap-2.5">
                   {filteredSlots.map(slot => {
                     const isBooked = slot.status === 'booked' || slot.status === 'pending';
-                    const isClosed = slot.status === 'closed';
+                    const isOwnerClosed = slot.status === 'closed' && slot.closedByOwner;
                     const isSelected = selectedSlot === slot.label;
-                    if (isClosed) return null;
+                    // Çalışma saati dışı slotlar listelenmez; sahibin kapattığı
+                    // saat ise gri "KAPALI" olarak görünür (tutarlılık: owner takvimiyle aynı).
+                    if (slot.status === 'closed' && !isOwnerClosed) return null;
                     return (
                       <button
                         key={slot.label}
-                        disabled={isBooked}
+                        disabled={isBooked || isOwnerClosed || bookingDisabled}
                         onClick={() => {
                           setSelectedSlot(slot.label);
-                          if (slot.assignedCourtId) setSelectedCourtId(slot.assignedCourtId);
                           if (navigator.vibrate) navigator.vibrate(12);
                         }}
                         className={`h-14 rounded-[14px] border flex flex-col items-center justify-center gap-0.5 transition-all ${
@@ -2109,20 +2232,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                             ? 'bg-[#FFFF00] border-[#FFFF00] shadow-[0_0_20px_rgba(255,255,0,0.35)]'
                             : isBooked
                               ? 'bg-red-500/[0.08] border-red-500/20 opacity-60 cursor-not-allowed'
-                              : 'bg-white/[0.03] border-white/[0.07]'
+                              : isOwnerClosed
+                                ? 'bg-white/[0.02] border-white/[0.05] opacity-50 cursor-not-allowed'
+                                : 'bg-white/[0.03] border-white/[0.07]'
                         }`}
                       >
-                        <span className={`text-sm ${isSelected ? 'font-black text-[#05070b]' : isBooked ? 'font-extrabold text-red-400 line-through' : 'font-extrabold text-white'}`}>
+                        <span className={`text-sm ${isSelected ? 'font-black text-[#05070b]' : isBooked ? 'font-extrabold text-red-400 line-through' : isOwnerClosed ? 'font-extrabold text-white/40 line-through' : 'font-extrabold text-white'}`}>
                           {slot.startTime}
                         </span>
-                        <span className={`${isBooked ? 'text-[9px] tracking-[0.1em]' : 'text-[10px]'} font-black ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : 'text-[#39FF14]'}`}>
-                          {isBooked ? 'DOLU' : slot.price != null ? `₺${slot.price}` : ''}
+                        <span className={`${isBooked || isOwnerClosed ? 'text-[9px] tracking-[0.1em]' : 'text-[10px]'} font-black ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : isOwnerClosed ? 'text-white/35' : 'text-[#39FF14]'}`}>
+                          {isBooked ? 'DOLU' : isOwnerClosed ? 'KAPALI' : slot.price != null ? `₺${slot.price}` : ''}
                         </span>
                       </button>
                     );
                   })}
                 </div>
-                {filteredSlots.filter(s => s.status !== 'closed').length === 0 && (
+                {selectedDayClosed ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm font-extrabold text-white/70">Bu gün kapalı</p>
+                    <p className="text-xs text-white/40 mt-1">Tesis bu gün çalışma saatlerinde hizmet vermiyor. Başka bir gün seçebilirsin.</p>
+                  </div>
+                ) : filteredSlots.filter(s => s.status !== 'closed').length === 0 && (
                   <p className="text-center text-xs text-white/40 py-6">Bu gün için uygun saat bulunmuyor.</p>
                 )}
 
@@ -2141,7 +2271,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <div className="px-6 py-4 pb-safe flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] font-black uppercase tracking-[0.08em] text-white/45 truncate">
-                    {selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık'}
+                    {selectedCourt?.name ?? (selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık')}
                     {' · '}{selectedDateObj.getDate()} {MONTHS_TR_SHORT[selectedDateObj.getMonth()]}
                     {selectedSlot ? ` · ${parseSlotLabel(selectedSlot).startTime}` : ''}
                     {!isSelectionMode ? ' · Kapora' : ''}
@@ -2160,7 +2290,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
                 {isSelectionMode ? (
                   <button
-                    disabled={!selectedSlot || !selectedCourtId}
+                    disabled={!selectedSlot || !selectedCourtId || bookingDisabled}
                     onClick={() => {
                       if (selectedPitch && selectedCourt && selectedSlot && onSelectTime) {
                         const date = new Date();
@@ -2178,7 +2308,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   </button>
                 ) : (
                   <button
-                    disabled={!selectedSlot || !selectedCourtId}
+                    disabled={!selectedSlot || !selectedCourtId || bookingDisabled}
                     onClick={handlePayDeposit}
                     className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-black italic uppercase tracking-wide whitespace-nowrap transition-all ${
                       selectedSlot && selectedCourtId

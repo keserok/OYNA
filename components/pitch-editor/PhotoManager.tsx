@@ -20,6 +20,7 @@ import {
 } from '../../services/pitchMediaService';
 import { ImageValidationError } from '../../utils/imageCompression';
 import { transformedImageUrl } from '../../utils/imageTransform';
+import ImageCropModal from './ImageCropModal';
 
 interface Props {
   pitchId: string;
@@ -36,6 +37,8 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [labelPickerFor, setLabelPickerFor] = useState<string | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [cropTotal, setCropTotal] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const maxPhotos = courtId ? MAX_COURT_PHOTOS : MAX_FACILITY_PHOTOS;
@@ -64,23 +67,32 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pitchId, courtId]);
 
-  const handleFiles = async (files: FileList | null) => {
+  // Dosya seçimi → kırpma kuyruğu (her fotoğraf 16:9 çerçevede konumlandırılır).
+  const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     if (items.length + files.length > maxPhotos) {
       onError?.(`En fazla ${maxPhotos} fotoğraf yükleyebilirsiniz.`);
       return;
     }
+    const arr = Array.from(files);
+    setCropQueue(arr);
+    setCropTotal(arr.length);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Kırpma onayı → odak noktasıyla yükle, kuyruktan çıkar; kuyruk bitince tazele.
+  const handleCropConfirm = async (focus: { x: number; y: number }) => {
+    const file = cropQueue[0];
+    if (!file) return;
+    setCropQueue((q) => q.slice(1));
     setBusy(true);
     try {
-      for (const file of Array.from(files)) {
-        await uploadPitchMedia(file, pitchId, { courtId, sortOrder: items.length + 100 });
-      }
-      await refresh();
+      await uploadPitchMedia(file, pitchId, { courtId, sortOrder: items.length + 100, focus });
+      if (cropQueue.length <= 1) await refresh();
     } catch (e) {
       report(e, 'Fotoğraf yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
       setBusy(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -264,9 +276,19 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
 
       {!readOnly && (
         <p className="text-[10px] text-gray-600 leading-relaxed">
-          İlk fotoğraf vitrindeki kapak görselidir. Fotoğraflar otomatik sıkıştırılır (max 10MB, min 800px).
-          En az 1 “Saha İçi” etiketli fotoğraf önerilir.
+          İlk fotoğraf vitrindeki kapak görselidir. Görseller 16:9 kırpılır (sürükleyerek konumlandır),
+          otomatik sıkıştırılır (max 10MB, min 1280px önerilir). En az 1 “Saha İçi” etiketli fotoğraf önerilir.
         </p>
+      )}
+
+      {cropQueue.length > 0 && (
+        <ImageCropModal
+          file={cropQueue[0]}
+          index={cropTotal - cropQueue.length}
+          total={cropTotal}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropQueue([])}
+        />
       )}
     </div>
   );

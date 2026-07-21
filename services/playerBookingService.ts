@@ -56,6 +56,7 @@ export interface CancelPreview {
 // SQL exception mesajlarını kullanıcı dostu Türkçe'ye çevir
 const ERROR_MAP: [string, string][] = [
   ['SLOT_TAKEN', 'Bu saat dilimi az önce dolmuş. Lütfen başka bir saat seç.'],
+  ['BOOKING_DISABLED', 'Bu tesis için online rezervasyon geçici olarak kapalı.'],
   ['NO_TARIFF', 'Bu saha için fiyat tarifesi tanımlanmamış; şimdilik uygulamadan rezervasyon alınamıyor.'],
   ['SLOT_UNAVAILABLE', 'Bu saat dilimi tesis tarafından kapatılmış.'],
   ['CANCEL_WINDOW_CLOSED', 'Rezervasyon saatine 48 saatten az kaldığı için uygulamadan iptal edilemiyor. Lütfen tesisle iletişime geç.'],

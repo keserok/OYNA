@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Repeat, Check } from 'lucide-react';
+import { useConfirmSheet } from '../components/useConfirmSheet';
 import type { FinanceSummary } from '../../../services/financeService';
 import type { PitchExpense } from '../../../types';
 import {
@@ -31,6 +32,7 @@ const emptyForm = { title: '', amount: '', category: 'Diğer', date: '' };
 export const FinanceExpenseTab: React.FC<Props> = ({
   summary, expenses, readOnly, pitchId, currentMonth, onAddExpense, onChanged, notify,
 }) => {
+  const { confirm, confirmElement } = useConfirmSheet();
   const [templates, setTemplates] = useState<ExpenseTemplate[]>([]);
   const [editing, setEditing] = useState<PitchExpense | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -81,7 +83,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
 
   const removeExpense = async (e: PitchExpense) => {
     if (readOnly) return;
-    if (!window.confirm(`"${e.title}" giderini sil?`)) return;
+    if (!(await confirm({ title: 'Gideri sil?', message: `"${e.title}" gideri silinecek.`, confirmLabel: 'Sil', destructive: true }))) return;
     try { await deleteExpense(e.id); onChanged(); notify('Gider silindi.', 'success'); }
     catch (err: any) { notify(err?.message || 'Silinemedi.', 'error'); }
   };
@@ -206,7 +208,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
             </select>
             <input type="date" className="bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
-          <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-[#FF00FF] text-white font-black rounded-2xl disabled:opacity-40">
+          <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl disabled:opacity-40">
             {busy ? 'KAYDEDİLİYOR…' : editing ? 'GÜNCELLE' : 'GİDERİ KAYDET'}
           </button>
         </BottomSheetModal>
@@ -240,6 +242,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
           </div>
         </BottomSheetModal>
       )}
+      {confirmElement}
     </div>
   );
 };

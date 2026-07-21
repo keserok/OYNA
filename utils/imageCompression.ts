@@ -6,6 +6,8 @@
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // bucket limiti ile aynı
 export const MIN_IMAGE_WIDTH = 800;
+/** Vitrin (tesis/saha) görselleri için önerilen min çözünürlük (Faz 8 · Karar #8). */
+export const SHOWCASE_MIN_WIDTH = 1280;
 export const MAX_IMAGE_DIMENSION = 1920;
 export const JPEG_QUALITY = 0.82;
 
@@ -28,9 +30,23 @@ const loadBitmap = async (file: File): Promise<ImageBitmap | HTMLImageElement> =
   });
 };
 
+/** Tesis/saha vitrin görselleri için TEK TİP oran: 16:9 yatay (mobil kart + galeri). */
+export const SHOWCASE_ASPECT_RATIO = 16 / 9;
+
 export interface CompressOptions {
   /** Kabul edilen en küçük kenar (px). Avatar/arma gibi küçük görseller için düşürülebilir. */
   minWidth?: number;
+  /**
+   * Hedef en/boy oranı (genişlik/yükseklik). Verilirse görsel bu orana kırpılır
+   * — vitrindeki tüm görseller tek tip olur, oyuncu kartları ve galeri header'ı
+   * hiçbir cihazda taşmaz/boşluk bırakmaz.
+   */
+  aspectRatio?: number;
+  /**
+   * Kırpma odak noktası (0..1). Verilmezse merkez (0.5, 0.5). Elle kırpma
+   * aracı bu değeri geçirir — kullanıcı fotoğrafın hangi bandının kalacağını seçer.
+   */
+  focus?: { x: number; y: number };
 }
 
 /**
@@ -67,11 +83,29 @@ export async function compressImageForUpload(file: File, options: CompressOption
     throw new ImageValidationError(`Fotoğraf çok küçük (en az ${minWidth}px kenar önerilir). Daha yüksek çözünürlüklü bir fotoğraf seçin.`);
   }
 
-  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
-  const targetW = Math.round(width * scale);
-  const targetH = Math.round(height * scale);
+  // Tek tip oran istenmişse: kaynaktan kırpma dikdörtgeni hesapla (odak noktalı).
+  const ratio = options.aspectRatio;
+  const fx = Math.min(1, Math.max(0, options.focus?.x ?? 0.5));
+  const fy = Math.min(1, Math.max(0, options.focus?.y ?? 0.5));
+  let srcX = 0, srcY = 0, srcW = width, srcH = height;
+  if (ratio && ratio > 0) {
+    const current = width / height;
+    const tolerance = 0.01;
+    if (current > ratio * (1 + tolerance)) {
+      srcW = Math.round(height * ratio);
+      srcX = Math.round((width - srcW) * fx);
+    } else if (current < ratio * (1 - tolerance)) {
+      srcH = Math.round(width / ratio);
+      srcY = Math.round((height - srcH) * fy);
+    }
+  }
 
-  const alreadySmallJpeg = scale === 1 && file.type === 'image/jpeg' && file.size < 600 * 1024;
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(srcW, srcH));
+  const targetW = Math.round(srcW * scale);
+  const targetH = Math.round(srcH * scale);
+
+  const cropNeeded = srcX !== 0 || srcY !== 0 || srcW !== width || srcH !== height;
+  const alreadySmallJpeg = !cropNeeded && scale === 1 && file.type === 'image/jpeg' && file.size < 600 * 1024;
   if (alreadySmallJpeg) return file;
 
   const canvas = document.createElement('canvas');
@@ -79,7 +113,7 @@ export async function compressImageForUpload(file: File, options: CompressOption
   canvas.height = targetH;
   const ctx = canvas.getContext('2d');
   if (!ctx) return file;
-  ctx.drawImage(bitmap as CanvasImageSource, 0, 0, targetW, targetH);
+  ctx.drawImage(bitmap as CanvasImageSource, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH);
   if ('close' in bitmap && typeof bitmap.close === 'function') bitmap.close();
 
   const blob = await new Promise<Blob | null>((resolve) =>

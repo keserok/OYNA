@@ -105,6 +105,8 @@ export type PitchShowcaseFlags = Partial<{
   is_featured: boolean;
   flash_deals_enabled: boolean;
   show_availability_badge: boolean;
+  /** Admin: online (oyuncu) rezervasyonu tesis bazında kapatır; sunucu BOOKING_DISABLED ile reddeder. */
+  booking_disabled_by_admin: boolean;
 }>;
 
 export async function setPitchShowcaseFlags(pitchId: string, flags: PitchShowcaseFlags): Promise<void> {

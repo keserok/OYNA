@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Banknote, Plus, Save, Star, Trash2, X } from 'lucide-react';
 import {
   deleteBankAccount,
@@ -6,6 +6,8 @@ import {
   toTurkishError,
   upsertBankAccount,
 } from '../../services/pitchOwnerService';
+import { validateTrIban, normalizeIban } from '../../utils/iban';
+import { useConfirmSheet } from './components/useConfirmSheet';
 import type { PitchBankAccount } from '../../types';
 
 interface OwnerBankAccountsModalProps {
@@ -21,6 +23,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
   onUpdated,
   readOnly = false,
 }) => {
+  const { confirm, confirmElement } = useConfirmSheet();
   const [accounts, setAccounts] = useState<PitchBankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,6 +37,11 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
 
   const canUseDb = !!pitchId && !pitchId.startsWith('mock-');
 
+  // FAZ3: onUpdated'ı ref'te tut — inline callback prop'u `load`ı her render değiştirip
+  // useEffect([load]) üzerinden SONSUZ refetch tetikliyordu.
+  const onUpdatedRef = useRef(onUpdated);
+  useEffect(() => { onUpdatedRef.current = onUpdated; }, [onUpdated]);
+
   const load = useCallback(async () => {
     if (!canUseDb) {
       setAccounts([]);
@@ -44,13 +52,13 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
     try {
       const rows = await getBankAccounts(pitchId);
       setAccounts(rows);
-      onUpdated?.(rows);
+      onUpdatedRef.current?.(rows);
     } catch (err) {
       setError(toTurkishError(err));
     } finally {
       setIsLoading(false);
     }
-  }, [pitchId, canUseDb, onUpdated]);
+  }, [pitchId, canUseDb]);
 
   useEffect(() => {
     load();
@@ -62,13 +70,18 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
       setError('Banka adı, hesap sahibi ve IBAN zorunludur.');
       return;
     }
+    const ibanCheck = validateTrIban(form.iban);
+    if (!ibanCheck.valid) {
+      setError(ibanCheck.reason ?? 'Geçerli bir TR IBAN girin.');
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
       await upsertBankAccount(pitchId, {
         bank_name: form.bank_name,
         account_holder: form.account_holder,
-        iban: form.iban,
+        iban: normalizeIban(form.iban),
         is_primary: form.is_primary || accounts.length === 0,
       });
       setForm({ bank_name: '', account_holder: '', iban: '', is_primary: false });
@@ -82,7 +95,13 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
 
   const handleDelete = async (id: string) => {
     if (readOnly) return;
-    if (!confirm('Bu banka hesabını silmek istiyor musunuz?')) return;
+    const ok = await confirm({
+      title: 'Banka hesabını sil?',
+      message: 'Bu banka hesabı kaldırılacak. Bekleyen ödemeler etkilenmez.',
+      confirmLabel: 'Sil',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await deleteBankAccount(id);
       await load();
@@ -218,6 +237,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
           </div>
         )}
       </div>
+      {confirmElement}
     </div>
   );
 };

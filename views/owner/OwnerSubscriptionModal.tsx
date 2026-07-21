@@ -35,7 +35,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
   const [durationMonths, setDurationMonths] = useState<number>(3);
   const [price, setPrice] = useState(() => {
     const hour = parseInt((timeSlots[18] ?? '18.00').split('.')[0], 10);
-    return resolveHourlyPrice(hour, pricingPolicy);
+    return resolveHourlyPrice(hour, pricingPolicy, defaultCourtId ?? activeCourts[0]?.id ?? null) ?? 0;
   });
   const [notes, setNotes] = useState('');
   const [autoRenew, setAutoRenew] = useState(true);
@@ -45,7 +45,14 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
   const handleTimeChange = (t: string) => {
     setTimeSlot(t);
     const hour = parseInt(t.split('.')[0], 10);
-    setPrice(resolveHourlyPrice(hour, pricingPolicy));
+    setPrice(resolveHourlyPrice(hour, pricingPolicy, courtId || null) ?? 0);
+  };
+
+  // Saha değişince tarife saha-özel olabilir; fiyatı güncel tut.
+  const handleCourtChange = (nextCourtId: string) => {
+    setCourtId(nextCourtId);
+    const hour = parseInt(timeSlot.split('.')[0], 10);
+    setPrice(resolveHourlyPrice(hour, pricingPolicy, nextCourtId || null) ?? 0);
   };
 
   const handleSubmit = async () => {
@@ -130,7 +137,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
             <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
               <select
                 value={courtId}
-                onChange={(e) => setCourtId(e.target.value)}
+                onChange={(e) => handleCourtChange(e.target.value)}
                 className="bg-transparent w-full outline-none text-white font-bold appearance-none"
               >
                 {activeCourts.map((c) => (

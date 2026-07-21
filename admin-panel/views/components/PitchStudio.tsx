@@ -13,7 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import {
   X, MapPin, Building2, Clock, LayoutGrid, Wallet, Image as ImageIcon,
   Sparkles, Check, Eye, Star, Lock, Loader2, Plus, Trash2, ShieldCheck, Percent,
-  CalendarClock, ChevronLeft, ChevronRight, RefreshCcw, Coins, AlertTriangle,
+  CalendarClock, CalendarCheck, ChevronLeft, ChevronRight, RefreshCcw, Coins, AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { getFacilitySchedule, type FacilitySchedule } from '../../../services/facilitySchedule';
@@ -161,6 +161,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [isFeatured, setIsFeatured] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [availabilityBadge, setAvailabilityBadge] = useState(false);
+  const [bookingDisabledAdmin, setBookingDisabledAdmin] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>('approved');
   const [showPreview, setShowPreview] = useState(false);
   const [scoreRefresh, setScoreRefresh] = useState(0);
@@ -172,7 +173,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     void (async () => {
       const { data, error } = await supabase
         .from('pitches')
-        .select('name, map_label, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, is_active, verification_status, price_per_match, owner_id')
+        .select('name, map_label, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, booking_disabled_by_admin, is_active, verification_status, price_per_match, owner_id')
         .eq('id', pitchId)
         .single();
       if (!alive) return;
@@ -201,6 +202,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       setIsFeatured(data.is_featured === true);
       setFlashEnabled((data as { flash_deals_enabled?: boolean | null }).flash_deals_enabled === true);
       setAvailabilityBadge((data as { show_availability_badge?: boolean | null }).show_availability_badge === true);
+      setBookingDisabledAdmin((data as { booking_disabled_by_admin?: boolean | null }).booking_disabled_by_admin === true);
       setIsActive(data.is_active !== false);
       setVerificationStatus((data.verification_status as typeof verificationStatus) ?? 'approved');
       setPricePerMatch(Number(data.price_per_match ?? 0));
@@ -1052,6 +1054,22 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                         className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${availabilityBadge ? 'bg-[#39FF14]' : 'bg-gray-700'}`}
                       >
                         <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${availabilityBadge ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+                    <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><CalendarCheck size={14} className="text-[#39FF14]" /> Online Rezervasyon</p>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[200px]">
+                          Kapalıyken oyuncular bu tesise uygulamadan rezervasyon YAPAMAZ (sunucu reddeder);
+                          tesisin kendi manuel kayıtları etkilenmez.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleShowcaseFlag('booking_disabled_by_admin', bookingDisabledAdmin, setBookingDisabledAdmin, ['Online rezervasyon KAPATILDI.', 'Online rezervasyon açıldı.'])}
+                        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${!bookingDisabledAdmin ? 'bg-green-500' : 'bg-red-500/80'}`}
+                      >
+                        <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${!bookingDisabledAdmin ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
                   </div>

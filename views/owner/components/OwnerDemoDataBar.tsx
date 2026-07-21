@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FlaskConical, Trash2 } from 'lucide-react';
+import { useConfirmSheet } from './useConfirmSheet';
 import {
   seedOwnerScreenDemo,
   purgeOwnerScreenDemo,
@@ -17,12 +18,13 @@ export const OwnerDemoDataBar: React.FC<{
   hasDemo?: boolean;
 }> = ({ pitchId, onChanged, hasDemo }) => {
   const notify = useOwnerToast();
+  const { confirm, confirmElement } = useConfirmSheet();
   const [busy, setBusy] = useState<null | 'seed' | 'purge'>(null);
   const canUse = !!pitchId && !pitchId.startsWith('mock-');
   if (!canUse) return null;
 
   const run = async (kind: 'seed' | 'purge') => {
-    if (kind === 'purge' && !window.confirm('Tüm demo veriler silinsin mi?')) return;
+    if (kind === 'purge' && !(await confirm({ title: 'Demo verileri sil?', message: 'Bu tesise ait tüm demo veriler temizlenecek.', confirmLabel: 'Sil', destructive: true }))) return;
     setBusy(kind);
     try {
       if (kind === 'seed') {
@@ -65,6 +67,7 @@ export const OwnerDemoDataBar: React.FC<{
           </button>
         )}
       </div>
+      {confirmElement}
     </div>
   );
 };

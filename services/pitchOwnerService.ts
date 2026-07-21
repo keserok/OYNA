@@ -470,16 +470,9 @@ export async function getAvailabilityExceptions(
 
 export async function saveTariffs(pitchId: string, tariffs: TariffInput[]): Promise<void> {
   try {
-    const { error: delError } = await supabase
-      .from('pitch_tariffs')
-      .delete()
-      .eq('pitch_id', pitchId);
-    if (delError) throw delError;
-
-    if (tariffs.length === 0) return;
-
+    // Atomik değişim (owner_replace_tariffs RPC): DELETE+INSERT tek transaction.
+    // Eski ayrı delete+insert, insert patlarsa TÜM tarifeleri silebiliyordu.
     const rows = tariffs.map((t, idx) => ({
-      pitch_id: pitchId,
       name: t.name,
       tariff_type: t.tariff_type,
       applies_to_days: t.applies_to_days,
@@ -491,9 +484,11 @@ export async function saveTariffs(pitchId: string, tariffs: TariffInput[]): Prom
       is_active: t.is_active ?? true,
       court_id: t.court_id ?? null,
     }));
-
-    const { error: insError } = await supabase.from('pitch_tariffs').insert(rows);
-    if (insError) throw insError;
+    const { error } = await supabase.rpc('owner_replace_tariffs', {
+      p_pitch_id: pitchId,
+      p_tariffs: rows,
+    });
+    if (error) throw error;
   } catch (error) {
     console.error('saveTariffs:', error);
     throw new Error(toTurkishError(error));
@@ -888,6 +883,20 @@ export async function requestWithdrawal(
   }
 }
 
+/** Çekim durumu (Faz 9): admin anahtarı açık mı + minimum tutar. */
+export async function getCashoutStatus(): Promise<{ enabled: boolean; min: number }> {
+  try {
+    const { data, error } = await supabase.rpc('get_cashout_status');
+    if (error) throw error;
+    const d = (data ?? {}) as { enabled?: boolean; min?: number };
+    return { enabled: d.enabled === true, min: Number(d.min ?? 100) };
+  } catch (error) {
+    console.error('getCashoutStatus:', error);
+    // Güvenli varsayılan: kapalı (owner yanlışlıkla açık sanmasın).
+    return { enabled: false, min: 100 };
+  }
+}
+
 /**
  * Saha sahibinin çekilebilir bakiyesini Faz 2 cüzdanından (get_wallet_summary) okur.
  * Bakiye KULLANICI bazlıdır (tüm tesislerin kazancı tek cüzdanda toplanır); pitchId
@@ -1194,6 +1203,7 @@ export interface CourtInput {
   capacity?: number | null;
   images?: string[] | null;
   description?: string | null;
+  features?: string[] | null;
   lighting_grade?: string | null;
   grass_grade?: string | null;
   locker_grade?: string | null;
@@ -1213,6 +1223,7 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       capacity: court.capacity ?? 14,
       images: court.images ?? [],
       description: court.description ?? null,
+      features: court.features ?? [],
       lighting_grade: court.lighting_grade ?? null,
       grass_grade: court.grass_grade ?? null,
       locker_grade: court.locker_grade ?? null,
@@ -1506,6 +1517,64 @@ export async function deleteCourt(courtId: string): Promise<void> {
   } catch (error) {
     console.error('deleteCourt:', error);
     throw new Error(toTurkishError(error));
+  }
+}
+
+/** Soft-delete edilmiş (pasif) sahalar — "Geri Aç" için (Karar #5). */
+export async function getInactiveCourts(pitchId: string): Promise<PitchCourt[]> {
+  try {
+    const { data, error } = await supabase
+      .from('courts')
+      .select('*')
+      .eq('pitch_id', pitchId)
+      .eq('is_active', false)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchCourt[];
+  } catch (error) {
+    console.error('getInactiveCourts:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Pasif sahayı yeniden aktifleştirir (yanlış silmeyi telafi). */
+export async function reactivateCourt(courtId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('courts')
+      .update({ is_active: true })
+      .eq('id', courtId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('reactivateCourt:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Aylık takvim yoğunluk noktaları: gün → iptal-olmayan rezervasyon sayısı (Faz 5). */
+export async function getMonthlyBookingDensity(
+  pitchId: string,
+  startISO: string,
+  endISO: string,
+): Promise<Record<string, number>> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_bookings')
+      .select('booking_date')
+      .eq('pitch_id', pitchId)
+      .neq('status', 'CANCELLED')
+      .gte('booking_date', startISO)
+      .lte('booking_date', endISO);
+    if (error) throw error;
+    const counts: Record<string, number> = {};
+    (data ?? []).forEach((r) => {
+      const d = String((r as { booking_date: string }).booking_date);
+      counts[d] = (counts[d] ?? 0) + 1;
+    });
+    return counts;
+  } catch (error) {
+    console.error('getMonthlyBookingDensity:', error);
+    return {};
   }
 }
 
@@ -1839,6 +1908,59 @@ export interface OwnerScoreMatch {
   status: string;
   courtName: string;
   hasScore: boolean;
+  homeScore?: number | null;
+  awayScore?: number | null;
+}
+
+/**
+ * Tesiste kiralanan TÜM maçlar (kaynağa bakılmaksızın match_id bağlı her
+ * rezervasyon). Tesis-bazlı sorgu: sahibin yanı sıra MÜDÜR de görebilir
+ * (pitch_bookings RLS'i can_staff_pitch ile personele okuma verir).
+ */
+export async function getPitchScoreMatches(pitchId: string): Promise<OwnerScoreMatch[]> {
+  try {
+    // Maçlar tesise matches.pitch_id ile bağlı (rezervasyona değil).
+    const { data, error } = await supabase
+      .from('matches')
+      .select('id, title, status, date, time, starts_at, court_id, "homeScore", "awayScore"')
+      .eq('pitch_id', pitchId)
+      .neq('status', 'CANCELLED')
+      .order('created_at', { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    const rows = (data ?? []) as Record<string, unknown>[];
+    // Saha adlarını tek sorguda çöz (matches.court_id → courts.name).
+    const courtIds = Array.from(
+      new Set(rows.map((r) => r.court_id).filter((v): v is string => typeof v === 'string')),
+    );
+    const courtNames = new Map<string, string>();
+    if (courtIds.length) {
+      const { data: courts } = await supabase.from('courts').select('id, name').in('id', courtIds);
+      (courts ?? []).forEach((c: { id: string; name: string }) => courtNames.set(c.id, c.name));
+    }
+    return rows.map((m) => {
+      const homeScore = (m.homeScore as number | null | undefined) ?? null;
+      const awayScore = (m.awayScore as number | null | undefined) ?? null;
+      const startsAt = m.starts_at ? new Date(String(m.starts_at)) : null;
+      const when = startsAt
+        ? startsAt.toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : `${String(m.date ?? '')} ${String(m.time ?? '')}`.trim();
+      const courtId = typeof m.court_id === 'string' ? m.court_id : null;
+      return {
+        matchId: String(m.id),
+        title: String((m.title as string) ?? 'Oyuncu Maçı'),
+        when,
+        status: String((m.status as string) ?? 'ACTIVE'),
+        courtName: courtId ? (courtNames.get(courtId) ?? 'Saha') : 'Tesis geneli',
+        hasScore: homeScore != null && awayScore != null,
+        homeScore,
+        awayScore,
+      };
+    });
+  } catch (error) {
+    console.error('getPitchScoreMatches:', error);
+    throw new Error(toTurkishError(error));
+  }
 }
 
 /**

@@ -297,6 +297,7 @@ export interface MatchListing {
   title: string;
   location: string;
   pitchName?: string; // Saha adı etiketi (servis panelleri için)
+  courtName?: string; // Maçın oynandığı saha (court) adı — "Tesis · Saha"
   time: string;
   date: string;
   price: number;
@@ -367,6 +368,12 @@ export interface Court {
   type: 'OPEN' | 'CLOSED';
   /** Zemin tipi: 'TURF' | 'GRASS' | 'PARQUET' | 'TARTAN' */
   surface?: string;
+  /** Saha ölçüsü, ör. "30x50" (metre) */
+  size?: string;
+  /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) */
+  capacity?: number;
+  /** Tesis içi sıralama (owner panelindeki sıra ile aynı) */
+  sortOrder?: number;
   price: number;
   slots: { time: string; status: 'available' | 'booked' | 'selected' }[];
   description?: string;
@@ -440,6 +447,8 @@ export interface Pitch {
   isFeatured?: boolean;
   /** Admin kontrollü: harita pininde fiyat yerine gösterilecek kısa isim (boşsa tam ad) */
   mapLabel?: string;
+  /** Admin panelden tesis bazlı online rezervasyon kapatma (sunucu: BOOKING_DISABLED). */
+  bookingDisabledByAdmin?: boolean;
   /** Admin kontrollü: "Bugün X saat müsait" rozeti gösterilsin mi */
   showAvailabilityBadge?: boolean;
   /** Bugün için müsait saat sayısı (liste rozetinde, tek toplu sorgudan) */
@@ -928,6 +937,8 @@ export interface PitchCourt {
   capacity?: number | null;
   images?: string[] | null;
   description?: string | null;
+  /** Saha bazlı özellik anahtarları (heating, tribune, camera...) */
+  features?: string[] | null;
   is_active: boolean;
   lighting_grade?: string | null;
   grass_grade?: string | null;

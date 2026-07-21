@@ -19,8 +19,6 @@ import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
 import { OwnerFlashDealModal } from './owner/OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from './owner/OwnerCloseSlotModal';
 import { OwnerBookingDetailModal } from './owner/OwnerBookingDetailModal';
-import { OwnerFacilityScheduleView } from './owner/OwnerFacilityScheduleView';
-import { OwnerFacilityWeekView } from './owner/OwnerFacilityWeekView';
 import { OwnerSpecialPriceModal } from './owner/OwnerSpecialPriceModal';
 import { useOwnerEntitlements } from '../hooks/useOwnerEntitlements';
 import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerToast';
@@ -36,10 +34,13 @@ import {
   OwnerWorkingHoursModal,
   OwnerPricingPolicyModal,
   OwnerCancellationPolicyModal,
-  OwnerPaymentSettingsModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
   OwnerOperationsSettingsModal,
+  OwnerMatchesModal,
+  OwnerNotificationsModal,
+  // NOT: OwnerPaymentSettingsModal (PayTR/Param) şu an bağlı değil — ödeme
+  // sağlayıcı entegrasyonu canlıya alınınca menüye eklenecek.
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerLogoutModal,
@@ -50,7 +51,6 @@ import {
   findFlashDealForSlot,
   isSlotClosed,
   localDateISO,
-  resolveHourlyPrice,
 } from './owner/ownerCalendarHelpers';
 import { getOrCreateOwnerAccount, planTierLabel, accountStatusLabel } from '../services/ownerAccountService';
 import type { OwnerAccount } from '../types';
@@ -100,7 +100,9 @@ interface OwnerPanelProps {
 
 import { FinancialCalendarView } from './owner/calendar/FinancialCalendarView';
 import { MatchCountdownItem, PitchOccupancyGrid } from './owner/home/OwnerHomeWidgets';
+import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
 import { PendingActionsView } from './owner/PendingActionsView';
+import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
 import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './owner/ownerPanelShared';
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
@@ -131,9 +133,12 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [isAdminPreview, setIsAdminPreview] = useState(false);
 
   const [pendingRequests, setPendingRequests] = useState<any[]>(INITIAL_PENDING_REQUESTS);
+  // FAZ1: işlenmekte olan talep id'leri — çift-onay/çift-ret koruması + buton kilidi.
+  const [processingRequestIds, setProcessingRequestIds] = useState<Set<string>>(new Set());
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showOccupancyModal, setShowOccupancyModal] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editProfileTab, setEditProfileTab] = useState<'general' | 'amenities' | 'location' | 'showcase'>('general');
   const [showWorkingHours, setShowWorkingHours] = useState(false);
   const [showBankAccountList, setShowBankAccountList] = useState(false);
   const [showWithdrawals, setShowWithdrawals] = useState(false);
@@ -178,12 +183,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   };
   const [showPricingPolicy, setShowPricingPolicy] = useState(false);
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
-  const [showPaymentSettings, setShowPaymentSettings] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-      const saved = localStorage.getItem('owner_notificationsEnabled');
-      return saved ? JSON.parse(saved) : true;
-  });
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
       const saved = localStorage.getItem('owner_activeWidgets');
       return saved ? JSON.parse(saved) : [
@@ -195,6 +195,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   });
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [showOperations, setShowOperations] = useState(false);
+  const [showMatches, setShowMatches] = useState(false);
+  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [menuBalance, setMenuBalance] = useState<number | undefined>(undefined);
@@ -262,11 +264,16 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       images: pitch.images?.length ? pitch.images : pitch.image ? [pitch.image] : [],
       amenities: Array.isArray(pitch.amenities) ? pitch.amenities : [],
       isFacilityOpen: pitch.is_open ?? true,
+      latitude: (pitch as { latitude?: number | null }).latitude ?? null,
+      longitude: (pitch as { longitude?: number | null }).longitude ?? null,
       pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
         startTime: String(t.start_time ?? '08:00'),
         endTime: String(t.end_time ?? '17:00'),
         price: Number(t.price_per_hour ?? 0),
         price_per_hour: Number(t.price_per_hour ?? 0),
+        court_id: t.court_id ?? null,
+        applies_to_days: t.applies_to_days ?? null,
+        tariff_type: t.tariff_type ?? undefined,
       })),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
@@ -540,20 +547,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   ], [dynamicTotalRevenue, dynamicOccupancyRatio, pendingCount, confirmedToday]);
 
   useEffect(() => {
-      localStorage.setItem('owner_notificationsEnabled', JSON.stringify(notificationsEnabled));
-  }, [notificationsEnabled]);
-
-  useEffect(() => {
       localStorage.setItem('owner_activeWidgets', JSON.stringify(activeWidgets));
   }, [activeWidgets]);
-
-  useEffect(() => {
-      if (facilityData?.id && !facilityData.id.startsWith('mock-')) return;
-      localStorage.setItem('owner_facilityData', JSON.stringify({
-          ...facilityData,
-          isFacilityOpen
-      }));
-  }, [facilityData, isFacilityOpen]);
 
   const toggleFacilityStatus = async () => {
     if (!effGuardWrite()) return;
@@ -638,6 +633,27 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     ],
   );
 
+  // Kurulum Sihirbazı adımları (Faz 7): eksik olan her adım tek dokunuşla açılır.
+  const setupSteps = useMemo((): SetupStep[] => {
+    const fd = facilityData;
+    const openProfile = (tab: 'general' | 'location') => {
+      if (managerGuard()) { setEditProfileTab(tab); setShowEditProfile(true); }
+    };
+    return [
+      { key: 'court', label: 'Saha ekle', hint: 'En az bir saha tanımla', done: menuStats.courtCount > 0,
+        onFix: () => { if (managerGuard()) setActiveTab('PITCHES'); } },
+      { key: 'location', label: 'Konumu işaretle', hint: 'Haritada pin — vitrin için şart', done: fd?.latitude != null && fd?.longitude != null,
+        onFix: () => openProfile('location') },
+      { key: 'photo', label: 'Fotoğraf yükle', hint: 'Tesis ve saha görselleri', done: (fd?.images?.length ?? 0) > 0,
+        onFix: () => openProfile('general') },
+      { key: 'tariff', label: 'Fiyat tarifesi', hint: 'Saat/gün bazlı ücret', done: menuStats.tariffCount > 0,
+        onFix: () => { if (managerGuard()) setShowPricingPolicy(true); } },
+      { key: 'hours', label: 'Çalışma saatleri', hint: 'Açık/kapalı saatler', done: (fd?.workingHours?.length ?? 0) > 0,
+        onFix: () => { if (managerGuard()) setShowWorkingHours(true); } },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facilityData, menuStats.courtCount, menuStats.tariffCount]);
+
   const toggleAutoApprove = async () => {
     if (!effGuardWrite()) return;
     const next = !autoApprove;
@@ -653,26 +669,34 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
       if (!effGuardWrite()) return;
+      // FAZ1: aynı talep zaten işleniyorsa ikinci dokunuşu yok say (çift onay/ret = para kaybı).
+      if (processingRequestIds.has(id)) return;
+      setProcessingRequestIds((prev) => { const n = new Set(prev); n.add(id); return n; });
+      // İyimser: talebi hemen işaretle (liste yenilenince sunucu gerçeğiyle değişir).
       setPendingRequests((prev: any[]) => prev.map(req =>
           req.id === id ? { ...req, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' } : req
       ));
-      if (!realPitchId) return;
       try {
-          if (action === 'APPROVE') {
-              await approveBooking(id);
-          } else {
-              await rejectBooking(id, 'Tesis sahibi tarafından reddedildi.');
+          if (realPitchId) {
+              if (action === 'APPROVE') {
+                  await approveBooking(id);
+              } else {
+                  await rejectBooking(id, 'Tesis sahibi tarafından reddedildi.');
+              }
+              await refreshDashboard(realPitchId, autoApproveMinutes);
           }
-          await refreshDashboard(realPitchId, autoApproveMinutes);
       } catch (err) {
           notify(toTurkishError(err), 'error');
+          // İyimser değişikliği geri al: sunucu gerçeğini yeniden çek.
           if (realPitchId) await refreshDashboard(realPitchId, autoApproveMinutes);
+      } finally {
+          setProcessingRequestIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
       }
   };
 
   if (needsOnboarding && !isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
         <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
@@ -690,14 +714,14 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    <div className="min-h-dvh flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className="px-6 py-4 pt-safe bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30">
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
-                  <button onClick={() => onBack()} className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors">
+                  <button onClick={() => onBack()} aria-label="Geri" className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors active:scale-95">
                       <ArrowLeft size={20} />
                   </button>
                   <div className="flex flex-col relative">
@@ -739,7 +763,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   <OutboxBadge />
                   <button
                     onClick={() => setIsNotificationsOpen(true)}
-                    className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 relative"
+                    aria-label={pendingCount > 0 ? `Bildirimler (${pendingCount} bekleyen)` : 'Bildirimler'}
+                    className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 relative active:scale-95 transition-transform"
                   >
                       <Bell size={20} />
                       {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
@@ -750,7 +775,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
-          <header className="px-6 py-4 bg-[#1A1F2C] border-b border-white/5 flex items-center sticky top-0 z-30">
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex items-center sticky top-0 z-30`}>
               <h1 className="text-lg font-black text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
@@ -765,6 +790,11 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                 onPendingClick={pendingCount > 0 ? () => setActiveTab('PENDING_ACTIONS') : undefined}
                 onCalendarClick={() => setActiveTab('CALENDAR')}
               />
+
+              {/* Kurulum Sihirbazı — yalnız gerçek tesiste ve eksik adım varken (Faz 7) */}
+              {!isDemoMode && !isAdminPreview && realPitchId && (
+                <OwnerSetupProgress steps={setupSteps} />
+              )}
 
               {activeWidgets.includes('QUICK_STATS') && (
                   <OwnerKpiGrid items={homeKpis} />
@@ -798,9 +828,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
               {activeWidgets.includes('OCCUPANCY_ANALYSIS') && (
                   <div className="bg-[#161B22] border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
-                    <h3 className="font-bold text-white text-base flex items-center gap-2 mb-6">
-                        <BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi
-                    </h3>
+                    <button
+                      onClick={() => setActiveTab('CALENDAR')}
+                      className="w-full font-bold text-white text-base flex items-center justify-between mb-6 group"
+                    >
+                        <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
+                        <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
+                    </button>
                     <PitchOccupancyGrid data={hourlyOccupancy} courtNames={courts.map(c => c.name)} />
                   </div>
               )}
@@ -813,9 +847,10 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       {pendingCount > 0 ? (
                           <div className="space-y-4">
                               {pendingRequests.filter((r: any) => r.status === 'PENDING').slice(0, 3).map((req: any) => (
-                                  <MatchCountdownItem 
+                                  <MatchCountdownItem
                                       key={req.id}
                                       request={req}
+                                      isProcessing={processingRequestIds.has(req.id)}
                                       onApprove={() => handleProcessRequest(req.id, 'APPROVE')}
                                       onReject={() => handleProcessRequest(req.id, 'REJECT')}
                                   />
@@ -855,6 +890,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   endTime: String(t.end_time ?? '17:00'),
                   price: Number(t.price_per_hour ?? 0),
                   price_per_hour: Number(t.price_per_hour ?? 0),
+                  court_id: t.court_id ?? null,
+                  applies_to_days: t.applies_to_days ?? null,
+                  tariff_type: t.tariff_type ?? undefined,
                 })),
               }));
             }
@@ -891,12 +929,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         />
       )}
       {activeTab === 'PENDING_ACTIONS' && (
-          <PendingActionsView 
+          <PendingActionsView
               pendingRequests={pendingRequests}
               realPitchId={realPitchId}
               autoApprove={autoApprove}
               onToggleAutoApprove={toggleAutoApprove}
-              onApprove={(id) => handleProcessRequest(id, 'APPROVE')} 
+              processingIds={processingRequestIds}
+              onApprove={(id) => handleProcessRequest(id, 'APPROVE')}
               onReject={(id) => handleProcessRequest(id, 'REJECT')}
               onBack={() => setActiveTab('HOME')}
           />
@@ -919,6 +958,10 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onOperations={() => {
             if (managerGuard()) setShowOperations(true);
           }}
+          onMatches={() => {
+            if (managerGuard()) setShowMatches(true);
+          }}
+          onTeam={() => { if (managerGuard()) setActiveTab('TEAM'); }}
           onBankAccounts={() => {
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
@@ -933,8 +976,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onSecurity={() => setShowSecurity(true)}
           onSupport={() => setShowSupport(true)}
           onLogout={() => setShowLogoutConfirm(true)}
-          notificationsEnabled={notificationsEnabled}
-          onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
+          onNotifications={() => setShowNotifPrefs(true)}
           onWidgetSettings={() => setShowWidgetSettings(true)}
           onPitches={() => {
             if (managerGuard()) setActiveTab('PITCHES');
@@ -952,6 +994,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onClose={() => setShowEditProfile(false)}
           facilityId={facilityData?.id}
           initialData={facilityData}
+          initialTab={editProfileTab}
           onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
           onOpenCourts={() => {
             setShowEditProfile(false);
@@ -975,6 +1018,17 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onToggleOpen={toggleFacilityStatus}
           initialHours={facilityData?.workingHours}
           onSave={(hours) => setFacilityData((prev: any) => ({ ...prev, workingHours: hours }))}
+        />
+      )}
+      {showNotifPrefs && (
+        <OwnerNotificationsModal onClose={() => setShowNotifPrefs(false)} />
+      )}
+      {showMatches && (
+        <OwnerMatchesModal
+          pitchId={realPitchId ?? facilityData?.id ?? ''}
+          /* Karar #26: skor girişi yalnız SAHİP + MÜDÜR; PERSONEL salt-okunur. */
+          readOnly={effReadOnly || !isManagerLevel}
+          onClose={() => setShowMatches(false)}
         />
       )}
       {showOperations && (
@@ -1008,6 +1062,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         <OwnerPricingPolicyModal
           onClose={() => setShowPricingPolicy(false)}
           facilityId={facilityData?.id}
+          courts={courts}
+          readOnly={effReadOnly}
           onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
         />
       )}
@@ -1031,57 +1087,53 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         <OwnerLogoutModal onClose={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); setStaffPanelContext(null); (onLogout ?? onBack)(); }} />
       )}
 
-      {showRevenueModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-[40px] border border-white/10 p-8 animate-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-2xl font-black text-white italic tracking-tight">CİRO DETAYLARI</h3>
-                      <button onClick={() => setShowRevenueModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+      {/* FAZ2: ortada kırpılan dialog → klavye-farkında, kaydırılabilir, güvenli-alanlı bottom-sheet.
+          Çok kortlu tesiste liste artık taşmıyor; backdrop/Esc ile kapanıyor. */}
+      <OwnerBottomSheet
+          open={showRevenueModal}
+          onClose={() => setShowRevenueModal(false)}
+          title="Ciro Detayları"
+          subtitle="Bugünkü saha bazlı tahsilat"
+      >
+          <div className="space-y-3">
+              {courtStats.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
+              ) : courtStats.map((item) => (
+                  <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+                      <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
+                      <span className="text-lg font-black text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
                   </div>
-                  <div className="space-y-4">
-                      {courtStats.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
-                      ) : courtStats.map((item) => (
-                          <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
-                              <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
-                              <span className="text-lg font-black text-emerald-400">{item.collected.toLocaleString('tr-TR')}₺</span>
-                          </div>
-                      ))}
-                      <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                          <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
-                          <span className="text-2xl font-black text-emerald-500">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
-                      </div>
-                  </div>
+              ))}
+              <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                  <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
+                  <span className="text-2xl font-black text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
               </div>
           </div>
-      )}
+      </OwnerBottomSheet>
 
-      {showOccupancyModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-[40px] border border-white/10 p-8 animate-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-2xl font-black text-white italic tracking-tight">DOLULUK DETAYI</h3>
-                      <button onClick={() => setShowOccupancyModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+      <OwnerBottomSheet
+          open={showOccupancyModal}
+          onClose={() => setShowOccupancyModal(false)}
+          title="Doluluk Detayı"
+          subtitle="Bugünkü saha bazlı doluluk"
+      >
+          <div className="space-y-6">
+              {courtStats.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
+              ) : courtStats.map((item) => (
+                  <div key={item.courtId} className="space-y-2">
+                      <div className="flex justify-between items-end">
+                          <span className="text-sm font-bold text-white">{item.courtName}</span>
+                          <span className={`text-sm font-black tabular-nums ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
+                      </div>
+                      <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
+                      </div>
+                      <p className="text-[0.6875rem] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
                   </div>
-                  <div className="space-y-6">
-                      {courtStats.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
-                      ) : courtStats.map((item) => (
-                          <div key={item.courtId} className="space-y-2">
-                              <div className="flex justify-between items-end">
-                                  <span className="text-sm font-bold text-white">{item.courtName}</span>
-                                  <span className={`text-sm font-black ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
-                              </div>
-                              <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
-                              </div>
-                              <p className="text-[10px] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
-                          </div>
-                      ))}
-                  </div>
-              </div>
+              ))}
           </div>
-      )}
+      </OwnerBottomSheet>
 
 
       <OwnerBottomNav
@@ -1089,7 +1141,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         pendingCount={pendingCount}
         financeLocked={false}
         teamLocked={false}
-        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE'] : []}
+        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'PITCHES'] : []}
         onSelect={(tab) => {
           if (tab === 'MORE') setActiveTab('MORE');
           else handleTabSelect(tab);

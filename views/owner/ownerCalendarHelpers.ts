@@ -5,6 +5,25 @@ export interface TariffLike {
   endTime: string;
   price?: number;
   price_per_hour?: number;
+  /** null/undefined = tesis geneli; dolu = yalnız o sahaya özel tarife. */
+  court_id?: string | null;
+  /** ISO gün listesi (1=Pzt … 7=Paz). Verilmezse gün filtresi uygulanmaz. */
+  applies_to_days?: number[] | null;
+  /** HOLIDAY | WEEKEND | WEEKDAY | SPECIAL — öncelik sıralaması için. */
+  tariff_type?: string;
+}
+
+const TARIFF_TYPE_PRIORITY: Record<string, number> = {
+  HOLIDAY: 1,
+  WEEKEND: 2,
+  WEEKDAY: 3,
+  SPECIAL: 4,
+};
+
+/** ISO weekday: 1 = Pazartesi … 7 = Pazar */
+function isoDow(dateISO: string): number {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  return ((new Date(y, m - 1, d).getDay() + 6) % 7) + 1;
 }
 
 export function slotKeyToTime(key: string): string {
@@ -18,23 +37,48 @@ export function normalizeTime(t: string): string {
   return `${h}:${m}`;
 }
 
-export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number {
-  if (pricingPolicy?.length) {
-    const matched = pricingPolicy.find((p) => {
-      // Bozuk/eksik tarife satırı (startTime/endTime yoksa) render'ı ÇÖKERTMEMELİ.
-      if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
-      const startH = parseInt(p.startTime.split(':')[0], 10);
-      let endH = parseInt(p.endTime.split(':')[0], 10);
-      if (Number.isNaN(startH) || Number.isNaN(endH)) return false;
-      if (endH === 0) endH = 24;
-      if (startH <= endH) return hour >= startH && hour < endH;
-      return hour >= startH || hour < endH;
+/**
+ * Saatin fiyatını GERÇEK tarifeden çözer. Eşleşen tarife yoksa null döner —
+ * uydurma varsayılan fiyat (eski 3200/2000 fallback'i) bilinçli olarak yok:
+ * tarifesiz saat arayüzde "Tarife yok" olarak gösterilmelidir.
+ *
+ * Saha-farkında: courtId verilirse saha-özel tarife (court_id = courtId)
+ * tesis-geneline (court_id null) üstün gelir; sunucu get_current_tariff_price
+ * ile aynı öncelik. courtId verilmezse yalnız tesis-geneli satırlar kullanılır.
+ */
+export function resolveHourlyPrice(
+  hour: number,
+  pricingPolicy?: TariffLike[],
+  courtId?: string | null,
+  dateISO?: string | null,
+): number | null {
+  if (!pricingPolicy?.length) return null;
+  const dow = dateISO ? isoDow(dateISO) : null;
+  const inWindow = (p: TariffLike) => {
+    if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
+    const startH = parseInt(p.startTime.split(':')[0], 10);
+    let endH = parseInt(p.endTime.split(':')[0], 10);
+    if (Number.isNaN(startH) || Number.isNaN(endH)) return false;
+    if (endH === 0) endH = 24;
+    if (startH <= endH) return hour >= startH && hour < endH;
+    return hour >= startH || hour < endH;
+  };
+  const isCourt = (p: TariffLike) => p.court_id != null && p.court_id === courtId;
+  const candidates = pricingPolicy
+    .filter((p) => p.court_id == null || (courtId != null && p.court_id === courtId))
+    // Gün filtresi: tarih verildiyse VE tarife gün listesi taşıyorsa uygula
+    // (sunucu get_current_tariff_price ile aynı — hafta içi/sonu ayrımı).
+    .filter((p) => dow == null || !p.applies_to_days || p.applies_to_days.includes(dow))
+    .filter(inWindow)
+    .sort((a, b) => {
+      // 1) saha-özel önce, 2) tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL)
+      const courtRank = (isCourt(a) ? 0 : 1) - (isCourt(b) ? 0 : 1);
+      if (courtRank !== 0) return courtRank;
+      return (TARIFF_TYPE_PRIORITY[a.tariff_type ?? ''] ?? 9) - (TARIFF_TYPE_PRIORITY[b.tariff_type ?? ''] ?? 9);
     });
-    if (matched) return matched.price ?? matched.price_per_hour ?? 2000;
-  }
-  if (hour >= 18 && hour < 23) return 3200;
-  if (hour >= 13 && hour < 16) return 2000;
-  return 2000;
+  const matched = candidates[0];
+  if (!matched) return null;
+  return matched.price ?? matched.price_per_hour ?? null;
 }
 
 export function findFlashDealForSlot(

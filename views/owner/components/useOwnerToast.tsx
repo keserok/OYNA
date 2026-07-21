@@ -56,7 +56,7 @@ export const OwnerToastProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   return (
     <OwnerToastContext.Provider value={value}>
       {children}
-      <div className="fixed top-4 left-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none max-w-lg mx-auto">
+      <div className="fixed left-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none max-w-lg mx-auto" style={{ top: 'calc(var(--safe-top) + 1rem)' }}>
         {toasts.map((t) => {
           const style = variantStyles[t.variant];
           return (

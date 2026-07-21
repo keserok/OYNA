@@ -147,6 +147,12 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
     const { data, error } = await supabase.from('matches').select('*').eq('id', matchId).single();
     if (error) throw error;
     if (!data) return null;
+    // Maçın oynandığı saha adı (varsa) — "Tesis · Saha" etiketi için (Karar #28).
+    let courtName: string | undefined;
+    if (data.court_id) {
+      const { data: court } = await supabase.from('courts').select('name').eq('id', data.court_id).maybeSingle();
+      courtName = (court as { name?: string } | null)?.name ?? undefined;
+    }
     return {
       ...data,
       awaySlots: data.away_slots || data.awaySlots || [],
@@ -160,6 +166,8 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       visibility: data.visibility || 'OPEN',
       privateCode: data.private_code || data.privateCode || undefined,
       pitchId: data.pitch_id || data.pitchId || undefined,
+      courtId: data.court_id || undefined,
+      courtName,
       isSuccessful: data.is_successful ?? data.isSuccessful ?? undefined,
       confirmedAt: data.confirmed_at || data.confirmedAt || undefined,
       startsAt: data.starts_at || data.startsAt || undefined,

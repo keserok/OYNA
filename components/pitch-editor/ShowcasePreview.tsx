@@ -7,6 +7,8 @@ import React, { useEffect, useState } from 'react';
 import { Star, Thermometer, Wind, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { splitAmenities } from '../../shared/amenities';
+import { courtFeatureLabel, normalizeCourtFeatures } from '../../shared/courtFeatures';
+import { surfaceLabel } from '../../shared/courtSurface';
 import { transformedImageUrl } from '../../utils/imageTransform';
 
 interface PreviewData {
@@ -25,14 +27,28 @@ interface PreviewData {
     id: string;
     name: string;
     court_type: string | null;
+    surface: string | null;
+    size: string | null;
+    capacity: number | null;
     price: number | null;
     is_active: boolean | null;
     description: string | null;
+    images: string[] | null;
+    features: string[] | null;
     lighting_grade: string | null;
     grass_grade: string | null;
     grades_status: string | null;
+    sort_order: number | null;
   }[];
 }
+
+// Oyuncu vitriniyle (PitchDiscovery) birebir ayna — zemin etiketleri tek kaynaktan.
+
+const formatCapacity = (capacity?: number | null): string | null => {
+  if (!capacity || capacity <= 0) return null;
+  if (capacity % 2 === 0) return `${capacity / 2}v${capacity / 2}`;
+  return `${capacity} oyuncu`;
+};
 
 export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }> = ({ pitchId, onClose }) => {
   const [data, setData] = useState<PreviewData | null>(null);
@@ -40,18 +56,16 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
   useEffect(() => {
     supabase
       .from('pitches')
-      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, price, is_active, description, lighting_grade, grass_grade, grades_status)')
+      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, surface, size, capacity, price, is_active, description, images, features, lighting_grade, grass_grade, grades_status, sort_order)')
       .eq('id', pitchId)
       .single()
       .then(({ data: d }) => setData(d as unknown as PreviewData));
   }, [pitchId]);
 
   const amenitySplit = splitAmenities(data?.amenities ?? []);
-  const activeCourts = (data?.courts ?? []).filter((c) => c.is_active !== false);
-  const placements = [
-    { key: 'CLOSED', label: 'Kapalı Saha', icon: Thermometer, courts: activeCourts.filter(c => c.court_type === 'CLOSED') },
-    { key: 'OPEN', label: 'Açık Saha', icon: Wind, courts: activeCourts.filter(c => c.court_type !== 'CLOSED') },
-  ].filter(p => p.courts.length > 0);
+  const activeCourts = (data?.courts ?? [])
+    .filter((c) => c.is_active !== false)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   const graded = activeCourts.find(c => c.grades_status === 'approved' && (c.lighting_grade || c.grass_grade));
 
   return (
@@ -127,27 +141,52 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                 </>
               )}
 
-              {placements.length > 0 && (
+              {activeCourts.length > 0 && (
                 <>
-                  <h3 className="mt-5 mb-2 text-sm font-extrabold text-white">Saha Tipi</h3>
+                  <h3 className="mt-5 mb-2 text-sm font-extrabold text-white">
+                    Sahalar{activeCourts.length > 1 ? ` (${activeCourts.length})` : ''}
+                  </h3>
                   <div className="space-y-2">
-                    {placements.map(({ key, label, icon: Icon, courts }) => (
-                      <div key={key} className="flex items-center justify-between p-3 rounded-2xl bg-[#161B22] border border-white/5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-[#39FF14]">
-                            <Icon size={17} />
+                    {activeCourts.map((court) => {
+                      const Icon = court.court_type === 'CLOSED' ? Thermometer : Wind;
+                      const thumb = court.images?.find(Boolean) ?? null;
+                      const meta = [
+                        court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık',
+                        surfaceLabel(court.surface),
+                        court.size ? `${court.size} m` : null,
+                        formatCapacity(court.capacity),
+                      ].filter(Boolean).join(' · ');
+                      return (
+                        <div key={court.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#161B22] border border-white/5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center text-[#39FF14] flex-shrink-0">
+                              {thumb ? (
+                                <img src={transformedImageUrl(thumb, 'thumb')} alt={court.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Icon size={17} />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-extrabold text-white truncate">{court.name}</div>
+                              <div className="text-[10px] text-white/50 truncate">{meta}</div>
+                              {normalizeCourtFeatures(court.features).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[9px] font-bold text-[#39FF14]/90">
+                                      {courtFeatureLabel(fv)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-[13px] font-extrabold text-white">{label}</div>
-                            <div className="text-[10px] text-white/50">{courts[0].description?.trim() || '6v6 / 7v7 oynanabilir'}{courts.length > 1 ? ` · ${courts.length} kort` : ''}</div>
+                          <div className="text-right flex-shrink-0 pl-2">
+                            <div className="text-sm font-black text-white">₺{court.price ?? data.total_price ?? '—'}</div>
+                            <div className="text-[8px] font-extrabold uppercase text-white/40">/saat</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-black text-white">₺{courts[0].price ?? data.total_price ?? '—'}</div>
-                          <div className="text-[8px] font-extrabold uppercase text-white/40">ort./saat</div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -169,7 +208,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
               <div className="mt-5 flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                 <div className="flex-1">
                   <div className="text-[9px] font-black uppercase tracking-wider text-white/40">Kapora · örnek</div>
-                  <div className="text-base font-black italic text-white">₺{Math.round((placements[0]?.courts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
+                  <div className="text-base font-black italic text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
                 </div>
                 <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[11px] font-black italic uppercase opacity-70">
                   Kaporayı Öde

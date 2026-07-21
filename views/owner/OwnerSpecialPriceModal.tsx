@@ -23,7 +23,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
   onSaved,
 }) => {
   const hour = parseInt(timeKey.split('.')[0], 10);
-  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy), [hour, pricingPolicy]);
+  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy, courtId, bookingDate) ?? 0, [hour, pricingPolicy, courtId, bookingDate]);
   const [customPrice, setCustomPrice] = useState(() => String(Math.round(standardPrice * 1.25)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +31,10 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
   const newPrice = parseInt(customPrice, 10) || 0;
 
   const handleSave = async () => {
+    if (standardPrice <= 0) {
+      setError('Bu saat için önce standart tarife tanımlayın (Fiyatlandırma Politikası). Özel fiyat standarda göre belirlenir.');
+      return;
+    }
     if (newPrice <= standardPrice) {
       setError('Özel fiyat standart fiyattan yüksek olmalıdır. İndirim için Flash Deal kullanın.');
       return;
@@ -86,7 +90,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
               className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center border-b border-white/20 focus:border-amber-400 transition-colors"
             />
           </div>
-          {newPrice > standardPrice && (
+          {newPrice > standardPrice && standardPrice > 0 && (
             <p className="text-sm text-amber-400 font-bold mt-3">
               +{newPrice - standardPrice}₺ ({Math.round(((newPrice - standardPrice) / standardPrice) * 100)}% artış)
             </p>

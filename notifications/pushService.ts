@@ -45,7 +45,12 @@ export type NotificationPreferenceKey =
   | 'tactic_approved'
   | 'tactic_rejected'
   | 'NEW_MESSAGE'
-  | 'team_chat_message';
+  | 'team_chat_message'
+  // Saha sahibi (owner) olayları — hepsi kapatılabilir
+  | 'owner_new_booking'
+  | 'owner_cancellation'
+  | 'owner_deposit_paid'
+  | 'owner_daily_summary';
 
 export type NotificationPreferences = Record<NotificationPreferenceKey, NotificationPreference>;
 
@@ -81,6 +86,11 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   tactic_rejected:          { enabled: true, mandatory: false },
   NEW_MESSAGE:              { enabled: true, mandatory: false },
   team_chat_message:        { enabled: true, mandatory: false },
+  // Saha sahibi olayları — varsayılan açık, tümü kapatılabilir
+  owner_new_booking:        { enabled: true, mandatory: false },
+  owner_cancellation:       { enabled: true, mandatory: false },
+  owner_deposit_paid:       { enabled: true, mandatory: false },
+  owner_daily_summary:      { enabled: true, mandatory: false },
 };
 
 // ─── Push Token Kaydı ────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { Lock, Check, X, ShieldCheck, LogOut, Mail } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
+import { useConfirmSheet } from '../components/useConfirmSheet';
 import { OwnerCenteredModal } from './OwnerModalFrame';
 
 interface Props {
@@ -25,6 +26,7 @@ function evaluatePassword(pw: string): PolicyCheck[] {
 
 export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
   const notify = useOwnerToast();
+  const { confirm: askConfirm, confirmElement } = useConfirmSheet();
   const [email, setEmail] = useState<string>('');
   const [lastSignIn, setLastSignIn] = useState<string>('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -98,7 +100,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
   };
 
   const handleSignOutAll = async () => {
-    if (!window.confirm('Tüm cihazlardaki oturumlar kapatılsın mı? Yeniden giriş yapmanız gerekir.')) return;
+    if (!(await askConfirm({ title: 'Tüm oturumları kapat?', message: 'Tüm cihazlardaki oturumlar kapatılacak; yeniden giriş yapmanız gerekir.', confirmLabel: 'Kapat', destructive: true }))) return;
     setSigningOutAll(true);
     try {
       const { error } = await supabase.auth.signOut({ scope: 'global' });
@@ -203,6 +205,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
           </p>
         </div>
       </div>
+      {confirmElement}
     </OwnerCenteredModal>
   );
 };

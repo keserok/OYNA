@@ -1,10 +1,12 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ArrowRight, ChevronLeft, Check, Crown, Gift, Share2, Phone, X, Award, ShieldCheck, Zap, Activity, TrendingUp, MapPin, Hourglass, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { UserRole } from '../types';
 import { Spinner } from '../components/ui/Spinner';
+import { ORDU_DISTRICT_NAMES, LAUNCH_CITY } from '../utils/orduData';
+import { fetchActiveCoverage } from '../services/regionCoverageService';
 
 interface PartnerOnboardingProps {
   onComplete: () => void;
@@ -24,7 +26,11 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
   // Form State
   const [facilityName, setFacilityName] = useState('');
-  const [cityRaw, setCityRaw] = useState(''); // "Altınordu, Ordu"
+  // Faz 2: serbest metin yerine il/ilçe seçimi (kayıt anından temiz veri).
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [addressLine, setAddressLine] = useState('');
+  const [coverage, setCoverage] = useState<{ city: string; district: string | null }[]>([]);
   const [price, setPrice] = useState('');
   const [iban, setIban] = useState('');
   const [pricingMode] = useState<'FULL' | 'PER_PERSON'>('FULL');
@@ -40,10 +46,27 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
   // Dashboard State
   const [giftOpen, setGiftOpen] = useState(false);
 
+  // İl/İlçe seçenekleri: aktif kapsama → yoksa Ordu fallback.
+  const cityOptions = useMemo(() => {
+    const fromCoverage = Array.from(new Set(coverage.map((c) => c.city).filter(Boolean)));
+    return fromCoverage.length ? fromCoverage : [LAUNCH_CITY];
+  }, [coverage]);
+  const districtOptions = useMemo(() => {
+    const forCity = coverage.filter((c) => (city ? c.city === city : true)).map((c) => c.district).filter((d): d is string => !!d);
+    return forCity.length ? Array.from(new Set(forCity)) : ORDU_DISTRICT_NAMES;
+  }, [coverage, city]);
+
+  useEffect(() => {
+    fetchActiveCoverage()
+      .then((rows) => setCoverage(rows.map((r) => ({ city: r.city, district: r.district }))))
+      .catch(() => setCoverage([]));
+  }, []);
+
   const handleNext = () => {
       if (navigator.vibrate) navigator.vibrate(50);
       if (step === 'SETUP_1') {
           if (!facilityName.trim()) { setOnboardError('Lütfen tesis adını girin.'); return; }
+          if (!city.trim() || !district.trim()) { setOnboardError('Lütfen il ve ilçe seçin.'); return; }
           setOnboardError(null);
           setStep('SETUP_2');
       } else if (step === 'SETUP_2') {
@@ -61,12 +84,6 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
       setPrice('1800');
   };
 
-  const parseLocation = (raw: string): { city: string; district: string | null } => {
-      const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
-      if (parts.length >= 2) return { district: parts[0], city: parts[parts.length - 1] };
-      return { district: null, city: parts[0] || '' };
-  };
-
   // --- REAL DB SAVE (runs once when entering LOADING) ---
   const onboardPitch = useCallback(async () => {
       try {
@@ -76,7 +93,6 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
           const { data: userData, error: userErr } = await supabase.auth.getUser();
           if (userErr || !userData.user) throw new Error('Oturumunuz bulunamadı. Lütfen tekrar giriş yapın.');
           const ownerId = userData.user.id;
-          const { city, district } = parseLocation(cityRaw);
           const basePrice = Number(price);
 
           // 1. Tesisi oluştur
@@ -85,9 +101,9 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               .insert({
                   owner_id: ownerId,
                   name: facilityName.trim(),
-                  // address NOT NULL — kullanıcının yazdığı ham konum en doğru kaynak;
-                  // eksik bırakılırsa tesis kaydı daha ilk adımda patlıyordu.
-                  address: cityRaw.trim() || [district, city].filter(Boolean).join(', '),
+                  // address NOT NULL — açık adres varsa o, yoksa ilçe/il birleşimi.
+                  // Kesin konum (pin) sonradan Tesis Ayarları → Konum'dan girilir.
+                  address: addressLine.trim() || [district, city].filter(Boolean).join(', '),
                   city,
                   district,
                   price_per_match: basePrice,
@@ -172,7 +188,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
           else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetinizi kontrol edin.';
           setOnboardError(msg);
       }
-  }, [cityRaw, facilityName, iban, price, pricingMode]);
+  }, [city, district, addressLine, facilityName, iban, price, pricingMode]);
 
   // LOADING adımına girince tek sefer çalıştır
   useEffect(() => {
@@ -283,15 +299,45 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     autoFocus
                                   />
                               </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                      <label className="text-xs font-bold text-gray-500 uppercase">İl</label>
+                                      <select
+                                        value={city}
+                                        onChange={(e) => { setCity(e.target.value); setDistrict(''); }}
+                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FACC15] outline-none transition-colors appearance-none"
+                                      >
+                                        <option value="" disabled className="bg-[#0A0E14]">İl seçin</option>
+                                        {cityOptions.map((c) => (
+                                          <option key={c} value={c} className="bg-[#0A0E14]">{c}</option>
+                                        ))}
+                                      </select>
+                                  </div>
+                                  <div className="space-y-2">
+                                      <label className="text-xs font-bold text-gray-500 uppercase">İlçe</label>
+                                      <select
+                                        value={district}
+                                        onChange={(e) => setDistrict(e.target.value)}
+                                        disabled={!city}
+                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FACC15] outline-none transition-colors appearance-none disabled:opacity-40"
+                                      >
+                                        <option value="" disabled className="bg-[#0A0E14]">İlçe seçin</option>
+                                        {districtOptions.map((d) => (
+                                          <option key={d} value={d} className="bg-[#0A0E14]">{d}</option>
+                                        ))}
+                                      </select>
+                                  </div>
+                              </div>
                               <div className="space-y-2">
-                                  <label className="text-xs font-bold text-gray-500 uppercase">Şehir / Semt</label>
-                                  <input 
-                                    type="text" 
-                                    value={cityRaw}
-                                    onChange={(e) => setCityRaw(e.target.value)}
-                                    placeholder="Örn: Altınordu, Ordu" 
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
+                                  <label className="text-xs font-bold text-gray-500 uppercase">Açık Adres <span className="text-gray-600 normal-case">(opsiyonel)</span></label>
+                                  <input
+                                    type="text"
+                                    value={addressLine}
+                                    onChange={(e) => setAddressLine(e.target.value)}
+                                    placeholder="Mahalle, sokak, no"
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-lg font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                   />
+                                  <p className="text-[11px] text-gray-600">Haritadaki kesin konumu kayıttan sonra Tesis Ayarları → Konum'dan işaretleyebilirsin.</p>
                               </div>
                           </div>
                       </div>
