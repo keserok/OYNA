@@ -1,14 +1,15 @@
 import React from 'react';
-import { Calendar, Home, MoreHorizontal, Users, Wallet } from 'lucide-react';
+import { Calendar, Home, LayoutGrid, MoreHorizontal, Wallet } from 'lucide-react';
 
-export type OwnerNavTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE';
+// Sahalarım alt sekmeye alındı (işin kalbi tek dokunuş); Ekip Menü'ye indi (Karar #42).
+export type OwnerNavTab = 'HOME' | 'CALENDAR' | 'PITCHES' | 'FINANCE' | 'TEAM' | 'MORE';
 
 interface OwnerBottomNavProps {
   activeTab: OwnerNavTab | string;
   pendingCount?: number;
   financeLocked?: boolean;
   teamLocked?: boolean;
-  /** STAFF-3: yetkiye göre tamamen gizlenen sekmeler (ör. personel için Finans). */
+  /** STAFF-3: yetkiye göre tamamen gizlenen sekmeler (ör. personel için Finans/Sahalarım). */
   hiddenTabs?: OwnerNavTab[];
   onSelect: (tab: OwnerNavTab) => void;
 }
@@ -16,8 +17,8 @@ interface OwnerBottomNavProps {
 const tabs: { id: OwnerNavTab; label: string; icon: React.ReactNode }[] = [
   { id: 'HOME', label: 'Özet', icon: <Home size={20} /> },
   { id: 'CALENDAR', label: 'Takvim', icon: <Calendar size={20} /> },
+  { id: 'PITCHES', label: 'Sahalarım', icon: <LayoutGrid size={20} /> },
   { id: 'FINANCE', label: 'Finans', icon: <Wallet size={20} /> },
-  { id: 'TEAM', label: 'Ekip', icon: <Users size={20} /> },
   { id: 'MORE', label: 'Menü', icon: <MoreHorizontal size={20} /> },
 ];
 
@@ -30,7 +31,7 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
   onSelect,
 }) => {
   const highlightTab =
-    activeTab === 'PENDING_ACTIONS' || activeTab === 'PITCHES' ? 'HOME' : activeTab;
+    activeTab === 'PENDING_ACTIONS' ? 'HOME' : activeTab === 'TEAM' ? 'MORE' : activeTab;
   const shownTabs = tabs.filter((t) => !hiddenTabs.includes(t.id));
 
   return (

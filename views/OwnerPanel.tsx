@@ -927,6 +927,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onMatches={() => {
             if (managerGuard()) setShowMatches(true);
           }}
+          onTeam={() => setActiveTab('TEAM')}
           onBankAccounts={() => {
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
@@ -1107,7 +1108,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         pendingCount={pendingCount}
         financeLocked={false}
         teamLocked={false}
-        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE'] : []}
+        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'PITCHES'] : []}
         onSelect={(tab) => {
           if (tab === 'MORE') setActiveTab('MORE');
           else handleTabSelect(tab);
