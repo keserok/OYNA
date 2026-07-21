@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Banknote, Plus, Save, Star, Trash2, X } from 'lucide-react';
 import {
   deleteBankAccount,
@@ -35,6 +35,11 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
 
   const canUseDb = !!pitchId && !pitchId.startsWith('mock-');
 
+  // FAZ3: onUpdated'ı ref'te tut — inline callback prop'u `load`ı her render değiştirip
+  // useEffect([load]) üzerinden SONSUZ refetch tetikliyordu.
+  const onUpdatedRef = useRef(onUpdated);
+  useEffect(() => { onUpdatedRef.current = onUpdated; }, [onUpdated]);
+
   const load = useCallback(async () => {
     if (!canUseDb) {
       setAccounts([]);
@@ -45,13 +50,13 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
     try {
       const rows = await getBankAccounts(pitchId);
       setAccounts(rows);
-      onUpdated?.(rows);
+      onUpdatedRef.current?.(rows);
     } catch (err) {
       setError(toTurkishError(err));
     } finally {
       setIsLoading(false);
     }
-  }, [pitchId, canUseDb, onUpdated]);
+  }, [pitchId, canUseDb]);
 
   useEffect(() => {
     load();

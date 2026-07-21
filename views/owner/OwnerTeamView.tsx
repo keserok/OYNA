@@ -5,6 +5,7 @@ import {
   Shield, MessageCircle,
 } from 'lucide-react';
 import { LoadingState } from '../../components/common/StatusState';
+import { useConfirmSheet } from './components/useConfirmSheet';
 import {
   getStaffTasks, upsertStaffTask, toggleStaffTaskStatus, toTurkishError,
 } from '../../services/pitchOwnerService';
@@ -66,9 +67,10 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const canManageStaff = accessLevel === 'OWNER';                         // davet/rol/kaldır
+  const canManageStaff = accessLevel === 'OWNER';                         // davet/rol/erişim-kaldır
   const canManageRoster = accessLevel === 'OWNER' || accessLevel === 'MANAGER'; // roster/nöbet/görev
   const writable = !readOnly && canManageRoster;
+  const { confirm, confirmElement } = useConfirmSheet();
 
   const canUseDb = !!pitchId && !pitchId.startsWith('mock-');
 
@@ -124,10 +126,17 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
 
   const handleRemove = async (m: TeamMember) => {
     const isLogin = m.account_status !== 'ROSTER';
-    const msg = isLogin
-      ? `${m.name} adlı kişinin tesis erişimi kaldırılsın mı? Giriş yetkisi düşer.`
-      : `${m.name} listeden silinsin mi?`;
-    if (!confirm(msg)) return;
+    // FAZ3: giriş erişimi kaldırma yalnız SAHİP'e; ROSTER silme MÜDÜR'e de açık (roster yönetimi).
+    if (isLogin && !canManageStaff) return;
+    const ok = await confirm({
+      title: isLogin ? 'Erişimi kaldır?' : 'Listeden sil?',
+      message: isLogin
+        ? `${m.name} adlı kişinin tesis erişimi kaldırılacak; giriş yetkisi düşer. Bu işlem geri alınamaz.`
+        : `${m.name} listeden silinecek.`,
+      confirmLabel: isLogin ? 'Erişimi Kaldır' : 'Sil',
+      destructive: true,
+    });
+    if (!ok) return;
     setIsSaving(true);
     try {
       if (isLogin) await staffRemove(m.id); else await staffDeleteRoster(m.id);
@@ -240,7 +249,9 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
               <div className="grid gap-3 md:grid-cols-2">
                 {team.map((m) => {
                   const st = STATUS_META[m.account_status];
-                  const tappable = writable && (canManageStaff || m.account_status === 'ROSTER');
+                  // FAZ3: MÜDÜR de kartı açabilir (ACTIVE personelin nöbetini yönetmek için) —
+                  // eskiden yalnız SAHİP veya ROSTER açılıyordu = MÜDÜR için dead-end.
+                  const tappable = writable;
                   return (
                     <button key={m.id} type="button" disabled={!tappable}
                       onClick={() => tappable && setMemberSheet(m)}
@@ -341,6 +352,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
           onShowCode={() => { if (memberSheet.invite_code) { setCodeSheet({ member_id: memberSheet.id, invite_code: memberSheet.invite_code, expires_at: memberSheet.invite_expires_at ?? '', staff_role: memberSheet.staff_role, name: memberSheet.name }); setMemberSheet(null); } }}
           copyCode={copyCode} copied={copied} />
       )}
+      {confirmElement}
     </div>
   );
 };
@@ -506,11 +518,13 @@ const MemberSheet: React.FC<{
         </>
       )}
 
-      {/* Kaldır */}
-      <button type="button" disabled={isSaving} onClick={onRemove}
-        className="w-full py-3.5 rounded-2xl bg-red-500/10 text-red-300 font-black text-sm flex items-center justify-center gap-2 border border-red-500/20">
-        <Trash2 size={16} /> {m.account_status === 'ROSTER' ? 'Listeden Sil' : 'Erişimi Kaldır'}
-      </button>
+      {/* Kaldır — ROSTER silme MÜDÜR'e açık; giriş erişimini kaldırma yalnız SAHİP */}
+      {(m.account_status === 'ROSTER' || canManageStaff) && (
+        <button type="button" disabled={isSaving} onClick={onRemove}
+          className="w-full min-h-[48px] py-3.5 rounded-2xl bg-red-500/10 text-red-300 font-black text-sm flex items-center justify-center gap-2 border border-red-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
+          <Trash2 size={16} /> {m.account_status === 'ROSTER' ? 'Listeden Sil' : 'Erişimi Kaldır'}
+        </button>
+      )}
     </div>
   </BottomSheetModal>
 );

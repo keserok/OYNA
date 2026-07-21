@@ -105,7 +105,19 @@ export const MatchCountdownItem: React.FC<{
 
 
 export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNames: string[] }> = ({ data, courtNames }) => {
-    const pitches = courtNames.length > 0 ? courtNames : ['Henüz saha yok'];
+    // FAZ3: dokunmatikte hover-tooltip (title) çalışmaz → seçili hücre bilgisi üstteki çubukta gösterilir.
+    const [selectedCell, setSelectedCell] = useState<{ label: string; type: string } | null>(null);
+
+    // FAZ3: sahte "Henüz saha yok" satırı yerine gerçek boş durum.
+    if (courtNames.length === 0) {
+        return (
+            <div className="py-8 text-center">
+                <p className="text-sm font-bold text-gray-400">Henüz saha eklenmedi</p>
+                <p className="text-[0.6875rem] text-gray-500 mt-1">Doluluk analizini görmek için Sahalarım&apos;dan saha ekleyin.</p>
+            </div>
+        );
+    }
+    const pitches = courtNames;
     // Başlık ve hücreler AYNI grid şablonunu paylaşır → saat etiketleri her dikdörtgenin
     // sol köşesine tam oturur, kayma olmaz. İlk sütun saha adı, kalan sütunlar saatler.
     const gridStyle: React.CSSProperties = {
@@ -115,7 +127,15 @@ export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNa
     };
 
     return (
-        <div className="w-full overflow-x-auto custom-scrollbar pb-2">
+        <div>
+            {/* FAZ3: dokunmatik hücre bilgisi (hover yerine) */}
+            {selectedCell && (
+                <div className="mb-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs animate-in fade-in duration-200">
+                    <span className="font-bold text-white truncate">{selectedCell.label}</span>
+                    <span className={`shrink-0 font-black px-2 py-0.5 rounded-md ${selectedCell.type === 'ABONMAN' ? 'bg-blue-500/20 text-blue-300' : selectedCell.type === 'GÜNLÜK' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-gray-300'}`}>{selectedCell.type}</span>
+                </div>
+            )}
+            <div className="w-full overflow-x-auto custom-scrollbar pb-2">
             <div className="min-w-[820px]">
                 {/* Başlık: saatler — her etiket kendi sütununun SOL kenarında (dikdörtgenin başlangıç köşesi). */}
                 <div style={gridStyle} className="mb-1.5 h-4 items-end">
@@ -157,12 +177,17 @@ export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNa
                                     shadow = 'shadow-[0_0_10px_rgba(16,185,129,0.2)]';
                                 }
 
+                                const typeLabel = bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ';
+                                const cellLabel = `${pitchName} · ${startH}:00-${endH}:00`;
                                 return (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={timeIdx}
-                                        className={`h-8 rounded-md transition-all duration-300 border ${bgColor} ${borderColor} ${shadow} ${!isOccupied ? 'hover:bg-white/10' : ''}`}
-                                        title={`${pitchName} · ${startH}:00-${endH}:00 · ${bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ'}`}
-                                    ></div>
+                                        onClick={() => setSelectedCell({ label: cellLabel, type: typeLabel })}
+                                        className={`h-8 rounded-md transition-all duration-300 border ${bgColor} ${borderColor} ${shadow} ${!isOccupied ? 'hover:bg-white/10' : ''} active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60`}
+                                        title={`${cellLabel} · ${typeLabel}`}
+                                        aria-label={`${cellLabel} · ${typeLabel}`}
+                                    ></button>
                                 );
                             })}
                         </div>
@@ -184,6 +209,7 @@ export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNa
                         <span className="text-[10px] font-bold text-gray-500 uppercase">Boş</span>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );
