@@ -30,7 +30,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
   onSaved,
 }) => {
   const hour = parseInt(timeKey.split('.')[0], 10);
-  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy) ?? 0, [hour, pricingPolicy]);
+  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy, courtId) ?? 0, [hour, pricingPolicy, courtId]);
   const [customPrice, setCustomPrice] = useState(
     () => String(existingDeal?.deal_price ?? Math.round(standardPrice * 0.8)),
   );

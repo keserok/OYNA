@@ -5,6 +5,8 @@ export interface TariffLike {
   endTime: string;
   price?: number;
   price_per_hour?: number;
+  /** null/undefined = tesis geneli; dolu = yalnız o sahaya özel tarife. */
+  court_id?: string | null;
 }
 
 export function slotKeyToTime(key: string): string {
@@ -22,11 +24,18 @@ export function normalizeTime(t: string): string {
  * Saatin fiyatını GERÇEK tarifeden çözer. Eşleşen tarife yoksa null döner —
  * uydurma varsayılan fiyat (eski 3200/2000 fallback'i) bilinçli olarak yok:
  * tarifesiz saat arayüzde "Tarife yok" olarak gösterilmelidir.
+ *
+ * Saha-farkında: courtId verilirse saha-özel tarife (court_id = courtId)
+ * tesis-geneline (court_id null) üstün gelir; sunucu get_current_tariff_price
+ * ile aynı öncelik. courtId verilmezse yalnız tesis-geneli satırlar kullanılır.
  */
-export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): number | null {
+export function resolveHourlyPrice(
+  hour: number,
+  pricingPolicy?: TariffLike[],
+  courtId?: string | null,
+): number | null {
   if (!pricingPolicy?.length) return null;
-  const matched = pricingPolicy.find((p) => {
-    // Bozuk/eksik tarife satırı (startTime/endTime yoksa) render'ı ÇÖKERTMEMELİ.
+  const inWindow = (p: TariffLike) => {
     if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
     const startH = parseInt(p.startTime.split(':')[0], 10);
     let endH = parseInt(p.endTime.split(':')[0], 10);
@@ -34,7 +43,16 @@ export function resolveHourlyPrice(hour: number, pricingPolicy?: TariffLike[]): 
     if (endH === 0) endH = 24;
     if (startH <= endH) return hour >= startH && hour < endH;
     return hour >= startH || hour < endH;
-  });
+  };
+  const candidates = pricingPolicy
+    .filter((p) => p.court_id == null || (courtId != null && p.court_id === courtId))
+    .filter(inWindow)
+    .sort((a, b) => {
+      const aCourt = a.court_id != null && a.court_id === courtId ? 0 : 1;
+      const bCourt = b.court_id != null && b.court_id === courtId ? 0 : 1;
+      return aCourt - bCourt; // saha-özel önce
+    });
+  const matched = candidates[0];
   if (!matched) return null;
   return matched.price ?? matched.price_per_hour ?? null;
 }

@@ -1245,7 +1245,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const selectedSlotQuote = useMemo(() => {
     if (!selectedPitch || !selectedSlot) return null;
     const { startTime } = parseSlotLabel(selectedSlot);
-    const fromTariff = resolveTariffForSlot(selectedPitch.tariffs, selectedDateISO, startTime);
+    const fromTariff = resolveTariffForSlot(selectedPitch.tariffs, selectedDateISO, startTime, selectedCourt?.id);
     // Karar #16: işletmenin tarifedeki kaporası öncelikli; yoksa %30 (10₺'ye yuvarlı)
     const fallbackDeposit = (price: number) => Math.round(price * 0.3 / 10) * 10;
     if (fromTariff) {

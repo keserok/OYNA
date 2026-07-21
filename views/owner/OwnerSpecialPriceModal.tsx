@@ -23,7 +23,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
   onSaved,
 }) => {
   const hour = parseInt(timeKey.split('.')[0], 10);
-  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy) ?? 0, [hour, pricingPolicy]);
+  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy, courtId) ?? 0, [hour, pricingPolicy, courtId]);
   const [customPrice, setCustomPrice] = useState(() => String(Math.round(standardPrice * 1.25)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

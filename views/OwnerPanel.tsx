@@ -266,6 +266,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         endTime: String(t.end_time ?? '17:00'),
         price: Number(t.price_per_hour ?? 0),
         price_per_hour: Number(t.price_per_hour ?? 0),
+        court_id: t.court_id ?? null,
       })),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
@@ -854,6 +855,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   endTime: String(t.end_time ?? '17:00'),
                   price: Number(t.price_per_hour ?? 0),
                   price_per_hour: Number(t.price_per_hour ?? 0),
+                  court_id: t.court_id ?? null,
                 })),
               }));
             }
@@ -1017,6 +1019,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         <OwnerPricingPolicyModal
           onClose={() => setShowPricingPolicy(false)}
           facilityId={facilityData?.id}
+          courts={courts}
+          readOnly={effReadOnly}
           onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
         />
       )}

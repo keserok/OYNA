@@ -166,7 +166,8 @@ export function buildAvailabilitySlots(
       return { label, startTime, endTime, status: 'closed' as const };
     }
 
-    const quote = resolveTariffForSlot(pitch.tariffs, bookingDate, startTime);
+    // Saha-öncelikli fiyat: seçili sahanın kendi tarifesi varsa o kullanılır.
+    const quote = resolveTariffForSlot(pitch.tariffs, bookingDate, startTime, courtId);
     const slotPrice = quote?.price ?? pitch.totalPrice;
     const slotDeposit = quote?.deposit ?? 0;
 
