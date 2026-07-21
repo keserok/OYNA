@@ -685,7 +685,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   if (needsOnboarding && !isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
         <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
@@ -703,7 +703,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    <div className="min-h-dvh flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}

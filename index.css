@@ -1,4 +1,7 @@
 @import "tailwindcss" source(none);
+/* tailwindcss-animate sınıflarını (animate-in/fade-in/zoom-in/slide-in-from-*) Tailwind v4'e
+   getirir — bunlar olmadan tüm modal/sheet/toast giriş animasyonları "pat" diye belirir. */
+@import "tw-animate-css";
 @source "./components/**/*.{ts,tsx}";
 @source "./views/**/*.{ts,tsx}";
 @source "./App.tsx";
@@ -62,6 +65,15 @@
 .pt-safe-2   { padding-top:    calc(var(--safe-top) + 0.5rem); }
 .pt-safe-6   { padding-top:    calc(var(--safe-top) + 1.5rem); }
 .pb-safe-6   { padding-bottom: calc(var(--safe-bottom) + 1.5rem); }
+/* FAZ0: hayalet sınıf — OwnerModalFrame/BankAccounts/Withdrawals/ImageCropModal
+   `safe-area-top` kullanıyordu ama TANIMSIZDI → çentikli cihazda modal başlığı
+   Dynamic Island altına giriyordu. (Unlayered kural, Tailwind p-4'ü ezer.) */
+.safe-area-top { padding-top: calc(var(--safe-top) + 1rem); }
+/* FAZ0: hayalet sınıf — OwnerKpiGrid vb. `scrollbar-hide` kullanıyordu; `.no-scrollbar` ile aynı. */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+/* FAZ0: hayalet sınıf — OwnerPanel başlık ("OYNA İŞLETME") legiblik için `text-shadow` kullanıyor. */
+.text-shadow { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
 
 /* Tutar / kart no / IBAN rakamları — tasarım tokenı (Space Grotesk index.html'de yüklü) */
 .font-numeric { font-family: "Space Grotesk", "Inter", ui-monospace, monospace; }
