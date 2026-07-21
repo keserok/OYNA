@@ -5,6 +5,8 @@ import {
   applyCanonicalCoords,
   normalizeRole,
   avatarFor,
+  resolveGkVisibility,
+  findHiredGkSlotId,
 } from '../../shared/lobbyEnrichment';
 import type { PositionSlot } from '../../types';
 
@@ -179,5 +181,73 @@ describe('enrichSlots', () => {
     const slots = makeSlots(7, ['u1', 'u2']);
     const result = enrichSlots(slots, users, '7v7');
     expect(result).toHaveLength(7);
+  });
+});
+
+// ─── resolveGkVisibility + findHiredGkSlotId ─────────────────────────────────
+//
+// İki taraflı kiralık kaleci görünürlüğü: taraf, HANGİ matches kolonunun dolu
+// olduğundan okunur (gk_id = ev sahibi, away_gk_id = deplasman). Kaleci YALNIZ
+// kendi takımının üyelerine görünür; rakip ve dış izleyici görmez. Hakem bu
+// politikanın dışında (iki takıma da görünür). Taraflar bağımsız değerlenir.
+
+describe('resolveGkVisibility — iki taraflı kaleci görünürlüğü', () => {
+  const HOME_GK = 'gk-home';
+  const AWAY_GK = 'gk-away';
+
+  it('kolon boşsa o taraf görünmez', () => {
+    const r = resolveGkVisibility({
+      homeGkId: null, awayGkId: null,
+      viewerIsHomeMember: true, viewerIsAwayMember: true,
+    });
+    expect(r).toEqual({ canSeeHome: false, canSeeAway: false });
+  });
+
+  it('ev sahibi kalecisini yalnız ev sahibi üyesi görür (rakip görmez)', () => {
+    const homeViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: null, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    const awayViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: null, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    const outsider  = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: null, viewerIsHomeMember: false, viewerIsAwayMember: false });
+    expect(homeViewer).toEqual({ canSeeHome: true, canSeeAway: false });
+    expect(awayViewer).toEqual({ canSeeHome: false, canSeeAway: false });
+    expect(outsider).toEqual({ canSeeHome: false, canSeeAway: false });
+  });
+
+  it('deplasman kalecisini yalnız deplasman üyesi görür', () => {
+    const awayViewer = resolveGkVisibility({ homeGkId: null, awayGkId: AWAY_GK, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    const homeViewer = resolveGkVisibility({ homeGkId: null, awayGkId: AWAY_GK, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    expect(awayViewer).toEqual({ canSeeHome: false, canSeeAway: true });
+    expect(homeViewer).toEqual({ canSeeHome: false, canSeeAway: false });
+  });
+
+  it('iki taraf da kiralamışsa: ev sahibi üyesi yalnız kendi kalecisini görür (rakibinkini değil)', () => {
+    const homeViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: AWAY_GK, viewerIsHomeMember: true, viewerIsAwayMember: false });
+    const awayViewer = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: AWAY_GK, viewerIsHomeMember: false, viewerIsAwayMember: true });
+    expect(homeViewer).toEqual({ canSeeHome: true, canSeeAway: false });
+    expect(awayViewer).toEqual({ canSeeHome: false, canSeeAway: true });
+  });
+
+  it('her iki tarafın da üyesi (nadir) her iki kaleciyi de görür', () => {
+    const r = resolveGkVisibility({ homeGkId: HOME_GK, awayGkId: AWAY_GK, viewerIsHomeMember: true, viewerIsAwayMember: true });
+    expect(r).toEqual({ canSeeHome: true, canSeeAway: true });
+  });
+});
+
+describe('findHiredGkSlotId — kalede gösterilecek slot', () => {
+  const slot = (id: string, role: string, status: 'OPEN' | 'TAKEN' | 'LOCKED'): PositionSlot =>
+    ({ id, role, status, x: 50, y: 90 } as PositionSlot);
+
+  it('ilk BOŞ GK slotunu döndürür (KL kısaltması dahil)', () => {
+    expect(findHiredGkSlotId([slot('a', 'DEF', 'OPEN'), slot('b', 'GK', 'OPEN')])).toBe('b');
+    expect(findHiredGkSlotId([slot('kl1', 'KL', 'OPEN')])).toBe('kl1');
+  });
+
+  it('GK slotu gerçek oyuncu tarafından alınmışsa ezmez → null', () => {
+    expect(findHiredGkSlotId([slot('g', 'GK', 'TAKEN'), slot('m', 'MID', 'OPEN')])).toBeNull();
+  });
+
+  it('GK slotu hiç yoksa veya liste boşsa null', () => {
+    expect(findHiredGkSlotId([slot('m', 'MID', 'OPEN')])).toBeNull();
+    expect(findHiredGkSlotId([])).toBeNull();
+    expect(findHiredGkSlotId([null, undefined])).toBeNull();
   });
 });

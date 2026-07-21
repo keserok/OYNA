@@ -13,6 +13,7 @@ const mapServiceRequest = (r: any): ServiceRequest => ({
   matchId: r.match_id,
   providerId: r.provider_id,
   providerType: r.provider_type,
+  teamSide: r.team_side ?? undefined,
   requestedBy: r.requested_by,
   fee: Number(r.fee),
   commissionAmount: Number(r.commission_amount),
@@ -154,16 +155,22 @@ export const findProvidersForMatch = async (
   return (data as ProviderSuggestion[]) ?? [];
 };
 
-/** Kaptan/maç sahibi bir sağlayıcı için talep oluşturur (blokaj + komisyon hesaplanır). */
+/**
+ * Kaptan/maç sahibi bir sağlayıcı için talep oluşturur (blokaj + komisyon hesaplanır).
+ * teamSide verilmezse backend kiralayanın yetkisinden çıkarır (ev sahibi/deplasman
+ * kaptanı). Lobide kaptan kendi tarafını açıkça geçirir; Marketplace geçmez (auto).
+ */
 export const createServiceRequest = async (
   matchId: string,
   providerId: string,
   providerType: ProviderType,
+  teamSide?: 'HOME' | 'AWAY',
 ): Promise<{ requestId: string; intentId: string; fee: number; commission: number; providerAmount: number }> => {
   const { data, error } = await supabase.rpc('create_service_request', {
     p_match_id: matchId,
     p_provider_id: providerId,
     p_provider_type: providerType,
+    p_team_side: teamSide ?? null,
   });
   if (error) throw new Error(parseRpcError(error.message) || 'Hizmet talebi oluşturulamadı.');
   if (!data) throw new Error('Hizmet talebi oluşturulamadı (beklenmeyen yanıt).');

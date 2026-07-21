@@ -40,6 +40,38 @@ Doğrulama (2026-07-05, canlı DB'de sorgulandı — hepsi mevcut):
 
 ---
 
+## 1.1.5 ✅ SONUÇ (2026-07-20): SIFIRDAN REPLAY TAMAMEN YEŞİL — drift kapatıldı
+
+> **271/271 migration dosyası, tamamen taze bir PG16 cluster'ında sıfırdan
+> hatasız koşuyor** ve sonuç şema, canlı üretimle **%100 tablo/view
+> kapsamasında** (iki yönlü fark: SIFIR). Yöntem: aşağıdaki 1.2 bölümündeki
+> baseline stratejisinin tamamlanması — 60 kayıp defter kaydını elle yeniden
+> üretmek yerine, eksik nesneler ya kanonik repo tanımlarının doğru sıraya
+> kopyasıyla ya da canlı introspeksiyonla (MCP, parolasız) kapatıldı;
+> tarih dosyalarına yalnız 5 nokta-guard eklendi (pitch_slots,
+> profiles_public, user_id1 policy, 2 imza-bazlı REVOKE, ccr policy DROP'ları).
+>
+> **Bonus — gerçek üretim hatası yakalandı ve onarıldı:** `get_nearby_matches`
+> canlıda 42P13 ("return type mismatch") ile KIRIKTI — gövdedeki `m.*`,
+> matches'e sonradan eklenen kolonlarla RETURNS TABLE'ı aşıyordu; "yakınımdaki
+> maçlar" keşfi sessizce patlıyordu. Açık kolon listesiyle onarıldı
+> (`20260720135944_...` — canlıya uygulandı + doğrulandı + repo'ya yazıldı).
+>
+> Eklenen baseline dosyaları (hepsi üretimde kanıtlı no-op):
+> `20260529100000` matches · `20260530090000` teams/members/courts ·
+> `20260530095000` defter-öncesi tablolar (settings/friendships/tactics/
+> owner_accounts/pitch_subscriptions/notification_templates/match_tactics/
+> texts/audit_logs + kolonlar) · `20260530096000` canlı kolon setleri
+> (profiles/pitches/pitch_bookings/notifications) · `20260602235900` bildirim
+> fonksiyonları · `20260607094500` + `202607130000155` + `20260723000000`
+> yetki-hedefi fonksiyonlar · `20260720135945` yalnız-defterde tablolar
+> (match_participants/push_log/support_*/owner_daily_summary).
+>
+> Bölüm 6'daki ledger-regen artık ZORUNLU DEĞİL (amaçları bu yolla karşılandı);
+> istenirse tarih-arkeolojisi için opsiyonel kalır.
+
+---
+
 ## 1.2 DURUM GÜNCELLEMESİ (2026-07-19) — kısmi onarım + parolasız kalıcı çözüm keşfi
 
 **Bu branch'te yapılan (PG16 sıfırdan-replay harness'ı ile doğrulandı):**

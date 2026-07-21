@@ -277,6 +277,11 @@ CREATE POLICY "community_members_insert" ON public.community_members
 DROP POLICY IF EXISTS "ccr_admin_all" ON public.community_creation_requests;
 DROP POLICY IF EXISTS "ccr_requester_insert" ON public.community_creation_requests;
 DROP POLICY IF EXISTS "ccr_requester_read" ON public.community_creation_requests;
+-- Replay-güvenlik: aynı adlar 20260603212134'te de yaratılıyor; yeniden
+-- yaratmadan önce düşür (içerik birebir aynı şekilde yeniden kurulur).
+DROP POLICY IF EXISTS "ccr_select" ON public.community_creation_requests;
+DROP POLICY IF EXISTS "ccr_insert" ON public.community_creation_requests;
+DROP POLICY IF EXISTS "ccr_admin_update" ON public.community_creation_requests;
 
 CREATE POLICY "ccr_select" ON public.community_creation_requests
   FOR SELECT TO authenticated
