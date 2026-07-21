@@ -63,7 +63,9 @@ Doğrulama (2026-07-05, canlı DB'de sorgulandı — hepsi mevcut):
 > owner_accounts/pitch_subscriptions/notification_templates/match_tactics/
 > texts/audit_logs + kolonlar) · `20260530096000` canlı kolon setleri
 > (profiles/pitches/pitch_bookings/notifications) · `20260602235900` bildirim
-> fonksiyonları · `20260607094500` + `202607130000155` + `20260723000000`
+> fonksiyonları · `20260607094500` + `20260712235959` (eski adı
+> `202607130000155`; 2026-07-21 sürüm normalizasyonunda 14 haneye çekildi) +
+> `20260723000000`
 > yetki-hedefi fonksiyonlar · `20260720135945` yalnız-defterde tablolar
 > (match_participants/push_log/support_*/owner_daily_summary).
 >

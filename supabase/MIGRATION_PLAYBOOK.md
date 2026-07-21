@@ -23,6 +23,16 @@
    (pratikte: bugünün tarihi ile `YYYYMMDDHHMMSS_isim.sql`). Geriye tarihli
    dosya eklemek `db push`'ta out-of-order hatası üretir.
 
+   > **Versiyon formatı TAM 14 hanedir** (`YYYYMMDDHHMMSS`). 8/11/15 haneli
+   > sürümlerin dolu-remote karşılaştırmasını bozduğu 2026-07-21'de kanıtlandı
+   > (Probe A/B deneyi) ve mevcut 5 dosya bir defalık normalize edildi:
+   > `20260529→20260529000000`, `20260531000→20260531000000`,
+   > `20260531001→20260531000001`, `20260608→20260608000000`,
+   > `202607130000155→20260712235959` (bağımlılık gereği sosyal serinin önüne
+   > alındı; dosyanın kendi başlığındaki konum şartı korunur). Bu istisna
+   > `migration-immutability` bekçisinde sabit beş çift olarak tanımlıdır —
+   > yeni rename affı YOKTUR.
+
 4. **Her migration idempotent yazılır** (`IF NOT EXISTS`, `CREATE OR REPLACE`,
    `DROP ... IF EXISTS`, `ON CONFLICT DO NOTHING`) — sıfırdan replay (preview
    branch) ve olası tekrar-uygulama güvenli olsun.
