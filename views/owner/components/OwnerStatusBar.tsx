@@ -34,7 +34,7 @@ export const OwnerStatusBar: React.FC<OwnerStatusBarProps> = ({ banners }) => {
   if (!primary) return null;
 
   return (
-    <div className={`sticky top-0 z-50 ${toneStyles[primary.tone]}`}>
+    <div className={`sticky top-0 z-50 safe-top ${toneStyles[primary.tone]}`}>
       <div className="flex items-center justify-center gap-2 text-[11px] font-bold py-2 px-4 text-center">
         {primary.icon ?? defaultIcons[primary.tone]}
         <span className="leading-tight">{primary.message}</span>

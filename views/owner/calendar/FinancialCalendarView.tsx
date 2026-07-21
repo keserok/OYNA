@@ -7,6 +7,7 @@ import {
   Play, Plus, RefreshCw, Shield, Tag, TrendingUp, User, X,
 } from 'lucide-react';
 import { useOwnerToast } from '../components/useOwnerToast';
+import { OwnerBottomSheet } from '../components/OwnerBottomSheet';
 import { OwnerSubscriptionModal } from '../OwnerSubscriptionModal';
 import { OwnerFlashDealModal } from '../OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from '../OwnerCloseSlotModal';
@@ -744,135 +745,132 @@ export const FinancialCalendarView: React.FC<{
             )}
         </div>
 
-            {/* Quick Create Modal Code (Same as before) */}
-            {isQuickCreateOpen && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-                    <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-black text-white">Yeni Rezervasyon</h3>
-                            <button onClick={() => setIsQuickCreateOpen(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
-                        </div>
-                        
-                        <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6 text-center">
-                            <p className="text-xs text-gray-500 uppercase font-bold">Seçilen Saat</p>
-                            <p className="text-3xl font-black text-white mt-1 font-mono">{isQuickCreateOpen}</p>
-                            {(() => {
-                                const rate = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
-                                return rate != null ? (
-                                    <p className="text-sm font-bold text-gray-400 mt-2">Tutar: {rate}₺</p>
-                                ) : (
-                                    <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Menü → Fiyatlandırma Politikası'ndan ekleyin.</p>
-                                );
-                            })()}
-                        </div>
-
-                        <div className="space-y-4 mb-6">
-                            <div className="bg-[#0A0E14] flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FACC15] transition-colors gap-3">
-                                <div className="flex items-center w-full">
-                                  <User size={18} className="text-gray-500 mr-3" />
-                                  <input 
-                                      type="text" 
-                                      placeholder="Müşteri Adı / Takım Adı" 
-                                      value={customerName}
-                                      onChange={(e) => setCustomerName(e.target.value)}
-                                      className="bg-transparent text-white font-bold w-full outline-none" 
-                                      autoFocus 
-                                  />
-                                </div>
-                                <div className="h-px w-full bg-white/5" />
-                                <div className="flex items-center w-full">
-                                  <Phone size={18} className="text-gray-500 mr-3" />
-                                  <input 
-                                      type="tel" 
-                                      placeholder="Telefon Numarası (Opsiyonel)" 
-                                      value={customerPhone}
-                                      onChange={(e) => setCustomerPhone(e.target.value)}
-                                      className="bg-transparent text-gray-300 font-mono text-sm w-full outline-none" 
-                                  />
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button 
-                                    type="button"
-                                    onClick={() => setPaymentStatus('PAID')}
-                                    className={`flex-1 py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PAID' ? 'bg-emerald-500 text-black border-emerald-500 font-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20'}`}
-                                >
-                                    Tam Ödendi
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setPaymentStatus('PARTIAL')}
-                                    className={`flex-1 py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PARTIAL' ? 'bg-yellow-500 text-black border-yellow-500 font-black' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'}`}
-                                >
-                                    Kapora
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setPaymentStatus('PENDING')}
-                                    className={`flex-1 py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PENDING' ? 'bg-red-500 text-white border-red-500 font-black' : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'}`}
-                                >
-                                    Ödeme Bekliyor
-                                </button>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={async () => {
-                                if (!isQuickCreateOpen || !selectedCourtId) return;
-                                if (!isRealPitch) {
-                                    notify('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.', 'warning');
+            {/* FAZ2: klavye-farkında bottom-sheet — müşteri adı inputu klavye açınca
+                KAYDET butonu (footer) klavye üstünde kalır; eskiden altında kayboluyordu. */}
+            <OwnerBottomSheet
+                open={!!isQuickCreateOpen}
+                onClose={() => setIsQuickCreateOpen(null)}
+                title="Yeni Rezervasyon"
+                footer={
+                    <button
+                        onClick={async () => {
+                            if (!isQuickCreateOpen || !selectedCourtId) return;
+                            if (!isRealPitch) {
+                                notify('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.', 'warning');
+                                return;
+                            }
+                            setIsAddingSlot(true);
+                            try {
+                                const startTime = isQuickCreateOpen.replace('.', ':');
+                                const hour = parseInt(startTime.split(':')[0], 10);
+                                const endTime = `${((hour + 1) % 24).toString().padStart(2, '0')}:00`;
+                                // Fiyat GERÇEK tarifeden; tarife yoksa kayıt engellenir (uydurma tutar yazılmaz).
+                                const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
+                                if (rateVal == null) {
+                                    notify('Bu saat için tarife tanımlı değil. Menü → Fiyatlandırma Politikası\'ndan tarife ekleyin.', 'warning');
+                                    setIsAddingSlot(false);
                                     return;
                                 }
-                                setIsAddingSlot(true);
-                                try {
-                                    const startTime = isQuickCreateOpen.replace('.', ':');
-                                    const hour = parseInt(startTime.split(':')[0], 10);
-                                    const endTime = `${((hour + 1) % 24).toString().padStart(2, '0')}:00`;
-                                    // Fiyat GERÇEK tarifeden; tarife yoksa kayıt engellenir (uydurma tutar yazılmaz).
-                                    const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
-                                    if (rateVal == null) {
-                                        notify('Bu saat için tarife tanımlı değil. Menü → Fiyatlandırma Politikası\'ndan tarife ekleyin.', 'warning');
-                                        setIsAddingSlot(false);
-                                        return;
-                                    }
-                                    const paidAmount =
-                                        paymentStatus === 'PAID' ? rateVal
-                                        : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25)
-                                        : 0;
-                                    // OP-P0-1: rezervasyon + nakit ödeme TEK atomik/idempotent RPC —
-                                    // "rezervasyon var ama tahsilat yok" tutarsızlığı biter. Telefon
-                                    // yalnız customer_phone'a yazılır (OP-P2-21; note tekrarı yok).
-                                    await ownerCreateManualBooking({
-                                        pitchId,
-                                        courtId: selectedCourtId,
-                                        bookingDate: selectedDateISO,
-                                        startTime,
-                                        endTime,
-                                        customerName: customerName.trim() || undefined,
-                                        customerPhone: customerPhone.trim() || undefined,
-                                        paymentStatus,
-                                        paidAmount,
-                                        paymentMethod: 'CASH',
-                                    });
-                                    await loadBookings();
-                                    setIsQuickCreateOpen(null);
-                                    setCustomerName('');
-                                    setCustomerPhone('');
-                                    setPaymentStatus('PENDING');
-                                } catch (err) {
-                                    notify(toTurkishError(err), 'error');
-                                } finally {
-                                    setIsAddingSlot(false);
-                                }
-                            }}
-                            disabled={isAddingSlot}
-                            className="w-full py-4 bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
+                                const paidAmount =
+                                    paymentStatus === 'PAID' ? rateVal
+                                    : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25)
+                                    : 0;
+                                // OP-P0-1: rezervasyon + nakit ödeme TEK atomik/idempotent RPC —
+                                // "rezervasyon var ama tahsilat yok" tutarsızlığı biter. Telefon
+                                // yalnız customer_phone'a yazılır (OP-P2-21; note tekrarı yok).
+                                await ownerCreateManualBooking({
+                                    pitchId,
+                                    courtId: selectedCourtId,
+                                    bookingDate: selectedDateISO,
+                                    startTime,
+                                    endTime,
+                                    customerName: customerName.trim() || undefined,
+                                    customerPhone: customerPhone.trim() || undefined,
+                                    paymentStatus,
+                                    paidAmount,
+                                    paymentMethod: 'CASH',
+                                });
+                                await loadBookings();
+                                setIsQuickCreateOpen(null);
+                                setCustomerName('');
+                                setCustomerPhone('');
+                                setPaymentStatus('PENDING');
+                            } catch (err) {
+                                notify(toTurkishError(err), 'error');
+                            } finally {
+                                setIsAddingSlot(false);
+                            }
+                        }}
+                        disabled={isAddingSlot}
+                        className="w-full py-4 min-h-[52px] bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                        {isAddingSlot ? 'KAYDEDİLİYOR...' : 'KAYDET'}
+                    </button>
+                }
+            >
+                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6 text-center">
+                    <p className="text-xs text-gray-500 uppercase font-bold">Seçilen Saat</p>
+                    <p className="text-3xl font-black text-white mt-1 font-mono tabular-nums">{isQuickCreateOpen}</p>
+                    {(() => {
+                        const rate = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
+                        return rate != null ? (
+                            <p className="text-sm font-bold text-gray-400 mt-2">Tutar: {rate}₺</p>
+                        ) : (
+                            <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Menü → Fiyatlandırma Politikası'ndan ekleyin.</p>
+                        );
+                    })()}
+                </div>
+
+                <div className="space-y-4">
+                    <div className="bg-[#0A0E14] flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FACC15] transition-colors gap-3">
+                        <div className="flex items-center w-full">
+                          <User size={18} className="text-gray-500 mr-3" />
+                          <input
+                              type="text"
+                              placeholder="Müşteri Adı / Takım Adı"
+                              value={customerName}
+                              onChange={(e) => setCustomerName(e.target.value)}
+                              className="bg-transparent text-white font-bold w-full outline-none"
+                              autoFocus
+                          />
+                        </div>
+                        <div className="h-px w-full bg-white/5" />
+                        <div className="flex items-center w-full">
+                          <Phone size={18} className="text-gray-500 mr-3" />
+                          <input
+                              type="tel"
+                              placeholder="Telefon Numarası (Opsiyonel)"
+                              value={customerPhone}
+                              onChange={(e) => setCustomerPhone(e.target.value)}
+                              className="bg-transparent text-gray-300 font-mono text-sm w-full outline-none"
+                          />
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setPaymentStatus('PAID')}
+                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PAID' ? 'bg-emerald-500 text-black border-emerald-500 font-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20'}`}
                         >
-                            {isAddingSlot ? 'KAYDEDİLİYOR...' : 'KAYDET'}
+                            Tam Ödendi
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPaymentStatus('PARTIAL')}
+                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PARTIAL' ? 'bg-yellow-500 text-black border-yellow-500 font-black' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'}`}
+                        >
+                            Kapora
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPaymentStatus('PENDING')}
+                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PENDING' ? 'bg-red-500 text-white border-red-500 font-black' : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'}`}
+                        >
+                            Ödeme Bekliyor
                         </button>
                     </div>
                 </div>
-            )}
+            </OwnerBottomSheet>
 
             {flashDealModalOpen && selectedCourtId && isRealPitch && (
                 <OwnerFlashDealModal

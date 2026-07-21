@@ -102,6 +102,7 @@ import { FinancialCalendarView } from './owner/calendar/FinancialCalendarView';
 import { MatchCountdownItem, PitchOccupancyGrid } from './owner/home/OwnerHomeWidgets';
 import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
 import { PendingActionsView } from './owner/PendingActionsView';
+import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
 import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './owner/ownerPanelShared';
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
@@ -718,7 +719,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className="px-6 py-4 pt-safe bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30">
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
                   <button onClick={() => onBack()} className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors">
                       <ArrowLeft size={20} />
@@ -773,7 +774,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
-          <header className="px-6 py-4 bg-[#1A1F2C] border-b border-white/5 flex items-center sticky top-0 z-30">
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex items-center sticky top-0 z-30`}>
               <h1 className="text-lg font-black text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
@@ -1085,57 +1086,53 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         <OwnerLogoutModal onClose={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); setStaffPanelContext(null); (onLogout ?? onBack)(); }} />
       )}
 
-      {showRevenueModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-[40px] border border-white/10 p-8 animate-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-2xl font-black text-white italic tracking-tight">CİRO DETAYLARI</h3>
-                      <button onClick={() => setShowRevenueModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+      {/* FAZ2: ortada kırpılan dialog → klavye-farkında, kaydırılabilir, güvenli-alanlı bottom-sheet.
+          Çok kortlu tesiste liste artık taşmıyor; backdrop/Esc ile kapanıyor. */}
+      <OwnerBottomSheet
+          open={showRevenueModal}
+          onClose={() => setShowRevenueModal(false)}
+          title="Ciro Detayları"
+          subtitle="Bugünkü saha bazlı tahsilat"
+      >
+          <div className="space-y-3">
+              {courtStats.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
+              ) : courtStats.map((item) => (
+                  <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+                      <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
+                      <span className="text-lg font-black text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
                   </div>
-                  <div className="space-y-4">
-                      {courtStats.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
-                      ) : courtStats.map((item) => (
-                          <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
-                              <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
-                              <span className="text-lg font-black text-emerald-400">{item.collected.toLocaleString('tr-TR')}₺</span>
-                          </div>
-                      ))}
-                      <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                          <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
-                          <span className="text-2xl font-black text-emerald-500">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
-                      </div>
-                  </div>
+              ))}
+              <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                  <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
+                  <span className="text-2xl font-black text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
               </div>
           </div>
-      )}
+      </OwnerBottomSheet>
 
-      {showOccupancyModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-[40px] border border-white/10 p-8 animate-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-2xl font-black text-white italic tracking-tight">DOLULUK DETAYI</h3>
-                      <button onClick={() => setShowOccupancyModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+      <OwnerBottomSheet
+          open={showOccupancyModal}
+          onClose={() => setShowOccupancyModal(false)}
+          title="Doluluk Detayı"
+          subtitle="Bugünkü saha bazlı doluluk"
+      >
+          <div className="space-y-6">
+              {courtStats.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
+              ) : courtStats.map((item) => (
+                  <div key={item.courtId} className="space-y-2">
+                      <div className="flex justify-between items-end">
+                          <span className="text-sm font-bold text-white">{item.courtName}</span>
+                          <span className={`text-sm font-black tabular-nums ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
+                      </div>
+                      <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
+                      </div>
+                      <p className="text-[0.6875rem] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
                   </div>
-                  <div className="space-y-6">
-                      {courtStats.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
-                      ) : courtStats.map((item) => (
-                          <div key={item.courtId} className="space-y-2">
-                              <div className="flex justify-between items-end">
-                                  <span className="text-sm font-bold text-white">{item.courtName}</span>
-                                  <span className={`text-sm font-black ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
-                              </div>
-                              <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
-                              </div>
-                              <p className="text-[10px] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
-                          </div>
-                      ))}
-                  </div>
-              </div>
+              ))}
           </div>
-      )}
+      </OwnerBottomSheet>
 
 
       <OwnerBottomNav
