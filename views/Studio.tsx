@@ -22,7 +22,8 @@ import {
 } from '../services/teamSocialService';
 import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
-    setTacticShareLink, tacticShareUrl,
+    setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
+    setActiveTactic as setActiveTacticRpc,
 } from '../services/tacticSocialService';
 import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
 // Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
@@ -41,6 +42,11 @@ import { ARCHETYPES, INSTRUCTIONS, DEFAULT_TEMPO, normalizeTempo, tempoSpeedFact
 import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
 // BİZ/RAKİP katman anahtarı — aktif taraf önde, pasif taraf arkada ve kilitli
 import { isLayerEditing, markerLayer, lineIsMuted } from './studio/layering';
+// Birleşik taktik kütüphanesi (kişisel + takım oyun defterleri) — saf yardımcılar
+import {
+    statusMeta, filterEntries, sortEntries, mineToEntry, showcaseToEntry,
+} from './studio/tacticLibrary';
+import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
 
 // ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
@@ -225,6 +231,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
     const [saveTacticName, setSaveTacticName] = useState('');
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
+    // ── Birleşik kütüphane: aktif sekme (Kütüphanem / takım) + arama + takım vitrinleri ──
+    const [libraryTab, setLibraryTab] = useState<'MINE' | string>('MINE');
+    const [librarySearch, setLibrarySearch] = useState('');
+    const [teamShowcases, setTeamShowcases] = useState<Record<string, LibraryEntry[]>>({});
+    const [loadingShowcase, setLoadingShowcase] = useState<string | null>(null);
+    const [openingTacticId, setOpeningTacticId] = useState<string | null>(null);
 
     // Global Store — stüdyo bağlamı
     const studioContext = useAppStore(s => s.studioContext);
@@ -713,6 +725,72 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         if (tempo === normalizeTempo(activeTactic.tempo)) return;
         setActiveTactic({ ...activeTactic, tempo });
         if (navigator.vibrate) navigator.vibrate(8);
+    };
+
+    // ── Birleşik kütüphane: takım oyun defterini tembel yükle (vitrin RPC) ──
+    const loadTeamShowcase = async (teamId: string) => {
+        if (teamShowcases[teamId]) return;
+        setLoadingShowcase(teamId);
+        try {
+            const rows = await getTeamTacticsShowcase(teamId);
+            setTeamShowcases(prev => ({ ...prev, [teamId]: rows.map(r => showcaseToEntry(r, teamId)) }));
+        } catch (e) {
+            console.error('[Studio] takım vitrini yüklenemedi', e);
+            setTeamShowcases(prev => ({ ...prev, [teamId]: [] }));
+        } finally {
+            setLoadingShowcase(null);
+        }
+    };
+
+    // Kütüphane penceresi açıldığında / sekme değişince ilgili takımı yükle
+    useEffect(() => {
+        if (!showTacticsModal) return;
+        if (libraryTab !== 'MINE') void loadTeamShowcase(libraryTab);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showTacticsModal, libraryTab]);
+
+    // Aktif sekmenin süzülmüş + sıralanmış satırları
+    const libraryEntries: LibraryEntry[] = sortEntries(filterEntries(
+        libraryTab === 'MINE'
+            ? dbTactics.map(mineToEntry)
+            : (teamShowcases[libraryTab] || []),
+        librarySearch,
+    ));
+
+    // Bir kütüphane satırını plana yükle: kişiselse yereldeki tam kayıt,
+    // takımsa getTacticById ile derin hidrasyon. Zaten açık plan varsa ona geç.
+    const openLibraryEntry = async (entry: LibraryEntry) => {
+        const existingIndex = plans.findIndex(p => p.id === entry.id);
+        if (existingIndex >= 0) {
+            setActivePlanIndex(existingIndex);
+            setShowTacticsModal(false);
+            return;
+        }
+        let tactic: TacticState | undefined =
+            entry.source === 'MINE' ? dbTactics.find(t => t.id === entry.id) : undefined;
+        if (!tactic) {
+            setOpeningTacticId(entry.id);
+            try {
+                const row = await getTacticById(entry.id);
+                if (!row) { showToast('Taktik bulunamadı ya da erişimin yok.', 'error'); return; }
+                tactic = parseDbTactic(row);
+            } catch (e) {
+                console.error('[Studio] taktik yüklenemedi', e);
+                showToast('Taktik yüklenemedi.', 'error');
+                return;
+            } finally {
+                setOpeningTacticId(null);
+            }
+        }
+        if (entry.teamId) {
+            tactic = { ...tactic, teamId: entry.teamId };
+            setSelectedTeamId(entry.teamId);
+            setIsTeamConfirmed(true);
+            void ensureSquad(entry.teamId);
+        }
+        setPlans(prev => [...prev, tactic!]);
+        setActivePlanIndex(plans.length);
+        setShowTacticsModal(false);
     };
 
     // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
@@ -2827,48 +2905,96 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className="bg-[#161B22] border border-white/10 rounded-[32px] w-full max-w-lg overflow-hidden shadow-[0_0_60px_rgba(57,255,20,0.1)] flex flex-col max-h-[80vh]"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0A0E14]/50">
-                                <h3 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-3">
-                                    <List size={24} className="text-[#39FF14]" /> KAYITLI TAKTİKLER
-                                </h3>
-                                <button onClick={() => setShowTacticsModal(false)} className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={20} /></button>
+                            <div className="p-5 border-b border-white/5 bg-[#0A0E14]/50">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2.5">
+                                        <List size={20} className="text-[#39FF14]" /> TAKTİK KÜTÜPHANESİ
+                                    </h3>
+                                    <button onClick={() => setShowTacticsModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={18} /></button>
+                                </div>
+                                {/* Sekmeler: Kütüphanem + üyesi olunan takımlar */}
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
+                                    <button
+                                        onClick={() => setLibraryTab('MINE')}
+                                        className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${libraryTab === 'MINE' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                    >Kütüphanem</button>
+                                    {studioTeams.map(team => (
+                                        <button
+                                            key={team.team_id}
+                                            onClick={() => setLibraryTab(team.team_id)}
+                                            title={`Takım kütüphanesi: ${team.name}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                        >
+                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                            </span>
+                                            {team.short_name || team.name}
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* Arama */}
+                                <div className="relative">
+                                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                    <input
+                                        value={librarySearch}
+                                        onChange={(e) => setLibrarySearch(e.target.value)}
+                                        placeholder="Taktik ara…"
+                                        aria-label="Taktik ara"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-10 pr-9 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-[#39FF14]/50 focus:outline-none"
+                                    />
+                                    {librarySearch && (
+                                        <button onClick={() => setLibrarySearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><X size={12} /></button>
+                                    )}
+                                </div>
                             </div>
-                            <div className="p-4 overflow-y-auto flex-1 space-y-3 no-scrollbar">
-                                {dbTactics.length === 0 ? (
-                                    <div className="py-12 text-center text-gray-500 font-mono text-sm">
-                                        Henüz kaydedilmiş bir taktik yok.
+                            <div className="p-4 overflow-y-auto flex-1 space-y-2.5 no-scrollbar">
+                                {loadingShowcase === libraryTab ? (
+                                    <div className="py-12 flex justify-center"><Spinner size={22} color="rgba(255,255,255,0.4)" glow={false} /></div>
+                                ) : libraryEntries.length === 0 ? (
+                                    <div className="py-12 text-center text-gray-500 text-sm px-6">
+                                        {librarySearch
+                                            ? 'Eşleşen taktik yok.'
+                                            : libraryTab === 'MINE'
+                                                ? 'Kişisel kütüphanen boş — bir taktik kur ve kaydet.'
+                                                : 'Bu takımın oyun defteri henüz boş.'}
                                     </div>
                                 ) : (
-                                    dbTactics.map((t) => (
-                                        <button
-                                            key={t.id}
-                                            onClick={() => {
-                                                const existingIndex = plans.findIndex(p => p.id === t.id);
-                                                if (existingIndex >= 0) {
-                                                    setActivePlanIndex(existingIndex);
-                                                } else {
-                                                    setPlans([...plans, t]);
-                                                    setActivePlanIndex(plans.length);
-                                                }
-                                                setShowTacticsModal(false);
-                                            }}
-                                            className="w-full text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between"
-                                        >
-                                            <div>
-                                                <h4 className="text-white font-bold text-lg group-hover:text-[#39FF14] transition-colors">{t.name}</h4>
-                                                <div className="text-[10px] font-mono text-gray-500 flex items-center gap-2 mt-1 uppercase">
-                                                    <span>{t.teamName || 'İSİMSİZ TAKIM'}</span>
-                                                    <span>•</span>
-                                                    <span>{t.formation}</span>
-                                                    <span>•</span>
-                                                    <span>{t.size}</span>
+                                    libraryEntries.map((entry) => {
+                                        const sm = statusMeta(entry.status);
+                                        const toneClass: Record<StatusTone, string> = {
+                                            ok: 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/25',
+                                            wait: 'bg-amber-400/10 text-amber-400 border-amber-400/25',
+                                            no: 'bg-red-500/10 text-red-400 border-red-500/25',
+                                            none: 'hidden',
+                                        };
+                                        const isOpening = openingTacticId === entry.id;
+                                        return (
+                                            <button
+                                                key={entry.id}
+                                                onClick={() => void openLibraryEntry(entry)}
+                                                disabled={isOpening}
+                                                className="w-full text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        {entry.isActive && (
+                                                            <span title="Takımın aktif maç planı" className="shrink-0"><Star size={14} className="text-[#FACC15]" fill="#FACC15" /></span>
+                                                        )}
+                                                        <h4 className="text-white font-bold text-base group-hover:text-[#39FF14] transition-colors truncate">{entry.name}</h4>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                        <span className="text-[10px] font-mono text-gray-500 uppercase">{entry.formation || '—'} · {entry.size || '—'}</span>
+                                                        {sm.tone !== 'none' && (
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest border rounded-full px-2 py-0.5 ${toneClass[sm.tone]}`}>{sm.label}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#39FF14] group-hover:text-black transition-colors text-white/50">
-                                                <ChevronRight size={18} />
-                                            </div>
-                                        </button>
-                                    ))
+                                                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#39FF14] group-hover:text-black transition-colors text-white/50 shrink-0 ml-3">
+                                                    {isOpening ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
+                                                </div>
+                                            </button>
+                                        );
+                                    })
                                 )}
                             </div>
                         </motion.div>
