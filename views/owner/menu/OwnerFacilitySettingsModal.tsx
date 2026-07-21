@@ -26,8 +26,10 @@ import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
 import PhotoManager from '../../../components/pitch-editor/PhotoManager';
 import ShowcaseScoreCard from '../../../components/pitch-editor/ShowcaseScoreCard';
 import ShowcasePreview from '../../../components/pitch-editor/ShowcasePreview';
-import { ORDU_CENTER } from '../../../utils/orduData';
+import { ORDU_CENTER, ORDU_DISTRICT_NAMES, LAUNCH_CITY } from '../../../utils/orduData';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../../../components/map/mapBase';
+import { geocodeAddress, reverseGeocode, type ReverseResult } from '../../../services/geocodingService';
+import { fetchActiveCoverage } from '../../../services/regionCoverageService';
 
 interface Props {
   onClose: () => void;
@@ -102,8 +104,31 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   const [isPublished, setIsPublished] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>(initialData?.verificationStatus ?? 'pending');
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  // Faz 2 · konum: geocoding + il/ilçe listesi + pin→adres önerisi
+  const [geocoding, setGeocoding] = useState(false);
+  const [reverseSuggest, setReverseSuggest] = useState<ReverseResult | null>(null);
+  const [coverage, setCoverage] = useState<{ city: string; district: string | null }[]>([]);
 
   const isRealPitch = !!facilityId && !facilityId.startsWith('mock-');
+
+  // İl/İlçe seçenekleri: aktif kapsama (region_coverage) → yoksa Ordu fallback.
+  const cityOptions = useMemo(() => {
+    const fromCoverage = Array.from(new Set(coverage.map((c) => c.city).filter(Boolean)));
+    const base = fromCoverage.length ? fromCoverage : [LAUNCH_CITY];
+    // Mevcut kayıtlı il listede yoksa da göster (kirli eski veriyi kaybetme).
+    if (city && !base.includes(city)) return [city, ...base];
+    return base;
+  }, [coverage, city]);
+
+  const districtOptions = useMemo(() => {
+    const forCity = coverage
+      .filter((c) => (city ? c.city === city : true))
+      .map((c) => c.district)
+      .filter((d): d is string => !!d);
+    const base = forCity.length ? Array.from(new Set(forCity)) : ORDU_DISTRICT_NAMES;
+    if (district && !base.includes(district)) return [district, ...base];
+    return base;
+  }, [coverage, city, district]);
 
   useEffect(() => {
     if (!isRealPitch) return;
@@ -140,6 +165,53 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facilityId, isRealPitch]);
 
+  useEffect(() => {
+    fetchActiveCoverage()
+      .then((rows) => setCoverage(rows.map((r) => ({ city: r.city, district: r.district }))))
+      .catch(() => setCoverage([]));
+  }, []);
+
+  // Adres → koordinat: pini adresin bulunduğu yere taşır (Karar #11).
+  const handleGeocode = async () => {
+    if (!address.trim()) {
+      notify('Önce adres girin, sonra haritada bulun.', 'warning');
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const hit = await geocodeAddress(address.trim(), { city, district });
+      if (!hit) {
+        notify('Adres bulunamadı. Daha açık yazmayı deneyin veya pini elle yerleştirin.', 'warning');
+        return;
+      }
+      setLatLng([hit.lat, hit.lng]);
+      setReverseSuggest(null);
+      setActiveTab('location');
+      notify('Konum bulundu — pini kontrol edip gerekiyorsa ince ayar yapın.', 'success');
+    } catch {
+      notify('Konum servisi şu an yanıt vermedi. Pini haritadan elle yerleştirebilirsiniz.', 'error');
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  // Pin taşınınca adres önerisi getir (Karar #14 — otomatik değiştirme YOK, öneri).
+  const handlePinMoved = (lat: number, lng: number) => {
+    setLatLng([Number(lat.toFixed(6)), Number(lng.toFixed(6))]);
+    reverseGeocode(lat, lng)
+      .then((r) => setReverseSuggest(r))
+      .catch(() => setReverseSuggest(null));
+  };
+
+  const applyReverseSuggestion = () => {
+    if (!reverseSuggest) return;
+    if (reverseSuggest.address) setAddress(reverseSuggest.address);
+    if (reverseSuggest.city && cityOptions.includes(reverseSuggest.city)) setCity(reverseSuggest.city);
+    if (reverseSuggest.district) setDistrict(reverseSuggest.district);
+    setReverseSuggest(null);
+    notify('Adres öneriden dolduruldu — kaydetmeyi unutmayın.', 'success');
+  };
+
   const customAmenities = useMemo(
     () => amenities.filter((a) => !AMENITY_CATALOG.some((c) => c.value === a)),
     [amenities],
@@ -164,6 +236,13 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   const handleTogglePublished = async () => {
     if (!isRealPitch) return;
     const next = !isPublished;
+    // Karar #12: koordinatsız tesis vitrine çıkamaz (haritada gösterilemez,
+    // mesafe hesaplanamaz). Yayına almadan önce pin şart.
+    if (next && !latLng) {
+      notify('Vitrine çıkmadan önce Konum sekmesinden tesisin pinini yerleştirin.', 'warning');
+      setActiveTab('location');
+      return;
+    }
     setIsPublished(next);
     try {
       await setPitchPublished(facilityId, next);
@@ -313,33 +392,52 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">İl</label>
-                <input
+                <select
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
-                  placeholder="Ordu"
-                />
+                  onChange={(e) => { setCity(e.target.value); setDistrict(''); }}
+                  className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 appearance-none"
+                >
+                  <option value="" disabled>İl seçin</option>
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">İlçe</label>
-                <input
+                <select
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
-                  className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
-                  placeholder="Altınordu"
-                />
+                  className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 appearance-none"
+                >
+                  <option value="" disabled>İlçe seçin</option>
+                  {districtOptions.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
                 <MapPin size={12} /> Adres
               </label>
-              <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
-                placeholder="Mahalle, sokak, no"
-              />
+              <div className="flex gap-2">
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="flex-1 bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
+                  placeholder="Mahalle, sokak, no"
+                />
+                <button
+                  type="button"
+                  onClick={handleGeocode}
+                  disabled={geocoding || !address.trim()}
+                  className="shrink-0 px-4 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"
+                >
+                  <MapPin size={14} /> {geocoding ? 'Bulunuyor…' : 'Haritada Bul'}
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-500">Adresi yazıp "Haritada Bul"a dokun; pin otomatik konumlanır, Konum sekmesinden ince ayar yapabilirsin.</p>
             </div>
 
             {isRealPitch ? (
@@ -443,10 +541,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               <style>{OYNA_MAP_CSS}</style>
               <MapContainer center={mapCenter} zoom={latLng ? 16 : 12} className="w-full h-full" {...oynaMapProps}>
                 <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
-                <DraggablePin
-                  pos={mapCenter}
-                  onMove={(lat, lng) => setLatLng([Number(lat.toFixed(6)), Number(lng.toFixed(6))])}
-                />
+                <DraggablePin pos={mapCenter} onMove={handlePinMoved} />
               </MapContainer>
             </div>
             <div className="flex items-center justify-between text-[11px] font-bold">
@@ -454,6 +549,32 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 {latLng ? `Pin: ${latLng[0].toFixed(5)}, ${latLng[1].toFixed(5)}` : 'Pin henüz yerleştirilmedi — vitrin için zorunlu'}
               </span>
             </div>
+            {/* Pin taşınınca adres önerisi (Karar #14 — öneri, otomatik değiştirme yok) */}
+            {reverseSuggest?.address && (
+              <div className="bg-blue-500/10 border border-blue-500/25 rounded-2xl p-3.5 flex items-start gap-3">
+                <MapPin size={16} className="text-blue-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-bold text-blue-200">Bu konumun adresi:</p>
+                  <p className="text-xs text-white/80 mt-0.5 leading-snug">{reverseSuggest.address}</p>
+                  <div className="flex gap-2 mt-2.5">
+                    <button
+                      type="button"
+                      onClick={applyReverseSuggestion}
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold"
+                    >
+                      Adres olarak kullan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReverseSuggest(null)}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-[11px] font-bold"
+                    >
+                      Kapat
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
