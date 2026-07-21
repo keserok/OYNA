@@ -1537,6 +1537,33 @@ export async function reactivateCourt(courtId: string): Promise<void> {
   }
 }
 
+/** Aylık takvim yoğunluk noktaları: gün → iptal-olmayan rezervasyon sayısı (Faz 5). */
+export async function getMonthlyBookingDensity(
+  pitchId: string,
+  startISO: string,
+  endISO: string,
+): Promise<Record<string, number>> {
+  try {
+    const { data, error } = await supabase
+      .from('pitch_bookings')
+      .select('booking_date')
+      .eq('pitch_id', pitchId)
+      .neq('status', 'CANCELLED')
+      .gte('booking_date', startISO)
+      .lte('booking_date', endISO);
+    if (error) throw error;
+    const counts: Record<string, number> = {};
+    (data ?? []).forEach((r) => {
+      const d = String((r as { booking_date: string }).booking_date);
+      counts[d] = (counts[d] ?? 0) + 1;
+    });
+    return counts;
+  } catch (error) {
+    console.error('getMonthlyBookingDensity:', error);
+    return {};
+  }
+}
+
 // ----------------------------------------------------------------------------
 // ÖDEME AYARLARI
 // ----------------------------------------------------------------------------

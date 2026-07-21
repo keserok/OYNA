@@ -1260,6 +1260,28 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return { price, deposit };
   }, [selectedPitch, selectedSlot, selectedDateISO, courtSlots, selectedCourt]);
 
+  // Faz 5: seçili gün çalışma saatlerine göre kapalı mı (oyuncuya net durum).
+  const selectedDayClosed = useMemo(() => {
+    if (!selectedPitch) return false;
+    const resolved = resolveWorkingHoursForDate(
+      (selectedPitch as { workingHoursRaw?: unknown }).workingHoursRaw ?? selectedPitch.workingHours,
+      selectedDateISO,
+    );
+    return resolved.closed === true;
+  }, [selectedPitch, selectedDateISO]);
+
+  // Faz 5: "X sahadan Y müsait" özet şeridi — seçili gün için boş sahası olan kort sayısı.
+  const facilityDayAvailability = useMemo(() => {
+    const courts = selectedPitch?.courts ?? [];
+    if (!selectedPitch || courts.length === 0) return { total: 0, free: 0 };
+    let free = 0;
+    courts.forEach((c) => {
+      const slots = computeAvailability(selectedPitch, selectedDateISO, bookings, c.id);
+      if (slots.some((s) => s.status === 'available')) free += 1;
+    });
+    return { total: courts.length, free };
+  }, [selectedPitch, selectedDateISO, bookings]);
+
   const persistBookingSelection = () => {
     if (!selectedPitch || !selectedCourt || !selectedSlot || !selectedSlotQuote) return;
     setBookingPitch(selectedPitch);
@@ -1971,9 +1993,18 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   ayrı seçilir; owner panelindeki "Sahalarım" ile birebir aynı kayıtlar. */}
               {detailCourts.length > 0 && (
                 <div className="px-6 mt-8">
-                  <h3 className="text-base font-extrabold tracking-tight mb-3">
-                    Sahalar{detailCourts.length > 1 ? ` (${detailCourts.length})` : ''}
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-base font-extrabold tracking-tight">
+                      Sahalar{detailCourts.length > 1 ? ` (${detailCourts.length})` : ''}
+                    </h3>
+                    {facilityDayAvailability.total > 1 && !selectedDayClosed && (
+                      <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full ${facilityDayAvailability.free > 0 ? 'bg-[#39FF14]/10 text-[#39FF14]' : 'bg-red-500/10 text-red-400'}`}>
+                        {facilityDayAvailability.free > 0
+                          ? `${facilityDayAvailability.total} sahadan ${facilityDayAvailability.free}'i müsait`
+                          : 'Bugün dolu'}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-col gap-2.5">
                     {detailCourts.map(court => {
                       const isSel = selectedCourtId === court.id;
@@ -2221,7 +2252,12 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     );
                   })}
                 </div>
-                {filteredSlots.filter(s => s.status !== 'closed').length === 0 && (
+                {selectedDayClosed ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm font-extrabold text-white/70">Bu gün kapalı</p>
+                    <p className="text-xs text-white/40 mt-1">Tesis bu gün çalışma saatlerinde hizmet vermiyor. Başka bir gün seçebilirsin.</p>
+                  </div>
+                ) : filteredSlots.filter(s => s.status !== 'closed').length === 0 && (
                   <p className="text-center text-xs text-white/40 py-6">Bu gün için uygun saat bulunmuyor.</p>
                 )}
 

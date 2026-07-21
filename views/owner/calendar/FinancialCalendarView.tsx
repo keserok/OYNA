@@ -17,7 +17,7 @@ import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } f
 import {
   getPitchBookings, ownerCreateManualBooking, getSubscriptions, updateSubscriptionStatus,
   setSubscriptionAutoRenew, subscribeToOwnerBookings, getActiveFlashDeals,
-  getAvailabilityExceptions, toTurkishError,
+  getAvailabilityExceptions, getMonthlyBookingDensity, toTurkishError,
 } from '../../../services/pitchOwnerService';
 import { todayISO } from '../ownerPanelShared';
 import type { PitchBookingFull, PitchCourt, FlashDeal, PitchAvailabilityException } from '../../../types';
@@ -110,6 +110,7 @@ export const FinancialCalendarView: React.FC<{
     const notify = useOwnerToast();
     const dayStrip = useMemo(() => buildDayStrip(), []);
     const dayStripRef = useRef<HTMLDivElement | null>(null);
+    const dayScrollRef = useRef<HTMLDivElement | null>(null);
 
     // Seçili gün artık ISO tarih — 30 günlük şerit ve aylık görünüm aynı state'i sürer.
     const [selectedDateISO, setSelectedDateISO] = useState(() => todayISO());
@@ -131,6 +132,7 @@ export const FinancialCalendarView: React.FC<{
     const [subActionBusy, setSubActionBusy] = useState(false);
     const [flashDeals, setFlashDeals] = useState<FlashDeal[]>([]);
     const [closedSlots, setClosedSlots] = useState<PitchAvailabilityException[]>([]);
+    const [monthDensity, setMonthDensity] = useState<Record<string, number>>({});
 
     const [bookings, setBookings] = useState<CalendarBooking[]>([]);
     const [customerName, setCustomerName] = useState('');
@@ -150,6 +152,20 @@ export const FinancialCalendarView: React.FC<{
         const el = dayStripRef.current?.querySelector<HTMLButtonElement>(`[data-date="${selectedDateISO}"]`);
         el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }, [selectedDateISO]);
+
+    // UX (Faz 5): bugün seçiliyken gün ekranı açılınca ŞU ANKİ saate kaydır —
+    // owner geçmiş saatleri geçip doğrudan güncel/yaklaşan slotları görsün.
+    useEffect(() => {
+        if (isMonthlyView) return;
+        if (selectedDateISO !== todayISO()) return;
+        const nowHour = new Date().getHours();
+        const key = `${String(nowHour).padStart(2, '0')}.00`;
+        const t = setTimeout(() => {
+            dayScrollRef.current?.querySelector<HTMLElement>(`[data-hour="${key}"]`)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+        return () => clearTimeout(t);
+    }, [selectedDateISO, isMonthlyView, showAllHours]);
     // WP6: seçili günün çalışma penceresi (owner ayarı = takvim penceresi = tüketici).
     const dayHours = useMemo(
         () => resolveWorkingHoursForDate(workingHours as any, selectedDateISO),
@@ -257,6 +273,15 @@ export const FinancialCalendarView: React.FC<{
     useEffect(() => {
         loadSlotMeta();
     }, [loadSlotMeta]);
+
+    // Aylık görünüm yoğunluk noktaları: gösterilen ayın rezervasyon sayıları.
+    useEffect(() => {
+        if (!isMonthlyView || !isRealPitch || !pitchId) { setMonthDensity({}); return; }
+        const startISO = `${monthCursor.y}-${String(monthCursor.m + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(monthCursor.y, monthCursor.m + 1, 0).getDate();
+        const endISO = `${monthCursor.y}-${String(monthCursor.m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        getMonthlyBookingDensity(pitchId, startISO, endISO).then(setMonthDensity).catch(() => setMonthDensity({}));
+    }, [isMonthlyView, isRealPitch, pitchId, monthCursor]);
 
     // Fiyat GERÇEK tarifeden gelir (saha-öncelikli + gün-farkında); tarife yoksa null.
     const getSlotPrice = (time: string): number | null => {
@@ -402,7 +427,7 @@ export const FinancialCalendarView: React.FC<{
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-32">
+            <div ref={dayScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-32">
                 {isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
@@ -449,17 +474,23 @@ export const FinancialCalendarView: React.FC<{
                                         const iso = formatDateISO(d);
                                         const isToday = iso === todayISO();
                                         const isSelected = iso === selectedDateISO;
+                                        const count = monthDensity[iso] ?? 0;
+                                        // Yoğunluk: 0 nokta yok, 1-2 düşük, 3-5 orta, 6+ yüksek.
+                                        const densityColor = count === 0 ? '' : count <= 2 ? 'bg-emerald-500/70' : count <= 5 ? 'bg-amber-500/80' : 'bg-red-500/80';
                                         return (
                                             <button
                                                 key={di}
                                                 onClick={() => selectDay(iso)}
-                                                className={`aspect-square rounded-xl flex items-center justify-center relative transition-all border ${
+                                                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border ${
                                                     isSelected ? 'bg-white/10 text-white border-white/30 shadow-lg scale-110 z-10' :
                                                     isToday ? 'text-[#FACC15] border-[#FACC15]/30' :
                                                     'text-gray-500 border-transparent hover:bg-white/5'
                                                 }`}
                                             >
                                                 <span className="text-xs font-bold">{d.getDate()}</span>
+                                                {count > 0 && (
+                                                    <span className={`mt-0.5 w-1.5 h-1.5 rounded-full ${densityColor}`} title={`${count} rezervasyon`} />
+                                                )}
                                             </button>
                                         );
                                     })}
@@ -576,7 +607,7 @@ export const FinancialCalendarView: React.FC<{
                         const withinHours = !dayHours.closed && isHourWithinWorkingHours(parseInt(time.split('.')[0], 10), dayHours.open, dayHours.close);
 
                         return (
-                            <div key={time} className="flex gap-4 group">
+                            <div key={time} data-hour={time} className="flex gap-4 group scroll-mt-40">
                                 <div className="w-20 pt-4 flex flex-col items-center">
                                     <span className={`text-[11px] font-mono font-black tracking-tighter ${booking || slotClosed ? 'text-white' : withinHours ? 'text-gray-600' : 'text-gray-700'}`}>
                                         {time} - {nextTime}
