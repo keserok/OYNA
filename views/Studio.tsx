@@ -9,7 +9,7 @@ import {
     Swords, UserPlus,
     MessageSquare, ShieldAlert,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
-    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, HelpCircle
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, HelpCircle, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -24,7 +24,11 @@ import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
     setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
     setActiveTactic as setActiveTacticRpc, TacticConflictError, logStudioEvent,
+    assignMatchTactic,
 } from '../services/tacticSocialService';
+// Takımın yaklaşan maçı — "kaydederken maça ata" için (teamService SSOT)
+import { fetchTeamNextMatch } from '../services/teamService';
+import type { TeamMatchRow } from '../services/teamService';
 import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
 // Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
 import { getFriends, getFriendLists } from '../services/socialService';
@@ -241,6 +245,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [conflictOpen, setConflictOpen] = useState(false);          // iyimser kilit çakışma diyaloğu
     const [reloadingConflict, setReloadingConflict] = useState(false);
+    // "Kaydederken maça ata" — yalnız yönetici + takım taktiği + yaklaşan maç varsa
+    const [nextMatch, setNextMatch] = useState<TeamMatchRow | null>(null);
+    const [assignToMatch, setAssignToMatch] = useState(false);
     const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
     const [saveTacticName, setSaveTacticName] = useState('');
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
@@ -1120,12 +1127,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             proposedBy: res.status === 'PENDING_APPROVAL' ? auth.currentUser!.uid : null,
             updatedAt: res.updatedAt ?? activeTactic.updatedAt, // beklenen damgayı tazele
         });
+        logStudioEvent('tactic_save');
+
+        // Kaydederken maça ata: yalnız ONAYLI takım taktiği (yönetici kaydı) + anahtar açık + maç var.
+        // Kayıt başarısını bozmaz — atama ayrı denenir, hatası ayrı bildirilir.
+        let assignedNote = '';
+        if (assignToMatch && nextMatch && res.status === 'APPROVED') {
+            try {
+                await assignMatchTactic(nextMatch.id, res.tacticId);
+                assignedNote = ` "${nextMatch.opponentName}" maçına atandı.`;
+            } catch (e) {
+                showToast((e as Error)?.message || 'Kayıt tamam ama maça atanamadı.', 'error');
+            }
+        }
         showToast(res.status === 'PENDING_APPROVAL'
             ? "Taktik önerin takım yöneticilerine gönderildi!"
-            : "Taktik kaydedildi!");
-        logStudioEvent('tactic_save');
+            : `Taktik kaydedildi!${assignedNote}`);
         setShowSaveModal(false);
         setConflictOpen(false);
+        setAssignToMatch(false);
         // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz
         try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
     };
@@ -1171,6 +1191,19 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         } catch { showToast('Güncel sürüm yüklenemedi.', 'error'); }
         finally { setReloadingConflict(false); setConflictOpen(false); }
     };
+
+    // Kaydet penceresi açılınca: yönetici + takım ise yaklaşan maçı getir (atama için).
+    useEffect(() => {
+        if (!showSaveModal || !selectedTeamId) { setNextMatch(null); setAssignToMatch(false); return; }
+        const role = studioTeams.find(t => t.team_id === selectedTeamId)?.my_role;
+        if (role !== 'CAPTAIN' && role !== 'ADMIN') { setNextMatch(null); setAssignToMatch(false); return; }
+        let alive = true;
+        fetchTeamNextMatch(selectedTeamId)
+            .then(m => { if (alive) setNextMatch(m); })
+            .catch(() => { if (alive) setNextMatch(null); });
+        return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showSaveModal, selectedTeamId]);
 
     // Stüdyo-içi öneri karar akışı: bekleyen takım taktiği + yönetici (M87)
     const myRoleForActiveTeam = studioTeams.find(t => t.team_id === (activeTactic.teamId || selectedTeamId))?.my_role;
@@ -3245,6 +3278,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             : <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span>;
                                     })()}
                                 </div>
+                                {/* Kaydederken maça ata — yalnız yönetici + takım + yaklaşan maç (nextMatch effect zaten gate'ler) */}
+                                {nextMatch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignToMatch(v => !v)}
+                                        aria-pressed={assignToMatch}
+                                        className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 border transition-all text-left ${assignToMatch ? 'bg-[#39FF14]/10 border-[#39FF14]/40' : 'bg-[#0A0E14] border-white/10 hover:border-white/25'}`}
+                                    >
+                                        <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${assignToMatch ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/30'}`}>
+                                            {assignToMatch && <Check size={13} className="text-black" />}
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[12px] font-black text-white">Yaklaşan maça ata</span>
+                                            <span className="block text-[10px] text-gray-500 truncate">
+                                                {nextMatch.opponentName} · {nextMatch.date}{nextMatch.time ? ` ${nextMatch.time}` : ''}
+                                            </span>
+                                        </span>
+                                        <Calendar size={16} className={assignToMatch ? 'text-[#39FF14]' : 'text-gray-500'} />
+                                    </button>
+                                )}
                             </div>
 
                             <button
