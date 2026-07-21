@@ -1194,6 +1194,7 @@ export interface CourtInput {
   capacity?: number | null;
   images?: string[] | null;
   description?: string | null;
+  features?: string[] | null;
   lighting_grade?: string | null;
   grass_grade?: string | null;
   locker_grade?: string | null;
@@ -1213,6 +1214,7 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       capacity: court.capacity ?? 14,
       images: court.images ?? [],
       description: court.description ?? null,
+      features: court.features ?? [],
       lighting_grade: court.lighting_grade ?? null,
       grass_grade: court.grass_grade ?? null,
       locker_grade: court.locker_grade ?? null,
@@ -1505,6 +1507,37 @@ export async function deleteCourt(courtId: string): Promise<void> {
     if (error) throw error;
   } catch (error) {
     console.error('deleteCourt:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Soft-delete edilmiş (pasif) sahalar — "Geri Aç" için (Karar #5). */
+export async function getInactiveCourts(pitchId: string): Promise<PitchCourt[]> {
+  try {
+    const { data, error } = await supabase
+      .from('courts')
+      .select('*')
+      .eq('pitch_id', pitchId)
+      .eq('is_active', false)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as PitchCourt[];
+  } catch (error) {
+    console.error('getInactiveCourts:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Pasif sahayı yeniden aktifleştirir (yanlış silmeyi telafi). */
+export async function reactivateCourt(courtId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('courts')
+      .update({ is_active: true })
+      .eq('id', courtId);
+    if (error) throw error;
+  } catch (error) {
+    console.error('reactivateCourt:', error);
     throw new Error(toTurkishError(error));
   }
 }

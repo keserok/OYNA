@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera } from 'lucide-react';
 import { PitchCourt } from '../../types';
-import { upsertCourt, deleteCourt, toTurkishError } from '../../services/pitchOwnerService';
+import { upsertCourt, deleteCourt, getInactiveCourts, reactivateCourt, toTurkishError } from '../../services/pitchOwnerService';
 import { approveCourtGrades } from '../../services/pitchContentService';
 import { supabase } from '../../supabaseClient';
 import PhotoManager from '../../components/pitch-editor/PhotoManager';
+import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatures';
 
 const SURFACE_LABELS: Record<string, string> = {
     TURF: 'Suni Çim',
@@ -12,6 +13,29 @@ const SURFACE_LABELS: Record<string, string> = {
     PARQUET: 'Parke',
     TARTAN: 'Tartan',
 };
+
+// Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
+const CAPACITY_OPTIONS = [
+    { label: '5v5', value: 10 },
+    { label: '6v6', value: 12 },
+    { label: '7v7', value: 14 },
+    { label: '8v8', value: 16 },
+    { label: '9v9', value: 18 },
+    { label: '11v11', value: 22 },
+];
+
+/** "30x50" → {w:'30', l:'50'} (Türkçe 'x'/'X'/'*' ayraçlarını hoş görür). */
+function parseSize(size?: string | null): { w: string; l: string } {
+    if (!size) return { w: '', l: '' };
+    const parts = String(size).split(/[xX*]/).map((s) => s.trim());
+    return { w: parts[0] ?? '', l: parts[1] ?? '' };
+}
+function composeSize(w: string, l: string): string | null {
+    const ww = w.trim();
+    const ll = l.trim();
+    if (!ww && !ll) return null;
+    return `${ww || '?'}x${ll || '?'}`;
+}
 
 interface PitchManagerProps {
     onBack: () => void;
@@ -33,8 +57,36 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [editingPitch, setEditingPitch] = useState<PitchCourt | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [inactiveCourts, setInactiveCourts] = useState<PitchCourt[]>([]);
 
     const isRealFacility = !!facilityId && !facilityId.startsWith('mock-');
+
+    // Pasif (soft-delete) sahalar — "Geri Aç" için (Karar #5).
+    const loadInactive = React.useCallback(() => {
+        if (!isRealFacility || !facilityId) { setInactiveCourts([]); return; }
+        getInactiveCourts(facilityId).then(setInactiveCourts).catch(() => setInactiveCourts([]));
+    }, [isRealFacility, facilityId]);
+    useEffect(() => { loadInactive(); }, [loadInactive, pitches.length]);
+
+    const handleReactivate = async (court: PitchCourt) => {
+        if (readOnly) return;
+        try {
+            if (isRealFacility && court.id) await reactivateCourt(court.id);
+            setInactiveCourts((prev) => prev.filter((c) => c.id !== court.id));
+            onUpdatePitches([...pitches, { ...court, is_active: true }]);
+        } catch (err) {
+            setSaveError(toTurkishError(err));
+        }
+    };
+
+    const editSize = useMemo(() => parseSize(editingPitch?.size), [editingPitch?.size]);
+    const editFeatures = useMemo(() => normalizeCourtFeatures(editingPitch?.features), [editingPitch?.features]);
+    const toggleFeature = (value: string) => {
+        if (!editingPitch) return;
+        const cur = normalizeCourtFeatures(editingPitch.features);
+        const next = cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value];
+        setEditingPitch({ ...editingPitch, features: next });
+    };
 
     // Kalite notu onayı yalnızca platform admin'e açık (Karar #2)
     const [isAdmin, setIsAdmin] = useState(false);
@@ -86,6 +138,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             capacity: 14,
             images: [],
             description: '',
+            features: [],
             lighting_grade: null,
             grass_grade: null,
             locker_grade: null,
@@ -112,6 +165,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     capacity: editingPitch.capacity,
                     images: editingPitch.images,
                     description: editingPitch.description,
+                    features: normalizeCourtFeatures(editingPitch.features),
                     lighting_grade: editingPitch.lighting_grade,
                     grass_grade: editingPitch.grass_grade,
                     locker_grade: editingPitch.locker_grade,
@@ -221,14 +275,24 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-400 uppercase">Boyutlar</label>
-                            <input
-                                type="text"
-                                value={editingPitch.size || ''}
-                                onChange={(e) => setEditingPitch({ ...editingPitch, size: e.target.value })}
-                                className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
-                                placeholder="Örn: 30x50"
-                            />
+                            <label className="text-xs font-bold text-gray-400 uppercase">Boyutlar (metre)</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    value={editSize.w}
+                                    onChange={(e) => setEditingPitch({ ...editingPitch, size: composeSize(e.target.value, editSize.l) })}
+                                    className="flex-1 bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors text-center"
+                                    placeholder="En (30)"
+                                />
+                                <span className="text-gray-500 font-black">×</span>
+                                <input
+                                    type="number"
+                                    value={editSize.l}
+                                    onChange={(e) => setEditingPitch({ ...editingPitch, size: composeSize(editSize.w, e.target.value) })}
+                                    className="flex-1 bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors text-center"
+                                    placeholder="Boy (50)"
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -241,16 +305,43 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
                                     placeholder="Örn: 2000"
                                 />
+                                <p className="text-[10px] text-gray-600">Kaba fiyat. Saat/gün bazlı tarife: Fiyatlandırma Politikası.</p>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Kapasite (Oyuncu Sayısı)</label>
-                                <input
-                                    type="number"
-                                    value={editingPitch.capacity || ''}
-                                    onChange={(e) => setEditingPitch({ ...editingPitch, capacity: e.target.value ? Number(e.target.value) : null })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
-                                    placeholder="Örn: 14"
-                                />
+                                <label className="text-xs font-bold text-gray-400 uppercase">Kapasite (Format)</label>
+                                <select
+                                    value={editingPitch.capacity ?? 14}
+                                    onChange={(e) => setEditingPitch({ ...editingPitch, capacity: Number(e.target.value) })}
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                >
+                                    {CAPACITY_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>{o.label} ({o.value} oyuncu)</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Saha bazlı özellikler (Karar #18) — oyuncu kartında rozet */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Saha Özellikleri</label>
+                            <div className="flex flex-wrap gap-2">
+                                {COURT_FEATURES.map((f) => {
+                                    const active = editFeatures.includes(f.value);
+                                    return (
+                                        <button
+                                            key={f.value}
+                                            type="button"
+                                            onClick={() => toggleFeature(f.value)}
+                                            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                                                active
+                                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                                    : 'bg-[#0A0D14] border-white/10 text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -409,9 +500,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     {pitch.images && pitch.images.length > 0 ? (
                                         <img src={pitch.images[0]} className="w-full h-full object-cover animate-in fade-in duration-300" alt={pitch.name} />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-black/30 text-gray-600">
-                                            <ImageIcon size={40} />
-                                        </div>
+                                        <button
+                                            onClick={() => handleEdit(pitch)}
+                                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-black/30 text-gray-500 hover:text-[#FFFF00] transition-colors"
+                                        >
+                                            <Camera size={28} />
+                                            <span className="text-[10px] font-black uppercase tracking-wider">Fotoğraf ekle</span>
+                                        </button>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-[#161B22] via-[#161B22]/60 to-transparent"></div>
                                     <div className="absolute bottom-4 left-4 right-4">
@@ -439,6 +534,31 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Pasif (silinmiş) sahalar — geri açılabilir (Karar #5) */}
+                {!readOnly && inactiveCourts.length > 0 && (
+                    <div className="mt-8">
+                        <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">Pasif Sahalar</h3>
+                        <div className="space-y-2">
+                            {inactiveCourts.map((court) => (
+                                <div key={court.id} className="flex items-center justify-between bg-[#161B22]/60 border border-white/5 rounded-2xl p-4">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-gray-300 truncate">{court.name}</p>
+                                        <p className="text-[11px] text-gray-600">
+                                            {court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[court.surface ?? 'TURF'] ?? court.surface} • Pasif
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleReactivate(court)}
+                                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-black uppercase"
+                                    >
+                                        <RotateCcw size={13} /> Geri Aç
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

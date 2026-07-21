@@ -38,6 +38,7 @@ import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchF
 import { recordPitchView } from '../services/pitchShowcaseService';
 import { reportPitchContent } from '../services/pitchMediaService';
 import { splitAmenities } from '../shared/amenities';
+import { courtFeatureLabel, normalizeCourtFeatures } from '../shared/courtFeatures';
 import { transformedImageUrl } from '../utils/imageTransform';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
@@ -70,6 +71,7 @@ interface DbCourtRow {
   grades_status?: string | null;
   capacity?: number | null;
   sort_order?: number | null;
+  features?: string[] | null;
 }
 
 interface DbPitchRow {
@@ -146,6 +148,7 @@ const mapDbPitchToUiPitch = (
       slots: [],
       description: c.description ?? undefined,
       images: (c.images as string[] | undefined) ?? undefined,
+      features: Array.isArray(c.features) ? (c.features as string[]) : undefined,
       lighting: gradeToScore(c.lighting_grade),
       grassQuality: gradeToScore(c.grass_grade),
       lockerRoomQuality: gradeToScore(c.locker_grade),
@@ -815,7 +818,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
       const pitchRes = await supabase
         .from('pitches')
-        .select('*, courts(id, name, court_type, surface, size, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity, sort_order), pitch_tariffs(*)')
+        .select('*, courts(id, name, court_type, surface, size, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity, sort_order, features), pitch_tariffs(*)')
         .eq('verification_status', 'approved')
         .eq('is_open', true)
         .eq('is_published', true);
@@ -2002,6 +2005,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                             <div className="min-w-0">
                               <div className="text-[15px] font-extrabold text-white truncate">{court.name}</div>
                               <div className="text-[11px] font-semibold text-white/50 mt-0.5 truncate">{meta}</div>
+                              {normalizeCourtFeatures(court.features).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[9px] font-bold text-[#39FF14]/90">
+                                      {courtFeatureLabel(fv)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                               {court.description?.trim() && (
                                 <div className="text-[10px] font-medium text-white/35 mt-0.5 truncate">{court.description.trim()}</div>
                               )}

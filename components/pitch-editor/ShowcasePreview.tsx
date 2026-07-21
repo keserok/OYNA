@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Star, Thermometer, Wind, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { splitAmenities } from '../../shared/amenities';
+import { courtFeatureLabel, normalizeCourtFeatures } from '../../shared/courtFeatures';
 import { transformedImageUrl } from '../../utils/imageTransform';
 
 interface PreviewData {
@@ -32,6 +33,7 @@ interface PreviewData {
     is_active: boolean | null;
     description: string | null;
     images: string[] | null;
+    features: string[] | null;
     lighting_grade: string | null;
     grass_grade: string | null;
     grades_status: string | null;
@@ -59,7 +61,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
   useEffect(() => {
     supabase
       .from('pitches')
-      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, surface, size, capacity, price, is_active, description, images, lighting_grade, grass_grade, grades_status, sort_order)')
+      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, surface, size, capacity, price, is_active, description, images, features, lighting_grade, grass_grade, grades_status, sort_order)')
       .eq('id', pitchId)
       .single()
       .then(({ data: d }) => setData(d as unknown as PreviewData));
@@ -172,6 +174,15 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                             <div className="min-w-0">
                               <div className="text-[13px] font-extrabold text-white truncate">{court.name}</div>
                               <div className="text-[10px] text-white/50 truncate">{meta}</div>
+                              {normalizeCourtFeatures(court.features).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[9px] font-bold text-[#39FF14]/90">
+                                      {courtFeatureLabel(fv)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0 pl-2">

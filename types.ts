@@ -933,6 +933,8 @@ export interface PitchCourt {
   capacity?: number | null;
   images?: string[] | null;
   description?: string | null;
+  /** Saha bazlı özellik anahtarları (heating, tribune, camera...) */
+  features?: string[] | null;
   is_active: boolean;
   lighting_grade?: string | null;
   grass_grade?: string | null;
