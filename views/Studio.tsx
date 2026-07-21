@@ -47,6 +47,8 @@ import {
     statusMeta, filterEntries, sortEntries, mineToEntry, showcaseToEntry,
 } from './studio/tacticLibrary';
 import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
+// Performans katmanı — zayıf cihazda süs efektlerini kıs (içerik değişmez)
+import { perfTierFrom, readDeviceSignals, liteGate } from './studio/perf';
 
 // ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
@@ -143,6 +145,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [presentMode, setPresentMode] = useState(false);
     // Faz 9 — mobil deneyim: yakınlaştırma/pan (S46), taslak (S49), reduced-motion (S50)
     const reduceMotion = useReducedMotion();
+    // Cihaz performans sınıfı — zayıf telefonda gölge/blur/glow kısılır (içerik aynı).
+    const perfTier = React.useMemo(() => perfTierFrom(readDeviceSignals(!!reduceMotion)), [reduceMotion]);
+    const perfLite = perfTier === 'lite';
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const panStartRef = useRef<{ px: number; py: number; ox: number; oy: number; moved: boolean } | null>(null);
@@ -1923,13 +1928,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 )}
                 <div
                     ref={canvasRef}
+                    data-testid="studio-pitch"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerLeave={handlePointerUp}
                     onPointerCancel={handlePointerUp}
                     style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', touchAction: 'none', transition: (pinchRef.current || panStartRef.current) ? 'none' : 'transform 0.18s ease-out' }}
-                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
+                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] ${liteGate(perfTier, 'shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]')} overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
                 >
                     {/* S44 — hafif kimlik vinyeti (WCAG: yalnız dekoratif, kontrastı bozmaz) */}
                     <div className="absolute inset-0 pointer-events-none z-[1]" style={{ boxShadow: 'inset 0 0 90px rgba(0,0,0,0.55)' }} />
@@ -2022,7 +2028,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <motion.div 
                             key={opp.id}
                             onPointerDown={(e) => handleDragStart('opponent', opp.id, e)}
-                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
+                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]')}` : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
                             animate={anim ? anim.animate : {
                                 left: `${opp.x}%`,
                                 top: `${opp.y}%`
@@ -2054,7 +2060,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         return (
                         <motion.div 
                             key={slot.id}
-                            layout={draggedItem?.id === slot.id ? false : true}
+                            layout={draggedItem ? false : !perfLite}
                             animate={anim ? anim.animate : {
                                 left: `${slot.x}%`,
                                 top: `${slot.y}%`
@@ -2067,14 +2073,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }
                             }}
                             onClick={() => { if (heldSub) placeHeldSub(slot.id); }}
-                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
+                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
                         >
                             {slot.player ? (
                                 <motion.div
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'} ${staleSlotIds.has(slot.id) ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-black/50' : ''}`}
+                                    className={`relative w-full h-full rounded-full border-2 flex items-center justify-center ${liteGate(perfTier, 'shadow-[0_4px_15px_rgba(0,0,0,0.5)]')} ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'} ${staleSlotIds.has(slot.id) ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-black/50' : ''}`}
                                 >
                                     <span className="text-white font-black text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
                                     {/* Forma numarası (takım kadrosundan) — sol üst rozet */}
