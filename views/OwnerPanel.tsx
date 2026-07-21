@@ -39,6 +39,7 @@ import {
   OwnerWidgetSettingsModal,
   OwnerOperationsSettingsModal,
   OwnerMatchesModal,
+  OwnerNotificationsModal,
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerLogoutModal,
@@ -196,6 +197,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [showOperations, setShowOperations] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
+  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [menuBalance, setMenuBalance] = useState<number | undefined>(undefined);
@@ -976,8 +978,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onSecurity={() => setShowSecurity(true)}
           onSupport={() => setShowSupport(true)}
           onLogout={() => setShowLogoutConfirm(true)}
-          notificationsEnabled={notificationsEnabled}
-          onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
+          onNotifications={() => setShowNotifPrefs(true)}
           onWidgetSettings={() => setShowWidgetSettings(true)}
           onPitches={() => {
             if (managerGuard()) setActiveTab('PITCHES');
@@ -1020,6 +1021,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           initialHours={facilityData?.workingHours}
           onSave={(hours) => setFacilityData((prev: any) => ({ ...prev, workingHours: hours }))}
         />
+      )}
+      {showNotifPrefs && (
+        <OwnerNotificationsModal onClose={() => setShowNotifPrefs(false)} />
       )}
       {showMatches && (
         <OwnerMatchesModal

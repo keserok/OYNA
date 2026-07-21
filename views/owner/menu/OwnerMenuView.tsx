@@ -41,8 +41,8 @@ export interface OwnerMenuViewProps {
   onLogout: () => void;
   onSecurity: () => void;
   onSupport: () => void;
-  notificationsEnabled: boolean;
-  onToggleNotifications: () => void;
+  /** Bildirim tercihleri modalını açar (cihazlar arası senkron — localStorage değil). */
+  onNotifications: () => void;
   onWidgetSettings: () => void;
   onPitches: () => void;
   isReadOnly?: boolean;
@@ -122,8 +122,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onLogout,
   onSecurity,
   onSupport,
-  notificationsEnabled,
-  onToggleNotifications,
+  onNotifications,
   onWidgetSettings,
   onPitches,
   isReadOnly = false,
@@ -309,27 +308,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Uygulama</h3>
           <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
             <MenuRow icon={<LayoutDashboard size={18} />} label="Özet Widgetları" onClick={onWidgetSettings} />
-            <button
-              type="button"
-              onClick={onToggleNotifications}
-              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors border-b border-white/5"
-            >
-              <div className="flex items-center gap-3">
-                <Bell size={18} className="text-gray-400" />
-                <span className="text-sm font-bold text-white">Bildirimler</span>
-              </div>
-              <div
-                className={`w-8 h-4 rounded-full relative transition-colors ${
-                  notificationsEnabled ? 'bg-emerald-500' : 'bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${
-                    notificationsEnabled ? 'right-0.5' : 'left-0.5'
-                  }`}
-                />
-              </div>
-            </button>
+            <MenuRow icon={<Bell size={18} />} label="Bildirimler" onClick={onNotifications} />
             <MenuRow icon={<Shield size={18} />} label="Güvenlik & Şifre" onClick={onSecurity} />
             <MenuRow
               icon={<Globe size={18} />}

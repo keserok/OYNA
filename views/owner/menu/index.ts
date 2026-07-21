@@ -11,6 +11,7 @@ export { OwnerWithdrawalsModal } from './OwnerWithdrawalsModal';
 export { OwnerWidgetSettingsModal } from './OwnerWidgetSettingsModal';
 export { OwnerOperationsSettingsModal } from './OwnerOperationsSettingsModal';
 export { OwnerMatchesModal } from './OwnerMatchesModal';
+export { OwnerNotificationsModal } from './OwnerNotificationsModal';
 export { OwnerBillingSettingsModal } from './OwnerBillingSettingsModal';
 export { OwnerSecurityModal } from './OwnerSecurityModal';
 export { OwnerSupportModal } from './OwnerSupportModal';
