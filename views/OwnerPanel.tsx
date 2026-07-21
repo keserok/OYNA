@@ -181,10 +181,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showPaymentSettings, setShowPaymentSettings] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-      const saved = localStorage.getItem('owner_notificationsEnabled');
-      return saved ? JSON.parse(saved) : true;
-  });
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
       const saved = localStorage.getItem('owner_activeWidgets');
       return saved ? JSON.parse(saved) : [
@@ -546,10 +542,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       onClick: () => setActiveTab('CALENDAR'),
     },
   ], [dynamicTotalRevenue, dynamicOccupancyRatio, pendingCount, confirmedToday]);
-
-  useEffect(() => {
-      localStorage.setItem('owner_notificationsEnabled', JSON.stringify(notificationsEnabled));
-  }, [notificationsEnabled]);
 
   useEffect(() => {
       localStorage.setItem('owner_activeWidgets', JSON.stringify(activeWidgets));
@@ -963,7 +955,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onMatches={() => {
             if (managerGuard()) setShowMatches(true);
           }}
-          onTeam={() => setActiveTab('TEAM')}
+          onTeam={() => { if (managerGuard()) setActiveTab('TEAM'); }}
           onBankAccounts={() => {
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
