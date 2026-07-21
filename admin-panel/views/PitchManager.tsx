@@ -6,13 +6,7 @@ import { approveCourtGrades } from '../../services/pitchContentService';
 import { supabase } from '../../supabaseClient';
 import PhotoManager from '../../components/pitch-editor/PhotoManager';
 import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatures';
-
-const SURFACE_LABELS: Record<string, string> = {
-    TURF: 'Suni Çim',
-    GRASS: 'Doğal Çim',
-    PARQUET: 'Parke',
-    TARTAN: 'Tartan',
-};
+import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
 
 // Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
 const CAPACITY_OPTIONS = [
@@ -267,10 +261,9 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     onChange={(e) => setEditingPitch({ ...editingPitch, surface: e.target.value })}
                                     className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
                                 >
-                                    <option value="TURF">Suni Çim</option>
-                                    <option value="GRASS">Doğal Çim</option>
-                                    <option value="PARQUET">Parke</option>
-                                    <option value="TARTAN">Tartan</option>
+                                    {SURFACE_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>

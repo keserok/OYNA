@@ -8,6 +8,7 @@ import { Star, Thermometer, Wind, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { splitAmenities } from '../../shared/amenities';
 import { courtFeatureLabel, normalizeCourtFeatures } from '../../shared/courtFeatures';
+import { surfaceLabel } from '../../shared/courtSurface';
 import { transformedImageUrl } from '../../utils/imageTransform';
 
 interface PreviewData {
@@ -41,13 +42,7 @@ interface PreviewData {
   }[];
 }
 
-// Oyuncu vitriniyle (PitchDiscovery) aynı sözlük/format — önizleme birebir ayna kalmalı.
-const SURFACE_LABELS: Record<string, string> = {
-  TURF: 'Halı',
-  GRASS: 'Çim',
-  PARQUET: 'Parke',
-  TARTAN: 'Tartan',
-};
+// Oyuncu vitriniyle (PitchDiscovery) birebir ayna — zemin etiketleri tek kaynaktan.
 
 const formatCapacity = (capacity?: number | null): string | null => {
   if (!capacity || capacity <= 0) return null;
@@ -157,7 +152,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                       const thumb = court.images?.find(Boolean) ?? null;
                       const meta = [
                         court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık',
-                        SURFACE_LABELS[court.surface ?? 'TURF'] ?? court.surface,
+                        surfaceLabel(court.surface),
                         court.size ? `${court.size} m` : null,
                         formatCapacity(court.capacity),
                       ].filter(Boolean).join(' · ');

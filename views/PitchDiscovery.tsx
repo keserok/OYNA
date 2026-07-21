@@ -39,6 +39,7 @@ import { recordPitchView } from '../services/pitchShowcaseService';
 import { reportPitchContent } from '../services/pitchMediaService';
 import { splitAmenities } from '../shared/amenities';
 import { courtFeatureLabel, normalizeCourtFeatures } from '../shared/courtFeatures';
+import { surfaceLabel } from '../shared/courtSurface';
 import { transformedImageUrl } from '../utils/imageTransform';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
@@ -113,13 +114,8 @@ const gradeToScore = (g?: string | null): number => {
   return 0;
 };
 
-// Saha kartı meta etiketleri — owner panelindeki (PitchManager) değerlerle aynı sözlük.
-const SURFACE_LABELS: Record<string, string> = {
-  TURF: 'Halı',
-  GRASS: 'Çim',
-  PARQUET: 'Parke',
-  TARTAN: 'Tartan',
-};
+// Saha zemini etiketleri artık tek kaynaktan (shared/courtSurface) gelir —
+// oyuncu, owner (PitchManager) ve admin paneli birebir aynı sözlüğü kullanır.
 
 /** capacity=14 → "7v7"; tek sayıysa "13 oyuncu" */
 const formatCapacity = (capacity?: number): string | null => {
@@ -2010,10 +2006,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       const isSel = selectedCourtId === court.id;
                       const price = court.price || selectedPitch.totalPrice;
                       const thumb = court.images?.find(Boolean) ?? selectedPitch.image;
-                      const surfaceLabel = SURFACE_LABELS[court.surface ?? 'TURF'] ?? court.surface;
                       const meta = [
                         court.type === 'CLOSED' ? 'Kapalı' : 'Açık',
-                        surfaceLabel,
+                        surfaceLabel(court.surface),
                         court.size ? `${court.size} m` : null,
                         formatCapacity(court.capacity),
                       ].filter(Boolean).join(' · ');
