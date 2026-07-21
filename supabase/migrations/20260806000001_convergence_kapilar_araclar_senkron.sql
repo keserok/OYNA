@@ -9,7 +9,24 @@
 -- Ön-uçuş kanıtları: earthdistance uzantısı 20260526000000'da, settings
 -- kolonları 20260530095000 + 20260618103739'da, support tabloları
 -- 20260720135945'te — hepsi bu dosyadan önce koşar.
+--
+-- KOLON DRIFT DÜZELTMESİ (2026-07-21): goalkeepers/referees tablolarındaki
+-- verification_status kolonu canlıda vardı ama hiçbir repo migration'ı
+-- oluşturmuyordu (CREATE TABLE 20260530000000'da yok, ALTER de yok). Bugüne
+-- dek görünmedi çünkü tüm referanslar plpgsql gövdelerindeydi (CREATE anında
+-- doğrulanmaz); aşağıdaki trg_gk_role_sync/trg_ref_role_sync tetikleyicileri
+-- kolonu ilk kez DDL düzeyinde ('UPDATE OF verification_status') zorluyor.
+-- Canlı tanım birebir: text NOT NULL DEFAULT 'pending'. Idempotent eklenir —
+-- canlıda no-op (kolon zaten var), fresh replay'de kolonu yaratır ki
+-- tetikleyiciler bağlanabilsin. Diğer olası prod-only kolonlar Faz 2c'de
+-- denetlenecek; bu düzeltme yalnız tetikleyicilerin ihtiyaç duyduğu kolonu
+-- kapsar.
 -- ============================================================================
+
+-- ─── Kolon drift düzeltmesi: sağlayıcı doğrulama kolonu (tetikleyicilerden önce) ───
+
+ALTER TABLE public.goalkeepers ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'pending';
+ALTER TABLE public.referees    ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'pending';
 
 -- ─── Bakım / kayıt kapıları ─────────────────────────────────────────────────
 
