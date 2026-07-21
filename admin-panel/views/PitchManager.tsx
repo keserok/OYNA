@@ -118,7 +118,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleAddNew = () => {
         if (readOnly) return;
         if (pitches.length >= maxCourts) {
-            setSaveError(`Mevcut planınız en fazla ${maxCourts} saha destekliyor.`);
+            setSaveError(`Mevcut planınız en fazla ${maxCourts} saha destekliyor. Daha fazla saha için Menü → Faturalandırma'dan planınızı yükseltin veya destek ile iletişime geçin.`);
             return;
         }
         const newPitch: PitchCourt = {
@@ -222,7 +222,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     <button
                         onClick={handleSave}
                         disabled={isSaving || !editingPitch.name.trim()}
-                        className="p-2 px-5 rounded-xl bg-[#FFFF00] text-black font-black text-xs flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)]"
+                        className="p-2 px-5 rounded-xl bg-[#FACC15] text-black font-black text-xs flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)]"
                     >
                         {isSaving ? '...' : <><Save size={16} /> KAYDET</>}
                     </button>
@@ -244,7 +244,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 type="text"
                                 value={editingPitch.name}
                                 onChange={(e) => setEditingPitch({ ...editingPitch, name: e.target.value })}
-                                className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
+                                className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors"
                                 placeholder="Örn: Saha 1 (Kapalı)"
                             />
                         </div>
@@ -255,7 +255,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <select
                                     value={editingPitch.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN'}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, court_type: e.target.value })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                 >
                                     <option value="OPEN">Açık Saha</option>
                                     <option value="CLOSED">Kapalı Saha</option>
@@ -267,7 +267,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <select
                                     value={editingPitch.surface || 'TURF'}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, surface: e.target.value })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                 >
                                     {SURFACE_OPTIONS.map((opt) => (
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -282,7 +282,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     type="number"
                                     value={editSize.w}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, size: composeSize(e.target.value, editSize.l) })}
-                                    className="flex-1 bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors text-center"
+                                    className="flex-1 bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors text-center"
                                     placeholder="En (30)"
                                 />
                                 <span className="text-gray-500 font-black">×</span>
@@ -290,7 +290,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     type="number"
                                     value={editSize.l}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, size: composeSize(editSize.w, e.target.value) })}
-                                    className="flex-1 bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors text-center"
+                                    className="flex-1 bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors text-center"
                                     placeholder="Boy (50)"
                                 />
                             </div>
@@ -303,7 +303,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     type="number"
                                     value={editingPitch.price || ''}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, price: e.target.value ? Number(e.target.value) : null })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors"
                                     placeholder="Örn: 2000"
                                 />
                                 <p className="text-[10px] text-gray-600">Kaba fiyat. Saat/gün bazlı tarife: Fiyatlandırma Politikası.</p>
@@ -313,7 +313,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <select
                                     value={editingPitch.capacity ?? 14}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, capacity: Number(e.target.value) })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                 >
                                     {CAPACITY_OPTIONS.map((o) => (
                                         <option key={o.value} value={o.value}>{o.label} ({o.value} oyuncu)</option>
@@ -351,7 +351,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                             <textarea
                                 value={editingPitch.description || ''}
                                 onChange={(e) => setEditingPitch({ ...editingPitch, description: e.target.value })}
-                                className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors h-24 resize-none"
+                                className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors h-24 resize-none"
                                 placeholder="Sahanın özellikleri, kuralları veya ek detayları..."
                             />
                         </div>
@@ -365,7 +365,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleApproveGrades}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[10px] font-black uppercase"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] text-[10px] font-black uppercase"
                                     >
                                         <BadgeCheck size={13} /> Notları Onayla
                                     </button>
@@ -376,7 +376,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 )
                             )}
                             {editingPitch.grades_status === 'approved' && (editingPitch.lighting_grade || editingPitch.grass_grade) && (
-                                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-black uppercase">
+                                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-[10px] font-black uppercase">
                                     <BadgeCheck size={12} /> Onaylı
                                 </span>
                             )}
@@ -392,7 +392,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <select
                                     value={editingPitch.lighting_grade || ''}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, lighting_grade: e.target.value || null })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                 >
                                     <option value="">Seçiniz</option>
                                     <option value="A+">A+ Çok İyi</option>
@@ -406,7 +406,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <select
                                     value={editingPitch.grass_grade || ''}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, grass_grade: e.target.value || null })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                 >
                                     <option value="">Seçiniz</option>
                                     <option value="A+">A+ Çok İyi</option>
@@ -420,7 +420,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <select
                                     value={editingPitch.locker_grade || ''}
                                     onChange={(e) => setEditingPitch({ ...editingPitch, locker_grade: e.target.value || null })}
-                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FFFF00]/50 outline-none transition-colors appearance-none"
+                                    className="w-full bg-[#0A0D14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                 >
                                     <option value="">Seçiniz</option>
                                     <option value="A+">A+ Çok İyi</option>
@@ -497,7 +497,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                         <button
                             onClick={handleAddNew}
                             disabled={!facilityId || readOnly}
-                            className="px-6 py-3 rounded-full bg-[#FFFF00] text-black font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,0,0.2)] hover:bg-yellow-300 transition-all disabled:opacity-40"
+                            className="px-6 py-3 rounded-full bg-[#FACC15] text-black font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,0,0.2)] hover:bg-yellow-300 transition-all disabled:opacity-40"
                         >
                             <Plus size={18} /> YENİ SAHA OLUŞTUR
                         </button>
@@ -512,7 +512,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     ) : (
                                         <button
                                             onClick={() => handleEdit(pitch)}
-                                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-black/30 text-gray-500 hover:text-[#FFFF00] transition-colors"
+                                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-black/30 text-gray-500 hover:text-[#FACC15] transition-colors"
                                         >
                                             <Camera size={28} />
                                             <span className="text-[10px] font-black uppercase tracking-wider">Fotoğraf ekle</span>

@@ -208,7 +208,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
             </select>
             <input type="date" className="bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
-          <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-[#FF00FF] text-white font-black rounded-2xl disabled:opacity-40">
+          <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl disabled:opacity-40">
             {busy ? 'KAYDEDİLİYOR…' : editing ? 'GÜNCELLE' : 'GİDERİ KAYDET'}
           </button>
         </BottomSheetModal>

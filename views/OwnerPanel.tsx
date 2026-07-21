@@ -721,7 +721,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
           <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
-                  <button onClick={() => onBack()} className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors">
+                  <button onClick={() => onBack()} aria-label="Geri" className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors active:scale-95">
                       <ArrowLeft size={20} />
                   </button>
                   <div className="flex flex-col relative">
@@ -763,7 +763,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   <OutboxBadge />
                   <button
                     onClick={() => setIsNotificationsOpen(true)}
-                    className="p-2 rounded-lg hover:bg-[#252B3B] text-gray-400 relative"
+                    aria-label={pendingCount > 0 ? `Bildirimler (${pendingCount} bekleyen)` : 'Bildirimler'}
+                    className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 relative active:scale-95 transition-transform"
                   >
                       <Bell size={20} />
                       {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}

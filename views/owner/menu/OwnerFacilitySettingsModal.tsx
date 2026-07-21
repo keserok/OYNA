@@ -51,7 +51,7 @@ const DESC_MAX = 500;
 
 const pinIcon = L.divIcon({
   className: '',
-  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#39FF14;transform:rotate(-45deg);border:3px solid #0A0E14;box-shadow:0 0 14px rgba(57,255,20,0.8);"></div>`,
+  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#10B981;transform:rotate(-45deg);border:3px solid #0A0E14;box-shadow:0 0 14px rgba(16,185,129,0.8);"></div>`,
   iconSize: [22, 22],
   iconAnchor: [11, 22],
 });
@@ -323,7 +323,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   };
 
   const descLen = description.trim().length;
-  const descTone = descLen === 0 ? 'text-gray-600' : descLen < DESC_MIN ? 'text-red-400' : 'text-[#39FF14]';
+  const descTone = descLen === 0 ? 'text-gray-600' : descLen < DESC_MIN ? 'text-red-400' : 'text-[#10B981]';
   const mapCenter: [number, number] = latLng ?? [ORDU_CENTER.lat, ORDU_CENTER.lng];
 
   const TABS: { id: Tab; label: string }[] = [
@@ -548,7 +548,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               </MapContainer>
             </div>
             <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className={latLng ? 'text-[#39FF14]' : 'text-red-400'}>
+              <span className={latLng ? 'text-[#10B981]' : 'text-red-400'}>
                 {latLng ? `Pin: ${latLng[0].toFixed(5)}, ${latLng[1].toFixed(5)}` : 'Pin henüz yerleştirilmedi — vitrin için zorunlu'}
               </span>
             </div>
@@ -594,7 +594,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={handleTogglePublished}
-                className={`relative w-14 h-8 rounded-full transition-colors ${isPublished ? 'bg-[#39FF14]' : 'bg-gray-700'}`}
+                className={`relative w-14 h-8 rounded-full transition-colors ${isPublished ? 'bg-[#10B981]' : 'bg-gray-700'}`}
               >
                 <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isPublished ? 'left-7' : 'left-1'}`} />
               </button>
@@ -603,7 +603,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/40 text-[#FFFF00] text-xs font-black uppercase tracking-wider"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/40 text-[#FACC15] text-xs font-black uppercase tracking-wider"
             >
               <Eye size={15} /> Vitrinde Önizle
             </button>

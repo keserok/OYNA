@@ -123,7 +123,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
                 onClose();
                 onNavigateQr?.();
               }}
-              className="py-3 bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] rounded-xl text-[11px] font-black hover:bg-[#39FF14]/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
+              className="py-3 bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] rounded-xl text-[11px] font-black hover:bg-[#10B981]/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
             >
               <QrCode size={16} /> QR Check-in
             </button>

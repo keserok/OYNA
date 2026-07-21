@@ -222,7 +222,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
                     }`}
                   >
                     {s.label}
-                    {s.key !== ALL_SCOPE && count > 0 && <span className="ml-1.5 text-[#39FF14]">•</span>}
+                    {s.key !== ALL_SCOPE && count > 0 && <span className="ml-1.5 text-[#10B981]">•</span>}
                   </button>
                 );
               },

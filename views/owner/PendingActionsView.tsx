@@ -245,7 +245,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                         </div>
                         <button
                             onClick={onToggleAutoApprove}
-                            className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${autoApprove ? 'bg-[#39FF14]' : 'bg-gray-600'}`}
+                            className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${autoApprove ? 'bg-[#10B981]' : 'bg-gray-600'}`}
                             aria-label="Otomatik onay aç/kapa"
                         >
                             <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition-transform ${autoApprove ? 'translate-x-6' : ''}`} />

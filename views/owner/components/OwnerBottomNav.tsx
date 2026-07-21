@@ -48,10 +48,12 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
               key={tab.id}
               type="button"
               onClick={() => onSelect(tab.id)}
-              className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+              aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 min-h-[48px] justify-center rounded-xl transition-all ${
                 isActive
                   ? 'text-blue-400 bg-blue-500/10'
-                  : 'text-slate-500 hover:text-slate-300'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <span className={`relative ${isActive ? 'scale-110' : ''} transition-transform`}>

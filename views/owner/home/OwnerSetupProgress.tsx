@@ -35,7 +35,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
           <svg viewBox="0 0 36 36" className="w-12 h-12 -rotate-90">
             <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
             <circle
-              cx="18" cy="18" r="15" fill="none" stroke="#39FF14" strokeWidth="3"
+              cx="18" cy="18" r="15" fill="none" stroke="#10B981" strokeWidth="3"
               strokeDasharray={`${(pct / 100) * 94.2} 94.2`} strokeLinecap="round"
             />
           </svg>
@@ -55,7 +55,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
             }`}
           >
             {s.done ? (
-              <CheckCircle2 size={18} className="text-[#39FF14] shrink-0" />
+              <CheckCircle2 size={18} className="text-[#10B981] shrink-0" />
             ) : (
               <Circle size={18} className="text-blue-400 shrink-0" />
             )}
