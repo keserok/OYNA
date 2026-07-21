@@ -23,7 +23,7 @@ import {
 import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
     setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
-    setActiveTactic as setActiveTacticRpc,
+    setActiveTactic as setActiveTacticRpc, TacticConflictError,
 } from '../services/tacticSocialService';
 import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
 // Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
@@ -237,6 +237,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Modals
     const [showTacticsModal, setShowTacticsModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
+    const [conflictOpen, setConflictOpen] = useState(false);          // iyimser kilit çakışma diyaloğu
+    const [reloadingConflict, setReloadingConflict] = useState(false);
     const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
     const [saveTacticName, setSaveTacticName] = useState('');
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
@@ -335,6 +337,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         drawings: JSON.parse(d.drawings || '[]'),
         status: d.status || undefined,
         proposedBy: d.proposedBy ?? null,
+        updatedAt: d.updatedAt || undefined,
     });
 
     // studioContext tüketimi (M80): Takım Detayı'ndan gelen takım/taktik
@@ -1079,6 +1082,47 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Kayıt TEK KAPIDAN: save_team_tactic RPC. Status SUNUCUDA belirlenir
     // (yönetici → APPROVED, üye → PENDING_APPROVAL + yöneticilere bildirim,
     // takımsız → kişisel kütüphane). İstemci status yazımı ÖLDÜ (M85).
+    // force=true: iyimser kilidi atla (çakışma diyaloğunda "Üzerine yaz").
+    const doSaveTactic = async (force: boolean) => {
+        const existingId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
+            ? activeTactic.id : null;
+        const res = await saveTeamTactic(selectedTeamId ?? null, existingId, {
+            name: saveTacticName.trim(),
+            size: activeTactic.size,
+            formation: activeTactic.formation,
+            slots: activeTactic.slots,
+            subs: activeTactic.subs,
+            opponents: activeTactic.opponents,
+            drawings: activeTactic.drawings || [],
+            captainId: activeTactic.captainId,
+            notes: activeTactic.notes,
+            mentality: activeTactic.mentality,
+            tempo: activeTactic.tempo,
+            identity: activeTactic.identity,
+            // İyimser kilit: yalnız mevcut kaydı güncellerken ve force değilken gönder
+            expectedUpdatedAt: (!force && existingId) ? (activeTactic.updatedAt ?? null) : null,
+        });
+
+        const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+        setActiveTactic({
+            ...activeTactic,
+            id: res.tacticId,
+            name: saveTacticName.trim(),
+            teamName: teamRow?.name,
+            teamId: selectedTeamId || null,
+            status: res.status as TacticState['status'],
+            proposedBy: res.status === 'PENDING_APPROVAL' ? auth.currentUser!.uid : null,
+            updatedAt: res.updatedAt ?? activeTactic.updatedAt, // beklenen damgayı tazele
+        });
+        showToast(res.status === 'PENDING_APPROVAL'
+            ? "Taktik önerin takım yöneticilerine gönderildi!"
+            : "Taktik kaydedildi!");
+        setShowSaveModal(false);
+        setConflictOpen(false);
+        // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+    };
+
     const handleSaveTactic = async () => {
         if (!saveTacticName.trim()) {
             showToast("Taktik ismi boş olamaz.", 'error');
@@ -1088,45 +1132,37 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             showToast("Taktiği kaydetmek için giriş yapmalısın.", 'error');
             return;
         }
-
         try {
-            const existingId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
-                ? activeTactic.id : null;
-            const res = await saveTeamTactic(selectedTeamId ?? null, existingId, {
-                name: saveTacticName.trim(),
-                size: activeTactic.size,
-                formation: activeTactic.formation,
-                slots: activeTactic.slots,
-                subs: activeTactic.subs,
-                opponents: activeTactic.opponents,
-                drawings: activeTactic.drawings || [],
-                captainId: activeTactic.captainId,
-                notes: activeTactic.notes,
-                mentality: activeTactic.mentality,
-                tempo: activeTactic.tempo,
-                identity: activeTactic.identity,
-            });
-
-            const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
-            setActiveTactic({
-                ...activeTactic,
-                id: res.tacticId,
-                name: saveTacticName.trim(),
-                teamName: teamRow?.name,
-                teamId: selectedTeamId || null,
-                status: res.status as TacticState['status'],
-                proposedBy: res.status === 'PENDING_APPROVAL' ? auth.currentUser.uid : null,
-            });
-            showToast(res.status === 'PENDING_APPROVAL'
-                ? "Taktik önerin takım yöneticilerine gönderildi!"
-                : "Taktik kaydedildi!");
-            setShowSaveModal(false);
-            // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz
-            try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+            await doSaveTactic(false);
         } catch (error) {
+            if (error instanceof TacticConflictError) {
+                // Sessiz emek kaybı yok: kullanıcıya sor (üzerine yaz / yenile)
+                setShowSaveModal(false);
+                setConflictOpen(true);
+                return;
+            }
             console.error("Error saving tactic:", error);
             showToast((error as Error)?.message || "Taktik kaydedilirken bir hata oluştu.", 'error');
         }
+    };
+
+    // Çakışma diyaloğu: "Üzerine yaz" (force) / "Yenile" (sunucudaki sürümü al)
+    const overwriteConflict = async () => {
+        try { await doSaveTactic(true); }
+        catch (e) { showToast((e as Error)?.message || 'Kaydedilemedi.', 'error'); }
+    };
+    const reloadConflict = async () => {
+        if (!activeTactic.id) { setConflictOpen(false); return; }
+        setReloadingConflict(true);
+        try {
+            const row = await getTacticById(activeTactic.id);
+            if (row) {
+                const fresh = parseDbTactic(row);
+                setPlans(prev => prev.map((p, i) => i === activePlanIndex ? fresh : p));
+                showToast('Sunucudaki güncel sürüm yüklendi.');
+            }
+        } catch { showToast('Güncel sürüm yüklenemedi.', 'error'); }
+        finally { setReloadingConflict(false); setConflictOpen(false); }
     };
 
     // Stüdyo-içi öneri karar akışı: bekleyen takım taktiği + yönetici (M87)
@@ -3483,6 +3519,51 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             >
                                 Tamam
                             </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* İyimser kilit çakışması — sessiz emek kaybı yerine kullanıcıya sor */}
+            <AnimatePresence>
+                {conflictOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[135] bg-black/75 backdrop-blur-sm flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                            className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-amber-500/30 p-6 shadow-2xl"
+                        >
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-4">
+                                <ShieldAlert size={22} className="text-amber-400" />
+                            </div>
+                            <h3 className="text-white text-lg font-black mb-1">Taktik bu arada değişti</h3>
+                            <p className="text-gray-400 text-[13px] leading-relaxed mb-5">
+                                Bu taktik sen açtıktan sonra (başka bir yönetici tarafından) güncellenmiş. Ne yapmak istersin?
+                            </p>
+                            <div className="flex flex-col gap-2.5">
+                                <button
+                                    onClick={() => void reloadConflict()}
+                                    disabled={reloadingConflict}
+                                    className="w-full py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                                >
+                                    {reloadingConflict ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />} Güncel sürümü getir
+                                </button>
+                                <button
+                                    onClick={() => void overwriteConflict()}
+                                    disabled={reloadingConflict}
+                                    className="w-full py-3 rounded-2xl bg-white/5 text-amber-300 font-black text-sm hover:bg-white/10 transition"
+                                >
+                                    Yine de üzerine yaz
+                                </button>
+                                <button
+                                    onClick={() => setConflictOpen(false)}
+                                    className="w-full py-2.5 rounded-2xl text-gray-500 font-bold text-xs uppercase tracking-widest hover:text-white transition"
+                                >
+                                    Vazgeç
+                                </button>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}

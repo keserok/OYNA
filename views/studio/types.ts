@@ -51,6 +51,7 @@ export interface TacticState {
     proposedBy?: string | null;
     priority?: number;
     teamId?: string | null; // takım taktiği köprüsü (Küme 3) — DB "teamId"
+    updatedAt?: string;     // iyimser kilit için kayıttaki son damga (DB "updatedAt")
 }
 
 export interface DrawingLine {
