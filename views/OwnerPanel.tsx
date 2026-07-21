@@ -98,6 +98,7 @@ interface OwnerPanelProps {
 
 import { FinancialCalendarView } from './owner/calendar/FinancialCalendarView';
 import { MatchCountdownItem, PitchOccupancyGrid } from './owner/home/OwnerHomeWidgets';
+import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
 import { PendingActionsView } from './owner/PendingActionsView';
 import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './owner/ownerPanelShared';
 
@@ -132,6 +133,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showOccupancyModal, setShowOccupancyModal] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editProfileTab, setEditProfileTab] = useState<'general' | 'amenities' | 'location' | 'showcase'>('general');
   const [showWorkingHours, setShowWorkingHours] = useState(false);
   const [showBankAccountList, setShowBankAccountList] = useState(false);
   const [showWithdrawals, setShowWithdrawals] = useState(false);
@@ -261,6 +263,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       images: pitch.images?.length ? pitch.images : pitch.image ? [pitch.image] : [],
       amenities: Array.isArray(pitch.amenities) ? pitch.amenities : [],
       isFacilityOpen: pitch.is_open ?? true,
+      latitude: (pitch as { latitude?: number | null }).latitude ?? null,
+      longitude: (pitch as { longitude?: number | null }).longitude ?? null,
       pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
         startTime: String(t.start_time ?? '08:00'),
         endTime: String(t.end_time ?? '17:00'),
@@ -640,6 +644,27 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     ],
   );
 
+  // Kurulum Sihirbazı adımları (Faz 7): eksik olan her adım tek dokunuşla açılır.
+  const setupSteps = useMemo((): SetupStep[] => {
+    const fd = facilityData;
+    const openProfile = (tab: 'general' | 'location') => {
+      if (managerGuard()) { setEditProfileTab(tab); setShowEditProfile(true); }
+    };
+    return [
+      { key: 'court', label: 'Saha ekle', hint: 'En az bir saha tanımla', done: menuStats.courtCount > 0,
+        onFix: () => { if (managerGuard()) setActiveTab('PITCHES'); } },
+      { key: 'location', label: 'Konumu işaretle', hint: 'Haritada pin — vitrin için şart', done: fd?.latitude != null && fd?.longitude != null,
+        onFix: () => openProfile('location') },
+      { key: 'photo', label: 'Fotoğraf yükle', hint: 'Tesis ve saha görselleri', done: (fd?.images?.length ?? 0) > 0,
+        onFix: () => openProfile('general') },
+      { key: 'tariff', label: 'Fiyat tarifesi', hint: 'Saat/gün bazlı ücret', done: menuStats.tariffCount > 0,
+        onFix: () => { if (managerGuard()) setShowPricingPolicy(true); } },
+      { key: 'hours', label: 'Çalışma saatleri', hint: 'Açık/kapalı saatler', done: (fd?.workingHours?.length ?? 0) > 0,
+        onFix: () => { if (managerGuard()) setShowWorkingHours(true); } },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facilityData, menuStats.courtCount, menuStats.tariffCount]);
+
   const toggleAutoApprove = async () => {
     if (!effGuardWrite()) return;
     const next = !autoApprove;
@@ -768,6 +793,11 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                 onCalendarClick={() => setActiveTab('CALENDAR')}
               />
 
+              {/* Kurulum Sihirbazı — yalnız gerçek tesiste ve eksik adım varken (Faz 7) */}
+              {!isDemoMode && !isAdminPreview && realPitchId && (
+                <OwnerSetupProgress steps={setupSteps} />
+              )}
+
               {activeWidgets.includes('QUICK_STATS') && (
                   <OwnerKpiGrid items={homeKpis} />
               )}
@@ -800,9 +830,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
               {activeWidgets.includes('OCCUPANCY_ANALYSIS') && (
                   <div className="bg-[#161B22] border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
-                    <h3 className="font-bold text-white text-base flex items-center gap-2 mb-6">
-                        <BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi
-                    </h3>
+                    <button
+                      onClick={() => setActiveTab('CALENDAR')}
+                      className="w-full font-bold text-white text-base flex items-center justify-between mb-6 group"
+                    >
+                        <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
+                        <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
+                    </button>
                     <PitchOccupancyGrid data={hourlyOccupancy} courtNames={courts.map(c => c.name)} />
                   </div>
               )}
@@ -961,6 +995,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onClose={() => setShowEditProfile(false)}
           facilityId={facilityData?.id}
           initialData={facilityData}
+          initialTab={editProfileTab}
           onSave={(data) => setFacilityData((prev: any) => ({ ...prev, ...data }))}
           onOpenCourts={() => {
             setShowEditProfile(false);

@@ -35,6 +35,8 @@ interface Props {
   onClose: () => void;
   facilityId: string;
   initialData?: OwnerFacilityFormData;
+  /** Açılışta gösterilecek sekme (Kurulum Sihirbazı 'konum' adımı doğrudan haritayı açar). */
+  initialTab?: 'general' | 'amenities' | 'location' | 'showcase';
   onSave: (data: OwnerFacilityFormData) => void;
   /** Vitrin sekmesinden kort yönetimine köprü (Sahalarım ekranı) */
   onOpenCourts?: () => void;
@@ -79,13 +81,14 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   onClose,
   facilityId,
   initialData,
+  initialTab,
   onSave,
   onOpenCourts,
   onOpenPricing,
   onOpenHours,
 }) => {
   const notify = useOwnerToast();
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? 'general');
   const [name, setName] = useState(initialData?.name ?? '');
   const [description, setDescription] = useState(initialData?.description ?? '');
   const [city, setCity] = useState(initialData?.city ?? '');
