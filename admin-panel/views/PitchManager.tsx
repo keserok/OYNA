@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera } from 'lucide-react';
+import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera, AlertCircle, X } from 'lucide-react';
 import { PitchCourt } from '../../types';
 import { upsertCourt, deleteCourt, getInactiveCourts, reactivateCourt, toTurkishError } from '../../services/pitchOwnerService';
 import { approveCourtGrades } from '../../services/pitchContentService';
@@ -468,6 +468,15 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     <Plus size={16} /> SAHA EKLE
                 </button>
             </div>
+
+            {/* FAZ1: saveError liste ekranında görünmüyordu — saha limiti/silme/geri-açma
+                hataları sessizce yutuluyordu. Artık üstte dismissible banner. */}
+            {saveError && (
+                <div className="mx-4 mt-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300 flex items-start justify-between gap-3">
+                    <span className="flex items-start gap-2"><AlertCircle size={15} className="shrink-0 mt-0.5" /> {saveError}</span>
+                    <button onClick={() => setSaveError(null)} className="text-red-400 shrink-0 p-1 -m-1" aria-label="Hatayı kapat"><X size={14} /></button>
+                </div>
+            )}
 
             <div className="flex-1 overflow-y-auto p-6">
                 {pitches.length === 0 ? (

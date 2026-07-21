@@ -1,7 +1,8 @@
 // P-REFACTOR: OwnerPanel'den SALT TAŞIMA — davranış değişmedi.
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, RefreshCw, Users, X } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, RefreshCw, Users, X } from 'lucide-react';
 import { useOwnerToast } from './components/useOwnerToast';
+import { useConfirmSheet } from './components/useConfirmSheet';
 import { LoadingState, EmptyState } from '../../components/common/StatusState';
 import { supabase } from '../../supabaseClient';
 import { approveBooking, rejectBooking, getPitchAppMatches, toTurkishError } from '../../services/pitchOwnerService';
@@ -20,6 +21,7 @@ interface RealPendingBooking {
 
 const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) => {
     const notify = useOwnerToast();
+    const { confirm, confirmElement } = useConfirmSheet();
     const [rows, setRows] = useState<RealPendingBooking[]>([]);
     const [loading, setLoading] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
@@ -57,6 +59,20 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
     }, [pitchId, load]);
 
     const handle = async (id: string, action: 'APPROVE' | 'REJECT') => {
+        if (busyId) return; // FAZ1: çift-dokunuş koruması
+        // FAZ1: Reddet, gerçek bir rezervasyonu geri-alınamaz iptal eder — onaysız tek dokunuş yok.
+        if (action === 'REJECT') {
+            const b = rows.find((r) => r.id === id);
+            const ok = await confirm({
+                title: 'Rezervasyonu reddet?',
+                message: b
+                    ? `${b.courts?.name ?? 'Saha'} · ${b.start_time.slice(0, 5)}-${b.end_time.slice(0, 5)} talebi reddedilecek. Bu işlem geri alınamaz.`
+                    : 'Bu rezervasyon talebi geri alınamaz şekilde reddedilecek.',
+                confirmLabel: 'Reddet',
+                destructive: true,
+            });
+            if (!ok) return;
+        }
         setBusyId(id);
         try {
             if (action === 'APPROVE') {
@@ -106,22 +122,23 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
                                 <button
                                     disabled={busyId === b.id}
                                     onClick={() => handle(b.id, 'REJECT')}
-                                    className="py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black uppercase hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                    className="min-h-[44px] py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black uppercase hover:bg-red-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    Reddet
+                                    {busyId === b.id ? <Loader2 size={15} className="animate-spin" /> : 'Reddet'}
                                 </button>
                                 <button
                                     disabled={busyId === b.id}
                                     onClick={() => handle(b.id, 'APPROVE')}
-                                    className="py-2.5 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black uppercase hover:bg-[#39FF14]/20 transition-colors disabled:opacity-50"
+                                    className="min-h-[44px] py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase hover:bg-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    {busyId === b.id ? '...' : 'Onayla'}
+                                    {busyId === b.id ? <Loader2 size={15} className="animate-spin" /> : 'Onayla'}
                                 </button>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
+            {confirmElement}
         </div>
     );
 };
@@ -131,12 +148,13 @@ interface PendingActionsViewProps {
     realPitchId?: string | null;
     autoApprove?: boolean;
     onToggleAutoApprove?: () => void;
+    processingIds?: Set<string>;
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
     onBack: () => void;
 }
 
-export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, onApprove, onReject, onBack }) => {
+export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, processingIds, onApprove, onReject, onBack }) => {
     const notify = useOwnerToast();
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
@@ -253,13 +271,15 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                                     <div className="flex gap-3 pl-2">
                                         <button
                                             onClick={() => onApprove(req.id)}
-                                            className="flex-1 py-3 bg-green-500 text-black font-black text-xs rounded-xl hover:bg-green-400 active:scale-95 transition-all shadow-lg shadow-green-900/10"
+                                            disabled={processingIds?.has(req.id)}
+                                            className="flex-1 min-h-[48px] py-3 bg-green-500 text-black font-black text-xs rounded-xl hover:bg-green-400 active:scale-95 transition-all shadow-lg shadow-green-900/10 disabled:opacity-60 flex items-center justify-center gap-2"
                                         >
-                                            REZERVE ET & ONAYLA
+                                            {processingIds?.has(req.id) ? <Loader2 size={16} className="animate-spin" /> : 'REZERVE ET & ONAYLA'}
                                         </button>
                                         <button
                                             onClick={() => onReject(req.id)}
-                                            className="px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold text-xs rounded-xl hover:bg-red-500 hover:text-white active:scale-95 transition-all"
+                                            disabled={processingIds?.has(req.id)}
+                                            className="px-6 min-h-[48px] py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold text-xs rounded-xl hover:bg-red-500 hover:text-white active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center"
                                         >
                                             REDDET
                                         </button>

@@ -132,6 +132,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [isAdminPreview, setIsAdminPreview] = useState(false);
 
   const [pendingRequests, setPendingRequests] = useState<any[]>(INITIAL_PENDING_REQUESTS);
+  // FAZ1: işlenmekte olan talep id'leri — çift-onay/çift-ret koruması + buton kilidi.
+  const [processingRequestIds, setProcessingRequestIds] = useState<Set<string>>(new Set());
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showOccupancyModal, setShowOccupancyModal] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -666,20 +668,28 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
       if (!effGuardWrite()) return;
+      // FAZ1: aynı talep zaten işleniyorsa ikinci dokunuşu yok say (çift onay/ret = para kaybı).
+      if (processingRequestIds.has(id)) return;
+      setProcessingRequestIds((prev) => { const n = new Set(prev); n.add(id); return n; });
+      // İyimser: talebi hemen işaretle (liste yenilenince sunucu gerçeğiyle değişir).
       setPendingRequests((prev: any[]) => prev.map(req =>
           req.id === id ? { ...req, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' } : req
       ));
-      if (!realPitchId) return;
       try {
-          if (action === 'APPROVE') {
-              await approveBooking(id);
-          } else {
-              await rejectBooking(id, 'Tesis sahibi tarafından reddedildi.');
+          if (realPitchId) {
+              if (action === 'APPROVE') {
+                  await approveBooking(id);
+              } else {
+                  await rejectBooking(id, 'Tesis sahibi tarafından reddedildi.');
+              }
+              await refreshDashboard(realPitchId, autoApproveMinutes);
           }
-          await refreshDashboard(realPitchId, autoApproveMinutes);
       } catch (err) {
           notify(toTurkishError(err), 'error');
+          // İyimser değişikliği geri al: sunucu gerçeğini yeniden çek.
           if (realPitchId) await refreshDashboard(realPitchId, autoApproveMinutes);
+      } finally {
+          setProcessingRequestIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
       }
   };
 
@@ -835,9 +845,10 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       {pendingCount > 0 ? (
                           <div className="space-y-4">
                               {pendingRequests.filter((r: any) => r.status === 'PENDING').slice(0, 3).map((req: any) => (
-                                  <MatchCountdownItem 
+                                  <MatchCountdownItem
                                       key={req.id}
                                       request={req}
+                                      isProcessing={processingRequestIds.has(req.id)}
                                       onApprove={() => handleProcessRequest(req.id, 'APPROVE')}
                                       onReject={() => handleProcessRequest(req.id, 'REJECT')}
                                   />
@@ -916,12 +927,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         />
       )}
       {activeTab === 'PENDING_ACTIONS' && (
-          <PendingActionsView 
+          <PendingActionsView
               pendingRequests={pendingRequests}
               realPitchId={realPitchId}
               autoApprove={autoApprove}
               onToggleAutoApprove={toggleAutoApprove}
-              onApprove={(id) => handleProcessRequest(id, 'APPROVE')} 
+              processingIds={processingRequestIds}
+              onApprove={(id) => handleProcessRequest(id, 'APPROVE')}
               onReject={(id) => handleProcessRequest(id, 'REJECT')}
               onBack={() => setActiveTab('HOME')}
           />
