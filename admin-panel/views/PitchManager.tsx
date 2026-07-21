@@ -7,6 +7,7 @@ import { supabase } from '../../supabaseClient';
 import PhotoManager from '../../components/pitch-editor/PhotoManager';
 import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatures';
 import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
+import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
 
 // Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
 const CAPACITY_OPTIONS = [
@@ -51,6 +52,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [editingPitch, setEditingPitch] = useState<PitchCourt | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const { confirm, confirmElement } = useConfirmSheet();
     const [inactiveCourts, setInactiveCourts] = useState<PitchCourt[]>([]);
 
     const isRealFacility = !!facilityId && !facilityId.startsWith('mock-');
@@ -190,7 +192,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
 
     const handleDelete = async (id: string) => {
         if (readOnly) return;
-        if (!confirm('Bu sahayı silmek istediğinize emin misiniz?')) return;
+        const ok = await confirm({
+            title: 'Sahayı sil?',
+            message: 'Bu saha kaldırılacak. Geçmiş rezervasyon kayıtları korunur ama saha artık kiralanamaz.',
+            confirmLabel: 'Sil',
+            destructive: true,
+        });
+        if (!ok) return;
         try {
             if (isRealFacility && id) {
                 await deleteCourt(id);
@@ -564,6 +572,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </div>
                 )}
             </div>
+            {confirmElement}
         </div>
     );
 };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquare, QrCode, X, XCircle } from 'lucide-react';
 import { cancelConfirmedBooking, toTurkishError } from '../../services/pitchOwnerService';
 import { useOwnerToast } from './components/useOwnerToast';
+import { useConfirmSheet } from './components/useConfirmSheet';
 
 export interface BookingDetailData {
   id: string;
@@ -30,6 +31,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
   onNavigateQr,
 }) => {
   const notify = useOwnerToast();
+  const { confirm, confirmElement } = useConfirmSheet();
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -42,9 +44,13 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       notify('İptal nedeni zorunludur.', 'warning');
       return;
     }
-    if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz? Ödenmiş tutar varsa iade işlemi başlatılır.')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Rezervasyonu iptal et?',
+      message: 'Ödenmiş tutar varsa iade işlemi başlatılır. Bu işlem geri alınamaz.',
+      confirmLabel: 'İptal Et',
+      destructive: true,
+    });
+    if (!ok) return;
     setIsCancelling(true);
     try {
       await cancelConfirmedBooking(booking.id, cancelReason.trim());
@@ -167,6 +173,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
           </div>
         )}
       </div>
+      {confirmElement}
     </div>
   );
 };

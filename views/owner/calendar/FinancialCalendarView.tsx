@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { OwnerBottomSheet } from '../components/OwnerBottomSheet';
+import { useConfirmSheet } from '../components/useConfirmSheet';
 import { OwnerSubscriptionModal } from '../OwnerSubscriptionModal';
 import { OwnerFlashDealModal } from '../OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from '../OwnerCloseSlotModal';
@@ -109,6 +110,7 @@ export const FinancialCalendarView: React.FC<{
   onPricingUpdated?: () => void;
 }> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, onNavigate, onPricingUpdated }) => {
     const notify = useOwnerToast();
+    const { confirm, confirmElement } = useConfirmSheet();
     const dayStrip = useMemo(() => buildDayStrip(), []);
     const dayStripRef = useRef<HTMLDivElement | null>(null);
     const dayScrollRef = useRef<HTMLDivElement | null>(null);
@@ -219,7 +221,15 @@ export const FinancialCalendarView: React.FC<{
     }, [isRealPitch, pitchId]);
 
     const handleSubStatus = async (id: string, status: 'ACTIVE' | 'PAUSED' | 'CANCELLED') => {
-        if (status === 'CANCELLED' && !window.confirm('Bu abonelik iptal edilsin mi? Bu işlem geri alınamaz.')) return;
+        if (status === 'CANCELLED') {
+            const ok = await confirm({
+                title: 'Aboneliği iptal et?',
+                message: 'Bu abonelik iptal edilecek. Bu işlem geri alınamaz.',
+                confirmLabel: 'İptal Et',
+                destructive: true,
+            });
+            if (!ok) return;
+        }
         setSubActionBusy(true);
         try {
             await updateSubscriptionStatus(id, status);
@@ -933,6 +943,7 @@ export const FinancialCalendarView: React.FC<{
                     onNavigateQr={() => onNavigate?.('QR_SCANNER')}
                 />
             )}
+            {confirmElement}
         </div>
     );
 };

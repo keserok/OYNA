@@ -7,6 +7,7 @@ import {
   upsertBankAccount,
 } from '../../services/pitchOwnerService';
 import { validateTrIban, normalizeIban } from '../../utils/iban';
+import { useConfirmSheet } from './components/useConfirmSheet';
 import type { PitchBankAccount } from '../../types';
 
 interface OwnerBankAccountsModalProps {
@@ -22,6 +23,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
   onUpdated,
   readOnly = false,
 }) => {
+  const { confirm, confirmElement } = useConfirmSheet();
   const [accounts, setAccounts] = useState<PitchBankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +95,13 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
 
   const handleDelete = async (id: string) => {
     if (readOnly) return;
-    if (!confirm('Bu banka hesabını silmek istiyor musunuz?')) return;
+    const ok = await confirm({
+      title: 'Banka hesabını sil?',
+      message: 'Bu banka hesabı kaldırılacak. Bekleyen ödemeler etkilenmez.',
+      confirmLabel: 'Sil',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await deleteBankAccount(id);
       await load();
@@ -229,6 +237,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
           </div>
         )}
       </div>
+      {confirmElement}
     </div>
   );
 };
