@@ -50,6 +50,7 @@ vi.mock('../../../services/teamSocialService', () => ({
   formatLabel: (s: unknown) => String(s),
 }));
 vi.mock('../../../services/tacticSocialService', () => ({
+  logStudioEvent: vi.fn(),
   saveTeamTactic: vi.fn(),
   approveTacticRpc: vi.fn(),
   rejectTacticRpc: vi.fn(),

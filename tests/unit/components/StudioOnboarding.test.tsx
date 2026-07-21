@@ -41,6 +41,7 @@ vi.mock('../../../services/teamSocialService', () => ({
   getMyTeams: vi.fn(async () => []), getTeamSquad: vi.fn(async () => []), formatLabel: (s: unknown) => String(s),
 }));
 vi.mock('../../../services/tacticSocialService', () => ({
+  logStudioEvent: vi.fn(),
   saveTeamTactic: vi.fn(), approveTacticRpc: vi.fn(), rejectTacticRpc: vi.fn(),
   getTacticById: vi.fn(async () => null), setTacticShareLink: vi.fn(), tacticShareUrl: vi.fn(() => ''),
   getTeamTacticsShowcase: vi.fn(async () => []), setActiveTactic: vi.fn(),

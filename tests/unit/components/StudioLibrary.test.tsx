@@ -68,6 +68,7 @@ const { getShowcase } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../services/tacticSocialService', () => ({
+  logStudioEvent: vi.fn(),
   saveTeamTactic: vi.fn(),
   approveTacticRpc: vi.fn(),
   rejectTacticRpc: vi.fn(),

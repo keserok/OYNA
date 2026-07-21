@@ -62,6 +62,7 @@ const TAC_ROW = {
 };
 
 vi.mock('../../../services/tacticSocialService', () => ({
+  logStudioEvent: vi.fn(),
   saveTeamTactic: vi.fn(), approveTacticRpc: vi.fn(), rejectTacticRpc: vi.fn(),
   getTacticById: vi.fn(async () => TAC_ROW), setTacticShareLink: vi.fn(), tacticShareUrl: vi.fn(() => ''),
   getTeamTacticsShowcase: vi.fn(async () => []), setActiveTactic: vi.fn(),

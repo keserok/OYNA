@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const rpc = vi.fn();
 vi.mock('../../supabaseClient', () => ({ supabase: { rpc: (...a: any[]) => rpc(...a) } }));
 
-import { saveTeamTactic, TacticConflictError } from '../../services/tacticSocialService';
+import { saveTeamTactic, TacticConflictError, logStudioEvent } from '../../services/tacticSocialService';
 
 const payload = {
   name: 'Test', size: '7v7', formation: '2-3-1',
@@ -46,5 +46,15 @@ describe('saveTeamTactic', () => {
     rpc.mockResolvedValue({ data: { tactic_id: 't1', status: 'APPROVED' }, error: null });
     const res = await saveTeamTactic(null, null, payload);
     expect(res.updatedAt).toBeNull();
+  });
+});
+
+describe('logStudioEvent — ateşle-unut telemetri', () => {
+  beforeEach(() => rpc.mockReset());
+
+  it('doğru olay adıyla RPC çağırır (kişisel içerik göndermez)', () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    logStudioEvent('tactic_play');
+    expect(rpc).toHaveBeenCalledWith('log_studio_event', { p_event: 'tactic_play' });
   });
 });

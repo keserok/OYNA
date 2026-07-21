@@ -23,7 +23,7 @@ import {
 import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
     setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
-    setActiveTactic as setActiveTacticRpc, TacticConflictError,
+    setActiveTactic as setActiveTacticRpc, TacticConflictError, logStudioEvent,
 } from '../services/tacticSocialService';
 import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
 // Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
@@ -204,8 +204,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
     };
     // Animasyon modülü stüdyo açılışında arka planda indirilir (kapı butonu öldü).
+    // Aynı anda anonim "stüdyo açıldı" telemetrisi (kişisel içerik yazılmaz).
     useEffect(() => {
         void loadAdvancedAnimation();
+        logStudioEvent('studio_open');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -639,6 +641,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         return () => clearTimeout(t);
     }, [isSimulating, playCycleSeconds]);
 
+    // Anonim "oynatıldı" telemetrisi — simülasyon her başladığında (kişisel içerik yok).
+    useEffect(() => { if (isSimulating) logStudioEvent('tactic_play'); }, [isSimulating]);
+
     // ── BİZ/RAKİP katman anahtarı: düzenlemede aktif taraf önde, pasif arkada ──
     const layerEditing = isLayerEditing(isSimulating, presentMode);
     const usLayer = markerLayer('US', drawSide, layerEditing);
@@ -781,6 +786,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         dismissOnboarding();
         setPlans(prev => [...prev, sample]);
         setActivePlanIndex(plans.length);
+        logStudioEvent('sample_load');
         showToast('Örnek taktik yüklendi — OYNAT ile izle.');
         await loadAdvancedAnimation();
         setShowBall(true);
@@ -1117,6 +1123,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         showToast(res.status === 'PENDING_APPROVAL'
             ? "Taktik önerin takım yöneticilerine gönderildi!"
             : "Taktik kaydedildi!");
+        logStudioEvent('tactic_save');
         setShowSaveModal(false);
         setConflictOpen(false);
         // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz

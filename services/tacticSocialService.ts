@@ -207,6 +207,19 @@ export const setTacticShareLink = async (
 
 export const tacticShareUrl = (token: string): string => `https://oyna.app/t/${token}`;
 
+// ─── Stüdyo telemetrisi — anonim olay sayacı (KİŞİSEL İÇERİK YAZILMAZ) ─────────
+
+export type StudioEvent = 'studio_open' | 'tactic_save' | 'tactic_play' | 'sample_load';
+
+/** Ateşle-unut: yalnız olay adını sayar; taktik verisi/isim GÖNDERMEZ. Hata
+    kullanıcı akışını asla bozmaz (sessiz yutulur). Sunucu allowlist'i doğrular. */
+export const logStudioEvent = (event: StudioEvent): void => {
+  try {
+    const p = supabase.rpc('log_studio_event', { p_event: event }) as unknown as Promise<unknown>;
+    if (p && typeof p.then === 'function') p.then(() => {}, () => {}); // başarı/başarısızlık sessiz
+  } catch { /* çevrimdışı / RPC yok — yok say */ }
+};
+
 // ─── Maça taktik atama (L76) ────────────────────────────────────────
 
 /** Maça onaylı takım taktiği ata (yalnız yönetici; maç başına tek plan). */

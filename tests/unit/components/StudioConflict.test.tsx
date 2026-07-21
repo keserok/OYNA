@@ -50,6 +50,7 @@ const { saveMock, TacticConflictError } = vi.hoisted(() => {
   return { saveMock: vi.fn(), TacticConflictError };
 });
 vi.mock('../../../services/tacticSocialService', () => ({
+  logStudioEvent: vi.fn(),
   saveTeamTactic: saveMock,
   approveTacticRpc: vi.fn(), rejectTacticRpc: vi.fn(),
   getTacticById: vi.fn(async () => ROW), setTacticShareLink: vi.fn(), tacticShareUrl: vi.fn(() => ''),
