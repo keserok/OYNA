@@ -34,12 +34,13 @@ import {
   OwnerWorkingHoursModal,
   OwnerPricingPolicyModal,
   OwnerCancellationPolicyModal,
-  OwnerPaymentSettingsModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
   OwnerOperationsSettingsModal,
   OwnerMatchesModal,
   OwnerNotificationsModal,
+  // NOT: OwnerPaymentSettingsModal (PayTR/Param) şu an bağlı değil — ödeme
+  // sağlayıcı entegrasyonu canlıya alınınca menüye eklenecek.
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerLogoutModal,
@@ -179,7 +180,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   };
   const [showPricingPolicy, setShowPricingPolicy] = useState(false);
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
-  const [showPaymentSettings, setShowPaymentSettings] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
       const saved = localStorage.getItem('owner_activeWidgets');
@@ -546,14 +546,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   useEffect(() => {
       localStorage.setItem('owner_activeWidgets', JSON.stringify(activeWidgets));
   }, [activeWidgets]);
-
-  useEffect(() => {
-      if (facilityData?.id && !facilityData.id.startsWith('mock-')) return;
-      localStorage.setItem('owner_facilityData', JSON.stringify({
-          ...facilityData,
-          isFacilityOpen
-      }));
-  }, [facilityData, isFacilityOpen]);
 
   const toggleFacilityStatus = async () => {
     if (!effGuardWrite()) return;
