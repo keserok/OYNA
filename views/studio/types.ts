@@ -9,6 +9,7 @@ export interface Player {
     code?: string;
     isOpponent?: boolean;
     isCustom?: boolean;
+    jersey?: number;   // takım kadrosundan gelen forma numarası (varsa sahada gösterilir)
 }
 
 export type GameIdentity = 'BALANCED' | 'HIGH_PRESS' | 'PARK_BUS' | 'COUNTER_ATTACK';

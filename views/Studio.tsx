@@ -241,6 +241,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Global Store — stüdyo bağlamı
     const studioContext = useAppStore(s => s.studioContext);
     const setStudioContext = useAppStore(s => s.setStudioContext);
+    const setStoreSelectedTeamId = useAppStore(s => s.setSelectedTeamId);
+    // Takımdan gelindiyse geri tuşu oraya döner (bağlam kopmasın); değilse onBack.
+    const [returnTeamId, setReturnTeamId] = useState<string | null>(null);
 
     // ── Küme 3 köprüsü: kanonik takımlar + GERÇEK kadrolar ──
     // store.myTeams (hayalet roster JSONB) ÖLDÜ; kaynak get_my_teams +
@@ -270,6 +273,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         name: m.full_name,
         role: m.pos || 'CM',
         rating: m.fp || 70,
+        ...(m.jersey_number != null ? { jersey: m.jersey_number } : {}),
     });
 
     // Mevkiyi (pos) saha hattına eşle: GK/DEF/MID/FWD.
@@ -348,11 +352,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     });
                     if (hydrated.teamId) {
                         setSelectedTeamId(hydrated.teamId);
+                        setReturnTeamId(hydrated.teamId);
                         setIsTeamConfirmed(true);
                         void ensureSquad(hydrated.teamId);
                     }
                 } else if (ctx.teamId) {
                     setSelectedTeamId(ctx.teamId);
+                    setReturnTeamId(ctx.teamId);
                     const [squad, teams] = await Promise.all([ensureSquad(ctx.teamId), getMyTeams()]);
                     const teamRow = teams.find(t => t.team_id === ctx.teamId);
                     setStudioTeams(teams.filter(r => !r.is_archived));
@@ -717,6 +723,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
+    };
+
+    // Akıllı geri dönüş: sunum modundaysa çık; takımdan gelindiyse takım detayına
+    // dön (bağlam kopmasın); değilse normal geri.
+    const handleBack = () => {
+        if (presentMode) { exitPresent(); return; }
+        if (returnTeamId) {
+            setStoreSelectedTeamId(returnTeamId);
+            onNavigate('MY_TEAM');
+            return;
+        }
+        onBack();
     };
 
     // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
@@ -1430,6 +1448,33 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         ...activeTactic.opponents.map(o => ({ ...o, type: 'opponent' as const }))
     ];
 
+    // ── Bayat kadro tespiti: takım taktiğindeki oyuncu artık kadroda değilse işaretle ──
+    // Kadro yüklüyse (squadsByTeam), takım oyuncusu olup güncel kadroda olmayan
+    // (elle eklenen hayali oyuncu HARİÇ) slotları "artık kadroda değil" say.
+    const activeTeamSquad = activeTactic.teamId ? squadsByTeam[activeTactic.teamId] : undefined;
+    const staleSlotIds = new Set<string>();
+    if (activeTeamSquad) {
+        const squadIds = new Set(activeTeamSquad.map(m => m.user_id));
+        activeTactic.slots.forEach(s => {
+            if (s.player && !s.player.isCustom && !squadIds.has(s.player.id)) staleSlotIds.add(s.id);
+        });
+    }
+    const hasStaleSquad = staleSlotIds.size > 0;
+
+    // "Kadroyla eşitle": güncel kadroyu mevki hattına göre akıllıca yeniden dizer.
+    const syncWithSquad = async () => {
+        if (!activeTactic.teamId) return;
+        try {
+            const squad = await ensureSquad(activeTactic.teamId);
+            pushHistory();
+            setActiveTactic({ ...activeTactic, slots: populateSlotsWithSquad(squad, activeTactic.slots) });
+            showToast('Kadro güncel oyuncularla eşitlendi.');
+        } catch (e) {
+            console.error('[Studio] kadro eşitlenemedi', e);
+            showToast('Kadro eşitlenemedi.', 'error');
+        }
+    };
+
     // ── Oyuncu Seç veri hazırlığı: tek akışlı liste (arkadaş + takım kadroları + manuel) ──
     const takenPlayerIds = new Set<string>([
         ...activeTactic.slots.filter(s => s.player).map(s => s.player!.id),
@@ -1484,7 +1529,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         {/* Header */}
                         <header className="px-6 pt-safe pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
                             <div className="flex items-center gap-3 min-w-0">
-                                <button id="studio-back-button" onClick={presentMode ? exitPresent : onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
+                                <button id="studio-back-button" onClick={handleBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
                                     <ChevronLeft size={20} />
                                 </button>
                                 <div className="min-w-0">
@@ -1828,6 +1873,23 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </div>
             </>)}
 
+            {/* Bayat kadro uyarısı — takım oyuncusu artık kadroda değilse tek dokunuş eşitle */}
+            {!presentMode && hasStaleSquad && (
+                <div className="px-6 pb-3">
+                    <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-3">
+                        <ShieldAlert size={18} className="text-red-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-black text-red-300">{staleSlotIds.size} oyuncu artık kadroda değil</div>
+                            <div className="text-[10px] text-red-400/80">Bu oyuncular takımdan ayrılmış olabilir.</div>
+                        </div>
+                        <button
+                            onClick={() => void syncWithSquad()}
+                            className="text-[10px] font-black text-black uppercase tracking-widest px-3 py-2 rounded-xl bg-red-400 hover:bg-red-300 active:scale-95 transition-all shrink-0"
+                        >Kadroyla eşitle</button>
+                    </div>
+                </div>
+            )}
+
             {/* Pitch Area */}
             <div className="px-6 relative z-10 max-w-md mx-auto w-full overflow-hidden">
                 {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez; alt navigasyonla çakışmaz) */}
@@ -2009,12 +2071,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
                         >
                             {slot.player ? (
-                                <motion.div 
+                                <motion.div
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'}`}
+                                    className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'} ${staleSlotIds.has(slot.id) ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-black/50' : ''}`}
                                 >
                                     <span className="text-white font-black text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
+                                    {/* Forma numarası (takım kadrosundan) — sol üst rozet */}
+                                    {slot.player.jersey != null && (
+                                        <div className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-black/80 rounded-full flex items-center justify-center text-white text-[9px] font-black border border-white/25 shadow-sm tabular-nums">
+                                            {slot.player.jersey}
+                                        </div>
+                                    )}
+                                    {/* Artık kadroda değil — sol alt uyarı */}
+                                    {staleSlotIds.has(slot.id) && (
+                                        <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white border-2 border-[#161B22] shadow-sm" title="Artık kadroda değil">
+                                            <ShieldAlert size={9} />
+                                        </div>
+                                    )}
                                     {activeTactic.captainId === slot.player.id && (
                                         <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[10px] font-black border-2 border-[#161B22] shadow-sm">
                                             K
