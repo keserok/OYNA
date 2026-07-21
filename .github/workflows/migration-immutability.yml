@@ -20,8 +20,20 @@ jobs:
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
           HEAD="${{ github.event.pull_request.head.sha }}"
+          # SABİT İSTİSNA (2026-07-21 drift onarımı): 5 standart-dışı sürüm
+          # numarası 14 haneye normalize edildi (ledger'da aynı gün eşlendi).
+          # YALNIZ bu beş eski→yeni çift affedilir; başka hiçbir R/M/D geçmez.
+          cat > /tmp/allowed_renames.tsv <<'EOF'
+          supabase/migrations/20260529_conflict_prevention.sql	supabase/migrations/20260529000000_conflict_prevention.sql
+          supabase/migrations/20260531000_rls_complete.sql	supabase/migrations/20260531000000_rls_complete.sql
+          supabase/migrations/20260531001_security_hardening.sql	supabase/migrations/20260531000001_security_hardening.sql
+          supabase/migrations/20260608_match_join_rpc_fixes.sql	supabase/migrations/20260608000000_match_join_rpc_fixes.sql
+          supabase/migrations/202607130000155_baseline_priv_fns_admin_core.sql	supabase/migrations/20260712235959_baseline_priv_fns_admin_core.sql
+          EOF
           # A=eklendi serbest; M=değişti, D=silindi, R=yeniden adlandı → ihlal
-          VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' || true)
+          VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' \
+            | awk -F'\t' 'BEGIN { while ((getline line < "/tmp/allowed_renames.tsv") > 0) { split(line, a, "\t"); ok[a[1] "\t" a[2]] = 1 } }
+                          { if ($1 ~ /^R100$/ && ok[$2 "\t" $3]) next; print }' || true)
           if [ -n "$VIOLATIONS" ]; then
             echo "❌ Var olan migration dosyaları değiştirilemez/yeniden adlandırılamaz/silinemez:"
             echo "$VIOLATIONS"
