@@ -113,3 +113,43 @@ export function collectAssignedIds(...groups: (PositionSlot[] | undefined)[]): S
   for (const g of groups) for (const s of g || []) { const uid = slotUserId(s); if (uid) ids.add(uid); }
   return ids;
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// KİRALIK KALECİ GÖRÜNÜRLÜK POLİTİKASI (SSOT)
+// Kural: kiralık kaleci YALNIZ kiralayan takımın üyelerine gösterilir
+// (altta "Maç Görevlileri" kartı + sahada kalede). Rakip takım ve dış
+// izleyiciler kaleciyi görmez. Hakem bu politikanın DIŞINDADIR: iki
+// takımın ekranında da altta görünür.
+//
+// İki taraflı kaleci: taraf, HANGİ matches kolonunun dolu olduğundan okunur
+// (gk_id = ev sahibi, away_gk_id = deplasman). Bu herkese açık (matches SELECT
+// public) → kaptan-olmayan takım üyeleri de kendi kalecisini görür; RLS-kısıtlı
+// service_requests'e bağımlılık yoktur.
+// ════════════════════════════════════════════════════════════════════════
+
+/**
+ * Görüntüleyenin hangi tarafın kalecisini görebileceğini çözer.
+ * Her taraf için: o tarafın kalecisi atanmış (id dolu) VE görüntüleyen o
+ * tarafın üyesi → görünür. Taraflar bağımsız değerlenir (bir kişi iki tarafın
+ * da üyesiyse ikisini de görebilir; tipik durumda tek taraf).
+ */
+export function resolveGkVisibility(params: {
+  homeGkId?: string | null;
+  awayGkId?: string | null;
+  viewerIsHomeMember: boolean;
+  viewerIsAwayMember: boolean;
+}): { canSeeHome: boolean; canSeeAway: boolean } {
+  return {
+    canSeeHome: !!params.homeGkId && params.viewerIsHomeMember,
+    canSeeAway: !!params.awayGkId && params.viewerIsAwayMember,
+  };
+}
+
+/**
+ * Kiralık kalecinin sahada işgal edeceği slot: İLK boş GK slotu.
+ * Gerçek bir oyuncunun aldığı (TAKEN) GK slotu asla ezilmez — o durumda
+ * kaleci sahada gösterilmez (yalnız alttaki kartta kalır).
+ */
+export function findHiredGkSlotId(slots: (PositionSlot | null | undefined)[]): string | null {
+  return (slots || []).find(s => s && s.status === 'OPEN' && normalizeRole(s.role) === 'GK')?.id ?? null;
+}

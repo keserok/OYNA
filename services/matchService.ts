@@ -154,6 +154,7 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       awayTeamId: data.away_team_id || data.awayTeamId,
       refereeId: data.ref_id || data.refereeId,
       gkId: data.gk_id ?? data.gkId ?? undefined,
+      awayGkId: data.away_gk_id ?? data.awayGkId ?? undefined,
       creatorId: data.captain_id || data.creatorId,
       // FAZ 3: maç çekirdeği alanları camelCase'e map et
       visibility: data.visibility || 'OPEN',
@@ -323,18 +324,23 @@ const mapProvider = (row: any): MatchProvider => ({
 export const getMatchProviders = async (
   gkId?: string | null,
   refereeId?: string | null,
-): Promise<{ goalkeeper: MatchProvider | null; referee: MatchProvider | null }> => {
-  const result: { goalkeeper: MatchProvider | null; referee: MatchProvider | null } = { goalkeeper: null, referee: null };
+  awayGkId?: string | null,
+): Promise<{ goalkeeper: MatchProvider | null; awayGoalkeeper: MatchProvider | null; referee: MatchProvider | null }> => {
+  const result: { goalkeeper: MatchProvider | null; awayGoalkeeper: MatchProvider | null; referee: MatchProvider | null } =
+    { goalkeeper: null, awayGoalkeeper: null, referee: null };
+  const GK_COLS = 'id,name,avatar,rating,fee,"matchCount",style,height,age,"isElite",skills,stats';
+  const gkQuery = (id?: string | null) =>
+    id ? supabase.from('goalkeepers').select(GK_COLS).eq('id', id).maybeSingle() : Promise.resolve({ data: null });
   try {
-    const [gkRes, refRes] = await Promise.all([
-      gkId
-        ? supabase.from('goalkeepers').select('id,name,avatar,rating,fee,"matchCount",style,height,age,"isElite",skills,stats').eq('id', gkId).maybeSingle()
-        : Promise.resolve({ data: null }),
+    const [gkRes, awayGkRes, refRes] = await Promise.all([
+      gkQuery(gkId),
+      gkQuery(awayGkId),
       refereeId
         ? supabase.from('referees').select('id,name,avatar,rating,fee,"matchCount",style,level,"isElite",stats').eq('id', refereeId).maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
     if ((gkRes as any).data) result.goalkeeper = mapProvider((gkRes as any).data);
+    if ((awayGkRes as any).data) result.awayGoalkeeper = mapProvider((awayGkRes as any).data);
     if ((refRes as any).data) result.referee = mapProvider((refRes as any).data);
   } catch (e) {
     console.warn('[matchService] atanmış sağlayıcılar çekilemedi:', e);

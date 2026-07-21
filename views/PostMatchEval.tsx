@@ -208,7 +208,9 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     const loadProviders = async () => {
       if (!selectedMatch) { setProviders([]); return; }
       const tasks: Promise<ServiceProviderInfo>[] = [];
-      if (selectedMatch.gkId) tasks.push(fetchProvider('goalkeepers', selectedMatch.gkId, 'GK', 'Kaleci'));
+      // İki taraflı kaleci: ev sahibi + deplasman kalecisi ayrı ayrı değerlendirilir.
+      if (selectedMatch.gkId) tasks.push(fetchProvider('goalkeepers', selectedMatch.gkId, 'GK', 'Ev Sahibi Kalecisi'));
+      if (selectedMatch.awayGkId) tasks.push(fetchProvider('goalkeepers', selectedMatch.awayGkId, 'GK', 'Deplasman Kalecisi'));
       if (selectedMatch.refereeId) tasks.push(fetchProvider('referees', selectedMatch.refereeId, 'REF', 'Hakem'));
       const results = await Promise.all(tasks);
       if (!cancelled) setProviders(results);
