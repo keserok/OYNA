@@ -1,0 +1,31 @@
+# Migration dosyaları DEĞİŞMEZDİR (ledger sözleşmesi).
+# PR'da supabase/migrations/ altında yeniden adlandırma/düzenleme/silme yakalanırsa
+# iş başarısız olur — yalnız YENİ dosya eklemek serbesttir.
+# Gerekçe: 2026-07-21 ledger drift onarımı (bkz. supabase/MIGRATION_PLAYBOOK.md).
+name: migration-immutability
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+jobs:
+  immutability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Var olan migration'lara dokunulmadığını doğrula
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          # A=eklendi serbest; M=değişti, D=silindi, R=yeniden adlandı → ihlal
+          VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ Var olan migration dosyaları değiştirilemez/yeniden adlandırılamaz/silinemez:"
+            echo "$VIOLATIONS"
+            echo "Düzeltme gerekiyorsa YENİ bir migration ekleyin (bkz. supabase/MIGRATION_PLAYBOOK.md)."
+            exit 1
+          fi
+          echo "✅ Yalnız yeni migration dosyaları eklenmiş."
