@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:admin": "node admin-panel/scripts/start-admin-local.mjs",
     "test:unit": "vitest run tests/unit --config vitest.config.ts",
+    "test:e2e:studio": "playwright test --config playwright.hermetic.config.ts",
     "test:admin": "playwright test tests/admin.spec.ts",
     "admin:verify": "node admin-panel/scripts/admin-panel-verify.mjs",
     "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",
