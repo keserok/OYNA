@@ -883,6 +883,20 @@ export async function requestWithdrawal(
   }
 }
 
+/** Çekim durumu (Faz 9): admin anahtarı açık mı + minimum tutar. */
+export async function getCashoutStatus(): Promise<{ enabled: boolean; min: number }> {
+  try {
+    const { data, error } = await supabase.rpc('get_cashout_status');
+    if (error) throw error;
+    const d = (data ?? {}) as { enabled?: boolean; min?: number };
+    return { enabled: d.enabled === true, min: Number(d.min ?? 100) };
+  } catch (error) {
+    console.error('getCashoutStatus:', error);
+    // Güvenli varsayılan: kapalı (owner yanlışlıkla açık sanmasın).
+    return { enabled: false, min: 100 };
+  }
+}
+
 /**
  * Saha sahibinin çekilebilir bakiyesini Faz 2 cüzdanından (get_wallet_summary) okur.
  * Bakiye KULLANICI bazlıdır (tüm tesislerin kazancı tek cüzdanda toplanır); pitchId

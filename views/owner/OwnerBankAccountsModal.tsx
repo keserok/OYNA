@@ -6,6 +6,7 @@ import {
   toTurkishError,
   upsertBankAccount,
 } from '../../services/pitchOwnerService';
+import { validateTrIban, normalizeIban } from '../../utils/iban';
 import type { PitchBankAccount } from '../../types';
 
 interface OwnerBankAccountsModalProps {
@@ -62,13 +63,18 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
       setError('Banka adı, hesap sahibi ve IBAN zorunludur.');
       return;
     }
+    const ibanCheck = validateTrIban(form.iban);
+    if (!ibanCheck.valid) {
+      setError(ibanCheck.reason ?? 'Geçerli bir TR IBAN girin.');
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
       await upsertBankAccount(pitchId, {
         bank_name: form.bank_name,
         account_holder: form.account_holder,
-        iban: form.iban,
+        iban: normalizeIban(form.iban),
         is_primary: form.is_primary || accounts.length === 0,
       });
       setForm({ bank_name: '', account_holder: '', iban: '', is_primary: false });

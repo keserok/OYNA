@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Banknote, Clock, Wallet, X } from 'lucide-react';
-import { getOwnerBalance, getBankAccounts, requestWithdrawal, toTurkishError } from '../../../services/pitchOwnerService';
+import { AlertCircle, Banknote, Clock, Lock, Wallet, X } from 'lucide-react';
+import { getOwnerBalance, getBankAccounts, requestWithdrawal, getCashoutStatus, toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
+import { validateTrIban } from '../../../utils/iban';
 
 interface Props {
   onClose: () => void;
@@ -21,6 +22,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [availableBalance, setAvailableBalance] = useState(0);
   const [reservedBalance, setReservedBalance] = useState(0);
+  const [cashout, setCashout] = useState<{ enabled: boolean; min: number }>({ enabled: false, min: 100 });
   const isRealPitch = !!facilityId && !facilityId.startsWith('mock-');
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
       .catch(() => {
         if (active) setAvailableBalance(0);
       });
+    getCashoutStatus().then((s) => { if (active) setCashout(s); }).catch(() => undefined);
     // N-3: kayıtlı birincil banka hesabını (IBAN + sahip) çekim formuna ön-doldur —
     // owner her çekimde IBAN'ı elle yazmasın (kurulumdaki IBAN ölü veri olmasın).
     getBankAccounts(facilityId)
@@ -57,17 +60,26 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
 
   const handleWithdraw = async () => {
     if (readOnly) return;
+    if (!cashout.enabled) {
+      notify('Para çekme şu an kapalı. Yakında admin onayıyla açılacak.', 'warning');
+      return;
+    }
     const amount = Number(withdrawAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       notify('Geçerli bir tutar girin.', 'error');
       return;
     }
-    if (!iban.trim() || iban.replace(/\s/g, '').length < 10) {
-      notify('Geçerli bir IBAN girin.', 'error');
+    const ibanCheck = validateTrIban(iban);
+    if (!ibanCheck.valid) {
+      notify(ibanCheck.reason ?? 'Geçerli bir TR IBAN girin.', 'error');
       return;
     }
     if (!ibanHolder.trim()) {
       notify('IBAN sahibi adı zorunludur.', 'error');
+      return;
+    }
+    if (amount < cashout.min) {
+      notify(`Minimum çekim tutarı ₺${cashout.min}.`, 'error');
       return;
     }
     if (amount > availableBalance) {
@@ -115,13 +127,24 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="bg-blue-500/5 border border-blue-500/15 p-4 rounded-2xl text-xs text-blue-200/80 flex items-start gap-2.5">
-          <Clock size={16} className="shrink-0 mt-0.5" />
-          <span>
-            Kazancınız (maç + saha kiralama) tahsilattan <b>2 hafta</b> sonra çekilebilir hale gelir.
-            Talebiniz admin onayıyla kayıtlı IBAN'ınıza gönderilir.
-          </span>
-        </div>
+        {!cashout.enabled ? (
+          <div className="bg-amber-500/10 border border-amber-500/25 p-4 rounded-2xl text-xs text-amber-200 flex items-start gap-2.5">
+            <Lock size={16} className="shrink-0 mt-0.5" />
+            <span>
+              <b>Para çekme şu an kapalı.</b> Güvenli ödeme altyapımız devreye girince admin onayıyla
+              açılacak. Bu arada banka hesabını (IBAN) ekleyip hazır tutabilirsin; bakiyen birikmeye
+              devam eder.
+            </span>
+          </div>
+        ) : (
+          <div className="bg-blue-500/5 border border-blue-500/15 p-4 rounded-2xl text-xs text-blue-200/80 flex items-start gap-2.5">
+            <Clock size={16} className="shrink-0 mt-0.5" />
+            <span>
+              Kazancınız (maç + saha kiralama) tahsilattan <b>2 hafta</b> sonra çekilebilir hale gelir.
+              Talebiniz admin onayıyla kayıtlı IBAN'ınıza gönderilir (min ₺{cashout.min}).
+            </span>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="bg-[#161B22] p-5 rounded-2xl border border-white/5">
@@ -170,6 +193,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           onClick={handleWithdraw}
           disabled={
             readOnly ||
+            !cashout.enabled ||
             isProcessing ||
             !withdrawAmount ||
             !iban ||
@@ -179,10 +203,10 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           }
           className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-2 hover:bg-blue-500 disabled:opacity-50"
         >
-          {isProcessing ? 'İşleniyor...' : (
-            <>
-              <Banknote size={22} /> Para Çek
-            </>
+          {!cashout.enabled ? (
+            <><Lock size={20} /> Çekim Yakında Açılacak</>
+          ) : isProcessing ? 'İşleniyor...' : (
+            <><Banknote size={22} /> Para Çek</>
           )}
         </button>
       </div>
