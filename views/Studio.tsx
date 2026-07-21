@@ -9,7 +9,7 @@ import {
     Swords, UserPlus,
     MessageSquare, ShieldAlert,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
-    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -49,6 +49,8 @@ import {
 import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
 // Performans katmanı — zayıf cihazda süs efektlerini kıs (içerik değişmez)
 import { perfTierFrom, readDeviceSignals, liteGate } from './studio/perf';
+// İlk kullanım — "Örnek taktiği yükle" içeriği (saf üretici)
+import { buildSampleTactic } from './studio/sampleTactic';
 
 // ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
@@ -79,6 +81,7 @@ const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444',
 
 // Faz 9 — kalıcılık & mobil deneyim anahtarları
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
+const ONBOARD_KEY = 'oyna_studio_onboarded_v1'; // ilk kullanım turu bir kez gösterilir
 const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
 // OYNAT başına oynatma turu sayısı — modüldeki `repeat: 1` (ilk + 1 tekrar) ile eş.
 const PLAY_TIMES = 2;
@@ -165,6 +168,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [hideLines, setHideLines] = useState(false);              // "Sadece Hareket" (S12)
     const [showClearSheet, setShowClearSheet] = useState(false);    // granüler temizle (S13)
     const [showTempoSheet, setShowTempoSheet] = useState(false);    // tempo ayar sayfası (araç çubuğu çipi)
+    const [onboardStep, setOnboardStep] = useState<number | null>(null); // ilk kullanım turu adımı (null = kapalı)
     const [undoStack, setUndoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [redoStack, setRedoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [selectedEl, setSelectedEl] = useState<{ type: 'slot' | 'opponent' | 'line'; id: string } | null>(null);
@@ -740,6 +744,44 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             return;
         }
         onBack();
+    };
+
+    // ── İlk kullanım turu: yalnız ilk açılışta bir kez (takım bağlamıyla açıldıysa değil) ──
+    const onboardCheckedRef = useRef(false);
+    useEffect(() => {
+        if (onboardCheckedRef.current) return;
+        onboardCheckedRef.current = true;
+        if (studioContext) return; // takım/taktik bağlamıyla geldiyse tur açma
+        try {
+            if (!localStorage.getItem(ONBOARD_KEY)) setOnboardStep(0);
+        } catch { /* localStorage yok — sessiz geç */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const dismissOnboarding = () => {
+        setOnboardStep(null);
+        try { localStorage.setItem(ONBOARD_KEY, '1'); } catch { /* yok say */ }
+    };
+    const openHelp = () => setOnboardStep(0);
+
+    // "Örnek taktiği yükle": çalışan bir taktiği yeni plana koyar; takım seçiliyse
+    // gerçek kadroyla dizer. Yükledikten sonra bir kez oynatır (hemen his verir).
+    const loadSampleTactic = async () => {
+        let players: Player[] | undefined;
+        if (selectedTeamId) {
+            try {
+                const squad = await ensureSquad(selectedTeamId);
+                if (squad.length) players = squad.slice(0, 7).map(squadRowToPlayer);
+            } catch { /* kadro yoksa yer-tutucu isimler */ }
+        }
+        const sample = buildSampleTactic({ id: crypto.randomUUID(), players });
+        dismissOnboarding();
+        setPlans(prev => [...prev, sample]);
+        setActivePlanIndex(plans.length);
+        showToast('Örnek taktik yüklendi — OYNAT ile izle.');
+        await loadAdvancedAnimation();
+        setShowBall(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true)));
     };
 
     // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
@@ -1564,14 +1606,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <X size={15} /> ÇIKIŞ
                                 </button>
                             ) : (
-                                /* Paylaş — taktik görseli + link + sadece-hareket sunumu */
-                                <button
-                                    onClick={() => setShowExportModal(true)}
-                                    aria-label="Paylaş"
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest shrink-0 hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
-                                >
-                                    <Share2 size={15} /> PAYLAŞ
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {/* Yardım — ilk kullanım turunu yeniden aç */}
+                                    <button
+                                        onClick={openHelp}
+                                        aria-label="Yardım"
+                                        title="Nasıl çalışır?"
+                                        className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+                                    >
+                                        <HelpCircle size={18} />
+                                    </button>
+                                    {/* Paylaş — taktik görseli + link + sadece-hareket sunumu */}
+                                    <button
+                                        onClick={() => setShowExportModal(true)}
+                                        aria-label="Paylaş"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
+                                    >
+                                        <Share2 size={15} /> PAYLAŞ
+                                    </button>
+                                </div>
                             )}
                         </header>
 
@@ -1892,6 +1945,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className="text-[10px] font-black text-black uppercase tracking-widest px-3 py-2 rounded-xl bg-red-400 hover:bg-red-300 active:scale-95 transition-all shrink-0"
                         >Kadroyla eşitle</button>
                     </div>
+                </div>
+            )}
+
+            {/* Boş tahta → örnek taktik daveti (turu atlayanlar da deneyebilsin) */}
+            {!presentMode && onboardStep === null && plans.length === 1
+                && activeTactic.slots.every(s => !s.player)
+                && (activeTactic.drawings?.length ?? 0) === 0
+                && activeTactic.opponents.length === 0 && (
+                <div className="px-6 pb-3">
+                    <button
+                        onClick={() => void loadSampleTactic()}
+                        className="w-full flex items-center gap-3 bg-[#39FF14]/8 border border-dashed border-[#39FF14]/30 rounded-2xl p-3 hover:bg-[#39FF14]/12 active:scale-[0.99] transition-all text-left"
+                    >
+                        <span className="w-10 h-10 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><Sparkles size={18} /></span>
+                        <span className="min-w-0">
+                            <span className="block text-sm font-black text-white">Örnek taktiği yükle</span>
+                            <span className="block text-[11px] text-gray-500">Hazır bir taktik gör — OYNAT ile nasıl çalıştığını izle.</span>
+                        </span>
+                    </button>
                 </div>
             )}
 
@@ -3414,6 +3486,65 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </motion.div>
                     </motion.div>
                 )}
+            </AnimatePresence>
+
+            {/* İlk kullanım turu — 3 adım + örnek taktik (yardım butonundan yeniden açılır) */}
+            <AnimatePresence>
+                {onboardStep !== null && (() => {
+                    const steps = [
+                        { icon: <Users size={24} className="text-[#39FF14]" />, title: 'Oyuncularını yerleştir', body: 'Sahadaki + işaretlerine dokun; arkadaşını, takımını ekle ya da bir isim yazıp elle koy.' },
+                        { icon: <PenTool size={24} className="text-[#39FF14]" />, title: 'Hareketleri çiz', body: 'KOŞU ve PAS araçlarını seç, parmağınla sahada ok ve çizgiler çiz.' },
+                        { icon: <Sparkles size={24} className="text-[#39FF14]" />, title: 'İzle ve paylaş', body: "OYNAT'a bas, taktiğin canlansın. Tempoyu ayarla, PAYLAŞ ile takımına gönder." },
+                    ];
+                    const i = Math.min(onboardStep, steps.length - 1);
+                    const isLast = i === steps.length - 1;
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[130] bg-black/75 backdrop-blur-sm flex items-center justify-center p-6"
+                        >
+                            <motion.div
+                                initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                                className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-white/10 p-6 shadow-2xl"
+                            >
+                                <div className="w-14 h-14 rounded-2xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center mb-4">
+                                    {steps[i].icon}
+                                </div>
+                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Adım {i + 1}/{steps.length}</div>
+                                <h3 className="text-white text-lg font-black mb-1.5">{steps[i].title}</h3>
+                                <p className="text-gray-400 text-[13px] leading-relaxed mb-4">{steps[i].body}</p>
+                                {/* Adım noktaları */}
+                                <div className="flex gap-1.5 mb-5">
+                                    {steps.map((_, k) => (
+                                        <span key={k} className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-[#39FF14]' : 'w-1.5 bg-white/15'}`} />
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    {isLast ? (
+                                        <>
+                                            <button onClick={dismissOnboarding} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
+                                                Kendim başlayayım
+                                            </button>
+                                            <button onClick={() => void loadSampleTactic()} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                                <Sparkles size={16} /> Örnek yükle
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={dismissOnboarding} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
+                                                Atla
+                                            </button>
+                                            <button onClick={() => setOnboardStep(i + 1)} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                                Sonraki <ChevronRight size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-gray-600 text-center mt-4">İpucu: boş sahaya uzun bas → rakip ekle · sağdaki BİZ/RAKİP ile takım değiştir</p>
+                            </motion.div>
+                        </motion.div>
+                    );
+                })()}
             </AnimatePresence>
 
             {/* S49 — Otomatik taslak: yarım kalan çalışmayı geri yükle */}
