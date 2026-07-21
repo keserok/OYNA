@@ -80,10 +80,12 @@ export function resolveTariffForSlot(
     .filter((t) => (t.applies_to_days ?? []).includes(dow))
     .filter((t) => timeMatchesTariff(startTime, t))
     .sort((a, b) => {
-      // 1) Saha-özel önce, 2) tarife tipi önceliği.
+      // 1) Saha-özel önce, 2) tarife tipi önceliği, 3) deterministik tiebreak (id).
       const courtRank = (isCourtSpecific(a) ? 0 : 1) - (isCourtSpecific(b) ? 0 : 1);
       if (courtRank !== 0) return courtRank;
-      return (TARIFF_PRIORITY[a.tariff_type] ?? 9) - (TARIFF_PRIORITY[b.tariff_type] ?? 9);
+      const typeRank = (TARIFF_PRIORITY[a.tariff_type] ?? 9) - (TARIFF_PRIORITY[b.tariff_type] ?? 9);
+      if (typeRank !== 0) return typeRank;
+      return String(a.id ?? '').localeCompare(String(b.id ?? ''));
     });
 
   if (matches.length === 0) return null;

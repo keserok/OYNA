@@ -51,10 +51,13 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
   const notify = useOwnerToast();
   const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
   const [scope, setScope] = useState<string>(ALL_SCOPE);
-  // Kapsam (Tüm Sahalar / her saha) → düzenlenebilir NORMAL tarife satırları.
+  // Kapsam (Tüm Sahalar / her saha) → düzenlenebilir NORMAL tarife satırları
+  // (yalnız AKTİF hafta içi/sonu). Diğer her tarife korunur (aşağıya).
   const [rowsByScope, setRowsByScope] = useState<Record<string, EditRow[]>>({});
-  // SPECIAL (prime/özel-slot) tarifeleri düzenlenmez ama kayıtta KORUNUR (yoksa silinirdi).
-  const [specialTariffs, setSpecialTariffs] = useState<PitchTariff[]>([]);
+  // Editörde GÖSTERİLMEYEN ama kayıtta AYNEN korunan tarifeler: SPECIAL (prime),
+  // HOLIDAY (tatil) ve pasif (is_active=false) satırlar. Full-replace kaydında
+  // bunlar da geri yazılmazsa kalıcı silinirdi (adversaryal review bulgusu).
+  const [preservedTariffs, setPreservedTariffs] = useState<PitchTariff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const rowSeq = useRef(0);
@@ -69,24 +72,27 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
     getTariffs(facilityId)
       .then((rows) => {
         if (!active) return;
-        const specials = rows.filter((t) => t.tariff_type === 'SPECIAL');
-        setSpecialTariffs(specials);
+        // Editörde yalnız AKTİF hafta içi/sonu tarifeler düzenlenir.
+        const isEditable = (t: PitchTariff) =>
+          t.is_active !== false && (t.tariff_type === 'WEEKDAY' || t.tariff_type === 'WEEKEND');
+        // Diğer HER tarife (SPECIAL, HOLIDAY, pasif) aynen korunur.
+        setPreservedTariffs(rows.filter((t) => !isEditable(t)));
         const grouped: Record<string, EditRow[]> = {};
-        rows
-          .filter((t) => t.tariff_type !== 'SPECIAL' && t.is_active !== false)
-          .forEach((t) => {
-            const key = t.court_id ?? ALL_SCOPE;
-            (grouped[key] ??= []).push({
-              id: t.id,
-              name: t.name,
-              startTime: String(t.start_time ?? '09:00').slice(0, 5),
-              endTime: String(t.end_time ?? '00:00').slice(0, 5),
-              price: Number(t.price_per_hour ?? 0),
-              deposit: Number(t.deposit_amount ?? 0),
-              dayType: dayTypeFromTariff(t),
-            });
+        rows.filter(isEditable).forEach((t) => {
+          const key = t.court_id ?? ALL_SCOPE;
+          (grouped[key] ??= []).push({
+            id: t.id,
+            name: t.name,
+            startTime: String(t.start_time ?? '09:00').slice(0, 5),
+            endTime: String(t.end_time ?? '00:00').slice(0, 5),
+            price: Number(t.price_per_hour ?? 0),
+            deposit: Number(t.deposit_amount ?? 0),
+            dayType: dayTypeFromTariff(t),
           });
-        if (!grouped[ALL_SCOPE] || grouped[ALL_SCOPE].length === 0) grouped[ALL_SCOPE] = defaultRows();
+        });
+        // Varsayılan tarifeler YALNIZ tamamen boş tesiste önerilir; saha-özel
+        // veya SPECIAL tarifesi olan tesise sahte 2000/3200 enjekte edilmez.
+        if (rows.length === 0) grouped[ALL_SCOPE] = defaultRows();
         setRowsByScope(grouped);
       })
       .catch((err) => notify(toTurkishError(err), 'error'))
@@ -102,17 +108,13 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
   const setRows = (updater: (prev: EditRow[]) => EditRow[]) =>
     setRowsByScope((prev) => ({ ...prev, [scope]: updater(prev[scope] ?? []) }));
 
+  // Yazarken sıkıştırma YOK (kapora alanı elle düzenlenebilir kalmalı — review
+  // bulgusu). Kapora %10–%50 sınırı input blur'unda ve kayıtta uygulanır.
   const updateRow = (id: string, field: keyof EditRow, value: string | number) => {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const next = { ...r, [field]: value } as EditRow;
-        // Ücret değişince kaporayı %10–%50 aralığına yeniden sıkıştır.
-        if (field === 'price') next.deposit = clampDeposit(next.deposit, Number(value) || 0);
-        if (field === 'deposit') next.deposit = clampDeposit(Number(value) || 0, next.price);
-        return next;
-      }),
-    );
+    setRows((prev) => prev.map((r) => (r.id === id ? ({ ...r, [field]: value } as EditRow) : r)));
+  };
+  const clampRowDeposit = (id: string) => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, deposit: clampDeposit(r.deposit, r.price) } : r)));
   };
 
   const scopeCourtId = scope === ALL_SCOPE ? null : scope;
@@ -136,17 +138,19 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         });
       });
     });
-    // SPECIAL tarifeler AYNEN korunur (silinmez).
-    specialTariffs.forEach((t, idx) => {
+    // Korunan tarifeler (SPECIAL, HOLIDAY, pasif) GERÇEK tipi/günü/aktifliğiyle
+    // aynen geri yazılır — full-replace'te silinmesinler.
+    preservedTariffs.forEach((t, idx) => {
       out.push({
         name: t.name,
-        tariff_type: 'SPECIAL',
+        tariff_type: (t.tariff_type as TariffInput['tariff_type']) ?? 'SPECIAL',
         applies_to_days: t.applies_to_days ?? [],
         start_time: String(t.start_time ?? '09:00').slice(0, 5),
         end_time: String(t.end_time ?? '00:00').slice(0, 5),
         price_per_hour: Number(t.price_per_hour) || 0,
         deposit_amount: Number(t.deposit_amount ?? 0),
         sort_order: 1000 + idx,
+        is_active: t.is_active,
         court_id: t.court_id ?? null,
       });
     });
@@ -330,7 +334,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
                       value={tariff.deposit}
                       disabled={readOnly}
                       onChange={(e) => updateRow(tariff.id, 'deposit', parseInt(e.target.value, 10) || 0)}
-                      onBlur={(e) => updateRow(tariff.id, 'deposit', clampDeposit(parseInt(e.target.value, 10) || 0, tariff.price))}
+                      onBlur={() => clampRowDeposit(tariff.id)}
                       className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-black outline-none"
                     />
                   </div>

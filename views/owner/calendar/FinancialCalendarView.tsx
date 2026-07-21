@@ -258,10 +258,10 @@ export const FinancialCalendarView: React.FC<{
         loadSlotMeta();
     }, [loadSlotMeta]);
 
-    // Fiyat GERÇEK tarifeden gelir (saha-öncelikli); tarife yoksa null (uydurma fallback yok).
+    // Fiyat GERÇEK tarifeden gelir (saha-öncelikli + gün-farkında); tarife yoksa null.
     const getSlotPrice = (time: string): number | null => {
         const hour = parseInt(time.split('.')[0], 10);
-        const defaultPrice = resolveHourlyPrice(hour, pricingPolicy, selectedCourtId);
+        const defaultPrice = resolveHourlyPrice(hour, pricingPolicy, selectedCourtId || null, selectedDateISO);
         const deal = findFlashDealForSlot(time, selectedCourtId, flashDeals);
         return deal ? deal.deal_price : defaultPrice;
     };
@@ -568,7 +568,7 @@ export const FinancialCalendarView: React.FC<{
                         const styles = booking ? (isSub ? subStyles : getStatusStyles(booking.status)) : null;
 
                         const currentPrice = getSlotPrice(time);
-                        const standardPrice = resolveHourlyPrice(parseInt(time.split('.')[0], 10), pricingPolicy, selectedCourtId);
+                        const standardPrice = resolveHourlyPrice(parseInt(time.split('.')[0], 10), pricingPolicy, selectedCourtId || null, selectedDateISO);
                         const hasFlashDeal = currentPrice != null && standardPrice != null && currentPrice < standardPrice;
                         const slotClosed = isSlotClosed(time, selectedCourtId, closedSlots);
                         const nextTime = `${((parseInt(time.split('.')[0]) + 1) % 24).toString().padStart(2, '0')}.00`;

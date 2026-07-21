@@ -81,3 +81,24 @@ describe('resolveHourlyPrice — saha-öncelikli (owner takvim)', () => {
     expect(resolveHourlyPrice(19, [], COURT_A)).toBeNull();
   });
 });
+
+// Review düzeltmesi: owner takvimi hafta içi/sonu + tarife tipi önceliğini
+// UYGULAMALI (yoksa sunucu/oyuncu ile ayrışır). dateISO verildiğinde gün filtresi çalışır.
+describe('resolveHourlyPrice — gün-farkında (hafta içi/sonu ayrımı)', () => {
+  const policy = [
+    { startTime: '09:00', endTime: '00:00', price: 2000, court_id: null, applies_to_days: [1, 2, 3, 4, 5], tariff_type: 'WEEKDAY' },
+    { startTime: '09:00', endTime: '00:00', price: 3000, court_id: null, applies_to_days: [6, 7], tariff_type: 'WEEKEND' },
+  ];
+  // 2026-07-08 = Çarşamba (hafta içi), 2026-07-11 = Cumartesi (hafta sonu)
+  it('hafta içi günde WEEKDAY fiyatı (→ 2000)', () => {
+    expect(resolveHourlyPrice(19, policy, null, '2026-07-08')).toBe(2000);
+  });
+  it('hafta sonu günde WEEKEND fiyatı (→ 3000)', () => {
+    expect(resolveHourlyPrice(19, policy, null, '2026-07-11')).toBe(3000);
+  });
+  it('tarih verilmezse gün filtresi uygulanmaz (ilk uygun → tip önceliği WEEKDAY)', () => {
+    // WEEKDAY (öncelik 3) < WEEKEND (öncelik 2)? Öncelik sayısı küçük olan önce:
+    // WEEKEND=2 önce gelir → 3000. Gün bilinmediğinde tip önceliği belirler.
+    expect(resolveHourlyPrice(19, policy)).toBe(3000);
+  });
+});

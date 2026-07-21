@@ -7,6 +7,23 @@ export interface TariffLike {
   price_per_hour?: number;
   /** null/undefined = tesis geneli; dolu = yalnız o sahaya özel tarife. */
   court_id?: string | null;
+  /** ISO gün listesi (1=Pzt … 7=Paz). Verilmezse gün filtresi uygulanmaz. */
+  applies_to_days?: number[] | null;
+  /** HOLIDAY | WEEKEND | WEEKDAY | SPECIAL — öncelik sıralaması için. */
+  tariff_type?: string;
+}
+
+const TARIFF_TYPE_PRIORITY: Record<string, number> = {
+  HOLIDAY: 1,
+  WEEKEND: 2,
+  WEEKDAY: 3,
+  SPECIAL: 4,
+};
+
+/** ISO weekday: 1 = Pazartesi … 7 = Pazar */
+function isoDow(dateISO: string): number {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  return ((new Date(y, m - 1, d).getDay() + 6) % 7) + 1;
 }
 
 export function slotKeyToTime(key: string): string {
@@ -33,8 +50,10 @@ export function resolveHourlyPrice(
   hour: number,
   pricingPolicy?: TariffLike[],
   courtId?: string | null,
+  dateISO?: string | null,
 ): number | null {
   if (!pricingPolicy?.length) return null;
+  const dow = dateISO ? isoDow(dateISO) : null;
   const inWindow = (p: TariffLike) => {
     if (!p || typeof p.startTime !== 'string' || typeof p.endTime !== 'string') return false;
     const startH = parseInt(p.startTime.split(':')[0], 10);
@@ -44,13 +63,18 @@ export function resolveHourlyPrice(
     if (startH <= endH) return hour >= startH && hour < endH;
     return hour >= startH || hour < endH;
   };
+  const isCourt = (p: TariffLike) => p.court_id != null && p.court_id === courtId;
   const candidates = pricingPolicy
     .filter((p) => p.court_id == null || (courtId != null && p.court_id === courtId))
+    // Gün filtresi: tarih verildiyse VE tarife gün listesi taşıyorsa uygula
+    // (sunucu get_current_tariff_price ile aynı — hafta içi/sonu ayrımı).
+    .filter((p) => dow == null || !p.applies_to_days || p.applies_to_days.includes(dow))
     .filter(inWindow)
     .sort((a, b) => {
-      const aCourt = a.court_id != null && a.court_id === courtId ? 0 : 1;
-      const bCourt = b.court_id != null && b.court_id === courtId ? 0 : 1;
-      return aCourt - bCourt; // saha-özel önce
+      // 1) saha-özel önce, 2) tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL)
+      const courtRank = (isCourt(a) ? 0 : 1) - (isCourt(b) ? 0 : 1);
+      if (courtRank !== 0) return courtRank;
+      return (TARIFF_TYPE_PRIORITY[a.tariff_type ?? ''] ?? 9) - (TARIFF_TYPE_PRIORITY[b.tariff_type ?? ''] ?? 9);
     });
   const matched = candidates[0];
   if (!matched) return null;

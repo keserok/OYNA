@@ -267,6 +267,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         price: Number(t.price_per_hour ?? 0),
         price_per_hour: Number(t.price_per_hour ?? 0),
         court_id: t.court_id ?? null,
+        applies_to_days: t.applies_to_days ?? null,
+        tariff_type: t.tariff_type ?? undefined,
       })),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
@@ -856,6 +858,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   price: Number(t.price_per_hour ?? 0),
                   price_per_hour: Number(t.price_per_hour ?? 0),
                   court_id: t.court_id ?? null,
+                  applies_to_days: t.applies_to_days ?? null,
+                  tariff_type: t.tariff_type ?? undefined,
                 })),
               }));
             }
