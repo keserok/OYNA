@@ -8,6 +8,10 @@ afterEach(() => {
   cleanup();
 });
 
+// Stüdyo ilk-kullanım turu varsayılan olarak KAPALI (bileşen testlerini örtmesin).
+// İlgili test dosyası ilk açılışı simüle etmek için localStorage'ı temizler.
+try { localStorage.setItem('oyna_studio_onboarded_v1', '1'); } catch { /* localStorage yok */ }
+
 // Mock window.matchMedia (jsdom'da eksik olabilir)
 if (!window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {

@@ -48,3 +48,22 @@ describe('getAnimationProps — SIRALI modda top pencere dışında gizlenir', (
         expect(anim.animate).toEqual({});
     });
 });
+
+describe('getAnimationProps — OYNAT başına iki tur (repeat: 1)', () => {
+    const mkLine = (id: string, seqStep: number): DrawingLine => ({
+        id,
+        points: [{ x: 10, y: 90 }, { x: 50, y: 30 }],
+        color: '#39FF14',
+        type: 'line',
+        seqStep,
+    });
+
+    it('SIRALI ve EŞZAMANLI modda sonsuz döngü yok: toplam 2 tur oynar', () => {
+        const drawings = [mkLine('l1', 1)];
+        const { seqMap, totalSeqDuration } = computeSeqMap(drawings);
+        for (const mode of ['SEQ', 'SYNC'] as const) {
+            const anim = getAnimationProps(drawings[0], true, mode, seqMap.get('l1')!, totalSeqDuration);
+            expect((anim.transition as { repeat: number }).repeat).toBe(1); // ilk + 1 tekrar = 2 tur
+        }
+    });
+});

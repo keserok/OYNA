@@ -18,11 +18,14 @@ Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Dai
 ### 2. İşlenen Kişisel Veriler
 Kimlik, iletişim, konum, rehber eşleştirme (yalnızca izninizle), işlem, kullanım ve (izin verirseniz) cihaz/fotoğraf verileri. Reşit olmayan kullanıcılar için veli onayı sürecinde ayrıca veli ve çocuğa ait ad-soyad, doğum tarihi ve T.C. Kimlik Numarası işlenir; **T.C. Kimlik numaraları şifrelenerek (hash) saklanır, açık biçimde tutulmaz** (bkz. [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md)).
 
+Ayrıca uygulamayı iyileştirmek amacıyla, hangi ekranların açıldığı ya da bir özelliğin ne sıklıkta kullanıldığı gibi **anonim kullanım istatistikleri** toplanır. Bu istatistikler yalnızca olayın adını (ör. "taktik stüdyosu açıldı") içerir; **taktik içeriğiniz, oyuncu/kişi isimleri, çizimleriniz veya diğer kişisel verileriniz bu istatistiklere dâhil edilmez** (bkz. [Anonim Veri Görünürlüğü Notu](../guvenlik-notu-anon-veri-gorunurlugu.md)).
+
 ### 3. İşleme Amaçları
 - Üyelik ve hesap yönetimi
 - Saha rezervasyonu ve kapora tahsilatının gerçekleştirilmesi
 - Maç/takım eşleştirme ve arkadaş bulma
 - Müşteri ilişkileri ve destek
+- Hizmetin iyileştirilmesi ve anonim kullanım istatistiklerinin analizi (kişisel içerik içermez)
 - Yasal yükümlülüklerin yerine getirilmesi
 
 ### 4. Hukuki Sebepler

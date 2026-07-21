@@ -7,9 +7,9 @@ import {
     PenTool, MousePointer2, Eye, EyeOff, Layout, Copy,
     Search, UserCheck,
     Swords, UserPlus,
-    MessageSquare, Zap, ShieldAlert,
+    MessageSquare, ShieldAlert,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
-    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, HelpCircle, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -22,8 +22,13 @@ import {
 } from '../services/teamSocialService';
 import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
-    setTacticShareLink, tacticShareUrl,
+    setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
+    setActiveTactic as setActiveTacticRpc, TacticConflictError, logStudioEvent,
+    assignMatchTactic,
 } from '../services/tacticSocialService';
+// Takımın yaklaşan maçı — "kaydederken maça ata" için (teamService SSOT)
+import { fetchTeamNextMatch } from '../services/teamService';
+import type { TeamMatchRow } from '../services/teamService';
 import { sendTeamMessage, tacticMessageBody } from '../services/teamChatService';
 // Gerçek arkadaş verisi (Sosyal ile aynı kaynak) — sahte store friends öldü
 import { getFriends, getFriendLists } from '../services/socialService';
@@ -41,10 +46,19 @@ import { ARCHETYPES, INSTRUCTIONS, DEFAULT_TEMPO, normalizeTempo, tempoSpeedFact
 import { getSmoothPathStr, computeSeqMap } from './studio/pitchGeometry';
 // BİZ/RAKİP katman anahtarı — aktif taraf önde, pasif taraf arkada ve kilitli
 import { isLayerEditing, markerLayer, lineIsMuted } from './studio/layering';
+// Birleşik taktik kütüphanesi (kişisel + takım oyun defterleri) — saf yardımcılar
+import {
+    statusMeta, filterEntries, sortEntries, mineToEntry, showcaseToEntry,
+} from './studio/tacticLibrary';
+import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
+// Performans katmanı — zayıf cihazda süs efektlerini kıs (içerik değişmez)
+import { perfTierFrom, readDeviceSignals, liteGate } from './studio/perf';
+// İlk kullanım — "Örnek taktiği yükle" içeriği (saf üretici)
+import { buildSampleTactic } from './studio/sampleTactic';
 
-// ⚡ GELİŞMİŞ ANİMASYON MODÜLÜ — on-demand (lazy) indirilir.
-// Bu chunk yalnız kullanıcı "Gelişmiş Animasyon" butonuna basınca yüklenir,
-// böylece ilk yük hafif kalır (düşük telefonlar yorulmasın).
+// ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
+// ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
+// araç çubuğunda her zaman doğrudan görünür, ayrıca bir "indir" kapısı yoktur.
 const AdvancedAnimationModule = lazy(() => import('./studio/AdvancedAnimationModule'));
 const AnimationToolbar = lazy(() =>
     import('./studio/AdvancedAnimationModule').then(m => ({ default: m.AnimationToolbar }))
@@ -71,7 +85,10 @@ const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444',
 
 // Faz 9 — kalıcılık & mobil deneyim anahtarları
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
+const ONBOARD_KEY = 'oyna_studio_onboarded_v1'; // ilk kullanım turu bir kez gösterilir
 const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
+// OYNAT başına oynatma turu sayısı — modüldeki `repeat: 1` (ilk + 1 tekrar) ile eş.
+const PLAY_TIMES = 2;
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
 const exampleForSize = (size: SquadSize): string => {
@@ -135,6 +152,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [presentMode, setPresentMode] = useState(false);
     // Faz 9 — mobil deneyim: yakınlaştırma/pan (S46), taslak (S49), reduced-motion (S50)
     const reduceMotion = useReducedMotion();
+    // Cihaz performans sınıfı — zayıf telefonda gölge/blur/glow kısılır (içerik aynı).
+    const perfTier = React.useMemo(() => perfTierFrom(readDeviceSignals(!!reduceMotion)), [reduceMotion]);
+    const perfLite = perfTier === 'lite';
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const panStartRef = useRef<{ px: number; py: number; ox: number; oy: number; moved: boolean } | null>(null);
@@ -151,6 +171,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Faz 3 — etkileşim & animasyon motoru
     const [hideLines, setHideLines] = useState(false);              // "Sadece Hareket" (S12)
     const [showClearSheet, setShowClearSheet] = useState(false);    // granüler temizle (S13)
+    const [showTempoSheet, setShowTempoSheet] = useState(false);    // tempo ayar sayfası (araç çubuğu çipi)
+    const [onboardStep, setOnboardStep] = useState<number | null>(null); // ilk kullanım turu adımı (null = kapalı)
     const [undoStack, setUndoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [redoStack, setRedoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
     const [selectedEl, setSelectedEl] = useState<{ type: 'slot' | 'opponent' | 'line'; id: string } | null>(null);
@@ -185,6 +207,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             setIsLoadingAdvancedAnim(false);
         }
     };
+    // Animasyon modülü stüdyo açılışında arka planda indirilir (kapı butonu öldü).
+    // Aynı anda anonim "stüdyo açıldı" telemetrisi (kişisel içerik yazılmaz).
+    useEffect(() => {
+        void loadAdvancedAnimation();
+        logStudioEvent('studio_open');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [selectedSeqBadge, setSelectedSeqBadge] = useState<string | null>(null);
     const [isCustomSeqInputOpen, setIsCustomSeqInputOpen] = useState(false);
     const [customSeqValue, setCustomSeqValue] = useState<string>('');
@@ -213,13 +243,27 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Modals
     const [showTacticsModal, setShowTacticsModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
+    const [conflictOpen, setConflictOpen] = useState(false);          // iyimser kilit çakışma diyaloğu
+    const [reloadingConflict, setReloadingConflict] = useState(false);
+    // "Kaydederken maça ata" — yalnız yönetici + takım taktiği + yaklaşan maç varsa
+    const [nextMatch, setNextMatch] = useState<TeamMatchRow | null>(null);
+    const [assignToMatch, setAssignToMatch] = useState(false);
     const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
     const [saveTacticName, setSaveTacticName] = useState('');
     const [dbTactics, setDbTactics] = useState<TacticState[]>([]);
+    // ── Birleşik kütüphane: aktif sekme (Kütüphanem / takım) + arama + takım vitrinleri ──
+    const [libraryTab, setLibraryTab] = useState<'MINE' | string>('MINE');
+    const [librarySearch, setLibrarySearch] = useState('');
+    const [teamShowcases, setTeamShowcases] = useState<Record<string, LibraryEntry[]>>({});
+    const [loadingShowcase, setLoadingShowcase] = useState<string | null>(null);
+    const [openingTacticId, setOpeningTacticId] = useState<string | null>(null);
 
     // Global Store — stüdyo bağlamı
     const studioContext = useAppStore(s => s.studioContext);
     const setStudioContext = useAppStore(s => s.setStudioContext);
+    const setStoreSelectedTeamId = useAppStore(s => s.setSelectedTeamId);
+    // Takımdan gelindiyse geri tuşu oraya döner (bağlam kopmasın); değilse onBack.
+    const [returnTeamId, setReturnTeamId] = useState<string | null>(null);
 
     // ── Küme 3 köprüsü: kanonik takımlar + GERÇEK kadrolar ──
     // store.myTeams (hayalet roster JSONB) ÖLDÜ; kaynak get_my_teams +
@@ -249,6 +293,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         name: m.full_name,
         role: m.pos || 'CM',
         rating: m.fp || 70,
+        ...(m.jersey_number != null ? { jersey: m.jersey_number } : {}),
     });
 
     // Mevkiyi (pos) saha hattına eşle: GK/DEF/MID/FWD.
@@ -301,6 +346,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         drawings: JSON.parse(d.drawings || '[]'),
         status: d.status || undefined,
         proposedBy: d.proposedBy ?? null,
+        updatedAt: d.updatedAt || undefined,
     });
 
     // studioContext tüketimi (M80): Takım Detayı'ndan gelen takım/taktik
@@ -327,11 +373,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     });
                     if (hydrated.teamId) {
                         setSelectedTeamId(hydrated.teamId);
+                        setReturnTeamId(hydrated.teamId);
                         setIsTeamConfirmed(true);
                         void ensureSquad(hydrated.teamId);
                     }
                 } else if (ctx.teamId) {
                     setSelectedTeamId(ctx.teamId);
+                    setReturnTeamId(ctx.teamId);
                     const [squad, teams] = await Promise.all([ensureSquad(ctx.teamId), getMyTeams()]);
                     const teamRow = teams.find(t => t.team_id === ctx.teamId);
                     setStudioTeams(teams.filter(r => !r.is_archived));
@@ -586,6 +634,23 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Oynatma hızı plan temposundan gelir: tempo 5 = 1.0x, 1 = 0.6x, 10 = 1.5x.
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings, tempoSpeedFactor(activeTactic.tempo));
 
+    // ── OYNAT = İKİ tur: taktik iki kez oynar, sonra kendiliğinden durur; tekrar
+    // izlemek için yeniden OYNAT gerekir. (Modüldeki repeat: 1 ile uyumlu.)
+    const playCycleSeconds = playMode === 'SEQ'
+        ? totalSeqDuration
+        : drawings.reduce((mx, d) => Math.max(mx, seqMap.get(d.id)?.duration || 0), 0);
+    useEffect(() => {
+        if (!isSimulating || playCycleSeconds <= 0) return;
+        const t = setTimeout(
+            () => setIsSimulating(false),
+            Math.round((playCycleSeconds * PLAY_TIMES + 0.25) * 1000),
+        );
+        return () => clearTimeout(t);
+    }, [isSimulating, playCycleSeconds]);
+
+    // Anonim "oynatıldı" telemetrisi — simülasyon her başladığında (kişisel içerik yok).
+    useEffect(() => { if (isSimulating) logStudioEvent('tactic_play'); }, [isSimulating]);
+
     // ── BİZ/RAKİP katman anahtarı: düzenlemede aktif taraf önde, pasif arkada ──
     const layerEditing = isLayerEditing(isSimulating, presentMode);
     const usLayer = markerLayer('US', drawSide, layerEditing);
@@ -684,12 +749,129 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setTimeout(() => setToast(null), 3000);
     };
 
+    // Akıllı geri dönüş: sunum modundaysa çık; takımdan gelindiyse takım detayına
+    // dön (bağlam kopmasın); değilse normal geri.
+    const handleBack = () => {
+        if (presentMode) { exitPresent(); return; }
+        if (returnTeamId) {
+            setStoreSelectedTeamId(returnTeamId);
+            onNavigate('MY_TEAM');
+            return;
+        }
+        onBack();
+    };
+
+    // ── İlk kullanım turu: yalnız ilk açılışta bir kez (takım bağlamıyla açıldıysa değil) ──
+    const onboardCheckedRef = useRef(false);
+    useEffect(() => {
+        if (onboardCheckedRef.current) return;
+        onboardCheckedRef.current = true;
+        if (studioContext) return; // takım/taktik bağlamıyla geldiyse tur açma
+        try {
+            if (!localStorage.getItem(ONBOARD_KEY)) setOnboardStep(0);
+        } catch { /* localStorage yok — sessiz geç */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const dismissOnboarding = () => {
+        setOnboardStep(null);
+        try { localStorage.setItem(ONBOARD_KEY, '1'); } catch { /* yok say */ }
+    };
+    const openHelp = () => setOnboardStep(0);
+
+    // "Örnek taktiği yükle": çalışan bir taktiği yeni plana koyar; takım seçiliyse
+    // gerçek kadroyla dizer. Yükledikten sonra bir kez oynatır (hemen his verir).
+    const loadSampleTactic = async () => {
+        let players: Player[] | undefined;
+        if (selectedTeamId) {
+            try {
+                const squad = await ensureSquad(selectedTeamId);
+                if (squad.length) players = squad.slice(0, 7).map(squadRowToPlayer);
+            } catch { /* kadro yoksa yer-tutucu isimler */ }
+        }
+        const sample = buildSampleTactic({ id: crypto.randomUUID(), players });
+        dismissOnboarding();
+        setPlans(prev => [...prev, sample]);
+        setActivePlanIndex(plans.length);
+        logStudioEvent('sample_load');
+        showToast('Örnek taktik yüklendi — OYNAT ile izle.');
+        await loadAdvancedAnimation();
+        setShowBall(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true)));
+    };
+
     // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
     const setTempo = (value: number) => {
         const tempo = normalizeTempo(value);
         if (tempo === normalizeTempo(activeTactic.tempo)) return;
         setActiveTactic({ ...activeTactic, tempo });
         if (navigator.vibrate) navigator.vibrate(8);
+    };
+
+    // ── Birleşik kütüphane: takım oyun defterini tembel yükle (vitrin RPC) ──
+    const loadTeamShowcase = async (teamId: string) => {
+        if (teamShowcases[teamId]) return;
+        setLoadingShowcase(teamId);
+        try {
+            const rows = await getTeamTacticsShowcase(teamId);
+            setTeamShowcases(prev => ({ ...prev, [teamId]: rows.map(r => showcaseToEntry(r, teamId)) }));
+        } catch (e) {
+            console.error('[Studio] takım vitrini yüklenemedi', e);
+            setTeamShowcases(prev => ({ ...prev, [teamId]: [] }));
+        } finally {
+            setLoadingShowcase(null);
+        }
+    };
+
+    // Kütüphane penceresi açıldığında / sekme değişince ilgili takımı yükle
+    useEffect(() => {
+        if (!showTacticsModal) return;
+        if (libraryTab !== 'MINE') void loadTeamShowcase(libraryTab);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showTacticsModal, libraryTab]);
+
+    // Aktif sekmenin süzülmüş + sıralanmış satırları
+    const libraryEntries: LibraryEntry[] = sortEntries(filterEntries(
+        libraryTab === 'MINE'
+            ? dbTactics.map(mineToEntry)
+            : (teamShowcases[libraryTab] || []),
+        librarySearch,
+    ));
+
+    // Bir kütüphane satırını plana yükle: kişiselse yereldeki tam kayıt,
+    // takımsa getTacticById ile derin hidrasyon. Zaten açık plan varsa ona geç.
+    const openLibraryEntry = async (entry: LibraryEntry) => {
+        const existingIndex = plans.findIndex(p => p.id === entry.id);
+        if (existingIndex >= 0) {
+            setActivePlanIndex(existingIndex);
+            setShowTacticsModal(false);
+            return;
+        }
+        let tactic: TacticState | undefined =
+            entry.source === 'MINE' ? dbTactics.find(t => t.id === entry.id) : undefined;
+        if (!tactic) {
+            setOpeningTacticId(entry.id);
+            try {
+                const row = await getTacticById(entry.id);
+                if (!row) { showToast('Taktik bulunamadı ya da erişimin yok.', 'error'); return; }
+                tactic = parseDbTactic(row);
+            } catch (e) {
+                console.error('[Studio] taktik yüklenemedi', e);
+                showToast('Taktik yüklenemedi.', 'error');
+                return;
+            } finally {
+                setOpeningTacticId(null);
+            }
+        }
+        if (entry.teamId) {
+            tactic = { ...tactic, teamId: entry.teamId };
+            setSelectedTeamId(entry.teamId);
+            setIsTeamConfirmed(true);
+            void ensureSquad(entry.teamId);
+        }
+        setPlans(prev => [...prev, tactic!]);
+        setActivePlanIndex(plans.length);
+        setShowTacticsModal(false);
     };
 
     // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
@@ -913,6 +1095,61 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Kayıt TEK KAPIDAN: save_team_tactic RPC. Status SUNUCUDA belirlenir
     // (yönetici → APPROVED, üye → PENDING_APPROVAL + yöneticilere bildirim,
     // takımsız → kişisel kütüphane). İstemci status yazımı ÖLDÜ (M85).
+    // force=true: iyimser kilidi atla (çakışma diyaloğunda "Üzerine yaz").
+    const doSaveTactic = async (force: boolean) => {
+        const existingId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
+            ? activeTactic.id : null;
+        const res = await saveTeamTactic(selectedTeamId ?? null, existingId, {
+            name: saveTacticName.trim(),
+            size: activeTactic.size,
+            formation: activeTactic.formation,
+            slots: activeTactic.slots,
+            subs: activeTactic.subs,
+            opponents: activeTactic.opponents,
+            drawings: activeTactic.drawings || [],
+            captainId: activeTactic.captainId,
+            notes: activeTactic.notes,
+            mentality: activeTactic.mentality,
+            tempo: activeTactic.tempo,
+            identity: activeTactic.identity,
+            // İyimser kilit: yalnız mevcut kaydı güncellerken ve force değilken gönder
+            expectedUpdatedAt: (!force && existingId) ? (activeTactic.updatedAt ?? null) : null,
+        });
+
+        const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+        setActiveTactic({
+            ...activeTactic,
+            id: res.tacticId,
+            name: saveTacticName.trim(),
+            teamName: teamRow?.name,
+            teamId: selectedTeamId || null,
+            status: res.status as TacticState['status'],
+            proposedBy: res.status === 'PENDING_APPROVAL' ? auth.currentUser!.uid : null,
+            updatedAt: res.updatedAt ?? activeTactic.updatedAt, // beklenen damgayı tazele
+        });
+        logStudioEvent('tactic_save');
+
+        // Kaydederken maça ata: yalnız ONAYLI takım taktiği (yönetici kaydı) + anahtar açık + maç var.
+        // Kayıt başarısını bozmaz — atama ayrı denenir, hatası ayrı bildirilir.
+        let assignedNote = '';
+        if (assignToMatch && nextMatch && res.status === 'APPROVED') {
+            try {
+                await assignMatchTactic(nextMatch.id, res.tacticId);
+                assignedNote = ` "${nextMatch.opponentName}" maçına atandı.`;
+            } catch (e) {
+                showToast((e as Error)?.message || 'Kayıt tamam ama maça atanamadı.', 'error');
+            }
+        }
+        showToast(res.status === 'PENDING_APPROVAL'
+            ? "Taktik önerin takım yöneticilerine gönderildi!"
+            : `Taktik kaydedildi!${assignedNote}`);
+        setShowSaveModal(false);
+        setConflictOpen(false);
+        setAssignToMatch(false);
+        // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+    };
+
     const handleSaveTactic = async () => {
         if (!saveTacticName.trim()) {
             showToast("Taktik ismi boş olamaz.", 'error');
@@ -922,46 +1159,51 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             showToast("Taktiği kaydetmek için giriş yapmalısın.", 'error');
             return;
         }
-
         try {
-            const existingId = activeTactic.id && dbTactics.find(t => t.id === activeTactic.id)
-                ? activeTactic.id : null;
-            const res = await saveTeamTactic(selectedTeamId ?? null, existingId, {
-                name: saveTacticName.trim(),
-                size: activeTactic.size,
-                formation: activeTactic.formation,
-                slots: activeTactic.slots,
-                subs: activeTactic.subs,
-                opponents: activeTactic.opponents,
-                drawings: activeTactic.drawings || [],
-                captainId: activeTactic.captainId,
-                notes: activeTactic.notes,
-                mentality: activeTactic.mentality,
-                tempo: activeTactic.tempo,
-                identity: activeTactic.identity,
-            });
-
-            const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
-            setActiveTactic({
-                ...activeTactic,
-                id: res.tacticId,
-                name: saveTacticName.trim(),
-                teamName: teamRow?.name,
-                teamId: selectedTeamId || null,
-                status: res.status as TacticState['status'],
-                proposedBy: res.status === 'PENDING_APPROVAL' ? auth.currentUser.uid : null,
-            });
-            showToast(res.status === 'PENDING_APPROVAL'
-                ? "Taktik önerin takım yöneticilerine gönderildi!"
-                : "Taktik kaydedildi!");
-            setShowSaveModal(false);
-            // S49 — kaydedilen iş için "devam et?" taslağı artık gereksiz
-            try { localStorage.removeItem(DRAFT_KEY); } catch { /* yok say */ }
+            await doSaveTactic(false);
         } catch (error) {
+            if (error instanceof TacticConflictError) {
+                // Sessiz emek kaybı yok: kullanıcıya sor (üzerine yaz / yenile)
+                setShowSaveModal(false);
+                setConflictOpen(true);
+                return;
+            }
             console.error("Error saving tactic:", error);
             showToast((error as Error)?.message || "Taktik kaydedilirken bir hata oluştu.", 'error');
         }
     };
+
+    // Çakışma diyaloğu: "Üzerine yaz" (force) / "Yenile" (sunucudaki sürümü al)
+    const overwriteConflict = async () => {
+        try { await doSaveTactic(true); }
+        catch (e) { showToast((e as Error)?.message || 'Kaydedilemedi.', 'error'); }
+    };
+    const reloadConflict = async () => {
+        if (!activeTactic.id) { setConflictOpen(false); return; }
+        setReloadingConflict(true);
+        try {
+            const row = await getTacticById(activeTactic.id);
+            if (row) {
+                const fresh = parseDbTactic(row);
+                setPlans(prev => prev.map((p, i) => i === activePlanIndex ? fresh : p));
+                showToast('Sunucudaki güncel sürüm yüklendi.');
+            }
+        } catch { showToast('Güncel sürüm yüklenemedi.', 'error'); }
+        finally { setReloadingConflict(false); setConflictOpen(false); }
+    };
+
+    // Kaydet penceresi açılınca: yönetici + takım ise yaklaşan maçı getir (atama için).
+    useEffect(() => {
+        if (!showSaveModal || !selectedTeamId) { setNextMatch(null); setAssignToMatch(false); return; }
+        const role = studioTeams.find(t => t.team_id === selectedTeamId)?.my_role;
+        if (role !== 'CAPTAIN' && role !== 'ADMIN') { setNextMatch(null); setAssignToMatch(false); return; }
+        let alive = true;
+        fetchTeamNextMatch(selectedTeamId)
+            .then(m => { if (alive) setNextMatch(m); })
+            .catch(() => { if (alive) setNextMatch(null); });
+        return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showSaveModal, selectedTeamId]);
 
     // Stüdyo-içi öneri karar akışı: bekleyen takım taktiği + yönetici (M87)
     const myRoleForActiveTeam = studioTeams.find(t => t.team_id === (activeTactic.teamId || selectedTeamId))?.my_role;
@@ -1329,6 +1571,33 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         ...activeTactic.opponents.map(o => ({ ...o, type: 'opponent' as const }))
     ];
 
+    // ── Bayat kadro tespiti: takım taktiğindeki oyuncu artık kadroda değilse işaretle ──
+    // Kadro yüklüyse (squadsByTeam), takım oyuncusu olup güncel kadroda olmayan
+    // (elle eklenen hayali oyuncu HARİÇ) slotları "artık kadroda değil" say.
+    const activeTeamSquad = activeTactic.teamId ? squadsByTeam[activeTactic.teamId] : undefined;
+    const staleSlotIds = new Set<string>();
+    if (activeTeamSquad) {
+        const squadIds = new Set(activeTeamSquad.map(m => m.user_id));
+        activeTactic.slots.forEach(s => {
+            if (s.player && !s.player.isCustom && !squadIds.has(s.player.id)) staleSlotIds.add(s.id);
+        });
+    }
+    const hasStaleSquad = staleSlotIds.size > 0;
+
+    // "Kadroyla eşitle": güncel kadroyu mevki hattına göre akıllıca yeniden dizer.
+    const syncWithSquad = async () => {
+        if (!activeTactic.teamId) return;
+        try {
+            const squad = await ensureSquad(activeTactic.teamId);
+            pushHistory();
+            setActiveTactic({ ...activeTactic, slots: populateSlotsWithSquad(squad, activeTactic.slots) });
+            showToast('Kadro güncel oyuncularla eşitlendi.');
+        } catch (e) {
+            console.error('[Studio] kadro eşitlenemedi', e);
+            showToast('Kadro eşitlenemedi.', 'error');
+        }
+    };
+
     // ── Oyuncu Seç veri hazırlığı: tek akışlı liste (arkadaş + takım kadroları + manuel) ──
     const takenPlayerIds = new Set<string>([
         ...activeTactic.slots.filter(s => s.player).map(s => s.player!.id),
@@ -1383,7 +1652,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         {/* Header */}
                         <header className="px-6 pt-safe pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
                             <div className="flex items-center gap-3 min-w-0">
-                                <button id="studio-back-button" onClick={presentMode ? exitPresent : onBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
+                                <button id="studio-back-button" onClick={handleBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
                                     <ChevronLeft size={20} />
                                 </button>
                                 <div className="min-w-0">
@@ -1413,14 +1682,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <X size={15} /> ÇIKIŞ
                                 </button>
                             ) : (
-                                /* Paylaş — taktik görseli + link + sadece-hareket sunumu */
-                                <button
-                                    onClick={() => setShowExportModal(true)}
-                                    aria-label="Paylaş"
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest shrink-0 hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
-                                >
-                                    <Share2 size={15} /> PAYLAŞ
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {/* Yardım — ilk kullanım turunu yeniden aç */}
+                                    <button
+                                        onClick={openHelp}
+                                        aria-label="Yardım"
+                                        title="Nasıl çalışır?"
+                                        className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+                                    >
+                                        <HelpCircle size={18} />
+                                    </button>
+                                    {/* Paylaş — taktik görseli + link + sadece-hareket sunumu */}
+                                    <button
+                                        onClick={() => setShowExportModal(true)}
+                                        aria-label="Paylaş"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
+                                    >
+                                        <Share2 size={15} /> PAYLAŞ
+                                    </button>
+                                </div>
                             )}
                         </header>
 
@@ -1667,38 +1947,30 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
                     </div>
+                    {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
+                    <button
+                        onClick={() => setShowTempoSheet(true)}
+                        title="Oynatma temposu (plana özel, 1-10)"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
+                    >
+                        <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
+                    </button>
+                    {/* Oynatma kontrolleri — kapı butonu yok; modül açılışta arka planda yüklenir */}
                     {drawings.length > 0 && (
-                        !isAdvancedAnimLoaded ? (
-                            // ⚡ Modül henüz indirilmedi: on-demand indirme butonu
-                            <button
-                                onClick={loadAdvancedAnimation}
-                                disabled={isLoadingAdvancedAnim}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105 disabled:opacity-60"
-                                title="Gelişmiş animasyon motorunu indir ve oynat"
-                            >
-                                {isLoadingAdvancedAnim ? (
-                                    <><Loader2 size={14} className="animate-spin" /> MODÜL İNDİRİLİYOR...</>
-                                ) : (
-                                    <><Zap size={14} className="fill-current" /> GELİŞMİŞ ANİMASYON</>
-                                )}
-                            </button>
-                        ) : (
-                            // Modül indirildi: lazy toolbar kontrolleri
-                            <Suspense fallback={
-                                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-white/5 text-gray-400 whitespace-nowrap">
-                                    <Loader2 size={14} className="animate-spin" /> Gelişmiş animasyon modülü indiriliyor...
-                                </div>
-                            }>
-                                <AnimationToolbar
-                                    isSimulating={isSimulating}
-                                    setIsSimulating={setIsSimulating}
-                                    showBall={showBall}
-                                    setShowBall={setShowBall}
-                                    playMode={playMode}
-                                    setPlayMode={setPlayMode}
-                                />
-                            </Suspense>
-                        )
+                        <Suspense fallback={
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-white/5 text-gray-400 whitespace-nowrap">
+                                <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor...
+                            </div>
+                        }>
+                            <AnimationToolbar
+                                isSimulating={isSimulating}
+                                setIsSimulating={setIsSimulating}
+                                showBall={showBall}
+                                setShowBall={setShowBall}
+                                playMode={playMode}
+                                setPlayMode={setPlayMode}
+                            />
+                        </Suspense>
                     )}
                     <div className="w-px h-8 bg-white/10 mx-1"></div>
                     {/* Geri Al / Yinele (S14) */}
@@ -1735,6 +2007,42 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </div>
             </>)}
 
+            {/* Bayat kadro uyarısı — takım oyuncusu artık kadroda değilse tek dokunuş eşitle */}
+            {!presentMode && hasStaleSquad && (
+                <div className="px-6 pb-3">
+                    <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-3">
+                        <ShieldAlert size={18} className="text-red-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-black text-red-300">{staleSlotIds.size} oyuncu artık kadroda değil</div>
+                            <div className="text-[10px] text-red-400/80">Bu oyuncular takımdan ayrılmış olabilir.</div>
+                        </div>
+                        <button
+                            onClick={() => void syncWithSquad()}
+                            className="text-[10px] font-black text-black uppercase tracking-widest px-3 py-2 rounded-xl bg-red-400 hover:bg-red-300 active:scale-95 transition-all shrink-0"
+                        >Kadroyla eşitle</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Boş tahta → örnek taktik daveti (turu atlayanlar da deneyebilsin) */}
+            {!presentMode && onboardStep === null && plans.length === 1
+                && activeTactic.slots.every(s => !s.player)
+                && (activeTactic.drawings?.length ?? 0) === 0
+                && activeTactic.opponents.length === 0 && (
+                <div className="px-6 pb-3">
+                    <button
+                        onClick={() => void loadSampleTactic()}
+                        className="w-full flex items-center gap-3 bg-[#39FF14]/8 border border-dashed border-[#39FF14]/30 rounded-2xl p-3 hover:bg-[#39FF14]/12 active:scale-[0.99] transition-all text-left"
+                    >
+                        <span className="w-10 h-10 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><Sparkles size={18} /></span>
+                        <span className="min-w-0">
+                            <span className="block text-sm font-black text-white">Örnek taktiği yükle</span>
+                            <span className="block text-[11px] text-gray-500">Hazır bir taktik gör — OYNAT ile nasıl çalıştığını izle.</span>
+                        </span>
+                    </button>
+                </div>
+            )}
+
             {/* Pitch Area */}
             <div className="px-6 relative z-10 max-w-md mx-auto w-full overflow-hidden">
                 {/* S46 — yakınlaştırma kontrolleri (sahayla ölçeklenmez; alt navigasyonla çakışmaz) */}
@@ -1768,13 +2076,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 )}
                 <div
                     ref={canvasRef}
+                    data-testid="studio-pitch"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerLeave={handlePointerUp}
                     onPointerCancel={handlePointerUp}
                     style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', touchAction: 'none', transition: (pinchRef.current || panStartRef.current) ? 'none' : 'transform 0.18s ease-out' }}
-                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
+                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] ${liteGate(perfTier, 'shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]')} overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
                 >
                     {/* S44 — hafif kimlik vinyeti (WCAG: yalnız dekoratif, kontrastı bozmaz) */}
                     <div className="absolute inset-0 pointer-events-none z-[1]" style={{ boxShadow: 'inset 0 0 90px rgba(0,0,0,0.55)' }} />
@@ -1867,7 +2176,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <motion.div 
                             key={opp.id}
                             onPointerDown={(e) => handleDragStart('opponent', opp.id, e)}
-                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]' : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
+                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]')}` : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
                             animate={anim ? anim.animate : {
                                 left: `${opp.x}%`,
                                 top: `${opp.y}%`
@@ -1899,7 +2208,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         return (
                         <motion.div 
                             key={slot.id}
-                            layout={draggedItem?.id === slot.id ? false : true}
+                            layout={draggedItem ? false : !perfLite}
                             animate={anim ? anim.animate : {
                                 left: `${slot.x}%`,
                                 top: `${slot.y}%`
@@ -1912,16 +2221,28 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }
                             }}
                             onClick={() => { if (heldSub) placeHeldSub(slot.id); }}
-                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? 'brightness-125 drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]' : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
+                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
                         >
                             {slot.player ? (
-                                <motion.div 
+                                <motion.div
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'}`}
+                                    className={`relative w-full h-full rounded-full border-2 flex items-center justify-center ${liteGate(perfTier, 'shadow-[0_4px_15px_rgba(0,0,0,0.5)]')} ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'} ${staleSlotIds.has(slot.id) ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-black/50' : ''}`}
                                 >
                                     <span className="text-white font-black text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
+                                    {/* Forma numarası (takım kadrosundan) — sol üst rozet */}
+                                    {slot.player.jersey != null && (
+                                        <div className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-black/80 rounded-full flex items-center justify-center text-white text-[9px] font-black border border-white/25 shadow-sm tabular-nums">
+                                            {slot.player.jersey}
+                                        </div>
+                                    )}
+                                    {/* Artık kadroda değil — sol alt uyarı */}
+                                    {staleSlotIds.has(slot.id) && (
+                                        <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white border-2 border-[#161B22] shadow-sm" title="Artık kadroda değil">
+                                            <ShieldAlert size={9} />
+                                        </div>
+                                    )}
                                     {activeTactic.captainId === slot.player.id && (
                                         <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[10px] font-black border-2 border-[#161B22] shadow-sm">
                                             K
@@ -2143,56 +2464,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             </div>
             )}
 
-            {/* Mentalite/Tempo + oyuncu talimatları — yalnız Düzenle modu (S42) */}
+            {/* Oyuncu talimatları — yalnız Düzenle modu (S42). Tempo araç çubuğu çipine taşındı. */}
             {!presentMode && (<>
-            {/* Tempo — plana özel 1-10; oynatma hızını da sürer (5 = temel hız) */}
-            <div className="px-6 pb-6 mt-8">
-                <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                            <Gauge size={14} className="text-blue-400" /> TEMPO
-                        </h3>
-                        <div className="flex items-baseline gap-0.5">
-                            <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
-                            <span className="text-[10px] font-bold text-gray-500">/10</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) - 1)}
-                            disabled={normalizeTempo(activeTactic.tempo) <= 1}
-                            aria-label="Tempoyu azalt"
-                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-                        >
-                            <Minus size={16} />
-                        </button>
-                        <div className="flex-1">
-                            <input
-                                type="range"
-                                min={1}
-                                max={10}
-                                step={1}
-                                value={normalizeTempo(activeTactic.tempo)}
-                                onChange={(e) => setTempo(Number(e.target.value))}
-                                aria-label="Tempo (1-10)"
-                                className="w-full h-2 cursor-pointer accent-blue-400"
-                            />
-                            <div className="flex justify-between mt-1 px-0.5">
-                                <span className="text-[9px] font-bold text-gray-600 font-mono">1</span>
-                                <span className="text-[9px] font-bold text-gray-600 font-mono">10</span>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setTempo(normalizeTempo(activeTactic.tempo) + 1)}
-                            disabled={normalizeTempo(activeTactic.tempo) >= 10}
-                            aria-label="Tempoyu artır"
-                            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             {/* Section Specific Content */}
             {/* Player List & Instructions Panel */}
@@ -2860,48 +3133,96 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className="bg-[#161B22] border border-white/10 rounded-[32px] w-full max-w-lg overflow-hidden shadow-[0_0_60px_rgba(57,255,20,0.1)] flex flex-col max-h-[80vh]"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0A0E14]/50">
-                                <h3 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-3">
-                                    <List size={24} className="text-[#39FF14]" /> KAYITLI TAKTİKLER
-                                </h3>
-                                <button onClick={() => setShowTacticsModal(false)} className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={20} /></button>
+                            <div className="p-5 border-b border-white/5 bg-[#0A0E14]/50">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2.5">
+                                        <List size={20} className="text-[#39FF14]" /> TAKTİK KÜTÜPHANESİ
+                                    </h3>
+                                    <button onClick={() => setShowTacticsModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={18} /></button>
+                                </div>
+                                {/* Sekmeler: Kütüphanem + üyesi olunan takımlar */}
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
+                                    <button
+                                        onClick={() => setLibraryTab('MINE')}
+                                        className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${libraryTab === 'MINE' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                    >Kütüphanem</button>
+                                    {studioTeams.map(team => (
+                                        <button
+                                            key={team.team_id}
+                                            onClick={() => setLibraryTab(team.team_id)}
+                                            title={`Takım kütüphanesi: ${team.name}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                        >
+                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                            </span>
+                                            {team.short_name || team.name}
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* Arama */}
+                                <div className="relative">
+                                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                    <input
+                                        value={librarySearch}
+                                        onChange={(e) => setLibrarySearch(e.target.value)}
+                                        placeholder="Taktik ara…"
+                                        aria-label="Taktik ara"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-10 pr-9 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-[#39FF14]/50 focus:outline-none"
+                                    />
+                                    {librarySearch && (
+                                        <button onClick={() => setLibrarySearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><X size={12} /></button>
+                                    )}
+                                </div>
                             </div>
-                            <div className="p-4 overflow-y-auto flex-1 space-y-3 no-scrollbar">
-                                {dbTactics.length === 0 ? (
-                                    <div className="py-12 text-center text-gray-500 font-mono text-sm">
-                                        Henüz kaydedilmiş bir taktik yok.
+                            <div className="p-4 overflow-y-auto flex-1 space-y-2.5 no-scrollbar">
+                                {loadingShowcase === libraryTab ? (
+                                    <div className="py-12 flex justify-center"><Spinner size={22} color="rgba(255,255,255,0.4)" glow={false} /></div>
+                                ) : libraryEntries.length === 0 ? (
+                                    <div className="py-12 text-center text-gray-500 text-sm px-6">
+                                        {librarySearch
+                                            ? 'Eşleşen taktik yok.'
+                                            : libraryTab === 'MINE'
+                                                ? 'Kişisel kütüphanen boş — bir taktik kur ve kaydet.'
+                                                : 'Bu takımın oyun defteri henüz boş.'}
                                     </div>
                                 ) : (
-                                    dbTactics.map((t) => (
-                                        <button
-                                            key={t.id}
-                                            onClick={() => {
-                                                const existingIndex = plans.findIndex(p => p.id === t.id);
-                                                if (existingIndex >= 0) {
-                                                    setActivePlanIndex(existingIndex);
-                                                } else {
-                                                    setPlans([...plans, t]);
-                                                    setActivePlanIndex(plans.length);
-                                                }
-                                                setShowTacticsModal(false);
-                                            }}
-                                            className="w-full text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between"
-                                        >
-                                            <div>
-                                                <h4 className="text-white font-bold text-lg group-hover:text-[#39FF14] transition-colors">{t.name}</h4>
-                                                <div className="text-[10px] font-mono text-gray-500 flex items-center gap-2 mt-1 uppercase">
-                                                    <span>{t.teamName || 'İSİMSİZ TAKIM'}</span>
-                                                    <span>•</span>
-                                                    <span>{t.formation}</span>
-                                                    <span>•</span>
-                                                    <span>{t.size}</span>
+                                    libraryEntries.map((entry) => {
+                                        const sm = statusMeta(entry.status);
+                                        const toneClass: Record<StatusTone, string> = {
+                                            ok: 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/25',
+                                            wait: 'bg-amber-400/10 text-amber-400 border-amber-400/25',
+                                            no: 'bg-red-500/10 text-red-400 border-red-500/25',
+                                            none: 'hidden',
+                                        };
+                                        const isOpening = openingTacticId === entry.id;
+                                        return (
+                                            <button
+                                                key={entry.id}
+                                                onClick={() => void openLibraryEntry(entry)}
+                                                disabled={isOpening}
+                                                className="w-full text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        {entry.isActive && (
+                                                            <span title="Takımın aktif maç planı" className="shrink-0"><Star size={14} className="text-[#FACC15]" fill="#FACC15" /></span>
+                                                        )}
+                                                        <h4 className="text-white font-bold text-base group-hover:text-[#39FF14] transition-colors truncate">{entry.name}</h4>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                        <span className="text-[10px] font-mono text-gray-500 uppercase">{entry.formation || '—'} · {entry.size || '—'}</span>
+                                                        {sm.tone !== 'none' && (
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest border rounded-full px-2 py-0.5 ${toneClass[sm.tone]}`}>{sm.label}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#39FF14] group-hover:text-black transition-colors text-white/50">
-                                                <ChevronRight size={18} />
-                                            </div>
-                                        </button>
-                                    ))
+                                                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#39FF14] group-hover:text-black transition-colors text-white/50 shrink-0 ml-3">
+                                                    {isOpening ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
+                                                </div>
+                                            </button>
+                                        );
+                                    })
                                 )}
                             </div>
                         </motion.div>
@@ -2957,6 +3278,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             : <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span>;
                                     })()}
                                 </div>
+                                {/* Kaydederken maça ata — yalnız yönetici + takım + yaklaşan maç (nextMatch effect zaten gate'ler) */}
+                                {nextMatch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignToMatch(v => !v)}
+                                        aria-pressed={assignToMatch}
+                                        className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 border transition-all text-left ${assignToMatch ? 'bg-[#39FF14]/10 border-[#39FF14]/40' : 'bg-[#0A0E14] border-white/10 hover:border-white/25'}`}
+                                    >
+                                        <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${assignToMatch ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/30'}`}>
+                                            {assignToMatch && <Check size={13} className="text-black" />}
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[12px] font-black text-white">Yaklaşan maça ata</span>
+                                            <span className="block text-[10px] text-gray-500 truncate">
+                                                {nextMatch.opponentName} · {nextMatch.date}{nextMatch.time ? ` ${nextMatch.time}` : ''}
+                                            </span>
+                                        </span>
+                                        <Calendar size={16} className={assignToMatch ? 'text-[#39FF14]' : 'text-gray-500'} />
+                                    </button>
+                                )}
                             </div>
 
                             <button
@@ -3173,6 +3514,178 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </motion.div>
                     </motion.div>
                 )}
+            </AnimatePresence>
+
+            {/* Tempo ayar sayfası — araç çubuğundaki TEMPO çipinden açılır (plana özel) */}
+            <AnimatePresence>
+                {showTempoSheet && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+                        onClick={() => setShowTempoSheet(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full max-w-sm bg-[#0E1420] border border-white/10 rounded-[24px] p-5 shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                    <Gauge size={16} className="text-blue-400" /> TEMPO
+                                </h3>
+                                <div className="flex items-baseline gap-0.5">
+                                    <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
+                                    <span className="text-[10px] font-bold text-gray-500">/10</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setTempo(normalizeTempo(activeTactic.tempo) - 1)}
+                                    disabled={normalizeTempo(activeTactic.tempo) <= 1}
+                                    aria-label="Tempoyu azalt"
+                                    className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                >
+                                    <Minus size={16} />
+                                </button>
+                                <div className="flex-1">
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                        value={normalizeTempo(activeTactic.tempo)}
+                                        onChange={(e) => setTempo(Number(e.target.value))}
+                                        aria-label="Tempo (1-10)"
+                                        className="w-full h-2 cursor-pointer accent-blue-400"
+                                    />
+                                    <div className="flex justify-between mt-1 px-0.5">
+                                        <span className="text-[9px] font-bold text-gray-600 font-mono">1</span>
+                                        <span className="text-[9px] font-bold text-gray-600 font-mono">10</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setTempo(normalizeTempo(activeTactic.tempo) + 1)}
+                                    disabled={normalizeTempo(activeTactic.tempo) >= 10}
+                                    aria-label="Tempoyu artır"
+                                    className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                >
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-gray-600 mt-3">Bu ayar yalnız <b className="text-gray-400">aktif planın</b> temposudur; oynatma hızını sürer (5 = temel hız).</p>
+                            <button
+                                onClick={() => setShowTempoSheet(false)}
+                                className="w-full mt-3 py-3 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                            >
+                                Tamam
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* İyimser kilit çakışması — sessiz emek kaybı yerine kullanıcıya sor */}
+            <AnimatePresence>
+                {conflictOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[135] bg-black/75 backdrop-blur-sm flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                            className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-amber-500/30 p-6 shadow-2xl"
+                        >
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-4">
+                                <ShieldAlert size={22} className="text-amber-400" />
+                            </div>
+                            <h3 className="text-white text-lg font-black mb-1">Taktik bu arada değişti</h3>
+                            <p className="text-gray-400 text-[13px] leading-relaxed mb-5">
+                                Bu taktik sen açtıktan sonra (başka bir yönetici tarafından) güncellenmiş. Ne yapmak istersin?
+                            </p>
+                            <div className="flex flex-col gap-2.5">
+                                <button
+                                    onClick={() => void reloadConflict()}
+                                    disabled={reloadingConflict}
+                                    className="w-full py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                                >
+                                    {reloadingConflict ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />} Güncel sürümü getir
+                                </button>
+                                <button
+                                    onClick={() => void overwriteConflict()}
+                                    disabled={reloadingConflict}
+                                    className="w-full py-3 rounded-2xl bg-white/5 text-amber-300 font-black text-sm hover:bg-white/10 transition"
+                                >
+                                    Yine de üzerine yaz
+                                </button>
+                                <button
+                                    onClick={() => setConflictOpen(false)}
+                                    className="w-full py-2.5 rounded-2xl text-gray-500 font-bold text-xs uppercase tracking-widest hover:text-white transition"
+                                >
+                                    Vazgeç
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* İlk kullanım turu — 3 adım + örnek taktik (yardım butonundan yeniden açılır) */}
+            <AnimatePresence>
+                {onboardStep !== null && (() => {
+                    const steps = [
+                        { icon: <Users size={24} className="text-[#39FF14]" />, title: 'Oyuncularını yerleştir', body: 'Sahadaki + işaretlerine dokun; arkadaşını, takımını ekle ya da bir isim yazıp elle koy.' },
+                        { icon: <PenTool size={24} className="text-[#39FF14]" />, title: 'Hareketleri çiz', body: 'KOŞU ve PAS araçlarını seç, parmağınla sahada ok ve çizgiler çiz.' },
+                        { icon: <Sparkles size={24} className="text-[#39FF14]" />, title: 'İzle ve paylaş', body: "OYNAT'a bas, taktiğin canlansın. Tempoyu ayarla, PAYLAŞ ile takımına gönder." },
+                    ];
+                    const i = Math.min(onboardStep, steps.length - 1);
+                    const isLast = i === steps.length - 1;
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[130] bg-black/75 backdrop-blur-sm flex items-center justify-center p-6"
+                        >
+                            <motion.div
+                                initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+                                className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-white/10 p-6 shadow-2xl"
+                            >
+                                <div className="w-14 h-14 rounded-2xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center mb-4">
+                                    {steps[i].icon}
+                                </div>
+                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Adım {i + 1}/{steps.length}</div>
+                                <h3 className="text-white text-lg font-black mb-1.5">{steps[i].title}</h3>
+                                <p className="text-gray-400 text-[13px] leading-relaxed mb-4">{steps[i].body}</p>
+                                {/* Adım noktaları */}
+                                <div className="flex gap-1.5 mb-5">
+                                    {steps.map((_, k) => (
+                                        <span key={k} className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-[#39FF14]' : 'w-1.5 bg-white/15'}`} />
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    {isLast ? (
+                                        <>
+                                            <button onClick={dismissOnboarding} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
+                                                Kendim başlayayım
+                                            </button>
+                                            <button onClick={() => void loadSampleTactic()} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                                <Sparkles size={16} /> Örnek yükle
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={dismissOnboarding} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
+                                                Atla
+                                            </button>
+                                            <button onClick={() => setOnboardStep(i + 1)} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                                Sonraki <ChevronRight size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-gray-600 text-center mt-4">İpucu: boş sahaya uzun bas → rakip ekle · sağdaki BİZ/RAKİP ile takım değiştir</p>
+                            </motion.div>
+                        </motion.div>
+                    );
+                })()}
             </AnimatePresence>
 
             {/* S49 — Otomatik taslak: yarım kalan çalışmayı geri yükle */}

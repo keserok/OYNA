@@ -9,6 +9,9 @@ const channel = process.env.PLAYWRIGHT_CHANNEL;
 
 export default defineConfig({
   testDir: './tests',
+  // Hermetik E2E'ler kendi config'iyle çalışır (playwright.hermetic.config.ts) —
+  // bu (canlı) config onları çalıştırmaya kalkmasın.
+  testIgnore: ['**/e2e/**'],
   use: {
     baseURL: 'http://localhost:4005',
     ...(chromiumPath

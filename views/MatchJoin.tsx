@@ -20,7 +20,7 @@ import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
-import { normalizeRole, inferSquadSize, applyCanonicalCoords } from '../shared/lobbyEnrichment';
+import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId } from '../shared/lobbyEnrichment';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -288,8 +288,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // FAZ 3: pazarda seçilen sağlayıcının dikey detaylı kartı (yetenek barları + istatistik)
   const [marketDetailProvider, setMarketDetailProvider] = useState<ProviderSuggestion | null>(null);
 
-  // FAZ 2: maça ATANMIŞ kaleci/hakem — lobide HERKESE (salt-okunur) gösterilir.
+  // FAZ 2: maça ATANMIŞ kaleci/hakem. Hakem lobide HERKESE gösterilir; kaleci
+  // ise YALNIZ kiralayan tarafın üyelerine. İki taraflı: ev sahibi + deplasman
+  // kalecisi ayrı ayrı tutulur (her takım kendi kalecisini kiralar).
   const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
+  const [assignedAwayGoalkeeper, setAssignedAwayGoalkeeper] = useState<MatchProvider | null>(null);
   const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
   // Atanmış kaleci/hakem dikey detay kartı (herkese) — hangi sağlayıcı + tür.
   const [providerDetail, setProviderDetail] = useState<{ p: MatchProvider; isRef: boolean } | null>(null);
@@ -352,6 +355,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         visibility: (updatedMatch as any).visibility || (originalMatch as any).visibility || 'OPEN',
         privateCode: (updatedMatch as any).private_code || (updatedMatch as any).privateCode || (originalMatch as any).privateCode,
         pitchId: (updatedMatch as any).pitch_id || (updatedMatch as any).pitchId || (originalMatch as any).pitchId,
+        // İki taraflı kaleci — realtime'da da taraf kolonlarını taşı
+        gkId: (updatedMatch as any).gk_id ?? (updatedMatch as any).gkId ?? (originalMatch as any).gkId,
+        awayGkId: (updatedMatch as any).away_gk_id ?? (updatedMatch as any).awayGkId ?? (originalMatch as any).awayGkId,
+        refereeId: (updatedMatch as any).refereeId ?? (updatedMatch as any).ref_id ?? (originalMatch as any).refereeId,
       };
       // KN-3a: realtime SALT-OKUR — gelen veri DB'ye GERİ YAZILMAZ.
       // (Eski updateMatch çağrısı her tick'te player_update_match tetikleyip
@@ -376,25 +383,29 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     refreshServiceRequests(originalMatch.id);
   }, [originalMatch?.id]);
 
-  // ── FAZ 2: Maça atanmış kaleci/hakem (HERKESE görünür, salt-okunur) ────────
+  // ── FAZ 2: Maça atanmış kaleci/hakem ───────────────────────────────────────
+  // gk_id = ev sahibi kalecisi, away_gk_id = deplasman kalecisi (iki taraflı).
   const assignedGkId = (match as any)?.gkId || (match as any)?.gk_id || null;
+  const assignedAwayGkId = (match as any)?.awayGkId || (match as any)?.away_gk_id || null;
   const assignedRefId = (match as any)?.refereeId || (match as any)?.ref_id || null;
   useEffect(() => {
-    if (!assignedGkId && !assignedRefId) {
+    if (!assignedGkId && !assignedAwayGkId && !assignedRefId) {
       setAssignedGoalkeeper(null);
+      setAssignedAwayGoalkeeper(null);
       setAssignedReferee(null);
       return;
     }
     let alive = true;
-    getMatchProviders(assignedGkId, assignedRefId)
-      .then(({ goalkeeper, referee }) => {
+    getMatchProviders(assignedGkId, assignedRefId, assignedAwayGkId)
+      .then(({ goalkeeper, awayGoalkeeper, referee }) => {
         if (!alive) return;
         setAssignedGoalkeeper(goalkeeper);
+        setAssignedAwayGoalkeeper(awayGoalkeeper);
         setAssignedReferee(referee);
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [assignedGkId, assignedRefId]);
+  }, [assignedGkId, assignedAwayGkId, assignedRefId]);
 
   // ── Sahadaki dolu slotları gerçek oyuncularla doldur (public_profiles) ────
   // TAKEN sayısı değişince (katılım/ayrılma, realtime dahil) yeniden çekilir.
@@ -496,6 +507,30 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const mySlot = isAlreadyJoined
     ? [...enrichedSlots, ...enrichedAwaySlots].find(s => s?.player?.id === currentUserProfile?.id)
+    : null;
+
+  // ── İki taraflı kiralık kaleci: taraf = HANGİ kolon dolu (SSOT). ────────────
+  // Kiralayan tarafın üyesi miyim? (kaptan / sahaya katılmış / takım rosterımda —
+  // userTeams yalnız KENDİ takımlarımı içerir, çözülmesi üyelik kanıtıdır.)
+  const isHomeSideMember = isHomeCaptain || isAlreadyJoinedHome || !!homeTeam;
+  const isAwaySideMember = isAwayCaptain || isAlreadyJoinedAway || !!awayTeam;
+  const { canSeeHome: canSeeHomeGk, canSeeAway: canSeeAwayGk } = resolveGkVisibility({
+    homeGkId: assignedGkId,
+    awayGkId: assignedAwayGkId,
+    viewerIsHomeMember: isHomeSideMember,
+    viewerIsAwayMember: isAwaySideMember,
+  });
+  // Şu an görüntülenen sahada gösterilecek kaleci (o tarafın üyesiysem).
+  const viewGoalkeeper = pitchSide === 'home'
+    ? (canSeeHomeGk ? assignedGoalkeeper : null)
+    : (canSeeAwayGk ? assignedAwayGoalkeeper : null);
+  // Kaptan hangi tarafı yönetiyor? (kendi tarafının kalecisini kiralar/yönetir)
+  const myCaptainSide: 'home' | 'away' | null = isHomeCaptain ? 'home' : (isAwayCaptain ? 'away' : null);
+  const myCaptainSideUpper: 'HOME' | 'AWAY' = myCaptainSide === 'away' ? 'AWAY' : 'HOME';
+  // Sahada kalede gösterim: o tarafın İLK boş GK slotu (gerçek bir oyuncunun
+  // aldığı GK slotu asla ezilmez — kaleci o durumda yalnız altta kalır).
+  const hiredGkSlotId = viewGoalkeeper
+    ? findHiredGkSlotId(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots)
     : null;
 
   // S2.4 — ayrılma modalı açılınca iade tutarını SUNUCUDAN çek (yedeklikte 0 döner).
@@ -931,13 +966,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // ── FAZ 5: Kaleci / Hakem Talep Handler'ları ────────────────────────────
   const ACTIVE_REQUEST_STATUSES: ServiceRequest['status'][] = ['PENDING', 'ACCEPTED', 'CAPTURED'];
 
-  // Belirli tipte aktif (bekleyen/atanmış) talep var mı?
+  // Belirli tipte aktif (bekleyen/atanmış) talep var mı? GK için kaptanın KENDİ
+  // tarafıyla eşleş (iki taraflı: her kaptan yalnız kendi tarafını yönetir).
   const getActiveRequestForType = (type: ProviderType): ServiceRequest | undefined =>
-    serviceRequests.find(r => r.providerType === type && ACTIVE_REQUEST_STATUSES.includes(r.status));
+    serviceRequests.find(r =>
+      r.providerType === type && ACTIVE_REQUEST_STATUSES.includes(r.status) &&
+      (type !== 'GK' || (r.teamSide ?? 'HOME') === myCaptainSideUpper));
 
   // ── Sağlayıcı-başlatan başvurular (kaleci/hakem maça başvurdu → kaptan yönetir) ──
   const [reqActionId, setReqActionId] = useState<string | null>(null);
-  const providerApplications = serviceRequests.filter(r => r.status === 'APPLIED' && r.initiatedBy === 'PROVIDER');
+  // Sağlayıcı başvuruları İKİ kaptana da görünür (RLS); ancak her kaptana yalnız
+  // KENDİ tarafı için kabul edilebilir olanları göster (dolu tarafta SLOT_FILLED
+  // hatası çıkmasın). GK: benim tarafımın kalecisi boşsa; REF: hakem boşsa.
+  const mySideGkAssigned = myCaptainSide === 'away' ? !!match.awayGkId : !!match.gkId;
+  const providerApplications = serviceRequests.filter(r => {
+    if (r.status !== 'APPLIED' || r.initiatedBy !== 'PROVIDER') return false;
+    if (r.providerType === 'REF') return !match.refereeId && !getActiveRequestForType('REF');
+    return !mySideGkAssigned && !getActiveRequestForType('GK');
+  });
   const captainConfirmPending = serviceRequests.filter(
     r => r.status === 'CAPTURED' && r.initiatedBy === 'PROVIDER' && !r.captainConfirmed && !r.payoutReleased
   );
@@ -1002,7 +1048,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!providerModalType) return;
     setProviderSubmittingId(provider.id);
     try {
-      const { requestId } = await createServiceRequest(match.id, provider.id, providerModalType);
+      // GK kaptanın KENDİ tarafına kiralanır; REF maç-tekil (taraf gönderilmez).
+      const { requestId } = await createServiceRequest(
+        match.id, provider.id, providerModalType,
+        providerModalType === 'GK' ? myCaptainSideUpper : undefined,
+      );
       await fundServiceRequest(requestId, source);
       await refreshServiceRequests(match.id);
       setMarketDetailProvider(null);
@@ -1017,7 +1067,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   };
 
   // FAZ 4: aktif (tahsil edilmiş) kaleci hizmeti → kaptan no-show bildirebilir.
-  const capturedGkRequest = serviceRequests.find(r => r.providerType === 'GK' && r.status === 'CAPTURED');
+  // Kaptanın KENDİ tarafının kalecisi (iki taraflı).
+  const capturedGkRequest = serviceRequests.find(r =>
+    r.providerType === 'GK' && r.status === 'CAPTURED' && (r.teamSide ?? 'HOME') === myCaptainSideUpper);
   const handleReportNoShow = async () => {
     if (!capturedGkRequest) return;
     try {
@@ -2257,6 +2309,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               const isMyOwnSlot = player?.id === currentUserProfile?.id;
               const inviteStatus = invitesSent[slot.id] || 'NONE';
               const invitedName = invitedFriendNames[slot.id];
+              const isHiredGkHere = slot.id === hiredGkSlotId;
 
               return (
                 <div
@@ -2264,7 +2317,38 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   className="absolute w-12 h-12 flex items-center justify-center z-10"
                   style={{ left: `${slot.x}%`, top: `${slot.y}%`, transform: 'translate(-50%, -50%)' }}
                 >
-                  {isTaken && player ? (
+                  {isHiredGkHere && viewGoalkeeper ? (
+                    /* ── Kiralık Kaleci (kalede — yalnız kiralayan tarafın üyeleri görür) ── */
+                    <button
+                      onClick={() => setProviderDetail({ p: viewGoalkeeper, isRef: false })}
+                      className="w-full h-full rounded-full focus:outline-none cursor-pointer"
+                    >
+                      <motion.div whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.93 }}
+                        className="relative w-full h-full flex flex-col items-center justify-center">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-[#FF9F43] shadow-[0_0_16px_rgba(255,159,67,0.6)]">
+                          {isRealPhoto(viewGoalkeeper.avatar) ? (
+                            <img
+                              src={viewGoalkeeper.avatar!}
+                              alt={viewGoalkeeper.name}
+                              className="w-full h-full object-cover bg-[#0A0E14]"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-black text-[15px] tracking-tight bg-orange-950/60 text-orange-300">
+                              {getInitials(viewGoalkeeper.name)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute -top-1 -right-1 p-0.5 rounded-md bg-[#FF9F43] border border-black z-20 pointer-events-none">
+                          <Hand size={9} className="text-black" />
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md max-w-[64px] z-20 pointer-events-none">
+                          <span className="text-[8px] font-black text-[#FF9F43] whitespace-nowrap uppercase truncate block">
+                            {(viewGoalkeeper.name || 'Kaleci').split(' ')[0]}
+                          </span>
+                        </div>
+                      </motion.div>
+                    </button>
+                  ) : isTaken && player ? (
                     /* ── Dolu Slot ──────────────────────────────── */
                     <button
                       onClick={() => handleSlotClick(slot)}
@@ -2479,22 +2563,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         </motion.div>
         </AnimatePresence>
 
-        {/* ── KALECİ & HAKEM (Yalnız MANAGE + Maç Sahibi/Kaptan) ──────────────── */}
-        {isManageMode && isCaptain && (
+        {/* ── KALECİ & HAKEM (MANAGE + kaptan). İki taraflı: her kaptan KENDİ ─── */}
+        {/* tarafının kalecisini yönetir; hakem maç-tekil (her iki kaptan görür). */}
+        {isManageMode && myCaptainSide && (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Kaleci & Hakem</p>
 
             <div className="grid grid-cols-2 gap-3">
               {(['GK', 'REF'] as ProviderType[]).map((type) => {
                 const isGK = type === 'GK';
-                const assignedId = isGK ? match.gkId : match.refereeId;
+                // GK kaptanın KENDİ tarafından; REF maç-tekil.
+                const assignedId = isGK ? (myCaptainSide === 'away' ? match.awayGkId : match.gkId) : match.refereeId;
                 const activeReq = getActiveRequestForType(type);
                 const accent = isGK ? '#FF9F43' : '#A78BFA';
                 const Icon = isGK ? Hand : Scale;
                 const label = isGK ? 'Kaleci' : 'Hakem';
                 // FAZ 2: atanmış sağlayıcı adı/avatarı gerçek goalkeepers/referees verisinden
                 // (adminUsers güvenilmez); okunamıyorsa genel etikete düşer.
-                const assignedProvider = isGK ? assignedGoalkeeper : assignedReferee;
+                const assignedProvider = isGK ? (myCaptainSide === 'away' ? assignedAwayGoalkeeper : assignedGoalkeeper) : assignedReferee;
                 const providerName = assignedProvider?.name
                   || (assignedId ? (adminUsers || []).find(u => u?.id === assignedId)?.name : null)
                   || label;
@@ -2638,23 +2724,32 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
         )}
 
-        {/* ── MAÇ GÖREVLİLERİ (HERKESE görünür, salt-okunur) ──────────────────── */}
-        {/* Atanmış kaleci/hakem gerçek verilerle; kaleci basınca dikey detay kartı. */}
-        {(assignedGoalkeeper || assignedReferee) && (
+        {/* ── MAÇ GÖREVLİLERİ (salt-okunur) ───────────────────────────────────── */}
+        {/* Hakem HERKESE görünür; kiralık kaleci YALNIZ kendi takımının üyelerine. */}
+        {/* İki taraflı: ev sahibi + deplasman kalecisi ayrı kartlar (yetki başına). */}
+        {(() => {
+          const visibleGks: { gk: MatchProvider; side: 'home' | 'away'; teamName: string }[] = [];
+          if (assignedGoalkeeper && canSeeHomeGk)
+            visibleGks.push({ gk: assignedGoalkeeper, side: 'home', teamName: match.homeTeamName || homeTeam?.name || 'Ev Sahibi' });
+          if (assignedAwayGoalkeeper && canSeeAwayGk)
+            visibleGks.push({ gk: assignedAwayGoalkeeper, side: 'away', teamName: match.awayTeamName || awayTeam?.name || 'Deplasman' });
+          if (visibleGks.length === 0 && !assignedReferee) return null;
+          return (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
 
-            {assignedGoalkeeper && (
+            {visibleGks.map(({ gk, side, teamName }) => (
+              <React.Fragment key={side}>
               <button
-                onClick={() => setProviderDetail({ p: assignedGoalkeeper, isRef: false })}
+                onClick={() => setProviderDetail({ p: gk, isRef: false })}
                 className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(255,159,67,0.14), transparent)' }} />
                 <div className="relative shrink-0">
-                  {isRealPhoto(assignedGoalkeeper.avatar) ? (
-                    <img src={assignedGoalkeeper.avatar!} alt={assignedGoalkeeper.name} className="w-12 h-12 rounded-2xl object-cover border border-[#FF9F43]/50" />
+                  {isRealPhoto(gk.avatar) ? (
+                    <img src={gk.avatar!} alt={gk.name} className="w-12 h-12 rounded-2xl object-cover border border-[#FF9F43]/50" />
                   ) : (
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-950/50 text-orange-300 border border-[#FF9F43]/40 font-black">
-                      {getInitials(assignedGoalkeeper.name)}
+                      {getInitials(gk.name)}
                     </div>
                   )}
                   <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#FF9F43] border-2 border-[#161B22]">
@@ -2663,16 +2758,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedGoalkeeper.name}</h4>
-                    {assignedGoalkeeper.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{gk.name}</h4>
+                    {gk.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
                   </div>
-                  <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci · {teamName}</p>
                   <div className="flex items-center gap-3 mt-1.5">
-                    {assignedGoalkeeper.rating != null && (
-                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-400"><Star size={10} fill="currentColor" />{assignedGoalkeeper.rating.toFixed(1)}</span>
+                    {gk.rating != null && (
+                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-400"><Star size={10} fill="currentColor" />{gk.rating.toFixed(1)}</span>
                     )}
-                    {assignedGoalkeeper.fee != null && (
-                      <span className="text-[10px] font-black text-white/70">{assignedGoalkeeper.fee}₺</span>
+                    {gk.fee != null && (
+                      <span className="text-[10px] font-black text-white/70">{gk.fee}₺</span>
                     )}
                   </div>
                 </div>
@@ -2680,16 +2775,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   Detay <ChevronRight size={13} />
                 </div>
               </button>
-            )}
 
-            {/* Kaptan: kaleci maça gelmediyse no-show bildir (ceza → teminattan) */}
-            {assignedGoalkeeper && isManageMode && isCaptain && capturedGkRequest && (
-              <button
-                onClick={() => setShowNoShowConfirm(true)}
-                className="w-full py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-red-400 bg-red-950/25 border border-red-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">
-                <AlertCircle size={13} /> Kaleci Gelmedi (No-show)
-              </button>
-            )}
+              {/* Kaptan: KENDİ tarafının kalecisi gelmediyse no-show bildir (ceza → teminattan) */}
+              {isManageMode && myCaptainSide === side && capturedGkRequest && (
+                <button
+                  onClick={() => setShowNoShowConfirm(true)}
+                  className="w-full py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-red-400 bg-red-950/25 border border-red-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5">
+                  <AlertCircle size={13} /> Kaleci Gelmedi (No-show)
+                </button>
+              )}
+              </React.Fragment>
+            ))}
 
             {assignedReferee && (
               <button
@@ -2732,7 +2828,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </button>
             )}
           </div>
-        )}
+          );
+        })()}
       </>
   </main>
 

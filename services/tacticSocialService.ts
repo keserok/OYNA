@@ -130,6 +130,18 @@ export interface TacticSavePayload {
   mentality: string;
   tempo: number; // 1-10 (DB kolonu text; RPC değeri olduğu gibi taşır)
   identity: string;
+  /** İyimser kilit: taktik açıldığındaki "updatedAt". Uyuşmazsa sunucu CONFLICT
+      verir (sessiz emek kaybını önler). Verilmezse kilit devre dışı (yeni kayıt). */
+  expectedUpdatedAt?: string | null;
+}
+
+/** save_team_tactic sonucu (updated_at ile — istemci beklenen damgayı tazeler). */
+export interface TacticSaveResult { tacticId: string; status: string; updatedAt: string | null; }
+
+/** İyimser kilit çakışması — istemci bunu "üzerine yaz / yenile" diyaloguna çevirir. */
+export class TacticConflictError extends Error {
+  code = 'CONFLICT' as const;
+  constructor() { super('Taktik sen açtıktan sonra değişti.'); this.name = 'TacticConflictError'; }
 }
 
 /** Taktiği tek kapıdan kaydet: status SUNUCUDA belirlenir (yönetici →
@@ -139,12 +151,19 @@ export const saveTeamTactic = async (
   teamId: string | null,
   tacticId: string | null,
   payload: TacticSavePayload,
-): Promise<{ tacticId: string; status: string }> => {
+): Promise<TacticSaveResult> => {
   const { data, error } = await supabase.rpc('save_team_tactic', {
     p_team_id: teamId, p_tactic_id: tacticId, p_payload: payload,
   });
-  if (error) throw new Error(parseRpcError(error.message) || 'Taktik kaydedilemedi.');
-  return { tacticId: data.tactic_id as string, status: data.status as string };
+  if (error) {
+    if (/\bCONFLICT\b/.test(error.message || '')) throw new TacticConflictError();
+    throw new Error(parseRpcError(error.message) || 'Taktik kaydedilemedi.');
+  }
+  return {
+    tacticId: data.tactic_id as string,
+    status: data.status as string,
+    updatedAt: (data.updated_at as string) ?? null,
+  };
 };
 
 /** Bekleyen takım taktiği önerisini onayla (yalnız yönetici). */
@@ -187,6 +206,19 @@ export const setTacticShareLink = async (
 };
 
 export const tacticShareUrl = (token: string): string => `https://oyna.app/t/${token}`;
+
+// ─── Stüdyo telemetrisi — anonim olay sayacı (KİŞİSEL İÇERİK YAZILMAZ) ─────────
+
+export type StudioEvent = 'studio_open' | 'tactic_save' | 'tactic_play' | 'sample_load';
+
+/** Ateşle-unut: yalnız olay adını sayar; taktik verisi/isim GÖNDERMEZ. Hata
+    kullanıcı akışını asla bozmaz (sessiz yutulur). Sunucu allowlist'i doğrular. */
+export const logStudioEvent = (event: StudioEvent): void => {
+  try {
+    const p = supabase.rpc('log_studio_event', { p_event: event }) as unknown as Promise<unknown>;
+    if (p && typeof p.then === 'function') p.then(() => {}, () => {}); // başarı/başarısızlık sessiz
+  } catch { /* çevrimdışı / RPC yok — yok say */ }
+};
 
 // ─── Maça taktik atama (L76) ────────────────────────────────────────
 

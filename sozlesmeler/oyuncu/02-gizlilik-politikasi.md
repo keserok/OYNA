@@ -19,7 +19,7 @@
 - **Cihaz:** push bildirimleri için cihaz token'ı
 - **Fotoğraf/kamera:** profil fotoğrafı ve QR bilet taraması için (izninizle)
 - **Ödeme:** kart bilgileriniz OYNA sunucularında saklanmaz; ödemeler doğrudan yetkili ödeme kuruluşunun güvenli altyapısında işlenir
-- **Hata ve kullanım analitiği:** uygulama kararlılığı ve iyileştirme amacıyla anonimleştirilmiş/takma adlı ölçüm verileri
+- **Hata ve kullanım analitiği:** uygulama kararlılığı ve iyileştirme amacıyla anonimleştirilmiş/takma adlı ölçüm verileri. Bu ölçümler yalnızca olayın adını (ör. bir ekranın açılması ya da bir özelliğin kullanılması) içerir; **taktik içeriği, oyuncu/kişi isimleri, çizimler veya diğer kişisel içerik bu ölçümlere dâhil edilmez.**
 
 ### 2. Verilerin Kullanım Amacı
 Hizmetin sunulması, rezervasyon ve ödeme süreçleri, maç/takım eşleştirme, bildirimler, güvenlik ve dolandırıcılık önleme, müşteri desteği ve hizmet iyileştirme.

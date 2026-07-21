@@ -315,7 +315,8 @@ export interface MatchListing {
   ageGroup?: string;
   // Hakem ve Skor Otoritesi
   refereeId?: string; // Appointed referee (FAZ 5: capture sonrası atanır)
-  gkId?: string;      // Appointed goalkeeper (FAZ 5: capture sonrası atanır)
+  gkId?: string;      // Ev sahibi kalecisi (FAZ 5: capture sonrası atanır)
+  awayGkId?: string;  // Deplasman kalecisi (iki taraflı kaleci: her takım kendi kalecisini kiralar)
   refereeStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı hakem takibi
   gkStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı kaleci takibi
   ownerCheckIn?: boolean; // Tesisin ekibi onaylama durumu
@@ -633,6 +634,8 @@ export interface ServiceRequest {
   matchId: string;
   providerId: string;
   providerType: ProviderType;
+  /** Talebin hangi takım için olduğu (iki taraflı kaleci). REF her zaman HOME. */
+  teamSide?: 'HOME' | 'AWAY';
   requestedBy: string;
   fee: number;
   commissionAmount: number;
