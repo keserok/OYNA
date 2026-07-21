@@ -658,7 +658,16 @@ const App: React.FC = () => {
         // Birleşik Takım Detayı — kimlik store.selectedTeamId ile taşınır (Spec §3.8)
         return <TeamDetailView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'STUDIO':
-        return <Studio onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+        return (
+          <ErrorBoundary
+            onBack={() => goBack('DASHBOARD')}
+            title="Taktik stüdyoda bir sorun oluştu."
+            message="Çalışman kaydedilmemiş olabilir. Ana sayfaya dönüp tekrar deneyebilirsin."
+            backLabel="Ana Sayfaya Dön"
+          >
+            <Studio onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />
+          </ErrorBoundary>
+        );
       case 'PROFILE':
         return <ProfileScreen
           role={role || UserRole.PLAYER}

@@ -98,7 +98,9 @@ export const getAnimationProps = (
         transition: {
             duration: totalCycle,
             ease: "linear",
-            repeat: Infinity,
+            // OYNAT başına toplam İKİ tur (ilk + 1 tekrar); sonra çekirdekteki
+            // otomatik durdurma (PLAY_TIMES zamanlayıcısı) simülasyonu kapatır.
+            repeat: 1,
             repeatType: "loop" as const,
             ...(playMode === 'SEQ' && { times })
         }
