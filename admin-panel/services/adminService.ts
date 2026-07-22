@@ -1520,6 +1520,45 @@ export async function createUserAdmin(input: {
   });
 }
 
+/** Saha sahibi hesap yönetimi eylemleri (admin-owner-credentials edge function). */
+export type OwnerCredentialAction = 'set_email' | 'set_password' | 'send_reset_code';
+
+/**
+ * Tesis (owner) hesabının e-postasını değiştirir, yeni şifre belirler veya
+ * mevcut e-postasına şifre sıfırlama kodu gönderir. Service-role gerektirdiği
+ * için edge function üzerinden çalışır; sunucu is_platform_admin ile doğrular
+ * ve işlemi admin_audit_log'a yazar.
+ */
+export async function manageOwnerCredentials(input: {
+  userId: string;
+  action: OwnerCredentialAction;
+  email?: string;
+  password?: string;
+}): Promise<{ ok: true; email?: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Oturum gerekli');
+
+  const url = `${SUPABASE_URL}/functions/v1/admin-owner-credentials`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error('admin-owner-credentials edge function deploy edilmemiş. Çalıştırın: supabase functions deploy admin-owner-credentials');
+    }
+    throw new Error(body.error || 'Hesap işlemi başarısız');
+  }
+  return body as { ok: true; email?: string };
+}
+
 export interface GoalkeeperAccountInput {
   email: string;
   password: string;

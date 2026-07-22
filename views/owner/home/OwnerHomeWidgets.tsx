@@ -106,7 +106,8 @@ export const MatchCountdownItem: React.FC<{
 
 export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNames: string[] }> = ({ data, courtNames }) => {
     // FAZ3: dokunmatikte hover-tooltip (title) çalışmaz → seçili hücre bilgisi üstteki çubukta gösterilir.
-    const [selectedCell, setSelectedCell] = useState<{ label: string; type: string } | null>(null);
+    // Dolu hücrede rezerve edenin adı da gösterilir (gerçek rezervasyon verisi).
+    const [selectedCell, setSelectedCell] = useState<{ label: string; type: string; name: string | null } | null>(null);
 
     // FAZ3: sahte "Henüz saha yok" satırı yerine gerçek boş durum.
     if (courtNames.length === 0) {
@@ -128,11 +129,18 @@ export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNa
 
     return (
         <div>
-            {/* FAZ3: dokunmatik hücre bilgisi (hover yerine) */}
+            {/* FAZ3: dokunmatik hücre bilgisi (hover yerine) — dolu slotta rezerve edenin adı görünür */}
             {selectedCell && (
-                <div className="mb-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs animate-in fade-in duration-200">
-                    <span className="font-bold text-white truncate">{selectedCell.label}</span>
-                    <span className={`shrink-0 font-black px-2 py-0.5 rounded-md ${selectedCell.type === 'ABONMAN' ? 'bg-blue-500/20 text-blue-300' : selectedCell.type === 'GÜNLÜK' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-gray-300'}`}>{selectedCell.type}</span>
+                <div className="mb-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-white truncate">{selectedCell.label}</span>
+                        <span className={`shrink-0 font-black px-2 py-0.5 rounded-md ${selectedCell.type === 'ABONMAN' ? 'bg-blue-500/20 text-blue-300' : selectedCell.type === 'GÜNLÜK' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-gray-300'}`}>{selectedCell.type}</span>
+                    </div>
+                    {selectedCell.name && (
+                        <p className="mt-1 text-[11px] font-bold text-gray-300 truncate">
+                            <span className="text-gray-500 font-medium">Rezerve eden: </span>{selectedCell.name}
+                        </p>
+                    )}
                 </div>
             )}
             <div className="w-full overflow-x-auto custom-scrollbar pb-2">
@@ -158,8 +166,9 @@ export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNa
                                 {pitchName}
                             </div>
                             {data.map((item, timeIdx) => {
-                                const bookingType = item.pitches[pitchIdx];
-                                const isOccupied = bookingType !== null;
+                                const cell = item.pitches[pitchIdx];
+                                const bookingType = cell?.type ?? null;
+                                const isOccupied = cell !== null && cell !== undefined;
                                 const startH = item.time.split(':')[0];
                                 const endH = ((parseInt(startH, 10) + 1) % 24).toString().padStart(2, '0');
 
@@ -179,14 +188,15 @@ export const PitchOccupancyGrid: React.FC<{ data: HourlyOccupancyCell[]; courtNa
 
                                 const typeLabel = bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ';
                                 const cellLabel = `${pitchName} · ${startH}:00-${endH}:00`;
+                                const cellTitle = `${cellLabel} · ${typeLabel}${cell?.name ? ` · ${cell.name}` : ''}`;
                                 return (
                                     <button
                                         type="button"
                                         key={timeIdx}
-                                        onClick={() => setSelectedCell({ label: cellLabel, type: typeLabel })}
+                                        onClick={() => setSelectedCell({ label: cellLabel, type: typeLabel, name: cell?.name ?? null })}
                                         className={`h-8 rounded-md transition-all duration-300 border ${bgColor} ${borderColor} ${shadow} ${!isOccupied ? 'hover:bg-white/10' : ''} active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60`}
-                                        title={`${cellLabel} · ${typeLabel}`}
-                                        aria-label={`${cellLabel} · ${typeLabel}`}
+                                        title={cellTitle}
+                                        aria-label={cellTitle}
                                     ></button>
                                 );
                             })}

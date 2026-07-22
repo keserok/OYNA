@@ -8,7 +8,7 @@ interface OwnerSpecialPriceModalProps {
   courtId: string;
   bookingDate: string;
   timeKey: string;
-  pricingPolicy?: Array<{ startTime: string; endTime: string; price?: number; price_per_hour?: number }>;
+  pricingPolicy?: Array<{ startTime: string; endTime: string; price?: number; price_per_hour?: number; valid_on?: string | null }>;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -23,7 +23,12 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
   onSaved,
 }) => {
   const hour = parseInt(timeKey.split('.')[0], 10);
-  const standardPrice = useMemo(() => resolveHourlyPrice(hour, pricingPolicy, courtId, bookingDate) ?? 0, [hour, pricingPolicy, courtId, bookingDate]);
+  // "Standart" fiyat tabandır: tarih-özel (valid_on) satırlar hariç tutulur ki
+  // mevcut özel fiyat standartmış gibi görünmesin ve kıyas tabana göre yapılsın.
+  const standardPrice = useMemo(
+    () => resolveHourlyPrice(hour, pricingPolicy?.filter((p) => !p.valid_on), courtId, bookingDate) ?? 0,
+    [hour, pricingPolicy, courtId, bookingDate],
+  );
   const [customPrice, setCustomPrice] = useState(() => String(Math.round(standardPrice * 1.25)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

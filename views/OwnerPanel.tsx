@@ -2,9 +2,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { 
-  ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
+  Wallet, TrendingUp, Calendar, AlertCircle, Settings,
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
-  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette, CalendarRange
+  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette, CalendarRange
 } from 'lucide-react';
 
 import { useAppStore } from '../store';
@@ -252,6 +252,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     // — 4 kortu olmasına rağmen). Çekirdek operasyon ekranı bir saniye beklemez;
     // finansal ayarlar arkada yüklenip facilityData'ya yamalanır.
     setRealPitchId(pitch.id);
+    // Skor Gir (QR_SCANNER) rotası maç listesini aktif tesise göre çeksin
+    // (çoklu tesis, personel/müdür ve admin-önizleme için de doğru tesis).
+    useAppStore.getState().setOwnerActivePitchId(pitch.id);
     setIsDemoMode(demo || !!pitch.is_demo);
     setCourts(facilityCourts);
     setAutoApproveMinutes(pitch.auto_approve_minutes ?? 35);
@@ -274,6 +277,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         court_id: t.court_id ?? null,
         applies_to_days: t.applies_to_days ?? null,
         tariff_type: t.tariff_type ?? undefined,
+        valid_on: t.valid_on ?? null,
       })),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
@@ -721,9 +725,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
           <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
-                  <button onClick={() => onBack()} aria-label="Geri" className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors active:scale-95">
-                      <ArrowLeft size={20} />
-                  </button>
                   <div className="flex flex-col relative">
                       {ownedFacilities.length > 1 && !isDemoMode ? (
                         <button
@@ -808,10 +809,10 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       className="flex flex-col items-center justify-center p-6 bg-blue-600 rounded-3xl border border-blue-400/30 shadow-xl shadow-blue-900/20 group hover:bg-blue-500 transition-all active:scale-95"
                     >
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <QrCode size={24} className="text-white" />
+                        <Trophy size={24} className="text-white" />
                       </div>
                       <span className="text-sm font-black italic text-white">SKOR GİR</span>
-                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">QR veya Manuel</span>
+                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
                     </button>
                     <button 
                       onClick={() => setActiveTab('CALENDAR')}
@@ -893,6 +894,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   court_id: t.court_id ?? null,
                   applies_to_days: t.applies_to_days ?? null,
                   tariff_type: t.tariff_type ?? undefined,
+                  valid_on: t.valid_on ?? null,
                 })),
               }));
             }
@@ -908,6 +910,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onBack={() => setActiveTab('HOME')}
           readOnly={effReadOnly}
           maxCourts={maxCourts}
+          showBack={false}
         />
       )}
       {/* Finans & Ekip her owner'a açık — plan/abonelik kilidi yok (karar: owner abonelik ödemez). */}

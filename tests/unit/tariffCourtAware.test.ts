@@ -102,3 +102,67 @@ describe('resolveHourlyPrice — gün-farkında (hafta içi/sonu ayrımı)', () 
     expect(resolveHourlyPrice(19, policy)).toBe(3000);
   });
 });
+
+// Takvimden girilen ÖZEL FİYAT (valid_on): yalnız kendi tarihinde geçerli ve o
+// tarihte her şeye üstün. Sunucu get_current_tariff_price ile birebir aynı kural —
+// oyuncunun gördüğü fiyat = rezervasyona yazılan fiyat = ödeme tutarı.
+describe('tarih-özel tarife (valid_on) — özel fiyat önceliği', () => {
+  // 2026-07-24 = Cuma (ISO 5); 2026-07-31 sonraki Cuma.
+  const FRI = '2026-07-24';
+  const NEXT_FRI = '2026-07-31';
+  const weekday: TariffLike = {
+    id: 't-std',
+    tariff_type: 'WEEKDAY',
+    applies_to_days: [1, 2, 3, 4, 5],
+    start_time: '08:00',
+    end_time: '00:00',
+    price_per_hour: 1000,
+    deposit_amount: 300,
+    court_id: null,
+  };
+  const specialFriday: TariffLike = {
+    id: 't-ozel',
+    tariff_type: 'SPECIAL',
+    applies_to_days: [5],
+    start_time: '20:00',
+    end_time: '21:00',
+    price_per_hour: 1500,
+    deposit_amount: 300,
+    court_id: null,
+    valid_on: FRI,
+  };
+  const tariffs = [weekday, specialFriday];
+
+  it('oyuncu tarafı: özel fiyat kendi tarihinde standardı yener (→ 1500)', () => {
+    const q = resolveTariffForSlot(tariffs, FRI, '20:00');
+    expect(q?.price).toBe(1500);
+    expect(q?.tariffId).toBe('t-ozel');
+    expect(q?.deposit).toBe(300); // kapora standarttan miras — ödeme akışı değişmez
+  });
+
+  it('sonraki hafta aynı gün/saat standart fiyata döner (→ 1000)', () => {
+    expect(resolveTariffForSlot(tariffs, NEXT_FRI, '20:00')?.price).toBe(1000);
+  });
+
+  it('aynı gün farklı saat standart fiyat (→ 1000)', () => {
+    expect(resolveTariffForSlot(tariffs, FRI, '19:00')?.price).toBe(1000);
+  });
+
+  it('owner takvimi aynı önceliği uygular (20:00 → 1500, 19:00 → 1000)', () => {
+    const policy = [
+      { startTime: '08:00', endTime: '00:00', price: 1000, court_id: null, applies_to_days: [1, 2, 3, 4, 5], tariff_type: 'WEEKDAY' },
+      { startTime: '20:00', endTime: '21:00', price: 1500, court_id: null, applies_to_days: [5], tariff_type: 'SPECIAL', valid_on: FRI },
+    ];
+    expect(resolveHourlyPrice(20, policy, null, FRI)).toBe(1500);
+    expect(resolveHourlyPrice(19, policy, null, FRI)).toBe(1000);
+    expect(resolveHourlyPrice(20, policy, null, NEXT_FRI)).toBe(1000);
+  });
+
+  it('tarih verilmeden çözümde tarih-özel satır hesaba katılmaz (→ 1000)', () => {
+    const policy = [
+      { startTime: '08:00', endTime: '00:00', price: 1000, court_id: null, tariff_type: 'WEEKDAY' },
+      { startTime: '20:00', endTime: '21:00', price: 1500, court_id: null, tariff_type: 'SPECIAL', valid_on: FRI },
+    ];
+    expect(resolveHourlyPrice(20, policy)).toBe(1000);
+  });
+});

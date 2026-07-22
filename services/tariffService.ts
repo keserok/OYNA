@@ -13,6 +13,9 @@ export interface TariffLike {
   sort_order?: number | null;
   /** null/undefined = tesis geneli; dolu = yalnız o sahaya (court) özel tarife. */
   court_id?: string | null;
+  /** Dolu ise tarife YALNIZ bu tarihte (YYYY-MM-DD) geçerlidir ve o tarihte
+   *  diğer tüm tarifelere üstün gelir (takvimden girilen özel fiyat). */
+  valid_on?: string | null;
 }
 
 const TARIFF_PRIORITY: Record<string, number> = {
@@ -44,9 +47,10 @@ function timeMatchesTariff(startTime: string, tariff: TariffLike): boolean {
   return hhmm >= start && (hhmm < end || end === '00:00');
 }
 
-/** Owner tarifelerinin ortalama saatlik ücreti (liste kartları için). */
+/** Owner tarifelerinin ortalama saatlik ücreti (liste kartları için).
+ *  Tarih-özel (valid_on) satırlar tek güne aittir; ortalamayı bozmasın diye hariç. */
 export function getAverageTariffPrice(tariffs: TariffLike[] | null | undefined): number | null {
-  const active = (tariffs ?? []).filter((t) => t.is_active !== false);
+  const active = (tariffs ?? []).filter((t) => t.is_active !== false && t.valid_on == null);
   if (active.length === 0) return null;
   const sum = active.reduce((acc, t) => acc + Number(t.price_per_hour), 0);
   return Math.round(sum / active.length);
@@ -60,9 +64,11 @@ export interface SlotTariffQuote {
 
 /**
  * Belirli tarih + saat dilimi için geçerli tarife. Sunucudaki
- * get_current_tariff_price ile BİREBİR aynı mantık: saha-özel tarife
- * (court_id = courtId) tesis-geneline (court_id null) üstün gelir; aynı kapsam
- * içinde tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL) uygulanır.
+ * get_current_tariff_price ile BİREBİR aynı mantık:
+ * 1) Tarih-özel tarife (valid_on = tarih) HER ŞEYE üstün gelir — takvimden
+ *    girilen özel fiyat yalnız o gün geçerlidir, diğer günlerde hiç uygulanmaz.
+ * 2) Saha-özel tarife (court_id = courtId) tesis-geneline (court_id null) üstün.
+ * 3) Aynı kapsamda tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL).
  * courtId verilmezse yalnız tesis-geneli tarifeler dikkate alınır.
  */
 export function resolveTariffForSlot(
@@ -74,13 +80,18 @@ export function resolveTariffForSlot(
   if (!tariffs?.length) return null;
   const dow = isoDayOfWeek(bookingDateISO);
   const isCourtSpecific = (t: TariffLike) => t.court_id != null && t.court_id === courtId;
+  const isDateSpecific = (t: TariffLike) => t.valid_on != null && t.valid_on !== '';
   const matches = tariffs
     .filter((t) => t.is_active !== false)
     .filter((t) => t.court_id == null || (courtId != null && t.court_id === courtId))
+    // Tarih-özel tarife yalnız kendi tarihinde geçerli; diğer günlerde elenir.
+    .filter((t) => !isDateSpecific(t) || t.valid_on === bookingDateISO)
     .filter((t) => (t.applies_to_days ?? []).includes(dow))
     .filter((t) => timeMatchesTariff(startTime, t))
     .sort((a, b) => {
-      // 1) Saha-özel önce, 2) tarife tipi önceliği, 3) deterministik tiebreak (id).
+      // 1) Tarih-özel önce, 2) saha-özel, 3) tip önceliği, 4) deterministik tiebreak (id).
+      const dateRank = (isDateSpecific(a) ? 0 : 1) - (isDateSpecific(b) ? 0 : 1);
+      if (dateRank !== 0) return dateRank;
       const courtRank = (isCourtSpecific(a) ? 0 : 1) - (isCourtSpecific(b) ? 0 : 1);
       if (courtRank !== 0) return courtRank;
       const typeRank = (TARIFF_PRIORITY[a.tariff_type] ?? 9) - (TARIFF_PRIORITY[b.tariff_type] ?? 9);
@@ -111,5 +122,6 @@ export function mapDbTariffsToPitchTariffs(rows: TariffLike[] | null | undefined
     deposit_amount: Number(t.deposit_amount ?? 0),
     is_active: t.is_active !== false,
     sort_order: t.sort_order ?? idx,
+    valid_on: t.valid_on ?? null,
   }));
 }

@@ -960,6 +960,9 @@ export interface PitchTariff {
   deposit_amount: number;
   is_active: boolean;
   sort_order: number;
+  /** Dolu ise tarife YALNIZ bu tarihte geçerlidir (takvimden girilen özel fiyat)
+   *  ve o tarihte diğer tüm tarifelere üstün gelir. null = süresiz/haftalık. */
+  valid_on?: string | null;
 }
 
 export interface BookingPayment {

@@ -609,6 +609,7 @@ const App: React.FC = () => {
       case 'QR_SCANNER':
         return <QRScannerView
           onBack={() => goBack('OWNER_PANEL')}
+          pitchId={useAppStore.getState().ownerActivePitchId}
           onResult={(res) => {
             setMatches(prev => [res, ...prev]);
           }}

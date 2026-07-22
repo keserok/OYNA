@@ -1,14 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Building2, RefreshCw, Save, Shield } from 'lucide-react';
+import { Building2, KeyRound, Mail, RefreshCw, Save, Send, Shield, Dices } from 'lucide-react';
 import {
   listOwnerAccountsForAdmin,
   planTierLabel,
   accountStatusLabel,
   type OwnerAccountAdminRow,
 } from '../../services/ownerAccountService';
-import { updateOwnerAccountAdmin, toTurkishAdminError } from '../services/adminService';
+import { updateOwnerAccountAdmin, manageOwnerCredentials, toTurkishAdminError, type OwnerCredentialAction } from '../services/adminService';
 import { useAdminToast } from './context/AdminToastContext';
 import type { OwnerAccount, OwnerEntitlements } from '../../types';
+
+/** Paylaşılabilir geçici şifre üretir (okunması kolay, 12 karakter). */
+function generateTempPassword(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+}
 
 const PLAN_OPTIONS: OwnerAccount['plan_tier'][] = ['starter', 'pro', 'enterprise'];
 const STATUS_OPTIONS: OwnerAccount['status'][] = [
@@ -26,6 +34,36 @@ const OwnerAccountsTab: React.FC = () => {
     status: OwnerAccount['status'];
     entitlements: OwnerEntitlements;
   }>>({});
+  // Hesap güvenliği (e-posta/şifre) taslakları — satır başına.
+  const [credDrafts, setCredDrafts] = useState<Record<string, { email: string; password: string; open: boolean }>>({});
+  const [credBusy, setCredBusy] = useState<{ userId: string; action: OwnerCredentialAction } | null>(null);
+
+  const setCredDraft = (userId: string, patch: Partial<{ email: string; password: string; open: boolean }>) =>
+    setCredDrafts((prev) => ({
+      ...prev,
+      [userId]: { email: '', password: '', open: false, ...prev[userId], ...patch },
+    }));
+
+  const runCredAction = async (
+    userId: string,
+    action: OwnerCredentialAction,
+    payload: { email?: string; password?: string },
+    okMessage: string,
+  ) => {
+    setCredBusy({ userId, action });
+    try {
+      await manageOwnerCredentials({ userId, action, ...payload });
+      success(okMessage);
+      if (action === 'set_email') {
+        setCredDraft(userId, { email: '' });
+        await load();
+      }
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setCredBusy(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -227,6 +265,122 @@ const OwnerAccountsTab: React.FC = () => {
                   <Save size={14} />
                   {savingId === row.owner_user_id ? 'Kaydediliyor…' : 'Kaydet'}
                 </button>
+
+                {/* ── Hesap Güvenliği: e-posta değiştirme, şifre belirleme, sıfırlama kodu ── */}
+                {(() => {
+                  const cred = credDrafts[row.owner_user_id] ?? { email: '', password: '', open: false };
+                  const busyFor = (a: OwnerCredentialAction) =>
+                    credBusy?.userId === row.owner_user_id && credBusy.action === a;
+                  const anyBusy = credBusy?.userId === row.owner_user_id;
+                  return (
+                    <div className="border-t border-white/5 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => setCredDraft(row.owner_user_id, { open: !cred.open })}
+                        className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-gray-400 hover:text-white"
+                      >
+                        <KeyRound size={13} className="text-amber-400" />
+                        Hesap Güvenliği (E-posta / Şifre)
+                        <span className="text-gray-600">{cred.open ? '▾' : '▸'}</span>
+                      </button>
+
+                      {cred.open && (
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* E-posta değiştir */}
+                          <div className="space-y-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                            <span className="text-[10px] text-gray-500 font-bold uppercase flex items-center gap-1.5">
+                              <Mail size={11} /> E-postayı Değiştir
+                            </span>
+                            <input
+                              type="email"
+                              value={cred.email}
+                              onChange={(e) => setCredDraft(row.owner_user_id, { email: e.target.value })}
+                              placeholder={row.owner_email ?? 'yeni@eposta.com'}
+                              className="w-full bg-[#161B22] border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+                            />
+                            <button
+                              type="button"
+                              disabled={anyBusy || !cred.email.trim()}
+                              onClick={() =>
+                                runCredAction(
+                                  row.owner_user_id,
+                                  'set_email',
+                                  { email: cred.email.trim() },
+                                  'E-posta güncellendi — yeni adres giriş için hemen geçerli',
+                                )
+                              }
+                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black rounded-lg disabled:opacity-40"
+                            >
+                              {busyFor('set_email') ? 'Güncelleniyor…' : 'E-postayı Güncelle'}
+                            </button>
+                          </div>
+
+                          {/* Yeni şifre belirle */}
+                          <div className="space-y-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                            <span className="text-[10px] text-gray-500 font-bold uppercase flex items-center gap-1.5">
+                              <KeyRound size={11} /> Yeni Şifre Belirle
+                            </span>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={cred.password}
+                                onChange={(e) => setCredDraft(row.owner_user_id, { password: e.target.value })}
+                                placeholder="En az 8 karakter"
+                                className="flex-1 min-w-0 bg-[#161B22] border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                              />
+                              <button
+                                type="button"
+                                title="Rastgele şifre üret"
+                                onClick={() => setCredDraft(row.owner_user_id, { password: generateTempPassword() })}
+                                className="shrink-0 px-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white"
+                              >
+                                <Dices size={14} />
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={anyBusy || cred.password.length < 8}
+                              onClick={() =>
+                                runCredAction(
+                                  row.owner_user_id,
+                                  'set_password',
+                                  { password: cred.password },
+                                  'Şifre güncellendi — yeni şifreyi tesise güvenli bir kanaldan iletin',
+                                )
+                              }
+                              className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-black rounded-lg disabled:opacity-40"
+                            >
+                              {busyFor('set_password') ? 'Kaydediliyor…' : 'Şifreyi Kaydet'}
+                            </button>
+                          </div>
+
+                          {/* Sıfırlama kodu gönder */}
+                          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                            <p className="text-[11px] text-gray-500">
+                              Ya da tesise kendi şifresini belirlemesi için <span className="text-gray-300 font-bold">{row.owner_email ?? 'kayıtlı e-postasına'}</span> sıfırlama kodu gönderin.
+                            </p>
+                            <button
+                              type="button"
+                              disabled={anyBusy || !row.owner_email}
+                              onClick={() =>
+                                runCredAction(
+                                  row.owner_user_id,
+                                  'send_reset_code',
+                                  {},
+                                  'Sıfırlama kodu e-postaya gönderildi',
+                                )
+                              }
+                              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-200 text-[11px] font-black rounded-lg disabled:opacity-40"
+                            >
+                              <Send size={12} />
+                              {busyFor('send_reset_code') ? 'Gönderiliyor…' : 'Sıfırlama Kodu Gönder'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
