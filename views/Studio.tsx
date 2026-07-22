@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import {
     ChevronLeft, Users, Save, Plus, Trash2, Minus,
@@ -647,6 +647,23 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         );
         return () => clearTimeout(t);
     }, [isSimulating, playCycleSeconds]);
+
+    // ── OYNAT ⇄ DURDUR durum makinesi (AnimationToolbar buradan sürülür) ─────
+    // DURDUR: oynatımı ANINDA keser (yukarıdaki effect cleanup'ı bekleyen
+    // otomatik-durdurma zamanlayıcısını temizler), oyuncular/top yumuşakça
+    // başlangıç dizilimine döner ve buton OYNAT'a geri döner. Otomatik bitiş de
+    // aynı isSimulating durumundan aktığı için buton her iki yolda da doğrudur.
+    // OYNAT: her zaman BAŞTAN oynatır — durdur→hemen oynat dizisinde önce
+    // animasyonsuz bir kare işletilir (çift-rAF), böylece framer yarım kalmış
+    // konumdan devam etmez; çift dokunuş zararsızdır.
+    const startSimulation = useCallback(() => {
+        setIsSimulating(false);
+        requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true)));
+    }, []);
+    const handleSimulationToggle = useCallback((next: boolean) => {
+        if (next) startSimulation();
+        else setIsSimulating(false);
+    }, [startSimulation]);
 
     // Anonim "oynatıldı" telemetrisi — simülasyon her başladığında (kişisel içerik yok).
     useEffect(() => { if (isSimulating) logStudioEvent('tactic_play'); }, [isSimulating]);
@@ -1964,7 +1981,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         }>
                             <AnimationToolbar
                                 isSimulating={isSimulating}
-                                setIsSimulating={setIsSimulating}
+                                setIsSimulating={handleSimulationToggle}
                                 showBall={showBall}
                                 setShowBall={setShowBall}
                                 playMode={playMode}

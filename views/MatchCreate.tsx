@@ -1,19 +1,25 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, Suspense, lazy } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight, MapPin, Users, Shield,
-  Zap, Activity, X, Lock, Check, CheckCircle2, Swords, Target,
-  Feather, Wallet, Radio, KeyRound,
+  Zap, Activity, X, Lock, CheckCircle2, Swords, Target,
+  Feather, Wallet, KeyRound, ShieldCheck, Undo2, Clock,
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
+import { Spinner } from '../components/ui/Spinner';
 import SharedPitch from '../components/SharedPitch';
 import PitchDiscovery from './PitchDiscovery';
 import MatchSquadPicker, { PickedPlayer } from '../components/social/MatchSquadPicker';
 import ProviderOfferPicker from '../components/social/ProviderOfferPicker';
 import { useMatchCreate, FORMATS } from '../hooks/useMatchCreate';
+import { PLAY_STYLE_META } from './onboarding/onboardingShared';
+
+// Cüzdan yükleme overlay'i — maç kurulum formu kaybolmadan bakiye tamamlanır.
+const WalletScreen = lazy(() => import('./WalletScreen'));
 
 interface MatchCreateProps {
   onBack: () => void;
@@ -23,15 +29,17 @@ interface MatchCreateProps {
 // ─── Sabitler (canlı kullanılan) ────────────────────────────────────────────
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
+// Renkler TEK kaynaktan (PLAY_STYLE_META — kanonik K/S/Y paleti): profil ve
+// onboarding'deki "Oyun Stili" ile maçtaki "Sertlik" aynı kimlik renklerini taşır.
 const MENTALITY_OPTIONS = [
-  { id: 'ciddi', title: 'Ciddi', subtitle: 'Rekabetçi', icon: Zap, color: '#FF4D4D' },
-  { id: 'taktiksel', title: 'Taktiksel', subtitle: 'Sistem', icon: Target, color: '#FACC15' },
-  { id: 'rahat', title: 'Rahat', subtitle: 'Eğlence', icon: Feather, color: '#39FF14' },
+  { id: 'ciddi', title: 'Ciddi', subtitle: 'Rekabetçi', icon: Zap, color: PLAY_STYLE_META.ciddi.color },
+  { id: 'taktiksel', title: 'Taktiksel', subtitle: 'Sistem', icon: Target, color: PLAY_STYLE_META.taktiksel.color },
+  { id: 'rahat', title: 'Rahat', subtitle: 'Eğlence', icon: Feather, color: PLAY_STYLE_META.rahat.color },
 ] as const;
 const MENTALITY_META: Record<string, { label: string; color: string }> = {
-  ciddi: { label: 'Ciddi', color: '#FF4D4D' },
-  taktiksel: { label: 'Taktiksel', color: '#FACC15' },
-  rahat: { label: 'Rahat', color: '#39FF14' },
+  ciddi: { label: 'Ciddi', color: PLAY_STYLE_META.ciddi.color },
+  taktiksel: { label: 'Taktiksel', color: PLAY_STYLE_META.taktiksel.color },
+  rahat: { label: 'Rahat', color: PLAY_STYLE_META.rahat.color },
 };
 
 // ─── Canlı Maç Kartı bilgi çipi ──────────────────────────────────────────────
@@ -69,17 +77,17 @@ const ActionCard: React.FC<{
   </motion.button>
 );
 
-// ─── Checklist Pill ──────────────────────────────────────────────────────────
-const ChecklistPill: React.FC<{ ok: boolean; label: string; soft?: boolean }> = ({ ok, label, soft }) => (
-  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider border ${
-    ok
-      ? 'text-[#39FF14] border-[#39FF14]/35 bg-[#39FF14]/[0.06]'
-      : soft
-        ? 'text-[#FACC15] border-[#FACC15]/30 bg-[#FACC15]/[0.05]'
-        : 'text-white/40 border-white/10 bg-white/[0.02]'
-  }`}>
-    {ok ? <Check size={10} strokeWidth={3} /> : <Radio size={9} />}{label}
-  </span>
+// ─── İade kuralı satırı (Kapora & İade Kuralları sayfası) ────────────────────
+const RuleRow: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+  <div className="flex gap-3.5 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+    <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] flex items-center justify-center shrink-0">
+      {icon}
+    </div>
+    <div className="min-w-0">
+      <p className="text-[13px] font-black text-white leading-tight">{title}</p>
+      <p className="text-[11px] text-white/55 leading-relaxed mt-1">{children}</p>
+    </div>
+  </div>
 );
 
 // ─── Ana Bileşen ───────────────────────────────────────────────────────────────
@@ -106,10 +114,14 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     handleSlotMove, pitchSlots,
     costPerPerson, matchDeposit,
     loadSquadFromTeam, readiness, squadCount,
+    spendableBalance, missingBalance, refreshWallet,
     publishMatch,
   } = useMatchCreate(onNavigate);
 
   const setSocialTarget = useAppStore(s => s.setSocialTarget);
+  // Mesafeli Satış / İptal-İade tam metni — paket içi statik sayfa, overlay'de
+  // açılır (LEGAL ekranına navigasyon formu sıfırlardı; burada form korunur).
+  const [showLegalDoc, setShowLegalDoc] = useState(false);
 
   const assignedIds = useMemo(
     () => pitchSlots.filter(s => s.player).map(s => (s.player as any).id as string),
@@ -163,9 +175,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             </span>
           </div>
           <div className="flex gap-2 mt-3">
-            <InfoChip label="Ne zaman" value={dateLabel || '+ Ekle'} empty={!dateLabel} />
-            <InfoChip label="Saha" value={selectedPitch?.name || '+ Seç'} empty={!selectedPitch} />
-            <InfoChip label="Kişi başı" value={costPerPerson > 0 ? `${costPerPerson}₺` : 'Ücretsiz'} accent={costPerPerson > 0} />
+            <InfoChip label="Ne zaman" value={dateLabel || '—'} empty={!dateLabel} />
+            <InfoChip label="Saha" value={selectedPitch?.name || '—'} empty={!selectedPitch} />
+            <InfoChip label="Kişi başı" value={costPerPerson > 0 ? `${costPerPerson}₺` : '—'} accent={costPerPerson > 0} empty={costPerPerson <= 0} />
           </div>
           <div className="mt-3 flex items-center gap-2.5">
             <div className="flex-1 h-1.5 rounded-full bg-white/8 overflow-hidden">
@@ -228,12 +240,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <div className="flex items-center gap-2">
             <span className="w-[54px] shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Sertlik</span>
             <div className="flex gap-1.5">
+              {/* Her seçenek DAİMA kendi kimlik renginde: seçili → dolu, değil → tonlu */}
               {MENTALITY_OPTIONS.map(m => (
                 <button key={m.id} onClick={() => setDna({ ...dna, mentality: m.id })}
                   className="px-3.5 py-1.5 rounded-xl text-[10px] font-black transition-all border"
                   style={dna.mentality === m.id
-                    ? { color: '#0A0E14', background: m.color, borderColor: m.color }
-                    : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
+                    ? { color: '#0A0E14', background: m.color, borderColor: m.color, boxShadow: `0 0 14px ${m.color}4D` }
+                    : { background: `${m.color}14`, borderColor: `${m.color}45`, color: m.color }}>
                   {m.title}
                 </button>
               ))}
@@ -261,17 +274,22 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         </div>
       </div>
 
-      {/* ── Fırlatma Rampası (sabit alt) ── */}
+      {/* ── Fırlatma Rampası (sabit alt) — SADE: yalnız Yayınla + İade kuralları
+             linki. Kapora tutarı, bakiye durumu ve tüm kurallar dokununca açılan
+             "Kapora & İade Kuralları" sayfasında (kural yoğunluğu kararı). ── */}
       <div className="absolute bottom-0 inset-x-0 z-30 px-4 pt-10 pb-6 bg-gradient-to-t from-[#06080A] via-[#06080A]/95 to-transparent pb-safe">
-        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-          <ChecklistPill ok={readiness.hasPitch} label="Saha" />
-          <ChecklistPill ok={readiness.hasTime} label="Saat" />
-          <ChecklistPill ok={squadCount > 0} label={`Kadro ${squadCount}/${perTeam}`} soft />
-        </div>
-        {matchDeposit > 0 && readiness.canPublish && (
-          <div className="mb-2.5 flex items-start gap-2 text-[10px] font-bold text-white/45 leading-snug">
-            <Lock size={11} className="text-[#FACC15] shrink-0 mt-0.5" />
-            <span>Yayınlayınca <span className="text-[#FACC15] font-black">{matchDeposit}₺</span> kapora kartında bloke edilir (çekilmez) · maç dolmazsa iade.</span>
+        {/* Yetersiz bakiye — YALNIZ sorun anında görünür (kalıcı bilgi kalabalığı yok) */}
+        {readiness.canPublish && missingBalance > 0 && (
+          <div className="mb-2.5 flex items-center justify-between gap-2 rounded-xl border border-red-500/30 bg-red-500/[0.08] px-3 py-2">
+            <span className="text-[10px] font-bold text-red-300 leading-snug">
+              Cüzdan bakiyen yetersiz — kapora için <span className="font-black">{missingBalance}₺</span> eksik.
+            </span>
+            <button
+              onClick={() => { useAppStore.getState().setWalletInitialTab('TOPUP'); setActiveSheet('WALLET'); }}
+              className="shrink-0 text-[10px] font-black text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
+            >
+              Yükle
+            </button>
           </div>
         )}
         <AnimatedButton
@@ -289,6 +307,15 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             ? (isDraftMode ? 'DAVETLERİ GÖNDER & YAYINLA' : 'YAYINLA & DAVET ET')
             : (readiness.blockReason || 'YAYINLA & DAVET ET').toLocaleUpperCase('tr-TR')}
         </AnimatedButton>
+        <button
+          onClick={() => { void refreshWallet(); setActiveSheet('REFUND'); }}
+          className="w-full mt-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white/45 hover:text-white/70 transition-colors"
+        >
+          <Lock size={10} className="text-[#FACC15]" />
+          <span className="underline underline-offset-2">
+            {matchDeposit > 0 ? `${matchDeposit}₺ kapora · İade kuralları` : 'Kapora & iade kuralları'}
+          </span>
+        </button>
       </div>
 
       {/* ── ALT SHEET'LER ── */}
@@ -398,15 +425,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Oyun Sertliği</p>
                 <div className="flex flex-col gap-2">
+                  {/* Kimlik renkleri seçim beklenmeden görünür (seçili → dolgun, değil → tonlu) */}
                   {MENTALITY_OPTIONS.map(m => (
                     <button key={m.id} onClick={() => setDna({ ...dna, mentality: m.id })}
                       className="h-12 w-full rounded-2xl px-4 flex items-center justify-between border transition-all"
-                      style={dna.mentality === m.id ? { backgroundColor: `${m.color}18`, borderColor: `${m.color}66` } : { background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                      style={dna.mentality === m.id ? { backgroundColor: `${m.color}18`, borderColor: `${m.color}66` } : { background: `${m.color}0D`, borderColor: `${m.color}30` }}>
                       <div className="flex items-center gap-3">
-                        <m.icon size={16} style={{ color: dna.mentality === m.id ? m.color : '#fff' }} />
-                        <span className="text-base font-black italic uppercase tracking-tight text-white">{m.title}</span>
+                        <m.icon size={16} style={{ color: m.color }} />
+                        <span className="text-base font-black italic uppercase tracking-tight" style={{ color: dna.mentality === m.id ? '#fff' : m.color }}>{m.title}</span>
                       </div>
-                      <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={dna.mentality === m.id ? { backgroundColor: m.color, borderColor: 'transparent' } : { borderColor: 'rgba(255,255,255,0.4)' }}>
+                      <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={dna.mentality === m.id ? { backgroundColor: m.color, borderColor: 'transparent' } : { borderColor: `${m.color}66` }}>
                         {dna.mentality === m.id && <CheckCircle2 size={10} className="text-black" />}
                       </div>
                     </button>
@@ -439,6 +467,107 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+        {/* ── Kapora & İade Kuralları + Cüzdan + Yasal metin: PORTAL ile body'ye
+            render edilir. Görünüm geçiş sarmalayıcısındaki transform, `fixed`
+            konumlandırmayı viewport yerine kaydırılabilir konteynere bağlıyor
+            (ekran kaydırılmışken sheet yarım kaplıyordu). Portal (ProfileScreen
+            deseni) bunu kökten çözer: overlay her durumda TÜM ekranı örter. ── */}
+        {activeSheet === 'REFUND' && createPortal((() => {
+          const totalPlayers = perTeam * 2;
+          const threshold = totalPlayers - 2;
+          const refundOnFill = Math.max(0, matchDeposit - costPerPerson);
+          return (
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-safe">
+              <header className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                <h2 className="text-lg font-black text-white italic tracking-tight uppercase">Kapora & İade Kuralları</h2>
+                <button onClick={() => setActiveSheet('NONE')} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
+              </header>
+              <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 space-y-3 custom-scrollbar pb-safe">
+
+                {/* Özet: kapora tutarı + cüzdan durumu */}
+                <div className="rounded-2xl border border-[#FACC15]/25 bg-[#FACC15]/[0.05] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
+                      <p className="text-2xl font-black text-[#FACC15] mt-0.5">{matchDeposit > 0 ? `${matchDeposit}₺` : '—'}</p>
+                    </div>
+                    {spendableBalance != null && matchDeposit > 0 && (
+                      <div className="text-right">
+                        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/40">Cüzdan bakiyen</p>
+                        <p className={`text-lg font-black mt-0.5 ${missingBalance > 0 ? 'text-red-400' : 'text-[#39FF14]'}`}>{Math.floor(spendableBalance)}₺</p>
+                        {missingBalance > 0 ? (
+                          <button
+                            onClick={() => { useAppStore.getState().setWalletInitialTab('TOPUP'); setActiveSheet('WALLET'); }}
+                            className="mt-1.5 text-[10px] font-black text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1 active:scale-95 transition-transform"
+                          >
+                            {missingBalance}₺ eksik · Yükle
+                          </button>
+                        ) : (
+                          <p className="text-[9px] font-bold text-[#39FF14]/80 mt-0.5">Yeterli ✓</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {matchDeposit <= 0 && (
+                    <p className="text-[10px] text-white/45 leading-relaxed mt-1.5">Saha ve saat seçildiğinde kapora tutarı burada görünür.</p>
+                  )}
+                </div>
+
+                <RuleRow icon={<Lock size={16} />} title="Kapora cüzdanından bloke edilir">
+                  Yayınladığın anda kapora cüzdan bakiyenden güvenceye alınır — para çekilmez, saha sana kilitlenir.
+                </RuleRow>
+                <RuleRow icon={<Users size={16} />} title={`Maç ${threshold} oyuncuda kesinleşir`}>
+                  Kural: toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir. Bu maç için {totalPlayers} kişilik kadroda {threshold} oyuncuya ulaşılınca maç kesinleşir ve kapora tahsil edilir.
+                </RuleRow>
+                <RuleRow icon={<Undo2 size={16} />} title="Maç dolunca payın dışındaki tutar sana döner">
+                  Maç dolduğunda, kaporayı ödeyen kullanıcıya ödediği tutardan 1 kişilik katılım ücreti düşülerek kalanı cüzdanına iade edilir — kaptan da herkes gibi yalnız kendi payını ödemiş olur.
+                  {matchDeposit > 0 && costPerPerson > 0 && (
+                    <> Bu maç için: {matchDeposit}₺ − {costPerPerson}₺ = <span className="text-[#39FF14] font-black">{refundOnFill}₺ iade</span>.</>
+                  )}
+                </RuleRow>
+                <RuleRow icon={<ShieldCheck size={16} />} title="Maç dolmazsa tam iade">
+                  Kadro eşiğe ulaşmazsa maç iptal olur ve kapora blokajı kesintisiz çözülür — kayıp yok.
+                </RuleRow>
+                <RuleRow icon={<Clock size={16} />} title="Kaptan iptali — 24 saat kuralı">
+                  Maça 24 saatten fazla varken iptal edersen kapora iade edilir (ödeme sağlayıcı komisyonu hariç). 24 saatten az kala iade yapılmaz (no-show) ve güvenilirlik puanın düşer.
+                </RuleRow>
+
+                <button
+                  onClick={() => setShowLegalDoc(true)}
+                  className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
+                >
+                  <span className="text-[11px] font-bold text-white/60">Mesafeli Satış ve İptal-İade koşullarının tam metni</span>
+                  <ChevronRight size={15} className="text-white/30 shrink-0" />
+                </button>
+
+                <button onClick={() => setActiveSheet('NONE')} className="w-full h-[52px] mt-1 bg-[#FACC15] text-[#0A0E14] font-black italic uppercase text-base rounded-[18px] active:scale-95 transition-transform">Anladım</button>
+              </div>
+            </motion.div>
+          );
+        })(), document.body)}
+
+        {/* ── Mesafeli Satış / İptal-İade tam metni — paket içi statik sayfa ── */}
+        {showLegalDoc && createPortal(
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[70] bg-[#0A0E14] flex flex-col pt-safe">
+            <header className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+              <h2 className="text-base font-black text-white italic tracking-tight uppercase">Mesafeli Satış · İptal & İade</h2>
+              <button onClick={() => setShowLegalDoc(false)} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
+            </header>
+            <iframe src="/mesafeli-satis.html" title="Mesafeli Satış ve İptal-İade koşulları" className="flex-1 w-full border-0 bg-white" />
+          </motion.div>,
+          document.body,
+        )}
+
+        {/* ── Cüzdan yükleme overlay'i — form KAYBOLMADAN bakiye tamamlanır ── */}
+        {activeSheet === 'WALLET' && createPortal(
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-[60] bg-[#0A0E14] overflow-y-auto overscroll-contain custom-scrollbar">
+            <Suspense fallback={<div className="h-full min-h-screen flex items-center justify-center"><Spinner /></div>}>
+              <WalletScreen onBack={() => { setActiveSheet('NONE'); void refreshWallet(); }} />
+            </Suspense>
+          </motion.div>,
+          document.body,
+        )}
     </PageLayout>
   );
 };

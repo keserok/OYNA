@@ -9,7 +9,7 @@
 //  - getAnimationProps: framer-motion keyframe zamanlama hesabı. Çekirdek pitch
 //    bunu, animasyon yüklüyken slot/rakip markörlerini hareket ettirmek için
 //    kullanır (orijinal davranış birebir korunur).
-//  - AnimationToolbar: simülasyon kontrolleri (OYNAT/SIFIRLA, topu göster/gizle,
+//  - AnimationToolbar: simülasyon kontrolleri (OYNAT ⇄ DURDUR, topu göster/gizle,
 //    sıralı/eşzamanlı oynatma).
 //  - default AdvancedAnimationModule: saha üzerine binen top animasyonu +
 //    sekans rozet/timeline editörü (additive overlay).
@@ -123,10 +123,12 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
     <>
         <button
             onClick={() => setIsSimulating(!isSimulating)}
+            title={isSimulating ? 'Taktiği durdur' : 'Taktiği oynat'}
+            aria-label={isSimulating ? 'Taktiği durdur' : 'Taktiği oynat'}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${isSimulating ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
             {isSimulating ? (
-                <><Square size={14} className="fill-current" /> SIFIRLA</>
+                <><Square size={14} className="fill-current" /> DURDUR</>
             ) : (
                 <><Play size={14} className="fill-current" /> OYNAT</>
             )}

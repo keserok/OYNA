@@ -203,6 +203,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 play_style: editStyle || null,
                 ...(editAvatar && editAvatar !== profile?.avatar_url ? { avatar_url: editAvatar } : {}),
             });
+            // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
+            // kimliğinden beslenir — fotoğraf değişimini ANINDA oraya da yansıt.
+            if (editAvatar && editAvatar !== profile?.avatar_url) {
+                const cur = useAppStore.getState().currentUserProfile;
+                if (cur && cur.id === uid) {
+                    useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: editAvatar });
+                }
+            }
             setShowEditModal(false);
             await loadProfile();
         } catch (e) {
@@ -477,6 +485,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <div>
                             <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Oyun Stili</label>
                             <div className="mt-1.5 grid grid-cols-3 gap-2">
+                                {/* Kimlik renkleri (kanonik K/S/Y) seçim beklenmeden görünür:
+                                    seçili → dolu renk, değil → kendi renginde tonlu */}
                                 {PLAY_STYLE_ORDER.map((s) => {
                                     const sel = editStyle === s;
                                     const meta = PLAY_STYLE_META[s];
@@ -487,8 +497,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                                             onClick={() => setEditStyle(sel ? '' : s)}
                                             className="py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95"
                                             style={sel
-                                                ? { color: '#000', backgroundColor: meta.color, borderColor: meta.color }
-                                                : { color: 'rgba(255,255,255,0.6)', backgroundColor: '#161B22', borderColor: 'rgba(255,255,255,0.1)' }}
+                                                ? { color: '#000', backgroundColor: meta.color, borderColor: meta.color, boxShadow: `0 0 14px ${meta.color}40` }
+                                                : { color: meta.color, backgroundColor: `${meta.color}12`, borderColor: `${meta.color}45` }}
                                         >
                                             {meta.label}
                                         </button>

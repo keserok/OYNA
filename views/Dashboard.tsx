@@ -9,6 +9,7 @@ import {
 import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
+import { UserAvatar } from '../components/common/UserAvatar';
 import { useAppStore } from '../store';
 import { useMyMatches } from '../hooks/useMyMatches';
 
@@ -300,6 +301,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
     return adminUsers.find(u => u.id === currentUserUid);
   }, [adminUsers, currentUserUid]);
 
+  // MOB-S4: sol üst avatar = Profil ekranıyla AYNI kaynak (profiles.avatar_url,
+  // girişte store'a yazılır; profil düzenlemesi anında günceller). Foto yoksa
+  // ProfileHero ile aynı stilde baş harfler — mock Unsplash fotoğrafı kalktı.
+  const sessionProfile = useAppStore(s => s.currentUserProfile);
+
   const closestMatchPulse = React.useMemo(() => {
     const now = new Date();
     let minDiffMs = Infinity;
@@ -360,8 +366,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             whileTap={{ scale: 0.95 }}
             className="w-12 h-12 rounded-full bg-gradient-to-br from-[#161B22] to-[#0A0E14] border border-white/10 p-0.5 overflow-hidden shadow-[0_0_20px_rgba(57,255,20,0.15)] transition-colors"
             onClick={() => onNavigate('PROFILE')}
+            aria-label="Profilim"
           >
-            <img src="https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=150" alt="Profile" className="w-full h-full object-cover rounded-full" />
+            <UserAvatar
+              name={sessionProfile?.name || currentUserProfile?.name}
+              avatarUrl={sessionProfile?.avatar || currentUserProfile?.avatar}
+              className="w-full h-full rounded-full"
+              textClassName="text-base"
+            />
           </motion.button>
           <div>
             <h1 className="text-xl font-black text-white italic tracking-tighter leading-none uppercase">{globalTexts?.dashboardTitle || 'ANA SAYFA'}</h1>

@@ -2011,12 +2011,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         <div className="px-4 pb-3">
           {/* VS Şeridi */}
           <div className="flex items-stretch gap-1.5 mb-2">
-            {/* Ev Sahibi */}
+            {/* Ev Sahibi — aktifken yavaş nabız (index.css team-pulse-active; reduce-motion'da durur) */}
             <button
               onClick={() => { setPitchSide('home'); setHasAutoSelectedSide(true); }}
+              style={{ '--pulse-color': 'rgba(255,255,255,0.2)' } as React.CSSProperties}
               className={`flex-1 flex items-center gap-2 px-4 py-3.5 rounded-xl border transition-all active:scale-[0.97] ${
                 pitchSide === 'home'
-                  ? 'bg-white/8 border-white/25'
+                  ? 'bg-white/8 border-white/25 team-pulse-active'
                   : 'bg-transparent border-white/5 opacity-55'
               }`}
             >
@@ -2038,12 +2039,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <div className="w-px h-7 bg-white/10" />
             </div>
 
-            {/* Deplasman */}
+            {/* Deplasman — aktifken yavaş nabız (kırmızı ışıma) */}
             <button
               onClick={() => { setPitchSide('away'); setHasAutoSelectedSide(true); }}
+              style={{ '--pulse-color': 'rgba(248,113,113,0.28)' } as React.CSSProperties}
               className={`flex-1 flex items-center gap-2 px-4 py-3.5 rounded-xl border transition-all active:scale-[0.97] ${
                 pitchSide === 'away'
-                  ? 'bg-red-500/8 border-red-500/25'
+                  ? 'bg-red-500/8 border-red-500/25 team-pulse-active'
                   : 'bg-transparent border-white/5 opacity-55'
               }`}
             >

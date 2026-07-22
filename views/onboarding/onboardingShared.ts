@@ -63,10 +63,13 @@ export const POSITION_CODE: Record<string, OnboardingPosition> = {
   Hücum: 'forvet',
 };
 
-/** Oyun stili etiket + vurgu rengi (kart/rozet gösterimlerinde tek kaynak). */
+/** Oyun stili etiket + vurgu rengi (kart/rozet gösterimlerinde tek kaynak).
+    KANONİK PALET (kullanıcı kararı): Ciddi=Kırmızı, Taktiksel=Sarı, Rahat=Yeşil —
+    maç kartları/oluşturma ile profil-onboarding artık AYNI renkleri kullanır
+    (eski amber/mavi profili maç tarafıyla çelişiyordu). */
 export const PLAY_STYLE_META: Record<Exclude<PlayStyle, ''>, { label: string; color: string }> = {
-  ciddi: { label: 'Ciddi', color: '#FFC107' },
-  taktiksel: { label: 'Taktiksel', color: '#00B0FF' },
+  ciddi: { label: 'Ciddi', color: '#FF4D4D' },
+  taktiksel: { label: 'Taktiksel', color: '#FACC15' },
   rahat: { label: 'Rahat', color: '#39FF14' },
 };
 

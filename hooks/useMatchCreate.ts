@@ -5,6 +5,8 @@ import { auth } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { getTeamSquad } from '../services/teamSocialService';
 import { DeferredProvider } from '../services/matchLifecycleService';
+import { getWalletSummary, WalletSummary } from '../services/walletService';
+import { showToast } from '../components/common/GlobalToast';
 import { FORMATIONS, defaultFormation, type SquadSize } from '../utils/formations';
 import { deriveMissingPositions } from '../utils/matchPositions';
 import { roleShort } from '../shared/lobbyEnrichment';
@@ -49,7 +51,9 @@ export const FORMATS = [
 ];
 
 export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
-  const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'PLAYER_PICKER' | 'SUPPORT' | 'NONE'>('NONE');
+  // REFUND: Kapora & İade Kuralları sayfası · WALLET: cüzdan yükleme overlay'i
+  // (WalletScreen sheet olarak açılır ki maç kurulum formu KAYBOLMASIN).
+  const [activeSheet, setActiveSheet] = useState<'RULES' | 'PITCH' | 'PLAYER_PICKER' | 'SUPPORT' | 'REFUND' | 'WALLET' | 'NONE'>('NONE');
   const [isPublishing, setIsPublishing] = useState(false);
   const [pickerTab, setPickerTab] = useState<'FRIENDS' | 'TEAMS'>('FRIENDS');
   const [pickerCategory, setPickerCategory] = useState('Tümü');
@@ -249,6 +253,28 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     return selectedPitch.totalPrice ? Math.ceil(selectedPitch.totalPrice * 0.2) : 0;
   }, [selectedPitch]);
 
+  // ── Cüzdan bakiyesi (MOB-P1) ─────────────────────────────────────────────
+  // Kapora cüzdandan bloke edildiği için yayın öncesi harcanabilir bakiye
+  // bilinmeli: yetersizse maç HİÇ yaratılmaz (öksüz maç + ödeme ekranında
+  // duvara toslama yerine yerinde uyarı + yükleme kısayolu). Bakiye
+  // öğrenilemezse (ağ/misafir) ENGELLEME yok — son sözü sunucu söyler.
+  const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
+  const refreshWallet = useCallback(async () => {
+    if (!auth.currentUser) { setWalletSummary(null); return; }
+    try {
+      setWalletSummary(await getWalletSummary());
+    } catch {
+      setWalletSummary(null); // bilinmiyor — publish akışı sunucu kontrolüne düşer
+    }
+  }, []);
+  useEffect(() => { void refreshWallet(); }, [refreshWallet]);
+
+  const spendableBalance = walletSummary?.spendableBalance ?? null;
+  const missingBalance = useMemo(() => {
+    if (matchDeposit <= 0 || spendableBalance == null) return 0;
+    return Math.max(0, Math.ceil(matchDeposit - spendableBalance));
+  }, [matchDeposit, spendableBalance]);
+
   // ── UX: Profile göre otomatik ön-doldurma (tek sefer) ────────────────────
   // Kurucu, maçı kurarken zaten oynayacak: onu kendi mevkisine göre sahaya
   // dizeriz ve yaş grubu varsayılanını doğum tarihinden işaretleriz.
@@ -340,6 +366,22 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     if (!isReady) {
       setActiveSheet('PITCH');
       return;
+    }
+
+    // MOB-P1: yayın anında TAZE bakiye kontrolü — kapora karşılanamıyorsa maç
+    // yaratılmaz; kullanıcı yükleme overlay'ine yönlendirilir (form korunur).
+    if (matchDeposit > 0 && auth.currentUser) {
+      let summary: WalletSummary | null = walletSummary;
+      try {
+        summary = await getWalletSummary();
+        setWalletSummary(summary);
+      } catch { /* bakiye öğrenilemedi — engelleme; RPC zaten yetersizde reddeder */ }
+      if (summary && summary.spendableBalance < matchDeposit) {
+        showToast(`Cüzdan bakiyen yetersiz — ${Math.ceil(matchDeposit - summary.spendableBalance)}₺ daha yüklemen gerekiyor.`);
+        useAppStore.getState().setWalletInitialTab('TOPUP');
+        setActiveSheet('WALLET');
+        return;
+      }
     }
 
     // S38: Takım Maçı — kendi takımın (ev sahibi) + rakip tarafı (away) kodla davet.
@@ -535,6 +577,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     handleSlotMove, pitchSlots,
     toggleOrientation, calculatedBudget, costPerPerson, matchDeposit,
     loadSquadFromTeam, readiness, squadCount,
+    spendableBalance, missingBalance, refreshWallet,
     publishMatch
   };
 };

@@ -70,7 +70,7 @@ const applyCanonicalCoords = (slots: PositionSlot[]): PositionSlot[] => {
 };
 
 const DIFF_CONFIG: Record<string, { color: string; label: string }> = {
-  'Ciddi':     { color: '#FF3B3B', label: 'CİDDİ'     },
+  'Ciddi':     { color: '#FF4D4D', label: 'CİDDİ'     },
   'Taktiksel': { color: '#FACC15', label: 'TAKTİKSEL' },
   'Rahat':     { color: '#39FF14', label: 'RAHAT'     },
 };
