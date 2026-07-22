@@ -156,6 +156,7 @@ Dokümanlar iki klasörde düzenlidir — **güncel** olanlar `docs/master/`, **
 * [Yol Haritası](docs/master/OYNA_YOL_HARITASI.md) - Faz planı ve geliştirme öncelikleri.
 * [Operasyonel Durum](docs/master/OYNA_OPERASYONEL_DURUM.md) - Kalan işler ve go-live durumu.
 * [Store Lansman Planı](docs/master/STORE_LANSMAN_PLANI.md) - App Store & Google Play süreci.
+* [🍎 iOS'a Çıkış Rehberi](docs/master/IOS_CIKIS_REHBERI.md) - Kurucu için adım adım: Mac kurulumu → Xcode → TestFlight → App Review.
 * [RUNBOOK](docs/master/RUNBOOK.md) - Yazılımcısız çalıştırma & kurtarma kılavuzu.
 * _Arşiv (`docs/eski/`):_ eski mimari/tasarım belgeleri, aşılmış soru setleri, Firebase-dönemi planlar ve bayat referanslar (DATABASE_README, DOSYALARIN_ISLEVLERI).
 

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>tr</string>
 	<key>CFBundleDisplayName</key>
         <string>OYNA</string>
 	<key>CFBundleExecutable</key>
@@ -60,5 +60,9 @@
 	<string>OYNA, profil fotoğrafınızı değiştirmek için fotoğraf kütüphanenize erişmek istiyor.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>OYNA, maç istatistiklerini ve taktik görsellerini kaydetmek istiyor.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>OYNA, rehberinizdeki arkadaşlarınızı bulup maça davet edebilmeniz için kişilerinize erişmek istiyor. Numaralar cihazınızda şifrelenir; rehberiniz olduğu gibi sunucuya yüklenmez.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

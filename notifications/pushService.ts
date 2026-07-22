@@ -268,18 +268,19 @@ export const initPushNotifications = async (
       return false;
     }
 
-    // 3. Cihazı push servisine kaydet
-    await PushNotifications.register();
-
-    // 4. Token Dinleyici
+    // 3. Token dinleyicileri register()'dan ÖNCE bağlanır — kayıt tamamlanıp
+    // token geldiğinde dinleyici hazır olmazsa olay kaçar (iOS'ta APNs token'ı
+    // hızlı dönebilir; sıralama bu yarışı ortadan kaldırır).
     PushNotifications.addListener('registration', async (token: Token) => {
       await savePushTokenToSupabase(token.value, userId);
     });
 
-    // 5. Token Hata Dinleyici
     PushNotifications.addListener('registrationError', (error) => {
       console.error('[PushService] Kayıt hatası:', error.error);
     });
+
+    // 4. Cihazı push servisine kaydet
+    await PushNotifications.register();
 
     // 6. Uygulama ÖN PLANDA iken gelen bildirim
     PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
