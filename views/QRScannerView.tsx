@@ -283,15 +283,17 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamAName}</span>
                   <div className="flex items-center gap-4">
                     <button
+                      aria-label="Ev sahibi skorunu azalt"
                       onClick={() => setScoreEntry(prev => ({ ...prev, teamA: Math.max(0, prev.teamA - 1) }))}
-                      className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold hover:bg-white/10"
+                      className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-lg hover:bg-white/10 active:scale-95 transition-transform"
                     >
                       -
                     </button>
-                    <span className="text-5xl font-black italic">{scoreEntry.teamA}</span>
+                    <span className="text-5xl font-black italic tabular-nums w-14 text-center">{scoreEntry.teamA}</span>
                     <button
+                      aria-label="Ev sahibi skorunu artır"
                       onClick={() => setScoreEntry(prev => ({ ...prev, teamA: Math.min(20, prev.teamA + 1) }))}
-                      className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold hover:bg-white/10"
+                      className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-lg hover:bg-white/10 active:scale-95 transition-transform"
                     >
                       +
                     </button>
@@ -304,15 +306,17 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamBName}</span>
                   <div className="flex items-center gap-4">
                     <button
+                      aria-label="Deplasman skorunu azalt"
                       onClick={() => setScoreEntry(prev => ({ ...prev, teamB: Math.max(0, prev.teamB - 1) }))}
-                      className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold hover:bg-white/10"
+                      className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-lg hover:bg-white/10 active:scale-95 transition-transform"
                     >
                       -
                     </button>
-                    <span className="text-5xl font-black italic">{scoreEntry.teamB}</span>
+                    <span className="text-5xl font-black italic tabular-nums w-14 text-center">{scoreEntry.teamB}</span>
                     <button
+                      aria-label="Deplasman skorunu artır"
                       onClick={() => setScoreEntry(prev => ({ ...prev, teamB: Math.min(20, prev.teamB + 1) }))}
-                      className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold hover:bg-white/10"
+                      className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-lg hover:bg-white/10 active:scale-95 transition-transform"
                     >
                       +
                     </button>

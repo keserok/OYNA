@@ -30,18 +30,20 @@ const ScoreStepper: React.FC<{ value: number; onChange: (v: number) => void; lab
     <div className="flex items-center justify-center gap-3 mt-2">
       <button
         type="button"
+        aria-label={`${label} skorunu azalt`}
         onClick={() => onChange(Math.max(0, value - 1))}
-        className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 active:scale-95"
+        className="w-11 h-11 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 active:scale-95 transition-transform"
       >
-        <Minus size={14} />
+        <Minus size={16} />
       </button>
-      <span className="text-2xl font-black text-white font-mono w-8">{value}</span>
+      <span className="text-2xl font-black text-white font-mono w-8 tabular-nums">{value}</span>
       <button
         type="button"
+        aria-label={`${label} skorunu artır`}
         onClick={() => onChange(Math.min(99, value + 1))}
-        className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 active:scale-95"
+        className="w-11 h-11 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 active:scale-95 transition-transform"
       >
-        <Plus size={14} />
+        <Plus size={16} />
       </button>
     </div>
   </div>

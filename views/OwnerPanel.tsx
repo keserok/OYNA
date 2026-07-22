@@ -13,6 +13,7 @@ import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } f
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
+import { PullToRefresh } from '../components/common/PullToRefresh';
 import { OwnerTeamView } from './owner/OwnerTeamView';
 import { OwnerBankAccountsModal } from './owner/OwnerBankAccountsModal';
 import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
@@ -225,6 +226,17 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     todayOpenHoursRef.current = wh.closed ? 0 : openHourCount(wh.open, wh.close);
   }, [facilityData]);
 
+  // Doluluk analizi görünür saat penceresi (mobil grid varsayılanı). Kapanış
+  // 00:00 → 24. Geçersiz/kapalı günde 08–24 güvenli varsayılan.
+  const todayHourWindow = useMemo(() => {
+    const wh = resolveWorkingHoursForDate(facilityData?.workingHours as any, todayISO());
+    const openH = parseInt(String(wh.open ?? '08:00').slice(0, 2), 10);
+    let closeH = parseInt(String(wh.close ?? '00:00').slice(0, 2), 10);
+    if (!Number.isFinite(openH)) return { open: 8, close: 24 };
+    if (!Number.isFinite(closeH) || closeH <= openH) closeH = 24;
+    return { open: openH, close: closeH };
+  }, [facilityData]);
+
   const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
     try {
       const [summary, bookings, pending] = await Promise.all([
@@ -243,6 +255,12 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       notify(toTurkishError(err), 'error');
     }
   }, [courts, notify]);
+
+  // Aşağı-çekip-yenile: HOME özetini (ciro/doluluk/talepler) elle tazeler.
+  // Realtime zaten dinliyor; bu, kullanıcının bilinçli "yenile" jesti için.
+  const handlePullRefresh = React.useCallback(async () => {
+    if (realPitchId) await refreshDashboard(realPitchId, autoApproveMinutes);
+  }, [realPitchId, autoApproveMinutes, refreshDashboard]);
 
   const applyPitch = React.useCallback(async (pitch: OwnerPitch, demo: boolean, uid: string, ownerScope: boolean = true) => {
     const facilityCourts = (pitch.courts ?? []).filter((c) => c.is_active !== false);
@@ -784,7 +802,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {activeTab === 'HOME' && isLoading && <OwnerHomeSkeleton />}
 
       {activeTab === 'HOME' && !isLoading && (
-          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
+          <PullToRefresh onRefresh={handlePullRefresh} className="flex-1 px-6 pt-6 custom-scrollbar pb-32">
               <OwnerCommandStrip
                 pendingCount={pendingCount}
                 isFacilityOpen={isFacilityOpen}
@@ -836,7 +854,12 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                         <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
                         <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
                     </button>
-                    <PitchOccupancyGrid data={hourlyOccupancy} courtNames={courts.map(c => c.name)} />
+                    <PitchOccupancyGrid
+                      data={hourlyOccupancy}
+                      courtNames={courts.map(c => c.name)}
+                      openHour={todayHourWindow.open}
+                      closeHour={todayHourWindow.close}
+                    />
                   </div>
               )}
 
@@ -866,7 +889,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   </div>
               )}
 
-          </main>
+          </PullToRefresh>
       )}
 
       {activeTab === 'CALENDAR' && (
