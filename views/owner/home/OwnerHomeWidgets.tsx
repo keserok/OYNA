@@ -138,8 +138,13 @@ export const PitchOccupancyGrid: React.FC<{
     let visible = data.filter((_, h) => h >= from && h < to);
     if (visible.length === 0) visible = data;
     const span = visible.length;
-    // Etiket sıklığı: dar pencerede her 2, geniş pencerede her 3–4 saatte bir.
-    const labelStep = span <= 8 ? 2 : span <= 14 ? 3 : 4;
+
+    // Segment genişliği: "Aktif saatler" flex-1 ile ekranı doldurur (kaydırma yok);
+    // "Tüm saatler" sabit genişlik + yatay kaydırma → 24 saatin hepsi ferah etiketlenir.
+    const segCls = showAll ? 'w-7 shrink-0' : 'flex-1 min-w-0';
+    const innerCls = showAll ? 'w-max' : 'w-full';
+    // Saha adı sütunu yatay kaydırmada SABİT kalır (sticky) — hangi saha olduğu kaybolmaz.
+    const nameColCls = 'sticky left-0 z-10 bg-[#161B22] w-14 shrink-0';
 
     return (
         <div>
@@ -169,60 +174,70 @@ export const PitchOccupancyGrid: React.FC<{
                 </button>
             </div>
 
-            {/* Saat ekseni — segmentlerle aynı flex şablonu, etiketler seyrek ve hizalı */}
-            <div className="flex gap-[2px] mb-1 px-0.5">
-                {visible.map((item, i) => {
-                    const h = parseInt(item.time, 10);
-                    return (
-                        <div key={i} className="flex-1 relative h-3">
-                            {(h - from) % labelStep === 0 && (
-                                <span className="absolute left-0 bottom-0 text-[8px] font-black text-gray-500 tabular-nums leading-none">{h}</span>
-                            )}
+            {/* Zaman çizelgesi — sticky saha adı sütunu + her saat etiketli eksen.
+                Aktif saatler: ekrana sığar (kaydırma yok). Tüm saatler: yatay kaydırılır,
+                saha adları solda sabit kalır. */}
+            <div className="relative">
+                <div className="overflow-x-auto custom-scrollbar pb-1">
+                    <div className={innerCls}>
+                        {/* Saat ekseni: HER saat etiketli, segmentlerle birebir hizalı */}
+                        <div className="flex gap-[2px] mb-1">
+                            <div className={`${nameColCls} h-3`} />
+                            {visible.map((item, i) => {
+                                const h = parseInt(item.time, 10);
+                                return (
+                                    <div key={i} className={`${segCls} h-3 flex items-end justify-center`}>
+                                        <span className="text-[9px] font-black text-gray-500 tabular-nums leading-none">{h}</span>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    );
-                })}
-            </div>
 
-            {/* Sahalar — her biri tam genişlikte segmentli çubuk (yatay kaydırma yok) */}
-            <div className="space-y-3">
-                {courtNames.map((pitchName, pitchIdx) => {
-                    const occupied = visible.filter((item) => item.pitches[pitchIdx]).length;
-                    const pct = span > 0 ? Math.round((occupied / span) * 100) : 0;
-                    return (
-                        <div key={pitchIdx} className="group">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="text-[11px] font-bold text-gray-300 truncate group-hover:text-white transition-colors">{pitchName}</span>
-                                <span className={`shrink-0 text-[10px] font-black tabular-nums ${pct >= 50 ? 'text-emerald-400' : pct > 0 ? 'text-gray-400' : 'text-gray-600'}`}>%{pct}</span>
-                            </div>
-                            <div className="flex gap-[2px]">
-                                {visible.map((item, i) => {
-                                    const cell = item.pitches[pitchIdx];
-                                    const bookingType = cell?.type ?? null;
-                                    const startH = parseInt(item.time, 10);
-                                    const endH = (startH + 1) % 24;
+                        {/* Sahalar */}
+                        <div className="space-y-2">
+                            {courtNames.map((pitchName, pitchIdx) => {
+                                const occupied = visible.filter((item) => item.pitches[pitchIdx]).length;
+                                const pct = span > 0 ? Math.round((occupied / span) * 100) : 0;
+                                return (
+                                    <div key={pitchIdx} className="flex gap-[2px] items-stretch group">
+                                        <div className={`${nameColCls} flex flex-col justify-center pr-2`}>
+                                            <p className="text-[11px] font-bold text-gray-300 truncate leading-tight group-hover:text-white transition-colors">{pitchName}</p>
+                                            <p className={`text-[9px] font-black tabular-nums leading-tight ${pct >= 50 ? 'text-emerald-400' : pct > 0 ? 'text-gray-400' : 'text-gray-600'}`}>%{pct}</p>
+                                        </div>
+                                        {visible.map((item, i) => {
+                                            const cell = item.pitches[pitchIdx];
+                                            const bookingType = cell?.type ?? null;
+                                            const startH = parseInt(item.time, 10);
+                                            const endH = (startH + 1) % 24;
 
-                                    let cls = 'bg-white/[0.06] border-white/5 hover:bg-white/10';
-                                    if (bookingType === 'SUB') cls = 'bg-blue-500/40 border-blue-500/50 shadow-[0_0_8px_rgba(59,130,246,0.2)]';
-                                    else if (bookingType === 'DAILY') cls = 'bg-emerald-500/40 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.2)]';
+                                            let cls = 'bg-white/[0.06] border-white/5 hover:bg-white/10';
+                                            if (bookingType === 'SUB') cls = 'bg-blue-500/40 border-blue-500/50 shadow-[0_0_8px_rgba(59,130,246,0.2)]';
+                                            else if (bookingType === 'DAILY') cls = 'bg-emerald-500/40 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.2)]';
 
-                                    const typeLabel = bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ';
-                                    const label = `${pitchName} · ${String(startH).padStart(2, '0')}:00-${String(endH).padStart(2, '0')}:00`;
-                                    const title = `${label} · ${typeLabel}${cell?.name ? ` · ${cell.name}` : ''}`;
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={i}
-                                            onClick={() => setSelected({ label, type: typeLabel, name: cell?.name ?? null })}
-                                            className={`flex-1 h-9 rounded-[4px] border transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${cls}`}
-                                            title={title}
-                                            aria-label={title}
-                                        ></button>
-                                    );
-                                })}
-                            </div>
+                                            const typeLabel = bookingType === 'SUB' ? 'ABONMAN' : bookingType === 'DAILY' ? 'GÜNLÜK' : 'BOŞ';
+                                            const label = `${pitchName} · ${String(startH).padStart(2, '0')}:00-${String(endH).padStart(2, '0')}:00`;
+                                            const title = `${label} · ${typeLabel}${cell?.name ? ` · ${cell.name}` : ''}`;
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={i}
+                                                    onClick={() => setSelected({ label, type: typeLabel, name: cell?.name ?? null })}
+                                                    className={`${segCls} h-9 rounded-[4px] border transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${cls}`}
+                                                    title={title}
+                                                    aria-label={title}
+                                                ></button>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    );
-                })}
+                    </div>
+                </div>
+                {/* Sağ kenar solma — "Tüm saatler"de daha fazla saat olduğunu sezdirir */}
+                {showAll && (
+                    <div className="pointer-events-none absolute top-0 right-0 bottom-1 w-8 bg-gradient-to-l from-[#161B22] to-transparent" />
+                )}
             </div>
 
             {/* Legend */}

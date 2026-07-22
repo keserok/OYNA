@@ -176,7 +176,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
     // STAFF-3: personel Finans/Sahalar sekmesini açamaz (yönetim yetkisi ister).
-    if (accessLevel === 'STAFF' && (tab === 'FINANCE' || tab === 'PITCHES')) {
+    // STAFF: Finans/Sahalarım/Ekip yönetim yetkisi ister — açamaz (sunucu da reddeder).
+    if (accessLevel === 'STAFF' && (tab === 'FINANCE' || tab === 'PITCHES' || tab === 'TEAM')) {
       setActiveTab('HOME');
       return;
     }
@@ -718,7 +719,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   if (needsOnboarding && !isLoading) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center safe-top safe-bottom">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#0A0E14] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
         <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
@@ -736,12 +737,12 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    <div className="min-h-dvh flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
                   <div className="flex flex-col relative">
                       {ownedFacilities.length > 1 && !isDemoMode ? (
@@ -786,7 +787,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                     className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 relative active:scale-95 transition-transform"
                   >
                       <Bell size={20} />
-                      {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
+                      {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#0A0E14]"></span>}
                   </button>
               </div>
           </header>
@@ -794,7 +795,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
               <h1 className="text-lg font-black text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
@@ -987,7 +988,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onMatches={() => {
             if (managerGuard()) setShowMatches(true);
           }}
-          onTeam={() => { if (managerGuard()) setActiveTab('TEAM'); }}
           onBankAccounts={() => {
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
@@ -1167,7 +1167,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         pendingCount={pendingCount}
         financeLocked={false}
         teamLocked={false}
-        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'PITCHES'] : []}
+        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'TEAM'] : []}
         onSelect={(tab) => {
           if (tab === 'MORE') setActiveTab('MORE');
           else handleTabSelect(tab);

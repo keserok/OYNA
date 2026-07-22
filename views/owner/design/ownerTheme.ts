@@ -1,7 +1,8 @@
 /** OYNA Owner Panel — tutarlı SaaS tasarım tokenları (Stripe / Square / Linear tarzı) */
 
 export const ownerColors = {
-  shell: '#1A1F2C',
+  // Bütüncül koyu zemin: kabuk, alt bar ve tüm alt görünümler tek renkte (dikişsiz).
+  shell: '#0A0E14',
   surface: '#161B22',
   surfaceRaised: '#1C2230',
   deep: '#0A0E14',

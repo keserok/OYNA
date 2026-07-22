@@ -35,6 +35,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   const draggingRef = useRef(false);
   const refreshingRef = useRef(false);
   const onRefreshRef = useRef(onRefresh);
+  // Bu jest için GERÇEK kaydıran ata (kendisi veya bir üst ata olabilir).
+  const scrollerRef = useRef<HTMLElement | null>(null);
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -45,8 +47,30 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     const el = scrollRef.current;
     if (!el || disabled) return;
 
+    // Dokunulan noktadan yukarı yürüyüp GERÇEKTEN kaydıran ilk atayı bul. Bu panel
+    // mimarisinde asıl kaydırıcı bazen App seviyesindeki dış kap; kendi scrollTop'una
+    // bakmak "en üstteyim" yanılgısı yaratıp yukarı kaydırmayı bloke ediyordu.
+    const findScroller = (start: EventTarget | null): HTMLElement => {
+      let node = start instanceof HTMLElement ? start : el;
+      while (node && node !== document.body) {
+        const oy = getComputedStyle(node).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
+          return node;
+        }
+        node = node.parentElement as HTMLElement;
+      }
+      return (document.scrollingElement as HTMLElement) ?? el;
+    };
+
     const onStart = (e: TouchEvent) => {
-      if (refreshingRef.current || e.touches.length !== 1 || el.scrollTop > 0) {
+      if (refreshingRef.current || e.touches.length !== 1) {
+        activeRef.current = false;
+        return;
+      }
+      const scroller = findScroller(e.target);
+      scrollerRef.current = scroller;
+      // Yalnız gerçek kaydırıcı EN ÜSTTEYKEN çekme jesti başlayabilir.
+      if (scroller.scrollTop > 0) {
         activeRef.current = false;
         return;
       }
@@ -57,8 +81,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
 
     const onMove = (e: TouchEvent) => {
       if (!activeRef.current || refreshingRef.current || startYRef.current == null) return;
-      // Bu arada içerik yukarı kaydıysa çekmeyi iptal et.
-      if (el.scrollTop > 0) {
+      const scroller = scrollerRef.current ?? el;
+      // Gerçek kaydırıcı en üstte değilse (kullanıcı yukarı kaydırıyor) çekmeyi bırak.
+      if (scroller.scrollTop > 0) {
         activeRef.current = false;
         draggingRef.current = false;
         setPull(0);
