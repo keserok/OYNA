@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Check, Plus, Shield, Wifi } from 'lucide-react';
 import { detectCardBrand, pickCardGradient, SavedCard, listSavedCards } from '../../services/walletService';
 import { registerCardInApp } from '../../services/paymentService';
+import CardBrandMark, { brandGradient, normalizeBrand } from './CardBrandMark';
 
 /**
  * YENİ KART EKLE — tam ekran (tasarım: canlı kart önizlemesi + form).
@@ -134,20 +135,40 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
       </header>
 
       <main className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* Canlı kart önizlemesi */}
-        <div className="rounded-[20px] p-5 bg-gradient-to-br from-gray-800 to-slate-900 border border-white/8 relative overflow-hidden min-h-[150px] flex flex-col justify-between">
-          <div className="absolute -top-5 -right-5 w-32 h-32 bg-[#39FF14]/8 blur-[50px] rounded-full" />
+        {/* Canlı kart önizlemesi — markaya özel gradyan + canlı marka logosu */}
+        <div
+          className={`rounded-[20px] p-5 bg-gradient-to-br ${brandGradient(brand)} border border-white/10 relative overflow-hidden min-h-[168px] flex flex-col justify-between shadow-[0_18px_40px_-12px_rgba(0,0,0,0.6)] transition-[background] duration-500`}
+        >
+          {/* ışık/parlaklık dokunuşları */}
+          <div className="absolute -top-8 -right-6 w-40 h-40 bg-white/10 blur-[60px] rounded-full" />
+          <div className="absolute -bottom-10 -left-8 w-40 h-40 bg-black/20 blur-[60px] rounded-full" />
           <div className="flex justify-between items-start relative">
-            <div className="w-10 h-[30px] rounded-md bg-gradient-to-br from-yellow-400 to-yellow-700" />
-            <Wifi size={22} className="text-white/50 rotate-90" />
+            {/* çip + temassız */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-[30px] rounded-[6px] bg-gradient-to-br from-[#f7d774] via-[#e6b34d] to-[#a97b25] shadow-inner relative overflow-hidden">
+                <div className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[1px] bg-black/25" />
+                <div className="absolute inset-y-1 left-1/2 -translate-x-1/2 w-[1px] bg-black/25" />
+              </div>
+              <Wifi size={20} className="text-white/55 rotate-90" />
+            </div>
+            {/* CANLI MARKA — numara yazıldıkça belirir */}
+            <div className={`transition-all duration-300 ${normalizeBrand(brand) === 'GENERIC' ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}`}>
+              <CardBrandMark brand={brand} size={26} withWordmark variant="onCard" />
+            </div>
           </div>
           <div className="relative">
-            <p className="text-[19px] font-bold tracking-[0.12em] text-white font-numeric">
+            <p className="text-[20px] font-bold tracking-[0.14em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
               {num || '•••• •••• •••• ••••'}
             </p>
-            <div className="flex justify-between mt-3 text-[11px] text-gray-400 font-numeric">
-              <span>{holder || 'AD SOYAD'}</span>
-              <span>{exp || 'AA/YY'}</span>
+            <div className="flex justify-between items-end mt-3.5 gap-3">
+              <div className="min-w-0">
+                <span className="block text-[8px] text-white/50 font-black uppercase tracking-[0.15em]">Kart Sahibi</span>
+                <span className="block text-[12px] text-white font-semibold font-numeric truncate uppercase">{holder || 'AD SOYAD'}</span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="block text-[8px] text-white/50 font-black uppercase tracking-[0.15em]">Son Kul.</span>
+                <span className="block text-[12px] text-white font-semibold font-numeric">{exp || 'AA/YY'}</span>
+              </div>
             </div>
           </div>
         </div>

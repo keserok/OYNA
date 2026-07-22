@@ -16,7 +16,7 @@ import {
 } from '../services/walletService';
 import { startInAppCardPayment } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
-import CardBrandMark from '../components/payment/CardBrandMark';
+import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 
 /**
@@ -453,7 +453,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       className={`w-full flex items-center gap-3 rounded-2xl p-3.5 text-left transition-all ${
                         active ? 'bg-[#161B22] border-2 border-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.12)]' : 'bg-[#161B22] border border-white/8'
                       }`}>
-                      <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-purple-700 to-blue-600'} flex items-center justify-center shrink-0`}>
+                      <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${brandGradient(card.brand)} flex items-center justify-center shrink-0 border border-white/10`}>
                         <CardBrandMark brand={card.brand} size={13} />
                       </span>
                       <span className="flex-1">
@@ -527,26 +527,35 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <SubHeader title="Kartlarım" subtitle="Kayıtlı ödeme yöntemleri" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-3.5">
           {defaultCard && (
-            <div className={`rounded-[18px] p-5 bg-gradient-to-br ${defaultCard.gradient ?? 'from-purple-800 to-blue-600'} relative`}>
-              <span className="absolute top-3.5 right-3.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#0A0E14] bg-[#39FF14] px-2 py-1 rounded-md">
-                Varsayılan
-              </span>
-              <div className="w-9 h-[26px] rounded bg-gradient-to-br from-yellow-400 to-yellow-700 mb-5" />
-              <p className="text-[17px] font-bold tracking-[0.1em] text-white font-numeric">•••• •••• •••• {defaultCard.last4}</p>
-              <div className="flex justify-between items-end mt-3">
-                <span className="text-[11px] text-white/85 font-numeric">
-                  {(defaultCard.holderName ?? 'OYNA KULLANICI').toLocaleUpperCase('tr-TR')}
-                  {defaultCard.expMonth && defaultCard.expYear ? ` · ${String(defaultCard.expMonth).padStart(2, '0')}/${String(defaultCard.expYear).slice(-2)}` : ''}
+            <div className={`rounded-[20px] p-5 min-h-[172px] flex flex-col justify-between bg-gradient-to-br ${brandGradient(defaultCard.brand)} relative overflow-hidden shadow-[0_16px_36px_-12px_rgba(0,0,0,0.6)]`}>
+              <div className="absolute -top-8 -right-6 w-40 h-40 bg-white/10 blur-[56px] rounded-full" />
+              <div className="absolute -bottom-10 -left-8 w-40 h-40 bg-black/20 blur-[56px] rounded-full" />
+              <div className="flex justify-between items-start relative">
+                <span className="w-11 h-[30px] rounded-[6px] bg-gradient-to-br from-[#f7d774] via-[#e6b34d] to-[#a97b25] relative overflow-hidden shadow-inner">
+                  <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[1px] bg-black/25" />
+                  <span className="absolute inset-y-1 left-1/2 -translate-x-1/2 w-[1px] bg-black/25" />
                 </span>
-                <CardBrandMark brand={defaultCard.brand} size={16} />
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#0A0E14] bg-[#39FF14] px-2 py-1 rounded-md">
+                  Varsayılan
+                </span>
+              </div>
+              <div className="relative">
+                <p className="text-[19px] font-bold tracking-[0.14em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">•••• •••• •••• {defaultCard.last4}</p>
+                <div className="flex justify-between items-end mt-3.5 gap-3">
+                  <span className="text-[11px] text-white/85 font-numeric truncate">
+                    {(defaultCard.holderName ?? 'OYNA KULLANICI').toLocaleUpperCase('tr-TR')}
+                    {defaultCard.expMonth && defaultCard.expYear ? ` · ${String(defaultCard.expMonth).padStart(2, '0')}/${String(defaultCard.expYear).slice(-2)}` : ''}
+                  </span>
+                  <CardBrandMark brand={defaultCard.brand} size={22} withWordmark variant="onCard" className="shrink-0" />
+                </div>
               </div>
             </div>
           )}
           {others.map(card => (
             <div key={card.id} className="bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3.5 min-w-0">
-                <span className={`w-[46px] h-[31px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-emerald-600 to-teal-700'} flex items-center justify-center shrink-0`}>
-                  <CardBrandMark brand={card.brand} size={11} />
+                <span className={`w-[46px] h-[31px] rounded-md bg-gradient-to-br ${brandGradient(card.brand)} flex items-center justify-center shrink-0 border border-white/10`}>
+                  <CardBrandMark brand={card.brand} size={12} />
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm text-white font-numeric">•••• {card.last4}</p>
@@ -1069,14 +1078,17 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               <div className="oy-carousel flex gap-3 overflow-x-auto pb-1">
                 {savedCards.map(card => (
                   <div key={card.id}
-                    className={`shrink-0 w-[200px] h-[120px] rounded-[18px] p-4 bg-gradient-to-br ${card.gradient ?? 'from-purple-800 to-blue-600'} flex flex-col justify-between`}>
-                    <div className="flex justify-between items-center">
-                      <span className="w-[34px] h-6 rounded bg-gradient-to-br from-yellow-400 to-yellow-700" />
-                      <CardBrandMark brand={card.brand} size={15} />
+                    className={`shrink-0 w-[210px] h-[126px] rounded-[18px] p-4 bg-gradient-to-br ${brandGradient(card.brand)} flex flex-col justify-between relative overflow-hidden shadow-[0_12px_28px_-10px_rgba(0,0,0,0.55)]`}>
+                    <div className="absolute -top-6 -right-4 w-24 h-24 bg-white/10 blur-[42px] rounded-full" />
+                    <div className="flex justify-between items-start relative">
+                      <span className="w-[36px] h-[26px] rounded-[5px] bg-gradient-to-br from-[#f7d774] via-[#e6b34d] to-[#a97b25] relative overflow-hidden shadow-inner">
+                        <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[1px] bg-black/25" />
+                      </span>
+                      <CardBrandMark brand={card.brand} size={17} variant="onCard" />
                     </div>
-                    <div>
-                      <p className="text-sm font-bold tracking-[0.1em] text-white font-numeric">•••• {card.last4}</p>
-                      <p className="text-[9px] text-white/70 uppercase mt-1">
+                    <div className="relative">
+                      <p className="text-[15px] font-bold tracking-[0.12em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">•••• {card.last4}</p>
+                      <p className="text-[9px] text-white/70 uppercase mt-1 tracking-wide">
                         {card.isDefault ? 'Varsayılan' : ''}
                         {card.expMonth && card.expYear ? `${card.isDefault ? ' · ' : ''}${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}` : ''}
                       </p>
