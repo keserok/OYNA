@@ -24,6 +24,7 @@ Bu klasör iki bölümden oluşur:
 | [RUNBOOK.md](master/RUNBOOK.md) | Yazılımcısız çalıştırma & kurtarma kılavuzu |
 | [runbook/](master/runbook/) | Olay müdahale · PITR restore · secret rotasyon prosedürleri |
 | [STORE_LANSMAN_PLANI.md](master/STORE_LANSMAN_PLANI.md) | Google Play & App Store lansman planı (Faz A–J + engel envanteri) |
+| [IOS_CIKIS_REHBERI.md](master/IOS_CIKIS_REHBERI.md) | 🍎 iOS'a çıkış — kurucu için adım adım Mac/Xcode/TestFlight/App Review rehberi |
 | [LANSMAN_ENGELLERI_VE_ASMA_PLANI.md](master/LANSMAN_ENGELLERI_VE_ASMA_PLANI.md) | Lansman & kitlesel benimsenme engelleri ve aşma planı (04.07) |
 | [KATMAN2_SAHA_SAHIBI_COZUM_PLANI.md](master/KATMAN2_SAHA_SAHIBI_COZUM_PLANI.md) | Saha sahibi problemleri — kesin çözüm & uygulama planı (04.07) |
 | [KALECI_HAKEM_PAZARYERI_PLANI.md](master/KALECI_HAKEM_PAZARYERI_PLANI.md) | Faz 8 — Kaleci & Hakem pazaryeri + sosyal vitrin uygulama planı (07.07, onay bekliyor) |

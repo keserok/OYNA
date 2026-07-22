@@ -157,12 +157,19 @@
 }
 
 /* Base styles */
+html {
+  /* iOS: kenardan çekince tüm sayfanın lastik gibi esneyip arkadaki boşluğu
+     göstermesini (rubber-band) engeller — native uygulama hissi. */
+  overscroll-behavior-y: none;
+  background-color: #0A0E14;
+}
 body {
   font-family: 'Inter', sans-serif;
   background-color: #0A0E14;
   color: white;
   margin: 0;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
 
 /* Mesh Gradient Background */
