@@ -1,0 +1,8 @@
+-- ============================================================================
+-- YAKINSAMA (Faz 2c) — KALAN DRIFT (fonksiyon gövdeleri, trigger'lar, nesneler)
+-- ----------------------------------------------------------------------------
+-- Faz 2b (RLS + 4 sertleştirme) sonrası kalan repo↔canlı farkları giderir.
+-- İçerik, taze preview ↔ canlı kapsamlı diff'inden üretilir; hedef: sıfır-fark.
+-- (Bu dosya önce preview kurmak için başlık-yer tutucu olarak açıldı; kapsamlı
+--  diff sonrası birebir doldurulacak ve preview reset ile doğrulanacak.)
+-- ============================================================================
