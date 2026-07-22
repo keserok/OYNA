@@ -5,7 +5,7 @@
 --   Bir profiles satırı hard-delete edildiğinde cüzdan defteri, rezervasyon/
 --   tahsilat geçmişi, SaaS faturalama olayları, para çekme talepleri ve
 --   promosyon kullanım kayıtları geri dönüşsüz silinirdi (muhasebe + denetim
---   tutarlılığı kaybı). 20260807000002 fonksiyon düzeyinde korumayı kurdu;
+--   tutarlılığı kaybı). 20260809000002 fonksiyon düzeyinde korumayı kurdu;
 --   bu migration aynı korumayı ŞEMA düzeyinde garanti eder.
 --
 -- KAPSAM (yalnız mali DEFTER tabloları):
