@@ -9,6 +9,11 @@
 -- canlının BİREBİR aynası yapar. Doğrulama: fresh preview envanteri canlıyla md5-eş.
 -- ============================================================================
 
+-- ── 0) EKLENTİ: canlıda kurulu ama repoda olmayan btree_gist ────────────────────
+--    pitch_bookings_no_overlap EXCLUDE kısıtı uuid üzerinde gist '=' operatör
+--    sınıfını gerektirir; bunu btree_gist sağlar. Canlıda kurulu → NO-OP.
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
+
 -- ── 1) İNDEKSLER: canlıda olup repoda olmayan bağımsız (kısıt-dışı) indeksler ──
 --    Ağırlıklı olarak FK-kolonlarını kapsayan performans indeksleri (idx_fk_*).
 CREATE INDEX IF NOT EXISTS courts_pitch_id_idx ON public.courts USING btree (pitch_id);
