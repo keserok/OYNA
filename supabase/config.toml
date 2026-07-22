@@ -320,9 +320,14 @@ max_frequency = "5s"
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 [auth.external.apple]
-enabled = false
-client_id = ""
+enabled = true
+# iOS native girişi (Capacitor @capacitor-community/apple-sign-in) bundle/audience:
+# com.oyna.app (bkz. supabaseAuth.ts clientId + capacitor.config.ts). Web OAuth için
+# ayrı bir Apple Services ID gerekiyorsa virgülle ekleyin: "com.oyna.app,com.oyna.app.web"
+client_id = "com.oyna.app"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+# Canlıya taşımak için: `SUPABASE_AUTH_EXTERNAL_APPLE_SECRET=<apple .p8 JWT>` ayarlayıp
+# `supabase config push` (veya Dashboard → Auth → Providers → Apple).
 secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
 # Overrides the default auth callback URL derived from auth.external_url.
 redirect_uri = ""

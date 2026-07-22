@@ -40,6 +40,11 @@ jobs:
         # `supabase start` ilk açılışta tüm migration'ları boş DB'ye uygular.
         # (config.toml seed'i ./seed.sql'i işaret eder; dosya yoksa CLI atlar —
         # test kendi kullanıcılarını SMOKE_SERVICE ile açar, seed'e bağlı değildir.)
+        # Apple provider config.toml'da enabled=true; lokal stack'te secret
+        # kullanılmıyor (race testi Apple'a dokunmuyor) ama GoTrue boş secret'la
+        # şikayet etmesin diye zararsız placeholder verilir.
+        env:
+          SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: ci-placeholder-not-used
         run: supabase start
 
       - name: Stack anahtarlarını topla
