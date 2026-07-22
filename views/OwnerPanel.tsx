@@ -13,7 +13,6 @@ import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } f
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
-import { PullToRefresh } from '../components/common/PullToRefresh';
 import { OwnerTeamView } from './owner/OwnerTeamView';
 import { OwnerBankAccountsModal } from './owner/OwnerBankAccountsModal';
 import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
@@ -256,12 +255,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       notify(toTurkishError(err), 'error');
     }
   }, [courts, notify]);
-
-  // Aşağı-çekip-yenile: HOME özetini (ciro/doluluk/talepler) elle tazeler.
-  // Realtime zaten dinliyor; bu, kullanıcının bilinçli "yenile" jesti için.
-  const handlePullRefresh = React.useCallback(async () => {
-    if (realPitchId) await refreshDashboard(realPitchId, autoApproveMinutes);
-  }, [realPitchId, autoApproveMinutes, refreshDashboard]);
 
   const applyPitch = React.useCallback(async (pitch: OwnerPitch, demo: boolean, uid: string, ownerScope: boolean = true) => {
     const facilityCourts = (pitch.courts ?? []).filter((c) => c.is_active !== false);
@@ -803,7 +796,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {activeTab === 'HOME' && isLoading && <OwnerHomeSkeleton />}
 
       {activeTab === 'HOME' && !isLoading && (
-          <PullToRefresh onRefresh={handlePullRefresh} className="flex-1 px-6 pt-6 custom-scrollbar pb-32">
+          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
               <OwnerCommandStrip
                 pendingCount={pendingCount}
                 isFacilityOpen={isFacilityOpen}
@@ -890,7 +883,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   </div>
               )}
 
-          </PullToRefresh>
+          </main>
       )}
 
       {activeTab === 'CALENDAR' && (

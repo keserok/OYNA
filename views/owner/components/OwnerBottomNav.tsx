@@ -39,8 +39,6 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
-      {/* Üst gradyan scrim: içerik alt bara "akarak" girer, sert çizgi olmaz. */}
-      <div className="pointer-events-none absolute left-0 right-0 -top-6 h-6 bg-gradient-to-t from-[#0A0E14] to-transparent" />
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {shownTabs.map((tab) => {
           const isActive = highlightTab === tab.id;
