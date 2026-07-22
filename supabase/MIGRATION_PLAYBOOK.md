@@ -18,6 +18,12 @@
    düzenlenmez veya silinmez.** Dosya adı = ledger sözleşmesidir. Düzeltme
    gerekiyorsa YENİ bir migration eklenir. (CI'daki `migration-immutability`
    kontrolü bunu otomatik reddeder.)
+   > **İstisna — ledger'da OLMAYAN orphan dosyalar:** Değişmezlik yalnız
+   > *ledger'a kayıtlı* migration'lar içindir. Repoya girmiş ama
+   > `schema_migrations`'ta karşılığı olmayan mükerrer/orphan dosyaları silmek
+   > sözleşmeyi bozmaz — aksine repo=ledger eşitliğini geri kurar. (2026-07-21'de
+   > `20260803000002–08` böyle temizlendi; içerikleri `20260805000000–06`'da
+   > kanonik olarak duruyor. Bekçide dar, adı-adına muafiyet tanımlı.)
 
 3. **Yeni dosyanın versiyonu her zaman en son dosyadan BÜYÜK olmalı**
    (pratikte: bugünün tarihi ile `YYYYMMDDHHMMSS_isim.sql`). Geriye tarihli

@@ -20,12 +20,20 @@ jobs:
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
           HEAD="${{ github.event.pull_request.head.sha }}"
-          # A=eklendi serbest; M=değişti, D=silindi, R=yeniden adlandı → ihlal
-          VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' || true)
+          # A=eklendi serbest; M=değişti, D=silindi, R=yeniden adlandı → ihlal.
+          # ── TEK SEFERLİK UZLAŞTIRMA MUAFİYETİ (2026-07-21 ledger drift) ──────────
+          # 20260803000002–08 "orphan" dosyaları ledger'da (schema_migrations) KAYITLI
+          # DEĞİL: içerikleri 20260805000000–06'ya BİREBİR taşındı ve canlıya o
+          # versiyonlarla uygulandı. Bu 7 orphan'ı silmek repo=ledger eşitliğini GERİ
+          # KURAR (sözleşmeyi bozmaz). Muafiyet YALNIZ aşağıdaki 7 tam dosya adına
+          # özgüdür; gerçek (ledger'daki) migration'ların M/R/D'si hâlâ ihlaldir.
+          ALLOW='supabase/migrations/20260803000002_admin_booking_toggle.sql|supabase/migrations/20260803000003_saha_bazli_tarife.sql|supabase/migrations/20260803000004_saha_ozellikleri.sql|supabase/migrations/20260803000005_mac_saha_bagi.sql|supabase/migrations/20260803000006_atomik_tarife_replace.sql|supabase/migrations/20260803000007_owner_bildirim_anahtarlari.sql|supabase/migrations/20260803000008_cashout_kapisi.sql'
+          VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' \
+            | grep -vE "$ALLOW" || true)
           if [ -n "$VIOLATIONS" ]; then
             echo "❌ Var olan migration dosyaları değiştirilemez/yeniden adlandırılamaz/silinemez:"
             echo "$VIOLATIONS"
             echo "Düzeltme gerekiyorsa YENİ bir migration ekleyin (bkz. supabase/MIGRATION_PLAYBOOK.md)."
             exit 1
           fi
-          echo "✅ Yalnız yeni migration dosyaları eklenmiş."
+          echo "✅ Migration değişmezliği korunuyor (yalnız izinli uzlaştırma silmeleri hariç)."

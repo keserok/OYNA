@@ -3,6 +3,12 @@
 > **Tarih:** 2026-07-05 · **Proje:** OYNA (`iikvzgyccvgcybzdfwlv`) · Postgres 17.6 · `ap-southeast-1`
 > **Durum:** Üretim **sağlıklı ve eksiksiz**; sorun yalnızca migration **defter kaydında** (bookkeeping).
 > Bu belge tek güncel kaynaktır.
+>
+> **🟢 GÜNCELLEME (2026-07-21):** Repo ↔ ledger **birebir eşit** (281 = 281).
+> #116 eksik `20260805000000–06` sürümlerini repoya ekledi; ardından geriye kalan
+> tek fark olan 7 orphan dosya (`20260803000002–08`; içerikleri `20260805*`'a
+> taşınmış, ledger'da kayıtsız) kaldırıldı. İki yönlü set farkı artık **SIFIR**
+> (LEDGER_NOT_IN_REPO=0, REPO_NOT_IN_LEDGER=0) → "Supabase Preview" yeşil.
 
 ---
 
