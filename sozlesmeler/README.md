@@ -5,6 +5,8 @@ Bu klasör, OYNA'nın tüm sözleşme ve yasal metinlerinin **okunabilir, kanoni
 Her yeni sözleşme/politika hazırlandığında buraya, açık bir dosya adıyla eklenir.
 
 > 📋 **Tüm yapılacaklar, idari aksiyonlar ve uyum kalemleri tek belgede toplandı:** [Yapılacaklar / Uyum Yol Haritası](00-yapilacaklar-uyum-yol-haritasi.md)
+>
+> 🌐 **Web sitesi yasal sayfaları:** Tüketici belgeleri, herkese açık HTML sayfaları olarak `public/` altında yayımlanır (indeks: `public/yasal.html` → https://oyna.app/yasal.html). Bu sayfalar kanonik markdown'dan **`npm run build:legal`** (`scripts/build-legal-pages.mjs`) ile üretilir; markdown güncellenince yeniden çalıştırılmalıdır. Elle tutulan `gizlilik.html`, `cerez-politikasi.html`, `hesap-silme.html` bu üretimin dışındadır.
 
 ## Durum Tablosu
 

@@ -12,6 +12,7 @@
     "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",
     "admin:deploy:interactive": "bash admin-panel/scripts/supabase-interactive-deploy.sh",
     "build": "vite build",
+    "build:legal": "node scripts/build-legal-pages.mjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "owner:demo:seed": "node scripts/owner-demo.mjs seed",
