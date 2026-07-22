@@ -4,6 +4,8 @@
  * Gerekli env (en az biri):
  *   SUPABASE_ACCESS_TOKEN — Dashboard → Account → Access Tokens
  *   SUPABASE_DB_PASSWORD — proje DB şifresi (supabase db push için)
+ * Uygulama yolu (SG-6): önce CLI `supabase db push` (schema_migrations
+ * defterine yazar — playbook kural 1); Management API yalnız son çaredir.
  */
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -55,6 +57,11 @@ function ensureCliAuth() {
 
 async function applyViaManagementApi() {
   if (!token) return false;
+  // ⚠️ Bu yol ham SQL çalıştırır ve supabase_migrations.schema_migrations
+  // defterine YAZMAZ (MIGRATION_PLAYBOOK kural 1'in yasakladığı defter-dışı
+  // mekanizma; 2026-07-21 drift onarımının kaynağıydı). Bu yüzden artık yalnız
+  // CLI (db push) kurulamadığında son çare olarak kullanılır.
+  console.warn('⚠️  Management API yolu schema_migrations defterine yazmaz — drift riski. Mümkünse SUPABASE_DB_PASSWORD verip CLI yolunu kullanın.');
   for (const migrationPath of MIGRATIONS) {
     if (!existsSync(migrationPath)) {
       console.error('❌ Migration dosyası bulunamadı:', migrationPath);
@@ -136,9 +143,11 @@ function deployEdgeFunction() {
   return true;
 }
 
-let migrated = false;
-if (token) migrated = await applyViaManagementApi();
-if (!migrated) migrated = applyViaCli();
+// SIRA ÖNEMLİ (SG-6): önce CLI (supabase db push) — schema_migrations
+// defterine yazar, playbook'un tek onaylı kanalıdır. Management API yalnız
+// CLI başarısız olursa son çaredir (defter-dışı; drift üretir).
+let migrated = applyViaCli();
+if (!migrated && token) migrated = await applyViaManagementApi();
 
 if (!migrated) {
   console.log('\n❌ Migration uygulanamadı. Şunlardan birini .env dosyasına ekleyin:\n');

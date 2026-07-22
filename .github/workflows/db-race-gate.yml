@@ -1,0 +1,57 @@
+# DB Yarış Kapısı — son-slot eşzamanlılık regresyonu (SG-5)
+#
+# Ne yapar: lokal Supabase stack'i kaldırır (GERÇEK Postgres), TÜM migration'ları
+# boş veritabanına uygular (yan fayda: temiz-kurulum/replay doğrulaması), sonra
+# tests/last-slot-race.mjs ile "son boş slota aynı anda 2 katılım" yarışını koşar.
+# join_public_match_slot'un FOR UPDATE kilidi tam 1 kazanan bırakmalıdır.
+#
+# Neden per-PR değil: 293+ migration'ın boş DB'ye sorunsuz uygulandığı bu
+# workflow'da kanıtlanana kadar tetikleyici manuel + haftalıktır. Yeşile
+# döndükten sonra istenirse pull_request tetikleyicisi eklenebilir.
+# Canlı Supabase'e DOKUNMAZ; secret gerektirmez.
+name: DB Yarış Kapısı
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 1' # her pazartesi 04:00 UTC
+
+jobs:
+  last-slot-race:
+    name: Son-slot eşzamanlılık (lokal stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Bağımlılıklar
+        run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Lokal stack + migration replay
+        # `supabase start` ilk açılışta tüm migration'ları boş DB'ye uygular.
+        # (config.toml seed'i ./seed.sql'i işaret eder; dosya yoksa CLI atlar —
+        # test kendi kullanıcılarını SMOKE_SERVICE ile açar, seed'e bağlı değildir.)
+        run: supabase start
+
+      - name: Stack anahtarlarını topla
+        run: supabase status -o env | tr -d '"' >> "$GITHUB_ENV"
+
+      - name: Son-slot yarış testi
+        env:
+          SMOKE_SB: ${{ env.API_URL }}
+          SMOKE_ANON: ${{ env.ANON_KEY }}
+          SMOKE_SERVICE: ${{ env.SERVICE_ROLE_KEY }}
+        run: node tests/last-slot-race.mjs
+
+      - name: Stack'i kapat
+        if: always()
+        run: supabase stop --no-backup
