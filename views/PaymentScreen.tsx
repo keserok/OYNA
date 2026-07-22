@@ -3,7 +3,7 @@ import {
   AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, Info,
   LayoutGrid, Lock, MapPin, Plus, RefreshCw, Shield, ShieldCheck, Users, Wallet, X,
 } from 'lucide-react';
-import CardBrandMark from '../components/payment/CardBrandMark';
+import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
@@ -935,7 +935,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                       <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
                     </span>
                   )}
-                  <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${card.gradient ?? 'from-purple-700 to-blue-600'} flex items-center justify-center mb-10`}>
+                  <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${brandGradient(card.brand)} flex items-center justify-center mb-10 border border-white/10`}>
                     <CardBrandMark brand={card.brand} size={13} />
                   </span>
                   <p className="text-xs font-extrabold text-white font-numeric">•••• {card.last4}</p>
@@ -961,7 +961,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
                     <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
                   </span>
                 )}
-                <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${tempCard.gradient} flex items-center justify-center mb-10`}>
+                <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${brandGradient(tempCard.brand)} flex items-center justify-center mb-10 border border-white/10`}>
                   <CardBrandMark brand={tempCard.brand} size={13} />
                 </span>
                 <p className="text-xs font-extrabold text-white font-numeric">•••• {tempCard.last4}</p>
