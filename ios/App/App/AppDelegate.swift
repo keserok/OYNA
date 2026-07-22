@@ -1,6 +1,27 @@
 import UIKit
 import Capacitor
 
+// MOB-S1 — Sabit kabuk: belge-seviyesi kaydırma tamamen native'de kapatılır.
+// Web tarafı (index.css) html/body'yi kilitler; burada da WKWebView'ın dış
+// UIScrollView'ının zıplaması (rubber-band) ve zemin rengi sabitlenir. Böylece
+// hangi ekranda olursa olsun üst/altta beyaz native katman ASLA görünemez.
+// Main.storyboard bu sınıfı kullanır (customClass="OYNAViewController").
+// AppDelegate.swift içinde tanımlı olması bilinçli: yeni .swift dosyası
+// eklemek project.pbxproj değişikliği gerektirirdi.
+class OYNAViewController: CAPBridgeViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let oynaDark = UIColor(red: 0x0A / 255.0, green: 0x0E / 255.0, blue: 0x14 / 255.0, alpha: 1.0)
+        view.backgroundColor = oynaDark
+        webView?.backgroundColor = oynaDark
+        webView?.isOpaque = false
+        webView?.scrollView.backgroundColor = oynaDark
+        webView?.scrollView.bounces = false
+        webView?.scrollView.alwaysBounceVertical = false
+        webView?.scrollView.alwaysBounceHorizontal = false
+    }
+}
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 

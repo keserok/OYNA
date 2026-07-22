@@ -1,7 +1,7 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './types';
-import { auth, onAuthStateChanged, logout } from './supabaseAuth';
+import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
@@ -10,6 +10,7 @@ import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, h
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
 import { startPresenceHeartbeat, stopPresenceHeartbeat } from './services/socialService';
+import { initKeyboardManager } from './services/keyboardManager';
 import { identifyUser, resetUser, trackEvent, captureException } from './utils/observability';
 import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
@@ -126,6 +127,9 @@ const App: React.FC = () => {
   useEffect(() => {
     initApp();
   }, [initApp]);
+
+  // MOB-S2: native klavye yöneticisi — alanlar klavye arkasında kalmaz.
+  useEffect(() => initKeyboardManager(), []);
 
 
   useEffect(() => {
@@ -459,16 +463,21 @@ const App: React.FC = () => {
     let remove: (() => void) | undefined;
     import('@capacitor/app').then(({ App: CapApp }) => {
       CapApp.addListener('appUrlOpen', ({ url }) => {
-        const s = useAppStore.getState();
-        handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
-          setSelectedMatch: (m) => s.setSelectedMatch(m),
-          setSelectedTeamId: s.setSelectedTeamId,
-          setStudioContext: s.setStudioContext,
-          setSocialTarget: s.setSocialTarget,
-          setSelectedConversationId: s.setSelectedConversationId,
-          setSelectedTeamChatId: s.setSelectedTeamChatId,
-          setTeamInitialTab: s.setTeamInitialTab,
-        });
+        void (async () => {
+          // OAuth dönüşü (oyna://auth-callback?code=...) — kodu oturuma bozdur;
+          // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
+          if (await handleAuthCallbackUrl(url)) return;
+          const s = useAppStore.getState();
+          handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+            setSelectedMatch: (m) => s.setSelectedMatch(m),
+            setSelectedTeamId: s.setSelectedTeamId,
+            setStudioContext: s.setStudioContext,
+            setSocialTarget: s.setSocialTarget,
+            setSelectedConversationId: s.setSelectedConversationId,
+            setSelectedTeamChatId: s.setSelectedTeamChatId,
+            setTeamInitialTab: s.setTeamInitialTab,
+          });
+        })();
       }).then((handle) => { remove = () => handle.remove(); });
     });
     return () => { if (remove) remove(); };
@@ -742,7 +751,7 @@ const App: React.FC = () => {
   const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
+    <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
         <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
@@ -768,7 +777,7 @@ const App: React.FC = () => {
         <motion.div
           key={view}
           {...PAGE_TRANSITION}
-          className={`w-full h-full absolute inset-0 overflow-y-auto custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : 'pb-safe'}`}
+          className={`w-full h-full absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : 'pb-safe'}`}
         >
           {/* A5: Görünüm-seviyesi hata sınırı. Bir görünüm çökse de (ör. lazy
               chunk ağ hatası, render exception) uygulama kabuğu + alt menü ayakta

@@ -1,9 +1,14 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.oyna.app',
   appName: 'OYNA',
   webDir: 'dist',
+  // WebView'ın NATIVE zemini: kaydırma lastiklemesi/klavye animasyonu gibi
+  // anlarda web içeriğinin altından görünen katman. Ayarlanmazsa BEYAZ kalır
+  // ve koyu temada üst/altta beyaz şeritler görünür (MOB-S1).
+  backgroundColor: '#0A0E14',
 
   // ─── Plugins ────────────────────────────────────────────────────
   plugins: {
@@ -11,7 +16,9 @@ const config: CapacitorConfig = {
       // clientId must match the App Store Bundle ID set in Apple Developer Console
     },
     SplashScreen: {
-      launchShowDuration: 2000,
+      // Açılış görseli artık düz koyu zemin (logo yok) — bekletmeye gerek yok;
+      // uygulama içi animasyonlu açılış (SplashScreen.tsx) hemen görünsün.
+      launchShowDuration: 400,
       launchAutoHide: true,
       backgroundColor: '#0A0E14',
       showSpinner: false,
@@ -25,7 +32,7 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: 'body',
+      resize: KeyboardResize.Body,
       resizeOnFullScreen: true,
     },
     PushNotifications: {

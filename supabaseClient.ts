@@ -184,6 +184,11 @@ export const supabase = createClient(
       autoRefreshToken: true,
       storage: persistentAuthStorage,
       storageKey: 'oyna.auth.token',
+      // PKCE: OAuth (Google/Apple web) artık ?code= ile döner. Native'de kod,
+      // oyna://auth-callback deep link'inden exchangeCodeForSession ile bozdurulur
+      // (supabaseAuth.handleAuthCallbackUrl); web'de detectSessionInUrl halleder.
+      // E-posta OTP (6 haneli kod) ve şifreli giriş bu ayardan etkilenmez.
+      flowType: 'pkce',
     },
   }
 );

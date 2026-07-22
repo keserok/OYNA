@@ -85,35 +85,98 @@ supabase.auth.onAuthStateChange((_event, session) => {
 });
 
 // ─── Google OAuth ────────────────────────────────────────────────────────────
+// Native (iOS/Android): Google, GÖMÜLÜ webview'da OAuth'u engeller
+// (disallowed_useragent) ve capacitor://localhost dönüşü çalışmaz. Bu yüzden
+// akış SİSTEM TARAYICISI + deep link üzerinden kurulur (PKCE):
+//   1. signInWithOAuth(skipBrowserRedirect) → yalnız OAuth URL'sini üretir,
+//   2. @capacitor/browser bu URL'yi Safari yaprağında açar,
+//   3. Supabase, girişten sonra oyna://auth-callback?code=... adresine döner,
+//   4. App.tsx'teki appUrlOpen → handleAuthCallbackUrl kodu oturuma bozdurur.
+// GEREKLİ PANEL AYARI: Supabase → Auth → URL Configuration → Redirect URLs
+// listesine "oyna://auth-callback" eklenmeli (yoksa Supabase dönüşü reddeder).
+export const OAUTH_NATIVE_REDIRECT = 'oyna://auth-callback';
+
 export const loginWithGoogle = async (): Promise<void> => {
+  if (Capacitor.isNativePlatform()) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: OAUTH_NATIVE_REDIRECT,
+        skipBrowserRedirect: true,
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+    if (error) throw error;
+    if (!data?.url) throw new Error('Google giriş adresi alınamadı.');
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: data.url, presentationStyle: 'popover' });
+    return; // Oturum, deep link dönüşünde açılır (handleAuthCallbackUrl).
+  }
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.origin },
   });
-  if (error) console.error('[Auth] Google OAuth hatası:', error.message);
+  if (error) throw error;
+};
+
+// ─── OAuth deep link dönüşü (native) ─────────────────────────────────────────
+// appUrlOpen'a gelen oyna://auth-callback?code=... URL'sini işler.
+// Dönüş: true → URL bir OAuth dönüşüydü (başka deep link işleyiciye gitmesin).
+export const handleAuthCallbackUrl = async (url: string): Promise<boolean> => {
+  if (!url.startsWith(OAUTH_NATIVE_REDIRECT)) return false;
+  // Sistem tarayıcısı yaprağını kapat (açık değilse sessizce geç).
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.close();
+  } catch { /* iOS dışında veya kapalıysa */ }
+  try {
+    const parsed = new URL(url);
+    const code = parsed.searchParams.get('code');
+    const oauthError = parsed.searchParams.get('error_description') || parsed.searchParams.get('error');
+    if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+      // Navigasyon App.tsx'teki onAuthStateChanged dinleyicisinde (SIGNED_IN).
+    } else if (oauthError) {
+      console.warn('[Auth] OAuth dönüşü hata ile geldi:', oauthError);
+    }
+  } catch (err) {
+    console.error('[Auth] OAuth dönüş kodu işlenemedi:', err);
+  }
+  return true;
 };
 
 // ─── Apple Sign-In ────────────────────────────────────────────────────────────
 // iOS App Store zorunluluğu: native platformda @capacitor-community/apple-sign-in
 // kullanılır; web'de standart Supabase OAuth redirect ile devam edilir.
+// NONCE SÖZLEŞMESİ (kritik): Apple'a nonce'un SHA-256 ÖZETİ verilir (kimlik
+// jetonuna o gömülür); Supabase'e HAM nonce verilir (kendisi hash'leyip jetonla
+// karşılaştırır). İkisine de aynı ham değeri vermek "nonce mismatch" ile girişi
+// sessizce reddettiriyordu — butona basınca "hiçbir şey olmuyor" şikâyetinin
+// Apple ayağı buydu.
+const sha256Hex = async (text: string): Promise<string> => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+};
+
 export const loginWithApple = async (): Promise<void> => {
   if (Capacitor.isNativePlatform()) {
     try {
       // Native Apple Sign-In — dinamik import ile bağımlılık opsiyonel tutulur
       const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
-      const nonce = crypto.randomUUID();
+      const rawNonce = crypto.randomUUID();
       const result = await SignInWithApple.authorize({
         clientId: 'com.oyna.app',
-        redirectURI: window.location.origin,
+        redirectURI: OAUTH_NATIVE_REDIRECT,
         scopes: 'email name',
         state: crypto.randomUUID(),
-        nonce,
+        nonce: await sha256Hex(rawNonce),
       });
 
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: result.response.identityToken,
-        nonce,
+        nonce: rawNonce,
       });
 
       if (error) throw error;

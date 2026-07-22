@@ -156,11 +156,18 @@
   scrollbar-width: none;  /* Firefox */
 }
 
-/* Base styles */
+/* ─── Sabit kabuk (MOB-S1) ────────────────────────────────────────────────────
+   Belge (html/body) ASLA kaydırılamaz: tüm kaydırma, ekranların kendi koyu
+   iç konteynerlerinde olur (App.tsx'teki görünüm kaydırıcısı + PageLayout main).
+   Böylece iOS'un belge-seviyesi lastiklenmesi (üst/altta beyaz native katman)
+   kökten imkânsızlaşır; native tarafta scrollView.bounces=false ile eşleşir.
+   Yükseklik %100 zinciri bilinçli olarak !important'sız: Capacitor Keyboard
+   (resize:'body') klavye açılınca body yüksekliğini inline küçültür, kabuk da
+   onunla birlikte daralır. ─────────────────────────────────────────────────── */
 html {
-  /* iOS: kenardan çekince tüm sayfanın lastik gibi esneyip arkadaki boşluğu
-     göstermesini (rubber-band) engeller — native uygulama hissi. */
-  overscroll-behavior-y: none;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   background-color: #0A0E14;
 }
 body {
@@ -168,8 +175,41 @@ body {
   background-color: #0A0E14;
   color: white;
   margin: 0;
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+#root {
+  height: 100%;
+}
+
+/* Kaydırma zincirlemesini kes: bir liste ucuna gelince hareket komşuya/belgeye
+   sızmaz. Dikey kaydırıcılar .custom-scrollbar, yatay şeritler .no-scrollbar
+   kullanır (yatayda sayfayı dikey sürüklemeyi de engeller). */
+.custom-scrollbar { overscroll-behavior: contain; }
+.no-scrollbar { overscroll-behavior-x: contain; }
+
+/* ─── Klavye yöneticisi (MOB-S2, services/keyboardManager.ts) ────────────────
+   Klavye açıkken kaydırılabilir gövdelere klavye kadar ek alt boşluk verilir;
+   odaklanan alan scrollIntoView(center) ile klavyenin üstünde tutulur. */
+body.kb-open .pb-safe,
+body.kb-open .pb-safe-nav,
+body.kb-open .pb-safe-6 {
+  padding-bottom: calc(var(--kb-height, 0px) + 2rem);
+}
+
+/* ─── Lobi VS şeridi — aktif takım kutusu yavaş nabız (MOB-S3) ───────────────
+   O an sahası gösterilen takımın kutusu yavaşça parlar/söner. Renk, kutunun
+   kendi --pulse-color değişkeninden gelir (ev: beyaz, deplasman: kırmızı). */
+@keyframes oy-team-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 transparent; }
+  50% { opacity: 0.78; box-shadow: 0 0 18px 1px var(--pulse-color, rgba(255,255,255,0.18)); }
+}
+.team-pulse-active {
+  animation: oy-team-pulse 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .team-pulse-active { animation: none !important; }
 }
 
 /* Mesh Gradient Background */
