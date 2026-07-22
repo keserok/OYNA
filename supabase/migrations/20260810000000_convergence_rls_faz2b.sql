@@ -11,6 +11,13 @@
 -- Canlıda NET NO-OP (aynı politikanın drop+recreate'i, migration transaction'ı
 -- içinde atomik). Kazanç: sıfırdan kurulum artık canlının güvenlik duruşunu
 -- birebir üretir. Doğrulama: preview RLS'i canlıyla md5-eşit (sıfır fark).
+-- ----------------------------------------------------------------------------
+-- SIRALAMA NOTU (2026-07-22): Bu dosya 20260810000000 sürümüne alındı. Sebep:
+-- canlıya PR-hattı DIŞINDA doğrudan uygulanmış 20260809000001–000004 güvenlik-
+-- sertleştirme migration'larının ARDINA gelmesi gerekiyor — hem Supabase'in
+-- "son uzak migration'dan önce eklenen yerel migration" deploy hatasını önler,
+-- hem de canlının SON (sertleştirme-sonrası) politika durumunu sadık üretir.
+-- (O 4 sertleştirme migration'ı Faz 2c'de repoya no-op dosya olarak alınacak.)
 -- ============================================================================
 
 -- ── 1) Etkilenen 60 tablonun MEVCUT politikalarını temizle (idempotent) ──────
