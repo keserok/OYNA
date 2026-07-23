@@ -155,7 +155,9 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
     title: match.title,
     location: match.location,
     date: dateIso,
-    time: match.time,
+    // Savunma: saat her zaman tek SS:DD olarak gider — slot etiketi ("20:00 -
+    // 21:00") sızarsa ilk kalıp çıkarılır (sunucu ::time cast güvenliği).
+    time: (String(match.time ?? '').replace('.', ':').match(/\d{1,2}:\d{2}/)?.[0]) || match.time,
     price: match.price,
     difficulty: match.difficulty,
     status: match.status || 'ACTIVE',

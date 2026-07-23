@@ -327,7 +327,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               isSelectionMode
               onSelectTime={(pitch: any, _court: any, date: string, time: string) => {
                 setSelectedPitch(pitch);
-                setSelectedTimeSlot({ date, time });
+                // Saat, saha vitrininden SLOT ETİKETİ ("20:00 - 21:00") olarak
+                // gelir; sistem genelinde maç saati TEK başlangıç saatidir.
+                // Normalize etmeden saklamak sunucudaki ::time cast'ini patlatıp
+                // "Maç Yayınlanamadı"ya yol açıyordu (SQLSTATE 22009).
+                const startTime = (time.replace('.', ':').match(/\d{1,2}:\d{2}/)?.[0]) || time;
+                setSelectedTimeSlot({ date, time: startTime });
                 setActiveSheet('NONE');
               }}
             />
