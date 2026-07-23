@@ -9,7 +9,8 @@ import {
     Swords, UserPlus,
     MessageSquare, ShieldAlert,
     Layers, Gauge, Crosshair, Share2, List, ChevronRight, ChevronDown, RotateCw, Loader2,
-    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, HelpCircle, Calendar
+    ZoomIn, ZoomOut, Maximize2, RotateCcw, Sparkles, HelpCircle, Calendar,
+    Radio, Play
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from 'framer-motion';
 import { auth } from '../supabaseAuth';
@@ -181,6 +182,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [namingOpp, setNamingOpp] = useState<string | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
+    // Madde 18 — DURDUR = OLDUĞU YERDE DON, OYNAT = DEVAM. simPaused: dondurulmuş;
+    // simEnded: rota sonuna ulaşıldı (buton "TEKRAR OYNAT"). isSimulating: sim aktif
+    // (oynuyor VEYA duraklatılmış) — mevcut opaklık/katman mantığı bunu kullanır.
+    const [simPaused, setSimPaused] = useState(false);
+    const [simEnded, setSimEnded] = useState(false);
     const [playMode, setPlayMode] = useState<PlayMode>('SYNC');
     const [showBall, setShowBall] = useState(false);
 
@@ -451,6 +457,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setActiveTactic({ ...activeTactic, drawings: derivedDrawings });
     };
 
+    // Pas zincirinin (tek top rotası) SON noktası — sonraki pas buradan başlar.
+    // Sıralı pas okları (type 'arrow') seqStep'e göre; en yüksek seqStep = son pas.
+    const passArrows = drawings.filter(d => d.type === 'arrow');
+    const passChainEnd = passArrows.length
+        ? (() => { const last = passArrows.reduce((a, b) => (b.seqStep >= a.seqStep ? b : a)); return last.points[last.points.length - 1] || null; })()
+        : null;
+
     // ── Geri Al / Yinele (S14) — aktif planın sahne anlık-görüntü yığını (maks 30) ──
     type Scene = { slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] };
     const sceneSnapshot = (): Scene => ({
@@ -639,31 +652,29 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const playCycleSeconds = playMode === 'SEQ'
         ? totalSeqDuration
         : drawings.reduce((mx, d) => Math.max(mx, seqMap.get(d.id)?.duration || 0), 0);
-    useEffect(() => {
-        if (!isSimulating || playCycleSeconds <= 0) return;
-        const t = setTimeout(
-            () => setIsSimulating(false),
-            Math.round((playCycleSeconds * PLAY_TIMES + 0.25) * 1000),
-        );
-        return () => clearTimeout(t);
-    }, [isSimulating, playCycleSeconds]);
+    // Rota süresi (CSS top animasyonuyla eş): zincir sonuna varınca "bitti".
+    const simTotalSeconds = Math.max(0.4, totalSeqDuration || playCycleSeconds || 2);
 
-    // ── OYNAT ⇄ DURDUR durum makinesi (AnimationToolbar buradan sürülür) ─────
-    // DURDUR: oynatımı ANINDA keser (yukarıdaki effect cleanup'ı bekleyen
-    // otomatik-durdurma zamanlayıcısını temizler), oyuncular/top yumuşakça
-    // başlangıç dizilimine döner ve buton OYNAT'a geri döner. Otomatik bitiş de
-    // aynı isSimulating durumundan aktığı için buton her iki yolda da doğrudur.
-    // OYNAT: her zaman BAŞTAN oynatır — durdur→hemen oynat dizisinde önce
-    // animasyonsuz bir kare işletilir (çift-rAF), böylece framer yarım kalmış
-    // konumdan devam etmez; çift dokunuş zararsızdır.
+    // ── OYNAT / DURDUR / DEVAM durum makinesi (madde 18) ─────────────────────
+    // Eski davranış (DURDUR → başa dön) KALDIRILDI. Artık:
+    //   • İlk OYNAT: baştan oynat (isSimulating=true, paused=false, ended=false).
+    //   • DURDUR: simPaused=true → top/oyuncular CSS play-state:paused ile OLDUĞU
+    //     YERDE donar (otomatik başa-dönüş yok).
+    //   • DEVAM: simPaused=false → kaldığı yerden ilerler.
+    //   • Rota bitince (sim-clock animationEnd) simEnded=true → buton TEKRAR OYNAT.
     const startSimulation = useCallback(() => {
+        setSimPaused(false);
+        setSimEnded(false);
         setIsSimulating(false);
         requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true)));
     }, []);
-    const handleSimulationToggle = useCallback((next: boolean) => {
-        if (next) startSimulation();
-        else setIsSimulating(false);
-    }, [startSimulation]);
+    const handlePlayPause = useCallback(() => {
+        if (simEnded || !isSimulating) { startSimulation(); return; }
+        setSimPaused(p => !p); // oynuyorsa dondur, donmuşsa devam
+    }, [simEnded, isSimulating, startSimulation]);
+    // Mevcut çağrılar (clearAllScene vb. setIsSimulating(false)) için: sim
+    // kapanınca duraklama/bitiş bayraklarını da temizle.
+    useEffect(() => { if (!isSimulating) { setSimPaused(false); setSimEnded(false); } }, [isSimulating]);
 
     // Anonim "oynatıldı" telemetrisi — simülasyon her başladığında (kişisel içerik yok).
     useEffect(() => { if (isSimulating) logStudioEvent('tactic_play'); }, [isSimulating]);
@@ -778,21 +789,40 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         onBack();
     };
 
-    // ── İlk kullanım turu: yalnız ilk açılışta bir kez (takım bağlamıyla açıldıysa değil) ──
+    // ── İlk kullanım tanıtımı: KULLANICI-BAŞINA bir kez (takım bağlamıyla değil) ──
+    // localStorage cihaz-başına hızlı önbellek; profiles.studio_intro_seen kalıcı
+    // kullanıcı-başına kaynak (yeni cihaz / yeniden kurulumda da tekrar açmaz).
     const onboardCheckedRef = useRef(false);
     useEffect(() => {
         if (onboardCheckedRef.current) return;
         onboardCheckedRef.current = true;
         if (studioContext) return; // takım/taktik bağlamıyla geldiyse tur açma
-        try {
-            if (!localStorage.getItem(ONBOARD_KEY)) setOnboardStep(0);
-        } catch { /* localStorage yok — sessiz geç */ }
+        let seenLocal = false;
+        try { seenLocal = !!localStorage.getItem(ONBOARD_KEY); } catch { /* yok */ }
+        if (seenLocal) return;
+        const uid = auth.currentUser?.uid;
+        if (!uid) { setOnboardStep(0); return; } // oturumsuz: cihaz-başına göster
+        void (async () => {
+            try {
+                const { data } = await supabase.from('profiles').select('studio_intro_seen').eq('id', uid).single();
+                if (data?.studio_intro_seen) {
+                    try { localStorage.setItem(ONBOARD_KEY, '1'); } catch { /* yok */ }
+                    return; // bu kullanıcı daha önce görmüş
+                }
+            } catch { /* okunamazsa güvenli varsayılan: göster */ }
+            setOnboardStep(0);
+        })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const dismissOnboarding = () => {
         setOnboardStep(null);
         try { localStorage.setItem(ONBOARD_KEY, '1'); } catch { /* yok say */ }
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+            void supabase.from('profiles').update({ studio_intro_seen: true }).eq('id', uid)
+                .then(undefined, () => { /* kalıcı yazım best-effort; localStorage yeterli */ });
+        }
     };
     const openHelp = () => setOnboardStep(0);
 
@@ -814,7 +844,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         showToast('Örnek taktik yüklendi — OYNAT ile izle.');
         await loadAdvancedAnimation();
         setShowBall(true);
-        requestAnimationFrame(() => requestAnimationFrame(() => setIsSimulating(true)));
+        // Demo atağı OTOMATİK oynatMA (kullanıcı kararı): örnek yüklenir, izlemek
+        // için kullanıcı OYNAT'a basar. (Eski otomatik simülasyon kaldırıldı.)
     };
 
     // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
@@ -1307,18 +1338,34 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 if (dist < threshold && dist < minDistance) { minDistance = dist; attachedTo = el.id; }
             });
 
-            // Aynı ögede aynı türden çizgi varsa değiştir (bir oyuncunun hem koşusu hem pası olabilir).
-            if (attachedTo) {
-                const lineType = tool === 'draw_pass' ? 'arrow' : 'line';
-                setDrawings(prev => prev.filter(d => d.attachedTo !== attachedTo || d.type !== lineType));
+            // Koşu ('line'): aynı ögede aynı türden çizgi varsa değiştir (bir
+            // oyuncunun tek koşusu olur). Pas ('arrow'): ZİNCİR olduğundan
+            // dedup YOK — çok sayıda bağlı pas oku birikebilir.
+            const isPass = tool === 'draw_pass';
+            if (attachedTo && !isPass) {
+                setDrawings(prev => prev.filter(d => d.attachedTo !== attachedTo || d.type !== 'line'));
+            }
+
+            // ── TEK TOP + ZİNCİRLEME PAS (madde 19) ──────────────────────────
+            // Sahada tek top vardır. Yeni pas, önceki pasın BİTTİĞİ noktadan
+            // OTOMATİK başlar (kullanıcı yalnız hedefi çizer) — dağınık çoklu
+            // top yerine tek bağlı pas rotası. İlk pas dokunulan yerden başlar.
+            let startPt = { x, y };
+            if (isPass) {
+                const passes = drawings.filter(d => d.type === 'arrow');
+                if (passes.length > 0) {
+                    const last = passes.reduce((a, b) => (b.seqStep >= a.seqStep ? b : a));
+                    const end = last.points[last.points.length - 1];
+                    if (end) startPt = { x: end.x, y: end.y };
+                }
             }
 
             const maxSeq = drawings.reduce((max, d) => Math.max(max, d.seqStep), 0);
             setCurrentLine({
                 id: `l${Date.now()}`,
-                points: [{ x, y }],
+                points: [startPt],
                 color: drawSide === 'OPP' ? '#ef4444' : '#39FF14',
-                type: tool === 'draw_pass' ? 'arrow' : 'line',
+                type: isPass ? 'arrow' : 'line',
                 attachedTo,
                 seqStep: maxSeq + 1
             });
@@ -1981,7 +2028,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         }>
                             <AnimationToolbar
                                 isSimulating={isSimulating}
-                                setIsSimulating={handleSimulationToggle}
+                                simPaused={simPaused}
+                                simEnded={simEnded}
+                                onPlayPause={handlePlayPause}
+                                onExit={() => setIsSimulating(false)}
                                 showBall={showBall}
                                 setShowBall={setShowBall}
                                 playMode={playMode}
@@ -2184,6 +2234,19 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             )}
                         </svg>
 
+                    {/* Zincir başlangıç göstergesi (madde 19): PAS aracı seçiliyken
+                        ve zaten bir pas varsa, sonraki pasın BAŞLAYACAĞI nokta
+                        (önceki pasın bitişi) yanıp sönen halka ile işaretlenir. */}
+                    {tool === 'draw_pass' && !isSimulating && passChainEnd && (
+                        <div
+                            className="absolute z-[55] pointer-events-none"
+                            style={{ left: `${passChainEnd.x}%`, top: `${passChainEnd.y}%`, transform: 'translate(-50%,-50%)' }}
+                        >
+                            <span className="block w-5 h-5 rounded-full border-2 border-[#39FF14] bg-[#39FF14]/20 animate-ping" />
+                            <span className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-[#39FF14]" />
+                        </div>
+                    )}
+
                     {/* Opponents */}
                     {activeTactic.opponents.map(opp => {
                         const path = drawings.find(d => d.attachedTo === opp.id && d.type === 'line');
@@ -2306,9 +2369,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         Yalnız modül indirildiğinde mount edilir; ağır kısım buradadır. */}
                     {isAdvancedAnimLoaded && (
                         <Suspense fallback={null}>
+                            {/* Sim-clock (madde 18): rota süresi kadar koşar, DURDUR ile
+                                birlikte donar (play-state), bitince simEnded=true → buton
+                                TEKRAR OYNAT. Görünmez, layout'a etkisiz. */}
+                            {isSimulating && (
+                                <>
+                                    <style>{`@keyframes oySimClock{from{left:0}to{left:0.01px}}`}</style>
+                                    <div
+                                        aria-hidden
+                                        onAnimationEnd={() => setSimEnded(true)}
+                                        style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none',
+                                                 animation: `oySimClock ${simTotalSeconds}s linear forwards`,
+                                                 animationPlayState: simPaused ? 'paused' : 'running' }}
+                                    />
+                                </>
+                            )}
                             <AdvancedAnimationModule
                                 drawings={drawings}
                                 isSimulating={isSimulating}
+                                simPaused={simPaused}
                                 showBall={showBall}
                                 playMode={playMode}
                                 seqMap={seqMap}
@@ -3649,56 +3728,48 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {/* İlk kullanım turu — 3 adım + örnek taktik (yardım butonundan yeniden açılır) */}
             <AnimatePresence>
                 {onboardStep !== null && (() => {
-                    const steps = [
-                        { icon: <Users size={24} className="text-[#39FF14]" />, title: 'Oyuncularını yerleştir', body: 'Sahadaki + işaretlerine dokun; arkadaşını, takımını ekle ya da bir isim yazıp elle koy.' },
-                        { icon: <PenTool size={24} className="text-[#39FF14]" />, title: 'Hareketleri çiz', body: 'KOŞU ve PAS araçlarını seç, parmağınla sahada ok ve çizgiler çiz.' },
-                        { icon: <Sparkles size={24} className="text-[#39FF14]" />, title: 'İzle ve paylaş', body: "OYNAT'a bas, taktiğin canlansın. Tempoyu ayarla, PAYLAŞ ile takımına gönder." },
+                    // TEK SAYFA kapsamlı araç tanıtımı (demo/örnek-oynatma yok):
+                    // tüm araçlar bir ekranda; kullanıcı-başına bir kez görünür.
+                    const rows = [
+                        { icon: <Users size={18} className="text-[#39FF14]" />, title: 'Oyuncuları yerleştir', body: 'Sahadaki + işaretine dokun; arkadaşını/takımını ekle ya da isim yazıp elle koy.' },
+                        { icon: <PenTool size={18} className="text-[#39FF14]" />, title: 'KOŞU çiz', body: 'KOŞU aracını seç, bir oyuncudan başlayıp parmağınla hareket çizgisini çek.' },
+                        { icon: <Radio size={18} className="text-[#39FF14]" />, title: 'PAS çiz — tek top, zincir', body: 'Sahada tek top vardır. İlk pası çiz; sonraki pas otomatik önceki pasın bittiği yerden başlar (vurgulu nokta).' },
+                        { icon: <Play size={18} className="text-[#39FF14]" />, title: 'OYNAT / DURDUR', body: "OYNAT taktiği canlandırır. DURDUR olduğu yerde DONDURUR; OYNAT kaldığı yerden devam eder." },
+                        { icon: <Gauge size={18} className="text-[#39FF14]" />, title: 'Tempo & taraf', body: 'TEMPO ile hızı ayarla. BİZ/RAKİP ile takım değiştir; boş sahaya uzun bas → rakip ekle.' },
+                        { icon: <Share2 size={18} className="text-[#39FF14]" />, title: 'Paylaş', body: 'PAYLAŞ ile taktiğini takımına gönder ya da dışa aktar.' },
                     ];
-                    const i = Math.min(onboardStep, steps.length - 1);
-                    const isLast = i === steps.length - 1;
                     return (
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[130] bg-black/75 backdrop-blur-sm flex items-center justify-center p-6"
+                            className="fixed inset-0 z-[130] bg-black/75 backdrop-blur-sm flex items-center justify-center p-5"
                         >
                             <motion.div
-                                initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
-                                className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-white/10 p-6 shadow-2xl"
+                                initial={reduceMotion ? false : { scale: 0.94, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, opacity: 0 }}
+                                className="w-full max-w-sm max-h-[88vh] flex flex-col rounded-3xl bg-[#0B1120] border border-white/10 shadow-2xl overflow-hidden"
                             >
-                                <div className="w-14 h-14 rounded-2xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center mb-4">
-                                    {steps[i].icon}
+                                <div className="px-6 pt-6 pb-3 shrink-0">
+                                    <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center mb-3">
+                                        <Sparkles size={22} className="text-[#39FF14]" />
+                                    </div>
+                                    <h3 className="text-white text-xl font-black leading-tight">Taktik Stüdyo</h3>
+                                    <p className="text-gray-400 text-[12px] leading-relaxed mt-1">Sahayı diz, hareketleri çiz, izle ve paylaş. Araçların tamamı:</p>
                                 </div>
-                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Adım {i + 1}/{steps.length}</div>
-                                <h3 className="text-white text-lg font-black mb-1.5">{steps[i].title}</h3>
-                                <p className="text-gray-400 text-[13px] leading-relaxed mb-4">{steps[i].body}</p>
-                                {/* Adım noktaları */}
-                                <div className="flex gap-1.5 mb-5">
-                                    {steps.map((_, k) => (
-                                        <span key={k} className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-[#39FF14]' : 'w-1.5 bg-white/15'}`} />
+                                <div className="flex-1 overflow-y-auto overscroll-contain px-6 space-y-2.5 custom-scrollbar">
+                                    {rows.map((r, k) => (
+                                        <div key={k} className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                                            <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 flex items-center justify-center shrink-0">{r.icon}</div>
+                                            <div className="min-w-0">
+                                                <p className="text-[13px] font-black text-white leading-tight">{r.title}</p>
+                                                <p className="text-[11px] text-gray-400 leading-relaxed mt-0.5">{r.body}</p>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
-                                <div className="flex gap-3">
-                                    {isLast ? (
-                                        <>
-                                            <button onClick={dismissOnboarding} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
-                                                Kendim başlayayım
-                                            </button>
-                                            <button onClick={() => void loadSampleTactic()} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
-                                                <Sparkles size={16} /> Örnek yükle
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button onClick={dismissOnboarding} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
-                                                Atla
-                                            </button>
-                                            <button onClick={() => setOnboardStep(i + 1)} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
-                                                Sonraki <ChevronRight size={16} />
-                                            </button>
-                                        </>
-                                    )}
+                                <div className="p-5 pt-4 shrink-0">
+                                    <button onClick={dismissOnboarding} className="w-full py-3.5 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition">
+                                        Başla
+                                    </button>
                                 </div>
-                                <p className="text-[10px] text-gray-600 text-center mt-4">İpucu: boş sahaya uzun bas → rakip ekle · sağdaki BİZ/RAKİP ile takım değiştir</p>
                             </motion.div>
                         </motion.div>
                     );

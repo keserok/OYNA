@@ -110,7 +110,14 @@ export const getAnimationProps = (
 // --- Simülasyon Toolbar Kontrolleri ---
 interface AnimationToolbarProps {
     isSimulating: boolean;
-    setIsSimulating: (v: boolean) => void;
+    /** DURDUR ile dondurulmuş mu (madde 18). */
+    simPaused?: boolean;
+    /** Rota sonuna ulaşıldı mı → buton "TEKRAR OYNAT". */
+    simEnded?: boolean;
+    /** OYNAT/DURDUR/DEVAM tek giriş noktası (durum makinesi Studio'da). */
+    onPlayPause: () => void;
+    /** Simülasyondan çıkıp düzenlemeye dön (sim aktifken görünür). */
+    onExit?: () => void;
     showBall: boolean;
     setShowBall: (v: boolean) => void;
     playMode: PlayMode;
@@ -118,21 +125,35 @@ interface AnimationToolbarProps {
 }
 
 export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
-    isSimulating, setIsSimulating, showBall, setShowBall, playMode, setPlayMode
-}) => (
+    isSimulating, simPaused = false, simEnded = false, onPlayPause, onExit, showBall, setShowBall, playMode, setPlayMode
+}) => {
+    const playing = isSimulating && !simPaused && !simEnded; // şu an ilerliyor
+    const label = playing ? 'DURDUR' : (simPaused ? 'DEVAM' : (simEnded ? 'TEKRAR OYNAT' : 'OYNAT'));
+    const title = playing ? 'Taktiği durdur (olduğu yerde dondur)' : (simPaused ? 'Kaldığı yerden devam et' : 'Taktiği oynat');
+    return (
     <>
         <button
-            onClick={() => setIsSimulating(!isSimulating)}
-            title={isSimulating ? 'Taktiği durdur' : 'Taktiği oynat'}
-            aria-label={isSimulating ? 'Taktiği durdur' : 'Taktiği oynat'}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${isSimulating ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
+            onClick={onPlayPause}
+            title={title}
+            aria-label={title}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
-            {isSimulating ? (
-                <><Square size={14} className="fill-current" /> DURDUR</>
+            {playing ? (
+                <><Square size={14} className="fill-current" /> {label}</>
             ) : (
-                <><Play size={14} className="fill-current" /> OYNAT</>
+                <><Play size={14} className="fill-current" /> {label}</>
             )}
         </button>
+        {isSimulating && onExit && (
+            <button
+                onClick={onExit}
+                title="Düzenlemeye dön"
+                aria-label="Düzenlemeye dön"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap bg-white/5 text-gray-300 hover:bg-white/10"
+            >
+                <X size={14} /> Düzenle
+            </button>
+        )}
         <button
             onClick={() => setShowBall(!showBall)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
@@ -147,12 +168,15 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
             {playMode === 'SEQ' ? '🔄 SIRALI OYNAT' : '👥 EŞZAMANLI OYNAT'}
         </button>
     </>
-);
+    );
+};
 
 // --- Saha içine binen ağır oynatma katmanı (top animasyonu + sekans editörü) ---
 interface AdvancedAnimationModuleProps {
     drawings: DrawingLine[];
     isSimulating: boolean;
+    /** DURDUR ile dondurulmuş mu? true → top olduğu yerde durur (madde 18). */
+    simPaused?: boolean;
     showBall: boolean;
     playMode: PlayMode;
     seqMap: Map<string, SeqInfo>;
@@ -170,29 +194,43 @@ interface AdvancedAnimationModuleProps {
 }
 
 const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
-    drawings, isSimulating, showBall, playMode,
+    drawings, isSimulating, simPaused = false, showBall, playMode,
     seqMap, totalSeqDuration, selectedSeqBadge, setSelectedSeqBadge,
     isCustomSeqInputOpen, setIsCustomSeqInputOpen, customSeqValue, setCustomSeqValue,
     setDrawings, hideLines, mutedLineIds
 }) => {
+    // ── TEK TOP + ZİNCİR (madde 19) + DONDUR/DEVAM (madde 18) ────────────────
+    // Sahada YALNIZCA BİR top var: sıralı pas oklarını (seqStep) tek bir birleşik
+    // rota olarak baştan sona kat eder. Hareket, CSS @keyframes ile sürülür;
+    // DURDUR → animation-play-state:paused (top OLDUĞU YERDE donar), OYNAT →
+    // running (kaldığı yerden devam). rAF/React churn'ü yok.
+    const passChain = drawings.filter(d => d.type === 'arrow').slice().sort((a, b) => a.seqStep - b.seqStep);
+    const chainPoints = passChain.flatMap(p => p.points);
+    const ballDur = Math.max(0.4, totalSeqDuration || passChain.reduce((m, p) => Math.max(m, seqMap.get(p.id)?.duration || 0), 0) || 2);
+    const ballKeyframes = chainPoints.length >= 2
+        ? chainPoints.map((p, i) => `${((i / (chainPoints.length - 1)) * 100).toFixed(2)}%{left:${p.x}%;top:${p.y}%}`).join('')
+        : '';
     return (
         <>
-            {/* Pas topları animasyonu — SIRALI modda top yalnız kendi penceresinde görünür */}
-            {isSimulating && showBall && drawings.filter(d => d.type === 'arrow').map(path => {
-                if (!seqMap.get(path.id)) return null;
-                const anim = getAnimationProps(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration, true);
-                return (
-                    <motion.div
-                        key={`ball-${path.id}`}
+            {/* Tek top: birleşik zincir rotası boyunca CSS keyframe animasyonu */}
+            {isSimulating && showBall && ballKeyframes && (
+                <>
+                    <style>{`@keyframes oyBallChain{${ballKeyframes}}`}</style>
+                    <div
+                        key={`ball-chain-${passChain.length}-${chainPoints.length}`}
                         className="absolute w-4 h-4 z-[60] bg-white rounded-full flex items-center justify-center text-[10px] shadow-[0_0_15px_rgba(255,255,255,0.8)]"
-                        animate={anim.animate}
-                        transition={anim.transition as any}
-                        style={{ x: "-50%", y: "-50%" }}
+                        style={{
+                            transform: 'translate(-50%, -50%)',
+                            left: `${chainPoints[0].x}%`,
+                            top: `${chainPoints[0].y}%`,
+                            animation: `oyBallChain ${ballDur}s linear forwards`,
+                            animationPlayState: simPaused ? 'paused' : 'running',
+                        }}
                     >
                         ⚽
-                    </motion.div>
-                );
-            })}
+                    </div>
+                </>
+            )}
 
             {/* Sekans Rozetleri (timeline sıralama editörü) — "Sadece Hareket" açıkken gizlenir.
                 Pasif katmanın (BİZ/RAKİP) rozetleri soluk ve kilitli: genel adım akışı okunur
