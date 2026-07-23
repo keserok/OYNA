@@ -233,7 +233,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <button key={v} onClick={() => setVisibility(v)}
                   className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-all border ${
                     visibility === v ? (v === 'OPEN' ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14]' : 'bg-[#FACC15] text-[#0A0E14] border-[#FACC15]') : 'bg-white/[0.03] border-white/10 text-white/70'
-                  }`}>{v === 'OPEN' ? 'Açık' : 'Özel'}</button>
+                  }`}>{v === 'OPEN' ? 'Herkese açık' : 'Kod ile'}</button>
               ))}
             </div>
           </div>
@@ -353,13 +353,15 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           />
         )}
 
-        {activeSheet === 'RULES' && (
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-safe">
+      </AnimatePresence>
+
+        {activeSheet === 'RULES' && createPortal(
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-safe">
             <header className="flex items-center justify-between px-6 py-4 border-b border-white/5">
               <h2 className="text-lg font-black text-white italic tracking-tight uppercase">Gelişmiş Ayarlar</h2>
               <button onClick={() => setActiveSheet('NONE')} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
             </header>
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar pb-safe">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 space-y-7 custom-scrollbar pb-safe">
 
               <div className="space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Maç Adı <span className="text-white/25 normal-case font-normal">(opsiyonel)</span></p>
@@ -371,12 +373,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Görünürlük</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={() => setVisibility('OPEN')} className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${visibility === 'OPEN' ? 'bg-[#39FF14]/10 border-[#39FF14]/50' : 'bg-white/[0.02] border-white/10'}`}>
-                    <span className={`text-xs font-black uppercase ${visibility === 'OPEN' ? 'text-[#39FF14]' : 'text-white'}`}>Açık</span>
-                    <span className="text-[9px] text-white/40 font-bold leading-tight">Vitrinde herkes görür</span>
+                    <span className={`text-xs font-black uppercase leading-tight ${visibility === 'OPEN' ? 'text-[#39FF14]' : 'text-white'}`}>Herkese açık maç</span>
+                    <span className="text-[9px] text-white/40 font-bold leading-tight">Vitrinde herkes görür ve katılabilir</span>
                   </button>
                   <button onClick={() => setVisibility('PRIVATE')} className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${visibility === 'PRIVATE' ? 'bg-[#FACC15]/10 border-[#FACC15]/50' : 'bg-white/[0.02] border-white/10'}`}>
-                    <span className={`text-xs font-black uppercase ${visibility === 'PRIVATE' ? 'text-[#FACC15]' : 'text-white'}`}>Özel</span>
-                    <span className="text-[9px] text-white/40 font-bold leading-tight">Sadece kodla katılım</span>
+                    <span className={`text-xs font-black uppercase leading-tight ${visibility === 'PRIVATE' ? 'text-[#FACC15]' : 'text-white'}`}>Kod ile girilen maç</span>
+                    <span className="text-[9px] text-white/40 font-bold leading-tight">Sadece paylaşılan kodla katılım</span>
                   </button>
                 </div>
                 {visibility === 'PRIVATE' && (
@@ -465,8 +467,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <button onClick={() => setActiveSheet('NONE')} className="w-full h-[56px] mt-2 bg-[#FACC15] text-[#0A0E14] font-black italic uppercase text-lg rounded-[20px] active:scale-95 shadow-[0_0_30px_rgba(250,204,21,0.4)]">Onayla</button>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        , document.body)}
 
         {/* ── Kapora & İade Kuralları + Cüzdan + Yasal metin: PORTAL ile body'ye
             render edilir. Görünüm geçiş sarmalayıcısındaki transform, `fixed`

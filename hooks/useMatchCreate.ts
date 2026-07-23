@@ -428,6 +428,12 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     // Takım maçı kodla davet edildiği için PRIVATE (paylaşılabilir kod üretilir).
     const effectiveVisibility = isTeamMatch ? 'PRIVATE' : visibility;
 
+    // pitch_id yalnız GERÇEK uuid ise gönderilir: seed/taslak sahte id'leri
+    // ('seed-pitch', 'draft-pitch') sunucudaki ::uuid cast'ini 400'e düşürüp
+    // maçı sessizce "yayınlanamadı"ya çeviriyordu. Uuid değilse null bağla.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const safePitchId = selectedPitch?.id && UUID_RE.test(selectedPitch.id) ? selectedPitch.id : undefined;
+
     const matchData = {
         id: 'm_' + Math.random().toString(36).substr(2, 9),
         creatorId: auth.currentUser?.uid,
@@ -436,7 +442,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         homeTeamId: resolvedHomeTeamId,   // S38: ev sahibi gerçek takım (state otoritesi)
         awayTeamName: awayTeamName.trim() || undefined,
         location: selectedPitch?.district || 'Belirtilmedi',
-        pitchId: selectedPitch?.id,            // FAZ 3: owner kredisi + iade için saha bağı
+        pitchId: safePitchId,            // FAZ 3: owner kredisi + iade için saha bağı (yalnız uuid)
         visibility: effectiveVisibility,       // FAZ 3: OPEN (vitrin) | PRIVATE (kodla davet)
         time: selectedTimeSlot?.time || '',
         date: selectedTimeSlot?.date || '',
@@ -521,24 +527,29 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
             }
         });
 
-        // Kapora gerekiyorsa ödeme ekranına; yoksa eski akış (özel maç → lobi).
+        // Kapora gerekiyorsa ödeme ekranına. Kapora yoksa (ücretsiz saha) maç
+        // ZATEN oluştu → kurucu HER ZAMAN lobiye gider (davet/kod paylaşımı orada).
+        // Eskiden açık+kaporasız maç vitrine (MATCH_DISCOVERY) düşüyordu; kurucu
+        // "davet edemedim" diyordu — artık açık maçta da lobiye götürüyoruz.
         if (goesToPayment) {
             onNavigate('PAYMENT');
-        } else if (isPrivate && targetId) {
-            // FAZ 3: Özel maçta kullanıcıyı doğrudan lobiye götür ki katılım kodunu görüp paylaşsın.
+        } else if (targetId) {
             const baseMatch = (isDraftMode && draftMatch ? draftMatch : matchData) as unknown as MatchListing;
-            setSelectedMatch({ ...baseMatch, id: targetId, visibility: 'PRIVATE' });
+            setSelectedMatch({ ...baseMatch, id: targetId, ...(isPrivate ? { visibility: 'PRIVATE' as const } : {}) });
             onNavigate('MATCH_JOIN');
         } else {
             onNavigate('MATCH_DISCOVERY');
         }
     } catch(err) {
         console.error("Maç yayınlanamadı:", err);
+        // Görünür geri bildirim: bildirim zili gözden kaçabildiği için toast da göster.
+        const reason = err instanceof Error ? err.message : '';
+        showToast(reason ? `Maç yayınlanamadı: ${reason}` : 'Maç yayınlanamadı. Lütfen tekrar dene.');
         addUserNotification({
             id: `err-publish-${Date.now()}`,
             type: 'SYSTEM',
             title: 'Maç Yayınlanamadı',
-            desc: err instanceof Error ? err.message : 'Lütfen tekrar dene.',
+            desc: reason || 'Lütfen tekrar dene.',
             time: 'Az önce',
             iconName: 'AlertCircle',
             color: 'bg-red-500',

@@ -239,7 +239,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const allowBalance = !!ctx?.allowBalance;
   // Cüzdan-öncelikli akış (ör. maç kaporası): ödeme YALNIZ bakiyeden — kart yok.
   const balanceOnly = !!ctx?.balanceOnly;
-  const insufficientBalance = balanceOnly && spendable < amount;
+  // Bakiye BİLİNİYOR mu? (özet yüklendi ve hatasız). Bilinmiyorken "yetersiz"
+  // VARSAYMA — aksi halde özet gelene/başarısız olana dek kapora ödenemiyordu
+  // ("param var ama yayınlayamıyorum"un ödeme ayağı). Bilinmiyorsa denemeye
+  // izin ver; sunucu (match_block_deposit) bakiyeyi zaten otoriter kontrol eder.
+  const balanceKnown = !!summary && !summaryError;
+  const insufficientBalance = balanceOnly && balanceKnown && spendable < amount;
   const balanceApplied = balanceOnly
     ? Math.min(spendable, amount)
     : allowBalance && useBalance ? Math.min(spendable, amount) : 0;
@@ -248,9 +253,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
   const selectedCard = selectedCardId === 'temp'
     ? tempCard
     : savedCards.find(c => c.id === selectedCardId) ?? null;
-  // C3 — bakiye bilinmiyorsa (özet hatası) bakiye-ilgili akışlarda ödeme kilitli.
-  const balanceUnknown = summaryError && (allowBalance || balanceOnly);
+  // C3 — bakiye bilinmiyorsa YALNIZ kart+bakiye KARIŞIK akışta kilitle (istemci
+  // matematiği kritik). Cüzdan-öncelikli (balanceOnly) kaporada kilitleme:
+  // özet okunamasa da kullanıcı deneyebilmeli, karar sunucuda.
+  const balanceUnknown = summaryError && allowBalance && !balanceOnly;
+  // Cüzdan-öncelikli ödeme özet YÜKLENİRKEN beklet (yanlış "yetersiz" gösterme);
+  // yükleme bitince (bilinir veya hata) buton canlanır.
   const canPay = amount > 0 && !balanceUnknown
+    && !(balanceOnly && summaryLoading)
     && (balanceOnly ? !insufficientBalance : (!needsCard || !!selectedCard));
 
   // Cüzdana yükleme kısayolu (cüzdan-öncelikli sistem: para platform içinde döner)
