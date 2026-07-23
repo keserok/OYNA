@@ -54,6 +54,8 @@ interface DbTariff {
   is_active: boolean | null;
   tariff_type: string;
   sort_order?: number | null;
+  /** Tarih-özel tarife (takvimden girilen özel fiyat) — yalnız bu tarihte geçerli. */
+  valid_on?: string | null;
 }
 
 interface DbCourtRow {

@@ -15,7 +15,6 @@ import {
   Shield,
   Tag,
   Trophy,
-  Users,
 } from 'lucide-react';
 import { APP_VERSION } from '../../../utils/appVersion';
 import type { OwnerMenuStats } from './ownerMenuTypes';
@@ -32,8 +31,6 @@ export interface OwnerMenuViewProps {
   onWorkingHours: () => void;
   onOperations: () => void;
   onMatches: () => void;
-  /** Ekip Yönetimi ekranını (TEAM sekmesi) açar — alt navdan Menü'ye taşındı (Karar #42). */
-  onTeam: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onPricingPolicy: () => void;
@@ -114,7 +111,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onWorkingHours,
   onOperations,
   onMatches,
-  onTeam,
   onBankAccounts,
   onWithdrawals,
   onPricingPolicy,
@@ -248,12 +244,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               label="Maçlar"
               onClick={onMatches}
             />
-            <MenuRow
-              icon={<Users size={18} />}
-              iconClass="text-indigo-400"
-              label="Ekip Yönetimi"
-              onClick={onTeam}
-            />
+            {/* "Ekip Yönetimi" alt bara (Ekip) taşındı — menüde mükerrer tutulmuyor. */}
           </div>
         </section>
         )}

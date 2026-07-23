@@ -11,6 +11,9 @@ export interface TariffLike {
   applies_to_days?: number[] | null;
   /** HOLIDAY | WEEKEND | WEEKDAY | SPECIAL — öncelik sıralaması için. */
   tariff_type?: string;
+  /** Dolu ise tarife YALNIZ bu tarihte (YYYY-MM-DD) geçerlidir ve o tarihte
+   *  her şeye üstün gelir (takvimden girilen özel fiyat). */
+  valid_on?: string | null;
 }
 
 const TARIFF_TYPE_PRIORITY: Record<string, number> = {
@@ -42,9 +45,12 @@ export function normalizeTime(t: string): string {
  * uydurma varsayılan fiyat (eski 3200/2000 fallback'i) bilinçli olarak yok:
  * tarifesiz saat arayüzde "Tarife yok" olarak gösterilmelidir.
  *
- * Saha-farkında: courtId verilirse saha-özel tarife (court_id = courtId)
- * tesis-geneline (court_id null) üstün gelir; sunucu get_current_tariff_price
- * ile aynı öncelik. courtId verilmezse yalnız tesis-geneli satırlar kullanılır.
+ * Sunucu get_current_tariff_price ile aynı öncelik:
+ * 1) Tarih-özel tarife (valid_on = dateISO) her şeye üstün — yalnız o tarihte.
+ * 2) Saha-özel (court_id = courtId) tesis-geneline üstün.
+ * 3) Tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL).
+ * courtId verilmezse yalnız tesis-geneli satırlar kullanılır; tarih verilmezse
+ * tarih-özel satırlar hesaba katılmaz (genel fiyatı bozmasınlar).
  */
 export function resolveHourlyPrice(
   hour: number,
@@ -64,14 +70,19 @@ export function resolveHourlyPrice(
     return hour >= startH || hour < endH;
   };
   const isCourt = (p: TariffLike) => p.court_id != null && p.court_id === courtId;
+  const isDated = (p: TariffLike) => p.valid_on != null && p.valid_on !== '';
   const candidates = pricingPolicy
     .filter((p) => p.court_id == null || (courtId != null && p.court_id === courtId))
+    // Tarih-özel tarife yalnız kendi tarihinde geçerli; tarih verilmemişse elenir.
+    .filter((p) => !isDated(p) || (dateISO != null && p.valid_on === dateISO))
     // Gün filtresi: tarih verildiyse VE tarife gün listesi taşıyorsa uygula
     // (sunucu get_current_tariff_price ile aynı — hafta içi/sonu ayrımı).
     .filter((p) => dow == null || !p.applies_to_days || p.applies_to_days.includes(dow))
     .filter(inWindow)
     .sort((a, b) => {
-      // 1) saha-özel önce, 2) tarife tipi önceliği (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL)
+      // 1) tarih-özel önce, 2) saha-özel, 3) tarife tipi (HOLIDAY>WEEKEND>WEEKDAY>SPECIAL)
+      const dateRank = (isDated(a) ? 0 : 1) - (isDated(b) ? 0 : 1);
+      if (dateRank !== 0) return dateRank;
       const courtRank = (isCourt(a) ? 0 : 1) - (isCourt(b) ? 0 : 1);
       if (courtRank !== 0) return courtRank;
       return (TARIFF_TYPE_PRIORITY[a.tariff_type ?? ''] ?? 9) - (TARIFF_TYPE_PRIORITY[b.tariff_type ?? ''] ?? 9);

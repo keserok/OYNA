@@ -14,6 +14,7 @@
 import { supabase } from '../supabaseClient';
 import { enqueueOrRun } from './offline/outbox';
 import { localDateISO } from '../views/owner/ownerCalendarHelpers';
+import { resolveTariffForSlot } from './tariffService';
 import type {
   OwnerPitch,
   OwnerDailySummary,
@@ -58,6 +59,9 @@ export interface TariffInput {
   sort_order?: number;
   is_active?: boolean;
   court_id?: string | null;
+  /** Dolu ise tarife YALNIZ bu tarihte (YYYY-MM-DD) geçerlidir — takvimden
+   *  girilen özel fiyat. Sunucu bu tarifeyi o tarihte en yüksek öncelikle uygular. */
+  valid_on?: string | null;
 }
 
 export interface ExpenseInput {
@@ -483,6 +487,7 @@ export async function saveTariffs(pitchId: string, tariffs: TariffInput[]): Prom
       sort_order: t.sort_order ?? idx,
       is_active: t.is_active ?? true,
       court_id: t.court_id ?? null,
+      valid_on: t.valid_on ?? null,
     }));
     const { error } = await supabase.rpc('owner_replace_tariffs', {
       p_pitch_id: pitchId,
@@ -510,7 +515,13 @@ export async function getTariffs(pitchId: string): Promise<PitchTariff[]> {
   }
 }
 
-/** Belirli gün/saat için prime-time (SPECIAL) tarife ekler veya günceller. */
+/**
+ * Belirli TARİH + saat için özel (SPECIAL) tarife ekler veya günceller.
+ * valid_on = bookingDate yazılır: sunucu (get_current_tariff_price) bu tarifeyi
+ * YALNIZ o tarihte ve en yüksek öncelikle uygular — oyuncunun gördüğü fiyat,
+ * rezervasyona yazılan fiyat ve ödeme birebir aynı olur.
+ * Kapora, aynı slotun standart tarifesinden miras alınır (ödeme akışı bozulmaz).
+ */
 export async function upsertSpecialSlotTariff(
   pitchId: string,
   params: {
@@ -530,13 +541,26 @@ export async function upsertSpecialSlotTariff(
     const existing = await getTariffs(pitchId);
     const filtered = existing.filter((t) => {
       if (t.tariff_type !== 'SPECIAL') return true;
-      const sameDay = Array.isArray(t.applies_to_days) && t.applies_to_days.includes(weekday);
       const sameCourt = (t.court_id ?? null) === (params.courtId ?? null);
       const sameSlot =
         (t.start_time ?? '').slice(0, 5) === params.startTime.slice(0, 5) &&
         (t.end_time ?? '').slice(0, 5) === params.endTime.slice(0, 5);
-      return !(sameDay && sameCourt && sameSlot);
+      // Aynı TARİH + saha + slot için önceki özel fiyat değiştirilir. Tarihsiz
+      // (eski) SPECIAL kayıtlarında hafta günü eşleşmesi kullanılır ki mükerrer
+      // satır birikmesin.
+      const sameDate = t.valid_on
+        ? t.valid_on === params.bookingDate
+        : Array.isArray(t.applies_to_days) && t.applies_to_days.includes(weekday);
+      return !(sameDate && sameCourt && sameSlot);
     });
+
+    // Kapora mirası: bu slotta geçerli STANDART (özel olmayan) tarifenin kaporası.
+    const standard = resolveTariffForSlot(
+      filtered.filter((t) => t.tariff_type !== 'SPECIAL'),
+      params.bookingDate,
+      params.startTime.slice(0, 5),
+      params.courtId ?? null,
+    );
 
     const rows: TariffInput[] = filtered.map((t, idx) => ({
       name: t.name,
@@ -549,6 +573,7 @@ export async function upsertSpecialSlotTariff(
       sort_order: t.sort_order ?? idx,
       is_active: t.is_active !== false,
       court_id: t.court_id ?? null,
+      valid_on: t.valid_on ?? null,
     }));
 
     rows.push({
@@ -558,8 +583,10 @@ export async function upsertSpecialSlotTariff(
       start_time: params.startTime.slice(0, 5),
       end_time: params.endTime.slice(0, 5),
       price_per_hour: params.pricePerHour,
+      deposit_amount: standard?.deposit ?? 0,
       sort_order: rows.length,
       court_id: params.courtId ?? null,
+      valid_on: params.bookingDate,
     });
 
     await saveTariffs(pitchId, rows);
@@ -1066,10 +1093,24 @@ export interface CourtDailyStats {
   occupancyPercent: number;
 }
 
+export interface OccupancySlotCell {
+  type: 'DAILY' | 'SUB';
+  /** Rezerve edenin görünen adı — customer_name → title → kaynak etiketi. */
+  name: string;
+}
+
 export interface HourlyOccupancyCell {
   time: string;
   occupancy: number;
-  pitches: (null | 'DAILY' | 'SUB')[];
+  pitches: (OccupancySlotCell | null)[];
+}
+
+/** Rezervasyonun görünen sahibi: manuel kayıtta müşteri adı, uygulama
+ *  rezervasyonunda oyuncu adı (create_pitch_booking profil adını snapshot'lar). */
+export function bookingDisplayName(b: Pick<PitchBookingFull, 'customer_name' | 'title' | 'source'>): string {
+  const name = (b.customer_name ?? '').trim() || (b.title ?? '').trim();
+  if (name) return name;
+  return b.source === 'APP_MATCH' ? 'Uygulama maçı' : b.source === 'APP_BOOKING' ? 'Uygulama rezervasyonu' : 'Misafir';
 }
 
 const DEFAULT_OPERATING_HOURS = 16; // 08:00–00:00
@@ -1106,7 +1147,7 @@ export function buildHourlyOccupancyGrid(
   const activeCourts = courts.length > 0 ? courts : [{ id: '_default', name: 'Saha' }];
   return Array.from({ length: 24 }, (_, h) => {
     const time = `${h.toString().padStart(2, '0')}:00`;
-    const pitches: (null | 'DAILY' | 'SUB')[] = activeCourts.map((court) => {
+    const pitches: (OccupancySlotCell | null)[] = activeCourts.map((court) => {
       // B4: başlangıç saati yerine KAPSANAN her saati işaretle → çok-saatlik
       // rezervasyon (20:00-22:00) hem 20 hem 21 hücresini doldurur (çifte-satış kapanır).
       const match = bookings.find((b) => {
@@ -1120,7 +1161,10 @@ export function buildHourlyOccupancyGrid(
         return h >= sH && h < eH;
       });
       if (!match) return null;
-      return match.source === 'SUBSCRIPTION' ? 'SUB' : 'DAILY';
+      return {
+        type: match.source === 'SUBSCRIPTION' ? 'SUB' : 'DAILY',
+        name: bookingDisplayName(match),
+      };
     });
     const occupancy = pitches.filter(Boolean).length;
     return { time, occupancy, pitches };
@@ -1211,7 +1255,7 @@ export interface CourtInput {
 
 export async function upsertCourt(pitchId: string, court: CourtInput): Promise<PitchCourt> {
   try {
-    const payload = {
+    const payload: Record<string, unknown> = {
       pitch_id: pitchId,
       name: court.name.trim(),
       court_type: court.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
@@ -1224,10 +1268,12 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       images: court.images ?? [],
       description: court.description ?? null,
       features: court.features ?? [],
-      lighting_grade: court.lighting_grade ?? null,
-      grass_grade: court.grass_grade ?? null,
-      locker_grade: court.locker_grade ?? null,
     };
+    // Kalite notları yalnız admin akışında payload'a girer (undefined → gönderilmez).
+    // Sunucu trigger'ı (enforce_court_grade_review) admin-dışı değişikliği zaten geri alır.
+    if (court.lighting_grade !== undefined) payload.lighting_grade = court.lighting_grade;
+    if (court.grass_grade !== undefined) payload.grass_grade = court.grass_grade;
+    if (court.locker_grade !== undefined) payload.locker_grade = court.locker_grade;
     if (court.id) {
       const { data, error } = await supabase
         .from('courts')

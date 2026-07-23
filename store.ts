@@ -456,6 +456,10 @@ interface AppState {
   // kendi panelini açar (varsayılan). Ayarlar→Tesis Paneli bunu doldurur.
   staffPanelContext: { pitchId: string; pitchName: string; accessLevel: 'MANAGER' | 'STAFF' } | null;
   setStaffPanelContext: (c: { pitchId: string; pitchName: string; accessLevel: 'MANAGER' | 'STAFF' } | null) => void;
+  // Owner panelinde o an yönetilen tesis (çoklu tesis/personel/admin-önizleme dahil).
+  // Skor Gir gibi panel dışı rotalar maç listesini bu tesise göre çeker.
+  ownerActivePitchId: string | null;
+  setOwnerActivePitchId: (id: string | null) => void;
   isSignupGateOpen: boolean;
   setIsSignupGateOpen: (open: boolean) => void;
   setIsRoleSwitcherOpen: (open: boolean) => void;
@@ -1232,6 +1236,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCurrentUserProfile: (p) => set({ currentUserProfile: p }),
   staffPanelContext: null,
   setStaffPanelContext: (c) => set({ staffPanelContext: c }),
+  ownerActivePitchId: null,
+  setOwnerActivePitchId: (id) => set({ ownerActivePitchId: id }),
   isSignupGateOpen: false,
   setIsSignupGateOpen: (open) => set({ isSignupGateOpen: open }),
   myRoles: [],

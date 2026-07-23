@@ -1,7 +1,8 @@
 import React from 'react';
-import { Calendar, Home, LayoutGrid, MoreHorizontal, Wallet } from 'lucide-react';
+import { Calendar, Home, MoreHorizontal, Users, Wallet } from 'lucide-react';
 
-// Sahalarım alt sekmeye alındı (işin kalbi tek dokunuş); Ekip Menü'ye indi (Karar #42).
+// Ekip alt bara (ortaya) alındı; Sahalarım Menü'ye indi. Team ekranı çok
+// kullanılan operasyon; Sahalarım kurulum-sonrası nadir → menüden erişilir.
 export type OwnerNavTab = 'HOME' | 'CALENDAR' | 'PITCHES' | 'FINANCE' | 'TEAM' | 'MORE';
 
 interface OwnerBottomNavProps {
@@ -9,15 +10,16 @@ interface OwnerBottomNavProps {
   pendingCount?: number;
   financeLocked?: boolean;
   teamLocked?: boolean;
-  /** STAFF-3: yetkiye göre tamamen gizlenen sekmeler (ör. personel için Finans/Sahalarım). */
+  /** STAFF-3: yetkiye göre tamamen gizlenen sekmeler (ör. personel için Finans/Ekip). */
   hiddenTabs?: OwnerNavTab[];
   onSelect: (tab: OwnerNavTab) => void;
 }
 
+// Ekip TAM ORTADA (5 sekmenin 3.'sü) — operasyonun kalbi, başparmak erişimi.
 const tabs: { id: OwnerNavTab; label: string; icon: React.ReactNode }[] = [
   { id: 'HOME', label: 'Özet', icon: <Home size={20} /> },
   { id: 'CALENDAR', label: 'Takvim', icon: <Calendar size={20} /> },
-  { id: 'PITCHES', label: 'Sahalarım', icon: <LayoutGrid size={20} /> },
+  { id: 'TEAM', label: 'Ekip', icon: <Users size={20} /> },
   { id: 'FINANCE', label: 'Finans', icon: <Wallet size={20} /> },
   { id: 'MORE', label: 'Menü', icon: <MoreHorizontal size={20} /> },
 ];
@@ -30,12 +32,13 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
   hiddenTabs = [],
   onSelect,
 }) => {
+  // Sahalarım artık menüden açılıyor → o ekrandayken "Menü" sekmesi vurgulanır.
   const highlightTab =
-    activeTab === 'PENDING_ACTIONS' ? 'HOME' : activeTab === 'TEAM' ? 'MORE' : activeTab;
+    activeTab === 'PENDING_ACTIONS' ? 'HOME' : activeTab === 'PITCHES' ? 'MORE' : activeTab;
   const shownTabs = tabs.filter((t) => !hiddenTabs.includes(t.id));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#1A1F2C]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {shownTabs.map((tab) => {
           const isActive = highlightTab === tab.id;
@@ -64,7 +67,7 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
                   </span>
                 )}
                 {locked && (
-                  <span className="absolute -bottom-0.5 -right-1 w-2 h-2 bg-slate-600 rounded-full border border-[#1A1F2C]" />
+                  <span className="absolute -bottom-0.5 -right-1 w-2 h-2 bg-slate-600 rounded-full border border-[#0A0E14]" />
                 )}
               </span>
               <span className="text-[10px] font-bold">{tab.label}</span>

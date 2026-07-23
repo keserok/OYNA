@@ -2,9 +2,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { 
-  ArrowLeft, Wallet, TrendingUp, Calendar, AlertCircle, Settings, 
+  Wallet, TrendingUp, Calendar, AlertCircle, Settings,
   MessageSquare, Clock, XCircle, Home, Users, CheckCircle2, ChevronRight, Bell, 
-  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, QrCode, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette, CalendarRange
+  MoreHorizontal, Shield, Hand, DollarSign, Filter, RefreshCw, X, Search, Pause, Play, ChevronDown, BarChart as BarChartIcon, ArrowUpRight, Zap, Phone, Plus, User, Lock, CreditCard, Banknote, Trash2, Edit3, Tag, Percent, CalendarDays, TrendingDown, Send, Receipt, ClipboardList, Briefcase, UserCheck, Flame, Building2, Image as ImageIcon, MapPin, Globe, HelpCircle, LogOut, FileText, Camera, Save, Type, List, Check, PieChart as PieChartIcon, Activity, ZapOff, CreditCard as CardIcon, Coins, Trophy, Star, Target, ChevronLeft, ImagePlus, GripVertical, LayoutDashboard, Palette, CalendarRange
 } from 'lucide-react';
 
 import { useAppStore } from '../store';
@@ -175,7 +175,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
     // STAFF-3: personel Finans/Sahalar sekmesini açamaz (yönetim yetkisi ister).
-    if (accessLevel === 'STAFF' && (tab === 'FINANCE' || tab === 'PITCHES')) {
+    // STAFF: Finans/Sahalarım/Ekip yönetim yetkisi ister — açamaz (sunucu da reddeder).
+    if (accessLevel === 'STAFF' && (tab === 'FINANCE' || tab === 'PITCHES' || tab === 'TEAM')) {
       setActiveTab('HOME');
       return;
     }
@@ -225,6 +226,17 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     todayOpenHoursRef.current = wh.closed ? 0 : openHourCount(wh.open, wh.close);
   }, [facilityData]);
 
+  // Doluluk analizi görünür saat penceresi (mobil grid varsayılanı). Kapanış
+  // 00:00 → 24. Geçersiz/kapalı günde 08–24 güvenli varsayılan.
+  const todayHourWindow = useMemo(() => {
+    const wh = resolveWorkingHoursForDate(facilityData?.workingHours as any, todayISO());
+    const openH = parseInt(String(wh.open ?? '08:00').slice(0, 2), 10);
+    let closeH = parseInt(String(wh.close ?? '00:00').slice(0, 2), 10);
+    if (!Number.isFinite(openH)) return { open: 8, close: 24 };
+    if (!Number.isFinite(closeH) || closeH <= openH) closeH = 24;
+    return { open: openH, close: closeH };
+  }, [facilityData]);
+
   const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
     try {
       const [summary, bookings, pending] = await Promise.all([
@@ -252,6 +264,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     // — 4 kortu olmasına rağmen). Çekirdek operasyon ekranı bir saniye beklemez;
     // finansal ayarlar arkada yüklenip facilityData'ya yamalanır.
     setRealPitchId(pitch.id);
+    // Skor Gir (QR_SCANNER) rotası maç listesini aktif tesise göre çeksin
+    // (çoklu tesis, personel/müdür ve admin-önizleme için de doğru tesis).
+    useAppStore.getState().setOwnerActivePitchId(pitch.id);
     setIsDemoMode(demo || !!pitch.is_demo);
     setCourts(facilityCourts);
     setAutoApproveMinutes(pitch.auto_approve_minutes ?? 35);
@@ -274,6 +289,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         court_id: t.court_id ?? null,
         applies_to_days: t.applies_to_days ?? null,
         tariff_type: t.tariff_type ?? undefined,
+        valid_on: t.valid_on ?? null,
       })),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
@@ -696,7 +712,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   if (needsOnboarding && !isLoading) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#1A1F2C] text-white p-8 text-center safe-top safe-bottom">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#0A0E14] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
         <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
@@ -714,16 +730,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#1A1F2C] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    <div className="min-h-dvh flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
-                  <button onClick={() => onBack()} aria-label="Geri" className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 transition-colors active:scale-95">
-                      <ArrowLeft size={20} />
-                  </button>
                   <div className="flex flex-col relative">
                       {ownedFacilities.length > 1 && !isDemoMode ? (
                         <button
@@ -767,7 +780,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                     className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 relative active:scale-95 transition-transform"
                   >
                       <Bell size={20} />
-                      {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#1A1F2C]"></span>}
+                      {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#0A0E14]"></span>}
                   </button>
               </div>
           </header>
@@ -775,7 +788,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#1A1F2C] border-b border-white/5 flex items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
               <h1 className="text-lg font-black text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
@@ -808,10 +821,10 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       className="flex flex-col items-center justify-center p-6 bg-blue-600 rounded-3xl border border-blue-400/30 shadow-xl shadow-blue-900/20 group hover:bg-blue-500 transition-all active:scale-95"
                     >
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <QrCode size={24} className="text-white" />
+                        <Trophy size={24} className="text-white" />
                       </div>
                       <span className="text-sm font-black italic text-white">SKOR GİR</span>
-                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">QR veya Manuel</span>
+                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
                     </button>
                     <button 
                       onClick={() => setActiveTab('CALENDAR')}
@@ -835,7 +848,12 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                         <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
                         <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
                     </button>
-                    <PitchOccupancyGrid data={hourlyOccupancy} courtNames={courts.map(c => c.name)} />
+                    <PitchOccupancyGrid
+                      data={hourlyOccupancy}
+                      courtNames={courts.map(c => c.name)}
+                      openHour={todayHourWindow.open}
+                      closeHour={todayHourWindow.close}
+                    />
                   </div>
               )}
 
@@ -893,6 +911,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   court_id: t.court_id ?? null,
                   applies_to_days: t.applies_to_days ?? null,
                   tariff_type: t.tariff_type ?? undefined,
+                  valid_on: t.valid_on ?? null,
                 })),
               }));
             }
@@ -908,6 +927,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onBack={() => setActiveTab('HOME')}
           readOnly={effReadOnly}
           maxCourts={maxCourts}
+          showBack={false}
         />
       )}
       {/* Finans & Ekip her owner'a açık — plan/abonelik kilidi yok (karar: owner abonelik ödemez). */}
@@ -961,7 +981,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onMatches={() => {
             if (managerGuard()) setShowMatches(true);
           }}
-          onTeam={() => { if (managerGuard()) setActiveTab('TEAM'); }}
           onBankAccounts={() => {
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
@@ -1141,7 +1160,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         pendingCount={pendingCount}
         financeLocked={false}
         teamLocked={false}
-        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'PITCHES'] : []}
+        hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'TEAM'] : []}
         onSelect={(tab) => {
           if (tab === 'MORE') setActiveTab('MORE');
           else handleTabSelect(tab);

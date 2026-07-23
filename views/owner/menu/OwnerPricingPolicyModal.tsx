@@ -138,8 +138,8 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         });
       });
     });
-    // Korunan tarifeler (SPECIAL, HOLIDAY, pasif) GERÇEK tipi/günü/aktifliğiyle
-    // aynen geri yazılır — full-replace'te silinmesinler.
+    // Korunan tarifeler (SPECIAL, HOLIDAY, pasif) GERÇEK tipi/günü/aktifliği ve
+    // TARİHİYLE (valid_on) aynen geri yazılır — full-replace'te silinmesinler.
     preservedTariffs.forEach((t, idx) => {
       out.push({
         name: t.name,
@@ -152,6 +152,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         sort_order: 1000 + idx,
         is_active: t.is_active,
         court_id: t.court_id ?? null,
+        valid_on: t.valid_on ?? null,
       });
     });
     return out;

@@ -1,6 +1,6 @@
 // P-REFACTOR: OwnerPanel'den SALT TAŞIMA — davranış değişmedi.
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, Loader2, RefreshCw, Users } from 'lucide-react';
+import { Clock, Loader2, RefreshCw, Users } from 'lucide-react';
 import { useOwnerToast } from './components/useOwnerToast';
 import { useConfirmSheet } from './components/useConfirmSheet';
 import { OwnerBottomSheet } from './components/OwnerBottomSheet';
@@ -152,10 +152,11 @@ interface PendingActionsViewProps {
     processingIds?: Set<string>;
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
-    onBack: () => void;
+    /** Geri oku kaldırıldı (alt nav dönüşü sağlar); prop eski çağıranlar için opsiyonel kaldı. */
+    onBack?: () => void;
 }
 
-export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, processingIds, onApprove, onReject, onBack }) => {
+export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingRequests, realPitchId, autoApprove, onToggleAutoApprove, processingIds, onApprove, onReject }) => {
     const notify = useOwnerToast();
     const [subTab, setSubTab] = useState<'REQUESTS' | 'PUBLIC_MATCHES'>('REQUESTS');
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
@@ -196,11 +197,8 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
 
     return (
         <div className="flex-1 bg-[#0A0E14] text-slate-200 font-sans flex flex-col h-full overflow-hidden">
-            {/* Header */}
+            {/* Header — geri oku kaldırıldı; alt navigasyondaki Özet sekmesi dönüşü sağlar. */}
             <div className="px-6 py-4 bg-[#161B22] border-b border-white/5 flex items-center gap-3">
-                <button onClick={onBack} className="p-2 rounded-lg hover:bg-white/5 text-gray-400 transition-colors">
-                    <ArrowLeft size={20} />
-                </button>
                 <div>
                     <h2 className="text-base font-black text-white italic uppercase tracking-tight">TALEPLER & AÇIK MAÇLAR</h2>
                     <p className="text-[10px] text-gray-500 font-bold uppercase">Sahada oluşturulan organizasyonlar</p>

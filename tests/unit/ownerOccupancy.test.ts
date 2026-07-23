@@ -28,8 +28,8 @@ describe('buildHourlyOccupancyGrid (B4)', () => {
     const grid = buildHourlyOccupancyGrid([booking({})], [{ id: 'c1', name: 'A' }]);
     const at = (h: number) => grid[h].pitches[0];
     expect(at(19)).toBeNull();
-    expect(at(20)).toBe('DAILY');
-    expect(at(21)).toBe('DAILY');
+    expect(at(20)?.type).toBe('DAILY');
+    expect(at(21)?.type).toBe('DAILY');
     expect(at(22)).toBeNull();
   });
 
@@ -38,7 +38,7 @@ describe('buildHourlyOccupancyGrid (B4)', () => {
       [booking({ start_time: '23:00', end_time: '00:00' })],
       [{ id: 'c1', name: 'A' }],
     );
-    expect(grid[23].pitches[0]).toBe('DAILY');
+    expect(grid[23].pitches[0]?.type).toBe('DAILY');
     expect(grid[22].pitches[0]).toBeNull();
   });
 
@@ -55,7 +55,27 @@ describe('buildHourlyOccupancyGrid (B4)', () => {
       [booking({ source: 'SUBSCRIPTION' })],
       [{ id: 'c1', name: 'A' }],
     );
-    expect(grid[20].pitches[0]).toBe('SUB');
+    expect(grid[20].pitches[0]?.type).toBe('SUB');
+  });
+
+  it('hücre rezerve edenin adını taşır (customer_name → title → kaynak etiketi)', () => {
+    const named = buildHourlyOccupancyGrid(
+      [booking({ customer_name: 'Ahmet Yılmaz' })],
+      [{ id: 'c1', name: 'A' }],
+    );
+    expect(named[20].pitches[0]?.name).toBe('Ahmet Yılmaz');
+
+    const titled = buildHourlyOccupancyGrid(
+      [booking({ customer_name: null, title: 'Salı Maçı' })],
+      [{ id: 'c1', name: 'A' }],
+    );
+    expect(titled[20].pitches[0]?.name).toBe('Salı Maçı');
+
+    const fallback = buildHourlyOccupancyGrid(
+      [booking({ customer_name: null, title: null, source: 'APP_BOOKING' })],
+      [{ id: 'c1', name: 'A' }],
+    );
+    expect(fallback[20].pitches[0]?.name).toBe('Uygulama rezervasyonu');
   });
 });
 
