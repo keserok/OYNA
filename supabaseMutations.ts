@@ -103,14 +103,23 @@ export const fbUpdateUser = async (user: AdminUser) => {
   if (error) throw new Error(`Kullanıcı güncellenemedi: ${error.message}`);
 };
 
+// Ban/doğrulama: doğrudan profiles UPDATE yerine SECURITY DEFINER RPC —
+// sunucu tarafı admin yetki kontrolü + admin_audit_log kaydı (bkz.
+// supabase/migrations/20260815000000_admin_ban_verify_rpcs.sql).
 export const fbBanUser = async (id: string, isBanned: boolean) => {
-  const { error } = await supabase.from('profiles').update({ is_banned: isBanned }).eq('id', id);
+  const { error } = await supabase.rpc('admin_ban_user', {
+    p_target_id: id,
+    p_is_banned: isBanned,
+    p_reason: isBanned ? 'Admin tarafından engellendi' : 'Ban kaldırıldı',
+  });
   if (error) throw new Error(`Ban işlemi başarısız: ${error.message}`);
 };
 
-
 export const fbVerifyUser = async (id: string) => {
-  const { error } = await supabase.from('profiles').update({ is_verified: true }).eq('id', id);
+  const { error } = await supabase.rpc('admin_verify_user', {
+    p_target_id: id,
+    p_status: 'approved',
+  });
   if (error) throw new Error(`Doğrulama başarısız: ${error.message}`);
 };
 
