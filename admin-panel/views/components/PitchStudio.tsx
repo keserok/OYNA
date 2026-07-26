@@ -35,7 +35,10 @@ import { useAdminToast } from '../context/AdminToastContext';
 import { DEFAULT_WORKING_DAYS, type OwnerWorkingDay } from '../../../views/owner/menu/ownerMenuTypes';
 import { ORDU_CENTER } from '../../../utils/orduData';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../../../components/map/mapBase';
-import type { PitchCourt } from '../../../types';
+import type { Pitch, PitchCourt } from '../../../types';
+// Canlı Ayna: oyuncu vitrini kartı + eşleyicisi TEK KAYNAK'tan (drift yok).
+import { PITCH_SHOWCASE_SELECT, mapDbPitchToUiPitch, type DbPitchRow } from '../../../shared/pitchShowcaseMapper';
+import { PitchShowcaseCard } from '../../../components/pitch-showcase/PitchShowcaseCard';
 
 interface PitchStudioProps {
   /** null → yeni tesis kurulumu; string → mevcut tesis düzenleme */
@@ -165,6 +168,19 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>('approved');
   const [showPreview, setShowPreview] = useState(false);
   const [scoreRefresh, setScoreRefresh] = useState(0);
+
+  // ── Canlı Ayna: oyuncunun Saha Keşfet'te gördüğü kartın birebir aynası ──
+  // Oyuncu tarafıyla AYNI sorgu + AYNI eşleyici; yalnız görünürlük filtreleri yok
+  // (admin onaysız/gizli sahayı da görmeli — teşhis şeridi durumu ayrıca söyler).
+  const [mirrorPitch, setMirrorPitch] = useState<Pitch | null>(null);
+  const [mirrorRow, setMirrorRow] = useState<{
+    verification_status: string | null;
+    is_open: boolean | null;
+    is_published: boolean | null;
+  } | null>(null);
+  const [mirrorLoading, setMirrorLoading] = useState(false);
+  const [mirrorError, setMirrorError] = useState<string | null>(null);
+  const [mirrorRefresh, setMirrorRefresh] = useState(0);
 
   // Mevcut tesis: canlı veriyi yükle
   useEffect(() => {
@@ -336,6 +352,41 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     if (activeTab === 'finance' && id) void loadFinance();
   }, [activeTab, id, loadFinance]);
 
+  // Canlı Ayna: oyuncu vitrinindeki AYNI sorgudan beslenir (PITCH_SHOWCASE_SELECT +
+  // mapDbPitchToUiPitch). verification/is_open/is_published filtreleri BİLEREK yok —
+  // ham durum teşhis şeridinde gösterilir.
+  const loadMirror = useCallback(async () => {
+    if (!id) return;
+    setMirrorLoading(true); setMirrorError(null);
+    try {
+      const { data, error } = await supabase
+        .from('pitches')
+        .select(PITCH_SHOWCASE_SELECT)
+        .eq('id', id)
+        .single();
+      if (error || !data) throw error ?? new Error('Tesis bulunamadı.');
+      const row = data as unknown as DbPitchRow & {
+        verification_status?: string | null;
+        is_open?: boolean | null;
+      };
+      setMirrorRow({
+        verification_status: row.verification_status ?? null,
+        is_open: row.is_open ?? null,
+        is_published: row.is_published ?? null,
+      });
+      setMirrorPitch(mapDbPitchToUiPitch(row));
+    } catch (e) {
+      setMirrorError(toTurkishAdminError(e));
+    } finally {
+      setMirrorLoading(false);
+    }
+  }, [id]);
+
+  // Sekme her açılışta + kayıt/tazeleme sonrası (mirrorRefresh) yeniden yüklenir.
+  useEffect(() => {
+    if (activeTab === 'showcase' && id) void loadMirror();
+  }, [activeTab, id, mirrorRefresh, loadMirror]);
+
   const scheduleGrid = useMemo(
     () => (schedule ? buildFacilityDayGrid(schedule, scheduleDateISO) : null),
     [schedule, scheduleDateISO],
@@ -410,6 +461,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       await updatePitchAdmin(id, buildProfilePayload());
       success('Tesis bilgileri kaydedildi.');
       setScoreRefresh((v) => v + 1);
+      setMirrorRefresh((v) => v + 1);
       onSaved();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -432,6 +484,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       await updatePitchAdmin(id, { price_per_match: pricePerMatch });
       success('Tarifeler kaydedildi.');
       setScoreRefresh((v) => v + 1);
+      setMirrorRefresh((v) => v + 1);
       onSaved();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -447,6 +500,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     try {
       await setPitchPublished(id, next);
       success(next ? 'Tesis vitrinde görünür.' : 'Tesis vitrinden gizlendi.');
+      setMirrorRefresh((v) => v + 1);
       onSaved();
     } catch (err) {
       setIsPublished(!next);
@@ -468,6 +522,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     try {
       await setPitchShowcaseFlags(id, { [key]: next });
       success(next ? okMsg[0] : okMsg[1]);
+      setMirrorRefresh((v) => v + 1);
       onSaved();
     } catch (err) {
       setLocal(cur);
@@ -482,6 +537,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     try {
       await updatePitchAdmin(id, { verification_status: status });
       success('Doğrulama durumu güncellendi.');
+      setMirrorRefresh((v) => v + 1);
       onSaved();
     } catch (err) {
       setVerificationStatus(prev);
@@ -995,6 +1051,92 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
 
               {activeTab === 'showcase' && id && (
                 <>
+                  {/* ── CANLI AYNA: oyuncunun Saha Keşfet'te gördüğü vitrin kartının birebir aynası ──
+                      Aynı sorgu (PITCH_SHOWCASE_SELECT) + aynı eşleyici + aynı kart bileşeni;
+                      teşhis şeridi ve köprü çipleri kartın DIŞINDA kalır (karta admin-özel görsel yok). */}
+                  <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Eye size={12} /> Canlı Ayna — Oyuncu Vitrini Kartı
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setMirrorRefresh((v) => v + 1)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-[10px] font-bold uppercase tracking-wide transition-colors shrink-0"
+                      >
+                        <RefreshCcw size={11} className={mirrorLoading ? 'animate-spin' : ''} /> Aynayı Yenile
+                      </button>
+                    </div>
+
+                    {/* Görünürlük teşhisi: oyuncu vitrini sorgusunun 3 şartı (approved + açık + yayında) */}
+                    {mirrorRow && (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {([
+                            { label: 'Doğrulama: Onaylı', ok: mirrorRow.verification_status === 'approved' },
+                            { label: 'Tesis Açık', ok: mirrorRow.is_open === true },
+                            { label: 'Yayında', ok: mirrorRow.is_published === true },
+                          ] as const).map((c) => (
+                            <span
+                              key={c.label}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wide ${
+                                c.ok
+                                  ? 'bg-green-500/10 border-green-500/30 text-green-300'
+                                  : 'bg-red-500/10 border-red-500/30 text-red-300'
+                              }`}
+                            >
+                              {c.ok ? <Check size={11} /> : <X size={11} />} {c.label}
+                            </span>
+                          ))}
+                        </div>
+                        {!(mirrorRow.verification_status === 'approved' && mirrorRow.is_open === true && mirrorRow.is_published === true) && (
+                          <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 flex items-start gap-2.5">
+                            <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-amber-300 font-bold leading-relaxed">
+                              Bu saha şu an oyuncu vitrininde LİSTELENMİYOR — kırmızı şart(lar) sağlanana kadar kart yalnız burada görünür.
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Kart, uygulama zemini üzerinde birebir çizilir (favori yıldızı/tıklama oyuncuya özel) */}
+                    {mirrorLoading && !mirrorPitch ? (
+                      <div className="flex items-center justify-center py-16 text-gray-500"><Loader2 size={18} className="animate-spin" /></div>
+                    ) : mirrorError ? (
+                      <div className="py-8 text-center">
+                        <p className="text-sm text-red-400 font-bold mb-3">{mirrorError}</p>
+                        <button type="button" onClick={() => void loadMirror()} className="text-xs text-red-400 font-bold inline-flex items-center gap-1.5"><RefreshCcw size={12} /> Tekrar dene</button>
+                      </div>
+                    ) : mirrorPitch ? (
+                      <div className="bg-[#0A0E14] rounded-3xl p-4">
+                        <div className="max-w-[400px] mx-auto">
+                          <PitchShowcaseCard pitch={mirrorPitch} />
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Ayna → düzenleme köprüleri: kartta gördüğünü ilgili sekmede düzelt */}
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { label: 'Fotoğraflar', tab: 'photos' },
+                        { label: 'Kimlik / Ad / Konum', tab: 'identity' },
+                        { label: 'Olanaklar', tab: 'amenities' },
+                        { label: 'Kortlar', tab: 'courts' },
+                        { label: 'Fiyat / Tarife', tab: 'tariffs' },
+                      ] as const).map((c) => (
+                        <button
+                          key={c.tab}
+                          type="button"
+                          onClick={() => setActiveTab(c.tab)}
+                          className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 text-[10px] font-bold uppercase tracking-wide transition-colors"
+                        >
+                          {c.label} · Düzenle
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
                       <div>
@@ -1099,13 +1241,18 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(true)}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/40 text-[#FFFF00] text-xs font-black uppercase tracking-wider"
-                  >
-                    <Eye size={15} /> Oyuncu Gözüyle Önizle
-                  </button>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FFFF00]/10 border border-[#FFFF00]/40 text-[#FFFF00] text-xs font-black uppercase tracking-wider"
+                    >
+                      <Eye size={15} /> Oyuncu Gözüyle Önizle
+                    </button>
+                    <p className="mt-1.5 text-[10px] text-gray-600 text-center">
+                      Vitrin kartını yukarıdaki Canlı Ayna'da, detay sayfası önizlemesini bu butonla görürsün.
+                    </p>
+                  </div>
 
                   <ShowcaseScoreCard
                     pitchId={id}

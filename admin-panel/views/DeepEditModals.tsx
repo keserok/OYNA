@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Pitch, Goalkeeper, Referee, AdminUser, UserRole } from '../../types';
 import { useAppStore } from '../../store';
+import { fetchProviderOpsAdmin, updateProviderOpsAdmin } from '../services/adminService';
 import * as FB from '../../supabaseMutations';
 import { X, Save, Image as ImageIcon, UploadCloud, Loader2, Check, Wallet, Star, Shield, Phone, Mail, AlertTriangle, Plus, Zap, MapPin, Clock } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
@@ -388,6 +389,22 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
     const { showOk, Toast } = useToast();
     const { loadServices, updateGoalkeeper, updateReferee } = useAppStore();
 
+    // Müsaitlik/doğrulamanın KANONİK kaynağı profiles'tır (is_available +
+    // verification_status) — eşleştirme motoru ve vitrin oradan okur. Eski
+    // "Doğrulanmış"/"Müsaitlik Durdur" toggle'ları GK/REF tablosuna var olmayan
+    // kolon yazmaya çalışan sessiz no-op'tu; artık gerçek ops RPC'sine bağlı.
+    const [ops, setOps] = useState<{ isAvailable: boolean; verificationStatus: string | null } | null>(null);
+    const [opsDraft, setOpsDraft] = useState<boolean | null>(null); // istenen isAvailable
+    useEffect(() => {
+        let alive = true;
+        setOps(null);
+        setOpsDraft(null);
+        fetchProviderOpsAdmin(item.id, typeParam)
+            .then((o) => { if (alive) { setOps({ isAvailable: o.isAvailable, verificationStatus: o.verificationStatus }); setOpsDraft(o.isAvailable); } })
+            .catch(() => { /* ops okunamazsa bölüm bilgilendirme moduna düşer */ });
+        return () => { alive = false; };
+    }, [item.id, typeParam]);
+
     const label = typeParam === 'GK' ? 'KALECİ' : 'HAKEM';
 
     const handleSave = async () => {
@@ -395,6 +412,10 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
         try {
             if (typeParam === 'GK') await updateGoalkeeper(edit);
             else await updateReferee(edit);
+            // Müsaitlik değiştiyse profiles.is_available'a audit'li ops RPC'siyle yaz
+            if (ops && opsDraft !== null && opsDraft !== ops.isAvailable) {
+                await updateProviderOpsAdmin(item.id, typeParam, { isAvailable: opsDraft });
+            }
             await loadServices();
             showOk(`✅ ${item.name} veritabanına kaydedildi`);
             setTimeout(onClose, 1000);
@@ -606,8 +627,34 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                         <div className="space-y-2">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">STATÜ</p>
                             <Toggle label="ELITE Statüsü" desc="Altın rozet göster, listedeki sıralamasını yükselt" value={!!edit.isElite} onChange={() => setEdit((prev: any) => ({ ...prev, isElite: !prev.isElite }))} />
-                            <Toggle label="Doğrulanmış" desc="Profil doğrulama rozeti" value={!!edit.isVerified} onChange={() => setEdit((prev: any) => ({ ...prev, isVerified: !prev.isVerified }))} />
-                            <Toggle label="Müsaitlik Durdur" desc="Bu kişiyi geçici olarak listeden kaldır" value={!!edit.isSuspended} onChange={() => setEdit((prev: any) => ({ ...prev, isSuspended: !prev.isSuspended }))} danger />
+                            {/* Doğrulama SALT OKUNUR: kimlik doğrulama Doğrulama Merkezi'nin
+                                belge akışından geçer — buradaki eski toggle hiçbir yere yazmıyordu. */}
+                            <div className="flex items-center justify-between p-3.5 bg-black/25 border border-white/5 rounded-2xl">
+                                <div>
+                                    <p className="text-xs font-bold text-white">Doğrulama Durumu</p>
+                                    <p className="text-[10px] text-gray-500">Belge onayı: Doğrulama Merkezi → Kimlik Doğrulama</p>
+                                </div>
+                                <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${
+                                    ops?.verificationStatus === 'approved'
+                                        ? 'text-green-300 bg-green-500/10 border-green-500/30'
+                                        : ops?.verificationStatus
+                                        ? 'text-amber-300 bg-amber-500/10 border-amber-500/30'
+                                        : 'text-gray-500 bg-white/5 border-white/10'
+                                }`}>
+                                    {ops?.verificationStatus === 'approved' ? 'ONAYLI' : ops?.verificationStatus === 'pending' ? 'BEKLİYOR' : ops?.verificationStatus?.toUpperCase() || '—'}
+                                </span>
+                            </div>
+                            {ops && opsDraft !== null ? (
+                                <Toggle
+                                    label="Müsaitlik Durdur"
+                                    desc="Eşleştirme ve pazardan geçici olarak kaldır (profiles.is_available — kaydedince işlenir)"
+                                    value={!opsDraft}
+                                    onChange={() => setOpsDraft((v) => (v === null ? v : !v))}
+                                    danger
+                                />
+                            ) : (
+                                <p className="text-[10px] text-gray-600 px-1">Müsaitlik bilgisi yükleniyor…</p>
+                            )}
                         </div>
                     </div>
 

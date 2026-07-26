@@ -64,6 +64,10 @@ export interface AdminDashboardStats {
   open_disputes?: number;
   total_communities?: number;
   active_promo_codes?: number;
+  /** Açık/yanıt bekleyen destek talepleri (kanal: PLAYER). */
+  open_support_tickets?: number;
+  /** Açık/yanıt bekleyen tesis mesajları (kanal: OWNER). */
+  open_owner_messages?: number;
 }
 
 export interface DbAuditLogRow {
@@ -1852,7 +1856,7 @@ export async function fetchProfileById(userId: string): Promise<AdminUser | null
 export async function fetchTeamsFromDb(): Promise<Array<{ id: string; name: string; captain_id: string | null; created_at: string | null; is_demo?: boolean }>> {
   const { data, error } = await supabase
     .from('teams')
-    .select('id, name, captain_id, captain, rating, level, location, is_demo')
+    .select('id, name, captain_id, captain, rating, level, location, is_demo, created_at')
     .order('name', { ascending: true })
     .limit(100);
   if (error) {
@@ -1863,7 +1867,7 @@ export async function fetchTeamsFromDb(): Promise<Array<{ id: string; name: stri
     id: t.id as string,
     name: t.name as string,
     captain_id: (t.captain_id as string) || (t.captain as string) || null,
-    created_at: null,
+    created_at: (t.created_at as string) || null,
     is_demo: Boolean(t.is_demo),
   }));
 }
@@ -1927,15 +1931,28 @@ export async function setPromoCodeActive(id: string, isActive: boolean): Promise
   }
 }
 
+/** Audit'li takım silme (TEAM_DELETE) — RPC yoksa eski doğrudan-tablo yoluna düşer. */
 export async function deleteTeamAdmin(id: string): Promise<void> {
-  const { error } = await supabase.from('teams').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  const { error } = await supabase.rpc('admin_delete_team', { p_team_id: id });
+  if (error) {
+    if (isRpcMissing(error)) {
+      const { error: e2 } = await supabase.from('teams').delete().eq('id', id);
+      if (e2) throw new Error(e2.message);
+      return;
+    }
+    throw new Error(error.message);
+  }
 }
 
+/**
+ * Audit'li takım oluşturma (TEAM_CREATE). Doğrudan tablo INSERT'i admin için
+ * HEP patlıyordu: teams_insert_own RLS'i captain_id = auth.uid() ister, panel
+ * captain'sız takım açar. SECURITY DEFINER RPC bu kısıtı doğru şekilde aşar.
+ */
 export async function createTeamAdmin(name: string, isDemo = false): Promise<string> {
-  const { data, error } = await supabase.from('teams').insert({ name, is_demo: isDemo }).select('id').single();
-  if (error) throw new Error(error.message);
-  return data.id as string;
+  const { data, error } = await supabase.rpc('admin_create_team', { p_name: name, p_is_demo: isDemo });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_create_team RPC deploy edilmedi — npm run admin:deploy' : error.message);
+  return data as string;
 }
 
 export async function deleteTournament(id: string): Promise<void> {
@@ -2683,6 +2700,10 @@ function providerToDbPayload(obj: Record<string, unknown>): Record<string, unkno
   };
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined || key === 'id') continue;
+    // Eski toggle'lardan sızan hayalet anahtarlar: GK/REF tablolarında bu
+    // kolonlar yok; müsaitlik profiles.is_available'a admin_update_provider_ops
+    // ile yazılır, doğrulama Doğrulama Merkezi akışından geçer.
+    if (key === 'isVerified' || key === 'isSuspended') continue;
     out[map[key] ?? key] = value;
   }
   return out;

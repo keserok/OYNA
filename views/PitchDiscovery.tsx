@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Search, Filter, MapPin, Star, Layers,
+  ArrowLeft, Search, Filter, MapPin, Star,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
   LocateFixed, Loader2, Navigation2, MapPinOff, Bell, Send, Check, Plus,
@@ -29,199 +29,21 @@ import {
   filterAndSortPitches,
   type PitchSortOrder,
 } from '../services/pitchFilterService';
-import {
-  getAverageTariffPrice,
-  mapDbTariffsToPitchTariffs,
-  resolveTariffForSlot,
-} from '../services/tariffService';
+import { resolveTariffForSlot } from '../services/tariffService';
 import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchFavoritesService';
 import { recordPitchView } from '../services/pitchShowcaseService';
 import { reportPitchContent } from '../services/pitchMediaService';
 import { splitAmenities } from '../shared/amenities';
 import { courtFeatureLabel, normalizeCourtFeatures } from '../shared/courtFeatures';
 import { surfaceLabel } from '../shared/courtSurface';
-import { transformedImageUrl } from '../utils/imageTransform';
-
-// ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
-interface DbTariff {
-  id: string;
-  name?: string;
-  applies_to_days: number[] | null;
-  start_time: string;
-  end_time: string;
-  price_per_hour: number;
-  deposit_amount?: number | null;
-  is_active: boolean | null;
-  tariff_type: string;
-  sort_order?: number | null;
-  /** Tarih-özel tarife (takvimden girilen özel fiyat) — yalnız bu tarihte geçerli. */
-  valid_on?: string | null;
-}
-
-interface DbCourtRow {
-  id: string;
-  name: string;
-  court_type: string | null;
-  surface?: string | null;
-  size?: string | null;
-  price: number | null;
-  is_active: boolean | null;
-  description?: string | null;
-  images?: string[] | null;
-  lighting_grade?: string | null;
-  grass_grade?: string | null;
-  locker_grade?: string | null;
-  grades_status?: string | null;
-  capacity?: number | null;
-  sort_order?: number | null;
-  features?: string[] | null;
-}
-
-interface DbPitchRow {
-  id: string;
-  name: string;
-  city: string | null;
-  district: string | null;
-  address: string | null;
-  rating: number | null;
-  rating_count: number | null;
-  google_rating: number | null;
-  google_review_count: number | null;
-  price_per_person: number | null;
-  total_price: number | null;
-  price_per_match: number | null;
-  image: string | null;
-  images: string[] | null;
-  description: string | null;
-  amenities: string[] | null;
-  latitude: number | null;
-  longitude: number | null;
-  owner_id?: string | null;
-  is_published?: boolean | null;
-  is_featured?: boolean | null;
-  flash_deals_enabled?: boolean | null;
-  show_availability_badge?: boolean | null;
-  map_label?: string | null;
-  booking_disabled_by_admin?: boolean | null;
-  working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
-  courts?: DbCourtRow[];
-  pitch_tariffs?: DbTariff[];
-}
-
-const gradeToScore = (g?: string | null): number => {
-  if (g === 'A+') return 98;
-  if (g === 'A') return 95;
-  if (g === 'B') return 80;
-  if (g === 'C') return 65;
-  return 0;
-};
-
-// Saha zemini etiketleri artık tek kaynaktan (shared/courtSurface) gelir —
-// oyuncu, owner (PitchManager) ve admin paneli birebir aynı sözlüğü kullanır.
-
-/** capacity=14 → "7v7"; tek sayıysa "13 oyuncu" */
-const formatCapacity = (capacity?: number): string | null => {
-  if (!capacity || capacity <= 0) return null;
-  if (capacity % 2 === 0) return `${capacity / 2}v${capacity / 2}`;
-  return `${capacity} oyuncu`;
-};
-
-const mapDbPitchToUiPitch = (
-  row: DbPitchRow,
-): Pitch => {
-  const tariffs = mapDbTariffsToPitchTariffs(row.pitch_tariffs);
-  const averagePrice =
-    getAverageTariffPrice(row.pitch_tariffs) ?? row.total_price ?? row.price_per_match ?? 0;
-  const wh = row.working_hours;
-  const courts: Court[] = (row.courts ?? [])
-    .filter((c) => c.is_active !== false)
-    .map((c): Court => ({
-      id: c.id,
-      name: c.name,
-      type: c.court_type === 'CLOSED' ? 'CLOSED' : 'OPEN',
-      surface: c.surface ?? 'TURF',
-      size: c.size ?? undefined,
-      capacity: c.capacity ?? undefined,
-      price: c.price ?? averagePrice,
-      slots: [],
-      description: c.description ?? undefined,
-      images: (c.images as string[] | undefined) ?? undefined,
-      features: Array.isArray(c.features) ? (c.features as string[]) : undefined,
-      lighting: gradeToScore(c.lighting_grade),
-      grassQuality: gradeToScore(c.grass_grade),
-      lockerRoomQuality: gradeToScore(c.locker_grade),
-      lightingGrade: c.lighting_grade ?? null,
-      grassGrade: c.grass_grade ?? null,
-      gradesStatus: (c.grades_status as Court['gradesStatus']) ?? 'approved',
-      sortOrder: c.sort_order ?? 0,
-    }))
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  return {
-    id: row.id,
-    name: row.name,
-    city: row.city ?? undefined,
-    district: row.district ?? row.city ?? '',
-    location: row.address ?? [row.district, row.city].filter(Boolean).join(', '),
-    distance: '',
-    // V-2: puansız saha sahte "5.0" göstermesin. Platform değerlendirmesi varsa
-    // onu, yoksa Google yorumu varsa onu; ikisi de yoksa 0 (kart "Yeni" gösterir).
-    // (pitches.rating DEFAULT 5.0 olduğundan rating_count kapısı ŞART.)
-    rating: (row.rating_count ?? 0) > 0
-      ? (row.rating ?? 0)
-      : (row.google_review_count ?? 0) > 0
-        ? (row.google_rating ?? 0)
-        : 0,
-    ratingCount: row.rating_count ?? 0,
-    googleRating: row.google_rating ?? 0,
-    googleReviews: row.google_review_count ?? 0,
-    pricePerPerson: row.price_per_person ?? 0,
-    // V-3: flash indirim SLOT-ÖZEL (court_id/booking_date/start_time) bir kampanya;
-    // vitrinde tüm sahaya "indirimli fiyat" olarak yansıtmak yanıltıcıydı (rezervasyon
-    // TAM tarifeyi alıyordu — yem-değiştir). Kart artık GERÇEK ortalama fiyatı gösterir;
-    // doğru slot-özel indirim uygulaması OW-D'de (rezervasyon fiyatına).
-    totalPrice: averagePrice,
-    originalPrice: undefined,
-    image: row.image ?? row.images?.[0] ?? '',
-    images: row.images ?? (row.image ? [row.image] : []),
-    description: row.description ?? '',
-    amenities: row.amenities ?? [],
-    lighting: 0,
-    grassQuality: 0,
-    lockerRoomQuality: 0,
-    goalQuality: 0,
-    // V-8: puandan uydurma doluluk türetme kaldırıldı; gerçek doluluk keşif
-    // tarafında hesaplanmıyor → 0 (bilinmiyor). Sahte veri modelde taşınmaz.
-    occupancy: 0,
-    // Koordinat yoksa sahte varsayılan basma — undefined bırak (haritada gizlenir).
-    coordinates:
-      row.latitude != null && row.longitude != null
-        ? { lat: row.latitude, lng: row.longitude }
-        : undefined,
-    slots: [],
-    courts,
-    isApproved: true,
-    ownerId: row.owner_id ?? undefined,
-    isPublished: row.is_published !== false,
-    isFeatured: row.is_featured === true,
-    showAvailabilityBadge: row.show_availability_badge === true,
-    mapLabel: row.map_label?.trim() || undefined,
-    bookingDisabledByAdmin: row.booking_disabled_by_admin === true,
-    // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
-    // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
-    workingHoursRaw: wh ?? null,
-    workingHours: wh && !Array.isArray(wh)
-      ? {
-          open: wh.open ?? '08:00',
-          close: wh.close ?? '02:00',
-          slotDuration: wh.slot_duration ?? wh.slotDuration ?? 60,
-        }
-      : { open: '08:00', close: '02:00', slotDuration: 60 },
-    // V-3: sahte pitch-geneli indirim rozeti/kimliği kaldırıldı (slot-özel doğru uygulama OW-D).
-    flashDiscount: undefined,
-    flashDealId: undefined,
-    tariffs,
-  };
-};
+// Vitrin eşleyicisi ve kartı TEK KAYNAK'tan gelir (admin Canlı Ayna da aynısını kullanır).
+import {
+  PITCH_SHOWCASE_SELECT,
+  formatCapacity,
+  mapDbPitchToUiPitch,
+  type DbPitchRow,
+} from '../shared/pitchShowcaseMapper';
+import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -655,126 +477,9 @@ const CALENDAR_MAX_DAYS = 90; // Karar #12: 3 ay ileri
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dayOffsetFromToday = (d: Date) => Math.round((startOfDay(d).getTime() - startOfDay(new Date()).getTime()) / 86400000);
 
-/** Favori/puan ayrımı: favori = büyük sarı yıldız (dolu/boş), puan = küçük altın yıldız */
-const FavStar: React.FC<{ active: boolean; size?: number }> = ({ active, size = 18 }) => (
-  <Star
-    size={size}
-    className={active ? 'fill-[#FFFF00] text-[#FFFF00]' : 'text-white'}
-    strokeWidth={2}
-  />
-);
-
-/** Görsel yoksa/kırıksa tasarımdaki yeşil gradient'e düşen güvenli görsel (Karar #11) */
-const SafeImage: React.FC<{ src?: string; alt: string; className?: string; variant?: 'card' | 'detail' | 'thumb' }> = ({ src, alt, className, variant = 'card' }) => {
-  const [failed, setFailed] = useState(false);
-  const url = transformedImageUrl(src, variant);
-  if (!url || failed) {
-    return (
-      <div className={`${className ?? ''} bg-[linear-gradient(160deg,#143a22_0%,#0b1f14_55%,#05080c_100%)] flex items-center justify-center`}>
-        <Layers size={28} className="text-white/15" />
-      </div>
-    );
-  }
-  return <img src={url} alt={alt} loading="lazy" className={className} onError={() => setFailed(true)} />;
-};
-
 // --- COMPONENTS ---
-
-/** Vitrin kartı — editoryal tam genişlik kart (tasarım 1a) */
-const PitchCard: React.FC<{
-  pitch: Pitch;
-  isFavorite: boolean;
-  onToggleFavorite: (pitch: Pitch) => void;
-  onClick: (pitch: Pitch) => void;
-}> = ({ pitch, isFavorite, onToggleFavorite, onClick }) => {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="cursor-pointer"
-      onClick={() => onClick(pitch)}
-    >
-      <div className="relative h-52 rounded-3xl overflow-hidden border border-white/5">
-        <SafeImage src={pitch.image} alt={pitch.name} className="w-full h-full object-cover" variant="card" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
-
-        {/* Rozetler: indirim + öne çıkan */}
-        <div className="absolute top-3 left-3 flex gap-1.5">
-          {pitch.flashDiscount ? (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600 text-[10px] font-black text-white shadow-md">
-              🔥 %{pitch.flashDiscount} İNDİRİM
-            </span>
-          ) : null}
-          {pitch.isFeatured && (
-            <span className="px-2 py-1 rounded-lg bg-[#FFFF00] text-[10px] font-black text-black shadow-md uppercase">Öne Çıkan</span>
-          )}
-        </div>
-
-        {/* Favori yıldızı */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleFavorite(pitch); }}
-          title={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
-          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center active:scale-90 transition-transform"
-        >
-          <FavStar active={isFavorite} />
-        </button>
-
-        {/* Mesafe */}
-        {pitch.distance && (
-          <div className="absolute left-3 bottom-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/50 backdrop-blur-md border border-white/10">
-            <MapPin size={11} className="text-[#39FF14]" />
-            <span className="text-[11px] font-extrabold text-white">{pitch.distance}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-start justify-between mt-3 gap-3">
-        <h3 className="text-lg font-black italic uppercase tracking-tight leading-none text-white">{pitch.name}</h3>
-        <div className="flex items-center gap-1 shrink-0">
-          {/* V-2: gerçek değerlendirme (platform veya Google) yoksa "5.0" değil "Yeni". */}
-          {(pitch.ratingCount > 0 || pitch.googleReviews > 0) ? (
-            <>
-              <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
-              <span className="text-sm font-extrabold text-white">{pitch.rating.toFixed(1)}</span>
-              {pitch.googleReviews > 0 && (
-                <span className="text-xs font-medium text-white/45">({pitch.googleReviews})</span>
-              )}
-            </>
-          ) : (
-            <span className="text-[11px] font-black uppercase tracking-wide text-white/40">Yeni</span>
-          )}
-        </div>
-      </div>
-      <p className="mt-1 text-[13px] font-medium text-white/55">{pitch.district}</p>
-
-      <div className="mt-2.5 flex items-end justify-between">
-        <div>
-          <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-white/40 mb-0.5">Ort. Saatlik</span>
-          <span className="flex items-baseline gap-2">
-            <span className={`text-lg font-black ${pitch.originalPrice ? 'text-[#39FF14]' : 'text-white'}`}>~₺{pitch.totalPrice}</span>
-            {pitch.originalPrice && (
-              <span className="text-[13px] font-semibold text-white/35 line-through">₺{pitch.originalPrice}</span>
-            )}
-          </span>
-        </div>
-        {/* Müsaitlik rozeti: yalnız admin show_availability_badge açtıysa gösterilir */}
-        {pitch.showAvailabilityBadge && pitch.todayAvailableCount !== undefined && (
-          pitch.todayAvailableCount > 0 ? (
-            <span className="px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black">
-              Bugün {pitch.todayAvailableCount} saat müsait
-            </span>
-          ) : (
-            <span className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[11px] font-black">
-              Bugün dolu
-            </span>
-          )
-        )}
-      </div>
-    </motion.div>
-  );
-};
+// Vitrin kartı (PitchShowcaseCard), FavStar ve SafeImage TEK KAYNAK'tan gelir:
+// components/pitch-showcase/PitchShowcaseCard — admin Canlı Ayna aynı kartı çizer.
 
 const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 
@@ -816,7 +521,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
       const pitchRes = await supabase
         .from('pitches')
-        .select('*, courts(id, name, court_type, surface, size, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity, sort_order, features), pitch_tariffs(*)')
+        .select(PITCH_SHOWCASE_SELECT)
         .eq('verification_status', 'approved')
         .eq('is_open', true)
         .eq('is_published', true);
@@ -1542,7 +1247,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <div className="space-y-7 pb-8">
                 <AnimatePresence mode="popLayout">
                   {filteredPitches.map((pitch) => (
-                    <PitchCard
+                    <PitchShowcaseCard
                       key={pitch.id}
                       pitch={pitch}
                       isFavorite={favorites.has(pitch.id)}

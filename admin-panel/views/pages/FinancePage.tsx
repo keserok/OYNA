@@ -4,9 +4,9 @@ import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
   fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout, fetchPayoutIdentityChecks,
   fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
-  markChargebackAdmin,
+  markChargebackAdmin, fetchWithdrawalRequestsAdmin, processWithdrawalAdmin,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
-  type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck,
+  type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck, type WithdrawalRequestRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
@@ -64,9 +64,52 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'report' | 'health' | 'golive'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'withdrawals' | 'report' | 'health' | 'golive'>('ledger');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
+
+  // Tesis İBAN talepleri (owner_withdrawal_requests) — Payout Talepleri'nden
+  // (payout_requests) AYRI legacy owner-IBAN akışı; şimdiye dek panelde hiç yoktu.
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequestRow[]>([]);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
+  const [withdrawalStatus, setWithdrawalStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING');
+  const [withdrawalBusy, setWithdrawalBusy] = useState<string | null>(null);
+
+  const loadWithdrawals = useCallback(async (status: string) => {
+    setWithdrawalsLoading(true);
+    try {
+      setWithdrawals(await fetchWithdrawalRequestsAdmin(status, PAGE_SIZE));
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setWithdrawalsLoading(false);
+    }
+  }, [toastError]);
+
+  useEffect(() => {
+    if (tab === 'withdrawals') void loadWithdrawals(withdrawalStatus);
+  }, [tab, withdrawalStatus, loadWithdrawals]);
+
+  const handleWithdrawal = async (r: WithdrawalRequestRow, approved: boolean) => {
+    let notes: string | undefined;
+    if (!approved) {
+      const input = window.prompt('Red sebebi (tesise bildirim olarak gider):');
+      if (input === null) return;
+      notes = input.trim() || undefined;
+    } else if (!window.confirm(`${r.owner_name || 'Tesis sahibi'} için ₺${Number(r.amount).toLocaleString('tr')} İBAN talebi ONAYLANSIN mı?\nBanka transferini ayrıca yapmanız gerekir — RPC yalnız durumu işler ve sahibi bilgilendirir.`)) {
+      return;
+    }
+    setWithdrawalBusy(r.id);
+    try {
+      await processWithdrawalAdmin(r.id, approved, notes);
+      success(approved ? 'Talep onaylandı; tesise bildirim gitti.' : 'Talep reddedildi; tesise bildirim gitti.');
+      await loadWithdrawals(withdrawalStatus);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setWithdrawalBusy(null);
+    }
+  };
 
   // Ödeme müdahale (Karar #73): genel intent listesi + force capture/void/refund
   const [intents, setIntents] = useState<PaymentIntentRow[]>([]);
@@ -270,14 +313,16 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
     { id: 'intents' as const, label: 'Ödeme Müdahale' },
     { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
+    { id: 'withdrawals' as const, label: `Tesis İBAN Talepleri${withdrawals.length ? ` (${withdrawals.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
     { id: 'report' as const, label: 'Finans Raporu' },
     { id: 'health' as const, label: 'Ödeme Sağlığı' },
     { id: 'golive' as const, label: 'Go-Live & Mutabakat' },
-  ]), [payouts.length]);
+  ]), [payouts.length, withdrawals.length]);
 
-  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'intents' ? intents : tab === 'billing' ? filteredBilling : filteredPayouts;
-  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'intents' ? intents.length : tab === 'billing' ? billing.length : payouts.length;
+  const filteredWithdrawals = useMemo(() => filterRows(withdrawals), [withdrawals, query]);
+  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'intents' ? intents : tab === 'billing' ? filteredBilling : tab === 'withdrawals' ? filteredWithdrawals : filteredPayouts;
+  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'intents' ? intents.length : tab === 'billing' ? billing.length : tab === 'withdrawals' ? withdrawals.length : payouts.length;
 
   return (
     <PageShell
@@ -288,7 +333,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           <button
             type="button"
             onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'intents' || tab === 'payouts'}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'intents' || tab === 'payouts' || tab === 'withdrawals'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -506,6 +551,74 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           loading={loading}
           emptyMessage="Bekleyen payout talebi yok"
         />
+      )}
+
+      {tab === 'withdrawals' && (
+        <>
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {([['PENDING', 'Bekleyen'], ['APPROVED', 'Onaylanan'], ['REJECTED', 'Reddedilen'], ['ALL', 'Tümü']] as const).map(([s, label]) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setWithdrawalStatus(s)}
+                className={`px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-colors ${
+                  withdrawalStatus === s ? 'bg-white/10 border-white/25 text-white' : 'border-white/10 text-gray-500 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <p className="text-[10px] text-gray-600 ml-2">
+              Tesis sahibinin İBAN'a çekim talebi — onay/red tesise bildirim düşürür; banka transferi manuel yapılır.
+            </p>
+          </div>
+          <DataTable
+            columns={[
+              { header: 'Tarih', render: (r: WithdrawalRequestRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
+              { header: 'Tesis', render: (r: WithdrawalRequestRow) => (
+                <div>
+                  <p className="text-sm text-white font-bold">{r.pitch_name || '—'}</p>
+                  <p className="text-[10px] text-gray-500">{r.owner_name || '—'}</p>
+                </div>
+              ) },
+              { header: 'Tutar', render: (r: WithdrawalRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
+              { header: 'IBAN', render: (r: WithdrawalRequestRow) => (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-mono text-gray-400">{r.iban || '—'}</span>
+                  {r.iban_photo_url && (
+                    <a href={r.iban_photo_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-400 hover:text-blue-300">IBAN belgesi ↗</a>
+                  )}
+                </div>
+              ) },
+              { header: 'Durum', render: (r: WithdrawalRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
+              { header: 'İşlem', render: (r: WithdrawalRequestRow) => (
+                r.status === 'PENDING' ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={withdrawalBusy === r.id}
+                      onClick={() => void handleWithdrawal(r, true)}
+                      className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25 disabled:opacity-40"
+                    >
+                      Onayla
+                    </button>
+                    <button
+                      type="button"
+                      disabled={withdrawalBusy === r.id}
+                      onClick={() => void handleWithdrawal(r, false)}
+                      className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-40"
+                    >
+                      Reddet
+                    </button>
+                  </div>
+                ) : <span className="text-[10px] text-gray-600">—</span>
+              ) },
+            ]}
+            data={filteredWithdrawals}
+            loading={withdrawalsLoading}
+            emptyMessage={withdrawalStatus === 'PENDING' ? 'Bekleyen İBAN talebi yok' : 'Kayıt yok'}
+          />
+        </>
       )}
 
       <ActionConfirmModal isOpen={!!intentConfirm} options={intentConfirm} />
