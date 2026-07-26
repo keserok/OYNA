@@ -19,7 +19,8 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 | **Kullanıcılar** | Tüm oyuncular — ban, silme, profil görüntüleme | Şikayet/sorun olduğunda |
 | **Kaleciler** | Kaleci başvuruları, profil düzenleme | Haftalık |
 | **Hakemler** | Hakem başvuruları, profil düzenleme | Haftalık |
-| **Maçlar** | Tüm maçları görüntüle, iptal/düzenle. Kokpitin "Kadro & Slot" sekmesinin tepesindeki **Lobi Aynası** oyuncu lobisiyle birebir aynıdır: başlık, konum, tarih, saat, ücret, zorluk, format, min. puan ve görünürlük (özel kod) öğesine tıklayıp yerinde düzenlenir — kayıt anında yayına geçer ve denetime düşer. Saha da (`shared/MatchPitch`) tüketiciyle aynıdır: slota tıkla → ata/çıkar/taşı. | Sorun olduğunda |
+| **Maçlar** | Tüm maçları görüntüle, iptal/düzenle. Kokpitin "Kadro & Slot" sekmesinin tepesindeki **Lobi Aynası** oyuncu lobisiyle birebir aynıdır: başlık, konum, tarih, saat, ücret, zorluk, format, min. puan ve görünürlük (özel kod) öğesine tıklayıp yerinde düzenlenir — kayıt anında yayına geçer ve denetime düşer. Saha da (`shared/MatchPitch`) tüketiciyle aynıdır: slota tıkla → ata/çıkar/taşı. İptal modalında **🚨 Acil İptal**: tek adımda iptal + iade sürecini başlatma + tüm kadroya anlık bildirim. | Sorun olduğunda |
+| **Destek Merkezi** | Kullanıcı (Oyuncular) ve tesis (Tesisler) destek talepleri: mesaj dizisi, yanıt yazma (yanıt kullanıcıya uygulama bildirimi olarak düşer), durum yönetimi (Açık→Yanıtlandı→Çözüldü/Kapalı). Kullanıcılar talebi uygulamada Ayarlar → Yardım Merkezi'nden açar. Sidebar rozeti açık talep sayısını canlı gösterir. | Her gün |
 | **Doğrulama Merkezi** | Başvuru onay kuyruğu (kaleci, hakem, tesis) | Günlük |
 | **Finans** | Cüzdan hareketleri, ödemeler, para çekme talepleri | Günlük |
 | **Komisyon** | Platform komisyon oranlarını yönet | Ayda bir gözden geçir |
