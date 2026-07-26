@@ -263,6 +263,11 @@ export const onAuthStateChanged = (
     } else {
       callback(null);
     }
+  }).catch((err) => {
+    // Oturum çözümlemesi hata verirse uygulama açılışı kilitlenmesin:
+    // oturumsuz kabul et, dinleyici sonraki durum değişimini yine yakalar.
+    console.warn('[supabaseAuth] getSession başarısız:', err);
+    callback(null);
   });
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
