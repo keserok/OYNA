@@ -300,6 +300,9 @@ export interface MatchListing {
   courtName?: string; // Maçın oynandığı saha (court) adı — "Tesis · Saha"
   time: string;
   date: string;
+  /** Ham ISO tarih (YYYY-MM-DD) — `date` görsel etikete ("Bugün") çevrildiği
+   *  için düzenleme formları gerçek tarihi buradan okur. */
+  rawDate?: string;
   price: number;
   difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
   minRating: number;

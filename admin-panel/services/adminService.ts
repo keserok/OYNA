@@ -2506,9 +2506,11 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     avatar_url: user.avatar,
     role: user.role,
     is_verified: user.isVerified,
-    wallet_balance: user.wallet,
     match_count: user.matchCount,
     rating: user.rating,
+    // wallet_balance BİLEREK GÖNDERİLMEZ: modal açıkken gerçekleşen cüzdan
+    // hareketini bayat değerle geri alma riski vardı; bakiye düzeltmesi artık
+    // ledger'lı admin_adjust_wallet_balance ile yapılır (Profil Aynası → Cüzdan).
   };
   if (user.phone) payload.phone = user.phone;
   if (user.playerCard) {
@@ -2516,9 +2518,6 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     if (user.playerCard.tier) payload.card_tier = user.playerCard.tier;
   }
   if (user.cardActive !== undefined) payload.card_active = user.cardActive;
-  if (user.matchCount !== undefined || user.rating !== undefined) {
-    payload.stats = { matchesPlayed: user.matchCount ?? 0, rating: user.rating ?? 5 };
-  }
   return payload;
 }
 
@@ -2556,6 +2555,59 @@ export async function updateUserProfileAdmin(user: import('../../types').AdminUs
   }
 }
 
+
+/**
+ * Kullanıcı Profili Aynası (uygulama-paritesi) alanları — ProfileEditSheet'in
+ * yazdıkları + profil ekranındaki yönetimsel alanlar. Ölçekler DB cinsindendir:
+ * trust_score/skill_rating 0–5 (UI 0–100 gösterir, /20 ile gönderilir).
+ */
+export interface AppProfileAdminFields {
+  full_name?: string;
+  avatar_url?: string;
+  position?: string;
+  bio?: string;
+  /** '' gönderilirse sunucu NULL'a çevirir (temizleme). */
+  birthdate?: string;
+  gender?: string;
+  play_style?: string;
+  age_range?: string;
+  trust_score?: number;
+  skill_rating?: number;
+  has_completed_onboarding?: boolean;
+  card_active?: boolean;
+  card_tier?: 'bronze' | 'silver' | 'gold';
+}
+
+/**
+ * Profil Aynası kaydı: yalnız DEĞİŞEN alanları gönderin — RPC gönderilmeyen
+ * alanlara dokunmaz, her çağrı admin_audit_log'a USER_UPDATE olarak düşer.
+ */
+export async function updateUserAppProfileAdmin(userId: string, fields: AppProfileAdminFields): Promise<void> {
+  const payload: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== undefined) payload[k] = v;
+  }
+  if (Object.keys(payload).length === 0) return;
+  const { error } = await supabase.rpc('admin_update_user_profile', {
+    p_user_id: userId,
+    p_payload: payload,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Ledger'li bakiye düzeltme (FINANCE yetkisi ister): profiles.wallet_balance'ı
+ * elle ezmek yerine wallet_transactions'a ADMIN_ADJUST kaydı açar — finans
+ * raporları ve mutabakat bozulmaz. Pozitif tutar yükleme, negatif düşümdür.
+ */
+export async function adjustWalletBalanceAdmin(userId: string, amount: number, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_adjust_wallet_balance', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+}
 
 export async function verifyUserAdmin(userId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_verify_user', { p_user_id: userId });

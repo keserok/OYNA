@@ -19,7 +19,7 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 | **Kullanıcılar** | Tüm oyuncular — ban, silme, profil görüntüleme | Şikayet/sorun olduğunda |
 | **Kaleciler** | Kaleci başvuruları, profil düzenleme | Haftalık |
 | **Hakemler** | Hakem başvuruları, profil düzenleme | Haftalık |
-| **Maçlar** | Tüm maçları görüntüle, iptal/düzenle | Sorun olduğunda |
+| **Maçlar** | Tüm maçları görüntüle, iptal/düzenle. Kokpitin "Kadro & Slot" sekmesinin tepesindeki **Lobi Aynası** oyuncu lobisiyle birebir aynıdır: başlık, konum, tarih, saat, ücret, zorluk, format, min. puan ve görünürlük (özel kod) öğesine tıklayıp yerinde düzenlenir — kayıt anında yayına geçer ve denetime düşer. Saha da (`shared/MatchPitch`) tüketiciyle aynıdır: slota tıkla → ata/çıkar/taşı. | Sorun olduğunda |
 | **Doğrulama Merkezi** | Başvuru onay kuyruğu (kaleci, hakem, tesis) | Günlük |
 | **Finans** | Cüzdan hareketleri, ödemeler, para çekme talepleri | Günlük |
 | **Komisyon** | Platform komisyon oranlarını yönet | Ayda bir gözden geçir |
@@ -81,6 +81,10 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 - **Kullanıcıyı Banla:** Kötüye kullanım durumunda geçici ya da kalıcı ban (+ süre seçilir)
 - **Ban Kaldır:** Banlı kullanıcının itirazı kabul edilirse banlı kişiyi seçip ban kaldırılır
 - **"360° Görünüm":** Kullanıcının tüm geçmişi (maçlar, ödemeler, ban geçmişi, ihtilaflar) tek ekranda
+- **"Profil Aynası" (360 → Profil sekmesi):** Kullanıcının UYGULAMADA gördüğü profil ekranının birebir canlı kopyası — kimlik kartı, premium kart (🎴), güven puanı, kısayollar ve maç geçmişi aynı bileşenlerle çizilir. Fark: her alan admin için düzenlenebilir:
+  - **Düzenle** butonu uygulamadaki "Profili Düzenle" alt sayfasının TA KENDİSİNİ açar (pozisyon, doğum tarihi, cinsiyet, oyun stili, tanıtım, fotoğraf) — kayıt audit'li `admin_update_user_profile` RPC'sinden geçer
+  - **Yönetici Alanları** (mor bölüm): ad-soyad, güven puanı (0–100), beceri puanı (kart OVR temeli) ve premium kart aç/kapat + tier
+  - **Cüzdan kısayolu:** bakiye düzeltmesi artık **ledger'lıdır** — `wallet_transactions`'a ADMIN_ADJUST kaydı düşer, sebep zorunludur, FINANCE yetkisi ister (bakiye elle ezilmez, mutabakat bozulmaz)
 - **"Ghost Girişi":** Kullanıcının şikayetini anlamak için onun gözünden uygulamayı görmek (şifre gerekmez, sadece sebep yazılır; her ghost girişi denetim günlüğüne kaydedilir)
 - **Kullanıcı Sil (Anonimleştir):** KVKK gereği hesap anonim hale getirilebilir
 

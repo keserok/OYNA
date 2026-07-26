@@ -264,6 +264,17 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     bio: data.bio ?? null,
     birthdate: data.birthdate ?? null,
     trustScore: typeof data.trust_score === 'number' ? data.trust_score : null,
+    // Onboarding rozet alanları: bunlar haritalanmadığı için kullanıcı
+    // kaydettiği hâlde profil rozetleri (yaş aralığı/cinsiyet/stil) hiç
+    // görünmüyordu — admin profil aynası da aynı okuyucuyu kullanır.
+    ageRange: data.age_range ?? null,
+    gender: data.gender ?? null,
+    playStyle: data.play_style ?? null,
+    firstName: data.first_name ?? null,
+    lastName: data.last_name ?? null,
+    isMinor: data.is_minor ?? false,
+    guardianConsentStatus: data.guardian_consent_status ?? 'NONE',
+    hasCompletedOnboarding: data.has_completed_onboarding ?? false,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };

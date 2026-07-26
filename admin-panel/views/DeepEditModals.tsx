@@ -327,18 +327,17 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             </div>
                         </div>
 
-                        {/* Wallet */}
+                        {/* Wallet — SALT OKUNUR: bakiyeyi elle ezmek wallet_transactions
+                            ledger'ıyla mutabakatı bozuyordu. Düzeltme artık ledger'lı
+                            admin_adjust_wallet_balance yolundan: Kullanıcı 360 → Profil
+                            Aynası → Cüzdan kısayolu. */}
                         <div className="p-4 bg-black/30 rounded-2xl border border-yellow-500/20">
-                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN KONTROLÜ</p>
-                            <div className="grid grid-cols-2 gap-4 items-end">
-                                <FI label="Cüzdan Bakiyesi (₺)">
-                                    <I type="number" value={edit.wallet || 0} onChange={e => setEdit({ ...edit, wallet: +e.target.value })} className="text-yellow-400 font-mono text-lg" />
-                                </FI>
-                                <div className="flex gap-2">
-                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: (prev.wallet || 0) + 100 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺100</button>
-                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: (prev.wallet || 0) + 500 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺500</button>
-                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: 0 }))} className="flex-1 h-11 bg-red-500/15 text-red-400 border border-red-500/20 rounded-xl text-xs font-black hover:bg-red-500/25 transition-all">SIFIRLA</button>
-                                </div>
+                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN</p>
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-lg font-black font-mono text-yellow-400">{Number(edit.wallet || 0).toLocaleString('tr-TR')} ₺</p>
+                                <p className="text-[10px] text-gray-500 leading-relaxed text-right max-w-[260px]">
+                                    Bakiye düzeltmesi ledger'a işlenir: <span className="text-gray-300 font-bold">360 → Profil Aynası → Cüzdan</span> (sebep zorunlu, FINANCE yetkisi).
+                                </p>
                             </div>
                         </div>
 
