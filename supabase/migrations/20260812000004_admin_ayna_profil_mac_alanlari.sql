@@ -13,6 +13,11 @@
 --    sessizce düşüyordu — pitch_id yalnız admin_create_match'te yazılıyordu.
 --    pitch_id artık güncellemede de yazılır (boş dize → NULL'a çevirmez,
 --    mevcut değeri korur; açıkça null gönderilirse temizler).
+--    ⚠️ CANLI ŞEMA GERÇEĞİ: matches.date ve matches.time TEXT'tir. Önceki
+--    tanımlardaki (p_payload->>'date')::date cast'i COALESCE(date,text) tip
+--    uyuşmazlığıyla fonksiyonun TAMAMINI planlama anında patlatıyordu (42804,
+--    canlıda ROLLBACK'li smoke ile yakalandı). Tarih artık text + ISO regex
+--    doğrulamasıyla yazılır.
 --
 -- İkisi de yalnız __core gövdesini değiştirir; RBAC sarmalayıcıları
 -- (20260710000006) aynı imzayla çağırmaya devam eder.
@@ -100,7 +105,8 @@ BEGIN
   UPDATE public.matches SET
     title = COALESCE(p_payload->>'title', title),
     location = COALESCE(p_payload->>'location', location),
-    date = COALESCE((p_payload->>'date')::date, date),
+    date = CASE WHEN p_payload ? 'date' AND (p_payload->>'date') ~ '^\d{4}-\d{2}-\d{2}$'
+                THEN p_payload->>'date' ELSE date END,
     "time" = COALESCE(p_payload->>'time', "time"),
     price = COALESCE((p_payload->>'price')::numeric, price),
     difficulty = COALESCE(p_payload->>'difficulty', difficulty),
