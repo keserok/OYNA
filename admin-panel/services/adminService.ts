@@ -1021,6 +1021,155 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
   if (error) throw new Error(error.message);
 }
 
+/** Silme talebini iptal et — kullanıcı vazgeçtiyse kuyruktan çıkarır (audit'li). */
+export async function cancelAccountDeletionAdmin(userId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_cancel_account_deletion', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Destek Merkezi (support_tickets + support_ticket_messages) ─────────────
+// Kanal: PLAYER (uygulama) | OWNER (tesis). Durum: OPEN → PENDING → RESOLVED/CLOSED.
+export type SupportChannel = 'PLAYER' | 'OWNER';
+export type SupportStatus = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
+
+export interface SupportTicketRow {
+  id: string;
+  user_id: string | null;
+  channel: SupportChannel;
+  subject: string | null;
+  category: string | null;
+  status: SupportStatus;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  last_sender_role: 'USER' | 'ADMIN';
+  unread_for_admin: boolean;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  resolved_at: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  message_count: number;
+  last_preview: string | null;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  sender_role: 'USER' | 'ADMIN';
+  sender_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface SupportTicketThread {
+  id: string;
+  user_id: string | null;
+  channel: SupportChannel;
+  subject: string | null;
+  category: string | null;
+  status: SupportStatus;
+  priority: string;
+  created_at: string;
+  last_message_at: string;
+  user_name: string | null;
+  user_email: string | null;
+  messages: SupportTicketMessage[];
+}
+
+export async function fetchSupportTicketsAdmin(
+  channel: SupportChannel,
+  opts?: { status?: SupportStatus | null; search?: string; limit?: number },
+): Promise<SupportTicketRow[]> {
+  const { data, error } = await supabase.rpc('admin_support_tickets_list', {
+    p_channel: channel,
+    p_status: opts?.status ?? null,
+    p_search: opts?.search?.trim() || null,
+    p_limit: opts?.limit ?? 100,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_support_tickets_list RPC deploy edilmedi' : error.message);
+  return (data || []) as SupportTicketRow[];
+}
+
+/** Diziyi açar; sunucu unread_for_admin bayrağını da temizler. */
+export async function fetchSupportTicketThreadAdmin(ticketId: string): Promise<SupportTicketThread> {
+  const { data, error } = await supabase.rpc('admin_support_ticket_thread', { p_ticket_id: ticketId });
+  if (error) throw new Error(error.message);
+  return data as SupportTicketThread;
+}
+
+/** Yanıt yaz; p_new_status verilirse aynı adımda durum da değişir (ör. PENDING). */
+export async function replySupportTicketAdmin(ticketId: string, body: string, newStatus?: SupportStatus): Promise<void> {
+  const { error } = await supabase.rpc('admin_support_ticket_reply', {
+    p_ticket_id: ticketId,
+    p_body: body,
+    p_new_status: newStatus ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setSupportTicketStatusAdmin(ticketId: string, status: SupportStatus): Promise<void> {
+  const { error } = await supabase.rpc('admin_support_ticket_set_status', { p_ticket_id: ticketId, p_status: status });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Acil maç iptali — tek adımda: CANCELLED + iade süreci + kadroya bildirim ─
+export async function emergencyCancelMatchAdmin(
+  matchId: string,
+  reason?: string,
+): Promise<{ ok: boolean; recipients: number }> {
+  const { data, error } = await supabase.rpc('admin_emergency_cancel_match', {
+    p_match_id: matchId,
+    p_reason: reason?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  const r = (data || {}) as { ok?: boolean; recipients?: number };
+  return { ok: !!r.ok, recipients: Number(r.recipients ?? 0) };
+}
+
+// ─── Tesis para çekme talepleri (owner_withdrawal_requests) ──────────────────
+export interface WithdrawalRequestRow {
+  id: string;
+  pitch_id: string | null;
+  owner_id: string | null;
+  amount: number;
+  iban: string | null;
+  iban_photo_url: string | null;
+  status: string;
+  created_at: string;
+  pitch_name: string | null;
+  owner_name: string | null;
+}
+
+export async function fetchWithdrawalRequestsAdmin(
+  status: string = 'PENDING',
+  limit = 100,
+): Promise<WithdrawalRequestRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_withdrawal_requests', { p_status: status, p_limit: limit });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_withdrawal_requests RPC deploy edilmedi' : error.message);
+  return (data || []) as WithdrawalRequestRow[];
+}
+
+export async function processWithdrawalAdmin(requestId: string, approved: boolean, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_process_withdrawal', {
+    p_request_id: requestId,
+    p_approved: approved,
+    p_notes: notes?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Saha yorumu moderasyonu + bildirim şablonu testi ───────────────────────
+export async function deletePitchRatingAdmin(ratingId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_pitch_rating', { p_id: ratingId });
+  if (error) throw new Error(error.message);
+}
+
+/** Şablonu kendi hesabına test bildirimi olarak gönderir; bildirim id döner. */
+export async function sendTemplateTestAdmin(typeKey: string, vars: Record<string, unknown> = {}): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_send_template_test', { p_type_key: typeKey, p_vars: vars });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
 export interface DeletionQueueRow {
   user_id: string;
   full_name: string | null;

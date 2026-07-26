@@ -6,6 +6,7 @@ import {
   adminGetMatchAdmin,
   assignMatchRefereeAdmin,
   assignMatchGoalkeeperSideAdmin,
+  emergencyCancelMatchAdmin,
   fetchMatchGoalkeepers,
   assignToSlotAdmin,
   swapSlotsAdmin,
@@ -317,6 +318,30 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       await cancelMatchAdmin(local.id, cancelReason.trim(), cancelRefund);
       setLocal({ ...local, status: 'CANCELLED' });
       success(cancelRefund ? 'Maç iptal edildi; iadeler politikaya göre işlenir' : 'Maç iptal edildi (iadesiz)');
+      setCancelOpen(false);
+      setCancelReason('');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ACİL İPTAL: tek adımda iptal + iade süreci (PENDING) + TÜM kadroya anlık
+  // bildirim (admin_emergency_cancel_match). Normal iptalden farkı: bildirim
+  // otomatik gider ve iade süreci daima başlatılır.
+  const confirmEmergencyCancel = async () => {
+    if (!local) return;
+    if (cancelReason.trim().length < 5) {
+      toastError('İptal sebebi zorunlu (en az 5 karakter).');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { recipients } = await emergencyCancelMatchAdmin(local.id, cancelReason.trim());
+      setLocal({ ...local, status: 'CANCELLED' });
+      success(`Acil iptal tamam — ${recipients} oyuncuya bildirim gitti, iade süreci başlatıldı`);
       setCancelOpen(false);
       setCancelReason('');
       onUpdated();
@@ -840,6 +865,18 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     İptal Et
                   </button>
                 </div>
+                {/* Acil iptal: iade + kadro bildirimi otomatik (tek adım) */}
+                <button
+                  type="button"
+                  disabled={busy || cancelReason.trim().length < 5}
+                  onClick={() => void confirmEmergencyCancel()}
+                  className="w-full py-2.5 rounded-xl bg-orange-500/15 border border-orange-500/40 text-orange-300 text-xs font-black uppercase tracking-wider hover:bg-orange-500/25 disabled:opacity-40"
+                >
+                  🚨 Acil İptal — iade sürecini başlat + tüm kadroya bildir
+                </button>
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  Acil iptalde iade süreci daima başlatılır ve kadrodaki herkese anlık bildirim gider; normal iptalde iade seçime bağlıdır ve bildirimi ayrıca gönderirsiniz.
+                </p>
               </div>
             </div>
           )}

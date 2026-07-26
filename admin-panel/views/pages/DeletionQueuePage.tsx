@@ -13,7 +13,7 @@ import { ActionConfirmModal, type ActionConfirmOptions } from '../components/Act
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
-  fetchDeletionQueue, processAccountDeletion, toTurkishAdminError,
+  cancelAccountDeletionAdmin, fetchDeletionQueue, processAccountDeletion, toTurkishAdminError,
   type DeletionQueueRow,
 } from '../../services/adminService';
 
@@ -48,6 +48,20 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
       await processAccountDeletion(row.user_id, anonymize);
       success(anonymize ? 'Hesap anonimleştirildi' : 'Hesap silindi');
       setConfirm(null);
+      await load();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Kullanıcı vazgeçtiyse: talebi kuyruktan çıkar (hesap olduğu gibi kalır, audit'e düşer).
+  const runCancelRequest = async (row: DeletionQueueRow) => {
+    setBusy(row.user_id);
+    try {
+      await cancelAccountDeletionAdmin(row.user_id);
+      success('Silme talebi iptal edildi — hesap aktif kalmaya devam eder');
       await load();
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -130,6 +144,15 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
             title="Kalıcı sil"
           >
             <Trash2 size={11} /> Sil
+          </button>
+          <button
+            type="button"
+            disabled={busy === r.user_id}
+            onClick={() => void runCancelRequest(r)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase bg-white/5 text-gray-300 border-white/15 hover:text-white disabled:opacity-40"
+            title="Kullanıcı vazgeçti — talebi kuyruktan çıkar"
+          >
+            <RefreshCw size={11} /> Talebi İptal Et
           </button>
         </div>
       ),
