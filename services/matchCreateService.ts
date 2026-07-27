@@ -166,14 +166,15 @@ export interface AtomicCreateResult {
 /** Sunucunun isimli hatalarını akışın anlayacağı koda çevirir. */
 export type CreateMatchErrorCode =
   | 'SLOT_TAKEN' | 'INSUFFICIENT_BALANCE' | 'FORMAT_OUT_OF_RANGE' | 'NO_TARIFF'
-  | 'PAST_TIME' | 'COURT_NOT_FOUND' | 'SEED_NOT_FOUND' | 'BOOKING_DISABLED'
-  | 'SLOT_UNAVAILABLE' | 'UNKNOWN';
+  | 'PAST_TIME' | 'COURT_NOT_FOUND' | 'SEED_NOT_FOUND' | 'SEED_NOT_READY'
+  | 'BOOKING_DISABLED' | 'SLOT_UNAVAILABLE' | 'UNKNOWN';
 
 export function parseCreateMatchError(err: unknown): { code: CreateMatchErrorCode; message: string } {
   const msg = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err ?? '');
   const codes: CreateMatchErrorCode[] = [
     'SLOT_TAKEN', 'INSUFFICIENT_BALANCE', 'FORMAT_OUT_OF_RANGE', 'NO_TARIFF',
-    'PAST_TIME', 'COURT_NOT_FOUND', 'SEED_NOT_FOUND', 'BOOKING_DISABLED', 'SLOT_UNAVAILABLE',
+    'PAST_TIME', 'COURT_NOT_FOUND', 'SEED_NOT_READY', 'SEED_NOT_FOUND',
+    'BOOKING_DISABLED', 'SLOT_UNAVAILABLE',
   ];
   for (const c of codes) {
     if (msg.includes(c)) return { code: c, message: msg };

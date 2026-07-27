@@ -22,9 +22,11 @@
 -- Değerler TAKIM BAŞINA oyuncudur (5 → 5v5 → 10 kişi). Eski (hiç kullanılmamış,
 -- toplam-kişi semantikli, çift sayı şartlı) kısıt düşürülür.
 ALTER TABLE public.courts DROP CONSTRAINT IF EXISTS courts_capacity_range_check;
+-- max daima min'in altına düşmesin (capacity<=4 kortlarda kelepçe — CHECK patlamaz)
 UPDATE public.courts
    SET min_capacity = GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2),
-       max_capacity = LEAST(11, CEIL(COALESCE(capacity, 14) / 2.0)::int)
+       max_capacity = GREATEST(LEAST(11, CEIL(COALESCE(capacity, 14) / 2.0)::int),
+                               GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2))
  WHERE min_capacity IS NULL OR max_capacity IS NULL;
 
 ALTER TABLE public.courts

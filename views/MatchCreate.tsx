@@ -60,10 +60,18 @@ type SheetKind = 'ADV' | 'FRIENDS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
 
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const {
-    matchCreateSeed, setMatchCreateSeed, setSelectedMatch, applyMatchLocal,
+    setMatchCreateSeed, setSelectedMatch, applyMatchLocal,
     setLobbyMode, currentUserProfile, adminMatches,
   } = useAppStore();
   const uid = currentUserProfile?.id;
+
+  // Seed TEK SEFERLİK tüketilir: mount'ta yerele kopyalanır ve store hemen
+  // temizlenir — vazgeçip çıkınca sonraki "Maç Oluştur" girişi temiz açılır.
+  const [seed, setSeed] = useState(() => useAppStore.getState().matchCreateSeed);
+  useEffect(() => {
+    if (useAppStore.getState().matchCreateSeed) setMatchCreateSeed(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Veri durumu ───────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -102,6 +110,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const dragRef = useRef<{ left: number; max: number } | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const publishRef = useRef<() => void>(() => {});
+  const publishBusyRef = useRef(false);
+  const slideValRef = useRef(0);
   const [result, setResult] = useState<AtomicCreateResult | null>(null);
   const [conflict, setConflict] = useState<{ time: string; next: string | null } | null>(null);
   const [missingTL, setMissingTL] = useState(0);
@@ -112,16 +122,21 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [suggestContact, setSuggestContact] = useState('');
   const searchRef = useRef<HTMLInputElement | null>(null);
 
-  const seed = matchCreateSeed;
   const seeded = !!seed?.bookingId;
 
   // ── Türetilenler ──────────────────────────────────────────────────────────
   // Maçlar İstanbul saatiyle yaşar (sunucu PAST_TIME'ı Europe/Istanbul ile
   // ölçer) → gün/saat filtreleri cihaz saatine değil İstanbul'a bağlanır.
+  // Dakikalık tik: ekran açık kalırsa saat/gece yarısı sınırı donup kalmasın.
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClockTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const istNow = useMemo(() => {
     try { return new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' })); }
     catch { return new Date(); }
-  }, []);
+  }, [clockTick]);
   const today = useMemo(() => { const d = new Date(istNow); d.setHours(0, 0, 0, 0); return d; }, [istNow]);
   const dateAt = useCallback((i: number) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; }, [today]);
   const dayDate = dateAt(selDay);
@@ -157,8 +172,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const visibleHours = useMemo(() => {
     if (!dayQuote) return [];
     return dayQuote.hours.filter(h => {
-      if (selDay === 0) {
-        // Bugünün geçmiş saatleri (gece slotları dahil) listelenmez
+      if (selDay === 0 && !h.night) {
+        // Bugünün geçmiş gündüz saatleri listelenmez; gece saatleri (şeridin
+        // sonundaki 00/01) fiziksel olarak yarın sabahtır — hep görünür.
         return parseInt(h.time, 10) > nowHour;
       }
       return true;
@@ -289,11 +305,14 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   useEffect(() => {
     if (seeded || !dayQuote) return;
+    // Çakışma banner'ı açıkken otomatik seçim YAPILMAZ: kullanıcı "X'e geç"
+    // önerisini görür; sessizce günün ilk saatine kaydırılmaz.
+    if (conflict) return;
     if (!selTime || !visibleHours.some(h => h.time === selTime && h.tariffOk && !hourBlocked(h.time))) {
       setSelTime(firstFree() ?? null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayQuote, selDay, selCourtId, busyMaps, localBusy]);
+  }, [dayQuote, selDay, selCourtId, busyMaps, localBusy, conflict]);
 
   // Format aralık dışına düşmesin
   useEffect(() => {
@@ -325,6 +344,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   // ── YAYINLA — atomik ─────────────────────────────────────────────────────
   const publish = useCallback(async () => {
+    // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
+    if (publishBusyRef.current) return;
+    publishBusyRef.current = true;
     setPublishing(true);
     setPubStep(0);
     setConflict(null);
@@ -356,7 +378,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       // Maçı yerel akışa işle + seed'i temizle + cüzdanı tazele
       const fresh = await getMatchDetails(res.matchId).catch(() => null);
       if (fresh) { applyMatchLocal(fresh); setSelectedMatch(fresh); }
-      if (seeded) setMatchCreateSeed(null);
+      if (seeded) setSeed(null);
       getWalletSummary().then(setWallet).catch(() => {});
       setResult(res);
       setCopied(false);
@@ -377,11 +399,19 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         showToast('Saha bilgisi güncellendi, liste tazeleniyor.', 'error');
         fetchCreateFacilities().then(setFacilities).catch(() => {});
       } else if (code === 'PAST_TIME') {
-        setSelTime(firstFree() ?? null);
-        showToast('Seçtiğin saat geçmişte kaldı — en yakın saate alındı.', 'error');
-      } else if (code === 'SEED_NOT_FOUND') {
-        setMatchCreateSeed(null);
-        showToast('Rezervasyon bulunamadı; normal kurulum akışına dönüldü.', 'error');
+        if (seeded) {
+          // Süresi geçmiş rezervasyon çevrilemez — kilidi çöz, normal akışa dön.
+          setSeed(null);
+          showToast('Rezervasyonun saati geçmiş — normal kurulum akışına dönüldü.', 'error');
+        } else {
+          setSelTime(firstFree() ?? null);
+          showToast('Seçtiğin saat geçmişte kaldı — en yakın saate alındı.', 'error');
+        }
+      } else if (code === 'SEED_NOT_FOUND' || code === 'SEED_NOT_READY') {
+        setSeed(null);
+        showToast(code === 'SEED_NOT_READY'
+          ? 'Rezervasyon onaylanmadan/kaporası ödenmeden maça çevrilemiyor.'
+          : 'Rezervasyon bulunamadı; normal kurulum akışına dönüldü.', 'error');
       } else {
         showToast('Maç yayınlanamadı. Lütfen tekrar dene.', 'error');
         console.error('create_match_atomic:', message);
@@ -389,6 +419,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       setSlide(0);
     } finally {
       clearTimeout(t1); clearTimeout(t2);
+      publishBusyRef.current = false;
       setPublishing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,20 +428,26 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   publishRef.current = publish;
 
   // ── Kaydır → yayınla (pointer takibi pencerede) ───────────────────────────
+  // Yayın tetikleme YAN ETKİSİ state updater'ın dışında tutulur (StrictMode
+  // updater'ları iki kez çalıştırır); güncel değer ref'te izlenir.
   useEffect(() => {
     const move = (e: PointerEvent) => {
       const d = dragRef.current;
       if (!d) return;
       const x = Math.max(0, Math.min(d.max, e.clientX - d.left - 27));
-      setSlide(x / d.max);
+      slideValRef.current = x / d.max;
+      setSlide(slideValRef.current);
     };
     const up = () => {
       if (!dragRef.current) return;
       dragRef.current = null;
-      setSlide(prev => {
-        if (prev >= 0.88) { void publishRef.current(); return 1; }
-        return 0;
-      });
+      if (slideValRef.current >= 0.88) {
+        setSlide(1);
+        void publishRef.current();
+      } else {
+        setSlide(0);
+      }
+      slideValRef.current = 0;
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -434,6 +471,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     if (sheet !== 'FRIENDS' || friends !== null) return;
     getFriends().then(setFriends).catch(() => setFriends([]));
   }, [sheet, friends]);
+
+  // Cüzdan overlay'i doğrudan YÜKLEME sekmesinde açılsın
+  useEffect(() => {
+    if (sheet === 'TOPUP') useAppStore.getState().setWalletInitialTab('TOPUP');
+  }, [sheet]);
 
   const goLobby = async () => {
     if (!result) return;
@@ -650,7 +692,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     <p className="text-[13px] font-black truncate">{venueTxt}</p>
                     <p className="mt-0.5 text-[10.5px] font-bold text-[#39FF14]">Rezervasyonundan kilitlendi · {whenTxt}</p>
                   </div>
-                  <button onClick={() => { setMatchCreateSeed(null); setSelTime(null); }}
+                  <button onClick={() => { setSeed(null); setSelTime(null); }}
                     className="shrink-0 min-h-[36px] px-3 rounded-[10px] border border-white/[0.14] text-white/60 text-[10.5px] font-black active:scale-95 transition-transform">
                     Değiştir
                   </button>

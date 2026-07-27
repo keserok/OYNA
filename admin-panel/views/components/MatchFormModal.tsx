@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, UploadCloud, Loader2 } from 'lucide-react';
 import { useImageUpload } from '../../../hooks/useImageUpload';
@@ -98,9 +98,15 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
     courtId: '',
   });
   const { uploadImage, uploading, progress } = useImageUpload('matches');
+  // admin_fetch_matches is_platform döndürmediğinden edit'te gerçek değer bilinmez:
+  // dokunulmadıysa payload'a HİÇ yazılmaz (sunucu mevcut değeri korur).
+  const [platformTouched, setPlatformTouched] = useState(false);
+  const initialPitchIdRef = useRef('');
 
   useEffect(() => {
     if (!open) return;
+    setPlatformTouched(false);
+    initialPitchIdRef.current = (mode === 'edit' && match ? match.pitchId : '') || '';
     if (mode === 'edit' && match) {
       setF({
         title: match.title,
@@ -219,13 +225,19 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         // Boş bırakılırsa anahtar hiç gitmez → sunucu otomatik kod üretir.
         ...(privateCode ? { privateCode } : {}),
         isDemo: f.isDemo,
-        isPlatform: f.isPlatform,
+        // Edit'te yalnız admin dokunduysa gönderilir — aksi hâlde sunucu değeri korunur
+        // (fetch is_platform döndürmediği için form gerçeği bilemez).
+        ...(mode !== 'edit' || platformTouched ? { isPlatform: f.isPlatform } : {}),
         // Boş → sunucu tetikleyicisi maçın sahasının fotoğrafını otomatik yazar.
         image: f.image.trim(),
         // Edit'te mevcut rozetleri KORU (zorlukla EZME); yalnız create'te zorluk yazılır.
         badges: mode === 'edit' && match ? match.badges : [f.difficulty],
         pitchId: f.pitchId || undefined,
-        ...(f.courtId ? { courtId: f.courtId } : {}),
+        // Saha değiştiyse ve yeni kort seçilmediyse eski kort bağı temizlenir
+        // (boş court_id sunucuda NULL'a çevrilir); aksi hâlde yalnız seçim gider.
+        ...(f.courtId
+          ? { courtId: f.courtId }
+          : (mode === 'edit' && f.pitchId !== initialPitchIdRef.current ? { courtId: '' } : {})),
       });
       onClose();
     } finally {
@@ -368,7 +380,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
                 <input
                   type="checkbox"
                   checked={f.isPlatform}
-                  onChange={(e) => setF({ ...f, isPlatform: e.target.checked })}
+                  onChange={(e) => { setPlatformTouched(true); setF({ ...f, isPlatform: e.target.checked }); }}
                   className="w-4 h-4 accent-red-500"
                 />
                 <span className="text-xs font-bold text-gray-300">OYNA platform maçı</span>
