@@ -18,16 +18,35 @@
 -- ============================================================================
 
 -- ── 1 · courts kapasite aralığı + boyut rozeti ──────────────────────────────
--- Kolonlar canlıda mevcut ama boş; tek 'capacity'den (toplam kişi) türetilir.
--- Değerler TAKIM BAŞINA oyuncudur (5 → 5v5 → 10 kişi). Eski (hiç kullanılmamış,
--- toplam-kişi semantikli, çift sayı şartlı) kısıt düşürülür.
+-- BİRİM KARARI: min_capacity/max_capacity TAKIM BAŞINA oyuncudur (5 → 5v5 → 10
+-- kişi). Eski kolon 'capacity' TOPLAM kişi olarak kalır (geriye dönük görünümler
+-- onu okur). Önceki tanım toplam-kişi semantikliydi ve çift sayı şartı koyuyordu;
+-- o kısıt düşürülür ve varsa toplam-birimle yazılmış satırlar ÇEVRİLİR — aksi
+-- hâlde yeni CHECK doğrulamada patlar ya da değerler iki kat yanlış okunur.
 ALTER TABLE public.courts DROP CONSTRAINT IF EXISTS courts_capacity_range_check;
--- max daima min'in altına düşmesin (capacity<=4 kortlarda kelepçe — CHECK patlamaz)
+
+-- (a) Toplam-birimle girilmiş satırları takım başına indir (12..22 → 6..11).
+--     11'in üstündeki her değer toplam-birim kabul edilir; takım başına
+--     11'den (11v11) büyük gerçek bir format yoktur.
+UPDATE public.courts
+   SET min_capacity = CEIL(min_capacity / 2.0)::int
+ WHERE min_capacity IS NOT NULL AND min_capacity > 11;
+UPDATE public.courts
+   SET max_capacity = CEIL(max_capacity / 2.0)::int
+ WHERE max_capacity IS NOT NULL AND max_capacity > 11;
+
+-- (b) Hiç aralık girilmemiş satırlar: 'capacity' (toplam) üzerinden türet.
+--     max daima min'in altına düşmesin (capacity<=4 kortlarda kelepçe).
 UPDATE public.courts
    SET min_capacity = GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2),
        max_capacity = GREATEST(LEAST(11, CEIL(COALESCE(capacity, 14) / 2.0)::int),
                                GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2))
  WHERE min_capacity IS NULL OR max_capacity IS NULL;
+
+-- (c) Kelepçe: dönüştürme sonrası min > max kalmasın.
+UPDATE public.courts
+   SET max_capacity = min_capacity
+ WHERE min_capacity IS NOT NULL AND max_capacity IS NOT NULL AND min_capacity > max_capacity;
 
 ALTER TABLE public.courts
   ALTER COLUMN min_capacity SET DEFAULT 5,
