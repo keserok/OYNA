@@ -173,25 +173,18 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       const gender = m.gender || 'Karma';
       const ageGroup = m.ageGroup || 'Tümü';
       
-      const mappedMissingPositions = (m.missingPositions || [])
-        .filter((pos: any) => Number(pos.count) > 0)
-        .map((pos: any) => {
-          const raw = String(pos.role || '').toUpperCase();
-          let role = pos.role;
-          if (['GK', 'KALECİ', 'KL'].includes(raw)) role = 'KALECİ';
-          else if (['DEF', 'STP', 'SĞB', 'SLB', 'SAVUNMA', 'BEK', 'SAV'].includes(raw)) role = 'SAVUNMA';
-          else if (['MID', 'ORT', 'MDO', 'OS', 'ORTA', 'ORTA SAHA'].includes(raw)) role = 'ORTA SAHA';
-          else if (['FW', 'HÜC', 'SNT', 'SĞA', 'SLA', 'HÜCUM', 'FV'].includes(raw)) role = 'HÜCUM';
-          else if (['PLAYER', 'OYUNCU', 'ANY', 'FIELD'].includes(raw)) role = 'OYUNCU';
-          else if (['REF', 'REFEREE', 'HAKEM'].includes(raw)) role = 'HAKEM';
-          return { ...pos, role };
-        });
+      // TEK KART DİLİ: pozisyon/rol çorbası ("8P", "2 STP", "pozisyon pozisyon")
+      // YOK — aranan oyuncu sayısı İKİ TARAFIN açık slotlarından hesaplanır.
+      const openCount =
+        ((m.slots || []).filter((sl: any) => sl?.status === 'OPEN').length) +
+        ((m.awaySlots || []).filter((sl: any) => sl?.status === 'OPEN').length);
 
       return {
         ...m,
         date: m.date || '18.05.2026',
         time: m.time || '22:00 - 23:00',
-        missingPositions: mappedMissingPositions,
+        missingPositions: [],
+        openCount,
         price,
         difficulty: normalizedMentality,
         matchMentality,
@@ -985,29 +978,17 @@ const MatchCard: React.FC<{
         </div>
       )}
 
-      {/* ── EKSİK POZİSYONLAR (akışta — Net ve Şık) ── */}
+      {/* ── ARANAN OYUNCU — tek dil: iki tarafın açık slot toplamı ── */}
       <div className="flex flex-col gap-2.5 items-start">
-        {match.missingPositions?.map((pos: any, i: number) => {
-          const isUrgent = pos.role === myRole;
-          const localizedRole = pos.role;
-          
-          return (
-            <div 
-              key={i} 
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-xl border transition-all ${
-                isUrgent 
-                  ? 'bg-red-500/15 border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
-                  : 'bg-black/60 border-white/10'
-              }`}
-              style={{ borderLeft: `4px solid ${isUrgent ? '#ef4444' : '#39FF14'}` }}
-            >
-              <Circle size={12} className={isUrgent ? 'text-[#ef4444]' : 'text-[#39FF14]'} />
-              <span className={`text-[10px] font-black uppercase tracking-widest ${isUrgent ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-white/80'}`}>
-                {pos.count} {localizedRole} ARANIYOR
-              </span>
-            </div>
-          );
-        })}
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-xl border bg-black/60 border-white/10"
+          style={{ borderLeft: `4px solid ${Number(match.openCount) > 0 ? '#39FF14' : '#FACC15'}` }}
+        >
+          <Circle size={12} className={Number(match.openCount) > 0 ? 'text-[#39FF14]' : 'text-[#FACC15]'} />
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/85">
+            {Number(match.openCount) > 0 ? `${match.openCount} OYUNCU ARANIYOR` : 'KADRO TAMAM'}
+          </span>
+        </div>
       </div>
  
       {/* ── ESNEK BOŞLUK: alt bloğu aşağı iter, çakışmayı önler ── */}

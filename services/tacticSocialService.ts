@@ -207,6 +207,60 @@ export const setTacticShareLink = async (
 
 export const tacticShareUrl = (token: string): string => `https://oyna.app/t/${token}`;
 
+// ─── Maç Taktik Önerileri (tek lobi P3) — kişi başı 1 öneri ──────────────────
+// Kadrodaki herkes Stüdyo'daki KENDİ taktiğinden birini önerir; öneriler yalnız
+// Maçlarım (MANAGE) lobisinin altında listelenir. (match_id, proposer_id) PK'sı
+// kişi başı tek öneriyi DB'de garanti eder; tekrar önermek üstüne yazar.
+
+export interface MatchTacticProposal {
+  proposer_id: string;
+  proposer_name: string;
+  proposer_avatar: string;
+  tactic_id: string;
+  tactic_name: string | null;
+  formation: string | null;
+  size: string | null;
+  created_at: string;
+}
+
+export const getMatchTacticProposals = async (matchId: string): Promise<MatchTacticProposal[]> => {
+  const { data, error } = await supabase.rpc('get_match_tactic_proposals', { p_match_id: matchId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Taktik önerileri yüklenemedi.');
+  return (data as MatchTacticProposal[]) ?? [];
+};
+
+export const proposeMatchTactic = async (matchId: string, tacticId: string): Promise<void> => {
+  const { error } = await supabase.rpc('propose_match_tactic', {
+    p_match_id: matchId, p_tactic_id: tacticId,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Taktik önerilemedi.');
+};
+
+export const withdrawMatchTactic = async (matchId: string): Promise<void> => {
+  const { error } = await supabase.rpc('withdraw_match_tactic', { p_match_id: matchId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Öneri geri çekilemedi.');
+};
+
+export interface MyTacticLite { id: string; name: string | null; formation: string | null; size: string | null }
+
+/** Öneri seçicisi için kullanıcının kendi Stüdyo taktikleri (hafif liste, RLS-kapsamlı). */
+export const listMyTacticsLite = async (): Promise<MyTacticLite[]> => {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData?.user?.id;
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('tactics')
+    .select('id, name, formation, size')
+    .eq('userId', uid)
+    .order('updatedAt', { ascending: false })
+    .limit(30);
+  if (error) {
+    console.warn('[tactic] taktik listesi okunamadı:', error.message);
+    return [];
+  }
+  return (data as MyTacticLite[]) ?? [];
+};
+
 // ─── Stüdyo telemetrisi — anonim olay sayacı (KİŞİSEL İÇERİK YAZILMAZ) ─────────
 
 export type StudioEvent = 'studio_open' | 'tactic_save' | 'tactic_play' | 'sample_load';

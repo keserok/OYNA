@@ -145,7 +145,16 @@ function computeMissingFromSlots(slots: PositionSlot[]): { role: string; count: 
   return Array.from(counts.entries()).map(([role, count]) => ({ role, count }));
 }
 
-export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?: string }): Record<string, unknown> {
+/** Form → payload kaynağı: MatchListing alanları + formun eklediği ekstra anahtarlar. */
+export type MatchPayloadSource = Partial<MatchListing> & {
+  rawDate?: string;
+  /** Maçın oynanacağı kort (courts.id) — payload'da 'court_id' olarak gider. */
+  courtId?: string;
+  /** OYNA platform maçı işareti — payload'da 'is_platform' olarak gider. */
+  isPlatform?: boolean;
+};
+
+export function listingToMatchPayload(match: MatchPayloadSource): Record<string, unknown> {
   let dateIso = match.rawDate;
   if (!dateIso && match.date) {
     const labels: Record<string, number> = { Bugün: 0, Yarın: 1 };
@@ -193,8 +202,14 @@ export function listingToMatchPayload(match: Partial<MatchListing> & { rawDate?:
     homeScore: match.homeScore,
     awayScore: match.awayScore,
     scoreEnteredAt: match.scoreEnteredAt,
-    // FAZ 3
-    visibility: match.visibility || 'OPEN',
+    // FAZ 3 — partial update güvenliği: bu anahtarlar YALNIZ kaynakta tanımlıysa
+    // gider (undefined → anahtar hiç yok; sunucu COALESCE ile mevcut değeri korur).
+    // Eski davranış visibility'yi her kayıtta 'OPEN'a eziyordu.
+    ...(match.visibility !== undefined ? { visibility: match.visibility } : {}),
+    ...(match.privateCode !== undefined ? { private_code: match.privateCode } : {}),
+    ...(match.courtId !== undefined ? { court_id: match.courtId } : {}),
+    ...(match.isDemo !== undefined ? { isDemo: match.isDemo } : {}),
+    ...(match.isPlatform !== undefined ? { is_platform: match.isPlatform } : {}),
     pitch_id: match.pitchId || null,
   };
 }

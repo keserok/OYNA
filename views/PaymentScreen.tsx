@@ -12,7 +12,7 @@ import { parseSlotLabel } from '../services/availabilityService';
 import {
   getWalletSummary, listSavedCards, WalletSummary, SavedCard,
 } from '../services/walletService';
-import { startInAppCardPayment, InAppPayInput } from '../services/paymentService';
+import { startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, cardFeeOf } from '../services/paymentService';
 import { getMyGuardianState } from '../services/guardianService';
 import { blockMatchDeposit } from '../services/matchLifecycleService';
 import { getMatchDetails } from '../services/matchService';
@@ -163,6 +163,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // çözülene dek ödeme kilitli. (Misafirde özet zaten yok — o durumda hata değil.)
   const [summaryError, setSummaryError] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  // Kart işlem bedeli oranı (app_config.card_fee_pct). 0 = özellik kapalı →
+  // ekranda hiçbir ek satır çıkmaz. Cüzdandan ödemede HİÇ uygulanmaz.
+  const [cardFeePct, setCardFeePct] = useState(0);
   // S1.2/C6 — 3 dk oturum tazelendi bildirimi (ince, kendiliğinden kaybolur).
   const [sessionRefreshed, setSessionRefreshed] = useState(false);
   // S3 — tesis iptal/iade kademesi (SUNUCUDAN; tesis override veya global)
@@ -209,6 +212,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     return () => { alive = false; };
   }, [setSavedCards]);
 
+  // Kart işlem bedeli oranı (SSOT: app_config.card_fee_pct). Cüzdan özetiyle
+  // AYNI ritimde tazelenir: kullanıcı üyelik kapısından geçtiğinde veya 3 dk'lık
+  // oturum tazelemesinde oran da yenilenir — misafirken okunamamış bir oran
+  // ekranda 0 kalıp sunucunun eklediği bedeli gizlemesin.
+  useEffect(() => {
+    let alive = true;
+    getCardFeePct().then(pct => { if (alive) setCardFeePct(pct); }).catch(() => {});
+    return () => { alive = false; };
+  }, [summary]);
+
   // S3 — kapora akışında tesis iptal/iade kademesini SUNUCUDAN çek (göster).
   useEffect(() => {
     const pid = (bookingPitch as any)?.id as string | undefined;
@@ -249,6 +262,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     : allowBalance && useBalance ? Math.min(spendable, amount) : 0;
   const remaining = Math.max(amount - balanceApplied, 0);
   const needsCard = !balanceOnly && remaining > 0;
+  // Kart işlem bedeli YALNIZ karttan çekilecek kısma uygulanır; bakiyeden
+  // karşılanan tutar bedelsizdir. Sunucudaki yuvarlamanın aynısı kullanılır,
+  // böylece burada yazan toplam ile karttan çekilen tutar birebir örtüşür.
+  const cardFee = needsCard ? computeCardFee(remaining, cardFeePct) : 0;
+  const cardCharge = remaining + cardFee;
+  const grandTotal = amount + cardFee;
   const selectedCard = selectedCardId === 'temp'
     ? tempCard
     : savedCards.find(c => c.id === selectedCardId) ?? null;
@@ -272,7 +291,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const breakdown = balanceOnly
     ? (insufficientBalance ? `Bakiye ${fmt(spendable)}₺ · ${fmt(amount - spendable)}₺ eksik` : 'Tamamı OYNA bakiyenden')
     : balanceApplied > 0 && needsCard
-      ? `${fmt(balanceApplied)}₺ bakiye + ${fmt(remaining)}₺ kart`
+      ? `${fmt(balanceApplied)}₺ bakiye + ${fmt(cardCharge)}₺ kart`
       : balanceApplied > 0
         ? 'Tamamı OYNA bakiyenden'
         : 'Tamamı karttan';
@@ -284,20 +303,21 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     : !allowBalance
     ? 'Bakiye bu ödemede kullanılamaz.'
     : balanceApplied > 0 && needsCard
-      ? `Bakiyen tutarın bir kısmını karşılıyor; kalan ${fmt(remaining)}₺ seçtiğin karttan tahsil edilir.`
+      ? `Bakiyen tutarın bir kısmını karşılıyor; kalan ${fmt(remaining)}₺${cardFee > 0 ? ` + ${fmt(cardFee)}₺ işlem bedeli` : ''} seçtiğin karttan tahsil edilir.`
       : balanceApplied > 0
         ? 'Tamamı OYNA bakiyenden karşılanıyor — kart gerekmez.'
-        : 'Bakiye kullanılmıyor; tutarın tamamı seçtiğin karttan tahsil edilir.';
+        : cardFee > 0
+          ? `Kartla ödemede ödeme altyapısı komisyonu için %${cardFeePct} işlem bedeli eklenir. OYNA bakiyenden ödersen bu bedel alınmaz.`
+          : 'Bakiye kullanılmıyor; tutarın tamamı seçtiğin karttan tahsil edilir.';
 
-  // Lobi state'ini tazele (lost-update önleme — sunucu SSOT)
+  // Lobi state'ini tazele (lost-update önleme — sunucu SSOT).
+  // KN-3: taze veri YERELE uygulanır, DB'ye GERİ YAZILMAZ (eski updateMatch
+  // yolu gereksiz tam yazımdı; player_update_match artık slot da yazmaz).
   const refreshMatch = async (matchId?: string) => {
     if (!matchId) return;
     try {
       const fresh = await getMatchDetails(matchId);
-      const current = useAppStore.getState().selectedMatch;
-      if (fresh && current && current.id === matchId) {
-        await updateMatch({ ...current, ...(fresh as any) });
-      }
+      if (fresh) useAppStore.getState().applyMatchLocal(fresh as any);
     } catch { /* kritik değil */ }
   };
 
@@ -610,9 +630,21 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     const store = useAppStore.getState();
     setPaymentContext(null);
     switch (ctx?.kind) {
-      case 'MATCH_JOIN':
-        onBack();
+      case 'MATCH_JOIN': {
+        // Tek tuşla Maçlarım lobisine: satın alınan REZERVE slotlar orada
+        // doldurulur (kendim / arkadaş / kod). Geri tuşu Maçlarım'a döner.
+        const matchId = ctx.matchId;
+        store.setLobbyMode('MANAGE');
+        store.resetNavigation('MY_MATCHES');
+        if (matchId) {
+          getMatchDetails(matchId).then((fresh) => {
+            const st = useAppStore.getState();
+            if (fresh) st.setSelectedMatch(fresh);
+            st.navigateTo('MATCH_JOIN');
+          });
+        }
         break;
+      }
       case 'MATCH_CREATE_DEPOSIT':
         store.resetNavigation(store.selectedMatch ? 'MATCH_JOIN' : 'MATCH_DISCOVERY');
         break;
@@ -735,6 +767,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 ? `${fmt(result.balanceApplied)}₺ bakiye + ${fmt(result.cardAmount)}₺ kart`
                 : result && result.balanceApplied > 0 ? 'OYNA bakiyesi' : 'Kart'
             } />
+            {/* TAHSİL EDİLEN gerçek bedel (tahmin değil): sunucunun çektiği
+                toplamdan hizmet tabanı düşülerek bulunur. */}
+            {result && cardFeeOf(amount, result.cardAmount, result.balanceApplied) > 0 && (
+              <SummaryRow
+                label="Kart işlem bedeli"
+                value={`${fmt(cardFeeOf(amount, result.cardAmount, result.balanceApplied))}₺`}
+              />
+            )}
             <div className="h-px bg-white/8" />
             <SummaryRow label="İşlem No" value={(result?.intentId ?? '').slice(0, 8).toUpperCase() || '—'} dim mono />
           </motion.div>
@@ -757,7 +797,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         <div className="shrink-0 px-5 pb-safe pt-3 flex flex-col gap-2.5">
           <button onClick={handleSuccessPrimary}
             className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-black text-[15px] rounded-2xl active:scale-[0.98] transition-all">
-            {ctx.kind === 'MATCH_JOIN' ? 'LOBİYE DÖN'
+            {ctx.kind === 'MATCH_JOIN' ? 'SLOTLARINI DOLDUR → MAÇLARIM'
               : ctx.kind === 'MATCH_CREATE_DEPOSIT' ? 'MAÇ LOBİSİNE GİT'
               : 'REZERVASYONLARIMA GİT'}
           </button>
@@ -884,6 +924,30 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             {fmt(amount)}₺
           </p>
           {ctx.amountHint && <p className="text-[11px] text-gray-500 mt-2">{ctx.amountHint}</p>}
+          {/* Kart işlem bedeli — yalnız kart kısmı varsa ve oran > 0 iken çıkar.
+              Cüzdana geçildiği anda bu blok kaybolur; fark böyle görünür olur. */}
+          {cardFee > 0 && (
+            <div className="mt-3 mx-auto max-w-[320px] rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 space-y-1.5">
+              <div className="flex items-center justify-between text-[11.5px]">
+                <span className="text-gray-400 font-semibold">Hizmet tutarı</span>
+                <span className="text-white font-bold font-numeric">{fmt(amount)}₺</span>
+              </div>
+              <div className="flex items-center justify-between text-[11.5px]">
+                <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
+                <span className="text-[#FACC15] font-bold font-numeric">+{fmt(cardFee)}₺</span>
+              </div>
+              <div className="h-px bg-white/8" />
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span className="text-white font-extrabold">Karttan çekilecek</span>
+                <span className="text-white font-black font-numeric">{fmt(grandTotal)}₺</span>
+              </div>
+              {allowBalance && !balanceOnly && (
+                <p className="text-[10px] text-[#39FF14]/80 font-semibold pt-0.5">
+                  OYNA bakiyenden ödersen bu bedel alınmaz.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Ödeme yöntemi karuseli */}
@@ -1046,7 +1110,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         <div className="flex items-center justify-between mb-3 px-0.5">
           <span className="text-[11px] text-gray-500 font-semibold">{breakdown}</span>
           <span className="text-[13px] font-extrabold text-white">
-            Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{fmt(amount)}₺</span>
+            Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{fmt(grandTotal)}₺</span>
           </span>
         </div>
         {insufficientBalance ? (
@@ -1066,7 +1130,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 : 'bg-gray-800 text-gray-500'
             }`}
           >
-            <Lock size={17} /> {fmt(amount)}₺ {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
+            <Lock size={17} /> {fmt(grandTotal)}₺ {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
           </button>
         )}
         {insufficientBalance && (

@@ -356,10 +356,13 @@ export interface PositionSlot {
   y: number;
   status: 'OPEN' | 'TAKEN' | 'LOCKED';
   player?: Player; // If taken
-  // Çoklu-slot satın alma + arkadaşa/koda atama (FAZ8)
+  // Tek lobi slot makinesi (P2): satın alma + atama yaşam döngüsü.
+  // RESERVED = satın alındı ama kimse atanmadı ("DOLU", seçilemez);
+  // SELF = alıcı kendini ekledi; ASSIGNED = arkadaş anında atandı;
+  // LINK_PENDING = devralma kodu bekliyor. (INVITED/ACCEPTED legacy okunur.)
   purchasedBy?: string;            // slotu satın alan (ödeyen) kullanıcı id
-  occupant?: string;               // slotta görünen kullanıcı id (başta satın alan)
-  assignmentStatus?: 'SELF' | 'INVITED' | 'LINK_PENDING' | 'ACCEPTED';
+  occupant?: string;               // slotta oturan kullanıcı id
+  assignmentStatus?: 'RESERVED' | 'SELF' | 'ASSIGNED' | 'INVITED' | 'LINK_PENDING' | 'ACCEPTED';
   inviteeId?: string;              // davet edilen arkadaş id
   claimCode?: string;              // paylaşılabilir devralma kodu
   side?: 'HOME' | 'AWAY';          // Takım maçında ev sahibi / deplasman tarafı (FAZ8 S38)
@@ -375,8 +378,8 @@ export interface Court {
   size?: string;
   /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) — aralık verilmemişse tek format */
   capacity?: number;
-  /** Oynanabilir format aralığı (toplam oyuncu): min 12 & maks 16 → "6v6–8v8".
-   *  Maç oluşturma akışı bu aralığı temel alır. */
+  /** Oynanabilir format aralığı — TAKIM BAŞINA oyuncu: min 6 & maks 8 → "6v6–8v8".
+   *  Maç oluşturma akışı ve create_match_atomic bu aralığı temel alır. */
   minCapacity?: number;
   maxCapacity?: number;
   /** Tesis içi sıralama (owner panelindeki sıra ile aynı) */
@@ -944,9 +947,12 @@ export interface PitchCourt {
   size?: string | null;
   price?: number | null;
   capacity?: number | null;
-  /** Oynanabilir format aralığı (toplam oyuncu; 12→6v6). NULL → yalnız capacity. */
+  /** Oynanabilir format aralığı — TAKIM BAŞINA oyuncu (6→6v6). NULL → yalnız capacity.
+   *  Legacy 'capacity' alanı ise TOPLAM kişidir (14→7v7). */
   min_capacity?: number | null;
   max_capacity?: number | null;
+  /** Vitrin format rozeti (serbest metin, maks 8 karakter: '7v7', 'Mini'…) */
+  size_label?: string | null;
   images?: string[] | null;
   description?: string | null;
   /** Saha bazlı özellik anahtarları (heating, tribune, camera...) */

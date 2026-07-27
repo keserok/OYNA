@@ -1245,9 +1245,12 @@ export interface CourtInput {
   sort_order?: number;
   price?: number | null;
   capacity?: number | null;
-  /** Oynanabilir format aralığı (toplam oyuncu; 12→6v6). null → aralık temizlenir. */
+  /** En küçük format — TAKIM BAŞINA oyuncu (3..11, ör. 5 → 5v5). null → temizle. */
   min_capacity?: number | null;
+  /** En büyük format — TAKIM BAŞINA oyuncu (3..11, ör. 7 → 7v7). null → temizle. */
   max_capacity?: number | null;
+  /** Format rozeti — vitrin etiketi (maks 8 karakter, ör. '7v7', 'Mini') */
+  size_label?: string | null;
   images?: string[] | null;
   description?: string | null;
   features?: string[] | null;
@@ -1272,9 +1275,10 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       description: court.description ?? null,
       features: court.features ?? [],
     };
-    // Format aralığı: undefined → dokunma, null → temizle, sayı → yaz.
+    // Format aralığı + rozet: undefined → dokunma, null → temizle, değer → yaz.
     if (court.min_capacity !== undefined) payload.min_capacity = court.min_capacity;
     if (court.max_capacity !== undefined) payload.max_capacity = court.max_capacity;
+    if (court.size_label !== undefined) payload.size_label = court.size_label;
     // Kalite notları yalnız admin akışında payload'a girer (undefined → gönderilmez).
     // Sunucu trigger'ı (enforce_court_grade_review) admin-dışı değişikliği zaten geri alır.
     if (court.lighting_grade !== undefined) payload.lighting_grade = court.lighting_grade;
@@ -1470,11 +1474,16 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
 // analiz edilebilmesi. Tam profesyonellik." → tesis sahibi kendi sahasının
 // gerçek uygulama tahsilatını gün-gün görebilir + CSV indirebilir.
 // ----------------------------------------------------------------------------
+// BİRİM: brüt = HİZMET tutarıdır; kartla ödemede kullanıcıdan alınan işlem
+// bedeli (PSP maliyeti) brüte DAHİL DEĞİLDİR — tesisin cirosu değildir, ayrı
+// 'card_fees' alanında bilgi olarak durur. Böylece her satırda
+// brüt = komisyon + saha payı özdeşliği korunur.
 export interface FinanceReportDay {
   day: string;          // YYYY-MM-DD
-  gross: number;        // brüt tahsilat
+  gross: number;        // brüt hizmet tahsilatı (kart işlem bedeli hariç)
   commission: number;   // OYNA komisyonu
   owner_net: number;    // sahaya kalan net
+  card_fees: number;    // kart işlem bedeli (geçiş kalemi, ciro değil)
   refunded: number;     // iade edilen
   count: number;        // ödeme adedi
 }
@@ -1487,6 +1496,7 @@ export interface OwnerFinanceReport {
     gross_captured: number;
     commission: number;
     owner_net: number;
+    card_fees: number;
     refunded: number;
     count: number;
   };

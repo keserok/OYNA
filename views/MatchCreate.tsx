@@ -1,24 +1,35 @@
-import React, { useMemo, useState, Suspense, lazy } from 'react';
+// ─── MAÇ KUR (2a) ────────────────────────────────────────────────────────────
+// "Tesis → Saha → Saat → Kaç kişi" tek ekranı. Tasarım: Maç Oluştur - 2a (Final).
+// Her alanın arkasında gerçek tablo var; fiyat/kapora rakamları SUNUCUDAN gelir
+// (get_court_day_quote), yayın TEK RPC ile atomiktir (create_match_atomic:
+// maç + saha rezervasyonu + kapora blokajı — çakışmada SLOT_TAKEN, bakiye
+// yetmezse INSUFFICIENT_BALANCE; form asla kaybolmaz, öksüz maç kalmaz).
+import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronRight, MapPin, Users, Shield,
-  Zap, Activity, X, Lock, CheckCircle2, Swords, Target,
-  Feather, Wallet, KeyRound, ShieldCheck, Undo2, Clock,
+  ChevronLeft, ChevronRight, Search, Check, MapPin, Bell, Plus, X,
+  ArrowRight, Copy, Share2, Lock, Sparkles, ShieldCheck, Users, Shield, Scale,
+  Info, ChevronDown, Undo2, Star, Zap,
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
-import { PageLayout } from '../components/common/PageLayout';
-import { AnimatedButton } from '../components/AnimatedButton';
+import { showToast } from '../components/common/GlobalToast';
 import { Spinner } from '../components/ui/Spinner';
-import SharedPitch from '../components/SharedPitch';
-import PitchDiscovery from './PitchDiscovery';
-import MatchSquadPicker, { PickedPlayer } from '../components/social/MatchSquadPicker';
-import ProviderOfferPicker from '../components/social/ProviderOfferPicker';
-import { useMatchCreate, FORMATS } from '../hooks/useMatchCreate';
-import { PLAY_STYLE_META } from './onboarding/onboardingShared';
+import {
+  fetchCreateFacilities, getCourtDayQuote, createMatchAtomic, inviteFriendsToMatch,
+  parseCreateMatchError, recordDemandSignal, listBookableProviders,
+  type CreateFacility, type CreateCourt, type DayQuote, type AtomicCreateResult,
+  type BookableProvider,
+} from '../services/matchCreateService';
+import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate } from '../services/playerBookingService';
+import { getWalletSummary, type WalletSummary } from '../services/walletService';
+import { getFriends, type FriendRow } from '../services/socialService';
+import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
+import { getMatchDetails } from '../services/matchService';
+import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 
-// Cüzdan yükleme overlay'i — maç kurulum formu kaybolmadan bakiye tamamlanır.
+// Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
 
 interface MatchCreateProps {
@@ -26,570 +37,1677 @@ interface MatchCreateProps {
   onNavigate: (view: AppView) => void;
 }
 
-// ─── Sabitler (canlı kullanılan) ────────────────────────────────────────────
-const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
-const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
-// Renkler TEK kaynaktan (PLAY_STYLE_META — kanonik K/S/Y paleti): profil ve
-// onboarding'deki "Oyun Stili" ile maçtaki "Sertlik" aynı kimlik renklerini taşır.
-const MENTALITY_OPTIONS = [
-  { id: 'ciddi', title: 'Ciddi', subtitle: 'Rekabetçi', icon: Zap, color: PLAY_STYLE_META.ciddi.color },
-  { id: 'taktiksel', title: 'Taktiksel', subtitle: 'Sistem', icon: Target, color: PLAY_STYLE_META.taktiksel.color },
-  { id: 'rahat', title: 'Rahat', subtitle: 'Eğlence', icon: Feather, color: PLAY_STYLE_META.rahat.color },
+// ─── Sabitler ────────────────────────────────────────────────────────────────
+const WD = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const MO = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const MO_LONG = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const MENTALS = [
+  { id: 'Ciddi', sub: 'Rekabetçi', color: '#FF4D4D' },
+  { id: 'Taktiksel', sub: 'Sistem', color: '#FACC15' },
+  { id: 'Rahat', sub: 'Eğlence', color: '#39FF14' },
 ] as const;
-const MENTALITY_META: Record<string, { label: string; color: string }> = {
-  ciddi: { label: 'Ciddi', color: PLAY_STYLE_META.ciddi.color },
-  taktiksel: { label: 'Taktiksel', color: PLAY_STYLE_META.taktiksel.color },
-  rahat: { label: 'Rahat', color: PLAY_STYLE_META.rahat.color },
-};
+const GENDERS = ['Karma', 'Erkek', 'Kadın'];
+const AGES = ['18-22', '23-27', '28-35', '35+', 'Tümü'];
+const DAY_MAX = 30;
+const DAY_PREFETCH = 7;
+const MAX_FACILITIES = 6;
 
-// ─── Canlı Maç Kartı bilgi çipi ──────────────────────────────────────────────
-const InfoChip: React.FC<{ label: string; value: string; empty?: boolean; accent?: boolean }> = ({ label, value, empty, accent }) => (
-  <div className={`flex-1 min-w-0 rounded-2xl border px-3 py-2.5 ${
-    empty ? 'border-dashed border-[#FACC15]/45 bg-[#FACC15]/[0.05]' : 'border-white/8 bg-black/30'
-  }`}>
-    <div className="text-[8px] font-black uppercase tracking-[0.14em] text-white/35">{label}</div>
-    <div className={`text-[13px] font-black truncate mt-0.5 ${empty ? 'text-[#FACC15]' : accent ? 'text-[#39FF14]' : 'text-white'}`}>{value}</div>
-  </div>
-);
+function buzz(pattern: number | number[]) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* desteklenmiyor */ }
+}
+const trLower = (s: string) => s.toLocaleLowerCase('tr-TR');
+const fmtTL = (n: number) => Math.round(n).toLocaleString('tr-TR');
 
-// ─── Aksiyon Kartı ───────────────────────────────────────────────────────────
-const ActionCard: React.FC<{
-  label: string; value: string; sub?: string; icon: React.ReactNode;
-  state?: 'ok' | 'need' | 'default'; onClick: () => void;
-}> = ({ label, value, sub, icon, state = 'default', onClick }) => (
-  <motion.button
-    whileTap={{ scale: 0.98 }}
-    onClick={onClick}
-    className={`relative overflow-hidden rounded-2xl border p-3.5 text-left transition-colors min-h-[76px] ${
-      state === 'ok'
-        ? 'bg-[#39FF14]/[0.05] border-[#39FF14]/30'
-        : state === 'need'
-          ? 'bg-[#FACC15]/[0.04] border-dashed border-[#FACC15]/35'
-          : 'bg-white/[0.03] border-white/10 hover:border-white/20'
-    }`}
-  >
-    <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.14em] ${state === 'ok' ? 'text-[#39FF14]' : 'text-white/40'}`}>
-      {icon}{label}
-    </div>
-    <div className={`text-[13px] font-black mt-1.5 leading-tight ${state === 'need' ? 'text-[#FACC15]' : 'text-white'}`}>{value}</div>
-    {sub && <div className="text-[10px] text-white/45 mt-0.5 truncate">{sub}</div>}
-    <ChevronRight size={14} className="absolute right-3 top-3.5 text-white/25" />
-  </motion.button>
-);
+type SheetKind = 'ADV' | 'FRIENDS' | 'PROVIDERS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
 
-// ─── İade kuralı satırı (Kapora & İade Kuralları sayfası) ────────────────────
-const RuleRow: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
-  <div className="flex gap-3.5 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-    <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] flex items-center justify-center shrink-0">
-      {icon}
-    </div>
-    <div className="min-w-0">
-      <p className="text-[13px] font-black text-white leading-tight">{title}</p>
-      <p className="text-[11px] text-white/55 leading-relaxed mt-1">{children}</p>
-    </div>
-  </div>
-);
+/** Kadroya çağrılan kişi — arkadaş listesinden ya da takım kadrosundan gelir. */
+interface InvitedPerson {
+  id: string;
+  name: string;
+  meta: string;
+  source: 'FRIEND' | 'TEAM';
+}
 
-// ─── Ana Bileşen ───────────────────────────────────────────────────────────────
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const {
-    activeSheet, setActiveSheet,
-    isPublishing,
-    selectedSlotForPicker, setSelectedSlotForPicker,
-    format, setFormat,
-    dna, setDna,
-    matchTitle, setMatchTitle,
-    homeTeamName, setHomeTeamName,
-    awayTeamName, setAwayTeamName,
-    visibility, setVisibility,
-    isTeamMatch, setIsTeamMatch,
-    homeTeamId,
-    deferredProviders, setDeferredProviders,
-    setMyPlayers,
-    selectedPitch, setSelectedPitch,
-    selectedCourt, setSelectedCourt,
-    allowedFormatValues, courtRangeLabel,
-    selectedTimeSlot, setSelectedTimeSlot,
-    orientation,
-    isDraftMode,
-    perTeam, isReady,
-    handleSlotMove, pitchSlots,
-    costPerPerson, matchDeposit,
-    loadSquadFromTeam, readiness, squadCount,
-    spendableBalance, missingBalance, refreshWallet,
-    publishMatch,
-  } = useMatchCreate(onNavigate);
+    setMatchCreateSeed, setSelectedMatch, applyMatchLocal,
+    setLobbyMode, currentUserProfile, adminMatches,
+  } = useAppStore();
+  const uid = currentUserProfile?.id;
 
-  const setSocialTarget = useAppStore(s => s.setSocialTarget);
-  // Mesafeli Satış / İptal-İade tam metni — paket içi statik sayfa, overlay'de
-  // açılır (LEGAL ekranına navigasyon formu sıfırlardı; burada form korunur).
-  const [showLegalDoc, setShowLegalDoc] = useState(false);
+  // Seed TEK SEFERLİK tüketilir: mount'ta yerele kopyalanır ve store hemen
+  // temizlenir — vazgeçip çıkınca sonraki "Maç Oluştur" girişi temiz açılır.
+  const [seed, setSeed] = useState(() => useAppStore.getState().matchCreateSeed);
+  useEffect(() => {
+    if (useAppStore.getState().matchCreateSeed) setMatchCreateSeed(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const assignedIds = useMemo(
-    () => pitchSlots.filter(s => s.player).map(s => (s.player as any).id as string),
-    [pitchSlots],
-  );
-  const openSlotCount = Math.max(0, perTeam - squadCount);
-  const mentality = MENTALITY_META[dna.mentality] || MENTALITY_META.rahat;
-  const dateLabel = selectedTimeSlot ? `${selectedTimeSlot.date} · ${selectedTimeSlot.time}` : null;
+  // ── Veri durumu ───────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
+  const [facilities, setFacilities] = useState<CreateFacility[]>([]);
+  const [wallet, setWallet] = useState<WalletSummary | null>(null);
+  const [busyMaps, setBusyMaps] = useState<Record<string, Record<string, 'PENDING' | 'CONFIRMED'>>>({});
+  const [quotes, setQuotes] = useState<Record<string, DayQuote>>({});
+  const [localBusy, setLocalBusy] = useState<Set<string>>(new Set()); // SLOT_TAKEN sonrası anlık işaret
 
-  // Seçilen arkadaşları boş slotlara yerleştir (dokunulan slot önceliklidir).
-  const addPlayersToSlots = (players: PickedPlayer[]) => {
-    setMyPlayers(prev => {
-      const next = { ...prev };
-      players.forEach(p => { for (const k in next) { if (next[k].id === p.id) delete next[k]; } });
-      let empties = pitchSlots.filter(s => !next[s.id]);
-      if (selectedSlotForPicker) {
-        const target = empties.find(s => s.id === selectedSlotForPicker);
-        if (target) empties = [target, ...empties.filter(s => s.id !== selectedSlotForPicker)];
+  // ── Seçimler ──────────────────────────────────────────────────────────────
+  const [q, setQ] = useState('');
+  const [selFacId, setSelFacId] = useState<string | null>(null);
+  const [selCourtId, setSelCourtId] = useState<string | null>(null);
+  const [daysLoaded, setDaysLoaded] = useState(DAY_PREFETCH);
+  const [selDay, setSelDay] = useState(0);
+  const [selTime, setSelTime] = useState<string | null>(null);
+  const [format, setFormat] = useState('7v7');
+  const [visibility, setVisibility] = useState<'OPEN' | 'PRIVATE'>('OPEN');
+  const [mental, setMental] = useState<string>('Rahat');
+  const [gender, setGender] = useState('Karma');
+  const [age, setAge] = useState('Tümü');
+  const [title, setTitle] = useState('');
+  const [teamInvite, setTeamInvite] = useState(false); // rakip tarafı ben davet edeceğim → kodla kapalı
+  const [invited, setInvited] = useState<InvitedPerson[]>([]);
+  const [friends, setFriends] = useState<FriendRow[] | null>(null);
+  const [teams, setTeams] = useState<MyTeamRow[] | null>(null);
+  const [squadTab, setSquadTab] = useState<'FRIENDS' | 'TEAMS'>('FRIENDS');
+  const [openTeamId, setOpenTeamId] = useState<string | null>(null);
+  const [teamSquads, setTeamSquads] = useState<Record<string, InvitedPerson[]>>({});
+  const [squadLoading, setSquadLoading] = useState(false);
+  const [friendQ, setFriendQ] = useState('');
+
+  // Kaleci / hakem: GERÇEK sağlayıcı seçimi (onaylı + müsait olanlar).
+  // providerIds boş + all=true → sunucu otomatik en uygun sağlayıcıyı seçer.
+  const [offers, setOffers] = useState<{ type: 'GK' | 'REF'; providerIds: string[]; all: boolean }[]>([]);
+  const [providers, setProviders] = useState<Record<'GK' | 'REF', BookableProvider[] | null>>({ GK: null, REF: null });
+  const [providerTab, setProviderTab] = useState<'GK' | 'REF'>('GK');
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [sheet, setSheet] = useState<SheetKind>(null);
+
+  // ── Yayın durumu ──────────────────────────────────────────────────────────
+  const [publishing, setPublishing] = useState(false);
+  const [pubStep, setPubStep] = useState(0);
+  const [slide, setSlide] = useState(0);
+  const dragRef = useRef<{ left: number; max: number } | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const publishRef = useRef<() => void>(() => {});
+  const publishBusyRef = useRef(false);
+  const slideValRef = useRef(0);
+  const [result, setResult] = useState<AtomicCreateResult | null>(null);
+  const [conflict, setConflict] = useState<{ time: string; next: string | null } | null>(null);
+  const [missingTL, setMissingTL] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [notified, setNotified] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestName, setSuggestName] = useState('');
+  const [suggestContact, setSuggestContact] = useState('');
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  const seeded = !!seed?.bookingId;
+
+  // ── Türetilenler ──────────────────────────────────────────────────────────
+  // Maçlar İstanbul saatiyle yaşar (sunucu PAST_TIME'ı Europe/Istanbul ile
+  // ölçer) → gün/saat filtreleri cihaz saatine değil İstanbul'a bağlanır.
+  // Dakikalık tik: ekran açık kalırsa saat/gece yarısı sınırı donup kalmasın.
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClockTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const istNow = useMemo(() => {
+    try { return new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' })); }
+    catch { return new Date(); }
+  }, [clockTick]);
+  const today = useMemo(() => { const d = new Date(istNow); d.setHours(0, 0, 0, 0); return d; }, [istNow]);
+  const dateAt = useCallback((i: number) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; }, [today]);
+  const dayDate = dateAt(selDay);
+  const dateISO = toISODate(dayDate);
+
+  const filtered = useMemo(() => {
+    const term = trLower(q.trim());
+    if (!term) return facilities;
+    return facilities.filter(f =>
+      trLower(f.name).includes(term)
+      || trLower(f.district ?? '').includes(term)
+      || f.courts.some(c => trLower(c.name).includes(term)));
+  }, [facilities, q]);
+  const shown = filtered.slice(0, MAX_FACILITIES);
+
+  const fac: CreateFacility | null = useMemo(
+    () => facilities.find(f => f.id === selFacId) ?? null, [facilities, selFacId]);
+  const court: CreateCourt | null = useMemo(
+    () => fac?.courts.find(c => c.id === selCourtId) ?? null, [fac, selCourtId]);
+  const per = parseInt(format.split('v')[0], 10) || 7;
+
+  const quoteKey = selCourtId ? `${selCourtId}|${dateISO}` : null;
+  const dayQuote = quoteKey ? quotes[quoteKey] : undefined;
+
+  const nowHour = istNow.getHours();
+  const hourBlocked = useCallback((time: string) => {
+    if (!selCourtId || !fac) return true;
+    if (localBusy.has(`${selCourtId}|${dateISO}|${time}`)) return true;
+    const map = busyMaps[fac.id];
+    return !!map && isSlotBusy(map, selCourtId, dateISO, time) !== null;
+  }, [selCourtId, fac, busyMaps, dateISO, localBusy]);
+
+  const visibleHours = useMemo(() => {
+    if (!dayQuote) return [];
+    return dayQuote.hours.filter(h => {
+      if (selDay === 0 && !h.night) {
+        // Bugünün geçmiş gündüz saatleri listelenmez; gece saatleri (şeridin
+        // sonundaki 00/01) fiziksel olarak yarın sabahtır — hep görünür.
+        return parseInt(h.time, 10) > nowHour;
       }
-      let i = 0;
-      players.forEach(p => {
-        if (i < empties.length) {
-          next[empties[i].id] = { id: p.id, name: p.name, avatar: p.avatar || '', status: 'PENDING' };
-          i++;
-        }
-      });
-      return next;
+      return true;
     });
-    setSelectedSlotForPicker(null);
+  }, [dayQuote, selDay, nowHour]);
+
+  const selHour = visibleHours.find(h => h.time === selTime) ?? null;
+  const total = seeded ? (seed?.price ?? 0) : (selHour?.total ?? null);
+  const deposit = seeded ? 0 : (selHour?.deposit ?? null);
+  const perPerson = total != null ? Math.ceil((total / (per * 2)) * 1.05) : null;
+  const spendable = wallet?.spendableBalance ?? 0;
+  const missing = deposit != null ? Math.max(0, Math.ceil(deposit - spendable)) : 0;
+  const threshold = per * 2 - 2;
+
+  const canPublish = !loading && !publishing && !!format
+    && (seeded || (!!selCourtId && !!selTime && !!selHour?.tariffOk && !hourBlocked(selTime ?? '')));
+
+  // ── Yükleme: tesisler + cüzdan + sıralama ─────────────────────────────────
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [facs, favIds, summary] = await Promise.all([
+          fetchCreateFacilities(),
+          fetchMyFavoritePitchIds().catch(() => new Set<string>()),
+          getWalletSummary().catch(() => null),
+        ]);
+        if (!alive) return;
+        // Sıra: favoriler → daha önce maç kurduğun tesisler → puan
+        const history = new Set(
+          (adminMatches ?? [])
+            .filter(m => m.creatorId === uid)
+            .map(m => String((m as unknown as { pitchId?: string; pitch_id?: string }).pitchId
+              ?? (m as unknown as { pitch_id?: string }).pitch_id ?? ''))
+            .filter(Boolean));
+        const rank = (f: CreateFacility) => (favIds.has(f.id) ? 0 : history.has(f.id) ? 1 : 2);
+        facs.sort((a, b) => rank(a) - rank(b) || b.rating - a.rating || a.name.localeCompare(b.name, 'tr'));
+        setFacilities(facs);
+        if (summary) setWallet(summary);
+
+        // Rezervasyondan çevirme: saha + saat kilitli gel
+        if (seed?.bookingId) {
+          if (seed.pitchId) setSelFacId(seed.pitchId);
+          if (seed.courtId) setSelCourtId(seed.courtId);
+          if (seed.date) {
+            const d = new Date(`${seed.date}T12:00:00`);
+            d.setHours(0, 0, 0, 0);
+            const idx = Math.round((d.getTime() - today.getTime()) / 86400000);
+            if (idx >= 0 && idx < DAY_MAX) { setSelDay(idx); if (idx >= DAY_PREFETCH) setDaysLoaded(DAY_MAX); }
+          }
+          if (seed.time) setSelTime(seed.time);
+          const seedFac = facs.find(f => f.id === seed.pitchId);
+          const seedCourt = seedFac?.courts.find(c => c.id === seed.courtId);
+          if (seedCourt) setFormat(`${seedCourt.minCapacity}v${seedCourt.minCapacity}`);
+        } else if (facs.length > 0) {
+          const first = facs[0];
+          setSelFacId(first.id);
+          const c0 = first.courts[0];
+          setSelCourtId(c0.id);
+          setFormat(`${c0.minCapacity}v${c0.minCapacity}`);
+        }
+      } catch (e) {
+        console.error('Maç Kur verisi yüklenemedi:', e);
+        showToast('Sahalar yüklenemedi. Bağlantını kontrol et.', 'error');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Profilden ön-doldurma: sertlik + cinsiyet (varsa)
+  useEffect(() => {
+    const p = currentUserProfile as { playStyle?: string; gender?: string } | null;
+    if (p?.playStyle) {
+      const map: Record<string, string> = { ciddi: 'Ciddi', taktiksel: 'Taktiksel', rahat: 'Rahat' };
+      if (map[p.playStyle]) setMental(map[p.playStyle]);
+    }
+    if (p?.gender && GENDERS.includes(p.gender)) setGender(p.gender);
+  }, [currentUserProfile]);
+
+  // ── Müsaitlik: seçili tesisin yüklü gün penceresi TEK çağrıda ─────────────
+  useEffect(() => {
+    if (!fac) return;
+    let alive = true;
+    const from = new Date(today);
+    const to = dateAt(Math.min(daysLoaded, DAY_MAX) - 1);
+    fetchPitchAvailability(fac.id, from, to)
+      .then(rows => { if (alive) setBusyMaps(prev => ({ ...prev, [fac.id]: buildBusyMap(rows) })); })
+      .catch(() => { /* müsaitlik gelmezse saatler açık varsayılır; son söz sunucuda */ });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fac?.id, daysLoaded]);
+
+  // ── Gün kotası (fiyat/kapora/indirim) — önbellekli + sınırlı tekrar ──────
+  const [quoteTick, setQuoteTick] = useState(0);
+  const quoteFailsRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!selCourtId || !quoteKey || quotes[quoteKey]) return;
+    if ((quoteFailsRef.current[quoteKey] ?? 0) >= 4) return; // sonsuz döngü emniyeti
+    let alive = true;
+    getCourtDayQuote(selCourtId, dateISO)
+      .then(qt => {
+        if (!alive) return;
+        quoteFailsRef.current[quoteKey] = 0;
+        setQuotes(prev => ({ ...prev, [`${qt.courtId}|${qt.date}`]: qt }));
+      })
+      .catch(() => {
+        // Zayıf ağda saat şeridi iskelette kalmasın: kısa aralıkla tekrar dene
+        if (!alive) return;
+        quoteFailsRef.current[quoteKey] = (quoteFailsRef.current[quoteKey] ?? 0) + 1;
+        setTimeout(() => { if (alive) setQuoteTick(t => t + 1); }, 2500);
+      });
+    return () => { alive = false; };
+  }, [selCourtId, dateISO, quoteKey, quotes, quoteTick]);
+
+  // ── Onarım: saha/gün değişince dolu saate düşme ───────────────────────────
+  const firstFree = useCallback((after?: string): string | null => {
+    const list = visibleHours.filter(h => h.tariffOk && !hourBlocked(h.time));
+    if (list.length === 0) return null;
+    if (after) {
+      const later = list.find(h => h.time > after);
+      if (later) return later.time;
+    }
+    return list[0].time;
+  }, [visibleHours, hourBlocked]);
+
+  useEffect(() => {
+    if (seeded || !dayQuote) return;
+    // Çakışma banner'ı açıkken otomatik seçim YAPILMAZ: kullanıcı "X'e geç"
+    // önerisini görür; sessizce günün ilk saatine kaydırılmaz.
+    if (conflict) return;
+    if (!selTime || !visibleHours.some(h => h.time === selTime && h.tariffOk && !hourBlocked(h.time))) {
+      setSelTime(firstFree() ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayQuote, selDay, selCourtId, busyMaps, localBusy, conflict]);
+
+  // Format aralık dışına düşmesin
+  useEffect(() => {
+    if (!court) return;
+    if (per < court.minCapacity || per > court.maxCapacity) {
+      setFormat(`${court.minCapacity}v${court.minCapacity}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [court?.id]);
+
+  // ── Seçim eylemleri ───────────────────────────────────────────────────────
+  const pickFacility = (f: CreateFacility) => {
+    if (f.id === selFacId) return;
+    buzz(12);
+    setSelFacId(f.id);
+    const c0 = f.courts[0];
+    setSelCourtId(c0?.id ?? null);
+    if (c0) setFormat(`${c0.minCapacity}v${c0.minCapacity}`);
+    setConflict(null);
+  };
+  const pickCourt = (c: CreateCourt) => {
+    buzz(12);
+    setSelCourtId(c.id);
+    setFormat(`${c.minCapacity}v${c.minCapacity}`);
+    setConflict(null);
+  };
+  const pickDay = (i: number) => { buzz(12); setSelDay(i); setConflict(null); };
+  const pickTime = (t: string) => { buzz(12); setSelTime(t); setConflict(null); };
+
+  // ── YAYINLA — atomik ─────────────────────────────────────────────────────
+  const publish = useCallback(async () => {
+    // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
+    if (publishBusyRef.current) return;
+    publishBusyRef.current = true;
+    setPublishing(true);
+    setPubStep(0);
+    setConflict(null);
+    const t1 = setTimeout(() => setPubStep(1), 500);
+    const t2 = setTimeout(() => setPubStep(2), 1100);
+    try {
+      const effVisibility = teamInvite ? 'PRIVATE' : visibility;
+      const res = await createMatchAtomic({
+        courtId: seeded ? null : selCourtId,
+        dateISO: seeded ? null : dateISO,
+        time: seeded ? null : selTime,
+        format,
+        visibility: effVisibility,
+        title: title.trim() || undefined,
+        gender,
+        ageGroup: age,
+        difficulty: mental,
+        // Seçili sağlayıcılara teklif; 'Tümüne gönder'de providerIds boş kalır
+        // ve sunucu en uygun sağlayıcıyı kendisi seçer.
+        deferredProviders: offers.map(o => ({ type: o.type, providerIds: o.all ? [] : o.providerIds })),
+        seedBookingId: seeded ? seed?.bookingId : null,
+      });
+      setPubStep(3);
+      buzz([18, 40, 30]);
+
+      // Davetler (arkadaş VEYA takım arkadaşı; başarısızlık yayını bozmaz)
+      if (invited.length > 0) {
+        inviteFriendsToMatch(res.matchId, invited.map(p => p.id))
+          .then(({ skipped }) => {
+            if (skipped > 0) showToast(`${skipped} kişiye davet gönderilemedi (tanışıklık gerekli).`, 'error');
+          })
+          .catch(() => showToast('Bazı davetler gönderilemedi.', 'error'));
+      }
+      // Maçı yerel akışa işle + seed'i temizle + cüzdanı tazele
+      const fresh = await getMatchDetails(res.matchId).catch(() => null);
+      if (fresh) { applyMatchLocal(fresh); setSelectedMatch(fresh); }
+      if (seeded) setSeed(null);
+      getWalletSummary().then(setWallet).catch(() => {});
+      setResult(res);
+      setCopied(false);
+      setSheet('SUCCESS');
+    } catch (err) {
+      const { code, message } = parseCreateMatchError(err);
+      if (code === 'SLOT_TAKEN' && selCourtId && selTime) {
+        // Saat "Dolu"ya döner, banner en yakın saati önerir — form korunur.
+        setLocalBusy(prev => new Set(prev).add(`${selCourtId}|${dateISO}|${selTime}`));
+        setConflict({ time: selTime, next: firstFree(selTime) });
+        buzz(30);
+      } else if (code === 'INSUFFICIENT_BALANCE') {
+        setMissingTL(deposit != null ? Math.max(1, Math.ceil(deposit - spendable)) : 1);
+        showToast('Kapora için bakiyen yetersiz — formun korundu.', 'error');
+      } else if (code === 'NO_TARIFF' || code === 'BOOKING_DISABLED' || code === 'SLOT_UNAVAILABLE') {
+        showToast(message.split(':').slice(1).join(':').trim() || 'Bu saat şu an kullanılamıyor.', 'error');
+      } else if (code === 'FORMAT_OUT_OF_RANGE' || code === 'COURT_NOT_FOUND') {
+        showToast('Saha bilgisi güncellendi, liste tazeleniyor.', 'error');
+        fetchCreateFacilities().then(setFacilities).catch(() => {});
+      } else if (code === 'PAST_TIME') {
+        if (seeded) {
+          // Süresi geçmiş rezervasyon çevrilemez — kilidi çöz, normal akışa dön.
+          setSeed(null);
+          showToast('Rezervasyonun saati geçmiş — normal kurulum akışına dönüldü.', 'error');
+        } else {
+          setSelTime(firstFree() ?? null);
+          showToast('Seçtiğin saat geçmişte kaldı — en yakın saate alındı.', 'error');
+        }
+      } else if (code === 'SEED_NOT_FOUND' || code === 'SEED_NOT_READY') {
+        setSeed(null);
+        showToast(code === 'SEED_NOT_READY'
+          ? 'Rezervasyon onaylanmadan/kaporası ödenmeden maça çevrilemiyor.'
+          : 'Rezervasyon bulunamadı; normal kurulum akışına dönüldü.', 'error');
+      } else {
+        showToast('Maç yayınlanamadı. Lütfen tekrar dene.', 'error');
+        console.error('create_match_atomic:', message);
+      }
+      setSlide(0);
+    } finally {
+      clearTimeout(t1); clearTimeout(t2);
+      publishBusyRef.current = false;
+      setPublishing(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamInvite, visibility, seeded, selCourtId, dateISO, selTime, format, title, gender, age,
+      mental, offers, seed?.bookingId, invited, deposit, spendable, firstFree]);
+  publishRef.current = publish;
+
+  // ── Kaydır → yayınla (pointer takibi pencerede) ───────────────────────────
+  // Yayın tetikleme YAN ETKİSİ state updater'ın dışında tutulur (StrictMode
+  // updater'ları iki kez çalıştırır); güncel değer ref'te izlenir.
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const x = Math.max(0, Math.min(d.max, e.clientX - d.left - 27));
+      slideValRef.current = x / d.max;
+      setSlide(slideValRef.current);
+    };
+    const up = () => {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      if (slideValRef.current >= 0.88) {
+        setSlide(1);
+        void publishRef.current();
+      } else {
+        setSlide(0);
+      }
+      slideValRef.current = 0;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
+
+  const onThumbDown = () => {
+    if (!canPublish) return;
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    dragRef.current = { left: rect.left + 5, max: rect.width - 59 };
   };
 
+  // ── Kadro: arkadaşlar + takımlar (sheet açılınca, gerçek servislerden) ───
+  useEffect(() => {
+    if (sheet !== 'FRIENDS') return;
+    if (friends === null) getFriends().then(setFriends).catch(() => setFriends([]));
+    if (teams === null) getMyTeams().then(setTeams).catch(() => setTeams([]));
+  }, [sheet, friends, teams]);
+
+  // Takım kadrosu ilk açılışta çekilir, sonra önbellekten
+  const toggleTeam = useCallback(async (teamId: string) => {
+    buzz(10);
+    if (openTeamId === teamId) { setOpenTeamId(null); return; }
+    setOpenTeamId(teamId);
+    if (teamSquads[teamId]) return;
+    setSquadLoading(true);
+    try {
+      const rows = await getTeamSquad(teamId);
+      setTeamSquads(prev => ({
+        ...prev,
+        [teamId]: rows
+          .filter(r => r.user_id !== uid)
+          .map(r => ({
+            id: r.user_id,
+            name: r.full_name || 'Oyuncu',
+            meta: [r.pos, r.jersey_number ? `#${r.jersey_number}` : null].filter(Boolean).join(' · ') || 'Takım arkadaşı',
+            source: 'TEAM' as const,
+          })),
+      }));
+    } catch {
+      showToast('Takım kadrosu yüklenemedi.', 'error');
+      setTeamSquads(prev => ({ ...prev, [teamId]: [] }));
+    } finally {
+      setSquadLoading(false);
+    }
+  }, [openTeamId, teamSquads, uid]);
+
+  // ── Sağlayıcılar (kaleci/hakem sheet'i açılınca) ─────────────────────────
+  useEffect(() => {
+    if (sheet !== 'PROVIDERS') return;
+    (['GK', 'REF'] as const).forEach(t => {
+      if (providers[t] !== null) return;
+      listBookableProviders(t)
+        .then(list => setProviders(prev => ({ ...prev, [t]: list })))
+        .catch(() => setProviders(prev => ({ ...prev, [t]: [] })));
+    });
+  }, [sheet, providers]);
+
+  const toggleInvite = (p: InvitedPerson) => {
+    buzz(10);
+    setInvited(prev => prev.some(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]);
+  };
+
+  const offerOf = (t: 'GK' | 'REF') => offers.find(o => o.type === t);
+  const offerCount = (t: 'GK' | 'REF') => {
+    const o = offerOf(t);
+    return o ? (o.all ? 1 : o.providerIds.length) : 0;
+  };
+  const toggleProvider = (t: 'GK' | 'REF', id: string) => {
+    buzz(10);
+    setOffers(prev => {
+      const cur = prev.find(o => o.type === t);
+      if (!cur) return [...prev, { type: t, providerIds: [id], all: false }];
+      if (cur.all) return prev.map(o => o.type === t ? { ...o, all: false, providerIds: [id] } : o);
+      const has = cur.providerIds.includes(id);
+      const next = has ? cur.providerIds.filter(x => x !== id) : [...cur.providerIds, id];
+      return next.length === 0 ? prev.filter(o => o.type !== t) : prev.map(o => o.type === t ? { ...o, providerIds: next } : o);
+    });
+  };
+  const toggleProviderAll = (t: 'GK' | 'REF') => {
+    buzz(10);
+    setOffers(prev => {
+      const cur = prev.find(o => o.type === t);
+      if (cur?.all) return prev.filter(o => o.type !== t);
+      const others = prev.filter(o => o.type !== t);
+      return [...others, { type: t, providerIds: [], all: true }];
+    });
+  };
+  // Seçilen sağlayıcıların toplam ücreti (bilgi amaçlı; tahsil onaydan sonra)
+  const offerFeeText = useMemo(() => {
+    let sum = 0; let unknown = false;
+    for (const o of offers) {
+      const list = providers[o.type];
+      if (o.all || !list) { unknown = true; continue; }
+      for (const id of o.providerIds) sum += list.find(p => p.id === id)?.fee ?? 0;
+    }
+    if (sum === 0 && unknown) return 'Ücret sağlayıcı onayında netleşir';
+    return `Toplam ${fmtTL(sum)}₺${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
+  }, [offers, providers]);
+
+  // Cüzdan overlay'i doğrudan YÜKLEME sekmesinde açılsın
+  useEffect(() => {
+    if (sheet === 'TOPUP') useAppStore.getState().setWalletInitialTab('TOPUP');
+  }, [sheet]);
+
+  const goLobby = async () => {
+    if (!result) return;
+    const fresh = await getMatchDetails(result.matchId).catch(() => null);
+    if (fresh) { setLobbyMode('MANAGE'); setSelectedMatch(fresh); onNavigate('MATCH_JOIN'); }
+    else onNavigate('MATCH_DISCOVERY');
+  };
+
+  const shareInvite = async () => {
+    if (!result) return;
+    const text = result.privateCode
+      ? `OYNA'da maç kurdum! Katılım kodu: ${result.privateCode} — oyna://match/${result.matchId}`
+      : `OYNA'da maç kurdum! Kadroda yerini al: oyna://match/${result.matchId}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); showToast('Davet metni kopyalandı', 'success'); }
+    } catch { /* kullanıcı vazgeçti */ }
+  };
+
+  const copyCode = async () => {
+    if (!result?.privateCode) return;
+    try { await navigator.clipboard.writeText(result.privateCode); setCopied(true); } catch { /* pano yok */ }
+  };
+
+  // ── Görsel yardımcılar ────────────────────────────────────────────────────
+  const whenTxt = `${selDay === 0 ? 'Bugün' : selDay === 1 ? 'Yarın' : WD[dayDate.getDay()]} ${dayDate.getDate()} ${MO[dayDate.getMonth()]}${selTime ? ` · ${selTime}` : ''}`;
+  const venueTxt = fac && court ? `${fac.name} · ${court.name}` : seeded ? (seed?.pitchName ?? 'Saha') : 'Saha seç';
+  const empty = !loading && facilities.length === 0;
+
+  const banner = conflict
+    ? { tone: '#F87171', box: 'bg-red-400/10 border-red-400/25', title: `${conflict.time} az önce doldu`, sub: conflict.next ? `Bu sahada en yakın müsait saat ${conflict.next}` : 'Bugün için başka müsait saat kalmadı', btn: conflict.next ? `${conflict.next}'e geç` : null, act: () => { if (conflict.next) { pickTime(conflict.next); } } }
+    : missingTL > 0 && missing > 0
+    ? { tone: '#FCA5A5', box: 'bg-red-400/10 border-red-400/25', title: `Kapora için ${fmtTL(missing)}₺ eksik`, sub: 'Formun kaybolmaz — yükleyip kaldığın yerden devam et', btn: 'Yükle', act: () => setSheet('TOPUP') }
+    : seeded
+    ? { tone: '#39FF14', box: 'bg-[#39FF14]/[0.07] border-[#39FF14]/25', title: 'Rezervasyonun maça çevriliyor', sub: 'Saha ve saat kilitli — sadece kadroyu kur', btn: 'Detay', act: () => setSheet('RULES') }
+    : null;
+
+  const chip = (on: boolean) => on
+    ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14]'
+    : 'bg-white/[0.03] border-white/10 text-white/65';
+
+  // ═══════════════════════════ RENDER ═══════════════════════════════════════
   return (
-    <PageLayout title="Maç Oluştur" onBack={onBack} scrollable className="bg-[#06080A]">
-      {/* Ambient */}
-      <div className="absolute top-10 -right-24 w-72 h-72 bg-[#39FF14]/[0.06] blur-[110px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-40 -left-24 w-72 h-72 bg-[#FACC15]/[0.05] blur-[110px] rounded-full pointer-events-none" />
-
-      <div className="relative z-10 px-4 pt-4 pb-[248px] space-y-4">
-
-        {/* ── 1. Canlı Maç Kartı ── */}
-        <div className="relative overflow-hidden rounded-3xl border border-[#FACC15]/25 p-4 bg-[linear-gradient(150deg,rgba(250,204,21,0.09),rgba(255,255,255,0.02)_55%,transparent)]">
-          <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-[#FACC15] to-transparent opacity-80" />
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black italic text-white tracking-tight">{format.label}</span>
-              <span className="text-[11px] font-black text-[#FACC15]">{format.players} OYUNCU</span>
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-widest rounded-full px-2.5 py-1 border"
-              style={{ color: mentality.color, borderColor: mentality.color + '55', background: mentality.color + '18' }}>
-              {mentality.label}
-            </span>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <InfoChip label="Ne zaman" value={dateLabel || '—'} empty={!dateLabel} />
-            <InfoChip label="Saha" value={selectedPitch?.name || '—'} empty={!selectedPitch} />
-            <InfoChip label="Kişi başı" value={costPerPerson > 0 ? `${costPerPerson}₺` : '—'} accent={costPerPerson > 0} empty={costPerPerson <= 0} />
-          </div>
-          <div className="mt-3 flex items-center gap-2.5">
-            <div className="flex-1 h-1.5 rounded-full bg-white/8 overflow-hidden">
-              <div className="h-full rounded-full bg-[#39FF14] transition-all duration-500" style={{ width: `${Math.min(100, (squadCount / perTeam) * 100)}%` }} />
-            </div>
-            <span className="text-[10px] font-black text-white/60 tabular-nums">{squadCount}/{perTeam}</span>
-          </div>
+    <div className="h-full bg-[#0A0E14] text-white flex flex-col relative overflow-hidden font-sans">
+      {/* ── Header (sabit) ── */}
+      <header className="shrink-0 pt-safe border-b border-white/5 bg-[#0A0E14]/80 backdrop-blur-xl relative z-10">
+        <div className="h-[60px] px-4 flex items-center relative">
+          <button onClick={onBack} aria-label="Geri"
+            className="w-11 h-11 rounded-full bg-white/5 border border-white/5 flex items-center justify-center active:scale-95 transition-transform">
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-black uppercase tracking-[0.16em]">Maç Kur</h1>
         </div>
+      </header>
 
-        {/* ── 2. Dizilim Sahası ── */}
-        <div className="flex flex-col items-center">
-          {isDraftMode && (
-            <div className="mb-2 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-400">
-              <Lock size={12} /> Sabit tesis · taslaktan
+      {/* ── Koşullu banner ── */}
+      <AnimatePresence>
+        {banner && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className={`shrink-0 flex items-center gap-3 px-3.5 py-2.5 border-b ${banner.box}`}>
+            <div className="w-[30px] h-[30px] rounded-[10px] shrink-0 flex items-center justify-center bg-white/5" style={{ color: banner.tone }}>
+              <Info size={15} />
             </div>
-          )}
-          <div className={`w-full transition-all ${orientation === 'horizontal' ? 'max-w-[520px]' : 'max-w-[360px]'} drop-shadow-[0_16px_40px_rgba(0,0,0,0.7)]`}>
-            <SharedPitch
-              mode="edit"
-              slots={pitchSlots}
-              orientation={orientation}
-              onSlotMove={handleSlotMove}
-              onSlotClick={(id) => { setSelectedSlotForPicker(id); setActiveSheet('PLAYER_PICKER'); }}
-              onDropPlayer={(slotId, player) => {
-                setMyPlayers(prev => {
-                  const next = { ...prev };
-                  for (const k in next) { if (next[k].id === (player as any).id) delete next[k]; }
-                  next[slotId] = { ...(player as any), avatar: (player as any).avatar || '', status: 'PENDING' as const };
-                  return next;
-                });
-              }}
-            />
-          </div>
-        </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11.5px] font-black leading-tight">{banner.title}</p>
+              <p className="text-[10px] font-bold mt-0.5" style={{ color: banner.tone }}>{banner.sub}</p>
+            </div>
+            {banner.btn && (
+              <button onClick={banner.act}
+                className="shrink-0 min-h-[36px] px-3.5 rounded-[10px] bg-[#39FF14] text-[#0A0E14] text-[11px] font-black active:scale-95 transition-transform">
+                {banner.btn}
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ── 3. Hızlı Kontrol Rayı ── */}
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <span className="w-[54px] shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Format</span>
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 flex-1">
-              {/* Kort seçiliyse yalnız aralığına giren formatlar seçilebilir
-                  (courts.min/max_capacity); dışındakiler kilitli görünür. */}
-              {FORMATS.map(f => {
-                const courtBlocked = !!selectedCourt && !allowedFormatValues.includes(f.v);
-                return (
-                  <button key={f.v} onClick={() => setFormat(f)} disabled={isDraftMode || courtBlocked}
-                    title={courtBlocked ? `${selectedCourt?.name} kortunda oynanamaz (${courtRangeLabel ?? 'aralık dışı'})` : undefined}
-                    className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border disabled:opacity-40 ${
-                      format.v === f.v ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.3)]' : 'bg-white/[0.03] border-white/10 text-white/70'
-                    } ${courtBlocked ? 'line-through' : ''}`}>{f.v}</button>
-                );
-              })}
+      {/* ── Gövde (kaydırma) ── */}
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+        {loading ? (
+          /* ── İskelet: header/alt bar yerinde, zıplama yok ── */
+          <div className="flex flex-col gap-5 p-4 pb-7">
+            <div className="h-[104px] rounded-3xl bg-white/5 animate-pulse" />
+            <div className="flex flex-col gap-3">
+              <div className="w-16 h-3 rounded-md bg-white/[0.06] animate-pulse" />
+              <div className="h-12 rounded-2xl bg-white/[0.04] animate-pulse" />
+              <div className="flex gap-2.5">
+                <div className="w-[152px] h-[152px] rounded-[20px] bg-white/5 animate-pulse" />
+                <div className="w-[152px] h-[152px] rounded-[20px] bg-white/[0.035] animate-pulse" />
+                <div className="w-[60px] h-[152px] rounded-[20px] bg-white/[0.025] animate-pulse" />
+              </div>
             </div>
-          </div>
-          {selectedCourt && courtRangeLabel && (
-            <p className="pl-[62px] text-[9px] text-white/35 -mt-1">
-              {selectedCourt.name}: bu kortta <span className="text-[#39FF14]/70 font-black">{courtRangeLabel}</span> oynanabilir
-            </p>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="w-[54px] shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Görünür</span>
-            <div className="flex gap-1.5">
-              {(['OPEN', 'PRIVATE'] as const).map(v => (
-                <button key={v} onClick={() => setVisibility(v)}
-                  className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-all border ${
-                    visibility === v ? (v === 'OPEN' ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14]' : 'bg-[#FACC15] text-[#0A0E14] border-[#FACC15]') : 'bg-white/[0.03] border-white/10 text-white/70'
-                  }`}>{v === 'OPEN' ? 'Herkese açık' : 'Kod ile'}</button>
-              ))}
+            <div className="flex flex-col gap-3">
+              <div className="w-20 h-3 rounded-md bg-white/[0.06] animate-pulse" />
+              <div className="flex gap-2">
+                {[0, 1, 2, 3, 4].map(i => <div key={i} className="w-[54px] h-[60px] rounded-2xl bg-white/5 animate-pulse" />)}
+              </div>
+              <div className="h-[46px] rounded-[14px] bg-white/[0.035] animate-pulse" />
             </div>
+            <p className="text-center text-[10.5px] font-bold text-white/30">Sahalar ve ilk {DAY_PREFETCH} günün müsaitliği yükleniyor…</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-[54px] shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Sertlik</span>
-            <div className="flex gap-1.5">
-              {/* Her seçenek DAİMA kendi kimlik renginde: seçili → dolu, değil → tonlu */}
-              {MENTALITY_OPTIONS.map(m => (
-                <button key={m.id} onClick={() => setDna({ ...dna, mentality: m.id })}
-                  className="px-3.5 py-1.5 rounded-xl text-[10px] font-black transition-all border"
-                  style={dna.mentality === m.id
-                    ? { color: '#0A0E14', background: m.color, borderColor: m.color, boxShadow: `0 0 14px ${m.color}4D` }
-                    : { background: `${m.color}14`, borderColor: `${m.color}45`, color: m.color }}>
-                  {m.title}
-                </button>
-              ))}
+        ) : empty ? (
+          /* ── Bölgede saha yok: NOTIFY / SUGGEST — ikisi de gerçek sinyal yazar ── */
+          <div className="flex flex-col gap-4 p-4 pt-6">
+            <div className="flex flex-col items-center gap-3.5 text-center px-4 py-7 rounded-3xl border border-dashed border-white/[0.14] bg-white/[0.02]">
+              <div className="w-14 h-14 rounded-[18px] bg-white/5 text-white/35 flex items-center justify-center"><MapPin size={26} /></div>
+              <div>
+                <h2 className="text-[19px] font-black tracking-tight">Bölgende henüz onaylı saha yok</h2>
+                <p className="mt-2 text-[12.5px] font-semibold leading-relaxed text-white/45">Burada onaylı saha olduğunda ilk sen bil. İstersen bildiğin bir sahayı öner — ekip iletişime geçsin.</p>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* ── 4. Aksiyon Kartları ── */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <ActionCard label="Saha & Saat" value={selectedPitch ? selectedPitch.name : 'Saha seç'}
-            sub={selectedPitch ? (dateLabel || 'Saat seç') : 'Nerede & ne zaman?'}
-            icon={<MapPin size={12} />} state={selectedPitch && selectedTimeSlot ? 'ok' : 'need'}
-            onClick={() => { if (!isDraftMode) setActiveSheet('PITCH'); }} />
-          <ActionCard label="Kadro" value={`${squadCount} / ${perTeam} dizildi`}
-            sub={openSlotCount > 0 ? 'Arkadaş / takım çağır' : 'Kadro tamam ✓'}
-            icon={<Users size={12} />} state={squadCount > 0 ? 'ok' : 'default'}
-            onClick={() => { setSelectedSlotForPicker(null); setActiveSheet('PLAYER_PICKER'); }} />
-          <ActionCard label="Kaleci & Hakem"
-            value={deferredProviders.length > 0 ? `${deferredProviders.length} hizmet · teklif` : 'Pro destek çağır'}
-            sub={deferredProviders.length > 0 ? 'Kapora sonrası teklif gider' : 'Kaleci / hakeme teklif gönder'}
-            icon={<Shield size={12} />} state={deferredProviders.length > 0 ? 'ok' : 'default'}
-            onClick={() => setActiveSheet('SUPPORT')} />
-          <ActionCard label="Gelişmiş" value="Yaş · Cinsiyet · Ücret" sub="Rakip daveti · takım adları"
-            icon={<Activity size={12} />} onClick={() => setActiveSheet('RULES')} />
-        </div>
-      </div>
-
-      {/* ── Fırlatma Rampası (sabit alt) — SADE: yalnız Yayınla + İade kuralları
-             linki. Kapora tutarı, bakiye durumu ve tüm kurallar dokununca açılan
-             "Kapora & İade Kuralları" sayfasında (kural yoğunluğu kararı). ── */}
-      <div className="absolute bottom-0 inset-x-0 z-30 px-4 pt-10 pb-6 bg-gradient-to-t from-[#06080A] via-[#06080A]/95 to-transparent pb-safe">
-        {/* Yetersiz bakiye — YALNIZ sorun anında görünür (kalıcı bilgi kalabalığı yok) */}
-        {readiness.canPublish && missingBalance > 0 && (
-          <div className="mb-2.5 flex items-center justify-between gap-2 rounded-xl border border-red-500/30 bg-red-500/[0.08] px-3 py-2">
-            <span className="text-[10px] font-bold text-red-300 leading-snug">
-              Cüzdan bakiyen yetersiz — kapora için <span className="font-black">{missingBalance}₺</span> eksik.
-            </span>
             <button
-              onClick={() => { useAppStore.getState().setWalletInitialTab('TOPUP'); setActiveSheet('WALLET'); }}
-              className="shrink-0 text-[10px] font-black text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
-            >
-              Yükle
+              onClick={async () => {
+                if (notified) return;
+                buzz(12);
+                try { await recordDemandSignal('NOTIFY', 'Ordu', 'Altınordu'); setNotified(true); }
+                catch { showToast('Kaydedilemedi, tekrar dene.', 'error'); }
+              }}
+              className={`flex items-center gap-3 rounded-[20px] border p-4 text-left min-h-[56px] active:scale-[0.99] transition-all ${notified ? 'border-[#39FF14]/40 bg-[#39FF14]/[0.07]' : 'border-white/10 bg-white/[0.025]'}`}>
+              <div className={`w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center ${notified ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'bg-white/5 text-white/40'}`}><Bell size={17} /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12.5px] font-black">{notified ? 'Haber listesindesin' : 'Saha açılınca haber ver'}</p>
+                <p className={`mt-0.5 text-[10.5px] font-bold ${notified ? 'text-[#39FF14]' : 'text-white/40'}`}>{notified ? 'Kaydedildi — ilk onaylı sahada bildirim gelir' : 'Tek dokunuş · istediğinde çıkarsın'}</p>
+              </div>
+            </button>
+            <button onClick={() => setSuggestOpen(v => !v)}
+              className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-4 text-left min-h-[56px] active:scale-[0.99] transition-transform">
+              <div className="w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center bg-white/5 text-white/50"><Plus size={17} /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12.5px] font-black">Bildiğin bir sahayı öner</p>
+                <p className="mt-0.5 text-[10.5px] font-bold text-white/40">Saha adı + iletişim yeter · ekip arar</p>
+              </div>
+            </button>
+            {suggestOpen && (
+              <div className="flex flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.02] p-4">
+                <input value={suggestName} onChange={e => setSuggestName(e.target.value)} placeholder="Saha adı"
+                  className="w-full h-12 rounded-xl bg-white/[0.04] border border-white/10 px-4 text-sm font-semibold outline-none" />
+                <input value={suggestContact} onChange={e => setSuggestContact(e.target.value)} placeholder="İletişim (telefon / kişi)"
+                  className="w-full h-12 rounded-xl bg-white/[0.04] border border-white/10 px-4 text-sm font-semibold outline-none" />
+                <button
+                  onClick={async () => {
+                    if (!suggestName.trim()) { showToast('Saha adı gerekli', 'error'); return; }
+                    try {
+                      await recordDemandSignal('SUGGEST', 'Ordu', 'Altınordu', suggestName.trim(), suggestContact.trim() || undefined);
+                      setSuggestOpen(false); setSuggestName(''); setSuggestContact('');
+                      showToast('Önerin alındı — teşekkürler! ⚽', 'success');
+                    } catch { showToast('Gönderilemedi, tekrar dene.', 'error'); }
+                  }}
+                  className="h-12 rounded-xl bg-[#39FF14] text-[#0A0E14] text-xs font-black uppercase tracking-widest active:scale-95 transition-transform">
+                  Gönder
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ── FORM ── */
+          <div className="flex flex-col gap-5 p-4 pb-7">
+
+            {/* Özet kartı */}
+            <div className="rounded-3xl border border-[#FACC15]/[0.22] p-4 px-[18px]"
+              style={{ background: 'linear-gradient(150deg, rgba(250,204,21,0.085), rgba(255,255,255,0.015) 58%, transparent)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[23px] font-black italic tracking-tight">{format}</span>
+                    <span className="text-[10.5px] font-black text-[#FACC15]">{per * 2} oyuncu</span>
+                  </div>
+                  <p className="mt-1 text-[12.5px] font-extrabold truncate">{venueTxt}</p>
+                  <p className="mt-0.5 text-[11.5px] font-semibold text-white/45">{whenTxt}</p>
+                </div>
+                <button onClick={() => { buzz(8); setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
+                  <span className="font-numeric text-[26px] font-black leading-none text-[#39FF14]">
+                    {perPerson != null ? `${fmtTL(perPerson)}₺` : '—'}
+                  </span>
+                  <span className="flex items-center gap-1 text-[9.5px] font-black uppercase tracking-[0.12em] text-white/[0.38]">
+                    Kişi başı <ChevronDown size={11} className={`transition-transform ${priceOpen ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+              </div>
+              <AnimatePresence>
+                {priceOpen && total != null && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="mt-3.5 pt-3 border-t border-white/[0.07] flex flex-col gap-1.5 text-[11px] font-bold">
+                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{fmtTL(selHour?.basePrice ?? total)}₺</span></div>
+                      {selHour?.deal && selHour.basePrice != null && selHour.total != null && (
+                        <div className="flex justify-between text-[#FACC15]"><span>Son dakika indirimi</span><span className="font-numeric">−{fmtTL(selHour.basePrice - selHour.total)}₺</span></div>
+                      )}
+                      <div className="flex justify-between text-white/50"><span>Toplam oyuncu ({per} + {per})</span><span className="font-numeric text-white">÷ {per * 2}</span></div>
+                      <div className="flex justify-between text-white/50"><span>OYNA hizmet payı</span><span className="font-numeric text-white">+%5</span></div>
+                      <div className="flex justify-between text-[#39FF14]"><span>Senin payın</span><span className="font-numeric">{perPerson != null ? fmtTL(perPerson) : '—'}₺</span></div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 1 · Saha */}
+            <section className="flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#39FF14]/[0.12] border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-bold font-numeric flex items-center justify-center">1</span>
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Saha</span>
+                <span className="ml-auto text-[10px] font-bold text-white/30">
+                  {q.trim() ? `${filtered.length} sonuç` : `${Math.min(facilities.length, MAX_FACILITIES)} tesis${facilities.length > MAX_FACILITIES ? ' · gerisi aramada' : ''}`}
+                </span>
+              </div>
+
+              {seeded ? (
+                /* Rezervasyondan kilitli kart */
+                <div className="flex items-center gap-3 rounded-[20px] border border-[#39FF14]/30 bg-[#39FF14]/5 p-3">
+                  <div className="w-[52px] h-[52px] rounded-[14px] shrink-0 overflow-hidden bg-[#12171f] flex items-center justify-center">
+                    {fac?.image ? <img src={fac.image} alt="" className="w-full h-full object-cover" /> : <Lock size={18} className="text-[#39FF14]/60" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-black truncate">{venueTxt}</p>
+                    <p className="mt-0.5 text-[10.5px] font-bold text-[#39FF14]">Rezervasyonundan kilitlendi · {whenTxt}</p>
+                  </div>
+                  <button onClick={() => { setSeed(null); setSelTime(null); }}
+                    className="shrink-0 min-h-[36px] px-3 rounded-[10px] border border-white/[0.14] text-white/60 text-[10.5px] font-black active:scale-95 transition-transform">
+                    Değiştir
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Arama */}
+                  <div className="relative flex items-center">
+                    <Search size={16} className="absolute left-3.5 text-white/30 pointer-events-none" />
+                    <input ref={searchRef} value={q} onChange={e => setQ(e.target.value)}
+                      placeholder="Tesis, saha veya semt ara…"
+                      className="w-full h-12 rounded-2xl bg-white/[0.035] border border-white/10 pl-10 pr-3.5 text-sm font-semibold outline-none placeholder:text-white/[0.28]" />
+                  </div>
+
+                  {/* Tesis şeridi */}
+                  <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 pb-1" style={{ scrollbarWidth: 'none' }}>
+                    {shown.map(f => {
+                      const on = f.id === selFacId;
+                      return (
+                        <button key={f.id} onClick={() => pickFacility(f)}
+                          className={`shrink-0 w-[152px] rounded-[20px] overflow-hidden text-left border transition-colors ${on ? 'bg-[#39FF14]/[0.06] border-[#39FF14]/[0.45]' : 'bg-white/[0.025] border-white/10'}`}>
+                          <div className="relative w-[152px] h-[86px] bg-[#12171f]">
+                            {f.image && <img src={f.image} alt="" className="w-full h-full object-cover" loading="lazy" />}
+                            {on && (
+                              <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#39FF14] text-[#0A0E14] flex items-center justify-center">
+                                <Check size={12} strokeWidth={4} />
+                              </span>
+                            )}
+                            {!f.hasTariff && (
+                              <span className="absolute bottom-1.5 left-1.5 text-[8px] font-black uppercase tracking-wider bg-black/70 text-[#FACC15] rounded-md px-1.5 py-0.5">Tarife yok</span>
+                            )}
+                          </div>
+                          <div className="px-2.5 pt-2.5 pb-3">
+                            <p className="text-[12.5px] font-black truncate">{f.name}</p>
+                            <p className="mt-0.5 text-[10px] font-bold text-white/[0.42] truncate">{[f.city, f.district].filter(Boolean).join(' · ') || '—'}</p>
+                            <p className={`mt-1.5 text-[10px] font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/[0.32]'}`}>
+                              {f.courts.length} saha{f.courts.some(c => c.basePrice > 0) ? ` · ${fmtTL(Math.min(...f.courts.filter(c => c.basePrice > 0).map(c => c.basePrice)))}₺'den` : ''}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    <button onClick={() => searchRef.current?.focus()}
+                      className="shrink-0 w-[72px] rounded-[20px] border border-dashed border-white/[0.14] text-white/45 flex flex-col items-center justify-center gap-2 px-2 active:scale-95 transition-transform">
+                      <Search size={17} />
+                      <span className="text-[9.5px] font-black leading-tight text-center">Tümünü<br />ara</span>
+                    </button>
+                  </div>
+
+                  {filtered.length === 0 && (
+                    <p className="text-center text-xs font-semibold text-white/35 py-4">Aramanla eşleşen tesis yok.</p>
+                  )}
+
+                  {/* Saha listesi */}
+                  {fac && (
+                    <div className="flex flex-col gap-2">
+                      {fac.courts.map(c => {
+                        const on = c.id === selCourtId;
+                        return (
+                          <button key={c.id} onClick={() => pickCourt(c)}
+                            className={`flex items-center gap-3 rounded-2xl border p-3 min-h-[56px] text-left transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.025] border-white/[0.07]'}`}>
+                            <span className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center border-2 ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
+                              {on && <Check size={10} strokeWidth={4} className="text-[#0A0E14]" />}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[12.5px] font-black truncate ${on ? 'text-[#39FF14]' : ''}`}>{c.name}</span>
+                                <span className={`shrink-0 text-[8.5px] font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 ${c.courtType === 'CLOSED' ? 'bg-blue-400/[0.14] text-blue-400' : 'bg-[#39FF14]/[0.12] text-[#39FF14]'}`}>
+                                  {c.courtType === 'CLOSED' ? 'Kapalı' : 'Açık'}
+                                </span>
+                                {c.sizeLabel && <span className="shrink-0 text-[8.5px] font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 bg-white/[0.06] text-white/50">{c.sizeLabel.slice(0, 8)}</span>}
+                              </div>
+                              <p className="mt-1 text-[10px] font-bold text-white/40">
+                                {c.minCapacity === c.maxCapacity
+                                  ? `${c.minCapacity}v${c.minCapacity}`
+                                  : `${c.minCapacity}v${c.minCapacity} – ${c.maxCapacity}v${c.maxCapacity}`}
+                              </p>
+                            </div>
+                            {c.basePrice > 0 && (
+                              <span className={`font-numeric shrink-0 text-xs font-black ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{fmtTL(c.basePrice)}₺</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+
+            {/* 2 · Ne zaman */}
+            {!seeded && (
+              <section className="flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-[#39FF14]/[0.12] border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-bold font-numeric flex items-center justify-center">2</span>
+                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Ne zaman</span>
+                  <span className="ml-auto text-[10px] font-bold text-white/30 font-numeric">{MO_LONG[dayDate.getMonth()]} {dayDate.getFullYear()}</span>
+                </div>
+
+                {/* Gün şeridi */}
+                <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                  {Array.from({ length: Math.min(daysLoaded, DAY_MAX) }, (_, i) => {
+                    const d = dateAt(i);
+                    const on = selDay === i;
+                    return (
+                      <button key={i} onClick={() => pickDay(i)}
+                        className={`shrink-0 w-[54px] h-[60px] rounded-2xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'bg-white/[0.03] border-white/[0.09]'}`}>
+                        <span className={`text-[9px] font-black uppercase tracking-wide ${on ? 'text-[#0A0E14]/70' : 'text-white/50'}`}>
+                          {i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : WD[d.getDay()]}
+                        </span>
+                        <span className={`font-numeric text-base font-bold leading-tight ${on ? 'text-[#0A0E14]' : 'text-white'}`}>{d.getDate()}</span>
+                        <span className={`text-[8.5px] font-bold ${on ? 'text-[#0A0E14]/60' : 'text-white/35'}`}>{MO[d.getMonth()]}</span>
+                      </button>
+                    );
+                  })}
+                  {daysLoaded < DAY_MAX && (
+                    <button onClick={() => { buzz(10); setDaysLoaded(DAY_MAX); }}
+                      className="shrink-0 w-16 h-[60px] rounded-2xl border border-dashed border-white/[0.14] text-white/45 flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform">
+                      <span className="font-numeric text-xs font-black">+{DAY_MAX - daysLoaded}</span>
+                      <span className="text-[8.5px] font-extrabold">gün daha</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Saat şeridi — dolu saatler görünür ama seçilemez */}
+                <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pt-2 pb-1" style={{ scrollbarWidth: 'none' }}>
+                  {!dayQuote ? (
+                    [0, 1, 2, 3, 4].map(i => <div key={i} className="shrink-0 min-w-[70px] h-[46px] rounded-[14px] bg-white/[0.04] animate-pulse" />)
+                  ) : visibleHours.length === 0 ? (
+                    <p className="text-xs font-semibold text-white/35 py-3">Bu gün için müsait saat yok.</p>
+                  ) : visibleHours.map(h => {
+                    const blocked = hourBlocked(h.time) || !h.tariffOk;
+                    const on = selTime === h.time && !blocked;
+                    return (
+                      <button key={h.time} disabled={blocked} onClick={() => pickTime(h.time)}
+                        className={`relative shrink-0 min-w-[70px] h-[46px] rounded-[14px] border font-numeric text-[13.5px] font-extrabold transition-colors ${
+                          blocked ? 'bg-white/[0.02] border-white/[0.06] text-white/[0.22] line-through cursor-not-allowed'
+                          : on ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]'
+                          : h.deal ? 'bg-[#FACC15]/[0.09] border-[#FACC15]/40 text-[#FACC15]'
+                          : 'bg-white/[0.03] border-white/[0.09] text-white/[0.78]'}`}>
+                        {blocked && h.tariffOk ? 'Dolu' : h.time}
+                        {h.deal && !on && !blocked && h.basePrice != null && h.total != null && h.basePrice > 0 && (
+                          <span className="absolute -top-[7px] -right-1 text-[8.5px] font-black text-[#0A0E14] bg-[#FACC15] rounded-md px-1 py-px">
+                            −%{Math.round((1 - h.total / h.basePrice) * 100)}
+                          </span>
+                        )}
+                        {h.night && !blocked && (
+                          <span className="absolute -top-[7px] -left-[3px] text-[8px] font-black uppercase tracking-wide text-[#0A0E14] bg-blue-400 rounded-md px-1 py-px">gece</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {dayQuote && (
+                  <p className="text-[10px] font-bold leading-normal text-white/30">
+                    {court?.name} · {dayDate.getDate()} {MO[dayDate.getMonth()]} için {visibleHours.filter(h => h.tariffOk && !hourBlocked(h.time)).length} saat müsait.
+                    {visibleHours.some(h => h.night) ? ' 00:00 ve 01:00 bu günün gecesidir.' : ''}
+                    {selHour?.deal ? ' Seçili saat indirimli.' : ''}
+                  </p>
+                )}
+              </section>
+            )}
+
+            {/* 3 · Kaç kişi */}
+            <section className="flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#39FF14]/[0.12] border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-bold font-numeric flex items-center justify-center">3</span>
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kaç kişi</span>
+              </div>
+              <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 pt-2 pb-1" style={{ scrollbarWidth: 'none' }}>
+                {court && Array.from({ length: Math.max(0, court.maxCapacity - court.minCapacity + 1) }, (_, i) => court.minCapacity + i).map(n => {
+                  const val = `${n}v${n}`;
+                  const on = format === val;
+                  const p = total != null ? Math.ceil((total / (n * 2)) * 1.05) : null;
+                  return (
+                    <button key={val} onClick={() => { buzz(12); setFormat(val); }}
+                      className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
+                      <span className={`text-base font-black italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
+                      <span className="text-[9px] font-bold text-white/[0.38]">{n * 2} oyuncu</span>
+                      <span className={`font-numeric text-[10.5px] font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/45'}`}>{p != null ? `${fmtTL(p)}₺` : '—'}</span>
+                      {n === court.minCapacity && (
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-wide text-[#0A0E14] bg-[#FACC15] rounded-md px-1.5 py-0.5 whitespace-nowrap">Önerilen</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {court && (
+                <p className="text-[10px] font-bold text-white/30">
+                  {court.name} {court.minCapacity}v{court.minCapacity} – {court.maxCapacity}v{court.maxCapacity} arası oynanabiliyor (tesis ayarı).
+                </p>
+              )}
+            </section>
+
+            {/* Kimler katılabilir */}
+            <section className="flex flex-col gap-3">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kimler katılabilir</span>
+              <div className="grid grid-cols-2 gap-2.5">
+                {([['OPEN', 'Herkese açık', 'Vitrinde görünür, boş kontenjan dolar'], ['PRIVATE', 'Kod ile', 'Sadece kodu paylaştığın kişiler']] as const).map(([id, label, sub]) => {
+                  const on = (teamInvite ? 'PRIVATE' : visibility) === id;
+                  return (
+                    <button key={id} onClick={() => { buzz(10); setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
+                      className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left min-h-[64px] transition-colors ${on ? 'bg-[#39FF14]/[0.08] border-[#39FF14]/[0.45]' : 'bg-white/[0.025] border-white/10'}`}>
+                      <span className={`text-xs font-black uppercase ${on ? 'text-[#39FF14]' : ''}`}>{label}</span>
+                      <span className="text-[9.5px] font-bold leading-snug text-white/40">{sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {(visibility === 'PRIVATE' || teamInvite) && (
+                <p className="text-[10px] font-bold text-blue-400">Maç kurulunca 6 haneli katılım kodu üretilir — sadece kodu paylaştığın kişiler girer.</p>
+              )}
+            </section>
+
+            {/* Kadro (opsiyonel) */}
+            <section className="flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kadro</span>
+                <span className="text-[10px] font-bold text-white/[0.28]">opsiyonel</span>
+              </div>
+              <button onClick={() => setSheet('FRIENDS')}
+                className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[60px] active:scale-[0.99] transition-transform">
+                <div className="flex items-center">
+                  <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#39FF14] flex items-center justify-center text-xs font-black">
+                    {(currentUserProfile?.name ?? 'S').charAt(0).toUpperCase()}
+                  </div>
+                  {invited.slice(0, 3).map(p => (
+                    <div key={p.id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-black text-white/80">
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                  <div className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-white/[0.04] border-2 border-white/[0.16] flex items-center justify-center text-white/50">
+                    <Plus size={14} />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0 ml-1">
+                  <p className="text-xs font-black">{invited.length > 0 ? `Sen + ${invited.length} kişi çağrıldı` : 'Kadroya kimseyi çağırmadın'}</p>
+                  <p className="mt-0.5 text-[10.5px] font-bold text-white/[0.42]">
+                    {(teamInvite || visibility === 'PRIVATE')
+                      ? `Kalan ${Math.max(0, per * 2 - 1 - invited.length)} kişi sadece kodla katılabilir`
+                      : `Kalan ${Math.max(0, per * 2 - 1 - invited.length)} kişi vitrinden gelir`}
+                  </p>
+                </div>
+                <ChevronRight size={15} className="text-white/25 shrink-0" />
+              </button>
+            </section>
+
+            {/* Kaleci / hakem — gerçek sağlayıcı seçimi */}
+            <section className="flex flex-col gap-2.5">
+              <button onClick={() => { buzz(8); setSheet('PROVIDERS'); }}
+                className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
+                <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center bg-white/5 text-white/55"><ShieldCheck size={16} /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black">
+                    {offers.length > 0
+                      ? [offerCount('GK') ? `${offerOf('GK')?.all ? 'Tüm kaleciler' : `${offerCount('GK')} kaleci`}` : null,
+                         offerCount('REF') ? `${offerOf('REF')?.all ? 'Tüm hakemler' : `${offerCount('REF')} hakem`}` : null]
+                        .filter(Boolean).join(' + ') + ' seçildi'
+                      : 'Kaleci veya hakem lazım mı?'}
+                  </p>
+                  <p className={`mt-0.5 text-[10.5px] font-bold ${offers.length > 0 ? 'text-[#39FF14]' : 'text-white/[0.42]'}`}>
+                    {offers.length > 0 ? offerFeeText : "Opsiyonel · teklif maç kurulunca gider, ilk kabul eden alır"}
+                  </p>
+                </div>
+                <ChevronRight size={15} className="text-white/25 shrink-0" />
+              </button>
+            </section>
+
+            {/* Gerisi profilinden */}
+            <button onClick={() => setSheet('ADV')}
+              className="flex items-center gap-3 rounded-[20px] border border-[#39FF14]/[0.18] bg-[#39FF14]/[0.04] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
+              <Sparkles size={17} className="text-[#39FF14] shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black">Gerisi profilinden ayarlandı</p>
+                <p className="mt-1 text-[10.5px] font-bold text-white/[0.42] truncate">{age} · {gender} · {mental} · {dayQuote?.slotDuration ?? 60} dk{title ? ` · "${title}"` : ''}</p>
+              </div>
+              <span className="text-[11px] font-black text-[#39FF14] shrink-0">Değiştir</span>
+            </button>
+
+            {/* Kapora kuralı */}
+            <button onClick={() => setSheet('RULES')}
+              className={`flex items-center gap-3 rounded-[20px] border p-4 text-left min-h-[60px] active:scale-[0.99] transition-transform ${
+                missing > 0 && deposit != null && !seeded
+                  ? 'border-red-400/30 bg-red-400/[0.07]'
+                  : 'border-[#FACC15]/25 bg-[#FACC15]/5'}`}>
+              <div className={`w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center ${missing > 0 && deposit != null && !seeded ? 'bg-red-400/[0.14] text-red-300' : 'bg-[#FACC15]/[0.12] text-[#FACC15]'}`}>
+                <Lock size={17} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12.5px] font-black">
+                  {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
+                    : deposit != null
+                      ? missing > 0
+                        ? `Kapora ${fmtTL(deposit)}₺ · bakiyen ${fmtTL(spendable)}₺`
+                        : `Kapora ${fmtTL(deposit)}₺ · cüzdanından bloke`
+                      : 'Kapora saat seçince hesaplanır'}
+                </p>
+                <p className={`mt-0.5 text-[10.5px] font-bold leading-snug ${missing > 0 && deposit != null && !seeded ? 'text-red-300' : 'text-[#FACC15]/85'}`}>
+                  {seeded ? 'Maç dolunca oyuncu payları cüzdanına gelir'
+                    : deposit != null
+                      ? missing > 0
+                        ? `${fmtTL(missing)}₺ yükle, kapora anında bloke edilsin`
+                        : `Maç dolunca ${fmtTL(Math.max(0, deposit - (perPerson ?? 0)))}₺ iade · dolmazsa tamamı`
+                      : 'Kapora ve iade kuralları için dokun'}
+                </p>
+              </div>
+              <ChevronRight size={15} className="text-white/25 shrink-0" />
             </button>
           </div>
         )}
-        <AnimatedButton
-          onClick={async () => { if (isReady) { await publishMatch(); } else { setActiveSheet('PITCH'); } }}
-          isLoading={isPublishing}
-          disabled={isPublishing}
-          className="w-full h-[58px]"
-          style={{
-            background: readiness.canPublish ? '#39FF14' : 'rgba(255,255,255,0.05)',
-            color: readiness.canPublish ? '#0A0E14' : 'rgba(255,255,255,0.4)',
-            boxShadow: readiness.canPublish && !isPublishing ? '0 0 28px rgba(57,255,20,0.3)' : 'none',
-          }}
-        >
-          {readiness.canPublish
-            ? (isDraftMode ? 'DAVETLERİ GÖNDER & YAYINLA' : 'YAYINLA & DAVET ET')
-            : (readiness.blockReason || 'YAYINLA & DAVET ET').toLocaleUpperCase('tr-TR')}
-        </AnimatedButton>
-        <button
-          onClick={() => { void refreshWallet(); setActiveSheet('REFUND'); }}
-          className="w-full mt-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white/45 hover:text-white/70 transition-colors"
-        >
-          <Lock size={10} className="text-[#FACC15]" />
-          <span className="underline underline-offset-2">
-            {matchDeposit > 0 ? `${matchDeposit}₺ kapora · İade kuralları` : 'Kapora & iade kuralları'}
-          </span>
-        </button>
-      </div>
+      </main>
 
-      {/* ── ALT SHEET'LER ── */}
+      {/* ── Alt bar (sabit): kaydır → yayınla ── */}
+      {!loading && !empty && (
+        <div className="shrink-0 px-4 pt-3.5 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent flex flex-col gap-2.5 relative z-10">
+          {publishing ? (
+            <div className="rounded-[20px] border border-[#39FF14]/25 bg-[#39FF14]/[0.06] p-3.5 flex flex-col gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-4 rounded-full border-2 border-[#39FF14]/25 border-t-[#39FF14] animate-spin shrink-0" />
+                <span className="text-xs font-black uppercase tracking-widest text-[#39FF14]">Yayınlanıyor</span>
+              </div>
+              {[['Maç oluşturuldu', 'matches'], ['Saha kilitlendi', 'pitch_bookings'], ['Kapora bloke ediliyor', 'payment_intents']].map(([t, src], i) => (
+                <div key={src} className="flex items-center gap-2.5">
+                  <span className={`w-3 text-[11px] font-black shrink-0 ${pubStep > i ? 'text-[#39FF14]' : 'text-white/40'}`}>{pubStep > i ? '✓' : '⟳'}</span>
+                  <span className={`flex-1 text-[11px] font-bold ${pubStep > i ? 'text-[#39FF14]' : 'text-white/55'}`}>{t}</span>
+                  <span className="font-numeric text-[8.5px] font-bold text-white/[0.28]">{src}</span>
+                </div>
+              ))}
+            </div>
+          ) : canPublish ? (
+            /* Kaydır → yayınla: dolum ilerledikçe parlayan ray, ışıltı taraması,
+               yaklaştıkça beliren "BIRAK" ipucu ve eşiğe varınca doygunlaşan tutamak. */
+            <div ref={trackRef}
+              className="relative h-[68px] rounded-[22px] overflow-hidden border transition-colors duration-200"
+              style={{
+                background: 'linear-gradient(180deg, rgba(57,255,20,0.10), rgba(57,255,20,0.05))',
+                borderColor: slide >= 0.88 ? 'rgba(57,255,20,0.85)' : 'rgba(57,255,20,0.28)',
+                boxShadow: slide >= 0.88 ? '0 0 34px rgba(57,255,20,0.30)' : 'none',
+              }}>
+              {/* Dolum */}
+              <div className="absolute left-0 top-0 bottom-0 transition-[background] duration-200"
+                style={{
+                  width: `${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63)) + 63}px`,
+                  background: slide >= 0.88
+                    ? 'linear-gradient(90deg, rgba(57,255,20,0.30), rgba(57,255,20,0.42))'
+                    : 'linear-gradient(90deg, rgba(57,255,20,0.10), rgba(57,255,20,0.22))',
+                }} />
+              {/* Işıltı taraması — boştayken hafifçe akar, sürüklerken durur */}
+              {slide < 0.02 && (
+                <motion.div aria-hidden
+                  className="absolute inset-y-0 w-24 pointer-events-none"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(57,255,20,0.16), transparent)' }}
+                  animate={{ x: ['-20%', '460%'] }}
+                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.7 }} />
+              )}
+              {/* Yön okları — tutamağın gideceği yolu gösterir */}
+              <div className="absolute inset-y-0 right-6 flex items-center gap-1 pointer-events-none"
+                style={{ opacity: Math.max(0, 0.5 - slide * 1.4) }}>
+                {[0, 1, 2].map(i => (
+                  <motion.span key={i} className="text-[#39FF14]"
+                    animate={{ opacity: [0.25, 1, 0.25] }}
+                    transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.18 }}>
+                    <ChevronRight size={14} strokeWidth={3} />
+                  </motion.span>
+                ))}
+              </div>
+              {/* Metin */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-16">
+                <span className="text-[12.5px] font-black uppercase tracking-[0.11em] text-[#39FF14] text-center"
+                  style={{ opacity: Math.max(0, 1 - slide * 2.4) }}>
+                  Kaydır → yayınla{deposit ? ' & kapora' : ''}
+                </span>
+                <span className="absolute text-[12.5px] font-black uppercase tracking-[0.14em] text-[#39FF14]"
+                  style={{ opacity: slide >= 0.88 ? 1 : 0, transition: 'opacity .15s' }}>
+                  Bırak ve yayınla
+                </span>
+              </div>
+              {/* Tutamak */}
+              <motion.div onPointerDown={onThumbDown}
+                className="absolute top-[6px] left-[6px] w-[56px] h-[56px] rounded-[18px] flex items-center justify-center cursor-grab active:cursor-grabbing"
+                style={{
+                  transform: `translateX(${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63))}px)`,
+                  touchAction: 'none',
+                  background: slide >= 0.88
+                    ? 'linear-gradient(135deg, #7CFF5C, #39FF14)'
+                    : 'linear-gradient(135deg, #39FF14, #2BD10F)',
+                  color: '#0A0E14',
+                  boxShadow: slide >= 0.88
+                    ? '0 0 30px rgba(57,255,20,0.65), inset 0 1px 0 rgba(255,255,255,0.45)'
+                    : '0 6px 18px rgba(0,0,0,0.35), 0 0 20px rgba(57,255,20,0.30), inset 0 1px 0 rgba(255,255,255,0.35)',
+                }}
+                animate={slide < 0.02 ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                transition={slide < 0.02 ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.15 }}>
+                <ArrowRight size={23} strokeWidth={2.8} />
+              </motion.div>
+            </div>
+          ) : (
+            <div className="h-16 rounded-[20px] border border-white/[0.07] bg-white/[0.02] flex items-center justify-center">
+              <span className="text-xs font-black uppercase tracking-[0.11em] text-white/25">
+                {!selCourtId ? 'Önce saha seç' : !selTime ? 'Saat seç' : 'Bu saat kullanılamıyor'}
+              </span>
+            </div>
+          )}
+          <p className="text-center text-[10px] font-bold text-white/[0.32] pb-1">
+            {publishing ? 'Kapatma — işlem birkaç saniye sürebilir'
+              : seeded ? 'Rezervasyonun maça çevrilecek · ek ödeme yok'
+              : deposit != null ? `${fmtTL(deposit)}₺ kapora cüzdanından bloke edilir · maç dolmazsa tam iade` : 'Saha ve saat seçince kapora hesaplanır'}
+          </p>
+        </div>
+      )}
+
+      {/* ═══ SHEET'LER ═══ */}
       <AnimatePresence>
-        {activeSheet === 'PITCH' && (
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col">
-            <PitchDiscovery
-              onBack={() => setActiveSheet('NONE')}
-              isSelectionMode
-              onSelectTime={(pitch: any, court: any, date: string, time: string) => {
-                setSelectedPitch(pitch);
-                // Kort artık ATILMIYOR: format aralığı kısıtının kaynağı
-                setSelectedCourt(court ?? null);
-                // Saat, saha vitrininden SLOT ETİKETİ ("20:00 - 21:00") olarak
-                // gelir; sistem genelinde maç saati TEK başlangıç saatidir.
-                // Normalize etmeden saklamak sunucudaki ::time cast'ini patlatıp
-                // "Maç Yayınlanamadı"ya yol açıyordu (SQLSTATE 22009).
-                const startTime = (time.replace('.', ':').match(/\d{1,2}:\d{2}/)?.[0]) || time;
-                setSelectedTimeSlot({ date, time: startTime });
-                setActiveSheet('NONE');
-              }}
-            />
-          </motion.div>
-        )}
-
-        {activeSheet === 'PLAYER_PICKER' && (
-          <MatchSquadPicker
-            onClose={() => setActiveSheet('NONE')}
-            assignedIds={assignedIds}
-            openSlotCount={openSlotCount}
-            onAddFriends={addPlayersToSlots}
-            onPickTeam={async (teamId, teamName) => { await loadSquadFromTeam(teamId, teamName); }}
-            onGoToTeamCreate={() => { setSocialTarget({ tab: 'TEAMS', subTab: 'CREATE' }); onNavigate('SOCIAL'); }}
-          />
-        )}
-
-        {activeSheet === 'SUPPORT' && (
-          <ProviderOfferPicker
-            onClose={() => setActiveSheet('NONE')}
-            onConfirm={setDeferredProviders}
-            initial={deferredProviders}
-          />
-        )}
-
-      </AnimatePresence>
-
-        {activeSheet === 'RULES' && createPortal(
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-safe">
-            <header className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-              <h2 className="text-lg font-black text-white italic tracking-tight uppercase">Gelişmiş Ayarlar</h2>
-              <button onClick={() => setActiveSheet('NONE')} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
+        {sheet === 'ADV' && (
+          <motion.div key="adv" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
+            <header className="shrink-0 pt-safe border-b border-white/5">
+              <div className="px-5 py-4 flex items-center justify-between">
+                <h2 className="text-[17px] font-black italic uppercase tracking-tight">Tercihe Bağlı Detaylar</h2>
+                <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
+              </div>
             </header>
-            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 space-y-7 custom-scrollbar pb-safe">
-
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Maç Adı <span className="text-white/25 normal-case font-normal">(opsiyonel)</span></p>
-                <input type="text" value={matchTitle} onChange={e => setMatchTitle(e.target.value)} placeholder="Süper Lig Derbisi…" maxLength={40}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#FACC15]/40" />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Görünürlük</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setVisibility('OPEN')} className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${visibility === 'OPEN' ? 'bg-[#39FF14]/10 border-[#39FF14]/50' : 'bg-white/[0.02] border-white/10'}`}>
-                    <span className={`text-xs font-black uppercase leading-tight ${visibility === 'OPEN' ? 'text-[#39FF14]' : 'text-white'}`}>Herkese açık maç</span>
-                    <span className="text-[9px] text-white/40 font-bold leading-tight">Vitrinde herkes görür ve katılabilir</span>
-                  </button>
-                  <button onClick={() => setVisibility('PRIVATE')} className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border text-left transition-all ${visibility === 'PRIVATE' ? 'bg-[#FACC15]/10 border-[#FACC15]/50' : 'bg-white/[0.02] border-white/10'}`}>
-                    <span className={`text-xs font-black uppercase leading-tight ${visibility === 'PRIVATE' ? 'text-[#FACC15]' : 'text-white'}`}>Kod ile girilen maç</span>
-                    <span className="text-[9px] text-white/40 font-bold leading-tight">Sadece paylaşılan kodla katılım</span>
-                  </button>
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+              <div className="p-5 pb-10 flex flex-col gap-6">
+                <div className="flex items-start gap-3 rounded-[18px] border border-[#39FF14]/[0.22] bg-[#39FF14]/5 p-3.5">
+                  <Sparkles size={16} className="text-[#39FF14] shrink-0 mt-0.5" />
+                  <p className="text-[11.5px] leading-relaxed text-white/[0.62]">Aşağıdakiler profilinden ve seçtiğin sahadan otomatik ayarlandı. Hiçbirine dokunmadan maçı kurabilirsin.</p>
                 </div>
-                {visibility === 'PRIVATE' && (
-                  <p className="text-[9px] text-[#FACC15]/70 font-bold leading-relaxed pt-1 flex items-center gap-1.5">
-                    <KeyRound size={11} /> Maç oluşturulunca lobide paylaşılabilir bir katılım kodu görünür.
-                  </p>
-                )}
-              </div>
 
-              <button
-                onClick={() => { const next = !isTeamMatch; setIsTeamMatch(next); if (next) setVisibility('PRIVATE'); }}
-                className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border text-left transition-all ${isTeamMatch ? 'bg-red-500/10 border-red-500/50' : 'bg-white/[0.02] border-white/10'}`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${isTeamMatch ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-gray-400'}`}><Swords size={20} /></div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-black italic uppercase tracking-tight ${isTeamMatch ? 'text-white' : 'text-gray-300'}`}>Rakip Takım Davet Et</p>
-                    <p className="text-[10px] text-gray-500 font-bold leading-tight truncate">{homeTeamId ? `${homeTeamName || 'Takımın'} vs rakip — kodla davet` : 'Takım maçı: kodu rakibe gönder'}</p>
-                  </div>
-                </div>
-                <div className={`w-[52px] h-7 rounded-full p-1 flex items-center shrink-0 transition-colors ${isTeamMatch ? 'bg-red-500' : 'bg-[#0A0E14] border border-white/10'}`}>
-                  <motion.div animate={{ x: isTeamMatch ? 24 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} className={`w-5 h-5 rounded-full ${isTeamMatch ? 'bg-white' : 'bg-gray-500'}`} />
-                </div>
-              </button>
-
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Cinsiyet</p>
-                  <div className="flex bg-white/[0.02] p-1 rounded-xl border border-white/10">
-                    {GENDER_OPTIONS.map(g => (
-                      <button key={g} onClick={() => setDna({ ...dna, gender: g })} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${dna.gender === g ? 'bg-white/20 text-white border border-white/30' : 'text-white/70'}`}>{g}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex-[1.5] space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Yaş Grubu</p>
-                  <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
-                    {AGE_OPTIONS.map(a => (
-                      <button key={a} onClick={() => setDna(prev => ({ ...prev, age: prev.age.includes(a) ? prev.age.filter(x => x !== a) : [...prev.age, a] }))}
-                        className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-black transition-all border ${dna.age.includes(a) ? 'bg-[#FACC15]/10 border-[#FACC15]/50 text-[#FACC15]' : 'bg-white/[0.02] border-white/10 text-white/70'}`}>{a}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Oyun Sertliği</p>
-                <div className="flex flex-col gap-2">
-                  {/* Kimlik renkleri seçim beklenmeden görünür (seçili → dolgun, değil → tonlu) */}
-                  {MENTALITY_OPTIONS.map(m => (
-                    <button key={m.id} onClick={() => setDna({ ...dna, mentality: m.id })}
-                      className="h-12 w-full rounded-2xl px-4 flex items-center justify-between border transition-all"
-                      style={dna.mentality === m.id ? { backgroundColor: `${m.color}18`, borderColor: `${m.color}66` } : { background: `${m.color}0D`, borderColor: `${m.color}30` }}>
-                      <div className="flex items-center gap-3">
-                        <m.icon size={16} style={{ color: m.color }} />
-                        <span className="text-base font-black italic uppercase tracking-tight" style={{ color: dna.mentality === m.id ? '#fff' : m.color }}>{m.title}</span>
-                      </div>
-                      <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={dna.mentality === m.id ? { backgroundColor: m.color, borderColor: 'transparent' } : { borderColor: `${m.color}66` }}>
-                        {dna.mentality === m.id && <CheckCircle2 size={10} className="text-black" />}
-                      </div>
+                <div className="flex flex-col gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Görünürlük</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button onClick={() => { setVisibility('OPEN'); setTeamInvite(false); }}
+                      className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left ${(teamInvite ? 'PRIVATE' : visibility) === 'OPEN' ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50 text-[#39FF14]' : 'bg-white/[0.02] border-white/10'}`}>
+                      <span className="text-xs font-black uppercase">Herkese açık</span>
+                      <span className="text-[9.5px] font-bold text-white/40">Vitrinde herkes görür ve katılabilir</span>
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 flex items-center gap-1.5"><Wallet size={12} /> Kişi Başı Ücret</p>
-                <div className="rounded-2xl bg-white/[0.03] border border-white/10 px-4 py-3.5 flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-black text-white">{costPerPerson > 0 ? `${costPerPerson} ₺` : '—'}</p>
-                    <p className="text-[10px] text-white/40 mt-0.5">Saha ücreti ÷ toplam oyuncu · otomatik</p>
+                    <button onClick={() => setVisibility('PRIVATE')}
+                      className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left ${(teamInvite ? 'PRIVATE' : visibility) === 'PRIVATE' ? 'bg-[#FACC15]/[0.09] border-[#FACC15]/50 text-[#FACC15]' : 'bg-white/[0.02] border-white/10'}`}>
+                      <span className="text-xs font-black uppercase">Kod ile</span>
+                      <span className="text-[9.5px] font-bold text-white/40">Sadece paylaştığın kodla katılım</span>
+                    </button>
                   </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] border border-[#39FF14]/30 bg-[#39FF14]/[0.06] rounded-full px-2.5 py-1">Otomatik</span>
                 </div>
-                <p className="text-[10px] text-white/30 leading-relaxed">Sahanın toplam ücreti iki takımdaki toplam oyuncuya bölünür; kurucu değiştiremez.</p>
-              </div>
 
-              <div className="space-y-3">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Takım Adları <span className="text-white/25 normal-case font-normal">(opsiyonel)</span></p>
-                <div className="flex gap-3">
-                  <input type="text" value={homeTeamName} onChange={e => setHomeTeamName(e.target.value)} placeholder="Ev Sahibi" maxLength={20} className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-[#39FF14]/40" />
-                  <input type="text" value={awayTeamName} onChange={e => setAwayTeamName(e.target.value)} placeholder="Deplasman" maxLength={20} className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-white/20 focus:outline-none focus:border-red-400/40" />
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Oyun sertliği</p>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 rounded-full px-2 py-1">Profilinden</span>
+                  </div>
+                  <div className="flex gap-2.5">
+                    {MENTALS.map(m => {
+                      const on = mental === m.id;
+                      return (
+                        <button key={m.id} onClick={() => setMental(m.id)}
+                          className="flex-1 h-[60px] rounded-2xl border flex flex-col items-center justify-center gap-1"
+                          style={{
+                            background: on ? `${m.color}26` : `${m.color}0D`,
+                            borderColor: on ? `${m.color}AA` : `${m.color}33`,
+                          }}>
+                          <span className="text-xs font-black italic uppercase" style={{ color: on ? '#fff' : m.color }}>{m.id}</span>
+                          <span className="text-[9px] font-bold text-white/35">{m.sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              <button onClick={() => setActiveSheet('NONE')} className="w-full h-[56px] mt-2 bg-[#FACC15] text-[#0A0E14] font-black italic uppercase text-lg rounded-[20px] active:scale-95 shadow-[0_0_30px_rgba(250,204,21,0.4)]">Onayla</button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Kimler katılabilir</p>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 rounded-full px-2 py-1">Otomatik</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {GENDERS.map(g => (
+                      <button key={g} onClick={() => setGender(g)} className={`flex-1 h-11 rounded-[14px] border text-[11px] font-black ${chip(gender === g)}`}>{g}</button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                    {AGES.map(a => (
+                      <button key={a} onClick={() => setAge(a)} className={`shrink-0 px-4 py-2.5 rounded-[14px] border text-[11px] font-black whitespace-nowrap font-numeric ${chip(age === a)}`}>{a}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Rakip taraf</p>
+                  <button onClick={() => setTeamInvite(v => !v)}
+                    className={`flex items-center justify-between gap-3 p-3.5 rounded-[18px] border text-left ${teamInvite ? 'bg-[#FF4D4D]/10 border-[#FF4D4D]/50' : 'bg-white/[0.03] border-white/10'}`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-[13px] bg-[#FF4D4D]/[0.12] text-[#FF4D4D] flex items-center justify-center shrink-0"><Users size={19} /></div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-black">Rakip takımı ben davet edeceğim</p>
+                        <p className="mt-0.5 text-[10px] font-bold text-white/40">Maç kod ile kapalı hale gelir</p>
+                      </div>
+                    </div>
+                    <div className={`w-[50px] h-7 rounded-full p-[3px] flex items-center shrink-0 transition-colors ${teamInvite ? 'justify-end bg-[#FF4D4D]' : 'justify-start bg-white/[0.08]'}`}>
+                      <div className={`w-[22px] h-[22px] rounded-full ${teamInvite ? 'bg-white' : 'bg-white/35'}`} />
+                    </div>
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                    Maç adı <span className="normal-case tracking-normal font-medium text-white/25">(opsiyonel)</span>
+                  </p>
+                  <input value={title} onChange={e => setTitle(e.target.value.slice(0, 40))} placeholder="Perşembe Derbisi…"
+                    className="w-full rounded-[14px] bg-white/[0.03] border border-white/10 px-4 py-3.5 text-sm font-semibold outline-none placeholder:text-white/[0.28]" />
+                </div>
+
+                <button onClick={() => setSheet(null)}
+                  className="w-full h-14 rounded-[18px] bg-[#FACC15] text-[#0A0E14] text-[15px] font-black italic uppercase shadow-[0_0_26px_rgba(250,204,21,0.28)] active:scale-[0.98] transition-transform">
+                  Onayla
+                </button>
+              </div>
             </div>
           </motion.div>
-        , document.body)}
+        )}
 
-        {/* ── Kapora & İade Kuralları + Cüzdan + Yasal metin: PORTAL ile body'ye
-            render edilir. Görünüm geçiş sarmalayıcısındaki transform, `fixed`
-            konumlandırmayı viewport yerine kaydırılabilir konteynere bağlıyor
-            (ekran kaydırılmışken sheet yarım kaplıyordu). Portal (ProfileScreen
-            deseni) bunu kökten çözer: overlay her durumda TÜM ekranı örter. ── */}
-        {activeSheet === 'REFUND' && createPortal((() => {
-          const totalPlayers = perTeam * 2;
-          const threshold = totalPlayers - 2;
-          const refundOnFill = Math.max(0, matchDeposit - costPerPerson);
-          return (
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col pt-safe">
-              <header className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                <h2 className="text-lg font-black text-white italic tracking-tight uppercase">Kapora & İade Kuralları</h2>
-                <button onClick={() => setActiveSheet('NONE')} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
-              </header>
-              <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 space-y-3 custom-scrollbar pb-safe">
-
-                {/* Özet: kapora tutarı + cüzdan durumu */}
-                <div className="rounded-2xl border border-[#FACC15]/25 bg-[#FACC15]/[0.05] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
-                      <p className="text-2xl font-black text-[#FACC15] mt-0.5">{matchDeposit > 0 ? `${matchDeposit}₺` : '—'}</p>
-                    </div>
-                    {spendableBalance != null && matchDeposit > 0 && (
-                      <div className="text-right">
-                        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/40">Cüzdan bakiyen</p>
-                        <p className={`text-lg font-black mt-0.5 ${missingBalance > 0 ? 'text-red-400' : 'text-[#39FF14]'}`}>{Math.floor(spendableBalance)}₺</p>
-                        {missingBalance > 0 ? (
-                          <button
-                            onClick={() => { useAppStore.getState().setWalletInitialTab('TOPUP'); setActiveSheet('WALLET'); }}
-                            className="mt-1.5 text-[10px] font-black text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1 active:scale-95 transition-transform"
-                          >
-                            {missingBalance}₺ eksik · Yükle
-                          </button>
-                        ) : (
-                          <p className="text-[9px] font-bold text-[#39FF14]/80 mt-0.5">Yeterli ✓</p>
-                        )}
-                      </div>
-                    )}
+        {sheet === 'FRIENDS' && (
+          <motion.div key="friends" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
+            <header className="shrink-0 pt-safe border-b border-white/5">
+              <div className="px-5 py-4 flex items-center justify-between">
+                <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kadronu Çağır</h2>
+                <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
+              </div>
+            </header>
+            {friends === null || teams === null ? (
+              <div className="flex-1 flex items-center justify-center"><Spinner /></div>
+            ) : friends.length === 0 && teams.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
+                <div className="w-[78px] h-[78px] rounded-full border border-dashed border-white/[0.16] flex items-center justify-center text-white/30"><Users size={30} /></div>
+                <div>
+                  <p className="text-[17px] font-black">Henüz arkadaşın ya da takımın yok</p>
+                  <p className="mt-2 text-[12.5px] leading-relaxed text-white/45">Sorun değil — maçı şimdi kur, boş kontenjanlar Top Oyna vitrininde yayınlansın. Yayın sonrası bağlantıyı paylaşarak da çağırabilirsin.</p>
+                </div>
+                <button onClick={() => setSheet(null)}
+                  className="w-full h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[13px] font-black uppercase tracking-wide shadow-[0_0_24px_rgba(57,255,20,0.24)] active:scale-95 transition-transform">
+                  Vitrinde yayınla, sonra çağır
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Sekmeler: gerçek arkadaş listesi ve gerçek takım kadroları */}
+                <div className="shrink-0 px-5 pt-4 pb-3 flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    {([['FRIENDS', `Arkadaşlar${friends.length ? ` · ${friends.length}` : ''}`],
+                       ['TEAMS', `Takımlarım${teams.length ? ` · ${teams.length}` : ''}`]] as const).map(([id, label]) => (
+                      <button key={id} onClick={() => { buzz(8); setSquadTab(id); }}
+                        className={`flex-1 h-[38px] rounded-xl text-[11px] font-black uppercase tracking-[0.06em] border transition-colors ${
+                          squadTab === id ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]' : 'bg-white/[0.03] border-white/10 text-white/60'}`}>
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                  {matchDeposit <= 0 && (
-                    <p className="text-[10px] text-white/45 leading-relaxed mt-1.5">Saha ve saat seçildiğinde kapora tutarı burada görünür.</p>
+                  {squadTab === 'FRIENDS' && friends.length > 0 && (
+                    <input value={friendQ} onChange={e => setFriendQ(e.target.value)} placeholder="Arkadaş ara…"
+                      className="w-full rounded-[14px] bg-white/[0.03] border border-white/10 px-4 py-3 text-sm font-semibold outline-none placeholder:text-white/[0.28]" />
                   )}
                 </div>
 
-                <RuleRow icon={<Lock size={16} />} title="Kapora cüzdanından bloke edilir">
-                  Yayınladığın anda kapora cüzdan bakiyenden güvenceye alınır — para çekilmez, saha sana kilitlenir.
-                </RuleRow>
-                <RuleRow icon={<Users size={16} />} title={`Maç ${threshold} oyuncuda kesinleşir`}>
-                  Kural: toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir. Bu maç için {totalPlayers} kişilik kadroda {threshold} oyuncuya ulaşılınca maç kesinleşir ve kapora tahsil edilir.
-                </RuleRow>
-                <RuleRow icon={<Undo2 size={16} />} title="Maç dolunca payın dışındaki tutar sana döner">
-                  Maç dolduğunda, kaporayı ödeyen kullanıcıya ödediği tutardan 1 kişilik katılım ücreti düşülerek kalanı cüzdanına iade edilir — kaptan da herkes gibi yalnız kendi payını ödemiş olur.
-                  {matchDeposit > 0 && costPerPerson > 0 && (
-                    <> Bu maç için: {matchDeposit}₺ − {costPerPerson}₺ = <span className="text-[#39FF14] font-black">{refundOnFill}₺ iade</span>.</>
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pb-4 flex flex-col gap-2">
+                  {squadTab === 'FRIENDS' ? (
+                    friends.length === 0 ? (
+                      <p className="text-center text-[12.5px] text-white/40 py-10 leading-relaxed">
+                        Arkadaş listen boş. Takımlarım sekmesinden takım arkadaşlarını çağırabilirsin.
+                      </p>
+                    ) : friends
+                      .filter(f => !friendQ.trim() || trLower(f.full_name ?? '').includes(trLower(friendQ.trim())))
+                      .map(f => {
+                        const on = invited.some(x => x.id === f.friend_id);
+                        return (
+                          <button key={f.friend_id}
+                            onClick={() => toggleInvite({
+                              id: f.friend_id,
+                              name: f.full_name || 'Oyuncu',
+                              meta: [f.pos, f.matches_together ? `${f.matches_together} ortak maç` : null].filter(Boolean).join(' · ') || 'Arkadaş',
+                              source: 'FRIEND',
+                            })}
+                            className={`flex items-center gap-3 p-3 rounded-2xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.025] border-white/[0.07]'}`}>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-black shrink-0 overflow-hidden">
+                              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : (f.full_name ?? '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13.5px] font-extrabold truncate">{f.full_name}</p>
+                              <p className="mt-0.5 text-[10.5px] font-bold text-white/40">
+                                {[f.pos, f.matches_together ? `${f.matches_together} ortak maç` : null].filter(Boolean).join(' · ') || 'Arkadaş'}
+                              </p>
+                            </div>
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
+                              {on && <Check size={12} strokeWidth={3.5} className="text-[#0A0E14]" />}
+                            </span>
+                          </button>
+                        );
+                      })
+                  ) : (
+                    teams.length === 0 ? (
+                      <p className="text-center text-[12.5px] text-white/40 py-10 leading-relaxed">
+                        Henüz bir takımda değilsin. Sosyal sekmesinden takım kurabilir ya da katılabilirsin.
+                      </p>
+                    ) : teams.map(t => {
+                      const open = openTeamId === t.team_id;
+                      const squad = teamSquads[t.team_id];
+                      const picked = (squad ?? []).filter(m => invited.some(x => x.id === m.id)).length;
+                      return (
+                        <div key={t.team_id} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+                          <button onClick={() => void toggleTeam(t.team_id)}
+                            className="w-full flex items-center gap-3 p-3 text-left">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 border border-white/10"
+                              style={{ background: `linear-gradient(135deg, ${t.color1 || '#1e2532'}, ${t.color2 || '#11151c'})` }}>
+                              {(t.short_name || t.name || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13.5px] font-extrabold truncate">{t.name}</p>
+                              <p className="mt-0.5 text-[10.5px] font-bold text-white/40">
+                                {t.member_count} üye{t.format ? ` · ${t.format}` : ''}{picked > 0 ? ` · ${picked} seçili` : ''}
+                              </p>
+                            </div>
+                            <ChevronDown size={16} className={`text-white/30 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                          </button>
+                          {open && (
+                            <div className="px-3 pb-3 flex flex-col gap-2">
+                              {squad === undefined ? (
+                                <div className="py-4 flex justify-center">{squadLoading ? <Spinner size={20} /> : null}</div>
+                              ) : squad.length === 0 ? (
+                                <p className="text-[11.5px] text-white/35 py-3 text-center">Bu takımda çağırabileceğin başka üye yok.</p>
+                              ) : squad.map(m => {
+                                const on = invited.some(x => x.id === m.id);
+                                return (
+                                  <button key={m.id} onClick={() => toggleInvite(m)}
+                                    className={`flex items-center gap-3 p-2.5 rounded-xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.03] border-white/[0.06]'}`}>
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-xs font-black shrink-0">
+                                      {m.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[12.5px] font-bold truncate">{m.name}</p>
+                                      <p className="text-[10px] font-bold text-white/35">{m.meta}</p>
+                                    </div>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
+                                      {on && <Check size={10} strokeWidth={3.5} className="text-[#0A0E14]" />}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
-                </RuleRow>
-                <RuleRow icon={<ShieldCheck size={16} />} title="Maç dolmazsa tam iade">
-                  Kadro eşiğe ulaşmazsa maç iptal olur ve kapora blokajı kesintisiz çözülür — kayıp yok.
-                </RuleRow>
-                <RuleRow icon={<Clock size={16} />} title="Kaptan iptali — 24 saat kuralı">
-                  Maça 24 saatten fazla varken iptal edersen kapora iade edilir (ödeme sağlayıcı komisyonu hariç). 24 saatten az kala iade yapılmaz (no-show) ve güvenilirlik puanın düşer.
-                </RuleRow>
+                </div>
 
-                <button
-                  onClick={() => setShowLegalDoc(true)}
-                  className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
-                >
-                  <span className="text-[11px] font-bold text-white/60">Mesafeli Satış ve İptal-İade koşullarının tam metni</span>
-                  <ChevronRight size={15} className="text-white/30 shrink-0" />
-                </button>
+                <div className="shrink-0 px-5 pt-3.5 pb-safe border-t border-white/5 bg-[#0A0E14]">
+                  <button onClick={() => setSheet(null)}
+                    className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform">
+                    {invited.length > 0 ? `${invited.length} kişiyi çağır` : 'Kimseyi çağırma'}
+                  </button>
+                  <p className="mt-2 mb-1 text-center text-[10px] font-bold text-white/30">Davetler maç yayınlanınca bildirim olarak gider · slotlar satın almayla dolar</p>
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
 
-                <button onClick={() => setActiveSheet('NONE')} className="w-full h-[52px] mt-1 bg-[#FACC15] text-[#0A0E14] font-black italic uppercase text-base rounded-[18px] active:scale-95 transition-transform">Anladım</button>
+        {/* ── Kaleci & Hakem: gerçek sağlayıcılar (onaylı + müsait) ── */}
+        {sheet === 'PROVIDERS' && (
+          <motion.div key="providers" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
+            <header className="shrink-0 pt-safe border-b border-white/5">
+              <div className="px-5 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kaleci &amp; Hakem</h2>
+                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: providerTab === 'GK' ? '#39FF14' : '#FACC15' }}>
+                    Çoklu teklif · ilk kabul eden alır
+                  </p>
+                </div>
+                <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
               </div>
-            </motion.div>
-          );
-        })(), document.body)}
-
-        {/* ── Mesafeli Satış / İptal-İade tam metni — paket içi statik sayfa ── */}
-        {showLegalDoc && createPortal(
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[70] bg-[#0A0E14] flex flex-col pt-safe">
-            <header className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-              <h2 className="text-base font-black text-white italic tracking-tight uppercase">Mesafeli Satış · İptal & İade</h2>
-              <button onClick={() => setShowLegalDoc(false)} className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10 border border-white/5"><X size={18} /></button>
+              <div className="px-5 pb-4">
+                <div className="bg-[#161B22] p-1.5 rounded-2xl flex border border-white/5">
+                  {([['GK', 'Kaleci', Shield, '#39FF14'], ['REF', 'Hakem', Scale, '#FACC15']] as const).map(([id, label, Icon, color]) => {
+                    const on = providerTab === id;
+                    const n = offerCount(id);
+                    return (
+                      <button key={id} onClick={() => { buzz(8); setProviderTab(id); }}
+                        className={`flex-1 py-2.5 text-[11px] font-black rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-gray-500'}`}
+                        style={on ? { background: color } : {}}>
+                        <Icon size={14} /> {label.toUpperCase()}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </header>
-            <iframe src="/mesafeli-satis.html" title="Mesafeli Satış ve İptal-İade koşulları" className="flex-1 w-full border-0 bg-white" />
-          </motion.div>,
-          document.body,
+
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pt-4 pb-4 flex flex-col gap-2.5">
+              {(() => {
+                const accent = providerTab === 'GK' ? '#39FF14' : '#FACC15';
+                const list = providers[providerTab];
+                const cur = offerOf(providerTab);
+                const all = !!cur?.all;
+                return (
+                  <>
+                    <button onClick={() => toggleProviderAll(providerTab)}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border transition-all"
+                      style={all ? { background: `${accent}14`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${accent}1f`, color: accent }}>
+                          <Users size={18} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-black uppercase italic">Tümüne Gönder</p>
+                          <p className="text-[10px] text-white/45">Uygun tüm {providerTab === 'GK' ? 'kalecilere' : 'hakemlere'} teklif</p>
+                        </div>
+                      </div>
+                      <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                        style={all ? { background: accent, borderColor: accent, color: '#0A0E14' } : { borderColor: 'rgba(255,255,255,0.25)' }}>
+                        {all && <Check size={14} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    {list === null ? (
+                      <div className="py-10 flex justify-center"><Spinner /></div>
+                    ) : list.length === 0 ? (
+                      <p className="text-center text-[12.5px] text-white/40 py-10 leading-relaxed">
+                        Şu an müsait {providerTab === 'GK' ? 'kaleci' : 'hakem'} yok. "Tümüne Gönder" seçersen uygun biri çıktığında teklif iletilir.
+                      </p>
+                    ) : (
+                      <div className={`flex flex-col gap-2.5 transition-opacity ${all ? 'opacity-40 pointer-events-none' : ''}`}>
+                        {list.map(p => {
+                          const on = !all && !!cur?.providerIds.includes(p.id);
+                          return (
+                            <button key={p.id} onClick={() => toggleProvider(providerTab, p.id)}
+                              className="w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.99]"
+                              style={on ? { background: `${accent}12`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-base font-black">
+                                {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : p.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm font-bold truncate">{p.name}</span>
+                                  {p.isElite && <Zap size={12} className="text-[#FACC15] shrink-0" />}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-white/45">
+                                  <span className="flex items-center gap-1"><Star size={11} className="fill-white/60 text-white/60" />{p.rating.toFixed(1)}</span>
+                                  {p.zone && <><span className="text-white/20">·</span><span className="truncate capitalize">{p.zone}</span></>}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="font-numeric text-sm font-black" style={{ color: accent }}>{fmtTL(p.fee)}₺</div>
+                                <div className="text-[8px] font-bold uppercase text-white/30 tracking-widest">bedel</div>
+                              </div>
+                              <span className="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center"
+                                style={on ? { background: accent, borderColor: accent, color: '#0A0E14' } : { borderColor: 'rgba(255,255,255,0.2)' }}>
+                                {on && <Check size={14} strokeWidth={3} />}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="shrink-0 px-5 pt-3.5 pb-safe border-t border-white/5 bg-[#0A0E14]">
+              {offers.length > 0 && (
+                <p className="mb-2 text-center text-[10px] font-bold text-white/45">
+                  Teklifler maçı yayınlayıp kaporayı bloke ettiğinde gönderilir.
+                </p>
+              )}
+              <button onClick={() => setSheet(null)}
+                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                <Zap size={16} />{offers.length > 0 ? 'Seçimi Onayla' : 'Hizmet Ekleme'}
+              </button>
+              <p className="mt-2 mb-1 text-center text-[10px] font-bold text-white/30">{offerFeeText}</p>
+            </div>
+          </motion.div>
         )}
 
-        {/* ── Cüzdan yükleme overlay'i — form KAYBOLMADAN bakiye tamamlanır ── */}
-        {activeSheet === 'WALLET' && createPortal(
-          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} className="fixed inset-0 z-[60] bg-[#0A0E14] overflow-y-auto overscroll-contain custom-scrollbar">
-            <Suspense fallback={<div className="h-full min-h-screen flex items-center justify-center"><Spinner /></div>}>
-              <WalletScreen onBack={() => { setActiveSheet('NONE'); void refreshWallet(); }} />
-            </Suspense>
-          </motion.div>,
-          document.body,
+        {sheet === 'RULES' && (
+          <motion.div key="rules" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
+            <header className="shrink-0 pt-safe border-b border-white/5">
+              <div className="px-5 py-4 flex items-center justify-between">
+                <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kapora &amp; İade</h2>
+                <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
+              </div>
+            </header>
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5 pb-10 flex flex-col gap-3">
+              <div className="rounded-[20px] border border-[#FACC15]/25 bg-[#FACC15]/5 p-[18px] flex items-center justify-between gap-3.5">
+                <div>
+                  <p className="text-[9.5px] font-black uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
+                  <p className="font-numeric mt-1 text-3xl font-black text-[#FACC15]">{seeded ? '0₺' : deposit != null ? `${fmtTL(deposit)}₺` : '—'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">Cüzdan bakiyen</p>
+                  <p className={`font-numeric mt-1 text-[19px] font-black ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{fmtTL(spendable)}₺</p>
+                  <p className={`mt-0.5 text-[9.5px] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>
+                    {seeded ? 'Gerekmiyor' : missing > 0 ? `${fmtTL(missing)}₺ eksik` : 'Yeterli ✓'}
+                  </p>
+                </div>
+              </div>
+              {[
+                { n: '1', t: 'Kapora cüzdanından bloke edilir', b: 'Yayınladığın anda tutar güvenceye alınır — para çekilmez, saha sana kilitlenir.' },
+                { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir ve kapora tahsil edilir.' },
+                { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${fmtTL(deposit)}₺ − ${fmtTL(perPerson)}₺ = ${fmtTL(Math.max(0, deposit - perPerson))}₺ cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
+                { n: '4', t: 'Maç dolmazsa tam iade', b: 'Kadro eşiğe ulaşmazsa maç iptal olur ve blokaj kesintisiz çözülür. 24 saatten az kala kaptan iptalinde iade yapılmaz.' },
+              ].map(r => (
+                <div key={r.n} className="flex gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.03] p-4">
+                  <div className="font-numeric w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-sm font-black flex items-center justify-center shrink-0">{r.n}</div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-black leading-tight">{r.t}</p>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">{r.b}</p>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => setSheet(null)}
+                className="mt-1 w-full h-[52px] rounded-2xl bg-[#FACC15] text-[#0A0E14] text-sm font-black italic uppercase active:scale-[0.98] transition-transform">
+                Anladım
+              </button>
+            </div>
+          </motion.div>
         )}
-    </PageLayout>
+
+        {sheet === 'SUCCESS' && result && (
+          <motion.div key="success" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col px-5 pt-safe pb-safe">
+            <div className="flex-1 flex flex-col items-center justify-center gap-5 min-h-0 overflow-y-auto custom-scrollbar">
+              <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 14 }}
+                className="w-[92px] h-[92px] rounded-full bg-[#39FF14]/[0.12] border-2 border-[#39FF14]/45 flex items-center justify-center text-[#39FF14] shadow-[0_0_44px_rgba(57,255,20,0.22)] shrink-0">
+                <Check size={42} strokeWidth={2.4} />
+              </motion.div>
+              <div className="text-center">
+                <h2 className="text-[26px] font-black italic uppercase tracking-tight">Maç yayında!</h2>
+                <p className="mt-2 text-[13px] font-semibold text-white/50">{venueTxt} · {whenTxt}</p>
+                {invited.length > 0 && <p className="mt-1 text-[11px] font-bold text-[#39FF14]">{invited.length} arkadaşına davet gönderildi</p>}
+              </div>
+              <div className="w-full rounded-[22px] border border-white/[0.08] bg-white/[0.03] p-[18px] flex flex-col gap-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">Kapora</span>
+                  <span className="font-numeric text-[15px] font-black text-[#FACC15]">
+                    {result.deposit > 0 ? `${fmtTL(result.deposit)}₺ bloke` : 'Gerekmedi'}
+                  </span>
+                </div>
+                <div className="h-px bg-white/[0.06]" />
+                <div className="flex items-start gap-2.5">
+                  <Undo2 size={14} className="text-[#39FF14] shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed text-white/55">
+                    {result.deposit > 0
+                      ? `Maç dolduğunda ${fmtTL(Math.max(0, result.deposit - result.perPerson))}₺ cüzdanına döner — sen de yalnız ${fmtTL(result.perPerson)}₺ kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
+                      : `Kişi başı ücret ${fmtTL(result.perPerson)}₺ — oyuncular katıldıkça ödemeler güvenceye alınır.`}
+                  </p>
+                </div>
+              </div>
+              {result.privateCode && (
+                <div className="w-full">
+                  <div className="w-full rounded-[22px] border border-dashed border-[#FACC15]/40 bg-[#FACC15]/5 px-[18px] py-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[9.5px] font-black uppercase tracking-[0.16em] text-[#FACC15]/70">Davet kodu</p>
+                      <p className="font-numeric mt-1 text-[23px] font-bold tracking-[0.16em] text-[#FACC15]">{result.privateCode}</p>
+                    </div>
+                    <button onClick={copyCode} aria-label="Kodu kopyala"
+                      className="w-11 h-11 rounded-[14px] border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+                      <Copy size={17} />
+                    </button>
+                  </div>
+                  <p className={`mt-2 text-center text-[10.5px] font-bold h-3.5 ${copied ? 'text-[#39FF14]' : 'text-white/30'}`}>
+                    {copied ? 'Kod kopyalandı ✓' : 'Kodu paylaş, rakip tarafı kendisi katılsın'}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 flex flex-col gap-2.5 py-4">
+              <button onClick={shareInvite}
+                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_28px_rgba(57,255,20,0.28)] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                <Share2 size={16} strokeWidth={2.2} /> Davet bağlantısını paylaş
+              </button>
+              <button onClick={goLobby}
+                className="w-full h-[52px] rounded-2xl border border-white/[0.12] bg-white/[0.04] text-[13px] font-black uppercase tracking-wide active:scale-[0.98] transition-transform">
+                Maç lobisine git
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cüzdan yükleme overlay'i — form kaybolmadan */}
+      {sheet === 'TOPUP' && createPortal(
+        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="fixed inset-0 z-[70] bg-[#0A0E14] overflow-y-auto overscroll-contain custom-scrollbar">
+          <Suspense fallback={<div className="h-full min-h-screen flex items-center justify-center"><Spinner /></div>}>
+            <WalletScreen onBack={() => {
+              setSheet(null);
+              getWalletSummary().then(s => { setWallet(s); if ((s?.spendableBalance ?? 0) >= (deposit ?? 0)) setMissingTL(0); }).catch(() => {});
+            }} />
+          </Suspense>
+        </motion.div>,
+        document.body,
+      )}
+    </div>
   );
 };
 

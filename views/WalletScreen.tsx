@@ -14,7 +14,7 @@ import {
   getOwnerEarningsSummary, EarningsSummary, WalletSummary, SavedCard,
   previewWalletCashout, requestWalletCashout, getPayoutMethods, addPayoutMethod,
 } from '../services/walletService';
-import { startInAppCardPayment } from '../services/paymentService';
+import { startInAppCardPayment, getCardFeePct, computeCardFee } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
 import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
@@ -124,6 +124,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [topupBusy, setTopupBusy] = useState(false);
   const [topupError, setTopupError] = useState('');
   const [topupDone, setTopupDone] = useState(false);
+  // Kart işlem bedeli oranı — okunamazsa 0 kalır ve ekranda hiç görünmez.
+  const [cardFeePct, setCardFeePct] = useState(0);
   // Uygulama-içi 3DS (banka SMS) sayfası — para yüklemede
   const [topupThreeDS, setTopupThreeDS] = useState<{ html: string; intentId: string } | null>(null);
   // C1 — çift-tık kilidi (senkron) + idempotency anahtarı (retry'da aynı kalır).
@@ -189,6 +191,13 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Kart işlem bedeli oranını bir kez oku (SSOT: app_config.card_fee_pct).
+  useEffect(() => {
+    let alive = true;
+    getCardFeePct().then(p => { if (alive) setCardFeePct(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   // Deep-link: profil/diğer ekranlardan gelen başlangıç sekmesi
   useEffect(() => {
     if (walletInitialTab === 'CARD_SETTINGS') setView('CARDS');
@@ -204,6 +213,9 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const reservedBalance = summary?.reservedBalance ?? 0;
 
   const effectiveTopup = isCustom ? Number(customAmount) || 0 : topupAmount;
+  // Kart işlem bedeli (app_config.card_fee_pct; 0 = kapalı) — sunucudaki
+  // yuvarlamanın aynısıyla hesaplanır, ekranda yazan toplam çekilenle örtüşür.
+  const topupFee = computeCardFee(effectiveTopup, cardFeePct);
 
   const pendingPayout = payouts.find(p => p.status === 'PENDING' || p.status === 'PROCESSING') ?? null;
 
@@ -396,6 +408,25 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 Yeni bakiye: {fmt(topupBalance + refundBalance + effectiveTopup)}₺
               </p>
             )}
+            {/* Kart işlem bedeli: yükleme kartla yapıldığı için burada her
+                zaman geçerlidir. Cüzdana YÜKLENEN tutar bedelden etkilenmez;
+                bedel yalnız karttan çekilen toplamı büyütür. */}
+            {effectiveTopup >= TOPUP_MIN && topupFee > 0 && (
+              <div className="mt-3 mx-auto max-w-[300px] rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-2.5 space-y-1">
+                <div className="flex items-center justify-between text-[11.5px]">
+                  <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
+                  <span className="text-[#FACC15] font-bold font-numeric">+{fmt(topupFee)}₺</span>
+                </div>
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="text-white font-extrabold">Karttan çekilecek</span>
+                  <span className="text-white font-black font-numeric">{fmt(effectiveTopup + topupFee)}₺</span>
+                </div>
+                <p className="text-[10px] text-gray-500 pt-0.5">
+                  Bakiyene {fmtInt(effectiveTopup)}₺ geçer; bedel ödeme altyapısı komisyonudur.
+                  Bakiyeden yaptığın ödemelerde ek bedel alınmaz.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
@@ -499,7 +530,11 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
             }`}>
             {topupBusy ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} />}
-            {topupBusy ? 'YÜKLENİYOR...' : `${fmtInt(effectiveTopup)}₺ YÜKLE`}
+            {topupBusy
+              ? 'YÜKLENİYOR...'
+              : topupFee > 0
+                ? `${fmt(effectiveTopup + topupFee)}₺ ÖDE · ${fmtInt(effectiveTopup)}₺ YÜKLE`
+                : `${fmtInt(effectiveTopup)}₺ YÜKLE`}
           </button>
           {savedCards.length === 0 && !selectedCard && (
             <p className="text-center text-[10px] text-gray-500 mt-2">Yükleme için önce bir kart ekle.</p>

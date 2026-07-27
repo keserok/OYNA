@@ -82,6 +82,25 @@ const App: React.FC = () => {
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
   // Oturum geri yüklemesi ilk kez çözüldü mü? (Splash otomatik geçişi bunu bekler)
   const [authResolved, setAuthResolved] = React.useState(false);
+  // Alt bar kaydırmaya duyarlı: aşağı kaydırınca gizlenir, yukarı kaydırınca
+  // veya listenin başına dönünce geri gelir. Kaydırma iç içe konteynerlerde
+  // olabildiğinden (scroll olayları kabarcıklanmaz) capture fazında dinlenir;
+  // son konumlar eleman başına tutulur.
+  const [navHidden, setNavHidden] = React.useState(false);
+  const navScrollMemo = React.useRef(new WeakMap<Element, number>());
+  const handleNavScrollCapture = React.useCallback((e: React.UIEvent<HTMLElement>) => {
+    const t = e.target as Element | null;
+    if (!(t instanceof HTMLElement)) return;
+    // Yatay şeritleri ve kaydırılamayan elemanları atla
+    if (t.scrollHeight - t.clientHeight < 60) return;
+    const y = t.scrollTop;
+    const prev = navScrollMemo.current.get(t) ?? y;
+    navScrollMemo.current.set(t, y);
+    const delta = y - prev;
+    if (y <= 32) { setNavHidden(false); return; }
+    if (delta > 8) setNavHidden(true);
+    else if (delta < -8) setNavHidden(false);
+  }, []);
   const {
     view,
     role,
@@ -116,7 +135,15 @@ const App: React.FC = () => {
     addUserNotification,
     setNotificationPreferences,
     updateSingleNotificationPref,
+    navOverlayOpen,
   } = useAppStore();
+
+  // Görünüm değişince alt bar her zaman görünür başlasın; kalmış overlay
+  // bayrağı da temizlensin (asıl temizlik görünümün kendi unmount'unda).
+  React.useEffect(() => {
+    setNavHidden(false);
+    useAppStore.getState().setNavOverlayOpen(false);
+  }, [view]);
 
   useEffect(() => {
     // Normal akış: her zaman SPLASH'ten başla, auth state'e göre yönlendir.
@@ -756,7 +783,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
+  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE', 'MY_MATCHES'].includes(view);
 
   return (
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
@@ -785,7 +812,12 @@ const App: React.FC = () => {
         <motion.div
           key={view}
           {...PAGE_TRANSITION}
-          className={`w-full h-full absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar ${showBottomNav ? 'pb-safe-nav' : 'pb-safe'}`}
+          onScrollCapture={showBottomNav ? handleNavScrollCapture : undefined}
+          className={`w-full h-full absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar ${
+            // MY_MATCHES kendi içinde kaydırır ve bar payını kendisi ayırır →
+            // dış dolgu ölü bant yaratmasın, kartlar barın altından aksın.
+            view === 'MY_MATCHES' ? '' : showBottomNav ? 'pb-safe-nav' : 'pb-safe'
+          }`}
         >
           {/* A5: Görünüm-seviyesi hata sınırı. Bir görünüm çökse de (ör. lazy
               chunk ağ hatası, render exception) uygulama kabuğu + alt menü ayakta
@@ -821,7 +853,7 @@ const App: React.FC = () => {
 
       <AnimatePresence>
         {showBottomNav && (
-          <BottomNav currentView={view} onNavigate={resetNavigation} />
+          <BottomNav currentView={view} onNavigate={resetNavigation} hidden={navHidden || navOverlayOpen} />
         )}
       </AnimatePresence>
 

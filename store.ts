@@ -11,23 +11,9 @@ import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
 import type { AdminSession } from './admin-panel/services/adminService';
 
-export interface Friend {
-  id: string;
-  name: string;
-  nickname: string;
-  avatar: string;
-  position: string;
-  style: string;
-  status: 'FRIEND' | 'PENDING_SENT' | 'PENDING_RECEIVED';
-  tags?: string[];
-  isFavorite?: boolean;
-  group?: string;
-  pos?: string;
-  fp?: number;
-  online?: boolean;
-  wins?: number;
-  losses?: number;
-}
+// (Tek lobi P4) Store'daki Friend tipi ve friends dizisi KALDIRILDI: hiçbir
+// yerde DB'den doldurulmuyordu ve lobi davet modalını boş/mock bırakıyordu.
+// Gerçek arkadaş verisi tek kaynaktan gelir: services/socialService.getFriends().
 
 // ─── Admin-only types ────────────────────────────────────────────────
 
@@ -216,7 +202,7 @@ interface AppState {
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
   // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
-  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number } | null;
+  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number; bookingId?: string; courtId?: string } | null;
   reliabilityScore: number;
   banExpiresAt: string | null;
   setReliabilityScore: (score: number) => void;
@@ -271,12 +257,6 @@ interface AppState {
 
   // Player Seek Announcements
 
-  // ─── Friend System ─────────────────────────────────────────────────
-  friends: Friend[];
-  addFriend: (friend: Friend) => void;
-  removeFriend: (id: string) => void;
-  acceptFriend: (id: string) => void;
-  addPendingFriend: (friend: Friend) => void;
 
   // ─── Squad Builder ────────────────────────────────────────────────
   selectedFriendsForTeam: string[];
@@ -389,7 +369,6 @@ interface AppState {
   loadOwnerData: (facilityId?: string) => Promise<void>;
 
   // ─── Supabase Plei Architecture ───────────────────────────────
-  joinMatchPleiAction: (matchId: string, slotId: string, role: string) => Promise<void>;
   initSupabaseRealtime: () => void;
 
   // ─── Match CRUD ────────────────────────────────────────────────
@@ -443,6 +422,10 @@ interface AppState {
   removeUserNotification: (id: string) => void;
   isNotificationsOpen: boolean;
   setIsNotificationsOpen: (open: boolean) => void;
+  // Bir görünüm alt sayfa/modal açtığında alt barın yol vermesi için bayrak
+  // (ör. Maçlarım bilet alt sayfaları). Kapanınca/görünümden çıkınca sıfırlanır.
+  navOverlayOpen: boolean;
+  setNavOverlayOpen: (open: boolean) => void;
   // FAZ 7.5: Çoklu rol geçişi (rol değiştirici sheet)
   isRoleSwitcherOpen: boolean;
   // Misafir modu: oturum açmadan gezinme. Yazma aksiyonlarında kayıt kapısı açılır.
@@ -466,8 +449,6 @@ interface AppState {
   myRoles: string[];
   setMyRoles: (roles: string[]) => void;
   markAllNotificationsAsRead: () => void;
-  acceptMatchInvite: (notificationId: string) => void;
-  rejectMatchInvite: (notificationId: string) => void;
   unreadNotificationsCount: number;
   incrementUnreadNotifications: () => void;
   clearUnreadNotifications: () => void;
@@ -701,39 +682,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   announcementBanner: INITIAL_SETTINGS.announcementBanner,
   showAnnouncementBanner: INITIAL_SETTINGS.showAnnouncementBanner,
-  friends: [] as any[],
-  addFriend: (friend) => set((state) => {
-    const next = [...state.friends, friend];
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      // Firebase sync removed for now
-    }
-    return { friends: next };
-  }),
-  removeFriend: (id) => set((state) => {
-    const next = state.friends.filter(f => f.id !== id);
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      // Firebase sync removed for now
-    }
-    return { friends: next };
-  }),
-  acceptFriend: (id) => set((state) => {
-    const next = state.friends.map(f => f.id === id ? { ...f, status: 'FRIEND' as const } : f);
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      // Firebase sync removed for now
-    }
-    return { friends: next };
-  }),
-  addPendingFriend: (friend) => set((state) => {
-    const next = [...state.friends, { ...friend, status: 'PENDING_SENT' as const }];
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      // Firebase sync removed for now
-    }
-    return { friends: next };
-  }),
 
   // Squad Builder
   selectedFriendsForTeam: [],
@@ -1025,59 +973,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
 
-  // Supabase Plei/Fubles Hybrid
-  joinMatchPleiAction: async (matchId, slotId, role) => {
-    const state = get();
-    const match = state.adminMatches.find(m => m.id === matchId);
-    if (!match) return;
-    
-    // 1. Optimistic Update
-    const previousSlots = match.slots ? [...match.slots] : [];
-    
-    // Misafir/oturumsuz kullanıcı maça KATILAMAZ: kayıt kapısını aç ve çık.
-    if (!auth.currentUser?.uid) {
-      set({ isSignupGateOpen: true });
-      return;
-    }
-    const currentUserUid = auth.currentUser.uid;
-    // Gerçek profil (bootstrap'ta profiles'tan yazılır) önce; admin-only
-    // adminUsers yalnız admin oturumunda dolu olduğundan oyuncuda son çare.
-    const currentUserProfile = state.currentUserProfile
-      || state.adminUsers.find(u => u.id === currentUserUid)
-      || { id: currentUserUid, name: auth.currentUser.displayName || 'Oyuncu', avatar: auth.currentUser.photoURL || `https://i.pravatar.cc/150?u=${currentUserUid}` };
-
-    const joinedPlayer: Player = {
-      id: currentUserProfile.id || currentUserUid,
-      name: currentUserProfile.name || auth.currentUser.displayName || 'Oyuncu',
-      avatar: currentUserProfile.avatar || `https://i.pravatar.cc/150?u=${currentUserProfile.id}`,
-      rating: (currentUserProfile as any).rating || 4.5,
-      position: role,
-      x: 50,
-      y: 50,
-    };
-    
-    const updatedSlots = previousSlots.map(s => 
-      s?.id === slotId ? { ...s, status: 'TAKEN' as const, player: joinedPlayer } : s
-    );
-    
-    set({ adminMatches: state.adminMatches.map(m => m.id === matchId ? { ...m, slots: updatedSlots } : m) });
-
-    try {
-      // 2. Gerçek RPC çağrısı
-      const { error } = await supabase.rpc('join_match_slot', {
-        p_match_id: matchId,
-        p_user_id: currentUserUid,
-        p_slot_id: slotId,
-        p_slot_role: role
-      });
-      if (error) throw error;
-    } catch (error) {
-      console.error('Supabase join failed:', error);
-      // 3. Rollback
-      set({ adminMatches: get().adminMatches.map(m => m.id === matchId ? { ...m, slots: previousSlots } : m) });
-      throw error; 
-    }
-  },
+  // (Tek lobi P4) joinMatchPleiAction (plei donemi join_match_slot istemcisi) kaldirildi.
 
   initSupabaseRealtime: () => {
     // Unused realtime subscriptions to match_registrations and waitlist dropped
@@ -1229,6 +1125,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   userNotifications: [],
   isNotificationsOpen: false,
   setIsNotificationsOpen: (open) => set({ isNotificationsOpen: open }),
+  navOverlayOpen: false,
+  setNavOverlayOpen: (open) => set({ navOverlayOpen: open }),
   isRoleSwitcherOpen: false,
   setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
   isGuest: false,
@@ -1254,71 +1152,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   markAllNotificationsAsRead: () => set((state) => ({
     userNotifications: state.userNotifications.map(n => ({ ...n, read: true }))
   })),
-  acceptMatchInvite: (id) => {
-    const state = get();
-    const notif = state.userNotifications.find((n) => n.id === id);
-
-    // Bildirimi hemen kaldır (UI donmasın)
-    set((s) => ({ userNotifications: s.userNotifications.filter((n) => n.id !== id) }));
-
-    if (!notif?.payload) return;
-    const { matchId, slotId } = notif.payload;
-    const match = state.adminMatches.find((m) => m.id === matchId);
-    if (!match) return;
-
-    const isAway = (match.awaySlots || []).some(s => s?.id === slotId);
-    const targetSlots = isAway ? (match.awaySlots || []) : (match.slots || []);
-    const slot = targetSlots.find(s => s?.id === slotId);
-
-    // Local önkontrol — gerçek kilit RPC'de (FOR UPDATE)
-    if (slot?.status === 'TAKEN') {
-      set((s) => ({
-        userNotifications: [{
-          id: `err_slot_${Date.now()}`,
-          type: 'alert',
-          title: 'Slot Doldu',
-          desc: 'Davet edildiğiniz pozisyona maalesef başka bir oyuncu katılmış.',
-          time: 'Az önce',
-          iconName: 'AlertCircle',
-          color: '#ef4444',
-          textColor: '#fff',
-          read: false,
-        }, ...s.userNotifications],
-      }));
-      return;
-    }
-
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-
-    // Atomik katılım — join_public_match_slot RPC (FOR UPDATE kilit içeriyor)
-    supabase.rpc('join_public_match_slot', {
-      p_match_id: matchId,
-      p_slot_id: slotId,
-      p_user_id: userId,
-      p_is_away: isAway,
-    }).then(({ error }) => {
-      if (error) {
-        set((s) => ({
-          userNotifications: [{
-            id: `err_join_${Date.now()}`,
-            type: 'alert',
-            title: 'Katılım Başarısız',
-            desc: error.message?.includes('dolu') ? 'Slot başka bir oyuncu tarafından dolduruldu.' : 'Maça katılırken hata oluştu.',
-            time: 'Az önce',
-            iconName: 'AlertCircle',
-            color: '#ef4444',
-            textColor: '#fff',
-            read: false,
-          }, ...s.userNotifications],
-        }));
-      }
-      // Başarı durumunda Realtime subscription store'u güncelleyecek
-    });
-  },
-  rejectMatchInvite: (id) => {
-    set((state) => ({ userNotifications: state.userNotifications.filter((n) => n.id !== id) }));
-  },
+  // (Tek lobi P4) acceptMatchInvite/rejectMatchInvite olu zinciri kaldirildi —
+  // davet-kabul artik DB bildirimi + player_assign_slot (aninda atama) ile yurur.
   unreadNotificationsCount: 0,
   incrementUnreadNotifications: () => set((state) => ({ unreadNotificationsCount: state.unreadNotificationsCount + 1 })),
   clearUnreadNotifications: () => set({ unreadNotificationsCount: 0 }),

@@ -101,9 +101,9 @@ describe('listingToMatchPayload — FAZ 3 alanları payloada girer', () => {
     expect(p.visibility).toBe('PRIVATE');
     expect(p.pitch_id).toBe('p7');
   });
-  it('visibility yoksa OPEN, pitchId yoksa null', () => {
+  it('visibility yoksa anahtar HİÇ gitmez (kısmi güncelleme PRIVATE maçı OPEN yapmasın), pitchId yoksa null', () => {
     const p = listingToMatchPayload({ rawDate: '2026-08-15' });
-    expect(p.visibility).toBe('OPEN');
+    expect('visibility' in p).toBe(false);
     expect(p.pitch_id).toBeNull();
   });
   it('status verilmezse ACTIVE varsayılır', () => {

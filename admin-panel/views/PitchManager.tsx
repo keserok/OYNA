@@ -12,10 +12,14 @@ import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
 
 // Format aralığı: min/max_capacity TAKIM BAŞI oyuncu tutar ("6v6" → 6).
 // DB CHECK kuralı 3–11 aralığını zorunlu kılar; rozetler formatCapacityRange ile üretilir.
-const CAPACITY_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => ({
-    label: `${n}v${n}`,
-    value: n,
-}));
+const FORMAT_RANGE_OPTIONS = Array.from({ length: 9 }, (_, i) => i + 3); // 3v3..11v11
+
+// PitchCourt tipinde bulunmayan (yalnız DB'de duran) kort rozeti alanı.
+type CourtFormatExtras = {
+    min_capacity?: number | null;
+    max_capacity?: number | null;
+    size_label?: string | null;
+};
 
 /** "30x50" → {w:'30', l:'50'} (Türkçe 'x'/'X'/'*' ayraçlarını hoş görür). */
 function parseSize(size?: string | null): { w: string; l: string } {
@@ -51,6 +55,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     showBack = true,
 }) => {
     const [editingPitch, setEditingPitch] = useState<PitchCourt | null>(null);
+    // Format aralığı + rozet — kort seçilen maçlarda format listesini daraltır.
+    const [editCaps, setEditCaps] = useState<{ min: number; max: number; sizeLabel: string }>({ min: 5, max: 7, sizeLabel: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const { confirm, confirmElement } = useConfirmSheet();
@@ -113,6 +119,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleEdit = (pitch: PitchCourt) => {
         if (readOnly) return;
         setEditingPitch({ ...pitch });
+        // Mevcut kortun format aralığı + rozetiyle doldur (yoksa varsayılan 5v5–7v7).
+        const ext = pitch as PitchCourt & CourtFormatExtras;
+        setEditCaps({
+            min: ext.min_capacity ?? 5,
+            max: ext.max_capacity ?? 7,
+            sizeLabel: ext.size_label ?? '',
+        });
         setSaveError(null);
     };
 
@@ -143,11 +156,17 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             locker_grade: null,
         };
         setEditingPitch(newPitch);
+        setEditCaps({ min: 5, max: 7, sizeLabel: '' }); // yeni kort varsayılanı
         setSaveError(null);
     };
 
     const handleSave = async () => {
         if (readOnly || !editingPitch || !facilityId) return;
+        // Doğrulama: en küçük format en büyük formatı aşamaz.
+        if (editCaps.min > editCaps.max) {
+            setSaveError('En küçük format, en büyük formattan büyük olamaz. Aralığı kontrol edin.');
+            return;
+        }
         setIsSaving(true);
         setSaveError(null);
         try {
@@ -161,10 +180,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     is_active: editingPitch.is_active,
                     sort_order: editingPitch.sort_order,
                     price: editingPitch.price,
-                    // Aralık varken legacy capacity = maks format (eski görünümler tutarlı kalır)
-                    capacity: editingPitch.max_capacity ?? editingPitch.capacity,
-                    min_capacity: editingPitch.min_capacity ?? null,
-                    max_capacity: editingPitch.max_capacity ?? null,
+                    // BİRİM: min/max_capacity TAKIM BAŞINA (7 → 7v7); legacy
+                    // 'capacity' ise TOPLAM kişidir — eski görünümler onu okur,
+                    // bu yüzden en büyük formatın iki katı yazılır (7 → 14).
+                    capacity: editCaps.max * 2,
+                    min_capacity: editCaps.min,
+                    max_capacity: editCaps.max,
+                    size_label: editCaps.sizeLabel.trim() || null,
                     images: editingPitch.images,
                     description: editingPitch.description,
                     features: normalizeCourtFeatures(editingPitch.features),
@@ -186,7 +208,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                 );
             } else {
                 const localId = editingPitch.id || Date.now().toString();
-                const saved = { ...editingPitch, id: localId };
+                const saved: PitchCourt & CourtFormatExtras = {
+                    ...editingPitch,
+                    id: localId,
+                    min_capacity: editCaps.min,
+                    max_capacity: editCaps.max,
+                    size_label: editCaps.sizeLabel.trim() || null,
+                };
                 const exists = pitches.find((p) => p.id === localId);
                 onUpdatePitches(
                     exists
@@ -308,7 +336,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-400 uppercase">Saatlik Ücret (₺)</label>
                                 <input
@@ -320,55 +348,50 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 />
                                 <p className="text-[10px] text-gray-600">Kaba fiyat. Saat/gün bazlı tarife: Fiyatlandırma Politikası.</p>
                             </div>
+                        </div>
+
+                        {/* Format aralığı (TEK kaynak): vitrinde kort rozetini (6v6–8v8) üretir ve
+                            maç oluştururken kort seçilince format listesi bu aralığa daralır. */}
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Format Aralığı (kaça kaç)</label>
-                                {/* Min/Maks oynanabilir format — vitrinde kort satırında aralık
-                                    rozeti olur (6v6–8v8) ve maç oluşturma akışı bu aralığı temel
-                                    alır. Min > Maks seçilemez: diğer uç otomatik hizalanır. */}
-                                <div className="grid grid-cols-2 gap-2">
-                                    <select
-                                        value={editingPitch.min_capacity ?? ''}
-                                        onChange={(e) => {
-                                            const v = e.target.value ? Number(e.target.value) : null;
-                                            setEditingPitch({
-                                                ...editingPitch,
-                                                min_capacity: v,
-                                                max_capacity: v !== null && editingPitch.max_capacity != null && editingPitch.max_capacity < v
-                                                    ? v : editingPitch.max_capacity,
-                                            });
-                                        }}
-                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
-                                    >
-                                        <option value="">Min —</option>
-                                        {CAPACITY_OPTIONS.map((o) => (
-                                            <option key={o.value} value={o.value}>Min {o.label}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={editingPitch.max_capacity ?? ''}
-                                        onChange={(e) => {
-                                            const v = e.target.value ? Number(e.target.value) : null;
-                                            setEditingPitch({
-                                                ...editingPitch,
-                                                max_capacity: v,
-                                                min_capacity: v !== null && editingPitch.min_capacity != null && editingPitch.min_capacity > v
-                                                    ? v : editingPitch.min_capacity,
-                                            });
-                                        }}
-                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
-                                    >
-                                        <option value="">Maks —</option>
-                                        {CAPACITY_OPTIONS.map((o) => (
-                                            <option key={o.value} value={o.value}>Maks {o.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <p className="text-[10px] text-gray-600">
-                                    Örn. Min 6v6 + Maks 8v8 → vitrinde "6v6–8v8". Boş bırakılırsa tek format varsayılır
-                                    {editingPitch.capacity ? ` (${editingPitch.capacity / 2}v${editingPitch.capacity / 2})` : ''}.
-                                </p>
+                                <label className="text-xs font-bold text-gray-400 uppercase">En Küçük Format</label>
+                                <select
+                                    value={editCaps.min}
+                                    onChange={(e) => setEditCaps({ ...editCaps, min: Number(e.target.value) })}
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
+                                >
+                                    {FORMAT_RANGE_OPTIONS.map((n) => (
+                                        <option key={n} value={n}>{n}v{n}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase">En Büyük Format</label>
+                                <select
+                                    value={editCaps.max}
+                                    onChange={(e) => setEditCaps({ ...editCaps, max: Number(e.target.value) })}
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
+                                >
+                                    {FORMAT_RANGE_OPTIONS.map((n) => (
+                                        <option key={n} value={n}>{n}v{n}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase">Format Rozeti</label>
+                                <input
+                                    type="text"
+                                    maxLength={8}
+                                    value={editCaps.sizeLabel}
+                                    onChange={(e) => setEditCaps({ ...editCaps, sizeLabel: e.target.value })}
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors"
+                                    placeholder="7v7, Mini..."
+                                />
                             </div>
                         </div>
+                        {editCaps.min > editCaps.max && (
+                            <p className="text-[10px] text-red-400 font-bold">En küçük format, en büyük formattan büyük olamaz.</p>
+                        )}
 
                         {/* Saha bazlı özellikler (Karar #18) — oyuncu kartında rozet */}
                         <div className="space-y-2">

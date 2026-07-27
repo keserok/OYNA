@@ -128,10 +128,46 @@ export interface InAppPayInput {
   idempotencyKey?: string;
 }
 
+// ═══ KART İŞLEM BEDELİ ══════════════════════════════════════════════════════
+// Kartla ödemede ödeme altyapısına ödenen komisyon kullanıcıya ayrı satır
+// olarak yansır; cüzdandan ödemede uygulanmaz. Oran app_config.card_fee_pct'tir
+// (panelden yönetilir, 0 = kapalı). Ekranlar oranı BİR KEZ okur ve sunucuyla
+// birebir aynı yuvarlamayla hesaplar; tahsil edilen otoriter tutar yine
+// sunucudan (startInAppCardPayment → cardAmount) döner.
+
+/** Yüzdeyi tek çağrıda öğren (100₺ üzerinden sorar; 0 → özellik kapalı). */
+export async function getCardFeePct(): Promise<number> {
+  const { data, error } = await supabase.rpc('get_card_fee_quote', { p_amount: 100 });
+  if (error || !data) return 0;
+  const pct = Number((data as { pct?: unknown }).pct);
+  return Number.isFinite(pct) && pct > 0 ? pct : 0;
+}
+
+/** Sunucudaki round(base*pct/100, 2) ile birebir aynı sonuç. */
+export function computeCardFee(base: number, pct: number): number {
+  if (!(base > 0) || !(pct > 0)) return 0;
+  return Math.round(base * pct) / 100;
+}
+
+/**
+ * Ödeme SONUCUNDAKİ gerçek bedel: sunucunun çektiği toplamdan hizmet tabanını
+ * düşerek bulunur. Tahmin değil, tahsil edilen tutardır — başarı ekranında
+ * gösterilen rakam bu olmalıdır.
+ */
+export function cardFeeOf(totalAmount: number, cardAmount: number, balanceApplied: number): number {
+  const base = Math.max(totalAmount - balanceApplied, 0);
+  return Math.max(Math.round((cardAmount - base) * 100) / 100, 0);
+}
+
 export interface InAppPayStart {
   provider: 'IYZICO' | 'SIMULATION';
   requiresThreeDS: boolean;
   intentId: string;
+  /**
+   * Karttan ÇEKİLEN toplam — hizmet tabanı + işlem bedeli.
+   * Kırılım ayrı alan olarak GELMEZ; taban = (tutar − balanceApplied),
+   * bedel = cardAmount − taban ile türetilir (bkz. cardFeeOf).
+   */
   cardAmount: number;
   balanceApplied: number;
   /** base64 — banka 3DS sayfası; decodeBase64Utf8 ile çözülüp iframe'e basılır. */
