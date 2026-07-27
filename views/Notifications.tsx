@@ -44,6 +44,12 @@ const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
   // Rezervasyon
   booking_confirmed: { icon: CheckCircle, color: '#22c55e' },
   booking_rejected: { icon: AlertTriangle, color: '#ef4444' },
+  // Destek (admin yanıtı → kullanıcı Ayarlar → Yardım Merkezi'nden okur)
+  support_reply: { icon: MessageCircle, color: '#22d3ee' },
+  // Hesap
+  account_deletion_cancelled: { icon: CheckCircle, color: '#22c55e' },
+  withdrawal_approved: { icon: DollarSign, color: '#22c55e' },
+  withdrawal_rejected: { icon: AlertTriangle, color: '#ef4444' },
   // Genel
   weekly_summary: { icon: Star, color: '#f59e0b' },
   promo_offers: { icon: Megaphone, color: '#f59e0b' },
@@ -445,10 +451,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           >
             <div className="flex-1 overflow-y-auto flex flex-col relative pb-32">
               <div className="w-full h-64 relative shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1518605368461-1ee12522c070?auto=format&fit=crop&q=80"
-                  className="w-full h-full object-cover opacity-50"
-                />
+                {/* F3d: stok Unsplash hero kaldırıldı — davet gerçek maç görseli
+                    taşımıyor; nötr gradient zemin kullanılır. */}
+                <div className="w-full h-full bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-[#0A0E14]" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-[#0A0E14]/60 to-[#0A0E14]" />
                 <button
                   onClick={() => setSelectedInvite(null)}

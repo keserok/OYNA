@@ -65,7 +65,8 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
       
       {/* MAP BACKGROUND */}
       <div className="absolute inset-0 opacity-20 grayscale mix-blend-luminosity">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=1000')] bg-cover bg-center"></div>
+          {/* F3d: harici stok görsel yerine yerel gradient (çevrimdışı/karanlıkta da tutarlı) */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-[#0A0E14]"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E14] via-transparent to-[#0A0E14]"></div>
       </div>
 

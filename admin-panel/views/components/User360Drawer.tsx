@@ -15,6 +15,7 @@ import { supabase } from '../../../supabaseClient';
 import { toTurkishAdminError } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { StatusBadge } from './StatusBadge';
+import { UserProfileMirror } from './UserProfileMirror';
 import { maskEmail, maskPhone } from '../../utils/pii';
 import type { AdminUser } from '../../../types';
 
@@ -25,6 +26,8 @@ interface Props {
   onVerify: (u: AdminUser) => void;
   onGhost: (u: AdminUser) => void;
   onEdit: (u: AdminUser) => void;
+  /** Profil Aynası bir alan kaydettiğinde liste tazelemesi için. */
+  onUpdated?: () => void;
 }
 
 interface WalletRow {
@@ -45,8 +48,10 @@ interface AuditRow {
 
 const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')}₺`;
 
-export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onEdit }) => {
+export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onEdit, onUpdated }) => {
   const { error: toastError } = useAdminToast();
+  // Varsayılan sekme PROFİL: kullanıcıyı uygulamadaki hâliyle gör + düzenle (ayna).
+  const [tab, setTab] = useState<'profil' | 'operasyon'>('profil');
   const [wallet, setWallet] = useState<WalletRow[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [audit, setAudit] = useState<AuditRow[]>([]);
@@ -95,6 +100,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
     setWallet([]);
     setAudit([]);
     setWalletBalance(null);
+    setTab('profil');
     if (userId) void load();
   }, [userId, load]);
 
@@ -152,7 +158,32 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+          {/* Sekmeler: PROFİL = uygulama aynası (düzenlenebilir), OPERASYON = 360 verisi */}
+          <div className="flex items-stretch border-b border-white/10 shrink-0">
+            {([
+              { key: 'profil', label: 'Profil (Uygulama Aynası)' },
+              { key: 'operasyon', label: 'Operasyon 360' },
+            ] as const).map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-wide border-b-2 transition-colors ${
+                  tab === key ? 'border-[#39FF14] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'profil' && (
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+              <UserProfileMirror userId={user.id} onUpdated={onUpdated} />
+            </div>
+          )}
+
+          <div className={`flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 ${tab !== 'operasyon' ? 'hidden' : ''}`}>
             {/* İletişim (PII — maskeli) */}
             <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2.5">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">İletişim (KVKK — görüntüleme kayıt altına alınır)</p>

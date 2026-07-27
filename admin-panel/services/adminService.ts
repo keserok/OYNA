@@ -64,6 +64,10 @@ export interface AdminDashboardStats {
   open_disputes?: number;
   total_communities?: number;
   active_promo_codes?: number;
+  /** Açık/yanıt bekleyen destek talepleri (kanal: PLAYER). */
+  open_support_tickets?: number;
+  /** Açık/yanıt bekleyen tesis mesajları (kanal: OWNER). */
+  open_owner_messages?: number;
 }
 
 export interface DbAuditLogRow {
@@ -255,6 +259,38 @@ export async function verifyAdminTotp(factorId: string, code: string): Promise<v
 }
 
 /** Kayıtlı (örn. yarım kalmış) bir faktörü siler — kurulum iptali için. */
+/**
+ * F5.6 — MFA kurtarma kodları.
+ * generate: düz metin kodlar YALNIZ BİR KEZ döner (sunucuda hash saklanır).
+ * consume: cihaz kaybında kodu doğrular ve TOTP faktörünü sıfırlamayı
+ *          yetkilendirir; kullanıcı yeniden enroll olur.
+ */
+export async function generateMfaRecoveryCodes(count = 8): Promise<string[]> {
+  const { data, error } = await supabase.rpc('admin_mfa_generate_recovery_codes', { p_count: count });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as string[];
+}
+
+export async function consumeMfaRecoveryCode(code: string): Promise<{ remaining: number }> {
+  const { data, error } = await supabase.rpc('admin_mfa_consume_recovery_code', { p_code: code });
+  if (error) throw new Error(error.message);
+  return { remaining: Number((data as { remaining?: number } | null)?.remaining ?? 0) };
+}
+
+export async function fetchMfaRecoveryStatus(): Promise<{ remaining: number; generatedAt: string | null }> {
+  const { data, error } = await supabase.rpc('admin_mfa_recovery_status');
+  if (error) throw new Error(error.message);
+  const d = (data ?? {}) as { remaining?: number; generated_at?: string | null };
+  return { remaining: Number(d.remaining ?? 0), generatedAt: d.generated_at ?? null };
+}
+
+/** SUPER_ADMIN başka bir admin'in MFA faktörünü sıfırlar (self-reset yasak). */
+export async function resetAdminMfa(userId: string): Promise<{ factorsRemoved: number }> {
+  const { data, error } = await supabase.rpc('admin_reset_mfa', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+  return { factorsRemoved: Number((data as { factors_removed?: number } | null)?.factors_removed ?? 0) };
+}
+
 export async function unenrollAdminTotp(factorId: string): Promise<void> {
   await supabase.auth.mfa.unenroll({ factorId }).catch(() => undefined);
 }
@@ -1021,6 +1057,155 @@ export async function processAccountDeletion(userId: string, anonymize = true): 
   if (error) throw new Error(error.message);
 }
 
+/** Silme talebini iptal et — kullanıcı vazgeçtiyse kuyruktan çıkarır (audit'li). */
+export async function cancelAccountDeletionAdmin(userId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_cancel_account_deletion', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Destek Merkezi (support_tickets + support_ticket_messages) ─────────────
+// Kanal: PLAYER (uygulama) | OWNER (tesis). Durum: OPEN → PENDING → RESOLVED/CLOSED.
+export type SupportChannel = 'PLAYER' | 'OWNER';
+export type SupportStatus = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
+
+export interface SupportTicketRow {
+  id: string;
+  user_id: string | null;
+  channel: SupportChannel;
+  subject: string | null;
+  category: string | null;
+  status: SupportStatus;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  last_sender_role: 'USER' | 'ADMIN';
+  unread_for_admin: boolean;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  resolved_at: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  message_count: number;
+  last_preview: string | null;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  sender_role: 'USER' | 'ADMIN';
+  sender_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface SupportTicketThread {
+  id: string;
+  user_id: string | null;
+  channel: SupportChannel;
+  subject: string | null;
+  category: string | null;
+  status: SupportStatus;
+  priority: string;
+  created_at: string;
+  last_message_at: string;
+  user_name: string | null;
+  user_email: string | null;
+  messages: SupportTicketMessage[];
+}
+
+export async function fetchSupportTicketsAdmin(
+  channel: SupportChannel,
+  opts?: { status?: SupportStatus | null; search?: string; limit?: number },
+): Promise<SupportTicketRow[]> {
+  const { data, error } = await supabase.rpc('admin_support_tickets_list', {
+    p_channel: channel,
+    p_status: opts?.status ?? null,
+    p_search: opts?.search?.trim() || null,
+    p_limit: opts?.limit ?? 100,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_support_tickets_list RPC deploy edilmedi' : error.message);
+  return (data || []) as SupportTicketRow[];
+}
+
+/** Diziyi açar; sunucu unread_for_admin bayrağını da temizler. */
+export async function fetchSupportTicketThreadAdmin(ticketId: string): Promise<SupportTicketThread> {
+  const { data, error } = await supabase.rpc('admin_support_ticket_thread', { p_ticket_id: ticketId });
+  if (error) throw new Error(error.message);
+  return data as SupportTicketThread;
+}
+
+/** Yanıt yaz; p_new_status verilirse aynı adımda durum da değişir (ör. PENDING). */
+export async function replySupportTicketAdmin(ticketId: string, body: string, newStatus?: SupportStatus): Promise<void> {
+  const { error } = await supabase.rpc('admin_support_ticket_reply', {
+    p_ticket_id: ticketId,
+    p_body: body,
+    p_new_status: newStatus ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setSupportTicketStatusAdmin(ticketId: string, status: SupportStatus): Promise<void> {
+  const { error } = await supabase.rpc('admin_support_ticket_set_status', { p_ticket_id: ticketId, p_status: status });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Acil maç iptali — tek adımda: CANCELLED + iade süreci + kadroya bildirim ─
+export async function emergencyCancelMatchAdmin(
+  matchId: string,
+  reason?: string,
+): Promise<{ ok: boolean; recipients: number }> {
+  const { data, error } = await supabase.rpc('admin_emergency_cancel_match', {
+    p_match_id: matchId,
+    p_reason: reason?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  const r = (data || {}) as { ok?: boolean; recipients?: number };
+  return { ok: !!r.ok, recipients: Number(r.recipients ?? 0) };
+}
+
+// ─── Tesis para çekme talepleri (owner_withdrawal_requests) ──────────────────
+export interface WithdrawalRequestRow {
+  id: string;
+  pitch_id: string | null;
+  owner_id: string | null;
+  amount: number;
+  iban: string | null;
+  iban_photo_url: string | null;
+  status: string;
+  created_at: string;
+  pitch_name: string | null;
+  owner_name: string | null;
+}
+
+export async function fetchWithdrawalRequestsAdmin(
+  status: string = 'PENDING',
+  limit = 100,
+): Promise<WithdrawalRequestRow[]> {
+  const { data, error } = await supabase.rpc('admin_fetch_withdrawal_requests', { p_status: status, p_limit: limit });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_fetch_withdrawal_requests RPC deploy edilmedi' : error.message);
+  return (data || []) as WithdrawalRequestRow[];
+}
+
+export async function processWithdrawalAdmin(requestId: string, approved: boolean, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_process_withdrawal', {
+    p_request_id: requestId,
+    p_approved: approved,
+    p_notes: notes?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Saha yorumu moderasyonu + bildirim şablonu testi ───────────────────────
+export async function deletePitchRatingAdmin(ratingId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_pitch_rating', { p_id: ratingId });
+  if (error) throw new Error(error.message);
+}
+
+/** Şablonu kendi hesabına test bildirimi olarak gönderir; bildirim id döner. */
+export async function sendTemplateTestAdmin(typeKey: string, vars: Record<string, unknown> = {}): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_send_template_test', { p_type_key: typeKey, p_vars: vars });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
 export interface DeletionQueueRow {
   user_id: string;
   full_name: string | null;
@@ -1703,7 +1888,7 @@ export async function fetchProfileById(userId: string): Promise<AdminUser | null
 export async function fetchTeamsFromDb(): Promise<Array<{ id: string; name: string; captain_id: string | null; created_at: string | null; is_demo?: boolean }>> {
   const { data, error } = await supabase
     .from('teams')
-    .select('id, name, captain_id, captain, rating, level, location, is_demo')
+    .select('id, name, captain_id, captain, rating, level, location, is_demo, created_at')
     .order('name', { ascending: true })
     .limit(100);
   if (error) {
@@ -1714,7 +1899,7 @@ export async function fetchTeamsFromDb(): Promise<Array<{ id: string; name: stri
     id: t.id as string,
     name: t.name as string,
     captain_id: (t.captain_id as string) || (t.captain as string) || null,
-    created_at: null,
+    created_at: (t.created_at as string) || null,
     is_demo: Boolean(t.is_demo),
   }));
 }
@@ -1778,15 +1963,28 @@ export async function setPromoCodeActive(id: string, isActive: boolean): Promise
   }
 }
 
+/** Audit'li takım silme (TEAM_DELETE) — RPC yoksa eski doğrudan-tablo yoluna düşer. */
 export async function deleteTeamAdmin(id: string): Promise<void> {
-  const { error } = await supabase.from('teams').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  const { error } = await supabase.rpc('admin_delete_team', { p_team_id: id });
+  if (error) {
+    if (isRpcMissing(error)) {
+      const { error: e2 } = await supabase.from('teams').delete().eq('id', id);
+      if (e2) throw new Error(e2.message);
+      return;
+    }
+    throw new Error(error.message);
+  }
 }
 
+/**
+ * Audit'li takım oluşturma (TEAM_CREATE). Doğrudan tablo INSERT'i admin için
+ * HEP patlıyordu: teams_insert_own RLS'i captain_id = auth.uid() ister, panel
+ * captain'sız takım açar. SECURITY DEFINER RPC bu kısıtı doğru şekilde aşar.
+ */
 export async function createTeamAdmin(name: string, isDemo = false): Promise<string> {
-  const { data, error } = await supabase.from('teams').insert({ name, is_demo: isDemo }).select('id').single();
-  if (error) throw new Error(error.message);
-  return data.id as string;
+  const { data, error } = await supabase.rpc('admin_create_team', { p_name: name, p_is_demo: isDemo });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_create_team RPC deploy edilmedi — npm run admin:deploy' : error.message);
+  return data as string;
 }
 
 export async function deleteTournament(id: string): Promise<void> {
@@ -2506,9 +2704,11 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     avatar_url: user.avatar,
     role: user.role,
     is_verified: user.isVerified,
-    wallet_balance: user.wallet,
     match_count: user.matchCount,
     rating: user.rating,
+    // wallet_balance BİLEREK GÖNDERİLMEZ: modal açıkken gerçekleşen cüzdan
+    // hareketini bayat değerle geri alma riski vardı; bakiye düzeltmesi artık
+    // ledger'lı admin_adjust_wallet_balance ile yapılır (Profil Aynası → Cüzdan).
   };
   if (user.phone) payload.phone = user.phone;
   if (user.playerCard) {
@@ -2516,9 +2716,6 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     if (user.playerCard.tier) payload.card_tier = user.playerCard.tier;
   }
   if (user.cardActive !== undefined) payload.card_active = user.cardActive;
-  if (user.matchCount !== undefined || user.rating !== undefined) {
-    payload.stats = { matchesPlayed: user.matchCount ?? 0, rating: user.rating ?? 5 };
-  }
   return payload;
 }
 
@@ -2535,6 +2732,10 @@ function providerToDbPayload(obj: Record<string, unknown>): Record<string, unkno
   };
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined || key === 'id') continue;
+    // Eski toggle'lardan sızan hayalet anahtarlar: GK/REF tablolarında bu
+    // kolonlar yok; müsaitlik profiles.is_available'a admin_update_provider_ops
+    // ile yazılır, doğrulama Doğrulama Merkezi akışından geçer.
+    if (key === 'isVerified' || key === 'isSuspended') continue;
     out[map[key] ?? key] = value;
   }
   return out;
@@ -2556,6 +2757,59 @@ export async function updateUserProfileAdmin(user: import('../../types').AdminUs
   }
 }
 
+
+/**
+ * Kullanıcı Profili Aynası (uygulama-paritesi) alanları — ProfileEditSheet'in
+ * yazdıkları + profil ekranındaki yönetimsel alanlar. Ölçekler DB cinsindendir:
+ * trust_score/skill_rating 0–5 (UI 0–100 gösterir, /20 ile gönderilir).
+ */
+export interface AppProfileAdminFields {
+  full_name?: string;
+  avatar_url?: string;
+  position?: string;
+  bio?: string;
+  /** '' gönderilirse sunucu NULL'a çevirir (temizleme). */
+  birthdate?: string;
+  gender?: string;
+  play_style?: string;
+  age_range?: string;
+  trust_score?: number;
+  skill_rating?: number;
+  has_completed_onboarding?: boolean;
+  card_active?: boolean;
+  card_tier?: 'bronze' | 'silver' | 'gold';
+}
+
+/**
+ * Profil Aynası kaydı: yalnız DEĞİŞEN alanları gönderin — RPC gönderilmeyen
+ * alanlara dokunmaz, her çağrı admin_audit_log'a USER_UPDATE olarak düşer.
+ */
+export async function updateUserAppProfileAdmin(userId: string, fields: AppProfileAdminFields): Promise<void> {
+  const payload: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== undefined) payload[k] = v;
+  }
+  if (Object.keys(payload).length === 0) return;
+  const { error } = await supabase.rpc('admin_update_user_profile', {
+    p_user_id: userId,
+    p_payload: payload,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Ledger'li bakiye düzeltme (FINANCE yetkisi ister): profiles.wallet_balance'ı
+ * elle ezmek yerine wallet_transactions'a ADMIN_ADJUST kaydı açar — finans
+ * raporları ve mutabakat bozulmaz. Pozitif tutar yükleme, negatif düşümdür.
+ */
+export async function adjustWalletBalanceAdmin(userId: string, amount: number, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_adjust_wallet_balance', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+}
 
 export async function verifyUserAdmin(userId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_verify_user', { p_user_id: userId });
@@ -2675,6 +2929,8 @@ export interface ServiceDisputeRow {
   status: string;
   reported_at: string;
   payout_released: boolean;
+  dispute_deadline: string | null;
+  penalty_amount: number | null;
   provider_name?: string | null;
 }
 
@@ -2763,13 +3019,19 @@ export async function reviewProviderApplication(
   if (error) throw new Error(error.message);
 }
 
-/** Açık hizmet itirazları: reported_at not null & payout_released=false (+ sağlayıcı adı) */
+/**
+ * Açık hizmet itirazları. F1.4: eski filtre yalnız payout_released=false
+ * bakıyordu; captain_report_no_show reported_at ile AYNI update'te
+ * payout_released=true yazdığı için no-show/DISPUTED kayıtlar kuyruğa HİÇ
+ * düşmüyordu (kara delik). Yeni filtre statü tabanlı: no-show/itiraz kayıtları
+ * VE (eski davranış) değerlendirme bekleyen attendance kayıtları birlikte gelir.
+ */
 export async function fetchServiceDisputes(): Promise<ServiceDisputeRow[]> {
   const { data, error } = await supabase
     .from('service_requests')
-    .select('id, match_id, provider_id, provider_type, fee, provider_amount, status, reported_at, payout_released')
+    .select('id, match_id, provider_id, provider_type, fee, provider_amount, status, reported_at, payout_released, dispute_deadline, penalty_amount')
     .not('reported_at', 'is', null)
-    .eq('payout_released', false)
+    .or('status.in.(NOSHOW_REPORTED,DISPUTED),payout_released.eq.false')
     .order('reported_at', { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -2785,6 +3047,22 @@ export async function fetchServiceDisputes(): Promise<ServiceDisputeRow[]> {
 export async function releaseServicePayout(requestId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_release_service_payout', {
     p_request_id: requestId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * F1.4 — No-show itirazını karara bağla (admin_resolve_noshow_dispute).
+ * uphold=true: kaptan haklı, ceza kesinleşir (NOSHOW_FINALIZED).
+ * uphold=false: sağlayıcı haklı — ceza iadesi + kaptan tazminat/iade geri
+ * alımı + EARNINGS geri açılır (ledger tabanlı, audit'li). İki dalda da
+ * taraflara bildirim sunucudan gider.
+ */
+export async function resolveNoShowDispute(requestId: string, uphold: boolean, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_resolve_noshow_dispute', {
+    p_request_id: requestId,
+    p_uphold: uphold,
+    p_notes: notes ?? null,
   });
   if (error) throw new Error(error.message);
 }

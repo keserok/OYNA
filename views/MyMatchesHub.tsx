@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Calendar, Clock, ChevronDown, ChevronRight, AlertTriangle,
-  CheckCircle2, XCircle, Loader2, MapPin, Swords, Navigation, Repeat, LogOut,
+  CheckCircle2, XCircle, Loader2, MapPin, Swords, Navigation, Repeat, LogOut, QrCode,
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
@@ -237,7 +237,20 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
   // Alt sayfa: dokunulan bilet (maç veya rezervasyon)
   const [sheet, setSheet] = useState<MyAgendaItem | null>(null);
 
-  // ── Rezervasyon iptali — iade önizlemesi SUNUCUDAN ────────────────────────
+  // F2.1: "Maçı Değerlendir" CTA'sı — kullanıcının zaten puanladığı maçlarda
+  // gizlenir (player_ratings kendi satırları RLS ile okunabilir).
+  const [evaluatedMatchIds, setEvaluatedMatchIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentUserUid) { setEvaluatedMatchIds(new Set()); return; }
+    supabase.from('player_ratings').select('match_id').eq('rater_id', currentUserUid)
+      .then(({ data }) => {
+        if (!cancelled) setEvaluatedMatchIds(new Set((data ?? []).map((r: { match_id: string }) => r.match_id)));
+      });
+    return () => { cancelled = true; };
+  }, [currentUserUid]);
+
+  // ── Rezervasyon iptali — iade önizlemesi SUNUCUDAN gelir, FE formül uydurmaz ──
   const [cancelTarget, setCancelTarget] = useState<MyBooking | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);
@@ -404,6 +417,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
   const sheetMatchStats = sheet?.kind === 'MATCH' ? matchStats(sheet as MyAgendaItem & { kind: 'MATCH' }) : null;
   const sheetHeading = sheet ? dayHeading(sheet.when) : null;
   const bookingRemaining = sheetBooking ? Math.max((sheetBooking.deposit_amount || 0) - (sheetBooking.paid_amount || 0), 0) : 0;
+  // F2.1: tamamlanmış ve henüz puanlanmamış maçta değerlendirme girişi açılır.
+  const sheetMatchEvaluable = !!sheetMatch && sheetMatch.status === 'COMPLETED'
+    && !evaluatedMatchIds.has(sheetMatch.id);
   // Ayrılma yalnız gerçekten kaydı olan için: sahada oturuyor, slot satın almış veya yedekte.
   const sheetMatchLeaveable = !!sheetMatch && !!currentUserUid
     && !['CANCELLED', 'COMPLETED'].includes(sheetMatch.status as string)
@@ -669,7 +685,22 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 </button>
               )}
 
-              <div className="grid grid-cols-3 gap-2 mt-5">
+              {/* F4.1: QR maç bileti — tesise girişte okutulan bilet ekranı */}
+              {sheetBooking.status !== 'CANCELLED' && (
+                <button
+                  onClick={() => {
+                    const id = sheetBooking.id;
+                    setSheet(null);
+                    useAppStore.getState().setTicketBookingId(id);
+                    navigateTo('MATCH_TICKET');
+                  }}
+                  className={`w-full h-[52px] rounded-2xl border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-xs font-black uppercase tracking-[0.12em] active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${bookingRemaining > 0 ? 'mt-2.5' : 'mt-5'}`}
+                >
+                  <QrCode size={16} /> Bileti Göster
+                </button>
+              )}
+
+              <div className="grid grid-cols-3 gap-2 mt-2.5">
                 <button
                   onClick={() => { const b = sheetBooking; setSheet(null); handleConvertToMatch(b); }}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-[#39FF14]/[0.06] border border-[#39FF14]/20 text-[#39FF14] active:scale-[0.97] transition-transform"
@@ -746,6 +777,19 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               >
                 Lobiyi Aç
               </button>
+              {/* F2.1: oynanmış ve henüz puanlanmamış maç → değerlendirme akışı */}
+              {sheetMatchEvaluable && (
+                <button
+                  onClick={() => { const m = sheetMatch; setSheet(null); setSelectedMatch(m); navigateTo('POST_MATCH_EVAL'); }}
+                  className="w-full min-h-[52px] mt-2.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-between px-4 text-left active:scale-[0.98] transition-transform"
+                >
+                  <span>
+                    <span className="block text-[11px] font-black text-[#FACC15] uppercase tracking-wider">Maçı Değerlendir</span>
+                    <span className="block text-[9px] text-white/40 font-bold">Takım arkadaşlarını ve kaleci/hakemi puanla</span>
+                  </span>
+                  <span className="text-[#FACC15] font-black">→</span>
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-2 mt-2.5">
                 <button
                   onClick={() => handleDirections([sheetMatch.location, 'Ordu'].filter(Boolean).join(' '))}

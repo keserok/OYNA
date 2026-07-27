@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import {
+  adminGetMatchAdmin,
   assignMatchRefereeAdmin,
   assignMatchGoalkeeperSideAdmin,
+  emergencyCancelMatchAdmin,
   fetchMatchGoalkeepers,
   assignToSlotAdmin,
   swapSlotsAdmin,
@@ -20,6 +22,7 @@ import {
   matchDepositActionAdmin,
   fetchMatchTimelineAdmin,
   fetchMatchServiceRequestsAdmin,
+  updateMatchAdmin,
   toTurkishAdminError,
   type MatchIntentRow,
   type MatchTimelineRow,
@@ -28,6 +31,7 @@ import {
 import { useAdminToast } from '../context/AdminToastContext';
 import { ActionConfirmModal, type ActionConfirmOptions } from './ActionConfirmModal';
 import { MatchLobbyPitch } from './MatchLobbyPitch';
+import { MatchLobbyHeader } from './MatchLobbyHeader';
 import type { MatchListing } from '../../../types';
 
 interface Props {
@@ -97,6 +101,22 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   const [confirm, setConfirm] = useState<ActionConfirmOptions | null>(null);
 
   useEffect(() => { setLocal(match); setTab('kadro'); }, [match]);
+
+  // TAM SATIR HİDRASYONU: liste RPC'si (admin_fetch_matches) kapora, sohbet,
+  // yedekler, skor ve kaleci kolonlarını döndürmüyor — kokpit açılır açılmaz
+  // tekil admin_get_match (to_jsonb) ile eksikler tamamlanır. Böylece listeden
+  // açılan kokpitte "Kapora: NONE" / boş sohbet gibi yanıltıcı görünüm kalmaz.
+  useEffect(() => {
+    if (!match?.id) return;
+    let alive = true;
+    adminGetMatchAdmin(match.id)
+      .then((full) => {
+        if (!alive || !full) return;
+        setLocal((prev) => (prev && prev.id === full.id ? { ...prev, ...full } : full));
+      })
+      .catch(() => { /* liste verisiyle devam — kokpit yine çalışır */ });
+    return () => { alive = false; };
+  }, [match?.id]);
 
   // Atanmış kalecileri (ev sahibi + deplasman) matches'ten tazele.
   useEffect(() => {
@@ -265,6 +285,34 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     }
   };
 
+  // Lobi Aynası alan kaydı: tek alan → admin_update_match (audit'li) → yerel yama.
+  // PRIVATE'a geçişte kod sunucuda üretilebilir → tam satırı yeniden çek.
+  // Fonksiyonel setLocal ŞART: açılıştaki tam-satır hidrasyonu uçuştayken kayıt
+  // yapılırsa nesne-literal yama bayat closure ile hidrasyonu ezip kaporayı
+  // NONE, sohbeti boş gösteriyordu. Dönüş: başarıda true — düzenleyici yalnız
+  // başarıda kapanır (hatada taslak korunur).
+  const handleInfoSave = async (payload: Record<string, unknown>, patch: Partial<MatchListing>): Promise<boolean> => {
+    if (!local || busy) return false;
+    const matchIdAtSave = local.id;
+    setBusy(true);
+    try {
+      await updateMatchAdmin(matchIdAtSave, payload);
+      setLocal((prev) => (prev && prev.id === matchIdAtSave ? { ...prev, ...patch } : prev));
+      if (payload.visibility === 'PRIVATE' && !payload.private_code) {
+        const full = await adminGetMatchAdmin(matchIdAtSave).catch(() => null);
+        if (full) setLocal((prev) => (prev && prev.id === full.id ? { ...prev, ...full } : prev));
+      }
+      success('Maç bilgisi güncellendi — lobide anında görünür');
+      onUpdated();
+      return true;
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmCancel = async () => {
     if (!local) return;
     // Karar #73: her iptal zorunlu sebeple audit'e yazılır.
@@ -277,6 +325,31 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       await cancelMatchAdmin(local.id, cancelReason.trim(), cancelRefund);
       setLocal({ ...local, status: 'CANCELLED' });
       success(cancelRefund ? 'Maç iptal edildi; iadeler politikaya göre işlenir' : 'Maç iptal edildi (iadesiz)');
+      setCancelOpen(false);
+      setCancelReason('');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ACİL İPTAL: tek adımda iptal + iade süreci (PENDING) + TÜM kadroya anlık
+  // bildirim (admin_emergency_cancel_match). Normal iptalden farkı: bildirim
+  // otomatik gider ve iade süreci daima başlatılır.
+  const confirmEmergencyCancel = async () => {
+    if (!local) return;
+    if (cancelReason.trim().length < 5) {
+      toastError('İptal sebebi zorunlu (en az 5 karakter).');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { recipients } = await emergencyCancelMatchAdmin(local.id, cancelReason.trim());
+      // Fonksiyonel güncelleme: eşzamanlı hidrasyonun getirdiği alanlar ezilmesin
+      setLocal((prev) => (prev ? { ...prev, status: 'CANCELLED' } : prev));
+      success(`Acil iptal tamam — ${recipients} oyuncuya bildirim gitti, iade süreci başlatıldı`);
       setCancelOpen(false);
       setCancelReason('');
       onUpdated();
@@ -414,31 +487,35 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
-            {/* Üst özet — her sekmede görünür */}
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="bg-black/30 rounded-lg p-2 border border-white/5">
-                <p className="text-[9px] text-gray-500 uppercase">Konum</p>
-                <p className="font-bold text-white truncate">{local.location}</p>
+            {/* Üst özet — kadro DIŞINDAKİ sekmelerde (kadroda Lobi Aynası var) */}
+            {tab !== 'kadro' && (
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-black/30 rounded-lg p-2 border border-white/5">
+                  <p className="text-[9px] text-gray-500 uppercase">Konum</p>
+                  <p className="font-bold text-white truncate">{local.location}</p>
+                </div>
+                <div className="bg-black/30 rounded-lg p-2 border border-white/5">
+                  <p className="text-[9px] text-gray-500 uppercase">Zaman</p>
+                  <p className="font-mono text-red-300">{local.date} {local.time}</p>
+                </div>
+                <div className="bg-black/30 rounded-lg p-2 border border-white/5">
+                  <p className="text-[9px] text-gray-500 uppercase">Durum</p>
+                  <p className="font-bold text-[#39FF14]">{local.status || 'ACTIVE'}</p>
+                </div>
+                <div className="bg-black/30 rounded-lg p-2 border border-white/5">
+                  <p className="text-[9px] text-gray-500 uppercase">Kapora</p>
+                  <span className={`inline-block mt-0.5 text-[10px] font-black px-1.5 py-0.5 rounded border ${intentBadge(local.depositStatus || 'NONE')}`}>
+                    {local.depositStatus || 'NONE'}{local.depositAmount ? ` · ${local.depositAmount}₺` : ''}
+                  </span>
+                </div>
               </div>
-              <div className="bg-black/30 rounded-lg p-2 border border-white/5">
-                <p className="text-[9px] text-gray-500 uppercase">Zaman</p>
-                <p className="font-mono text-red-300">{local.date} {local.time}</p>
-              </div>
-              <div className="bg-black/30 rounded-lg p-2 border border-white/5">
-                <p className="text-[9px] text-gray-500 uppercase">Durum</p>
-                <p className="font-bold text-[#39FF14]">{local.status || 'ACTIVE'}</p>
-              </div>
-              <div className="bg-black/30 rounded-lg p-2 border border-white/5">
-                <p className="text-[9px] text-gray-500 uppercase">Kapora</p>
-                <span className={`inline-block mt-0.5 text-[10px] font-black px-1.5 py-0.5 rounded border ${intentBadge(local.depositStatus || 'NONE')}`}>
-                  {local.depositStatus || 'NONE'}{local.depositAmount ? ` · ${local.depositAmount}₺` : ''}
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* ── KADRO & SLOT ── */}
             {tab === 'kadro' && (
               <>
+                {/* Lobi Aynası: kullanıcı lobisi başlığının düzenlenebilir birebir kopyası */}
+                <MatchLobbyHeader match={local} busy={busy} onSave={handleInfoSave} />
                 {local.status === 'DRAFT' && (
                   <button
                     type="button"
@@ -796,6 +873,18 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     İptal Et
                   </button>
                 </div>
+                {/* Acil iptal: iade + kadro bildirimi otomatik (tek adım) */}
+                <button
+                  type="button"
+                  disabled={busy || cancelReason.trim().length < 5}
+                  onClick={() => void confirmEmergencyCancel()}
+                  className="w-full py-2.5 rounded-xl bg-orange-500/15 border border-orange-500/40 text-orange-300 text-xs font-black uppercase tracking-wider hover:bg-orange-500/25 disabled:opacity-40"
+                >
+                  🚨 Acil İptal — iade sürecini başlat + tüm kadroya bildir
+                </button>
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  Acil iptalde iade süreci daima başlatılır ve kadrodaki herkese anlık bildirim gider; normal iptalde iade seçime bağlıdır ve bildirimi ayrıca gönderirsiniz.
+                </p>
               </div>
             </div>
           )}

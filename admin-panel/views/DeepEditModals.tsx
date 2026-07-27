@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Pitch, Goalkeeper, Referee, AdminUser, UserRole } from '../../types';
 import { useAppStore } from '../../store';
+import { fetchProviderOpsAdmin, updateProviderOpsAdmin } from '../services/adminService';
 import * as FB from '../../supabaseMutations';
 import { X, Save, Image as ImageIcon, UploadCloud, Loader2, Check, Wallet, Star, Shield, Phone, Mail, AlertTriangle, Plus, Zap, MapPin, Clock } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
@@ -327,18 +328,17 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             </div>
                         </div>
 
-                        {/* Wallet */}
+                        {/* Wallet — SALT OKUNUR: bakiyeyi elle ezmek wallet_transactions
+                            ledger'ıyla mutabakatı bozuyordu. Düzeltme artık ledger'lı
+                            admin_adjust_wallet_balance yolundan: Kullanıcı 360 → Profil
+                            Aynası → Cüzdan kısayolu. */}
                         <div className="p-4 bg-black/30 rounded-2xl border border-yellow-500/20">
-                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN KONTROLÜ</p>
-                            <div className="grid grid-cols-2 gap-4 items-end">
-                                <FI label="Cüzdan Bakiyesi (₺)">
-                                    <I type="number" value={edit.wallet || 0} onChange={e => setEdit({ ...edit, wallet: +e.target.value })} className="text-yellow-400 font-mono text-lg" />
-                                </FI>
-                                <div className="flex gap-2">
-                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: (prev.wallet || 0) + 100 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺100</button>
-                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: (prev.wallet || 0) + 500 }))} className="flex-1 h-11 bg-green-500/15 text-green-400 border border-green-500/20 rounded-xl text-xs font-black hover:bg-green-500/25 transition-all">+₺500</button>
-                                    <button type="button" onClick={() => setEdit(prev => ({ ...prev, wallet: 0 }))} className="flex-1 h-11 bg-red-500/15 text-red-400 border border-red-500/20 rounded-xl text-xs font-black hover:bg-red-500/25 transition-all">SIFIRLA</button>
-                                </div>
+                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN</p>
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-lg font-black font-mono text-yellow-400">{Number(edit.wallet || 0).toLocaleString('tr-TR')} ₺</p>
+                                <p className="text-[10px] text-gray-500 leading-relaxed text-right max-w-[260px]">
+                                    Bakiye düzeltmesi ledger'a işlenir: <span className="text-gray-300 font-bold">360 → Profil Aynası → Cüzdan</span> (sebep zorunlu, FINANCE yetkisi).
+                                </p>
                             </div>
                         </div>
 
@@ -389,6 +389,25 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
     const { showOk, Toast } = useToast();
     const { loadServices, updateGoalkeeper, updateReferee } = useAppStore();
 
+    // Müsaitlik/doğrulamanın KANONİK kaynağı profiles'tır (is_available +
+    // verification_status) — eşleştirme motoru ve vitrin oradan okur. Eski
+    // "Doğrulanmış"/"Müsaitlik Durdur" toggle'ları GK/REF tablosuna var olmayan
+    // kolon yazmaya çalışan sessiz no-op'tu; artık gerçek ops RPC'sine bağlı.
+    const [ops, setOps] = useState<{ isAvailable: boolean; verificationStatus: string | null } | null>(null);
+    const [opsDraft, setOpsDraft] = useState<boolean | null>(null); // istenen isAvailable
+    const [opsError, setOpsError] = useState<string | null>(null);
+    const [opsReloadKey, setOpsReloadKey] = useState(0); // Tekrar Dene sayacı
+    useEffect(() => {
+        let alive = true;
+        setOps(null);
+        setOpsDraft(null);
+        setOpsError(null);
+        fetchProviderOpsAdmin(item.id, typeParam)
+            .then((o) => { if (alive) { setOps({ isAvailable: o.isAvailable, verificationStatus: o.verificationStatus }); setOpsDraft(o.isAvailable); } })
+            .catch((err) => { if (alive) setOpsError(err instanceof Error ? err.message : 'Müsaitlik bilgisi okunamadı'); });
+        return () => { alive = false; };
+    }, [item.id, typeParam, opsReloadKey]);
+
     const label = typeParam === 'GK' ? 'KALECİ' : 'HAKEM';
 
     const handleSave = async () => {
@@ -396,6 +415,10 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
         try {
             if (typeParam === 'GK') await updateGoalkeeper(edit);
             else await updateReferee(edit);
+            // Müsaitlik değiştiyse profiles.is_available'a audit'li ops RPC'siyle yaz
+            if (ops && opsDraft !== null && opsDraft !== ops.isAvailable) {
+                await updateProviderOpsAdmin(item.id, typeParam, { isAvailable: opsDraft });
+            }
             await loadServices();
             showOk(`✅ ${item.name} veritabanına kaydedildi`);
             setTimeout(onClose, 1000);
@@ -607,8 +630,41 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                         <div className="space-y-2">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">STATÜ</p>
                             <Toggle label="ELITE Statüsü" desc="Altın rozet göster, listedeki sıralamasını yükselt" value={!!edit.isElite} onChange={() => setEdit((prev: any) => ({ ...prev, isElite: !prev.isElite }))} />
-                            <Toggle label="Doğrulanmış" desc="Profil doğrulama rozeti" value={!!edit.isVerified} onChange={() => setEdit((prev: any) => ({ ...prev, isVerified: !prev.isVerified }))} />
-                            <Toggle label="Müsaitlik Durdur" desc="Bu kişiyi geçici olarak listeden kaldır" value={!!edit.isSuspended} onChange={() => setEdit((prev: any) => ({ ...prev, isSuspended: !prev.isSuspended }))} danger />
+                            {/* Doğrulama SALT OKUNUR: kimlik doğrulama Doğrulama Merkezi'nin
+                                belge akışından geçer — buradaki eski toggle hiçbir yere yazmıyordu. */}
+                            <div className="flex items-center justify-between p-3.5 bg-black/25 border border-white/5 rounded-2xl">
+                                <div>
+                                    <p className="text-xs font-bold text-white">Doğrulama Durumu</p>
+                                    <p className="text-[10px] text-gray-500">Belge onayı: Doğrulama Merkezi → Kimlik Doğrulama</p>
+                                </div>
+                                <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${
+                                    ops?.verificationStatus === 'approved'
+                                        ? 'text-green-300 bg-green-500/10 border-green-500/30'
+                                        : ops?.verificationStatus
+                                        ? 'text-amber-300 bg-amber-500/10 border-amber-500/30'
+                                        : 'text-gray-500 bg-white/5 border-white/10'
+                                }`}>
+                                    {ops?.verificationStatus === 'approved' ? 'ONAYLI' : ops?.verificationStatus === 'pending' ? 'BEKLİYOR' : ops?.verificationStatus?.toUpperCase() || '—'}
+                                </span>
+                            </div>
+                            {ops && opsDraft !== null ? (
+                                <Toggle
+                                    label="Müsaitlik Durdur"
+                                    desc="Eşleştirme ve pazardan geçici olarak kaldır (profiles.is_available — kaydedince işlenir)"
+                                    value={!opsDraft}
+                                    onChange={() => setOpsDraft((v) => (v === null ? v : !v))}
+                                    danger
+                                />
+                            ) : opsError ? (
+                                <div className="flex items-center justify-between gap-2 p-3 bg-red-500/5 border border-red-500/20 rounded-2xl">
+                                    <p className="text-[10px] text-red-400 leading-relaxed min-w-0">Müsaitlik bilgisi okunamadı: {opsError}</p>
+                                    <button type="button" onClick={() => setOpsReloadKey((k) => k + 1)} className="shrink-0 text-[10px] font-black uppercase text-gray-300 border border-white/15 rounded-lg px-2.5 py-1.5 hover:text-white">
+                                        Tekrar Dene
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="text-[10px] text-gray-600 px-1">Müsaitlik bilgisi yükleniyor…</p>
+                            )}
                         </div>
                     </div>
 

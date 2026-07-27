@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable } from '../components/DataTable';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
   fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout, fetchPayoutIdentityChecks,
   fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
-  markChargebackAdmin,
+  markChargebackAdmin, fetchWithdrawalRequestsAdmin, processWithdrawalAdmin, reversePayout,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
-  type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck,
+  type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck, type WithdrawalRequestRow,
 } from '../../services/adminService';
 import { PageShell } from '../components/PageShell';
 import { FinanceGoLivePanel } from '../components/FinanceGoLivePanel';
@@ -15,7 +15,7 @@ import { PaymentHealthPanel } from '../components/PaymentHealthPanel';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { useAdminToast } from '../context/AdminToastContext';
-import { downloadCsv } from '../../utils/exportCsv';
+import { downloadCsv, maskIban } from '../../utils/exportCsv';
 import { CreditCard, Download, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react';
 import type { AdminNavigateFn } from '../GodViewPanel';
 
@@ -64,9 +64,60 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'report' | 'health' | 'golive'>('ledger');
+  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'withdrawals' | 'report' | 'health' | 'golive'>('ledger');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
+
+  // Tesis İBAN talepleri (owner_withdrawal_requests) — Payout Talepleri'nden
+  // (payout_requests) AYRI legacy owner-IBAN akışı; şimdiye dek panelde hiç yoktu.
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequestRow[]>([]);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
+  const [withdrawalStatus, setWithdrawalStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING');
+  const [withdrawalBusy, setWithdrawalBusy] = useState<string | null>(null);
+  // Yarış koruması: RPC sürerken filtre değişirse bayat yanıt en son yazılıp
+  // yanlış filtrenin satırlarını gösterebilirdi — yalnız en güncel istek yazar.
+  const withdrawalReqRef = useRef(0);
+  const withdrawalStatusRef = useRef(withdrawalStatus);
+  useEffect(() => { withdrawalStatusRef.current = withdrawalStatus; }, [withdrawalStatus]);
+
+  const loadWithdrawals = useCallback(async (status: string) => {
+    const reqId = ++withdrawalReqRef.current;
+    setWithdrawalsLoading(true);
+    try {
+      const rows = await fetchWithdrawalRequestsAdmin(status, PAGE_SIZE);
+      if (withdrawalReqRef.current === reqId) setWithdrawals(rows);
+    } catch (err) {
+      if (withdrawalReqRef.current === reqId) toastError(toTurkishAdminError(err));
+    } finally {
+      if (withdrawalReqRef.current === reqId) setWithdrawalsLoading(false);
+    }
+  }, [toastError]);
+
+  useEffect(() => {
+    if (tab === 'withdrawals') void loadWithdrawals(withdrawalStatus);
+  }, [tab, withdrawalStatus, loadWithdrawals]);
+
+  const handleWithdrawal = async (r: WithdrawalRequestRow, approved: boolean) => {
+    let notes: string | undefined;
+    if (!approved) {
+      const input = window.prompt('Red sebebi (tesise bildirim olarak gider):');
+      if (input === null) return;
+      notes = input.trim() || undefined;
+    } else if (!window.confirm(`${r.owner_name || 'Tesis sahibi'} için ₺${Number(r.amount).toLocaleString('tr')} İBAN talebi ONAYLANSIN mı?\nBanka transferini ayrıca yapmanız gerekir — RPC yalnız durumu işler ve sahibi bilgilendirir.`)) {
+      return;
+    }
+    setWithdrawalBusy(r.id);
+    try {
+      await processWithdrawalAdmin(r.id, approved, notes);
+      success(approved ? 'Talep onaylandı; tesise bildirim gitti.' : 'Talep reddedildi; tesise bildirim gitti.');
+      // Ref'ten oku: RPC sürerken admin filtreyi değiştirdiyse GÜNCEL filtreyle tazele
+      await loadWithdrawals(withdrawalStatusRef.current);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setWithdrawalBusy(null);
+    }
+  };
 
   // Ödeme müdahale (Karar #73): genel intent listesi + force capture/void/refund
   const [intents, setIntents] = useState<PaymentIntentRow[]>([]);
@@ -146,6 +197,19 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
 
   const fmtTry = (n: number | null | undefined) => `₺${Number(n ?? 0).toLocaleString('tr-TR')}`;
 
+  // Tesis sahibinin serbestçe yazdığı ham URL'yi (iban_photo_url) doğrulamadan
+  // <a href> yapmıyoruz: yalnız https + Supabase storage host'u tıklanabilir olur.
+  const safeStorageUrl = (raw: string | null): string | null => {
+    if (!raw) return null;
+    try {
+      const u = new URL(raw);
+      if (u.protocol !== 'https:' || !/\.supabase\.co$/.test(u.hostname)) return null;
+      return u.toString();
+    } catch {
+      return null;
+    }
+  };
+
   const runIntentAction = async (fn: () => Promise<void>, okMsg: string, id: string) => {
     setIntentBusy(id);
     try {
@@ -208,6 +272,35 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     });
   };
 
+  // F5.3: reversePayout servis sarmalayıcısı vardı ama hiçbir UI çağırmıyordu —
+  // yanlış COMPLETED işaretlenen ödeme panelden geri alınamıyordu.
+  const askReversePayout = (r: PayoutRequestRow) => {
+    const reason = (window.prompt('Geri alma nedeni (zorunlu — denetim kaydına yazılır):') || '').trim();
+    if (!reason) { toastError('Sebep girilmeden geri alınamaz.'); return; }
+    const label = `${nameMap[r.user_id] || r.user_id.slice(0, 8)} • ₺${Number(r.net_amount ?? r.amount).toLocaleString('tr')}`;
+    setIntentConfirm({
+      title: 'Payout işaretini geri al',
+      description: 'COMPLETED işaretli ödeme PENDING durumuna döner; ilgili cüzdan hareketi de PENDING olur. Banka transferi gerçekten yapıldıysa GERİ ALMAYIN — bu yalnız kayıt düzeltmesidir.',
+      impactText: `Sebep: ${reason}`,
+      actionType: 'PAYOUT_REVERSE', targetId: r.id, targetName: label,
+      confirmPhrase: 'ONAYLA',
+      onConfirm: () => void (async () => {
+        setPayoutBusy(r.id);
+        try {
+          await reversePayout(r.id, reason);
+          success('Payout PENDING durumuna geri alındı');
+          setIntentConfirm(null);
+          await load();
+        } catch (err) {
+          toastError(toTurkishAdminError(err));
+        } finally {
+          setPayoutBusy(null);
+        }
+      })(),
+      onCancel: () => setIntentConfirm(null),
+    });
+  };
+
   const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED', row?: PayoutRequestRow) => {
     if (status === 'FAILED' && !window.confirm('Bu payout talebi reddedilsin mi? Rezerve tutar sahibe iade edilir.')) return;
     // [S2.1] Cüzdan çekiminde bankaya NET tutar gönderilir (brüt − kesinti) — admin'e vurgula.
@@ -265,19 +358,53 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     ]));
   };
 
+  // F5.4: muhasebenin bankaya gönderdiği liste — IBAN maskeli (PII politikası).
+  const exportPayouts = () => {
+    downloadCsv('oyna-payouts.csv',
+      ['Tarih', 'Talep Eden', 'Tip', 'IBAN Sahibi', 'IBAN (maskeli)', 'Brüt', 'Kesinti', 'Net', 'Durum', 'Banka Ref'],
+      payouts.map((r) => [
+        new Date(r.created_at).toLocaleString('tr-TR'),
+        nameMap[r.user_id] || r.user_id,
+        PAYOUT_TYPE_LABELS[r.payout_type] ?? r.payout_type,
+        r.iban_holder_name || '',
+        maskIban(r.iban),
+        String(r.amount),
+        String(r.fee_amount ?? 0),
+        String(r.net_amount ?? r.amount),
+        r.status,
+        r.iyzico_payout_ref || '',
+      ]));
+  };
+
+  const exportIntents = () => {
+    downloadCsv('oyna-intents.csv',
+      ['Tarih', 'Kullanıcı', 'Bağlam', 'Tutar', 'Komisyon', 'Durum', 'Sağlayıcı Ref'],
+      intents.map((r) => [
+        new Date(r.created_at).toLocaleString('tr-TR'),
+        r.user_name || r.user_id || '',
+        r.related_entity_type || r.pitch_name || '',
+        String(r.amount),
+        String(r.commission_amount ?? 0),
+        r.status,
+        r.provider_ref || '',
+      ]));
+  };
+
   const tabs = useMemo(() => ([
     { id: 'ledger' as const, label: 'Cüzdan Ledger' },
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
     { id: 'intents' as const, label: 'Ödeme Müdahale' },
     { id: 'payouts' as const, label: `Payout Talepleri${payouts.length ? ` (${payouts.length})` : ''}` },
+    { id: 'withdrawals' as const, label: `Tesis İBAN Talepleri${withdrawals.length ? ` (${withdrawals.length})` : ''}` },
     { id: 'billing' as const, label: 'Owner Billing' },
     { id: 'report' as const, label: 'Finans Raporu' },
     { id: 'health' as const, label: 'Ödeme Sağlığı' },
     { id: 'golive' as const, label: 'Go-Live & Mutabakat' },
-  ]), [payouts.length]);
+  ]), [payouts.length, withdrawals.length]);
 
-  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'intents' ? intents : tab === 'billing' ? filteredBilling : filteredPayouts;
-  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'intents' ? intents.length : tab === 'billing' ? billing.length : payouts.length;
+  const filteredWithdrawals = useMemo(() => filterRows(withdrawals), [withdrawals, query]);
+  const activeData = tab === 'ledger' ? filteredLedger : tab === 'payments' ? filteredPayments : tab === 'intents' ? intents : tab === 'billing' ? filteredBilling : tab === 'withdrawals' ? filteredWithdrawals : filteredPayouts;
+  const totalData = tab === 'ledger' ? ledger.length : tab === 'payments' ? payments.length : tab === 'intents' ? intents.length : tab === 'billing' ? billing.length : tab === 'withdrawals' ? withdrawals.length : payouts.length;
 
   return (
     <PageShell
@@ -287,8 +414,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         <div className="flex gap-2 flex-wrap">
           <button
             type="button"
-            onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'intents' || tab === 'payouts'}
+            onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : tab === 'payouts' ? exportPayouts : tab === 'intents' ? exportIntents : exportBilling}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || (tab === 'payouts' && payouts.length === 0) || (tab === 'intents' && intents.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'withdrawals'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -499,6 +626,20 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                     Reddet
                   </button>
                 </div>
+              ) : r.status === 'COMPLETED' ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-600">{r.iyzico_payout_ref || '—'}</span>
+                  {/* F5.3: yanlış COMPLETED işaretlenen payout'u geri al —
+                      admin_reverse_payout (FINANCE + sebep zorunlu + audit) */}
+                  <button
+                    type="button"
+                    disabled={payoutBusy === r.id}
+                    onClick={() => askReversePayout(r)}
+                    className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 disabled:opacity-40"
+                  >
+                    Geri Al
+                  </button>
+                </div>
               ) : <span className="text-[10px] text-gray-600">{r.iyzico_payout_ref || '—'}</span>
             ) },
           ]}
@@ -506,6 +647,79 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           loading={loading}
           emptyMessage="Bekleyen payout talebi yok"
         />
+      )}
+
+      {tab === 'withdrawals' && (
+        <>
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {([['PENDING', 'Bekleyen'], ['APPROVED', 'Onaylanan'], ['REJECTED', 'Reddedilen'], ['ALL', 'Tümü']] as const).map(([s, label]) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setWithdrawalStatus(s)}
+                className={`px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-colors ${
+                  withdrawalStatus === s ? 'bg-white/10 border-white/25 text-white' : 'border-white/10 text-gray-500 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <p className="text-[10px] text-gray-600 ml-2">
+              Tesis sahibinin İBAN'a çekim talebi — onay/red tesise bildirim düşürür; banka transferi manuel yapılır.
+            </p>
+          </div>
+          <DataTable
+            columns={[
+              { header: 'Tarih', render: (r: WithdrawalRequestRow) => <span className="text-[11px] font-mono text-gray-400">{new Date(r.created_at).toLocaleString('tr-TR')}</span> },
+              { header: 'Tesis', render: (r: WithdrawalRequestRow) => (
+                <div>
+                  <p className="text-sm text-white font-bold">{r.pitch_name || '—'}</p>
+                  <p className="text-[10px] text-gray-500">{r.owner_name || '—'}</p>
+                </div>
+              ) },
+              { header: 'Tutar', render: (r: WithdrawalRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
+              { header: 'IBAN', render: (r: WithdrawalRequestRow) => {
+                const doc = safeStorageUrl(r.iban_photo_url);
+                return (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-mono text-gray-400">{r.iban || '—'}</span>
+                    {doc ? (
+                      <a href={doc} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-400 hover:text-blue-300">IBAN belgesi ↗</a>
+                    ) : r.iban_photo_url ? (
+                      <span className="text-[10px] text-gray-600" title={r.iban_photo_url}>belge bağlantısı geçersiz</span>
+                    ) : null}
+                  </div>
+                );
+              } },
+              { header: 'Durum', render: (r: WithdrawalRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
+              { header: 'İşlem', render: (r: WithdrawalRequestRow) => (
+                r.status === 'PENDING' ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={withdrawalBusy === r.id}
+                      onClick={() => void handleWithdrawal(r, true)}
+                      className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25 disabled:opacity-40"
+                    >
+                      Onayla
+                    </button>
+                    <button
+                      type="button"
+                      disabled={withdrawalBusy === r.id}
+                      onClick={() => void handleWithdrawal(r, false)}
+                      className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-40"
+                    >
+                      Reddet
+                    </button>
+                  </div>
+                ) : <span className="text-[10px] text-gray-600">—</span>
+              ) },
+            ]}
+            data={filteredWithdrawals}
+            loading={withdrawalsLoading}
+            emptyMessage={withdrawalStatus === 'PENDING' ? 'Bekleyen İBAN talebi yok' : 'Kayıt yok'}
+          />
+        </>
       )}
 
       <ActionConfirmModal isOpen={!!intentConfirm} options={intentConfirm} />

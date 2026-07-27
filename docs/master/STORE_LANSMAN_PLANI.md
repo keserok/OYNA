@@ -49,7 +49,7 @@ Buna karşılık **native (mobil) katman mağazaya çıkamaz durumda**. Öne ç�
 - **Frontend:** React 19 + Vite 6 + TailwindCSS v4 + Zustand. Router yok; `App.tsx` içinde `view` state'ine göre dev bir switch (lazy-loaded ~40 ekran). Tek üst seviye ErrorBoundary + Sentry/PostHog entegrasyonu (env boşsa no-op).
 - **Backend:** Supabase (Auth, PostgreSQL + 126 migration + ~73 tablo, Realtime, Storage, 10 Edge Function). RLS yaygın şekilde uygulanmış, art arda hardening migration'ları mevcut.
 - **Mobil:** Capacitor 8 (12 plugin). Android platformu senkron, iOS platformu **bayat/bozuk**.
-- **Roller:** Herkes PLAYER kaydolur; GOALKEEPER/REFEREE (ServiceApplication) ve OWNER (PartnerOnboarding) admin onaylı opt-in. Çoklu rolde RoleSwitcher. Admin paneli ayrı SPA (`/admin`), Supabase Auth + zorunlu MFA (AAL2).
+- **Roller:** Herkes PLAYER kaydolur; GOALKEEPER/REFEREE (ServiceApplication) ve OWNER (PartnerOnboarding) admin onaylı opt-in. Çoklu rolde RoleSwitcher. Admin paneli ayrı SPA (`/admin`), Supabase Auth + MFA (AAL2) — altyapı ve kurtarma kodları hazır, zorunluluk bayrakla açılır.
 - **Auth:** E-posta OTP (şifresiz), Google OAuth, Apple Sign-In (native plugin), misafir modu. Hesap silme akışı mevcut (`request_account_deletion` RPC) — her iki mağazanın da zorunlu şartı ✅.
 
 ### 1.2 Sağlık kontrolleri (bu analizde çalıştırıldı)

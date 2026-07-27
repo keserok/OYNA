@@ -39,7 +39,12 @@ const fmtDate = (iso: string | null): string => {
 
 // Tesis onay kuyruğu. Para çekme talepleri tek kaynak olarak Finans → Payout
 // Talepleri sekmesinde (payout_requests) yönetilir; burada artık yer almaz.
-const OwnerModerationTab: React.FC = () => {
+interface OwnerModerationTabProps {
+  /** F5.5: bekleyen tesis sayısını üst kabuğa bildirir (Doğrulama Merkezi rozeti). */
+  onBadgeCount?: (n: number) => void;
+}
+
+const OwnerModerationTab: React.FC<OwnerModerationTabProps> = ({ onBadgeCount }) => {
   const [pitches, setPitches] = useState<PendingPitch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +101,11 @@ const OwnerModerationTab: React.FC = () => {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  // F5.5: bekleyen tesis + değişiklik talebi sayısı üst kabuğa (segment rozeti)
+  useEffect(() => {
+    onBadgeCount?.(pitches.length + changeRequests.length);
+  }, [pitches.length, changeRequests.length, onBadgeCount]);
 
   const approvePitch = async (p: PendingPitch) => {
     const blockers = blockersByPitch[p.id] ?? [];

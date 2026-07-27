@@ -84,7 +84,7 @@ export interface BasicMatchRecord {
 export type Match = BasicMatchRecord;
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'MATCH_CALENDAR' | 'ADMIN_PANEL' | 'TEAM_BUILDER' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'ADMIN_PANEL' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
 
 export interface SavedPaymentCard {
   id: string;
@@ -300,6 +300,9 @@ export interface MatchListing {
   courtName?: string; // Maçın oynandığı saha (court) adı — "Tesis · Saha"
   time: string;
   date: string;
+  /** Ham ISO tarih (YYYY-MM-DD) — `date` görsel etikete ("Bugün") çevrildiği
+   *  için düzenleme formları gerçek tarihi buradan okur. */
+  rawDate?: string;
   price: number;
   difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
   minRating: number;
@@ -373,8 +376,12 @@ export interface Court {
   surface?: string;
   /** Saha ölçüsü, ör. "30x50" (metre) */
   size?: string;
-  /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) */
+  /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) — aralık verilmemişse tek format */
   capacity?: number;
+  /** Oynanabilir format aralığı — TAKIM BAŞINA oyuncu: min 6 & maks 8 → "6v6–8v8".
+   *  Maç oluşturma akışı ve create_match_atomic bu aralığı temel alır. */
+  minCapacity?: number;
+  maxCapacity?: number;
   /** Tesis içi sıralama (owner panelindeki sıra ile aynı) */
   sortOrder?: number;
   price: number;
@@ -653,6 +660,8 @@ export interface ServiceRequest {
   appliedAt?: string;
   paymentIntentId?: string;
   payoutReleased: boolean;
+  /** F3c: sağlayıcının canlı durumu (yolda/tesiste) — kaptan lobisi rozeti */
+  liveStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED';
   acceptedAt?: string;
   capturedAt?: string;
   completedAt?: string;
@@ -938,6 +947,12 @@ export interface PitchCourt {
   size?: string | null;
   price?: number | null;
   capacity?: number | null;
+  /** Oynanabilir format aralığı — TAKIM BAŞINA oyuncu (6→6v6). NULL → yalnız capacity.
+   *  Legacy 'capacity' alanı ise TOPLAM kişidir (14→7v7). */
+  min_capacity?: number | null;
+  max_capacity?: number | null;
+  /** Vitrin format rozeti (serbest metin, maks 8 karakter: '7v7', 'Mini'…) */
+  size_label?: string | null;
   images?: string[] | null;
   description?: string | null;
   /** Saha bazlı özellik anahtarları (heating, tribune, camera...) */

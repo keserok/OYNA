@@ -62,7 +62,7 @@ function normalizeDifficulty(raw: string | null | undefined): MatchListing['diff
   return 'Rahat'; // kolay / easy / rahat / bilinmeyen
 }
 
-function formatDateLabel(dateVal: string | null): string {
+export function formatDateLabel(dateVal: string | null): string {
   if (!dateVal) return 'Bugün';
   try {
     const d = new Date(dateVal);
@@ -86,7 +86,10 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
   const awaySlots = parseJsonArray<PositionSlot>(r.away_slots ?? rRaw.awaySlots);
   const missing = parseJsonArray<{ role: string; count: number }>(r.missingPositions);
   const chatMessages = parseJsonArray<NonNullable<MatchListing['chatMessages']>[number]>(r.chatMessages);
+  const reservePlayers = parseJsonArray<NonNullable<MatchListing['reservePlayers']>[number]>(rRaw.reservePlayers);
   const difficulty = normalizeDifficulty(r.difficulty);
+  const homeScore = (rRaw.homeScore ?? rRaw.home_score) as number | null | undefined;
+  const awayScore = (rRaw.awayScore ?? rRaw.away_score) as number | null | undefined;
 
   return {
     id: String(r.id),
@@ -94,6 +97,9 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     location: r.location || '',
     time: r.time || '20:00',
     date: formatDateLabel(r.date),
+    // Düzenleme akışları için HAM ISO tarih korunur — etikete ("Bugün") çevrilen
+    // date alanı yüzünden MatchFormModal her düzenlemede tarihi bugüne çekiyordu.
+    rawDate: r.date ? String(r.date).slice(0, 10) : undefined,
     price: Number(r.price ?? 0),
     difficulty,
     minRating: Number(r.minRating ?? 3),
@@ -110,6 +116,13 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     creatorId: r.creatorId || undefined,
     cancelReason: r.cancel_reason || undefined,
     refundStatus: r.refund_status || undefined,
+    // Tekil admin_get_match (to_jsonb) çekiminde gelen zengin alanlar — liste
+    // RPC'si döndürmez; kokpit açılışta tekil hidrasyonla tamamlar.
+    reservePlayers: reservePlayers.length ? reservePlayers : undefined,
+    homeScore: homeScore != null ? Number(homeScore) : undefined,
+    awayScore: awayScore != null ? Number(awayScore) : undefined,
+    gkId: (rRaw.gk_id as string) || undefined,
+    awayGkId: (rRaw.away_gk_id as string) || undefined,
     format: r.format || '7v7',
     visibility: (r.visibility === 'PRIVATE' ? 'PRIVATE' : 'OPEN'),
     privateCode: r.private_code || undefined,

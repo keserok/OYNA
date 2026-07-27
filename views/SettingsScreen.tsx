@@ -20,6 +20,7 @@ import NotificationSettingsPage from '../components/settings/NotificationSetting
 import RegionPickerPage from '../components/settings/RegionPickerPage';
 import ProfileInfoPage from '../components/settings/ProfileInfoPage';
 import FieldRolePage from '../components/settings/FieldRolePage';
+import SupportPage from '../components/settings/SupportPage';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
 
@@ -28,9 +29,7 @@ interface SettingsScreenProps {
   onNavigate: (view: AppView) => void;
 }
 
-const CONTACT_EMAIL = 'destek@oyna.app';
-
-type SubPage = null | 'notifications' | 'privacy' | 'region' | 'profile' | 'role';
+type SubPage = null | 'notifications' | 'privacy' | 'region' | 'profile' | 'role' | 'support';
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) => {
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
@@ -428,11 +427,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2">Destek</h3>
           <div className="flex flex-col">
+            {/* Uygulama içi destek: talep aç → admin Destek Merkezi'nden yanıt gelir.
+                mailto yedeği SupportPage içinde durur. */}
             <SettingItem
               icon={<HelpCircle size={20} />}
               title="Yardım Merkezi"
               value=""
-              onClick={() => { window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('OYNA — Yardım Talebi')}`; }}
+              onClick={() => setSubPage('support')}
             />
             <button
               onClick={handleLogout}
@@ -459,6 +460,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       <FieldRolePage open={subPage === 'role'} onClose={() => setSubPage(null)} onNavigate={onNavigate} />
       <NotificationSettingsPage open={subPage === 'notifications'} onClose={() => setSubPage(null)} />
       <RegionPickerPage open={subPage === 'region'} onClose={() => setSubPage(null)} />
+      <SupportPage open={subPage === 'support'} onClose={() => setSubPage(null)} />
       <SettingsSubPage open={subPage === 'privacy'} onClose={() => setSubPage(null)} title="Gizlilik" subtitle="Görünürlük ve engellenenler">
         <PrivacySection embedded />
       </SettingsSubPage>

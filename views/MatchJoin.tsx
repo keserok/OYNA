@@ -67,6 +67,8 @@ const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number;
 // geçince zaman bazlı olarak otomatik 'Geçmiş'e düşer; skor kavramı yok.
 
 // Kanonik koordinat atayıcı artık shared/lobbyEnrichment'tan gelir (admin ile tek kaynak).
+// (checkAndGetStatus + fillVacatedSlot kaldırıldı — F1.8: kick artık sunucuda,
+// player_kick_slot RPC'si; statü/terfi hesabının client kopyası kalmadı.)
 
 // ─── Difficulty Badge Renk Sistemi ─────────────────────────────────────────
 
@@ -444,6 +446,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // (Tek lobi P4) fallbackPitch + isim-eşleşmesi + rozet-türetmeli kural tahminleri
   // KALDIRILDI: kurallar yalnız gerçek kolonlardan gelir, yoksa 'Belirtilmedi'.
+  // Saha adı yalnız gerçek kayıttan: pitch_id eşleşmesi, yoksa maçın konumu.
+  const activePitchName = match.location || 'Saha';
 
   // Home & Away Teams derived from store
   const homeTeam = match.homeTeamId ? (userTeams || []).find(t => t.id === match.homeTeamId) : null;
@@ -813,17 +817,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
 
-  // Kaptan oyuncuyu DAR RPC ile çıkarır (player_kick_slot): iade otomatik
-  // purchasedBy cüzdanına, yedek bildirimi sunucuda — tam-dizi yazımı YOK.
+  // F1.8: kick atomik sunucu RPC'si (player_kick_slot) — kaptan kapısı, idempotent
+  // iade (_match_refund_partial) ve boşalan yer için yedek bildirimi sunucuda.
+  // Servis sarmalayıcısı (kickSlot) iade tutarını döndürür; tam-dizi yazımı YOK.
   const handleRemovePlayer = async (slotId: string) => {
     try {
-      await kickSlot(match.id, slotId);
+      const refunded = await kickSlot(match.id, slotId);
       const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
-    } catch (e) {
+      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${refunded}₺ iade kredisi işlendi.` : 'Oyuncu kadrodan çıkarıldı.');
+    } catch (e: any) {
       console.error(e);
-      showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
+      const msg = String(e?.message || '');
+      showActionError(
+        msg.includes('CANNOT_KICK_SELF') ? 'Kendini çıkaramazsın — maçtan ayrılma akışını kullan.'
+        : msg.includes('FORBIDDEN') ? 'Yalnız maç kaptanı oyuncu çıkarabilir.'
+        : msg.includes('SLOT_EMPTY') ? 'Bu slotta çıkarılacak oyuncu yok.'
+        : 'Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
     }
   };
 
@@ -905,8 +916,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (r.providerType === 'REF') return !match.refereeId && !getActiveRequestForType('REF');
     return !mySideGkAssigned && !getActiveRequestForType('GK');
   });
+  // F1.1: initiatedBy==='PROVIDER' filtresi kaldırıldı — kaptan-başlatan
+  // (çoğunluk) taleplerde de onay kartı çıkar; iki-taraflı payout kapısının
+  // kaptan ayağı HER talepte gerekli. captainConfirmed olanlar da listede
+  // kalır (rozet olarak render edilir). GK'de taraf koruması: sunucu
+  // (_hire_side_for) iki kaptana da izin verdiği için deplasman kaptanının
+  // ev sahibi kalecisini onaylamasını burada engelliyoruz.
   const captainConfirmPending = serviceRequests.filter(
-    r => r.status === 'CAPTURED' && r.initiatedBy === 'PROVIDER' && !r.captainConfirmed && !r.payoutReleased
+    r => r.status === 'CAPTURED' && !r.payoutReleased &&
+      (r.providerType !== 'GK' || (r.teamSide ?? 'HOME') === myCaptainSideUpper)
   );
 
   const handleAcceptApplication = async (requestId: string) => {
@@ -2522,10 +2540,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-green-500/20 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black text-white truncate">{applicant?.name || label} geldi mi?</p>
-                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide">Onayınca ücret sağlayıcıya ödenir</p>
+                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide">
+                          {req.captainConfirmed
+                            ? (req.providerConfirmed ? 'Ödeme serbest bırakılıyor…' : 'Sağlayıcının onayı bekleniyor')
+                            : 'Onayınca ücret ödenir · Sorun bildirmezsen maç bitiminden 48 saat sonra otomatik onaylanır'}
+                        </p>
                       </div>
-                      <button onClick={() => handleCaptainConfirm(req.id)} disabled={reqActionId === req.id}
-                        className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-black bg-green-400 disabled:opacity-50">Onayla</button>
+                      {req.captainConfirmed ? (
+                        <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-green-300 border border-green-500/30">Onayladın ✓</span>
+                      ) : (
+                        <button onClick={() => handleCaptainConfirm(req.id)} disabled={reqActionId === req.id}
+                          className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-black bg-green-400 disabled:opacity-50">Onayla</button>
+                      )}
                     </div>
                   );
                 })}
@@ -2544,6 +2570,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           if (assignedAwayGoalkeeper && canSeeAwayGk)
             visibleGks.push({ gk: assignedAwayGoalkeeper, side: 'away', teamName: match.awayTeamName || awayTeam?.name || 'Deplasman' });
           if (visibleGks.length === 0 && !assignedReferee) return null;
+          // F3c: sağlayıcının sunucuya bildirdiği canlı durum (yolda/tesiste) rozeti
+          const liveBadge = (providerId: string) => {
+            const r = serviceRequests.find(x => x.providerId === providerId
+              && (x.status === 'ACCEPTED' || x.status === 'CAPTURED'));
+            if (!r?.liveStatus || r.liveStatus === 'PENDING' || r.liveStatus === 'FINISHED') return null;
+            const arrived = r.liveStatus === 'ARRIVED';
+            return (
+              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${arrived ? 'bg-green-500/15 text-green-400 border-green-500/30' : 'bg-blue-500/15 text-blue-400 border-blue-500/30'}`}>
+                {arrived ? 'Tesiste' : 'Yolda'}
+              </span>
+            );
+          };
           return (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
@@ -2570,6 +2608,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{gk.name}</h4>
                     {gk.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    {liveBadge(gk.id)}
                   </div>
                   <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci · {teamName}</p>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -2618,6 +2657,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedReferee.name}</h4>
                     {assignedReferee.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    {liveBadge(assignedReferee.id)}
                   </div>
                   <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -2875,7 +2915,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {/* Başlık */}
               <div className="flex items-center justify-between px-6 pt-7 pb-5">
                 <div>
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{match.location || 'Saha'}</p>
+                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{activePitchName}</p>
                   <h2 className="text-base font-black text-white uppercase italic tracking-tight">MAÇ ÖZELLİKLERİ</h2>
                 </div>
                 <button

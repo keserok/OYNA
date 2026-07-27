@@ -84,7 +84,8 @@ const mapUserToDb = (user: Partial<AdminUser>) => {
   if (user.role !== undefined) mapped.role = user.role;
   if (user.isVerified !== undefined) mapped.is_verified = user.isVerified;
   if (user.isBanned !== undefined) mapped.is_banned = user.isBanned;
-  if (user.wallet !== undefined) mapped.wallet_balance = user.wallet;
+  // wallet_balance yazılmaz: bakiye düzeltmesi ledger'lı admin_adjust_wallet_balance
+  // RPC'sinden geçer — bayat değerle eşzamanlı cüzdan hareketini ezme riski kapandı.
   // NOT: profiles tablosunda 'stats' kolonu yok. Gerçek kolonlara yaz (F4).
   if (user.matchCount !== undefined) mapped.match_count = user.matchCount;
   if (user.rating !== undefined) mapped.rating = user.rating;
@@ -103,14 +104,23 @@ export const fbUpdateUser = async (user: AdminUser) => {
   if (error) throw new Error(`Kullanıcı güncellenemedi: ${error.message}`);
 };
 
+// Ban/doğrulama: doğrudan profiles UPDATE yerine SECURITY DEFINER RPC —
+// sunucu tarafı admin yetki kontrolü + admin_audit_log kaydı (bkz.
+// supabase/migrations/20260815000000_admin_ban_verify_rpcs.sql).
 export const fbBanUser = async (id: string, isBanned: boolean) => {
-  const { error } = await supabase.from('profiles').update({ is_banned: isBanned }).eq('id', id);
+  const { error } = await supabase.rpc('admin_ban_user', {
+    p_target_id: id,
+    p_is_banned: isBanned,
+    p_reason: isBanned ? 'Admin tarafından engellendi' : 'Ban kaldırıldı',
+  });
   if (error) throw new Error(`Ban işlemi başarısız: ${error.message}`);
 };
 
-
 export const fbVerifyUser = async (id: string) => {
-  const { error } = await supabase.from('profiles').update({ is_verified: true }).eq('id', id);
+  const { error } = await supabase.rpc('admin_verify_user', {
+    p_target_id: id,
+    p_status: 'approved',
+  });
   if (error) throw new Error(`Doğrulama başarısız: ${error.message}`);
 };
 

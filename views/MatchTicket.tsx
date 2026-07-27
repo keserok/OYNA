@@ -39,7 +39,7 @@ interface MatchTicketProps {
 }
 
 const STATE_STYLE: Record<PayState, { label: string; bg: string; text: string; note: string }> = {
-  PAID:      { label: 'ONAYLANDI',      bg: '#39FF14', text: '#0A0E14', note: 'Ödeme tamamlandı. Girişte bu bileti okut.' },
+  PAID:      { label: 'ONAYLANDI',      bg: '#39FF14', text: '#0A0E14', note: 'Ödeme tamamlandı. Tesiste bu kartı göster.' },
   PARTIAL:   { label: 'KAPORA ÖDENDİ',  bg: '#FACC15', text: '#0A0E14', note: 'Kapora alındı; kalan tutar tesiste ödenir.' },
   PENDING:   { label: 'ÖDEME BEKLİYOR', bg: '#F59E0B', text: '#0A0E14', note: 'Rezervasyon henüz ödenmedi.' },
   CANCELLED: { label: 'İPTAL EDİLDİ',   bg: '#F87171', text: '#0A0E14', note: 'Bu rezervasyon iptal edilmiştir.' },
@@ -151,7 +151,9 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
         <div className="text-center mb-6">
           <h1 className="text-2xl font-black text-white tracking-tight">MAÇ KARTINIZ</h1>
           <p className="text-gray-400 text-sm">
-            {canEnter ? 'Giriş için turnikede/temsilcide okutunuz.' : 'Ödeme tamamlanınca giriş için geçerli olur.'}
+            {/* F4.1 dürüstlük: turnike/okuyucu sistemi YOK — bilet tesiste
+                gösterilen rezervasyon referansıdır. */}
+            {canEnter ? 'Girişte bu kartı tesis görevlisine göster.' : 'Ödeme tamamlanınca giriş için geçerli olur.'}
           </p>
         </div>
 

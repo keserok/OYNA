@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   CreditCard,
   Scale,
+  Banknote,
 } from 'lucide-react';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
@@ -15,6 +16,8 @@ import {
   fetchAppConfig,
   setAppConfig,
   toTurkishAdminError,
+  fetchPayouts,
+  fetchPayoutIdentityChecks,
   type PaymentGoliveCheck,
   type ReconciliationSummary,
   type AppConfigRow,
@@ -65,6 +68,13 @@ export const FinanceGoLivePanel: React.FC = () => {
   const [providerRow, setProviderRow] = useState<AppConfigRow | null>(null);
   const [recon, setRecon] = useState<ReconciliationSummary | null>(null);
 
+  // F5.7: cashout (para çekme) açılış hazırlığı — bayrak + bekleyen talep +
+  // kimliği doğrulanmamış talep sayısı tek yerde görünsün ki açma kararı
+  // körlemesine verilmesin.
+  const [cashoutCfg, setCashoutCfg] = useState<{ enabled: boolean; feePct: number; min: number; requireIdentity: boolean } | null>(null);
+  const [cashoutPending, setCashoutPending] = useState(0);
+  const [cashoutIdentityGaps, setCashoutIdentityGaps] = useState(0);
+
   const [refreshing, setRefreshing] = useState(false);
   const [savingProvider, setSavingProvider] = useState(false);
   // İki adımlı onay: hangi hedefe geçileceği bekliyor ('IYZICO' | 'SIMULATION' | null)
@@ -82,6 +92,26 @@ export const FinanceGoLivePanel: React.FC = () => {
       setChecks(c);
       setProviderRow(cfg.find((row) => row.key === PROVIDER_KEY) ?? null);
       setRecon(r);
+
+      // F5.7: cashout hazırlığı
+      const cfgVal = (key: string) => cfg.find((row) => row.key === key)?.value;
+      setCashoutCfg({
+        enabled: cfgVal('wallet_cashout_enabled') === true,
+        feePct: Number(cfgVal('wallet_cashout_fee_pct') ?? 10),
+        min: Number(cfgVal('wallet_cashout_min') ?? 100),
+        requireIdentity: cfgVal('wallet_cashout_require_identity') !== false,
+      });
+      try {
+        const [payouts, idChecks] = await Promise.all([fetchPayouts(), fetchPayoutIdentityChecks('PENDING')]);
+        const cashouts = payouts.filter((p) => p.payout_type === 'WALLET_CASHOUT');
+        setCashoutPending(cashouts.filter((p) => p.status === 'PENDING' || p.status === 'PROCESSING').length);
+        // Kimliği doğrulanmamış VEYA IBAN sahibi adı tutmayan bekleyen talepler
+        setCashoutIdentityGaps(
+          idChecks.filter((c) => c.identity_status !== 'VERIFIED' || c.name_match === false).length,
+        );
+      } catch {
+        // hazırlık kartı bilgilendirme amaçlı — ana panel yüklenmesini bloklamaz
+      }
     } catch (err) {
       setLoadError(toTurkishAdminError(err));
     } finally {
@@ -379,6 +409,59 @@ export const FinanceGoLivePanel: React.FC = () => {
                     Vazgeç
                   </button>
                 </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* F5.7 — Cashout (para çekme) açılış hazırlığı */}
+      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="shrink-0 w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center">
+            <Banknote size={18} className="text-emerald-400" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-white">Para Çekme (Cashout) Hazırlığı</h3>
+            <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+              Otomatik havale entegrasyonu yoktur: talep onaylandığında transferi banka üzerinden
+              ELLE yapıp referansı Payout Talepleri ekranına girersiniz.
+            </p>
+          </div>
+        </div>
+
+        {cashoutCfg == null ? (
+          <p className="text-xs text-gray-500 text-center py-4">Yapılandırma okunamadı.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
+                <span className="text-xs font-bold text-gray-400">Durum</span>
+                <span className={`text-sm font-black ${cashoutCfg.enabled ? 'text-green-400' : 'text-amber-400'}`}>
+                  {cashoutCfg.enabled ? 'AÇIK' : 'KAPALI'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
+                <span className="text-xs font-bold text-gray-400">Kesinti / asgari</span>
+                <span className="text-sm font-black text-white">%{cashoutCfg.feePct} · ₺{cashoutCfg.min}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
+                <span className="text-xs font-bold text-gray-400">Bekleyen çekim talebi</span>
+                <span className={`text-sm font-black ${cashoutPending > 0 ? 'text-amber-400' : 'text-white'}`}>{cashoutPending}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
+                <span className="text-xs font-bold text-gray-400">Kimlik/isim uyuşmazlığı</span>
+                <span className={`text-sm font-black ${cashoutIdentityGaps > 0 ? 'text-red-400' : 'text-green-400'}`}>{cashoutIdentityGaps}</span>
+              </div>
+            </div>
+
+            {!cashoutCfg.enabled && (
+              <div className="mt-4 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+                <p className="text-[11px] text-amber-200 leading-relaxed">
+                  <b>Açmadan önce:</b> iyzico sözleşmesi/KYC tamam · manuel havale prosedürü (SOP) yazılı ·
+                  Payout Talepleri ekranında <b>Geri Al</b> butonu çalışır durumda (yanlış işaretlemeyi düzeltmek için) ·
+                  muhasebe CSV dışa aktarımı test edilmiş. Anahtar: <code className="text-amber-300">wallet_cashout_enabled</code> (Sistem Parametreleri).
+                </p>
               </div>
             )}
           </>

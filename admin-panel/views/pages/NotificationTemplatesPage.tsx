@@ -5,6 +5,7 @@ import { PageLoadingSkeleton } from '../components/PageLoadingSkeleton';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
   fetchNotificationTemplates,
+  sendTemplateTestAdmin,
   updateNotificationTemplate,
   toTurkishAdminError,
   type NotificationTemplateRow,
@@ -71,6 +72,21 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
   const [templates, setTemplates] = useState<NotificationTemplateRow[]>([]);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
+
+  // Şablonu önizleme örnek değişkenleriyle KENDİ hesabına gerçek bildirim
+  // olarak gönderir — metin değişikliği yayınlanmadan cihazda test edilir.
+  const sendTest = async (row: NotificationTemplateRow) => {
+    setTesting(row.type_key);
+    try {
+      await sendTemplateTestAdmin(row.type_key, PREVIEW_SAMPLES);
+      success(`Test bildirimi gönderildi (${row.label_tr}) — kendi hesabının Bildirimler'inde gör`);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setTesting(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -206,13 +222,24 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => openEditor(row)}
-                        className="mt-auto self-start px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-bold text-gray-200 transition-colors"
-                      >
-                        Düzenle
-                      </button>
+                      <div className="mt-auto flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditor(row)}
+                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-bold text-gray-200 transition-colors"
+                        >
+                          Düzenle
+                        </button>
+                        <button
+                          type="button"
+                          disabled={testing === row.type_key}
+                          onClick={() => void sendTest(row)}
+                          className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 rounded-lg text-[11px] font-bold text-cyan-300 transition-colors disabled:opacity-40"
+                          title="Şablonu örnek değişkenlerle KENDİ hesabına bildirim olarak gönderir"
+                        >
+                          {testing === row.type_key ? 'Gönderiliyor…' : 'Kendime Test Gönder'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

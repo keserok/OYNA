@@ -55,6 +55,24 @@ export const fetchNotifications = async (limit = 50): Promise<AppNotification[]>
   return (data ?? []).map(mapNotification);
 };
 
+/** F3f: gerçek okunmamış sayısı (rozetler için) — sayaç artık DB'den beslenir;
+ * eski oturum-yerel sayaç yalnız Bildirimler ekranı açıkken artıyordu. */
+export const fetchUnreadCount = async (): Promise<number> => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return 0;
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid)
+    .eq('inbox', true)
+    .eq('is_read', false);
+  if (error) {
+    console.warn('[notification] okunmamış sayısı okunamadı:', error.message);
+    return 0;
+  }
+  return count ?? 0;
+};
+
 /** Tek bir bildirimi okundu işaretle. */
 export const markNotificationRead = async (id: string): Promise<void> => {
   const { error } = await supabase

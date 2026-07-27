@@ -1245,9 +1245,9 @@ export interface CourtInput {
   sort_order?: number;
   price?: number | null;
   capacity?: number | null;
-  /** En küçük format — takım başına oyuncu (3..11, ör. 5 → 5v5) */
+  /** En küçük format — TAKIM BAŞINA oyuncu (3..11, ör. 5 → 5v5). null → temizle. */
   min_capacity?: number | null;
-  /** En büyük format — takım başına oyuncu (3..11, ör. 7 → 7v7) */
+  /** En büyük format — TAKIM BAŞINA oyuncu (3..11, ör. 7 → 7v7). null → temizle. */
   max_capacity?: number | null;
   /** Format rozeti — vitrin etiketi (maks 8 karakter, ör. '7v7', 'Mini') */
   size_label?: string | null;
@@ -1275,7 +1275,7 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       description: court.description ?? null,
       features: court.features ?? [],
     };
-    // Format aralığı + rozet: yalnız formda tanımlıysa gönder (undefined → dokunma).
+    // Format aralığı + rozet: undefined → dokunma, null → temizle, değer → yaz.
     if (court.min_capacity !== undefined) payload.min_capacity = court.min_capacity;
     if (court.max_capacity !== undefined) payload.max_capacity = court.max_capacity;
     if (court.size_label !== undefined) payload.size_label = court.size_label;

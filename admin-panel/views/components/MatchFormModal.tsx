@@ -111,8 +111,10 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
       setF({
         title: match.title,
         location: match.location,
-        // Edit modunda maçın GERÇEK tarihi (eski hali her açılışta bugüne sıfırlıyordu).
-        rawDate: resolveMatchDate(match),
+        // Maçın GERÇEK tarihi: mapper'ın taşıdığı rawDate en güvenilir kaynak;
+        // yoksa startsAt / ISO / TR etiket çözümüne düşülür (eskiden her açılışta
+        // bugüne sıfırlanıyordu ve başlık düzeltmek maçın tarihini kaydırıyordu).
+        rawDate: match.rawDate || resolveMatchDate(match),
         time: match.time,
         price: String(match.price),
         difficulty: match.difficulty,
