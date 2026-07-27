@@ -422,7 +422,20 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     const takenHome = (match.slots || []).filter(s => s?.status === 'TAKEN').length;
     const takenAway = (match.awaySlots || []).filter(s => s?.status === 'TAKEN').length;
     if (takenHome === 0 && takenAway === 0) return; // veri gelene kadar bekle
-    setPitchSide(takenAway < takenHome ? 'away' : 'home');
+    // MANAGE inişinde kullanıcı KENDİ slotlarını görmeli (satın alım sonrası
+    // "SLOTLARINI DOLDUR" akışı); keşifte ise az dolu taraf gösterilir.
+    const uid = auth.currentUser?.uid;
+    const mine = (s: unknown) => {
+      const x = s as { purchasedBy?: string; occupant?: string; player?: { id?: string } } | null;
+      return !!uid && !!x && (x.purchasedBy === uid || x.occupant === uid || x.player?.id === uid);
+    };
+    const mineHome = (match.slots || []).some(mine);
+    const mineAway = (match.awaySlots || []).some(mine);
+    if (isManageMode && (mineHome || mineAway)) {
+      setPitchSide(mineHome ? 'home' : 'away');
+    } else {
+      setPitchSide(takenAway < takenHome ? 'away' : 'home');
+    }
     setHasAutoSelectedSide(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.slots, match?.awaySlots, hasAutoSelectedSide]);
