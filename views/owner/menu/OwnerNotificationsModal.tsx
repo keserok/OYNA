@@ -16,11 +16,14 @@ import {
 } from '../../../notifications/notificationPreferences';
 import type { NotificationPreferences, NotificationPreferenceKey } from '../../../notifications/pushService';
 
+// F3i: 'owner_deposit_paid' ve 'owner_daily_summary' KALDIRILDI — bu type_key'lerle
+// bildirim üreten hiçbir kod yok (yalnız şablon seed'i vardı); göndereni olmayan
+// toggle kullanıcıyı yanıltıyordu. Gönderici yazılırsa buraya geri eklenir.
+// 'owner_new_booking' operasyonel-kritik: tercih kapatılsa da uygulama-içi
+// bildirim düşer (notify_booking_events bu olayda tercihe bakmaz).
 const OWNER_EVENTS: { key: NotificationPreferenceKey; label: string; hint: string }[] = [
-  { key: 'owner_new_booking', label: 'Yeni Rezervasyon', hint: 'Bir oyuncu sahanı rezerve ettiğinde' },
-  { key: 'owner_deposit_paid', label: 'Kapora Ödendi', hint: 'Rezervasyon kaporası tesisine düştüğünde' },
+  { key: 'owner_new_booking', label: 'Yeni Rezervasyon', hint: 'Bir oyuncu sahanı rezerve ettiğinde (kritik — uygulama içi bildirim her zaman düşer)' },
   { key: 'owner_cancellation', label: 'İptal', hint: 'Bir rezervasyon iptal edildiğinde' },
-  { key: 'owner_daily_summary', label: 'Günlük Özet', hint: 'Akşam: bugünkü tahsilat ve doluluk özeti' },
 ];
 
 export const OwnerNotificationsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -71,8 +74,9 @@ export const OwnerNotificationsModal: React.FC<{ onClose: () => void }> = ({ onC
         <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
           <Bell size={18} className="text-blue-400 shrink-0 mt-0.5" />
           <p className="text-xs text-blue-200">
-            Tercihlerin tüm cihazlarında geçerlidir. Kapora ve yeni rezervasyon bildirimleri
-            önemli olduğu için açık tutman önerilir.
+            Tercihlerin tüm cihazlarında geçerlidir. Yeni rezervasyon bildirimi kritik olduğu
+            için uygulama içinde her zaman gösterilir. Telefon (push) bildirimi platform
+            genelinde henüz aktif değil — açıldığında tercihlerin otomatik geçerli olur.
           </p>
         </div>
 
