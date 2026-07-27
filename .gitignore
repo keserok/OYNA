@@ -17,6 +17,9 @@ scripts/*
 !scripts/owner-demo.mjs
 !scripts/owner-menu-live-test.mjs
 !scripts/regenerate-migrations-from-ledger.mjs
+# Kılavuz ekran görüntüsü çekim aracı (tekrar üretilebilirlik için depoda)
+!scripts/kilavuz-gorselleri/
+!scripts/kilavuz-gorselleri/**
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs
