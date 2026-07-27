@@ -383,6 +383,14 @@ const App: React.FC = () => {
       setNotificationPreferences(prefs);
 
       // 2. Capacitor Push başlat (native platformda)
+      // F3f: rozet sayacını gerçek okunmamış sayısıyla tohumla (oturum-yerel
+      // sayaç yalnız Bildirimler ekranı açıkken artıyordu — rozetler yalan
+      // söylüyordu: ya hep yanık ya hep sönük).
+      import('./services/notificationService')
+        .then(m => m.fetchUnreadCount())
+        .then(n => useAppStore.getState().setUnreadNotificationsCount(n))
+        .catch(() => {});
+
       await initPushNotifications(
         uid,
         // Uygulama ön plandayken gelen bildirim → in-app toast

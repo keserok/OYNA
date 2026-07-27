@@ -26,6 +26,7 @@ const mapServiceRequest = (r: any): ServiceRequest => ({
   appliedAt: r.applied_at ?? undefined,
   paymentIntentId: r.payment_intent_id ?? undefined,
   payoutReleased: !!r.payout_released,
+  liveStatus: r.live_status ?? 'PENDING',
   acceptedAt: r.accepted_at ?? undefined,
   capturedAt: r.captured_at ?? undefined,
   completedAt: r.completed_at ?? undefined,
@@ -305,6 +306,21 @@ export const providerDisputeNoShow = async (
 export const cancelServiceRequest = async (requestId: string): Promise<void> => {
   const { error } = await supabase.rpc('cancel_service_request', { p_request_id: requestId });
   if (error) throw new Error(parseRpcError(error.message) || 'Talep iptal edilemedi.');
+};
+
+/**
+ * F3c — Sağlayıcı canlı durum bildirimi (yola çıktım / tesise vardım).
+ * Sunucu kaydeder + kaptana gerçek bildirim atar; eski sürüm yalnız cihaz-yerel
+ * state değiştirip "KAPTANA BİLDİRİLDİ" diyordu.
+ */
+export const setProviderLiveStatus = async (
+  requestId: string,
+  status: 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED',
+): Promise<void> => {
+  const { error } = await supabase.rpc('provider_set_live_status', {
+    p_request_id: requestId, p_status: status,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'Durum bildirilemedi.');
 };
 
 /**

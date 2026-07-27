@@ -657,6 +657,8 @@ export interface ServiceRequest {
   appliedAt?: string;
   paymentIntentId?: string;
   payoutReleased: boolean;
+  /** F3c: sağlayıcının canlı durumu (yolda/tesiste) — kaptan lobisi rozeti */
+  liveStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED';
   acceptedAt?: string;
   capturedAt?: string;
   completedAt?: string;
