@@ -10,8 +10,12 @@ const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..',
 const ROOT = path.join(REPO, 'docs/kilavuzlar/gorseller');
 // Tarayıcı profilleri geçici bir yere yazılır (OYNA_SHOT_TMP ile değiştirilebilir).
 const SCRATCH = process.env.OYNA_SHOT_TMP || '/tmp/oyna-gorsel';
-const APP = 'http://localhost:5199/';
-const ADMIN = 'http://localhost:4005/admin.html';
+// Yerel yığında tek Vite sunucusu hem uygulamayı hem admin panelini veriyor.
+// NOT: `/admin.html` kısayolu yalnız ADMIN_DEV=1 ile çalışır (o modda `/` de
+// panele yönlenir); tek sunucuda ikisini birden almak için panelin gerçek
+// dosya yolu kullanılıyor. OYNA_APP_URL / OYNA_ADMIN_URL ile değiştirilebilir.
+export const APP = process.env.OYNA_APP_URL || 'http://127.0.0.1:5199/';
+export const ADMIN = process.env.OYNA_ADMIN_URL || 'http://127.0.0.1:5199/admin-panel/admin.html';
 
 const ACCOUNTS = {
   oyuncu: { email: 'oyuncu01@oyna.app', landmark: 'Sosyal' },
@@ -19,16 +23,18 @@ const ACCOUNTS = {
   hakem:  { email: 'hakem1@oyna.app', landmark: 'Maç Bul' },
   saha:   { email: 'saha1@oyna.app', landmark: 'Takvim' },
 };
-const PASS = 'password123';
+export const PASS = 'password123';
 
 export async function launch(role, { desktop = false } = {}) {
   const profileDir = path.join(SCRATCH, 'profiles', role);
   fs.mkdirSync(profileDir, { recursive: true });
+  // Yerel yığında (127.0.0.1) vekil gerekmez; canlıya sürülürken HTTPS_PROXY kullanılır.
+  const useProxy = !APP.includes('127.0.0.1') && !!process.env.HTTPS_PROXY;
   const ctx = await chromium.launchPersistentContext(profileDir, {
     executablePath: '/opt/pw-browsers/chromium',
     headless: true,
     viewport: desktop ? { width: 1440, height: 900 } : { width: 390, height: 844 },
-    proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' },
+    ...(useProxy ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}),
     deviceScaleFactor: 2,
   });
   const page = ctx.pages()[0] || (await ctx.newPage());
@@ -38,20 +44,37 @@ export async function launch(role, { desktop = false } = {}) {
 export async function loginApp(page, role) {
   const acc = ACCOUNTS[role];
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
+
   // Oturum zaten varsa auth ekranı gelmez
   const emailBox = page.locator('input[type="email"]').first();
   try {
-    await emailBox.waitFor({ timeout: 15000 });
+    await emailBox.waitFor({ timeout: 20000 });
   } catch {
     return; // muhtemelen zaten girişli
   }
-  await emailBox.fill(acc.email);
+
+  // NOT: Türkçe "İ" (U+0130) JavaScript'in /i/ bayrağıyla "i"ye katlanmaz —
+  // /giriş yap/i deseni "GİRİŞ YAP" metnini BULAMAZ. Bu yüzden her yerde
+  // birebir (exact) metin eşleşmesi kullanılıyor.
+
+  // Açılış KAYIT modunda olabilir — GİRİŞ moduna geç.
+  const toLogin = page.getByRole('button', { name: 'Zaten hesabın var mı? Giriş yap' });
+  if (await toLogin.isVisible().catch(() => false)) {
+    await toLogin.click();
+    await page.waitForTimeout(800);
+  }
+
+  await page.locator('input[type="email"]').first().fill(acc.email);
   await page.locator('input[type="password"]').first().fill(PASS);
-  // KVKK onay kutusu — özel buton; metin kardeşi üzerinden dene, olmazsa koordinat
-  try { await page.locator('p:has-text("okudum")').first().click({ timeout: 4000 }); }
-  catch { await page.mouse.click(55, 805); }
-  await page.getByRole('button', { name: /giriş yap/i }).first().click();
-  await page.getByText(acc.landmark).first().waitFor({ timeout: 40000 });
+
+  // KVKK onayı — özel bir <button id="agreement-checkbox">; işaretlenmeden
+  // GİRİŞ YAP düğmesi disabled kalır.
+  const consent = page.locator('#agreement-checkbox');
+  if (await consent.isVisible().catch(() => false)) await consent.click();
+
+  // Gönder düğmesi — "KOD İLE GİRİŞ YAP" ile karışmasın diye birebir eşleşme.
+  await page.getByRole('button', { name: 'GİRİŞ YAP', exact: true }).click();
+  await page.getByText(acc.landmark).first().waitFor({ timeout: 45000 });
 }
 
 export async function shot(page, rel, { settle = 1200 } = {}) {
