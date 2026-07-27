@@ -1,0 +1,18 @@
+-- SÜRÜKLENME TELAFİSİ (yalnız yerel yığın için)
+--
+-- 20260827000003_mac_kur_kadro_ve_saglayici.sql şunu yapıyor:
+--     CREATE OR REPLACE FUNCTION public.invite_friends_to_match(...) RETURNS jsonb
+-- Ama aynı fonksiyon 20260827000001_mac_kur_atomik_yayin.sql içinde
+--     RETURNS integer
+-- olarak oluşturuluyor. PostgreSQL, CREATE OR REPLACE ile dönüş tipinin
+-- değiştirilmesine izin vermez → "cannot change return type of existing
+-- function" hatası ve migration durur.
+--
+-- Üretime uygulanan sürümde (defterde 20260727160543) dosyanın başında
+-- `DROP FUNCTION IF EXISTS public.invite_friends_to_match(uuid, uuid[]);`
+-- satırı VARDI; depoya alınırken bu satır düşmüş. Bu yüzden depo, kendi
+-- geçmişini takip eden bir veritabanında ayağa kalkmıyor.
+--
+-- Kalıcı çözüm: depoya DROP satırını ekleyen yeni bir migration koymak.
+-- Bu dosya yalnız yerel kopyayı kurtarır.
+DROP FUNCTION IF EXISTS public.invite_friends_to_match(uuid, uuid[]);
