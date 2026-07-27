@@ -1,9 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { supabase } from '../../../supabaseClient';
 
 type Status = 'checking' | 'ok' | 'pending';
 
-const CACHE_KEY = 'oyna_admin_rpc_check_v1';
+// v2: eski sürüm import.meta.env'i DOĞRUDAN okuyordu — env değişkeni olmayan
+// (gömülü üretim yedeğiyle çalışan) kurulumlarda ve geçici ağ hatasında yanlış
+// "deploy edilmedi" uyarısı basıyor, sonucu da sessionStorage'da yapıştırıyordu.
+// Artık uygulamanın ÇÖZÜMLENMİŞ supabase istemcisiyle yoklar; yalnız gerçek
+// "fonksiyon yok" (PGRST202) durumunda uyarır. Anahtar v2 → bayat yanlış
+// 'pending' önbellekleri geçersiz.
+const CACHE_KEY = 'oyna_admin_rpc_check_v2';
+
+const isMissingFnError = (err: { code?: string; message?: string } | null): boolean => {
+  if (!err) return false;
+  const msg = err.message || '';
+  return err.code === 'PGRST202' || msg.includes('PGRST202') || msg.includes('schema cache');
+};
 
 export const AdminStatusBar: React.FC = () => {
   const [status, setStatus] = useState<Status>(() => {
@@ -18,31 +31,17 @@ export const AdminStatusBar: React.FC = () => {
     let cancelled = false;
     void (async () => {
       try {
-        const url = import.meta.env.VITE_SUPABASE_URL;
-        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        if (!url || !key) {
-          if (!cancelled) {
-            sessionStorage.setItem(CACHE_KEY, 'pending');
-            setStatus('pending');
-          }
-          return;
-        }
-        const res = await fetch(`${url}/rest/v1/rpc/admin_fetch_revenue_trend`, {
-          method: 'POST',
-          headers: { apikey: key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ p_days: 1 }),
-        });
-        const text = await res.text();
-        const next: Status = text.includes('PGRST202') ? 'pending' : 'ok';
+        const { error } = await supabase.rpc('admin_fetch_revenue_trend', { p_days: 1 });
+        // Yalnız "fonksiyon yok" uyarı sebebidir; UNAUTHORIZED/veri hataları
+        // fonksiyonun deploy edildiğini kanıtlar → ok.
+        const next: Status = isMissingFnError(error) ? 'pending' : 'ok';
         if (!cancelled) {
           sessionStorage.setItem(CACHE_KEY, next);
           setStatus(next);
         }
       } catch {
-        if (!cancelled) {
-          sessionStorage.setItem(CACHE_KEY, 'pending');
-          setStatus('pending');
-        }
+        // Ağ hatası = sonuçsuz yoklama; korkutma, önbellekleme (sonraki açılış tekrar dener).
+        if (!cancelled) setStatus('ok');
       }
     })();
     return () => { cancelled = true; };

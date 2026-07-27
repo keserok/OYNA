@@ -9,6 +9,7 @@ import { supabase } from '../../supabaseClient';
 import { splitAmenities } from '../../shared/amenities';
 import { courtFeatureLabel, normalizeCourtFeatures } from '../../shared/courtFeatures';
 import { surfaceLabel } from '../../shared/courtSurface';
+import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { transformedImageUrl } from '../../utils/imageTransform';
 
 interface PreviewData {
@@ -30,6 +31,8 @@ interface PreviewData {
     surface: string | null;
     size: string | null;
     capacity: number | null;
+    min_capacity?: number | null;
+    max_capacity?: number | null;
     price: number | null;
     is_active: boolean | null;
     description: string | null;
@@ -42,13 +45,7 @@ interface PreviewData {
   }[];
 }
 
-// Oyuncu vitriniyle (PitchDiscovery) birebir ayna — zemin etiketleri tek kaynaktan.
-
-const formatCapacity = (capacity?: number | null): string | null => {
-  if (!capacity || capacity <= 0) return null;
-  if (capacity % 2 === 0) return `${capacity / 2}v${capacity / 2}`;
-  return `${capacity} oyuncu`;
-};
+// Oyuncu vitriniyle (PitchDiscovery) birebir ayna — etiketler/format aralığı tek kaynaktan.
 
 export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }> = ({ pitchId, onClose }) => {
   const [data, setData] = useState<PreviewData | null>(null);
@@ -56,7 +53,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
   useEffect(() => {
     supabase
       .from('pitches')
-      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, surface, size, capacity, price, is_active, description, images, features, lighting_grade, grass_grade, grades_status, sort_order)')
+      .select('name, district, city, rating, rating_count, google_review_count, description, amenities, images, image, total_price, courts(id, name, court_type, surface, size, capacity, min_capacity, max_capacity, price, is_active, description, images, features, lighting_grade, grass_grade, grades_status, sort_order)')
       .eq('id', pitchId)
       .single()
       .then(({ data: d }) => setData(d as unknown as PreviewData));
@@ -154,7 +151,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                         court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık',
                         surfaceLabel(court.surface),
                         court.size ? `${court.size} m` : null,
-                        formatCapacity(court.capacity),
+                        formatCapacityRange(court.min_capacity, court.max_capacity, court.capacity),
                       ].filter(Boolean).join(' · ');
                       return (
                         <div key={court.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#161B22] border border-white/5">

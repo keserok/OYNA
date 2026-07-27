@@ -84,7 +84,8 @@ const mapUserToDb = (user: Partial<AdminUser>) => {
   if (user.role !== undefined) mapped.role = user.role;
   if (user.isVerified !== undefined) mapped.is_verified = user.isVerified;
   if (user.isBanned !== undefined) mapped.is_banned = user.isBanned;
-  if (user.wallet !== undefined) mapped.wallet_balance = user.wallet;
+  // wallet_balance yazılmaz: bakiye düzeltmesi ledger'lı admin_adjust_wallet_balance
+  // RPC'sinden geçer — bayat değerle eşzamanlı cüzdan hareketini ezme riski kapandı.
   // NOT: profiles tablosunda 'stats' kolonu yok. Gerçek kolonlara yaz (F4).
   if (user.matchCount !== undefined) mapped.match_count = user.matchCount;
   if (user.rating !== undefined) mapped.rating = user.rating;

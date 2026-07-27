@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { UserRole, AppView, PlayerCardData } from '../types';
+import { UserRole, AppView } from '../types';
 import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
@@ -8,73 +7,13 @@ import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, upd
 import { fetchFriends } from '../services/friendService';
 import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
-import { useImageUpload } from '../hooks/useImageUpload';
 import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
 import type { ShortcutItem } from '../components/profile';
+import { ProfileEditSheet, type ProfileEditValues } from '../components/profile/ProfileEditSheet';
 import { OynaLogo } from '../components/OynaLogo';
-import { ratingToOverall, tierForOverall } from '../utils/ratingScale';
-import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from './onboarding/onboardingShared';
-
-const POSITION_ORDER = ['kaleci', 'defans', 'orta', 'forvet'] as const;
-const GENDER_ORDER = ['kadin', 'erkek'] as const;
-const PLAY_STYLE_ORDER = ['ciddi', 'taktiksel', 'rahat'] as const;
-
-const DEFAULT_CARD_STAT = { value: 50, videoUrl: null };
-
-const buildCardData = (profile: OynaUser | null, wins: number, total: number): PlayerCardData => {
-    // playerCard'ı YALNIZCA tam (stats + overall içeriyorsa) kullan; eksik/kısmi
-    // kart (ör. yalnız tier/position) PlayerCard'ı çökertirdi (stats.shooting undefined).
-    const pc = profile?.playerCard as Partial<PlayerCardData> | undefined;
-    if (pc && pc.stats && typeof pc.overall === 'number') {
-        return pc as PlayerCardData;
-    }
-    // Rookie ayrımı: hiç maç oynamamış oyuncu için sahte OVR göstermeyiz.
-    // Maç sayısı için GÜVENİLİR sinyal profiles.match_count (stats.matchesPlayed);
-    // matchHistory.length maç kayıtları linklenmemişse veterana "0" derdi.
-    const matchesForCard = profile?.stats?.matchesPlayed ?? total;
-    const overallOrNull = ratingToOverall(profile?.stats?.rating, matchesForCard);
-    const rookie = overallOrNull === null;
-    const overall = overallOrNull ?? 0;
-    return {
-        overall,
-        isRookie: rookie,
-        tier: rookie ? 'bronze' : (tierForOverall(overallOrNull) as 'gold' | 'silver' | 'bronze'),
-        isStatsVerified: false,
-        diamondValue: 0,
-        winCount: wins,
-        totalMatches: matchesForCard,
-        stats: {
-            pace: { ...DEFAULT_CARD_STAT },
-            shooting: { ...DEFAULT_CARD_STAT },
-            passing: { ...DEFAULT_CARD_STAT },
-            dribbling: { ...DEFAULT_CARD_STAT },
-            defense: { ...DEFAULT_CARD_STAT },
-            physical: { ...DEFAULT_CARD_STAT },
-        }
-    };
-};
-
-const ageFromBirthdate = (birthdate?: string | null): number | null => {
-    if (!birthdate) return null;
-    const d = new Date(birthdate);
-    if (isNaN(d.getTime())) return null;
-    const now = new Date();
-    let age = now.getFullYear() - d.getFullYear();
-    const m = now.getMonth() - d.getMonth();
-    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-    return age >= 5 && age < 120 ? age : null;
-};
-
-// Eski/seed verideki enum-biçimli mevkileri okunur hale getirir ("SAG_KANAT" → "Sağ Kanat").
-const POSITION_WORDS: Record<string, string> = {
-    SAG: 'Sağ', SOL: 'Sol', KANAT: 'Kanat', ORTA: 'Orta', SAHA: 'Saha',
-    KALECI: 'Kaleci', STOPER: 'Stoper', BEK: 'Bek', FORVET: 'Forvet', SANTRFOR: 'Santrfor',
-};
-const formatPosition = (pos?: string | null): string | null => {
-    if (!pos) return null;
-    if (!/^[A-Z_ÇĞİÖŞÜ]+$/.test(pos)) return pos; // serbest metin — dokunma
-    return pos.split('_').map(w => POSITION_WORDS[w] || (w.charAt(0) + w.slice(1).toLocaleLowerCase('tr-TR'))).join(' ');
-};
+// Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
+// modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
+import { buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -84,19 +23,9 @@ interface ProfileScreenProps {
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
-    // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı
+    // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı — TEK KAYNAK ProfileEditSheet
     const [showEditModal, setShowEditModal] = useState(false);
-    // D5: görsel yükleme hatası (HEIC/boyut/çok küçük/offline) kullanıcıya gösterilir.
-    const [photoError, setPhotoError] = useState<string | null>(null);
-    const [editPos, setEditPos] = useState('');
-    const [editBio, setEditBio] = useState('');
-    const [editAvatar, setEditAvatar] = useState('');
-    const [editBirthdate, setEditBirthdate] = useState('');
-    const [editGender, setEditGender] = useState('');
-    const [editStyle, setEditStyle] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
     const { setMyRoles, setSocialTarget } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -165,50 +94,26 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
 
-    const openEdit = () => {
-        setPhotoError(null);
-        setEditPos(profile?.position || '');
-        setEditBio(profile?.bio || '');
-        setEditAvatar(profile?.avatar_url || '');
-        setEditBirthdate(profile?.birthdate || '');
-        setEditGender(profile?.gender || '');
-        setEditStyle(profile?.playStyle || '');
-        setShowEditModal(true);
-    };
-    const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setPhotoError(null);
-        try {
-            const url = await uploadImage(file);
-            setEditAvatar(url);
-        } catch (err: any) {
-            // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
-            // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
-            console.error('Fotoğraf yükleme hatası:', err);
-            setPhotoError(err?.message || 'Fotoğraf yüklenemedi. Farklı bir görsel dene (JPG/PNG, en fazla 10MB).');
-        } finally {
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
-    const saveEdit = async () => {
+    const openEdit = () => setShowEditModal(true);
+
+    const saveEdit = async (v: ProfileEditValues) => {
         if (!uid) return;
         setSavingEdit(true);
         try {
             await updateProfileBasics(uid, {
-                position: editPos.trim(),
-                bio: editBio.trim(),
-                birthdate: editBirthdate || null,
-                gender: editGender || null,
-                play_style: editStyle || null,
-                ...(editAvatar && editAvatar !== profile?.avatar_url ? { avatar_url: editAvatar } : {}),
+                position: v.position,
+                bio: v.bio,
+                birthdate: v.birthdate || null,
+                gender: v.gender || null,
+                play_style: v.playStyle || null,
+                ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
             });
             // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
             // kimliğinden beslenir — fotoğraf değişimini ANINDA oraya da yansıt.
-            if (editAvatar && editAvatar !== profile?.avatar_url) {
+            if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {
                 const cur = useAppStore.getState().currentUserProfile;
                 if (cur && cur.id === uid) {
-                    useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: editAvatar });
+                    useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: v.avatarUrl });
                 }
             }
             setShowEditModal(false);
@@ -220,19 +125,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         }
     };
 
-    const total = matchHistory.length;
-    const wins = matchHistory.filter(m => m.result === 'WIN').length;
-    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const { total, wins, winRate } = winStats(matchHistory);
 
     // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
-    const cardData = (() => {
-        const c = buildCardData(profile, wins, total);
-        // Admin açıkça tier atadıysa rookie durumunu geçersiz kıl (o kartı göster).
-        return profile?.cardTier ? { ...c, tier: profile.cardTier, isRookie: false } : c;
-    })();
+    const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.
-    const trustScore = Math.round((profile?.trustScore ?? 5) * 20);
+    const trustScore = trustScoreTo100(profile?.trustScore);
 
     const shortcuts: ShortcutItem[] = [
         {
@@ -389,134 +288,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 )}
             </div>
 
-            {/* ═══ PROFİLİ DÜZENLE MODALI (mevki + bio + doğum tarihi + ayak) ═══
-                 Portal: motion sarmalayıcıların stacking context'i modalı BottomNav'ın
-                 altına itiyordu (Kaydet tıklanamıyordu) — body'ye taşınarak çözüldü. */}
-            {showEditModal && createPortal(
-                <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowEditModal(false)}>
-                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[88vh] overflow-y-auto custom-scrollbar bg-bg-main border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
-                        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
-                        <h3 className="text-base font-black text-white uppercase tracking-wider">Profili Düzenle</h3>
-                        {/* Profil fotoğrafı */}
-                        <div className="flex flex-col items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="relative group active:scale-95 transition-all disabled:opacity-60"
-                            >
-                                <img
-                                    src={editAvatar || '/player_card_photo.png'}
-                                    alt="Profil"
-                                    referrerPolicy="no-referrer"
-                                    className="w-24 h-24 rounded-3xl object-cover border border-white/10"
-                                />
-                                <div className="absolute inset-0 rounded-3xl bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Pencil size={20} className="text-white" />
-                                </div>
-                                {uploading && (
-                                    <div className="absolute inset-0 rounded-3xl bg-black/70 flex items-center justify-center">
-                                        <span className="text-[10px] font-black text-primary uppercase tracking-widest">Yükleniyor…</span>
-                                    </div>
-                                )}
-                            </button>
-                            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-black text-primary uppercase tracking-widest disabled:opacity-60">
-                                Fotoğrafı Değiştir
-                            </button>
-                            {photoError && (
-                                <p className="text-[11px] font-bold text-red-400 text-center max-w-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
-                                    {photoError}
-                                </p>
-                            )}
-                            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Pozisyon</label>
-                            <div className="mt-1.5 grid grid-cols-4 gap-2">
-                                {POSITION_ORDER.map((code) => {
-                                    const label = POSITION_LABEL[code];
-                                    const sel = editPos === label;
-                                    return (
-                                        <button
-                                            key={code}
-                                            type="button"
-                                            onClick={() => setEditPos(sel ? '' : label)}
-                                            className={`py-2.5 rounded-2xl border transition-all active:scale-95 flex flex-col items-center gap-0.5 ${
-                                                sel ? 'bg-primary text-black border-primary' : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
-                                            }`}
-                                        >
-                                            <span className="text-[13px] font-black">{POSITION_ABBR[code]}</span>
-                                            <span className="text-[8px] font-bold opacity-80">{label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Doğum Tarihi</label>
-                            <input
-                                type="date"
-                                value={editBirthdate}
-                                onChange={(e) => setEditBirthdate(e.target.value)}
-                                max={new Date().toISOString().slice(0, 10)}
-                                className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 [color-scheme:dark]"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Cinsiyet</label>
-                            <div className="mt-1.5 flex gap-2">
-                                {GENDER_ORDER.map((g) => {
-                                    const sel = editGender === g;
-                                    return (
-                                        <button
-                                            key={g}
-                                            type="button"
-                                            onClick={() => setEditGender(sel ? '' : g)}
-                                            className={`flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95 ${
-                                                sel ? 'bg-primary text-black border-primary' : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
-                                            }`}
-                                        >
-                                            {g === 'kadin' ? '♀' : '♂'} {GENDER_LABEL[g]}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Oyun Stili</label>
-                            <div className="mt-1.5 grid grid-cols-3 gap-2">
-                                {/* Kimlik renkleri (kanonik K/S/Y) seçim beklenmeden görünür:
-                                    seçili → dolu renk, değil → kendi renginde tonlu */}
-                                {PLAY_STYLE_ORDER.map((s) => {
-                                    const sel = editStyle === s;
-                                    const meta = PLAY_STYLE_META[s];
-                                    return (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            onClick={() => setEditStyle(sel ? '' : s)}
-                                            className="py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95"
-                                            style={sel
-                                                ? { color: '#000', backgroundColor: meta.color, borderColor: meta.color, boxShadow: `0 0 14px ${meta.color}40` }
-                                                : { color: meta.color, backgroundColor: `${meta.color}12`, borderColor: `${meta.color}45` }}
-                                        >
-                                            {meta.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Kısa Tanıtım</label>
-                            <textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat..." className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none" />
-                        </div>
-                        <button onClick={saveEdit} disabled={savingEdit || uploading} className="w-full h-12 rounded-2xl bg-primary text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
-                            {savingEdit ? 'Kaydediliyor...' : 'Kaydet'}
-                        </button>
-                    </div>
-                </div>,
-                document.body
-            )}
+            {/* ═══ PROFİLİ DÜZENLE — TEK KAYNAK alt sayfa (admin aynası da aynısını kullanır) ═══ */}
+            <ProfileEditSheet
+                open={showEditModal}
+                initial={{
+                    position: profile?.position || '',
+                    bio: profile?.bio || '',
+                    birthdate: profile?.birthdate || '',
+                    gender: profile?.gender || '',
+                    playStyle: profile?.playStyle || '',
+                    avatarUrl: profile?.avatar_url || '',
+                }}
+                saving={savingEdit}
+                onSave={saveEdit}
+                onClose={() => setShowEditModal(false)}
+            />
         </div>
     );
 };
