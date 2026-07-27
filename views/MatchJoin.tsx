@@ -2,18 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import {
   ArrowLeft, MapPin, Clock, Calendar, Zap, Hand, Scale,
-  X, Loader2, ChevronRight, Diamond, Search, UserPlus,
-  Plus, CheckCircle2, Users, Star, Wifi, WifiOff,
-  Send, AlertCircle, Shield, Layers, Droplets, Award,
-  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard
+  X, Loader2, ChevronRight, UserPlus,
+  Plus, CheckCircle2, Users, Star,
+  AlertCircle, Shield, Layers, Award,
+  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
+import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchSquadPicker';
+import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
 import { formatTRYWithSymbol } from '../utils/formatTRY';
@@ -57,8 +59,6 @@ interface MatchJoinProps {
   onBack: () => void;
   onJoin: () => void;
 }
-
-type SlotInviteStatus = 'NONE' | 'INVITED' | 'ACCEPTED';
 
 // ─── Formasyonlar: tek kanonik kaynak (utils/formations.ts) ────────────────
 const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number; y: number; role: string }[]>>;
@@ -141,9 +141,9 @@ const extractProviderRatings = (
     .filter(r => Number.isFinite(r.value));
 };
 
-// DOLU (TAKEN) slotları tarafın GERÇEK katılımcılarıyla (public_profiles) doldurur.
-// Slot'ta zaten kimlikli oyuncu varsa korunur (ad/avatar public_profiles'tan tazelenir);
-// oyuncusuz (seed) TAKEN slotlar, sahada olmayan katılımcılarla sırayla eşlenir.
+// Dolu slotların KİMLİĞİNİ tazeler (public_profiles) — occupant/player.id birebir.
+// Eski sıralı-kuyruk tahmini KALDIRILDI: occupant'sız TAKEN slot artık REZERVE'dir
+// ("DOLU" çizilir) ve asla alakasız bir katılımcıyla doldurulmaz.
 const enrichSideSlots = (
   slots: PositionSlot[],
   sideParticipants: LobbyParticipant[],
@@ -151,37 +151,19 @@ const enrichSideSlots = (
 ): PositionSlot[] => {
   const canonical = applyCanonicalCoords(slots || []);
   const byId = new Map(sideParticipants.map(p => [p.userId, p]));
-  const onField = new Set(
-    canonical.filter(s => s && s.status === 'TAKEN' && s.player?.id).map(s => s.player!.id)
-  );
-  const queue = sideParticipants.filter(p => !onField.has(p.userId));
-  let qi = 0;
   return canonical.map(slot => {
     if (!slot || slot.status !== 'TAKEN') return slot;
-    let src: { id: string; name: string; avatar: string; rating: number } | null = null;
-    const orig: any = slot.player;
-    if (orig?.id) {
-      const prof = byId.get(orig.id);
-      src = {
-        id: orig.id,
-        name: prof?.name || orig.name || 'Oyuncu',
-        avatar: (prof ? prof.avatarUrl : orig.avatar) || '',
-        rating: prof?.rating || orig.rating || 4.5,
-      };
-    } else if (orig?.name) {
-      src = { id: orig.id || '', name: orig.name, avatar: orig.avatar || '', rating: orig.rating || 4.5 };
-    } else {
-      const part = queue[qi++];
-      if (part) src = { id: part.userId, name: part.name, avatar: part.avatarUrl || '', rating: part.rating };
-    }
-    if (!src) return slot; // katılımcı yoksa olduğu gibi bırak
+    const pid = (slot as any).occupant || slot.player?.id;
+    if (!pid) return slot; // REZERVE — kimliksiz, sahada "DOLU" kapsülü çizilir
+    const prof = byId.get(pid);
+    const orig: any = slot.player || {};
     return {
       ...slot,
       player: {
-        id: src.id,
-        name: src.name || 'Oyuncu',
-        avatar: src.avatar || '',
-        rating: src.rating || 4.5,
+        id: pid,
+        name: prof?.name || orig.name || 'Oyuncu',
+        avatar: (prof ? prof.avatarUrl : orig.avatar) || '',
+        rating: prof?.rating || orig.rating || 4.5,
         position: slot.role || 'OYUNCU',
         x: slot.x,
         y: slot.y,
@@ -226,8 +208,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   }, [originalMatch?.id, originalMatch?.slots, originalMatch?.awaySlots, originalMatch?.format]);
 
   // ── State ────────────────────────────────────────────────────────────────
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  // Oyuncu çoklu-slot satın alma seçimi (kontenjana kadar). Ödeme = adet × ücret.
+  // Çoklu slot satın alma seçimi — HERKES için tek akış (kurucu dahil). Ödeme = adet × ücret.
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -258,17 +239,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [playerCardLoading, setPlayerCardLoading] = useState(false);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
 
-  const [inviteModalSlotId, setInviteModalSlotId] = useState<string | null>(null);
-  const [friendSearch, setFriendSearch] = useState('');
-  const [invitesSent, setInvitesSent] = useState<Record<string, SlotInviteStatus>>({}); // slot
-  const [invitedFriendNames, setInvitedFriendNames] = useState<Record<string, string>>({});
-  const [resolvedHomeTeam, setResolvedHomeTeam] = useState<Team | null>(null);
-  const [resolvedAwayTeam, setResolvedAwayTeam] = useState<Team | null>(null);
+  // Rezerve slot doldurma sayfası (MANAGE): Kendimi Ekle / Arkadaş / Kod / İade
+  const [fillSlot, setFillSlot] = useState<PositionSlot | null>(null);
+  // Arkadaş atama seçicisi hangi slottan açıldı (GERÇEK friendships verisi)
+  const [assignPickerSlotId, setAssignPickerSlotId] = useState<string | null>(null);
   const [removeConfirmSlot, setRemoveConfirmSlot] = useState<PositionSlot | null>(null);
-  const [openSlotActionSlot, setOpenSlotActionSlot] = useState<PositionSlot | null>(null);
-
-  // Arkadaş daveti kategorisi
-  const [inviteCategory, setInviteCategory] = useState('Tümü');
+  // Özel maç kodu — satırda değil; kurucuya SECURITY DEFINER RPC ile gelir (P1)
+  const [privateCode, setPrivateCode] = useState<string | null>(null);
+  // Taktik önerileri (kişi başı 1 — YALNIZ Maçlarım lobisinde)
+  const [tacticProposals, setTacticProposals] = useState<MatchTacticProposal[]>([]);
+  const [showTacticPicker, setShowTacticPicker] = useState(false);
+  const [myTactics, setMyTactics] = useState<MyTacticLite[]>([]);
 
   // Maçtan Ayrıl
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -303,8 +284,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
-    adminUsers, friends, updateMatch, applyMatchLocal, addUserNotification, adminPitches,
-    userTeams, myTeams, setSelectedMatch,
+    adminUsers, updateMatch, applyMatchLocal,
+    userTeams, setStudioContext, navigateTo,
     setNewMatchBadge, lobbyMode, currentUserProfile: storeCurrentUserProfile
   } = useAppStore();
   // MANAGE = Maçlarım hub'ından; yönetim aksiyonları yalnız burada görünür.
@@ -407,6 +388,28 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     return () => { alive = false; };
   }, [assignedGkId, assignedAwayGkId, assignedRefId]);
 
+  // ── Özel maç kodu — yalnız kurucuya, istemciye kapalı tablodan RPC ile (P1) ──
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    const isPrivateCreator = !!uid && (match as any)?.visibility === 'PRIVATE' && (match as any)?.creatorId === uid;
+    if (!originalMatch?.id || !isPrivateCreator) { setPrivateCode(null); return; }
+    let alive = true;
+    getMyMatchPrivateCode(originalMatch.id).then(c => { if (alive) setPrivateCode(c); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originalMatch?.id, (match as any)?.visibility, (match as any)?.creatorId]);
+
+  // ── Taktik önerileri — YALNIZ Maçlarım (MANAGE) lobisinde yüklenir ──
+  const refreshTacticProposals = async () => {
+    if (!originalMatch?.id) return;
+    try { setTacticProposals(await getMatchTacticProposals(originalMatch.id)); } catch { /* sessiz */ }
+  };
+  useEffect(() => {
+    if (!isManageMode) { setTacticProposals([]); return; }
+    refreshTacticProposals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originalMatch?.id, isManageMode]);
+
   // ── Sahadaki dolu slotları gerçek oyuncularla doldur (public_profiles) ────
   // TAKEN sayısı değişince (katılım/ayrılma, realtime dahil) yeniden çekilir.
   const takenSignature =
@@ -437,33 +440,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   if (!match) return null;
 
-  // Saha ve Detaylı Filtre Bilgilerini Çekme
-  const matchPitch = (adminPitches || []).find(p =>
-    p?.name && match.location &&
-    (match.location.toLowerCase().includes(p.name.toLowerCase()) ||
-     p.name.toLowerCase().includes(match.location.toLowerCase()))
-  );
-
-  const fallbackPitch = {
-    name: match.location || 'Oyna Arena',
-    rating: 4.5,
-    googleRating: 4.4,
-    googleReviews: 120,
-    grassGrade: 'A' as const,
-    lightingGrade: 'A' as const,
-    lockerRoomGrade: 'B' as const,
-    amenities: ['Duş', 'Otopark', 'Soyunma Odası', 'Su'],
-    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&q=80&w=1000'
-  };
-
-  const activePitch = matchPitch || fallbackPitch;
-
-  // Dinamik kurallar ve filtreler
-  const ageLimit = match.badges?.find(b => b.includes('Yaş') || b.includes('Yaş Grubu'))
-    || (match.difficulty === 'Ciddi' ? '20-35 Yaş' : 'Limit Yok (18+)');
-
-  const genderRule = match.badges?.find(b => b === 'Erkek' || b === 'Kadın' || b === 'Karma')
-    || 'Karma Katılım';
+  // (Tek lobi P4) fallbackPitch + isim-eşleşmesi + rozet-türetmeli kural tahminleri
+  // KALDIRILDI: kurallar yalnız gerçek kolonlardan gelir, yoksa 'Belirtilmedi'.
 
   // Home & Away Teams derived from store
   const homeTeam = match.homeTeamId ? (userTeams || []).find(t => t.id === match.homeTeamId) : null;
@@ -493,12 +471,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const enrichedAwaySlots = enrichSideSlots(match.awaySlots || [], awayParticipants, 'PAID');
 
   // ── Derived State ─────────────────────────────────────────────────────────
-  const isAlreadyJoinedHome = (match.slots || []).some(
-    s => s?.player?.id === currentUserProfile?.id
-  );
-  const isAlreadyJoinedAway = (match.awaySlots || []).some(
-    s => s?.player?.id === currentUserProfile?.id
-  );
+  const occupiesSlot = (s: PositionSlot | undefined | null) =>
+    !!s && ((s as any).occupant === currentUserProfile?.id || s.player?.id === currentUserProfile?.id);
+  const isAlreadyJoinedHome = (match.slots || []).some(occupiesSlot);
+  const isAlreadyJoinedAway = (match.awaySlots || []).some(occupiesSlot);
   const isAlreadyJoined = isAlreadyJoinedHome || isAlreadyJoinedAway;
 
   const isAlreadyJoinedReserve = (match.reservePlayers || []).some(
@@ -506,8 +482,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   );
 
   const mySlot = isAlreadyJoined
-    ? [...enrichedSlots, ...enrichedAwaySlots].find(s => s?.player?.id === currentUserProfile?.id)
+    ? [...enrichedSlots, ...enrichedAwaySlots].find(occupiesSlot)
     : null;
+
+  // Satın aldığım ve henüz kimseyi atamadığım slotlar (REZERVE — "DOLU")
+  const myReservedSlots = [...(match.slots || []), ...(match.awaySlots || [])].filter(
+    s => s && (s as any).purchasedBy === currentUserProfile?.id
+      && s.status === 'TAKEN' && !s.player && !(s as any).occupant
+  );
 
   // ── İki taraflı kiralık kaleci: taraf = HANGİ kolon dolu (SSOT). ────────────
   // Kiralayan tarafın üyesi miyim? (kaptan / sahaya katılmış / takım rosterımda —
@@ -546,22 +528,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     return () => { alive = false; };
   }, [showLeaveConfirm, match?.id]);
 
-  const assignedIds = (match.slots || []).filter(s => s?.player).map(s => s.player!.id);
-  const filteredFriends = (friends || []).filter(f => {
-    if (!f || !f.id || !f.name) return false;
-    if (assignedIds.includes(f.id)) return false;
-    if (friendSearch && !f.name.toLowerCase().includes(friendSearch.toLowerCase())) return false;
-    if (inviteCategory !== 'Tümü') {
-      if (inviteCategory === 'Favorilerim') {
-        if (!(f as any).isFavorite) return false;
-      } else {
-        if (f.group !== inviteCategory) return false;
-      }
-    }
-    return true;
-  });
-  const onlineFriends = filteredFriends.filter(f => (f as any).online);
-  const offlineFriends = filteredFriends.filter(f => !(f as any).online);
+  // Sahada oturanlar — arkadaş atama seçicisinde "eklendi" işaretlemek için
+  const assignedIds = [...(match.slots || []), ...(match.awaySlots || [])]
+    .map(s => ((s as any)?.occupant || s?.player?.id) as string | undefined)
+    .filter(Boolean) as string[];
 
   const diffConf = difficultyConfig[match.difficulty] || difficultyConfig['Rahat'];
   const squadSize = inferSquadSize((match.slots || []).length);
@@ -573,7 +543,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const handleSlotClick = (slot: any) => {
     if (!slot) return;
 
-    if (slot.status === 'TAKEN') {
+    // Oyunculu dolu slot → oyuncu bilgi kartı
+    if (slot.status === 'TAKEN' && slot.player) {
       setActivePlayerSlotId(slot.id);
       setFriendRequestSent(false);
       setPlayerCard(null);
@@ -587,65 +558,25 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       return;
     }
 
-    if (slot.status === 'OPEN') {
-      if (isCaptain) {
-        // Kaptan akışı korunur (tekli seçim + mevcut davet/modal).
-        if (isAlreadyJoined) {
-          setInviteModalSlotId(slot.id);
-          setFriendSearch('');
-          return;
-        }
-        setSelectedSlotId(slot.id);
-        setOpenSlotActionSlot(slot);
-        return;
+    // REZERVE / kilitli: sahibi Maçlarım'dan doldurur, diğer herkese seçilemez
+    if (slot.status !== 'OPEN') {
+      if (isManageMode && slot.purchasedBy === currentUserProfile?.id) {
+        setFillSlot(slot);
+      } else {
+        if (navigator.vibrate) navigator.vibrate(15);
+        showActionError('Bu slot rezerve edildi — satın alan kişi dolduracak.');
       }
-      // Oyuncu: çoklu slot seçimi (kontenjana kadar). Ödeme butonunda toplam görünür.
-      setSelectedSlotIds((prev) =>
-        prev.includes(slot.id) ? prev.filter((id) => id !== slot.id) : [...prev, slot.id]
-      );
+      return;
     }
+
+    // AÇIK slot → tek akış (kurucu dahil): çoklu seçim + "Öde ve Katıl"
+    setSelectedSlotIds((prev) =>
+      prev.includes(slot.id) ? prev.filter((id) => id !== slot.id) : [...prev, slot.id]
+    );
   };
 
-  const handleJoin = async () => {
-    if (!selectedSlotId || isAlreadyJoined) return;
-    setIsProcessing(true);
-    
-    const isAway = (match.awaySlots || []).some(s => s?.id === selectedSlotId);
-    const slotsSource = isAway ? (match.awaySlots || []) : (match.slots || []);
-    const targetSlot = slotsSource.find(s => s?.id === selectedSlotId);
-    if (!targetSlot) { setIsProcessing(false); return; }
-
-    try {
-      // Call Supabase RPC for safe concurrency-locked join
-      const { error } = await supabase.rpc('join_public_match_slot', {
-        p_match_id: match.id,
-        p_slot_id: selectedSlotId,
-        p_user_id: currentUserProfile.id,
-        p_is_away: isAway
-      });
-
-      if (error) throw error;
-
-      // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
-      try { await checkMatchThreshold(match.id); } catch { /* eşik kontrolü kritik değil */ }
-
-      // KN-3b: bayat tam-dizi yazımı YOK. Sunucu (RPC) tek otorite; taze durumu
-      // çekip YEREL uygula — eşzamanlı katılımcılar birbirini ezemez, LIVE
-      // geçişi de (threshold sonrası) anında yansır.
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
-
-      setSelectedSlotId(null);
-      setNewMatchBadge(true);
-    } catch (e: any) {
-      console.error('Join error:', e);
-      showActionError((e?.message || '').includes('MIN_RATING')
-        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
-        : 'Maça katılırken bir hata oluştu. Lütfen tekrar dene.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  // (Tek lobi) Eski ücretsiz tekli katılım (join_public_match_slot) KALDIRILDI —
+  // kurucu dahil herkes slot satın alır; ücretsiz maçta aynı RPC 0₺ ile çalışır.
 
   const handleBuySlots = async () => {
     if (selectedSlotIds.length === 0 || isProcessing) return;
@@ -675,7 +606,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         slotIds: [...selectedSlotIds],
       });
       setSelectedSlotIds([]);
-      setSelectedSlotId(null);
       store.navigateTo('PAYMENT');
       return;
     }
@@ -683,9 +613,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     // Ücretsiz maç: eski hızlı yol (ödeme ekranı gerekmez).
     setIsProcessing(true);
     try {
-      const { error } = await supabase.rpc('player_buy_slots', {
+      const { error } = await supabase.rpc('player_buy_slots_v2', {
         p_match_id: match.id,
         p_slot_ids: selectedSlotIds,
+        p_use_balance: true,
       });
       if (error) throw error;
 
@@ -698,8 +629,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (fresh) applyMatchLocal(fresh);
 
       setSelectedSlotIds([]);
-      setSelectedSlotId(null);
       setNewMatchBadge(true);
+      // Satın alınan slotlar REZERVE — kullanıcıyı doldurma moduna al.
+      useAppStore.getState().setLobbyMode('MANAGE');
+      showActionSuccess('Slotların rezerve edildi — kendini veya arkadaşlarını ekle.');
     } catch (e: any) {
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
@@ -709,42 +642,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const fillVacatedSlot = (
-    slots: PositionSlot[],
-    reserves: Player[],
-    vacatedSlotId: string
-  ): { updatedSlots: PositionSlot[]; remainingReserves: Player[]; promotedPlayer?: Player } => {
-    let promotedPlayer: Player | undefined = undefined;
-    let remainingReserves = [...reserves];
-
-    const updatedSlots = slots.map(s => {
-      if (s.id === vacatedSlotId) {
-        if (remainingReserves.length > 0) {
-          const rawPlayer = remainingReserves.shift()!;
-          promotedPlayer = {
-            ...rawPlayer,
-            position: s.role || 'OYUNCU',
-            x: s.x,
-            y: s.y,
-            paymentStatus: 'UNPAID',
-          };
-          return {
-            ...s,
-            status: 'TAKEN' as const,
-            player: promotedPlayer,
-          };
-        } else {
-          const newSlot = { ...s, status: 'OPEN' as const };
-          delete newSlot.player;
-          return newSlot;
-        }
-      }
-      return s;
-    });
-
-    return { updatedSlots, remainingReserves, promotedPlayer };
   };
 
   const handleJoinAsReserve = async () => {
@@ -796,50 +693,84 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  const handleInviteFriend = async (friend: any) => {
-    if (!inviteModalSlotId || !friend) return;
-    const slotId = inviteModalSlotId;
-    setInvitesSent(prev => ({ ...prev, [slotId]: 'INVITED' }));
-    setInvitedFriendNames(prev => ({ ...prev, [slotId]: friend.name || 'Arkadaş' }));
+  // ── Rezerve slot doldurma aksiyonları (MANAGE — yalnız satın alan) ─────────
+  const handleSelfAssign = async (slotId: string) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await selfAssignSlot(match.id, slotId);
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh); // KN-3b
+      setFillSlot(null);
+      showActionSuccess('Sahadasın! ⚽');
+    } catch (e: any) {
+      showActionError((e?.message || '').includes('ALREADY_ON_FIELD')
+        ? 'Zaten sahada bir slotun var.' : 'Slota eklenemedin. Lütfen tekrar dene.');
+    } finally { setIsProcessing(false); }
+  };
 
-    // Satın aldığım slotu arkadaşa atıyorsam → gerçek RPC (davet + slot INVITED).
-    const ownedSlot = (match.slots || []).find(s => s?.id === slotId && (s as any).purchasedBy === currentUserProfile.id);
-    if (ownedSlot) {
+  // Seçilen arkadaşlar, tıklanan slottan başlayarak REZERVE slotlarıma sırayla
+  // atanır — her atama ANINDA görünür ve arkadaşa gerçek bildirim gider.
+  const handleAssignFriends = async (picked: PickedPlayer[]) => {
+    const startId = assignPickerSlotId;
+    setAssignPickerSlotId(null);
+    if (!picked.length) return;
+    const targets = [
+      ...myReservedSlots.filter(s => s!.id === startId),
+      ...myReservedSlots.filter(s => s!.id !== startId),
+    ];
+    let ok = 0;
+    for (let i = 0; i < picked.length && i < targets.length; i++) {
       try {
-        const { error } = await supabase.rpc('player_assign_slot', {
-          p_match_id: match.id, p_slot_id: slotId, p_friend_id: friend.id,
-        });
-        if (error) throw error;
-        const fresh = await getMatchDetails(match.id);
-        if (fresh) applyMatchLocal(fresh); // KN-3b
-        showActionSuccess(`${friend.name || 'Arkadaşın'} bu slota davet edildi.`);
+        await assignSlotToFriend(match.id, targets[i]!.id, picked[i].id);
+        ok++;
       } catch (e: any) {
-        console.error('assign slot error', e);
-        showActionError('Atama yapılamadı. Lütfen tekrar dene.');
+        showActionError((e?.message || '').includes('NOT_FRIENDS')
+          ? 'Yalnız arkadaş listenden atama yapabilirsin.'
+          : `${picked[i].name} atanamadı.`);
       }
-      setInviteModalSlotId(null);
-      setFriendSearch('');
-      return;
     }
+    const fresh = await getMatchDetails(match.id);
+    if (fresh) applyMatchLocal(fresh);
+    setFillSlot(null);
+    if (ok > 0) showActionSuccess(`${ok} arkadaşın slota eklendi — bildirim gitti ⚽`);
+  };
 
-    // (Kaptan/diğer akış) yerel davet bildirimi
-    const isAway = (match.awaySlots || []).some(s => s?.id === slotId);
-    addUserNotification({
-      id: `inv_${slotId}_${Date.now()}`,
-      type: 'invite',
-      title: isAway ? '⚔️ Rakip Daveti' : '⚽ Maç Daveti',
-      desc: isAway
-        ? `${currentUserProfile.name} sizi "${match.title || 'bir maça'}" karşı takımda oynamaya (rakip olarak) davet etti!`
-        : `${currentUserProfile.name} sizi "${match.title || 'bir maça'}" davet etti!`,
-      time: 'Az önce',
-      iconName: 'Trophy',
-      color: '#FACC15',
-      textColor: '#FACC15',
-      payload: { matchId: match.id, slotId },
-      read: false,
-    });
-    setInviteModalSlotId(null);
-    setFriendSearch('');
+  const handleUnassign = async (slotId: string) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await unassignSlot(match.id, slotId);
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
+      setActivePlayerSlotId(null);
+      showActionSuccess('Slot yeniden rezervine döndü.');
+    } catch { showActionError('İşlem tamamlanamadı. Lütfen tekrar dene.'); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleRelease = async (slotId: string) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const refunded = await releaseSlot(match.id, slotId);
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
+      setFillSlot(null);
+      showActionSuccess(refunded > 0
+        ? `Slot iade edildi — ${refunded.toLocaleString('tr-TR')}₺ iade kredisi cüzdanına döndü.`
+        : 'Slot vitrine iade edildi.');
+    } catch { showActionError('Slot iade edilemedi.'); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleProposeTactic = async (tacticId: string) => {
+    try {
+      await proposeMatchTactic(match.id, tacticId);
+      setShowTacticPicker(false);
+      await refreshTacticProposals();
+      showActionSuccess('Taktiğin maça önerildi. 📋');
+    } catch (e: any) { showActionError(e?.message || 'Taktik önerilemedi.'); }
   };
 
   // Satın alınan slot için paylaşılabilir devralma kodu üret
@@ -849,6 +780,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (error) throw error;
       const fresh = await getMatchDetails(match.id);
       if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
+      setFillSlot(null);
       showActionSuccess(`Devralma kodu: ${data} — arkadaşına gönder.`);
     } catch (e: any) {
       console.error('make slot code error', e);
@@ -877,28 +809,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
 
-  // Kaptan bir oyuncuyu kadrodan çıkarır. Özel bir kick RPC'si YOK; bu nedenle
-  // KN-3b asgari güvenliği uygulanır: önce SUNUCUDAN taze durum çekilir,
-  // değişiklik taze veri üstüne uygulanır, öyle yazılır (bayat-dizi penceresi
-  // daralır). Kalıcı çözüm (dar player_kick_slot RPC'si) S3 backlog'da.
+  // Kaptan oyuncuyu DAR RPC ile çıkarır (player_kick_slot): iade otomatik
+  // purchasedBy cüzdanına, yedek bildirimi sunucuda — tam-dizi yazımı YOK.
   const handleRemovePlayer = async (slotId: string) => {
     try {
-      const base = (await getMatchDetails(match.id)) ?? match;
-      const isHomeSlot = (base.slots || []).some(s => s?.id === slotId);
-      const reserves = base.reservePlayers || [];
-
-      const src = isHomeSlot ? (base.slots || []) : (base.awaySlots || []);
-      const { updatedSlots, remainingReserves } = fillVacatedSlot(src, reserves, slotId);
-      const nextStatus = isHomeSlot
-        ? checkAndGetStatus(updatedSlots, base.awaySlots)
-        : checkAndGetStatus(base.slots || [], updatedSlots);
-
-      await updateMatch({
-        ...base,
-        ...(isHomeSlot ? { slots: updatedSlots } : { awaySlots: updatedSlots }),
-        reservePlayers: remainingReserves,
-        status: nextStatus,
-      });
+      await kickSlot(match.id, slotId);
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh);
       setActivePlayerSlotId(null);
     } catch (e) {
       console.error(e);
@@ -1198,18 +1115,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     {/* Yönetim aksiyonları — YALNIZ MANAGE (Maçlarım hub'ı) */}
                     {isManageMode && (
                       <div className="w-full mt-4 space-y-2">
-                        {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus !== 'ACCEPTED' && (
-                          <div className="flex gap-2">
-                            <button onClick={() => { setInviteModalSlotId(activePlayerSlot.id); setFriendSearch(''); setActivePlayerSlotId(null); }}
-                              className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-wider text-black bg-[#39FF14] active:scale-95 transition-all flex items-center justify-center gap-1.5">
-                              <UserPlus size={13} /> Arkadaşa Ata
-                            </button>
-                            <button onClick={() => handleMakeSlotCode(activePlayerSlot.id)}
-                              className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-wider text-white bg-white/5 border border-white/15 active:scale-95 transition-all flex items-center justify-center gap-1.5">
-                              <KeyRound size={13} /> Kod Oluştur
-                            </button>
-                          </div>
+                        {/* Alıcı: slottaki arkadaşı çıkar — slot rezervine döner */}
+                        {activePlayerSlot && (activePlayerSlot as any).purchasedBy === currentUserProfile.id && !isMySlot && (
+                          <button onClick={() => handleUnassign(activePlayerSlot.id)} disabled={isProcessing}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-amber-300 bg-amber-950/30 border border-amber-500/20 active:scale-95 transition-all">
+                            ARKADAŞI SLOTTAN ÇIKAR
+                          </button>
                         )}
+                        {/* Legacy INVITED davetini davetli kabul eder */}
                         {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
                           <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
                             className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
@@ -1222,10 +1135,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             KADRODAN ÇIKAR
                           </button>
                         )}
+                        {/* Kendi satın aldığım slottan sahadan çekil (slot bende kalır) */}
+                        {isMySlot && (activePlayerSlot as any)?.purchasedBy === currentUserProfile.id && (
+                          <button onClick={() => { if (activePlayerSlot) handleUnassign(activePlayerSlot.id); }} disabled={isProcessing}
+                            className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-amber-300 bg-amber-950/30 border border-amber-500/20 active:scale-95 transition-all">
+                            SAHADAN ÇEKİL (SLOT SENDE KALIR)
+                          </button>
+                        )}
                         {isMySlot && (
                           <button onClick={() => { setActivePlayerSlotId(null); setShowLeaveConfirm(true); }}
                             className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 active:scale-95 transition-all">
-                            SLOTTAN AYRIL
+                            MAÇTAN AYRIL
                           </button>
                         )}
                       </div>
@@ -1384,51 +1304,38 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         )}
       </AnimatePresence>
 
-      {/* ── Boş Slota Tıklama Karar Modalı (Kendim Katıl / Arkadaş Davet Et) ─────────────────────── */}
+      {/* ── Rezerve Slot Doldurma Sayfası (MANAGE — yalnız satın alan) ─────── */}
       <AnimatePresence>
-        {openSlotActionSlot && (
+        {fillSlot && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end justify-center"
+            onClick={() => setFillSlot(null)}>
             <motion.div
-              initial={{ scale: 0.9, y: 20, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              className="bg-[#161B22] border border-[#39FF14]/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(57,255,20,0.15)] text-center">
-              
-              <div className="w-16 h-16 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center mx-auto mb-4">
-                <UserPlus size={32} className="text-[#39FF14]" />
-              </div>
-              
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">
-                Pozisyon Seçimi
-              </h3>
-              
-              <p className="text-sm text-gray-400 mb-6">
-                <strong>{ { 'GK': 'Kaleci (KL)', 'DEF': 'Savunma (SAV)', 'MID': 'Orta Saha (ORT)', 'FWD': 'Hücum (HÜC)' }[normalizeRole(openSlotActionSlot.role)] || 'Orta Saha (ORT)' }</strong> pozisyonu için bir işlem seçin:
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#161B22] border-t border-[#39FF14]/25 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
+              <h3 className="text-lg font-black text-white italic uppercase tracking-tighter text-center">Slotu Doldur</h3>
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest text-center mt-1 mb-5">
+                { { 'GK': 'Kaleci', 'DEF': 'Defans', 'MID': 'Orta Saha', 'FWD': 'Forvet' }[normalizeRole(fillSlot.role)] || 'Pozisyon' } · Rezerve senin
               </p>
-              
               <div className="space-y-3">
-                <button 
-                  onClick={() => {
-                    setSelectedSlotId(openSlotActionSlot.id);
-                    setOpenSlotActionSlot(null);
-                  }}
-                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-[#39FF14] hover:bg-[#32dd10] transition-colors shadow-[0_0_20px_rgba(57,255,20,0.3)]">
-                  KENDİM KATILACAĞIM
+                <button onClick={() => handleSelfAssign(fillSlot.id)} disabled={isProcessing}
+                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] flex items-center justify-center gap-2 disabled:opacity-60">
+                  {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <><UserPlus size={15} /> KENDİMİ EKLE</>}
                 </button>
-                <button 
-                  onClick={() => {
-                    setInviteModalSlotId(openSlotActionSlot.id);
-                    setFriendSearch('');
-                    setOpenSlotActionSlot(null);
-                  }}
-                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                  ARKADAŞIMI DAVET ET
+                <button onClick={() => { setAssignPickerSlotId(fillSlot.id); setFillSlot(null); }}
+                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-white/5 border border-white/12 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <Users size={15} /> ARKADAŞ EKLE
                 </button>
-                <button 
-                  onClick={() => setOpenSlotActionSlot(null)}
-                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest text-white/50 hover:text-white transition-colors pt-2">
-                  İPTAL
+                <button onClick={() => handleMakeSlotCode(fillSlot.id)}
+                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest text-[#FACC15] bg-[#FACC15]/8 border border-[#FACC15]/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <KeyRound size={15} /> DEVRALMA KODU ÜRET
+                </button>
+                <button onClick={() => handleRelease(fillSlot.id)} disabled={isProcessing}
+                  className="w-full py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-red-400/80 hover:text-red-400 transition-colors">
+                  Slotu İade Et (ücret cüzdanına döner)
                 </button>
               </div>
             </motion.div>
@@ -1436,100 +1343,60 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         )}
       </AnimatePresence>
 
-      {/* ── Arkadaş Davet Modalı ──────────────────────────────────────────── */}
+      {/* ── Arkadaş Atama — GERÇEK arkadaş listesi (friendships/get_friends) ── */}
+      {assignPickerSlotId && (
+        <MatchSquadPicker
+          onClose={() => setAssignPickerSlotId(null)}
+          onAddFriends={handleAssignFriends}
+          onPickTeam={() => { setAssignPickerSlotId(null); showActionError('Takım kadrosu ataması Maç Oluştur akışından yapılır.'); }}
+          onToast={(m) => showActionSuccess(m)}
+          assignedIds={assignedIds}
+          openSlotCount={myReservedSlots.length}
+        />
+      )}
+
+      {/* ── Taktik Öner — kendi Stüdyo taktiklerinden seç (kişi başı 1) ────── */}
       <AnimatePresence>
-        {inviteModalSlotId && (
+        {showTacticPicker && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex flex-col">
-            <div className="flex-1 overflow-y-auto">
-              {/* Modal Header */}
-              <div className="sticky top-0 bg-[#0A0E14]/95 backdrop-blur-xl border-b border-white/5 px-6 pt-14 pb-5 z-10">
-                <div className="flex justify-between items-start mb-5">
-                  {(() => {
-                    const isAway = (match.awaySlots || []).some(s => s?.id === inviteModalSlotId);
-                    return (
-                      <div>
-                        <h2 className="text-xl font-black text-white uppercase italic tracking-tight">
-                          {isAway ? 'RAKİP OLMAYA DAVET ET' : 'ARKADAŞINI DAVET ET'}
-                        </h2>
-                        <p className="text-[10px] text-[#39FF14] font-bold uppercase tracking-widest mt-1">
-                          {isAway ? 'Deplasman Kadrosuna Çağır' : 'Boş Pozisyona Çağır'}
-                        </p>
-                      </div>
-                    );
-                  })()}
-                  <button onClick={() => { setInviteModalSlotId(null); setFriendSearch(''); setInviteCategory('Tümü'); }}
-                    className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10">
-                    <X size={18} />
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end justify-center"
+            onClick={() => setShowTacticPicker(false)}>
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#161B22] border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
+              <h3 className="text-lg font-black text-white italic uppercase tracking-tighter text-center">Taktik Öner</h3>
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest text-center mt-1 mb-4">
+                Stüdyo taktiklerinden birini seç — kişi başı 1 öneri
+              </p>
+              {myTactics.length === 0 ? (
+                <div className="text-center py-8">
+                  <Layers size={26} className="text-white/20 mx-auto mb-2" />
+                  <p className="text-xs text-white/40 font-bold">Henüz kayıtlı taktiğin yok.</p>
+                  <button onClick={() => { setShowTacticPicker(false); navigateTo('STUDIO'); }}
+                    className="mt-3 px-4 py-2.5 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                    Stüdyo'da Taktik Çiz
                   </button>
                 </div>
-                {/* Arama */}
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={16} />
-                  <input type="text" value={friendSearch} onChange={e => setFriendSearch(e.target.value)}
-                    placeholder="Arkadaş ara..."
-                    className="w-full bg-[#161B22] border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#39FF14]/50 transition-colors" />
-                </div>
-              </div>
-
-              <div className="px-6 py-4 max-w-lg mx-auto w-full">
-
-                {/* Kategori Sekmeleri */}
-                <div className="flex gap-2 mb-4 overflow-x-auto custom-scrollbar pb-2">
-                  {['Tümü', 'Favorilerim', 'Lise Tayfası', 'Üniversite', 'İş Arkadaşları'].map(cat => (
-                    <button 
-                      key={cat}
-                      onClick={() => setInviteCategory(cat)}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-                        inviteCategory === cat 
-                          ? (cat === 'Favorilerim' ? 'bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-[#39FF14] text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]')
-                          : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'
-                      }`}
-                    >
-                      {cat === 'Favorilerim' && <Star size={10} fill={inviteCategory === cat ? "black" : "currentColor"} />}
-                      {cat}
+              ) : (
+                <div className="space-y-2 max-h-[46vh] overflow-y-auto custom-scrollbar pr-1">
+                  {myTactics.map(t => (
+                    <button key={t.id} onClick={() => handleProposeTactic(t.id)}
+                      className="w-full flex items-center justify-between gap-3 bg-black/30 border border-white/8 rounded-2xl p-3.5 text-left hover:border-[#39FF14]/30 active:scale-[0.99] transition-all">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-white truncate">{t.name || 'Taktik'}</p>
+                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide mt-0.5">
+                          {[t.formation, t.size].filter(Boolean).join(' · ') || '—'}
+                        </p>
+                      </div>
+                      <ChevronRight size={15} className="text-white/30 shrink-0" />
                     </button>
                   ))}
                 </div>
-
-                {/* Çevrimiçi Arkadaşlar */}
-                {onlineFriends.length > 0 && (
-                  <div className="mb-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Wifi size={12} className="text-[#39FF14]" />
-                      <span className="text-[9px] font-black text-[#39FF14] uppercase tracking-[0.2em]">ÇEVRİMİÇİ — {onlineFriends.length}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {onlineFriends.map(friend => (
-                        <FriendInviteRow key={(friend as any).id} friend={friend} onInvite={() => handleInviteFriend(friend)} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Çevrimdışı Arkadaşlar */}
-                {offlineFriends.length > 0 && (
-                  <div className="mb-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <WifiOff size={12} className="text-white/30" />
-                      <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">ÇEVRİMDIŞI — {offlineFriends.length}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {offlineFriends.map(friend => (
-                        <FriendInviteRow key={(friend as any).id} friend={friend} onInvite={() => handleInviteFriend(friend)} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {filteredFriends.length === 0 && (
-                  <div className="text-center py-12">
-                    <Users size={28} className="text-white/20 mx-auto mb-3" />
-                    <p className="text-xs text-white/30 font-bold uppercase tracking-widest">Arkadaş Bulunamadı</p>
-                  </div>
-                )}
-              </div>
-            </div>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1975,11 +1842,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         )}
 
         {/* ── Özel Maç Kodu (yalnız kaptana) ── */}
-        {match.visibility === 'PRIVATE' && match.privateCode && isCaptain && (
+        {match.visibility === 'PRIVATE' && privateCode && isCaptain && (
           <div className="px-4 pb-3">
             <button
               onClick={() => {
-                const code = match.privateCode!;
+                const code = privateCode!;
                 if (navigator.clipboard?.writeText) {
                   navigator.clipboard.writeText(code).then(
                     () => showActionSuccess(`Kod kopyalandı: ${code}`),
@@ -1997,7 +1864,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 </div>
                 <div className="text-left min-w-0">
                   <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#FACC15]/70">Özel Maç Kodu</p>
-                  <p className="text-lg font-black tracking-[0.3em] text-white truncate">{match.privateCode}</p>
+                  <p className="text-lg font-black tracking-[0.3em] text-white truncate">{privateCode}</p>
                 </div>
               </div>
               <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FACC15] shrink-0">
@@ -2083,6 +1950,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <span>{match.time || '—'}</span>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {(match as any).is_platform && (
+                <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase text-black bg-[#FACC15] border border-[#FACC15]"
+                  title="OYNA Organizasyonu — platform maçı">
+                  OYNA
+                </span>
+              )}
               <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border"
                 style={{ color: diffConf.color, borderColor: diffConf.color + '40', background: diffConf.color + '12' }}>
                 {diffConf.label}
@@ -2221,7 +2094,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 className="mb-4 flex items-center gap-3 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-2xl px-4 py-3">
                 <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" />
                 <p className="text-xs font-bold text-[#39FF14]">
-                  Kadroya alındın! Boş pozisyonlara <span className="font-black">+</span> basarak arkadaşlarını davet edebilirsin.
+                  Kadrodasın! Satın aldığın rezerve slotları Maçlarım lobisinden doldurabilirsin.
                 </p>
               </motion.div>
             )}
@@ -2229,6 +2102,37 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
         {/* ── Takım planı önizlemesi — yalnız atanan takımın üyeleri (L76) ── */}
         <TeamPlanBanner matchId={match.id} />
+
+        {/* ── Taktik Önerileri — kişi başı 1 (YALNIZ Maçlarım lobisi) ────── */}
+        {isManageMode && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">Taktik Önerileri</p>
+              <button
+                onClick={async () => { setMyTactics(await listMyTacticsLite()); setShowTacticPicker(true); }}
+                className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/8 border border-[#39FF14]/25 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all">
+                + Taktik Öner
+              </button>
+            </div>
+            {tacticProposals.length === 0 ? (
+              <p className="text-[10px] text-white/25 italic px-1">Henüz öneri yok — Stüdyo taktiğini ilk öneren sen ol.</p>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                {tacticProposals.map(p => (
+                  <button key={p.proposer_id}
+                    onClick={() => { setStudioContext({ tacticId: p.tactic_id }); navigateTo('STUDIO'); }}
+                    className="shrink-0 min-w-[150px] text-left bg-[#161B22]/80 border border-white/8 rounded-2xl p-3 hover:border-[#39FF14]/25 active:scale-[0.98] transition-all">
+                    <p className="text-[11px] font-black text-white truncate">{p.tactic_name || 'Taktik'}</p>
+                    <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide truncate mt-0.5">
+                      {[p.formation, p.size].filter(Boolean).join(' · ') || '—'}
+                    </p>
+                    <p className="text-[9px] text-[#39FF14]/80 font-bold truncate mt-1.5">{p.proposer_name}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── TAKTİK SAHA ─────────────────────────────────────────────────── */}
         <AnimatePresence mode="wait">
@@ -2253,14 +2157,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   : `${match.awayTeamName || awayTeam?.name || 'TAKIM'} Kadrosu`}
               </p>
             </div>
-            {selectedSlotId && (
+            {selectedSlotIds.length > 0 && (
               <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border animate-pulse ${
-                  pitchSide === 'home'
-                    ? 'text-[#39FF14] bg-[#39FF14]/10 border-[#39FF14]/30'
-                    : 'text-red-500 bg-red-500/10 border-red-500/30'
-                }`}>
-                Pozisyon Seçildi ✓
+                className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border text-[#39FF14] bg-[#39FF14]/10 border-[#39FF14]/30">
+                {selectedSlotIds.length} Slot Seçildi
               </motion.span>
             )}
           </div>
@@ -2304,13 +2204,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             {/* SLOTLAR — Kanonik Koordinatlarla */}
             {(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots).map((slot) => {
               if (!slot) return null;
-              const isSelected = selectedSlotIds.includes(slot.id) || selectedSlotId === slot.id;
+              const isSelected = selectedSlotIds.includes(slot.id);
               const isTaken = slot.status === 'TAKEN';
               const isOpen = slot.status === 'OPEN';
               const player = slot.player;
               const isMyOwnSlot = player?.id === currentUserProfile?.id;
-              const inviteStatus = invitesSent[slot.id] || 'NONE';
-              const invitedName = invitedFriendNames[slot.id];
+              // REZERVE: satın alınmış ama oyuncu atanmamış — "DOLU" çizilir.
+              const isReserved = !isOpen && !player;
+              const isMineReserved = isReserved && (slot as any).purchasedBy === currentUserProfile?.id;
               const isHiredGkHere = slot.id === hiredGkSlotId;
 
               return (
@@ -2399,25 +2300,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </motion.div>
                     </button>
                   ) : isOpen ? (
-                    inviteStatus === 'INVITED' ? (
-                      /* ── Davet Gönderildi Slotu ────────────────── */
-                      <button
-                        onClick={() => handleSlotClick(slot)}
-                        className="w-full h-full rounded-full focus:outline-none cursor-pointer"
-                      >
-                        <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }}
-                          className="relative w-full h-full flex flex-col items-center justify-center">
-                          <div className="w-12 h-12 rounded-full border-2 border-orange-400/60 bg-orange-950/40 flex items-center justify-center shadow-[0_0_10px_rgba(251,146,60,0.3)]">
-                            <Send size={14} className="text-orange-400" />
-                          </div>
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 px-1.5 py-0.5 rounded-full border border-orange-400/30 max-w-[64px] z-20 pointer-events-none">
-                            <span className="text-[7px] font-black text-orange-400 whitespace-nowrap truncate block">
-                              {(invitedName || 'Davet').split(' ')[0]}
-                            </span>
-                          </div>
-                        </motion.div>
-                      </button>
-                    ) : (
+                    (
                       /* ── Açık Slot ──────────────────────────────── */
                       <button
                         onClick={() => handleSlotClick(slot)}
@@ -2431,9 +2314,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-200 relative ${
                             isSelected
                               ? 'bg-[#39FF14] border-white text-black shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
-                              : isAlreadyJoined
-                                ? 'bg-black/50 border-white/20 text-white/40 hover:border-[#39FF14]/60 hover:bg-[#39FF14]/10 hover:text-[#39FF14] backdrop-blur-md'
-                                : 'bg-black/50 border-white/25 text-white/60 hover:border-[#39FF14]/50 backdrop-blur-md'
+                              : 'bg-black/50 border-white/25 text-white/60 hover:border-[#39FF14]/50 backdrop-blur-md'
                           }`}>
                             {isSelected ? (
                               <CheckCircle2 size={20} className="drop-shadow-md" />
@@ -2454,19 +2335,49 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <span className={`text-[7px] font-black uppercase truncate block whitespace-nowrap ${
                               isSelected ? 'text-[#39FF14]' : 'text-white/40'
                             }`}>
-                              {isSelected ? 'SEÇİLDİ' : (isAlreadyJoined ? 'DAVET' : (
+                              {isSelected ? 'SEÇİLDİ' : (
                                 { GOALKEEPER: 'KAL', MIDFIELDER: 'ORT', DEFENDER: 'DEF', FORWARD: 'FOR' }[slot.role] ?? slot.role?.slice(0,3) ?? 'BOŞ'
-                              ))}
+                              )}
                             </span>
                           </div>
                         </motion.div>
                       </button>
                     )
+                  ) : isMineReserved && isManageMode ? (
+                    /* ── SENİN REZERVEN — doldurmak için dokun ─────── */
+                    <button onClick={() => handleSlotClick(slot)} className="w-full h-full rounded-full focus:outline-none cursor-pointer">
+                      <motion.div whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+                        className="relative w-full h-full flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-[#39FF14] bg-[#39FF14]/15 text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.45)] animate-pulse">
+                          <Plus size={18} strokeWidth={3} />
+                        </div>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 bg-black/85 px-2.5 py-0.5 rounded-full border border-[#39FF14]/40 z-20 pointer-events-none">
+                          <span className="text-[7px] font-black text-[#39FF14] uppercase tracking-widest whitespace-nowrap">EKLE</span>
+                        </div>
+                      </motion.div>
+                    </button>
                   ) : (
-                    /* ── Kilitli Slot ───────────────────────────── */
-                    <div className="w-12 h-12 rounded-full bg-black/40 border border-white/10 flex items-center justify-center">
-                      <X size={14} className="text-white/20" />
-                    </div>
+                    /* ── DOLU — rezerve edildi, seçilemez (şeffaf çarpı emekli) ── */
+                    <button onClick={() => handleSlotClick(slot)} className="w-full h-full rounded-full focus:outline-none cursor-default">
+                      <div className="relative w-full h-full flex flex-col items-center justify-center">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-[inset_0_2px_10px_rgba(0,0,0,0.6)] ${
+                          pitchSide === 'home'
+                            ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-400/70'
+                            : 'bg-red-950/80 border-red-500/30 text-red-400/70'
+                        }`}>
+                          <Lock size={15} />
+                        </div>
+                        <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-2.5 py-0.5 rounded-full border z-20 pointer-events-none ${
+                          pitchSide === 'home'
+                            ? 'bg-emerald-950/90 border-emerald-500/40'
+                            : 'bg-red-950/90 border-red-500/40'
+                        }`}>
+                          <span className={`text-[7px] font-black uppercase tracking-widest whitespace-nowrap ${
+                            pitchSide === 'home' ? 'text-emerald-300' : 'text-red-300'
+                          }`}>{isMineReserved ? 'SENİN' : 'DOLU'}</span>
+                        </div>
+                      </div>
+                    </button>
                   )}
                 </div>
               );
@@ -2475,8 +2386,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
           <p className="text-center text-[9px] text-white/25 font-bold mt-3 uppercase tracking-[0.2em]">
             {isAlreadyJoined
-              ? '+ butonuna basarak arkadaşlarını davet et'
-              : 'Pozisyona dokun — ardından aşağıdan "Sahaya Çık"'}
+              ? 'Kadrodasın — oyunculara dokunup kartlarını görebilirsin'
+              : 'Slot seç — ardından aşağıdan "Öde ve Katıl"'}
           </p>
 
           {/* Yedek Kulübesi (Reserve List) */}
@@ -2511,7 +2422,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
 
           {/* Taktik / Diziliş Seçimi (Yalnızca Kaptanlara Özel) */}
-          {isManageMode && ((pitchSide === 'home' && isHomeCaptain) || (pitchSide === 'away' && isAwayCaptain)) && (
+          {isManageMode && isCaptain && (
             <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto">
               <span className="block text-[8px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 px-1">
                 TAKIM DİZİLİŞİNİ GÜNCELLE
@@ -2526,25 +2437,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         const sizeVal = pitchSide === 'home' ? squadSize : inferSquadSize(match.awaySlots?.length || match.slots.length);
                         const coords = FORMATIONS[sizeVal]?.[fName];
                         if (coords) {
-                          // KN-3b taze-önce: diziliş koordinatları sunucudan
-                          // çekilen TAZE kadro üstüne uygulanır (bayat match
-                          // yazımı eşzamanlı katılanı ezmesin).
-                          const base = (await getMatchDetails(match.id)) ?? match;
-                          const mapCoords = (s: PositionSlot, index: number) => {
+                          // DAR RPC: yalnız koordinat/rol yazar — doluluk anahtarlarına
+                          // dokunamaz (tam-dizi yazımı emekli, KN-3 tamam).
+                          const srcSlots = pitchSide === 'home' ? (match.slots || []) : (match.awaySlots || []);
+                          const payload = srcSlots.map((s, index) => {
                             const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
-                            return {
-                              ...s,
-                              x: coord.x,
-                              y: coord.y,
-                              role: coord.role,
-                              player: s.player ? { ...s.player, position: coord.role, x: coord.x, y: coord.y } : undefined
-                            };
-                          };
-                          if (pitchSide === 'home') {
-                            await updateMatch({ ...base, slots: (base.slots || []).map(mapCoords) });
-                          } else {
-                            await updateMatch({ ...base, awaySlots: (base.awaySlots || []).map(mapCoords) });
-                          }
+                            return { id: s.id, x: coord.x, y: coord.y, role: coord.role };
+                          });
+                          await updateFormationRpc(match.id, pitchSide, payload);
+                          const fresh = await getMatchDetails(match.id);
+                          if (fresh) applyMatchLocal(fresh);
                           if (navigator.vibrate) navigator.vibrate(30);
                         }
                       } catch (err) {
@@ -2873,7 +2775,49 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             ) : (() => {
               const activeSlots = pitchSide === 'home' ? (match.slots || []) : (match.awaySlots || []);
               const isActiveSideFull = activeSlots.length > 0 && activeSlots.every(s => s.status === 'TAKEN');
-              
+
+              if (selectedSlotIds.length > 0) {
+                const unitPrice = Number((match as any).price) || 0;
+                const total = selectedSlotIds.length * unitPrice;
+                return (
+                  <motion.button
+                    disabled={isProcessing}
+                    onClick={handleBuySlots}
+                    whileTap={{ scale: 0.96 }}
+                    className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-black"
+                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                  >
+                    {isProcessing ? (
+                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
+                    ) : total > 0 ? (
+                      <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
+                    ) : (
+                      <><span>{selectedSlotIds.length} SLOT</span><span className="opacity-60">·</span><span>YERİNİ AYIRT</span><ChevronRight size={18} /></>
+                    )}
+                  </motion.button>
+                );
+              }
+
+              // Satın alınmış ama doldurulmamış slotların var → tek tuşla doldurmaya geç.
+              if (myReservedSlots.length > 0) {
+                return (
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      if (!isManageMode) useAppStore.getState().setLobbyMode('MANAGE');
+                      const first = myReservedSlots[0];
+                      if (first) setFillSlot(first as PositionSlot);
+                    }}
+                    className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 text-black cursor-pointer"
+                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.5), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                  >
+                    <UserPlus size={18} />
+                    <span>SLOTLARINI DOLDUR ({myReservedSlots.length})</span>
+                    <ChevronRight size={18} />
+                  </motion.button>
+                );
+              }
+
               if (isActiveSideFull) {
                 return (
                   <motion.button
@@ -2895,96 +2839,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 );
               }
 
-              if (!isCaptain && selectedSlotIds.length > 0) {
-                const unitPrice = Number((match as any).price) || 0;
-                const total = selectedSlotIds.length * unitPrice;
-                return (
-                  <motion.button
-                    disabled={isProcessing}
-                    onClick={handleBuySlots}
-                    whileTap={{ scale: 0.96 }}
-                    className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-black"
-                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
-                  >
-                    {isProcessing ? (
-                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
-                    ) : (
-                      <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
-                    )}
-                  </motion.button>
-                );
-              }
-
-              if (selectedSlotId) {
-                if (isCaptain) {
-                  return (
-                    <div className="flex gap-3">
-                      {/* Sahaya Çık */}
-                      <motion.button
-                        onClick={handleJoin}
-                        disabled={isProcessing}
-                        animate={{ scale: [1, 1.015, 1] }}
-                        transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
-                        whileTap={{ scale: 0.95 }}
-                        className="w-[60%] h-16 rounded-[22px] font-black text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 transition-all text-black cursor-pointer"
-                        style={{
-                          background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)',
-                          boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
-                        }}>
-                        {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <><span>SAHAYA ÇIK</span><ChevronRight size={17} /></>}
-                      </motion.button>
-                      {/* Oyuncu Ekle */}
-                      <motion.button
-                        onClick={() => {
-                          setInviteModalSlotId(selectedSlotId);
-                        }}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="w-[40%] h-16 rounded-[22px] font-black text-xs uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 text-white transition-all cursor-pointer"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(0,242,254,0.15) 0%, rgba(79,172,254,0.10) 100%)',
-                          border: '1px solid rgba(0,242,254,0.3)',
-                          boxShadow: '0 0 20px rgba(0,242,254,0.25)',
-                        }}>
-                        <UserPlus size={15} />
-                        <span>OYUNCU</span>
-                      </motion.button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <motion.button
-                    disabled={isProcessing}
-                    onClick={handleJoin}
-                    animate={{ scale: [1, 1.018, 1] }}
-                    transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                    whileTap={{ scale: 0.95 }}
-                    className="w-full h-16 rounded-[24px] font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-400 cursor-pointer"
-                    style={{
-                      background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)',
-                      boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
-                      color: '#000',
-                      border: 'none',
-                    }}>
-                    {isProcessing ? (
-                      <><Loader2 size={20} className="animate-spin" /><span>KAYIT EDİLİYOR...</span></>
-                    ) : (
-                      <><span>SAHAYA ÇIK</span><ChevronRight size={20} /></>
-                    )}
-                  </motion.button>
-                );
-              }
-
-              // Pozisyon seçilmedi ve saha dolu değil → tam genişlikte "pozisyon seç" ipucu.
-              // (Boş yer varken yedek girişi yok; yedek yalnız saha tamamen dolunca açılır.)
               return (
                 <div className="w-full h-16 rounded-[24px] bg-white/[0.02] border border-dashed border-white/20 text-white/40 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
                   <Zap size={13} className="text-white/20" />
-                  <span>POZİSYON SEÇ</span>
+                  <span>SLOT SEÇ</span>
                 </div>
               );
-            })()}
+                        })()}
           </div>
         </div>
       </div>
@@ -3062,7 +2923,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {/* Başlık */}
               <div className="flex items-center justify-between px-6 pt-7 pb-5">
                 <div>
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{activePitch.name}</p>
+                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{match.location || 'Saha'}</p>
                   <h2 className="text-base font-black text-white uppercase italic tracking-tight">MAÇ ÖZELLİKLERİ</h2>
                 </div>
                 <button
@@ -3082,11 +2943,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">YAŞ GRUBU</span>
-                    <span className="text-sm font-black text-white uppercase italic">{match.ageGroup || ageLimit}</span>
+                    <span className="text-sm font-black text-white uppercase italic">{match.ageGroup || 'Belirtilmedi'}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">CİNSİYET</span>
-                    <span className="text-sm font-black text-white uppercase italic">{match.gender || genderRule}</span>
+                    <span className="text-sm font-black text-white uppercase italic">{match.gender || 'Belirtilmedi'}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">OYUN SERTLİĞİ</span>
@@ -3126,41 +2987,5 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     </div>
   );
 };
-
-// ─── Arkadaş Satır Bileşeni ───────────────────────────────────────────────────
-
-const FriendInviteRow: React.FC<{ friend: any; onInvite: () => void }> = ({ friend, onInvite }) => (
-  <motion.button
-    whileHover={{ scale: 1.01, x: 2 }}
-    whileTap={{ scale: 0.98 }}
-    onClick={onInvite}
-    className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3.5 flex items-center justify-between transition-all hover:border-[#39FF14]/20 hover:bg-white/[0.02] group"
-  >
-    <div className="flex items-center gap-3">
-      <div className="relative">
-        <img src={friend.avatar || `https://i.pravatar.cc/150?u=${friend.id}`}
-          alt={friend.name} className="w-11 h-11 rounded-full object-cover bg-[#0A0E14] border border-white/10" />
-        <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#161B22] ${friend.online ? 'bg-[#39FF14]' : 'bg-white/20'}`} />
-      </div>
-      <div className="text-left">
-        <p className="text-sm font-bold text-white leading-tight">{friend.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 text-white/40 uppercase tracking-widest">
-            {friend.pos || friend.position || 'OYUNCU'}
-          </span>
-          {friend.fp && (
-            <span className="text-[9px] font-bold text-yellow-400 flex items-center gap-0.5">
-              <Star size={8} className="fill-current" /> {friend.fp}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-    <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all bg-[#39FF14]/5 border border-[#39FF14]/15 text-[#39FF14] group-hover:bg-[#39FF14]/15 group-hover:border-[#39FF14]/40 group-hover:shadow-[0_0_12px_rgba(57,255,20,0.25)]">
-      <Send size={11} />
-      <span>Davet</span>
-    </div>
-  </motion.button>
-);
 
 export default MatchJoin;

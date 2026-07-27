@@ -293,24 +293,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         if (bucket) {
           setDna(prev => (prev.age && prev.age.length && prev.age[0] !== 'Tümü') ? prev : { ...prev, age: [bucket] });
         }
-        // 2) Kurucuyu sahaya diz (kendi mevkisine) — kadro boşsa
-        setMyPlayers(prev => {
-          if (Object.keys(prev).length > 0) return prev;
-          const role = roleFromPositionText(profile.position);
-          const defaults = getSymmetricPositions(perTeam, orientation);
-          let idx = defaults.findIndex(d => d.role === role);
-          if (idx < 0) idx = defaults.findIndex(d => d.role !== 'KL');
-          if (idx < 0) idx = 0;
-          const storeUser = (adminUsers || []).find(u => u.id === uid);
-          return {
-            [`slot_${idx}`]: {
-              id: uid,
-              name: profile.full_name || storeUser?.name || 'Sen',
-              avatar: profile.avatar_url || storeUser?.avatar || '',
-              status: 'CONFIRMED' as const,
-            },
-          };
-        });
+        // 2) (Tek lobi P4) Kurucuyu ücretsiz sahaya dizme KALDIRILDI: kurucu
+        // eşitliği — kurucu da yayın sonrası kendi lobisinden slot satın alır.
       } catch {
         /* prefill best-effort — profil çekilemezse sessizce varsayılan kalır */
       } finally {
@@ -324,27 +308,21 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
   // ── Takım kadrosunu sahaya diz (yeni sosyal sistem: get_team_squad) ──────
   // Legacy t.roster yeni takımlarda boş olduğu için kanonik get_team_squad
   // RPC'sinden çeker; homeTeamId/homeTeamName'i de kaydeder (publish'te yazılır).
+  // (Tek lobi P4) Takım seçimi artık yalnız YAPI yazar (homeTeamId/homeTeamName):
+  // kadro ücretsiz dizilmez — üyeler yayın sonrası slot satın alarak katılır
+  // (kaptan isterse toplu alıp lobiden atar).
   const loadSquadFromTeam = useCallback(async (teamId: string, teamName?: string) => {
     try {
       const squad = await getTeamSquad(teamId);
-      const next: Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }> = {};
-      squad.slice(0, perTeam).forEach((m, i) => {
-        next[`slot_${i}`] = {
-          id: m.user_id,
-          name: m.full_name || 'Oyuncu',
-          avatar: m.avatar_url || '',
-          status: 'CONFIRMED',
-        };
-      });
-      setMyPlayers(next);
       setHomeTeamId(teamId);
       if (teamName) setHomeTeamName(teamName);
+      showToast(`${teamName || 'Takım'} seçildi — üyeler lobiden slot alarak katılır.`);
       return squad.length;
     } catch (e) {
       console.warn('[useMatchCreate] takım kadrosu yüklenemedi:', e);
       return 0;
     }
-  }, [perTeam]);
+  }, []);
 
   // ── Yayınlanabilirlik durumu (canlı checklist + engel sebebi) ────────────
   // Kadro sayısı SAHADAKİ (görünür) oyunculardan türetilir — format küçültülünce
@@ -390,31 +368,17 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     const teamObj = homeTeamId ? myTeams.find(t => t.id === homeTeamId) : null;
     const resolvedHomeTeamName = homeTeamName.trim() || teamObj?.name || '';
     const resolvedHomeTeamId = homeTeamId || teamObj?.id || undefined;
-    // İki sütun modeli (MatchJoin ile uyumlu): ev sahibi → slots, rakip → awaySlots.
-    const homeSlots: PositionSlot[] = pitchSlots.map((slot): PositionSlot => {
-      const baseSlot: PositionSlot = {
-        id: slot.id,
-        role: slot.role,
-        x: slot.x,
-        y: slot.y,
-        status: slot.player ? 'TAKEN' : 'OPEN',
-        ...(isTeamMatch ? { side: 'HOME' as const } : {}),
-      };
-      if (slot.player) {
-        baseSlot.player = {
-          id: slot.player.id,
-          name: slot.player.name,
-          avatar: slot.player.avatar,
-          style: 'Bitirici',
-          rating: 4.8,
-          position: slot.role,
-          x: slot.x,
-          y: slot.y,
-          paymentStatus: slot.player.status === 'CONFIRMED' ? 'PAID' : 'PENDING',
-        };
-      }
-      return baseSlot;
-    });
+    // TEK LOBİ KURALI: oluşturma YAPI kurar (diziliş/rol/koordinat) — doluluk
+    // YALNIZ satın almayla olur. Sunucu (player_create_match) zaten normalize
+    // eder; burada da dürüst UI: hiçbir slot TAKEN/player ile yayınlanmaz.
+    const homeSlots: PositionSlot[] = pitchSlots.map((slot): PositionSlot => ({
+      id: slot.id,
+      role: slot.role,
+      x: slot.x,
+      y: slot.y,
+      status: 'OPEN',
+      ...(isTeamMatch ? { side: 'HOME' as const } : {}),
+    }));
     // Rakip tarafı (awaySlots) HER ZAMAN üretilir — maç iki takımdır; eşik (toplam−2)
     // ve kişi başı ücret (perTeam×2) bunun üzerinden hesaplanır. Takım maçında side:'AWAY'.
     const awaySlots: PositionSlot[] = pitchSlots.map((slot, i): PositionSlot => ({
@@ -510,22 +474,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
           });
         }
 
-        // Add user notifications for pending players
-        pitchSlots.forEach(slot => {
-            if (slot.player && slot.player.status === 'PENDING') {
-                addUserNotification({
-                    id: Math.random().toString(),
-                    type: 'INVITE',
-                    title: 'Maç Daveti ⚽',
-                    desc: `${selectedPitch?.name || 'Saha'} maçı için kadroya davet edildin!`,
-                    time: 'Az önce',
-                    iconName: 'Trophy',
-                    color: 'bg-yellow-500',
-                    textColor: 'text-yellow-500'
-                });
-                incrementUnreadNotifications();
-            }
-        });
+        // (Tek lobi P4) Yayında yerel "davet" bildirimi üretimi kaldırıldı —
+        // gerçek davetler lobide player_assign_slot ile (sunucu bildirimli) yapılır.
 
         // Kapora gerekiyorsa ödeme ekranına. Kapora yoksa (ücretsiz saha) maç
         // ZATEN oluştu → kurucu HER ZAMAN lobiye gider (davet/kod paylaşımı orada).

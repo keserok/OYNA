@@ -290,15 +290,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         ? 'Tamamı OYNA bakiyenden karşılanıyor — kart gerekmez.'
         : 'Bakiye kullanılmıyor; tutarın tamamı seçtiğin karttan tahsil edilir.';
 
-  // Lobi state'ini tazele (lost-update önleme — sunucu SSOT)
+  // Lobi state'ini tazele (lost-update önleme — sunucu SSOT).
+  // KN-3: taze veri YERELE uygulanır, DB'ye GERİ YAZILMAZ (eski updateMatch
+  // yolu gereksiz tam yazımdı; player_update_match artık slot da yazmaz).
   const refreshMatch = async (matchId?: string) => {
     if (!matchId) return;
     try {
       const fresh = await getMatchDetails(matchId);
-      const current = useAppStore.getState().selectedMatch;
-      if (fresh && current && current.id === matchId) {
-        await updateMatch({ ...current, ...(fresh as any) });
-      }
+      if (fresh) useAppStore.getState().applyMatchLocal(fresh as any);
     } catch { /* kritik değil */ }
   };
 
@@ -611,9 +610,21 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
     const store = useAppStore.getState();
     setPaymentContext(null);
     switch (ctx?.kind) {
-      case 'MATCH_JOIN':
-        onBack();
+      case 'MATCH_JOIN': {
+        // Tek tuşla Maçlarım lobisine: satın alınan REZERVE slotlar orada
+        // doldurulur (kendim / arkadaş / kod). Geri tuşu Maçlarım'a döner.
+        const matchId = ctx.matchId;
+        store.setLobbyMode('MANAGE');
+        store.resetNavigation('MY_MATCHES');
+        if (matchId) {
+          getMatchDetails(matchId).then((fresh) => {
+            const st = useAppStore.getState();
+            if (fresh) st.setSelectedMatch(fresh);
+            st.navigateTo('MATCH_JOIN');
+          });
+        }
         break;
+      }
       case 'MATCH_CREATE_DEPOSIT':
         store.resetNavigation(store.selectedMatch ? 'MATCH_JOIN' : 'MATCH_DISCOVERY');
         break;
@@ -755,7 +766,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         <div className="shrink-0 px-5 pb-safe pt-3 flex flex-col gap-2.5">
           <button onClick={handleSuccessPrimary}
             className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-black text-[15px] rounded-2xl active:scale-[0.98] transition-all">
-            {ctx.kind === 'MATCH_JOIN' ? 'LOBİYE DÖN'
+            {ctx.kind === 'MATCH_JOIN' ? 'SLOTLARINI DOLDUR → MAÇLARIM'
               : ctx.kind === 'MATCH_CREATE_DEPOSIT' ? 'MAÇ LOBİSİNE GİT'
               : 'REZERVASYONLARIMA GİT'}
           </button>

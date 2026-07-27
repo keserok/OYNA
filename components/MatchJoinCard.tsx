@@ -138,6 +138,22 @@ const MiniPitch: React.FC<MiniPitchProps> = ({ slots, currentUserUid }) => (
                 </span>
               </div>
             </>
+          ) : isTaken ? (
+            /* REZERVE (satın alındı, atanmadı) — sayaçla tutarlı DOLU çizimi */
+            <>
+              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shadow-[inset_0_1px_5px_rgba(0,0,0,0.6)] ${
+                (slot as any).purchasedBy === currentUserUid
+                  ? 'border-[#39FF14]/60 bg-[#39FF14]/15 text-[#39FF14]'
+                  : 'border-emerald-500/30 bg-emerald-950/70 text-emerald-400/70'
+              }`}>
+                <span className="text-[8px] font-black leading-none">●</span>
+              </div>
+              <div className="mt-1 px-1.5 py-px rounded-full border bg-emerald-950/85 border-emerald-500/35 shadow-sm">
+                <span className="text-[6px] font-black text-emerald-300 uppercase whitespace-nowrap block leading-none">
+                  {(slot as any).purchasedBy === currentUserUid ? 'SENİN' : 'DOLU'}
+                </span>
+              </div>
+            </>
           ) : (
             <div className="w-7 h-7 rounded-full border-2 border-dashed border-white/15 bg-white/4 flex items-center justify-center">
               <span className="text-[6px] font-bold text-white/25 uppercase">

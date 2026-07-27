@@ -23,83 +23,11 @@ export interface Match {
 }
 
 // ============================================================================
-// 1. OYUNCU (KAPTAN) UYGULAMASI FONKSİYONLARI
+// 1. AÇIK MAÇ LİSTELERİ (Top Oyna / Servis paneli)
 // ============================================================================
-
-export const createMatch = async (matchData: Omit<Match, 'id' | 'createdAt' | 'status' | 'applicants'>) => {
-  try {
-    const { data, error } = await supabase.from('matches').insert([{
-      pitch_id: matchData.pitchId,
-      pitch_name: matchData.pitchName,
-      captain_id: matchData.captainId,
-      captain_name: matchData.captainName,
-      date: matchData.date,
-      time: matchData.time,
-      status: 'OPEN',
-      applicants: []
-    }]).select().single();
-
-    if (error) throw error;
-    return data.id;
-  } catch (error) {
-    console.error("Maç oluşturulurken hata oluştu: ", error);
-    throw error;
-  }
-};
-
-export const approveApplicant = async (matchId: string, applicantUid: string, role: 'GOALKEEPER' | 'REFEREE') => {
-  try {
-    const updateData: any = {};
-    if (role === 'GOALKEEPER') updateData.gk_id = applicantUid;
-    else if (role === 'REFEREE') updateData.ref_id = applicantUid;
-    
-    updateData.status = 'CONFIRMED';
-
-    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
-    if (error) throw error;
-
-    console.log(`${role} onaylandı: `, applicantUid);
-  } catch (error) {
-    console.error("Başvuru onaylanırken hata oluştu: ", error);
-    throw error;
-  }
-};
-
-// ============================================================================
-// 2. KALECİ / HAKEM UYGULAMASI FONKSİYONLARI
-// ============================================================================
-
-export const applyToMatch = async (matchId: string, user: { uid: string, displayName: string, role: 'GOALKEEPER' | 'REFEREE', photoURL?: string }) => {
-  try {
-    // 1. Mevcut başvuruları çek
-    const { data: match, error: fetchError } = await supabase
-      .from('matches')
-      .select('applicants')
-      .eq('id', matchId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const applicants = match.applicants || [];
-    applicants.push({
-      ...user,
-      status: 'PENDING'
-    });
-
-    // 2. Yeni listeyi güncelle
-    const { error: updateError } = await supabase
-      .from('matches')
-      .update({ applicants })
-      .eq('id', matchId);
-
-    if (updateError) throw updateError;
-
-    console.log("Maça başvuru yapıldı: ", matchId);
-  } catch (error) {
-    console.error("Maça başvururken hata oluştu: ", error);
-    throw error;
-  }
-};
+// Legacy createMatch/approveApplicant/applyToMatch kaldırıldı (P5): maç
+// oluşturma tek yol player_create_match / admin_create_match RPC'leridir;
+// kaleci-hakem akışı serviceRequestService üzerinden yürür.
 
 export const subscribeToOpenMatches = (callback: (matches: Match[]) => void) => {
   // İlk veriyi çek
@@ -164,7 +92,7 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       creatorId: data.captain_id || data.creatorId,
       // FAZ 3: maç çekirdeği alanları camelCase'e map et
       visibility: data.visibility || 'OPEN',
-      privateCode: data.private_code || data.privateCode || undefined,
+      // privateCode artık satırda YOK (P1 güvenlik): kurucu getMyMatchPrivateCode ile çeker.
       pitchId: data.pitch_id || data.pitchId || undefined,
       courtId: data.court_id || undefined,
       courtName,
@@ -427,18 +355,65 @@ export const saveMatchNote = async (matchId: string, note: string): Promise<void
   if (error) throw error;
 };
 
-export const joinMatchSlot = async (
+// ============================================================================
+// 3b. SLOT YAŞAM DÖNGÜSÜ — dar RPC sarmalayıcıları (P2, tek yazım yolu)
+// ============================================================================
+// Doluluk değiştiren TEK yüzey bunlardır; matches tablosuna doğrudan update yok.
+
+/** Alıcı kendini rezerve slota yerleştirir (RESERVED → SELF). */
+export const selfAssignSlot = async (matchId: string, slotId: string): Promise<void> => {
+  const { error } = await supabase.rpc('player_self_assign', { p_match_id: matchId, p_slot_id: slotId });
+  if (error) throw error;
+};
+
+/** Arkadaş ANINDA slota atanır (RESERVED → ASSIGNED) + gerçek bildirim alır. */
+export const assignSlotToFriend = async (matchId: string, slotId: string, friendId: string): Promise<void> => {
+  const { error } = await supabase.rpc('player_assign_slot', {
+    p_match_id: matchId, p_slot_id: slotId, p_friend_id: friendId,
+  });
+  if (error) throw error;
+};
+
+/** Slottaki oyuncu çıkar; slot alıcının rezervine döner (para alıcıda kalır). */
+export const unassignSlot = async (matchId: string, slotId: string): Promise<void> => {
+  const { error } = await supabase.rpc('player_unassign_slot', { p_match_id: matchId, p_slot_id: slotId });
+  if (error) throw error;
+};
+
+/** Alıcı slotu vitrine iade eder — kurallı iade purchasedBy cüzdanına döner. */
+export const releaseSlot = async (matchId: string, slotId: string): Promise<number> => {
+  const { data, error } = await supabase.rpc('player_release_slot', { p_match_id: matchId, p_slot_id: slotId });
+  if (error) throw error;
+  return Number((data as { refunded?: number } | null)?.refunded) || 0;
+};
+
+/** Kurucu oyuncuyu çıkarır — iade otomatik, yedek bildirimi sunucuda. */
+export const kickSlot = async (matchId: string, slotId: string): Promise<number> => {
+  const { data, error } = await supabase.rpc('player_kick_slot', { p_match_id: matchId, p_slot_id: slotId });
+  if (error) throw error;
+  return Number((data as { refunded?: number } | null)?.refunded) || 0;
+};
+
+/** Diziliş güncelleme — YALNIZ koordinat/rol yazar, doluluk anahtarlarına dokunamaz. */
+export const updateFormationRpc = async (
   matchId: string,
-  updatedSlots: PositionSlot[],
-  isAway: boolean
+  side: 'home' | 'away',
+  coords: { id: string; x: number; y: number; role: string }[],
 ): Promise<void> => {
+  const { error } = await supabase.rpc('player_update_formation', {
+    p_match_id: matchId, p_side: side, p_coords: coords,
+  });
+  if (error) throw error;
+};
+
+/** Özel maç kodu — YALNIZ kurucuya döner (match_private_codes SECURITY DEFINER). */
+export const getMyMatchPrivateCode = async (matchId: string): Promise<string | null> => {
   try {
-    const updateData = isAway ? { away_slots: updatedSlots } : { slots: updatedSlots };
-    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
+    const { data, error } = await supabase.rpc('get_my_match_private_code', { p_match_id: matchId });
     if (error) throw error;
-  } catch (error) {
-    console.error("Slota katılırken hata:", error);
-    throw error;
+    return (data as string | null) || null;
+  } catch {
+    return null;
   }
 };
 

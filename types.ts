@@ -353,10 +353,13 @@ export interface PositionSlot {
   y: number;
   status: 'OPEN' | 'TAKEN' | 'LOCKED';
   player?: Player; // If taken
-  // Çoklu-slot satın alma + arkadaşa/koda atama (FAZ8)
+  // Tek lobi slot makinesi (P2): satın alma + atama yaşam döngüsü.
+  // RESERVED = satın alındı ama kimse atanmadı ("DOLU", seçilemez);
+  // SELF = alıcı kendini ekledi; ASSIGNED = arkadaş anında atandı;
+  // LINK_PENDING = devralma kodu bekliyor. (INVITED/ACCEPTED legacy okunur.)
   purchasedBy?: string;            // slotu satın alan (ödeyen) kullanıcı id
-  occupant?: string;               // slotta görünen kullanıcı id (başta satın alan)
-  assignmentStatus?: 'SELF' | 'INVITED' | 'LINK_PENDING' | 'ACCEPTED';
+  occupant?: string;               // slotta oturan kullanıcı id
+  assignmentStatus?: 'RESERVED' | 'SELF' | 'ASSIGNED' | 'INVITED' | 'LINK_PENDING' | 'ACCEPTED';
   inviteeId?: string;              // davet edilen arkadaş id
   claimCode?: string;              // paylaşılabilir devralma kodu
   side?: 'HOME' | 'AWAY';          // Takım maçında ev sahibi / deplasman tarafı (FAZ8 S38)

@@ -16,6 +16,7 @@ import PitchDiscovery from './PitchDiscovery';
 import MatchSquadPicker, { PickedPlayer } from '../components/social/MatchSquadPicker';
 import ProviderOfferPicker from '../components/social/ProviderOfferPicker';
 import { useMatchCreate, FORMATS } from '../hooks/useMatchCreate';
+import { showToast } from '../components/common/GlobalToast';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 
 // Cüzdan yükleme overlay'i — maç kurulum formu kaybolmadan bakiye tamamlanır.
@@ -131,26 +132,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const mentality = MENTALITY_META[dna.mentality] || MENTALITY_META.rahat;
   const dateLabel = selectedTimeSlot ? `${selectedTimeSlot.date} · ${selectedTimeSlot.time}` : null;
 
-  // Seçilen arkadaşları boş slotlara yerleştir (dokunulan slot önceliklidir).
-  const addPlayersToSlots = (players: PickedPlayer[]) => {
-    setMyPlayers(prev => {
-      const next = { ...prev };
-      players.forEach(p => { for (const k in next) { if (next[k].id === p.id) delete next[k]; } });
-      let empties = pitchSlots.filter(s => !next[s.id]);
-      if (selectedSlotForPicker) {
-        const target = empties.find(s => s.id === selectedSlotForPicker);
-        if (target) empties = [target, ...empties.filter(s => s.id !== selectedSlotForPicker)];
-      }
-      let i = 0;
-      players.forEach(p => {
-        if (i < empties.length) {
-          next[empties[i].id] = { id: p.id, name: p.name, avatar: p.avatar || '', status: 'PENDING' };
-          i++;
-        }
-      });
-      return next;
-    });
+  // TEK LOBİ KURALI: oluşturma yalnız YAPI kurar — kadro, yayın sonrası lobiden
+  // slot SATIN ALINARAK dolar. Arkadaş yerleştirme burada bilinçli olarak kapalı;
+  // seçici yalnız takım maçı için takım seçmeye (yapı) hizmet eder.
+  const addPlayersToSlots = (_players: PickedPlayer[]) => {
     setSelectedSlotForPicker(null);
+    showToast('Kadro satın almayla dolar — maçı yayınla, slotlar lobiden alınsın. ⚽');
   };
 
   return (
@@ -200,7 +187,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               slots={pitchSlots}
               orientation={orientation}
               onSlotMove={handleSlotMove}
-              onSlotClick={(id) => { setSelectedSlotForPicker(id); setActiveSheet('PLAYER_PICKER'); }}
+              onSlotClick={() => { showToast('Slotlar satın almayla dolar — önce maçı yayınla. ⚽'); }}
               onDropPlayer={(slotId, player) => {
                 setMyPlayers(prev => {
                   const next = { ...prev };
@@ -260,9 +247,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             sub={selectedPitch ? (dateLabel || 'Saat seç') : 'Nerede & ne zaman?'}
             icon={<MapPin size={12} />} state={selectedPitch && selectedTimeSlot ? 'ok' : 'need'}
             onClick={() => { if (!isDraftMode) setActiveSheet('PITCH'); }} />
-          <ActionCard label="Kadro" value={`${squadCount} / ${perTeam} dizildi`}
-            sub={openSlotCount > 0 ? 'Arkadaş / takım çağır' : 'Kadro tamam ✓'}
-            icon={<Users size={12} />} state={squadCount > 0 ? 'ok' : 'default'}
+          <ActionCard label="Takım Maçı" value={homeTeamName || 'Takımını seç (ops.)'}
+            sub="Doluluk satın almayla olur"
+            icon={<Users size={12} />} state={homeTeamId ? 'ok' : 'default'}
             onClick={() => { setSelectedSlotForPicker(null); setActiveSheet('PLAYER_PICKER'); }} />
           <ActionCard label="Kaleci & Hakem"
             value={deferredProviders.length > 0 ? `${deferredProviders.length} hizmet · teklif` : 'Pro destek çağır'}

@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, MapPin, Users, User, Scale, Shield, Swords,
   Clock, Check, Wallet, Sparkles, ChevronRight,
-  Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap, PenLine, Hand
+  Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap, PenLine, Hand,
+  KeyRound, Loader2
 } from 'lucide-react';
+import { resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { OynaLogo } from '../components/OynaLogo';
 import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
@@ -294,6 +296,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
   const [isLoading, setIsLoading] = useState(!initialLoadComplete);
   const myDrafts = React.useMemo(() => adminMatches.filter(m => m.status === 'DRAFT'), [adminMatches]);
   const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
+
+  // ── Açık maçlar şeridi (tek lobi P4): herkese açık maçlar ana ekranda ──
+  const openMatches = React.useMemo(() =>
+    adminMatches
+      .filter(m =>
+        (!m.status || ['OPEN', 'ACTIVE', 'LIVE'].includes(m.status as string)) &&
+        (m as any).visibility !== 'PRIVATE')
+      .slice(0, 4),
+    [adminMatches]);
+
+  // ── Kodla katılım (ana ekrandan): resolve → lobi ──
+  const [dashCode, setDashCode] = useState('');
+  const [dashCodeOpen, setDashCodeOpen] = useState(false);
+  const [dashCodeBusy, setDashCodeBusy] = useState(false);
+  const [dashCodeErr, setDashCodeErr] = useState<string | null>(null);
+  const handleDashCode = async () => {
+    const code = dashCode.trim().toUpperCase();
+    if (code.length < 4 || dashCodeBusy) return;
+    setDashCodeBusy(true);
+    setDashCodeErr(null);
+    try {
+      const res = await resolvePrivateMatch(code);
+      const full = await getMatchDetails(res.matchId);
+      if (!full) throw new Error('NOT_FOUND');
+      useAppStore.getState().setLobbyMode('DISCOVER');
+      setSelectedMatch(full);
+      setDashCode(''); setDashCodeOpen(false);
+      onNavigate('MATCH_JOIN');
+    } catch (e) {
+      setDashCodeErr(toPrivateMatchErrorMessage(e));
+    } finally {
+      setDashCodeBusy(false);
+    }
+  };
 
   const { all: userMatches, closest: closestMatch, currentUserUid } = useMyMatches();
 
@@ -622,6 +658,87 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             </div>
           </div>
         </AnimatedButton>
+
+        {/* ═══ AÇIK MAÇLAR ŞERİDİ + KODLA KATIL (tek lobi P4) ═══ */}
+        <motion.div variants={itemVariants} className="col-span-2">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">Açık Maçlar</p>
+            <button
+              onClick={() => { setDashCodeOpen(v => !v); setDashCodeErr(null); }}
+              className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#FACC15] bg-[#FACC15]/8 border border-[#FACC15]/25 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all">
+              <KeyRound size={11} /> Kodla Katıl
+            </button>
+          </div>
+
+          {/* Kod girişi — özel maç kodu ana ekrandan çözülür */}
+          <AnimatePresence>
+            {dashCodeOpen && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text" value={dashCode}
+                    onChange={e => { setDashCode(e.target.value.toUpperCase()); setDashCodeErr(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleDashCode(); }}
+                    placeholder="MAÇ KODU"
+                    maxLength={8}
+                    className="flex-1 bg-[#161B22] border border-[#FACC15]/25 rounded-2xl px-4 py-3 text-sm font-black tracking-[0.3em] text-white placeholder-white/20 focus:outline-none focus:border-[#FACC15]/60 uppercase"
+                  />
+                  <button
+                    onClick={handleDashCode}
+                    disabled={dashCodeBusy || dashCode.trim().length < 4}
+                    className="px-5 rounded-2xl bg-[#FACC15] text-black text-[11px] font-black uppercase tracking-widest disabled:opacity-40 active:scale-95 transition-all flex items-center justify-center">
+                    {dashCodeBusy ? <Loader2 size={15} className="animate-spin" /> : 'AÇ'}
+                  </button>
+                </div>
+                {dashCodeErr && <p className="text-[10px] text-red-400 font-bold mt-1.5 px-1">{dashCodeErr}</p>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {openMatches.length === 0 ? (
+            <button onClick={() => onNavigate('MATCH_DISCOVERY')}
+              className="w-full py-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/15 text-white/35 text-[10px] font-black uppercase tracking-widest active:scale-[0.99] transition-all">
+              Şu an açık maç yok — Top Oyna'yı keşfet
+            </button>
+          ) : (
+            <div className="flex gap-2.5 overflow-x-auto pb-1 custom-scrollbar">
+              {openMatches.map(m => {
+                const total = (m.slots?.length || 0) + (m.awaySlots?.length || 0);
+                const taken = (m.slots || []).filter(s => s?.status === 'TAKEN').length
+                  + (m.awaySlots || []).filter(s => s?.status === 'TAKEN').length;
+                return (
+                  <button key={m.id}
+                    onClick={() => {
+                      useAppStore.getState().setLobbyMode('DISCOVER');
+                      setSelectedMatch(m);
+                      onNavigate('MATCH_JOIN');
+                    }}
+                    className="shrink-0 w-[190px] text-left bg-[#161B22]/90 border border-white/8 rounded-2xl p-3.5 hover:border-[#39FF14]/25 active:scale-[0.98] transition-all">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 px-1.5 py-0.5 rounded-md">
+                        {m.format || 'MAÇ'}
+                      </span>
+                      <span className="text-[9px] font-black text-white/50">{taken}/{total}</span>
+                    </div>
+                    <p className="text-[12px] font-black text-white truncate mt-2">{m.title || 'Maç'}</p>
+                    <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide truncate mt-0.5">
+                      {[m.location, m.time].filter(Boolean).join(' · ') || '—'}
+                    </p>
+                    <p className="text-[10px] font-black text-[#FACC15] mt-1.5">
+                      {Number(m.price) > 0 ? `${Number(m.price).toLocaleString('tr-TR')}₺ / slot` : 'ÜCRETSİZ'}
+                    </p>
+                  </button>
+                );
+              })}
+              <button onClick={() => onNavigate('MATCH_DISCOVERY')}
+                className="shrink-0 w-[110px] rounded-2xl bg-white/[0.02] border border-dashed border-white/15 text-white/40 text-[9px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1.5 active:scale-[0.98] transition-all">
+                <ChevronRight size={16} />
+                Tümünü Gör
+              </button>
+            </div>
+          )}
+        </motion.div>
 
         {/* 3. Pitch Booking (FULL WIDTH) */}
         <AnimatedButton
