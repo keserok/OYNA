@@ -6,9 +6,11 @@ import { AppView } from '../types';
 interface BottomNavProps {
   currentView: AppView;
   onNavigate: (view: AppView) => void;
+  /** Aşağı kaydırırken bar yolu açar; yukarı kaydırınca geri gelir. */
+  hidden?: boolean;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate }) => {
+export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, hidden = false }) => {
   const navItems = [
     { id: 'DASHBOARD', icon: Home, label: 'Ana Sayfa' },
     { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Top Oyna' },
@@ -18,15 +20,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
   ];
 
   return (
-    <nav 
+    <motion.nav
       aria-label="Ana Gezinti"
       role="navigation"
+      initial={{ y: '130%' }}
+      animate={{ y: hidden ? '130%' : 0 }}
+      exit={{ y: '130%' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe max-w-lg md:max-w-2xl mx-auto"
     >
-      <motion.div 
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      <div
         className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
       >
         {navItems.map((item) => {
@@ -87,7 +90,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
             </button>
           );
         })}
-      </motion.div>
-    </nav>
+      </div>
+    </motion.nav>
   );
 };

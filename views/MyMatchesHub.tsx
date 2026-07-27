@@ -405,7 +405,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     );
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col relative font-sans selection:bg-[#FACC15] selection:text-black">
+    <div className="h-full bg-[#0A0E14] text-white flex flex-col relative overflow-hidden font-sans selection:bg-[#FACC15] selection:text-black">
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 mix-blend-overlay pointer-events-none" />
 
       {/* ── Başlık ── */}
@@ -447,7 +447,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       </header>
 
       {/* ── İçerik ── */}
-      <main className="flex-1 px-4 pt-4 overflow-y-auto custom-scrollbar pb-36 relative z-10">
+      {/* Kaydırma bu konteynerde: gün başlıkları header'ın hemen altına yapışır,
+          kartlar yarı saydam alt barın altından akar (pb-36 bar payı). */}
+      <main className="flex-1 min-h-0 px-4 pt-4 overflow-y-auto overscroll-contain custom-scrollbar pb-36 relative z-10">
         {bookingsError && (
           <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-red-950/30 border border-red-500/20">
             <p className="text-[11px] text-red-300 font-bold leading-snug">
