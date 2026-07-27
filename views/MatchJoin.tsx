@@ -63,20 +63,9 @@ type SlotInviteStatus = 'NONE' | 'INVITED' | 'ACCEPTED';
 // ─── Formasyonlar: tek kanonik kaynak (utils/formations.ts) ────────────────
 const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number; y: number; role: string }[]>>;
 
-const checkAndGetStatus = (slots: PositionSlot[], awaySlots?: PositionSlot[]): 'ACTIVE' | 'LIVE' => {
-  const allHomeFilled = slots.filter(s => s.status === 'TAKEN').length === slots.length;
-  const allHomePaid = slots.every(s => s.status !== 'TAKEN' || s.player?.paymentStatus === 'PAID');
-  
-  if (awaySlots && awaySlots.length > 0) {
-    const allAwayFilled = awaySlots.filter(s => s.status === 'TAKEN').length === awaySlots.length;
-    const allAwayPaid = awaySlots.every(s => s.status !== 'TAKEN' || s.player?.paymentStatus === 'PAID');
-    return (allHomeFilled && allHomePaid && allAwayFilled && allAwayPaid) ? 'LIVE' : 'ACTIVE';
-  }
-  
-  return (allHomeFilled && allHomePaid) ? 'LIVE' : 'ACTIVE';
-};
-
 // Kanonik koordinat atayıcı artık shared/lobbyEnrichment'tan gelir (admin ile tek kaynak).
+// (checkAndGetStatus + fillVacatedSlot kaldırıldı — F1.8: kick artık sunucuda,
+// player_kick_slot RPC'si; statü/terfi hesabının client kopyası kalmadı.)
 
 // ─── Difficulty Badge Renk Sistemi ─────────────────────────────────────────
 
@@ -711,42 +700,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  const fillVacatedSlot = (
-    slots: PositionSlot[],
-    reserves: Player[],
-    vacatedSlotId: string
-  ): { updatedSlots: PositionSlot[]; remainingReserves: Player[]; promotedPlayer?: Player } => {
-    let promotedPlayer: Player | undefined = undefined;
-    let remainingReserves = [...reserves];
-
-    const updatedSlots = slots.map(s => {
-      if (s.id === vacatedSlotId) {
-        if (remainingReserves.length > 0) {
-          const rawPlayer = remainingReserves.shift()!;
-          promotedPlayer = {
-            ...rawPlayer,
-            position: s.role || 'OYUNCU',
-            x: s.x,
-            y: s.y,
-            paymentStatus: 'UNPAID',
-          };
-          return {
-            ...s,
-            status: 'TAKEN' as const,
-            player: promotedPlayer,
-          };
-        } else {
-          const newSlot = { ...s, status: 'OPEN' as const };
-          delete newSlot.player;
-          return newSlot;
-        }
-      }
-      return s;
-    });
-
-    return { updatedSlots, remainingReserves, promotedPlayer };
-  };
-
   const handleJoinAsReserve = async () => {
     if (isAlreadyJoined || isAlreadyJoinedReserve) return;
     setIsProcessing(true);
@@ -877,32 +830,27 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
 
 
-  // Kaptan bir oyuncuyu kadrodan çıkarır. Özel bir kick RPC'si YOK; bu nedenle
-  // KN-3b asgari güvenliği uygulanır: önce SUNUCUDAN taze durum çekilir,
-  // değişiklik taze veri üstüne uygulanır, öyle yazılır (bayat-dizi penceresi
-  // daralır). Kalıcı çözüm (dar player_kick_slot RPC'si) S3 backlog'da.
+  // F1.8: kick artık atomik sunucu RPC'si (player_kick_slot) — kaptan kapısı,
+  // idempotent iade (_match_refund_partial) ve boşalan yer için yedek bildirimi
+  // sunucuda. Eski yol (tüm slot dizisini player_update_match'e yazmak) canlı
+  // fonksiyon slot anahtarlarını yok saydığı için SESSİZ NO-OP'tu.
   const handleRemovePlayer = async (slotId: string) => {
     try {
-      const base = (await getMatchDetails(match.id)) ?? match;
-      const isHomeSlot = (base.slots || []).some(s => s?.id === slotId);
-      const reserves = base.reservePlayers || [];
-
-      const src = isHomeSlot ? (base.slots || []) : (base.awaySlots || []);
-      const { updatedSlots, remainingReserves } = fillVacatedSlot(src, reserves, slotId);
-      const nextStatus = isHomeSlot
-        ? checkAndGetStatus(updatedSlots, base.awaySlots)
-        : checkAndGetStatus(base.slots || [], updatedSlots);
-
-      await updateMatch({
-        ...base,
-        ...(isHomeSlot ? { slots: updatedSlots } : { awaySlots: updatedSlots }),
-        reservePlayers: remainingReserves,
-        status: nextStatus,
-      });
+      const { data, error } = await supabase.rpc('player_kick_slot', { p_match_id: match.id, p_slot_id: slotId });
+      if (error) throw error;
+      const fresh = await getMatchDetails(match.id);
+      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
-    } catch (e) {
+      const refunded = Number((data as { refunded?: number } | null)?.refunded || 0);
+      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${refunded}₺ iade kredisi işlendi.` : 'Oyuncu kadrodan çıkarıldı.');
+    } catch (e: any) {
       console.error(e);
-      showActionError('Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
+      const msg = String(e?.message || '');
+      showActionError(
+        msg.includes('CANNOT_KICK_SELF') ? 'Kendini çıkaramazsın — maçtan ayrılma akışını kullan.'
+        : msg.includes('FORBIDDEN') ? 'Yalnız maç kaptanı oyuncu çıkarabilir.'
+        : msg.includes('SLOT_EMPTY') ? 'Bu slotta çıkarılacak oyuncu yok.'
+        : 'Oyuncu kadrodan çıkarılamadı. Lütfen tekrar dene.');
     }
   };
 
@@ -984,8 +932,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (r.providerType === 'REF') return !match.refereeId && !getActiveRequestForType('REF');
     return !mySideGkAssigned && !getActiveRequestForType('GK');
   });
+  // F1.1: initiatedBy==='PROVIDER' filtresi kaldırıldı — kaptan-başlatan
+  // (çoğunluk) taleplerde de onay kartı çıkar; iki-taraflı payout kapısının
+  // kaptan ayağı HER talepte gerekli. captainConfirmed olanlar da listede
+  // kalır (rozet olarak render edilir). GK'de taraf koruması: sunucu
+  // (_hire_side_for) iki kaptana da izin verdiği için deplasman kaptanının
+  // ev sahibi kalecisini onaylamasını burada engelliyoruz.
   const captainConfirmPending = serviceRequests.filter(
-    r => r.status === 'CAPTURED' && r.initiatedBy === 'PROVIDER' && !r.captainConfirmed && !r.payoutReleased
+    r => r.status === 'CAPTURED' && !r.payoutReleased &&
+      (r.providerType !== 'GK' || (r.teamSide ?? 'HOME') === myCaptainSideUpper)
   );
 
   const handleAcceptApplication = async (requestId: string) => {
@@ -2714,10 +2669,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-green-500/20 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black text-white truncate">{applicant?.name || label} geldi mi?</p>
-                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide">Onayınca ücret sağlayıcıya ödenir</p>
+                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-wide">
+                          {req.captainConfirmed
+                            ? (req.providerConfirmed ? 'Ödeme serbest bırakılıyor…' : 'Sağlayıcının onayı bekleniyor')
+                            : 'Onayınca ücret ödenir · Sorun bildirmezsen maç bitiminden 48 saat sonra otomatik onaylanır'}
+                        </p>
                       </div>
-                      <button onClick={() => handleCaptainConfirm(req.id)} disabled={reqActionId === req.id}
-                        className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-black bg-green-400 disabled:opacity-50">Onayla</button>
+                      {req.captainConfirmed ? (
+                        <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-green-300 border border-green-500/30">Onayladın ✓</span>
+                      ) : (
+                        <button onClick={() => handleCaptainConfirm(req.id)} disabled={reqActionId === req.id}
+                          className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-black bg-green-400 disabled:opacity-50">Onayla</button>
+                      )}
                     </div>
                   );
                 })}
