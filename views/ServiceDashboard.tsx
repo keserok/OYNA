@@ -97,7 +97,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // UX Enhancements States
   const [matchLiveStatus, setMatchLiveStatus] = useState<Record<string, 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED'>>({});
   const [showPostMatchReport, setShowPostMatchReport] = useState(false);
-  const [postMatchRating, setPostMatchRating] = useState(5);
+  // F2.3: kaleci 5 yıldız formu kaldırıldı — hiçbir tabloya yazmıyordu (ölü
+  // form + sahte başarı). Modal artık yalnız hakem skor girişi içindir;
+  // kalecinin gerçek maç-sonu aksiyonu "Maçı Oynadım · Onayla" (Gelen Talepler).
   // HR-A: hakem resmi skor girişi — kontrollü alanlar + gönderim durumu.
   const [refScore, setRefScore] = useState<{ home: string; away: string }>({ home: '', away: '' });
   const [submittingScore, setSubmittingScore] = useState(false);
@@ -1580,8 +1582,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                         gitmiyor (sunucu bağlantısı Faz 3c'de). Yalan beyan kaldırıldı. */}
                                     <CheckCircle2 size={12} /> TESİSTEYİM — YALNIZ SANA GÖRÜNÜR
                                   </button>
-                                  <button 
-                                    onClick={() => setShowPostMatchReport(true)}
+                                  <button
+                                    onClick={() => {
+                                      if (isRef) { setShowPostMatchReport(true); return; }
+                                      // F2.3: kaleci için modal yok — dürüst yerel işaretleme + doğru CTA.
+                                      const mid = myUpcomingMatches[0]?.id;
+                                      if (mid) setMatchLiveStatus(prev => ({ ...prev, [mid]: 'FINISHED' }));
+                                      showActionSuccess('Maçı bitirdin. Ücretin için "Gelen Talepler"deki Maçı Oynadım · Onayla adımını tamamla.');
+                                    }}
                                     className="flex-1 py-2 rounded-xl bg-blue-500 text-white text-[10px] font-black uppercase shadow-[0_0_15px_rgba(59,130,246,0.4)]"
                                   >
                                     MAÇI BİTİR
@@ -2570,7 +2578,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             </div>
         )}
 
-        {showPostMatchReport && (
+        {showPostMatchReport && isRef && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -2587,13 +2595,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <Award size={32} />
                 </div>
                 <h3 className="text-xl font-black text-white uppercase italic">MAÇ SONU RAPORU</h3>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">
-                  {isRef ? 'Resmi Maç Skorunu Gir' : 'Takımı ve Ortamı Değerlendir'}
-                </p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Resmi Maç Skorunu Gir</p>
               </div>
 
               <div className="space-y-4 mb-6">
-                {isRef && (
+                {(
                   /* HR-A: kontrollü skor alanları — girilen değer gerçekten finalize_match'e yazılır. */
                   <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
                     <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Maç Skoru</label>
@@ -2623,32 +2629,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     <p className="text-[9px] text-gray-500 font-bold uppercase text-center mt-3">Resmi hakem skoru — maç bu skorla tamamlanır</p>
                   </div>
                 )}
-                {!isRef && (
-                  <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
-                    <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Centilmenlik ve Misafirperverlik</label>
-                    <div className="flex justify-between items-center px-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          onClick={() => setPostMatchRating(star)}
-                          className="transition-transform hover:scale-110 active:scale-95"
-                        >
-                          <Star size={32} className={star <= postMatchRating ? 'text-[#FACC15] fill-[#FACC15]' : 'text-gray-700'} />
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-center text-[10px] text-[#FACC15] font-black mt-3 uppercase tracking-widest">
-                      {postMatchRating === 5 ? "Mükemmel Takım" : postMatchRating >= 3 ? "İyi Takım" : "Toksik Takım"}
-                    </p>
-                  </div>
-                )}
+                {/* F2.3: 'Centilmenlik' 5 yıldız bloğu kaldırıldı — hiçbir tabloya
+                    yazmıyordu; kalecinin puan verdiği izlenimi yaratıp veriyi çöpe
+                    atıyordu. Modal artık yalnız hakem (isRef) için açılır. */}
               </div>
 
               <button
                 disabled={submittingScore}
                 onClick={async () => {
                   const matchId = myUpcomingMatches[0]?.id;
-                  if (isRef) {
+                  {
                       // HR-A: hakem skoru GERÇEKTEN yazılır (finalize_match). Başarısızsa
                       // modal açık kalır ve dürüst hata gösterilir — sahte başarı YOK.
                       if (!matchId) { showActionError('Atanmış bir maç bulunamadı.'); return; }
@@ -2674,17 +2664,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       } finally {
                         setSubmittingScore(false);
                       }
-                  } else {
-                      // Kaleci: bu ekran ödeme değil operasyon; ödeme escrow onayıyla otomatik akar.
-                      if (matchId) setMatchLiveStatus(prev => ({ ...prev, [matchId]: 'FINISHED' }));
-                      setShowPostMatchReport(false);
-                      showActionSuccess('Maçı bitirdin olarak işaretledin. Ücretin, sen ve kaptan onaylayınca cüzdanına geçer — onayı "Gelen Talepler"den ver.');
                   }
                 }}
                 className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {submittingScore && <RefreshCcw size={14} className="animate-spin" />}
-                {submittingScore ? 'KAYDEDİLİYOR...' : (isRef ? 'SKORU KAYDET VE BİTİR' : 'RAPORU GÖNDER VE BİTİR')}
+                {submittingScore ? 'KAYDEDİLİYOR...' : 'SKORU KAYDET VE BİTİR'}
               </button>
             </motion.div>
           </div>
