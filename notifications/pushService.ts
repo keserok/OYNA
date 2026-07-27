@@ -179,7 +179,8 @@ export const handleDeepLink = (
     case 'match':
       // UUID doğrulaması: geçersiz formatlı ID'ler Supabase sorgusuna gönderilmez.
       if (actions.setSelectedMatch && isValidUuid(id)) {
-        // Maç verisini Supabase'den çek ve MATCH_JOIN'e git
+        // Maç verisini Supabase'den çek; alt yol 'eval' ise değerlendirme
+        // ekranına (F2.1 — match_completed_evaluate bildirimi), yoksa lobiye git.
         supabase.from('matches').select('*').eq('id', id).maybeSingle().then(
           ({ data, error }) => {
             if (error || !data) {
@@ -187,7 +188,7 @@ export const handleDeepLink = (
               return;
             }
             actions.setSelectedMatch!(data);
-            setView('MATCH_JOIN');
+            setView(sub === 'eval' ? 'POST_MATCH_EVAL' : 'MATCH_JOIN');
           },
           (e: unknown) => {
             console.warn('[DeepLink] Maç sorgusu başarısız:', e);

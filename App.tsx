@@ -741,7 +741,9 @@ const App: React.FC = () => {
           }}
         />;
       case 'POST_MATCH_EVAL':
-        return <PostMatchEval onBack={() => goBack('SOCIAL')} onComplete={() => goBack('SOCIAL')} />;
+        {/* F2.1: ekran artık Maçlarım'dan (ve eval deep-link'inden) açılıyor;
+            eski SOCIAL dönüşü yanlış bağlamdı. */}
+        return <PostMatchEval onBack={() => goBack('MY_MATCHES')} onComplete={() => goBack('MY_MATCHES')} />;
       case 'MATCH_CREATE':
         return <MatchCreate onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       default:
