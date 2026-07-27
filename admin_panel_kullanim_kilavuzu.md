@@ -63,7 +63,8 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 2. **Tesis Düzenle:** Listeden tesise tıklayın → kalemi (✏️) seçin → değişiklikleri yapıp kaydedin.
 3. **Tesis Onayla / Reddet:** Saha sahibi kayıt yaptırdığında tesis "Onay Bekliyor" durumunda gelir → Siz onaylarsanız platforma girer, reddederseniz sahibine bildirim gider.
 4. **Vitrine Al / Çıkar:** Tesisi öne çıkarmak için yıldız (⭐) ikonuna tıklayın. Gizlemek için göz kapatma (👁️) ikonunu kullanın.
-5. **Vitrin Aynası (Saha Kurulum Merkezi → Vitrin sekmesi):** Oyuncunun Saha Keşfet'te gördüğü saha kartının CANLI birebir kopyası. Kartın üstünde "vitrinde görünüyor mu?" teşhisi (Onaylı ✓ / Tesis Açık ✓ / Yayında ✓ — biri kırmızıysa saha listelenmiyor demektir), altında ilgili düzenleme sekmelerine köprüler (fotoğraf/kimlik/olanak/kort/tarife). Kaydettiğiniz her değişikliğin oyuncuya nasıl göründüğünü tahmin etmeden görürsünüz.
+5. **Kort Format Aralığı (Saha Kurulum Merkezi → Kortlar):** Her kort için minimum–maksimum "kaça kaç" ayarlanır (örn. Min 6v6 + Maks 8v8). Aynı ayar tesis sahibinin kendi panelindeki kort editöründe de var (ikisi aynı bileşen). Aralık, vitrinde kort satırında "6v6–8v8" rozeti olarak görünür; maç oluşturma akışı bu aralığı temel alacak.
+6. **Vitrin Aynası (Saha Kurulum Merkezi → Vitrin sekmesi):** Oyuncunun Saha Keşfet'te gördüğü saha kartının CANLI birebir kopyası. Kartın üstünde "vitrinde görünüyor mu?" teşhisi (Onaylı ✓ / Tesis Açık ✓ / Yayında ✓ — biri kırmızıysa saha listelenmiyor demektir), altında ilgili düzenleme sekmelerine köprüler (fotoğraf/kimlik/olanak/kort/tarife). Kaydettiğiniz her değişikliğin oyuncuya nasıl göründüğünü tahmin etmeden görürsünüz.
 
 **Tesis onaylamak için adımlar:**
 1. Sol menüden **"Doğrulama Merkezi"** → **"Tesis Onayları"** sekmesine gelin

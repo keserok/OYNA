@@ -38,6 +38,8 @@ export interface DbCourtRow {
   locker_grade?: string | null;
   grades_status?: string | null;
   capacity?: number | null;
+  min_capacity?: number | null;
+  max_capacity?: number | null;
   sort_order?: number | null;
   features?: string[] | null;
 }
@@ -78,7 +80,7 @@ export interface DbPitchRow {
  * admin (PitchStudio Canlı Ayna) birebir bu ifadeyi kullanır.
  */
 export const PITCH_SHOWCASE_SELECT =
-  '*, courts(id, name, court_type, surface, size, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity, sort_order, features), pitch_tariffs(*)';
+  '*, courts(id, name, court_type, surface, size, price, is_active, description, images, lighting_grade, grass_grade, locker_grade, grades_status, capacity, min_capacity, max_capacity, sort_order, features), pitch_tariffs(*)';
 
 export const gradeToScore = (g?: string | null): number => {
   if (g === 'A+') return 98;
@@ -98,6 +100,24 @@ export const formatCapacity = (capacity?: number): string | null => {
   return `${capacity} oyuncu`;
 };
 
+/**
+ * Kortun oynanabilir format aralığı rozeti: min 12 & maks 16 → "6v6–8v8";
+ * min=maks → tek format ("7v7"); yalnız biri varsa "6v6+" / "≤8v8";
+ * aralık yoksa legacy capacity'ye düşer. Vitrin kort satırları ve maç
+ * oluşturma akışı TEK bu yardımcıdan okur.
+ */
+export const formatCapacityRange = (
+  min?: number | null,
+  max?: number | null,
+  fallbackCapacity?: number | null,
+): string | null => {
+  const f = (n: number) => formatCapacity(n);
+  if (min && max) return min === max ? f(min) : `${f(min)}–${f(max)}`;
+  if (min) return `${f(min)}+`;
+  if (max) return `≤${f(max)}`;
+  return formatCapacity(fallbackCapacity ?? undefined);
+};
+
 export const mapDbPitchToUiPitch = (
   row: DbPitchRow,
 ): Pitch => {
@@ -114,6 +134,8 @@ export const mapDbPitchToUiPitch = (
       surface: c.surface ?? 'TURF',
       size: c.size ?? undefined,
       capacity: c.capacity ?? undefined,
+      minCapacity: c.min_capacity ?? undefined,
+      maxCapacity: c.max_capacity ?? undefined,
       price: c.price ?? averagePrice,
       slots: [],
       description: c.description ?? undefined,

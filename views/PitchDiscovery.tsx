@@ -39,7 +39,7 @@ import { surfaceLabel } from '../shared/courtSurface';
 // Vitrin eşleyicisi ve kartı TEK KAYNAK'tan gelir (admin Canlı Ayna da aynısını kullanır).
 import {
   PITCH_SHOWCASE_SELECT,
-  formatCapacity,
+  formatCapacityRange,
   mapDbPitchToUiPitch,
   type DbPitchRow,
 } from '../shared/pitchShowcaseMapper';
@@ -1701,7 +1701,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                         court.type === 'CLOSED' ? 'Kapalı' : 'Açık',
                         surfaceLabel(court.surface),
                         court.size ? `${court.size} m` : null,
-                        formatCapacity(court.capacity),
+                        // Format aralığı rozeti: "6v6–8v8"; aralık yoksa tek kapasite
+                        formatCapacityRange(court.minCapacity, court.maxCapacity, court.capacity),
                       ].filter(Boolean).join(' · ');
                       return (
                         <button
