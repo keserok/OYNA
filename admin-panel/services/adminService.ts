@@ -2897,6 +2897,8 @@ export interface ServiceDisputeRow {
   status: string;
   reported_at: string;
   payout_released: boolean;
+  dispute_deadline: string | null;
+  penalty_amount: number | null;
   provider_name?: string | null;
 }
 
@@ -2985,13 +2987,19 @@ export async function reviewProviderApplication(
   if (error) throw new Error(error.message);
 }
 
-/** Açık hizmet itirazları: reported_at not null & payout_released=false (+ sağlayıcı adı) */
+/**
+ * Açık hizmet itirazları. F1.4: eski filtre yalnız payout_released=false
+ * bakıyordu; captain_report_no_show reported_at ile AYNI update'te
+ * payout_released=true yazdığı için no-show/DISPUTED kayıtlar kuyruğa HİÇ
+ * düşmüyordu (kara delik). Yeni filtre statü tabanlı: no-show/itiraz kayıtları
+ * VE (eski davranış) değerlendirme bekleyen attendance kayıtları birlikte gelir.
+ */
 export async function fetchServiceDisputes(): Promise<ServiceDisputeRow[]> {
   const { data, error } = await supabase
     .from('service_requests')
-    .select('id, match_id, provider_id, provider_type, fee, provider_amount, status, reported_at, payout_released')
+    .select('id, match_id, provider_id, provider_type, fee, provider_amount, status, reported_at, payout_released, dispute_deadline, penalty_amount')
     .not('reported_at', 'is', null)
-    .eq('payout_released', false)
+    .or('status.in.(NOSHOW_REPORTED,DISPUTED),payout_released.eq.false')
     .order('reported_at', { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -3007,6 +3015,22 @@ export async function fetchServiceDisputes(): Promise<ServiceDisputeRow[]> {
 export async function releaseServicePayout(requestId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_release_service_payout', {
     p_request_id: requestId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * F1.4 — No-show itirazını karara bağla (admin_resolve_noshow_dispute).
+ * uphold=true: kaptan haklı, ceza kesinleşir (NOSHOW_FINALIZED).
+ * uphold=false: sağlayıcı haklı — ceza iadesi + kaptan tazminat/iade geri
+ * alımı + EARNINGS geri açılır (ledger tabanlı, audit'li). İki dalda da
+ * taraflara bildirim sunucudan gider.
+ */
+export async function resolveNoShowDispute(requestId: string, uphold: boolean, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_resolve_noshow_dispute', {
+    p_request_id: requestId,
+    p_uphold: uphold,
+    p_notes: notes ?? null,
   });
   if (error) throw new Error(error.message);
 }
