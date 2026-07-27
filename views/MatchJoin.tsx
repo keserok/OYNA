@@ -433,19 +433,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
      p.name.toLowerCase().includes(match.location.toLowerCase()))
   );
 
-  const fallbackPitch = {
-    name: match.location || 'Oyna Arena',
-    rating: 4.5,
-    googleRating: 4.4,
-    googleReviews: 120,
-    grassGrade: 'A' as const,
-    lightingGrade: 'A' as const,
-    lockerRoomGrade: 'B' as const,
-    amenities: ['Duş', 'Otopark', 'Soyunma Odası', 'Su'],
-    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&q=80&w=1000'
-  };
-
-  const activePitch = matchPitch || fallbackPitch;
+  // F3d/F3g: sahte fallbackPitch (uydurma 4.5 puan, A/B kalite notları, sabit
+  // amenities, stok foto) kaldırıldı — tek kullanılan alan isimdi.
+  const activePitchName = matchPitch?.name || match.location || 'Saha';
 
   // Dinamik kurallar ve filtreler
   const ageLimit = match.badges?.find(b => b.includes('Yaş') || b.includes('Yaş Grubu'))
@@ -2699,6 +2689,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           if (assignedAwayGoalkeeper && canSeeAwayGk)
             visibleGks.push({ gk: assignedAwayGoalkeeper, side: 'away', teamName: match.awayTeamName || awayTeam?.name || 'Deplasman' });
           if (visibleGks.length === 0 && !assignedReferee) return null;
+          // F3c: sağlayıcının sunucuya bildirdiği canlı durum (yolda/tesiste) rozeti
+          const liveBadge = (providerId: string) => {
+            const r = serviceRequests.find(x => x.providerId === providerId
+              && (x.status === 'ACCEPTED' || x.status === 'CAPTURED'));
+            if (!r?.liveStatus || r.liveStatus === 'PENDING' || r.liveStatus === 'FINISHED') return null;
+            const arrived = r.liveStatus === 'ARRIVED';
+            return (
+              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${arrived ? 'bg-green-500/15 text-green-400 border-green-500/30' : 'bg-blue-500/15 text-blue-400 border-blue-500/30'}`}>
+                {arrived ? 'Tesiste' : 'Yolda'}
+              </span>
+            );
+          };
           return (
           <div className="space-y-3 mt-6">
             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
@@ -2725,6 +2727,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{gk.name}</h4>
                     {gk.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    {liveBadge(gk.id)}
                   </div>
                   <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci · {teamName}</p>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -2773,6 +2776,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-black text-white uppercase tracking-tight truncate">{assignedReferee.name}</h4>
                     {assignedReferee.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    {liveBadge(assignedReferee.id)}
                   </div>
                   <p className="text-[9px] font-black uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -3025,7 +3029,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               {/* Başlık */}
               <div className="flex items-center justify-between px-6 pt-7 pb-5">
                 <div>
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{activePitch.name}</p>
+                  <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-0.5">{activePitchName}</p>
                   <h2 className="text-base font-black text-white uppercase italic tracking-tight">MAÇ ÖZELLİKLERİ</h2>
                 </div>
                 <button

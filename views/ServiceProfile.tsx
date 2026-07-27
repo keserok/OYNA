@@ -31,27 +31,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Uğurcan Çakır tarzı kaleci fotoğrafları
-const GOALKEEPER_PHOTOS = [
-  'https://images.unsplash.com/photo-1544966614-05a04dd69d0c?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&q=80&w=400',
-];
-
-const REFEREE_PHOTOS = [
-  'https://images.unsplash.com/photo-1574629310576-6e84c60be5cb?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1580234811497-9df7fd2f357e?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1599077108862-31aa1ab6a69e?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&q=80&w=400',
-];
+// F3d: "Hazır Fotoğraflar" (Unsplash stok yabancı kaleci/hakem fotoğrafları)
+// KALDIRILDI — stok foto sağlayıcının GERÇEK avatarı olarak DB'ye yazılıyor ve
+// pazaryerinde kaptanlara kimlikmiş gibi gösteriliyordu (yanıltma + telif).
+// Tek yol: cihazdan gerçek fotoğraf yükleme; yoksa baş harf avatarı.
 
 const GK_STYLES = ['Panter', 'Duvar', 'Libero', 'Atak', 'Dengeli'];
 const REF_STYLES = ['Otoriter', 'Diyalogcu', 'Teknisyen', 'Hızlı Karar'];
 
 const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
-  const photoPool = isRef ? REFEREE_PHOTOS : GOALKEEPER_PHOTOS;
 
   const { adminGoalkeepers, adminReferees, updateOwnProvider, activeRegion } = useAppStore();
   const currentUser = auth.currentUser;
@@ -73,8 +62,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const defaultFee = userProfile?.fee || 0;
   const defaultStyle = typeof userProfile?.style === 'string' ? userProfile.style : '';
 
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [customPhoto, setCustomPhoto] = useState<string | null>(userProfile?.avatar || null);
+  // Mevcut avatar stok Unsplash URL'siyse yok say (F3d veri temizliği migration'ı
+  // canlıyı NULL'a çeker; UI de defansif davranır).
+  const [customPhoto, setCustomPhoto] = useState<string | null>(() => {
+    const a = userProfile?.avatar || null;
+    return a && a.includes('images.unsplash.com') ? null : a;
+  });
   const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
   const [bio, setBio] = useState(defaultBio);
@@ -132,7 +125,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
 
 
 
-  const currentPhoto = customPhoto ?? photoPool[photoIndex];
+  const currentPhoto = customPhoto;
 
   const accentColor = isRef ? '#ef4444' : '#22c55e';
   const accentBg = isRef ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
@@ -156,9 +149,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         fee,
         name: displayName,
         style: selectedStyle,
-        // WYSIWYG: ekranda görünen fotoğrafı kaydet. Eski hâlde preset seçimi
-        // customPhoto=null bıraktığından hazır fotoğraf seçimi hiç kaydedilmiyordu.
-        avatar: currentPhoto || userProfile.avatar,
+        // WYSIWYG: ekranda görünen (yüklenmiş) fotoğraf kaydedilir; stok havuz yok.
+        avatar: currentPhoto,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
         settings: { ...(userProfile as any).settings, radiusKm },
       });
@@ -282,11 +274,15 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           <div className="relative rounded-[32px] overflow-hidden border border-white/8 shadow-2xl">
             {/* Cover */}
             <div className="h-36 w-full relative overflow-hidden">
-              <img
-                src={currentPhoto}
-                className="w-full h-full object-cover opacity-30 blur-sm scale-110"
-                alt="cover"
-              />
+              {currentPhoto ? (
+                <img
+                  src={currentPhoto}
+                  className="w-full h-full object-cover opacity-30 blur-sm scale-110"
+                  alt="cover"
+                />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-br ${gradientFrom} to-[#0d1420] opacity-60`} />
+              )}
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0d1420]" />
             </div>
 
@@ -299,11 +295,17 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     className="w-24 h-28 rounded-[20px] overflow-hidden border-2 shadow-2xl"
                     style={{ borderColor: accentColor, boxShadow: `0 0 24px ${accentColor}50` }}
                   >
-                    <img
-                      src={currentPhoto}
-                      className="w-full h-full object-cover object-top"
-                      alt="profile"
-                    />
+                    {currentPhoto ? (
+                      <img
+                        src={currentPhoto}
+                        className="w-full h-full object-cover object-top"
+                        alt="profile"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl font-black text-white/80" style={{ background: accentBg }}>
+                        {(displayName || '?').trim().charAt(0).toLocaleUpperCase('tr-TR')}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => setShowPhotoPicker(true)}
@@ -635,31 +637,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 {photoUploading ? 'YÜKLENİYOR…' : 'CİHAZDAN FOTOĞRAF YÜKLE'}
               </motion.button>
 
-              {/* Preset grid */}
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Hazır Fotoğraflar</p>
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {photoPool.map((url, idx) => (
-                  <motion.button
-                    key={idx}
-                    whileTap={{ scale: 0.92 }}
-                    onClick={() => { setPhotoIndex(idx); setCustomPhoto(null); setShowPhotoPicker(false); }}
-                    className="relative rounded-2xl overflow-hidden aspect-square border-2 transition-all"
-                    style={{
-                      borderColor: !customPhoto && photoIndex === idx ? accentColor : 'rgba(255,255,255,0.08)',
-                      boxShadow: !customPhoto && photoIndex === idx ? `0 0 12px ${accentColor}60` : 'none'
-                    }}
-                  >
-                    <img src={url} className="w-full h-full object-cover object-top" />
-                    {!customPhoto && photoIndex === idx && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-black" style={{ background: accentColor }}>
-                          <Check size={12} />
-                        </div>
-                      </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
+              {/* F3d: stok "Hazır Fotoğraflar" ızgarası kaldırıldı — yalnız gerçek yükleme. */}
 
               {/* Remove custom photo */}
               {customPhoto && (

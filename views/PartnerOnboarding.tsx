@@ -219,11 +219,8 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
       <div className="min-h-screen relative flex flex-col justify-end px-6 pt-6 pb-safe overflow-hidden">
           {/* Background */}
           <div className="absolute inset-0 z-0">
-              <img 
-                src="https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=1280" 
-                className="w-full h-full object-cover opacity-60 filter blur-sm scale-105" 
-                alt="Pitch"
-              />
+              {/* F3d: harici stok görsel yerine yerel gradient */}
+              <div className="w-full h-full bg-gradient-to-br from-[#1a3a1a] via-[#12271b] to-[#0A0E14]" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/80 to-transparent"></div>
           </div>
 
@@ -558,20 +555,20 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   </div>
               </div>
 
-              {/* Main Actions */}
+              {/* Main Actions — F3e: üç buton da handler'sızdı (ölü); bağlandı. */}
               <div className="grid grid-cols-2 gap-4">
-                  <button className="col-span-2 bg-[#FACC15] h-20 rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.15)] hover:scale-[1.02] transition-transform active:scale-95 group">
+                  <button onClick={onComplete} className="col-span-2 bg-[#FACC15] h-20 rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(250,204,21,0.15)] hover:scale-[1.02] transition-transform active:scale-95 group">
                       <div className="bg-black text-[#FACC15] p-2 rounded-full group-hover:rotate-90 transition-transform">
                           <Activity size={24} />
                       </div>
-                      <span className="text-black font-black text-lg">HEMEN İLK RANDEVUYU AÇ</span>
+                      <span className="text-black font-black text-lg">PANELE GİT</span>
                   </button>
 
-                  <button className="bg-[#161B22] h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">
+                  <button onClick={() => { window.location.href = 'mailto:destek@oyna.app?subject=OYNA%20Tesis%20Ba%C5%9Fvurusu%20Destek'; }} className="bg-[#161B22] h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">
                       <Phone className="text-blue-400" size={24} />
-                      <span className="text-xs font-bold text-white">Destek Hattı</span>
+                      <span className="text-xs font-bold text-white">Destek (e-posta)</span>
                   </button>
-                  <button className="bg-[#161B22] h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">
+                  <button onClick={() => { if (navigator.share) navigator.share({ title: 'OYNA', text: 'Tesisim OYNA’da!', url: window.location.origin }).catch(() => {}); }} className="bg-[#161B22] h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">
                       <Share2 className="text-green-400" size={24} />
                       <span className="text-xs font-bold text-white">Profili Paylaş</span>
                   </button>

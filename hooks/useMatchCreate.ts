@@ -456,7 +456,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
         // Yeni/rookie oyuncunun tüm vitrini kilitli görmesi (soğuk-başlangıç
         // çıkmazı) böylece kalkar. Kurucu-ayarlı baraj ayrı bir özellik olacak.
         minRating: 0,
-        image: selectedPitch?.image || 'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
+        // F3d: stok Unsplash fallback'i kaldırıldı — görselsiz sahada boş bırakılır;
+        // MatchDiscovery hasPoster=false durumunda gradient zemin gösterir.
+        image: selectedPitch?.image || '',
         badges: ['Fair Play Vurgulu', `${format.label}`],
         // B9: eksik pozisyonlar GERÇEK açık slotlardan türetilir — eski sabit
         // "1 STP + 1 ORT" dolu maçta bile sahte "ARANIYOR" rozeti üretiyordu.
