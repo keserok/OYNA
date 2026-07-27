@@ -403,10 +403,11 @@ Evet. **Menü → Oyuncu Moduna Geç** ile oyuncu tarafına geçer, dilediğinde
 ## Bilinen Sınırlamalar
 
 - Para çekme şu anda kapalıdır; ekranda "Çekim Yakında Açılacak" görürsün ve verilen talepler işleme alınmaz.
-- Girişte turnikede/kapıda QR kod okutma yoktur; rezervasyondaki "QR Check-in" butonu seni skor girme ekranına götürür.
+- Girişte turnikede/kapıda QR kod okutma yoktur; rezervasyondaki "QR Check-in" butonu seni skor girme ekranına götürür. Oyuncunun bileti, tesiste gösterilen bir rezervasyon kartıdır.
+- Bildirim tercihlerinde yalnız "Yeni Rezervasyon" ve "İptal" vardır; yeni rezervasyon bildirimi kritik olduğu için uygulama içinde her zaman gösterilir. Telefon (push) bildirimi platform genelinde henüz açık değildir.
 - Maç kaptanına panel üzerinden mesaj gönderme henüz aktif değildir; "yakında" uyarısı görürsün.
 - Uygulama dili değiştirilemez; dil menüsü şimdilik kapalıdır.
-- Panelden destek talebi açıp takip edemezsin; destek yalnız e-posta ve WhatsApp üzerinden verilir.
+- Panelden **Destek Merkezi** ile talep açıp yanıtları uygulama içinde takip edebilirsin; e-posta kanalı da açıktır (WhatsApp hattı yoktur).
 - Kortlarının kalite notunu kendin belirleyemezsin; notları yalnız OYNA yönetimi onaylar.
 - Uygulama içi online ödeme sağlayıcısı ayarlarını panelden kendin yapılandıramazsın.
 - Standart planda en fazla 5 kort ekleyebilirsin.

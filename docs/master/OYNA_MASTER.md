@@ -142,7 +142,7 @@ Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, 
 - **Frontend:** React 19 + TypeScript + Vite 6 + TailwindCSS v4 + Zustand + Framer Motion + Leaflet + Recharts. Router yok — `App.tsx` içinde `view` state switch'i (~40 lazy ekran). ErrorBoundary + Sentry/PostHog (env boşsa no-op). Ana paket 386KB→**57KB** (lazy'leme sonrası).
 - **Backend:** Supabase — Auth (OTP/Google/Apple) · PostgreSQL 17 (**126+ migration, ~73 tablo, RLS 67/67 aktif**) · Realtime · Storage · **9 Edge Function** (create/capture/void/refund-payment, payment-webhook, send-push, send-email, admin-broadcast, admin-create-user — legacy `push-notification` silindi). Proje ref: `iikvzgyccvgcybzdfwlv`.
 - **Mobil:** Capacitor 8 (10-12 plugin). Android + iOS native katman **02.07'de onarıldı** (bkz. §11).
-- **Admin:** Ayrı SPA (`admin-panel/`, `admin.html`), Supabase Auth + **zorunlu MFA (TOTP, AAL2)**. İki mod: OPanel (operasyon) + GodView (platform).
+- **Admin:** Ayrı SPA (`admin-panel/`, `admin.html`), Supabase Auth + **MFA (TOTP, AAL2) — altyapı hazır, `app_config.admin_mfa_required` bayrağıyla açılır (bugün kapalı)**. İki mod: OPanel (operasyon) + GodView (platform).
 - **SSOT ilkesi:** Her varlık için tek kanonik tanım · snake_case standardı · tek `FORMATIONS` kaynağı · komisyon `commission_config` (motor SSOT canlı; panel/`settings` tek-kaynağa indirme Wave 5) · operasyonel parametreler `app_config` (deploy'suz panel değişikliği) · feature-flag `feature_flags`.
 - **Ölçek hedefi:** Mimari 100k+ kullanıcıya; lansman gerçekçi hedef ~10–20k kayıtlı, pik ~300–500 eşzamanlı, ~100 maç/gün. Eşzamanlı katılım atomik (ilk gelen alır).
 
@@ -171,7 +171,7 @@ Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, 
 
 ## 9. Güvenlik Durumu
 
-**✅ Yapıldı:** RLS 67/67 + art arda hardening migration'ları · admin zorunlu MFA · webhook imza doğrulama (iyzico token yeniden sorgulanır) · `admin-broadcast` **fail-closed** yapıldı · auth'suz legacy `push-notification` fonksiyonu ve bayat kopya **silindi** (Supabase undeploy = kurucu aksiyonu) · `IS_LOCAL_DEV` yalnız `VITE_DEV_MODE=true` ile · secret'lar Supabase secrets'ta, `.gitignore` düzenlendi (keystore/google-services/p8/p12 asla commit'lenmez).
+**✅ Yapıldı:** RLS 67/67 + art arda hardening migration'ları · admin MFA altyapısı (bayrak kontrollü) + kurtarma kodları · webhook imza doğrulama (iyzico token yeniden sorgulanır) · `admin-broadcast` **fail-closed** yapıldı · auth'suz legacy `push-notification` fonksiyonu ve bayat kopya **silindi** (Supabase undeploy = kurucu aksiyonu) · `IS_LOCAL_DEV` yalnız `VITE_DEV_MODE=true` ile · secret'lar Supabase secrets'ta, `.gitignore` düzenlendi (keystore/google-services/p8/p12 asla commit'lenmez).
 
 **🔴 Kalan (lansman öncesi, çoğu KURUCU):**
 1. **Edge CORS:** `ALLOWED_ORIGIN` / `ADMIN_ALLOWED_ORIGIN` gerçek domainlere (varsayılan `*`).
@@ -182,7 +182,7 @@ Anahtar çevirme sırası: edge secrets (`PAYMENT_PROVIDER=IYZICO`, `IYZICO_*`, 
 6. Secret rotasyon takvimi: service-role 180g · webhook/payment secret 90g · sızıntıda anında iptal (RUNBOOK §6).
 7. **Webhook replay/idempotency (`payment-webhook`):** imza doğrulanıyor ama tekrar-koruması yok → geçerli bir isteğin tekrarı çift cüzdan-kredisi/çift rezervasyona yol açabilir. `processed_webhook_events` tablosuna event_id **UNIQUE** (çakışmada atla) + payload timestamp'ine ±5 dk tolerans (KARARLAR Soru 34, Wave 10).
 8. **Admin-auth sertleştirme (Wave 10 — KARARLAR Soru 24–27):**
-   - **MFA cihaz-kaybı kurtarma (🔴 kritik):** bugün zorunlu TOTP, cihaz kaybında admin'i tamamen kilitler. Enroll'da 8–10 tek-kullanımlık recovery kodu (hash'li) + SUPER_ADMIN'in çağırdığı audit'li `admin_reset_mfa` (self-reset yasak).
+   - **MFA cihaz-kaybı kurtarma: ✅ ÇÖZÜLDÜ (2026-07-27).** Enroll'da 8 tek-kullanımlık recovery kodu (bcrypt hash) tek sefer gösterilir; challenge ekranında "kurtarma kodu kullan" yolu var; SUPER_ADMIN için audit'li `admin_reset_mfa` (self-reset yasak). MFA bayrağı (`admin_mfa_required`) hâlâ **kapalı** — açmadan önce en az bir SUPER_ADMIN enroll olup kodlarını indirmeli.
    - **Oturum hijyeni:** 15 dk idle-logout + 8 saat mutlak oturum + kritik işlem öncesi step-up MFA (şu an yalnız AAL2 zorunlu; idle/TTL kodu yok).
    - **Login rate-limit + alarm:** IP+email başına 5 başarısız/15 dk kilit + başarılı login/kilitlenme alarmı + tüm denemeler audit.
    - **Ağ kısıtı (🙋 KURUCU):** `admin.html` Cloudflare Access/Zero Trust arkasına + `admin-*` edge'lerde IP/CIDR allowlist.

@@ -205,7 +205,7 @@ No-show bildirimi haksızsa itiraz hakkın var:
 
 1. Ana Sayfa **Gelen Talepler**'de ilgili işte kırmızı **No-show Bildirimi** kartını görürsün.
 2. **48 saat içinde** **İtiraz Et**'e dokun.
-3. "İtirazın alındı" onayını görürsün; durum OYNA yönetiminin incelemesine girer. 48 saati kaçırırsan ceza kesinleşir.
+3. "İtirazın alındı" onayını görürsün; durum OYNA yönetiminin incelemesine girer ve karar bildirimle sana döner (haklı bulunursan ceza iade edilir, ücretin ödenir). 48 saati kaçırırsan ceza kesinleşir.
 
 Önemli: kabul ettiğin bir işe gidemeyeceğini anlarsan şu an uygulama içinden işi bırakma imkânı yok — bu yüzden yalnızca gerçekten gidebileceğin işleri kabul et.
 
@@ -266,16 +266,10 @@ Hayır, asgari tutar yok; ama TC kimlik doğrulaman tamamlanmış olmalı ve ayn
 
 ## Bilinen Sınırlamalar
 
-- Maç kartındaki **YOLA ÇIKTIM** ve **TESİSE VARDIM** butonları kaptana gerçek bir bildirim göndermiyor; yola çıktığını haber vermek istiyorsan kaptana mesaj at.
-- Ayarlar'daki bildirim tercihleri şu an gönderilen bildirimleri etkilemiyor.
-- Teklif ekranındaki "Karşı Teklifin (Opsiyonel)" alanı çalışmıyor — karşı teklif/pazarlık şu an mümkün değil.
-- Kabul ettiğin bir işi uygulama içinden bırakmanın (iptal etmenin) bir yolu yok.
-- Kimlik kartındaki maç sayısı, yönettiğin maçlarla şu an artmıyor.
-- **AKTİFLİK AYARLARI**'nda gün/saat seçmek, önerilen hakem listelerinde görünmeni engelleyebiliyor — görünürlüğünü garantiye almak için bu ayarı şimdilik boş bırakman daha güvenli.
+- Ücret pazarlığı yoktur: teklif ekranında ücret sabittir ve salt-okunur gösterilir.
+- Komisyon her kazançta **%10**'dur (bedele dahildir).
+- Profilinde "hazır fotoğraf" seçeneği yoktur; avatar olarak yalnız kendi yüklediğin fotoğraf kullanılır.
+- Maç detayında tesis özellikleri listesi ve mesafe bilgisi gösterilmez; yol tarifi sahanın konumuyla harita uygulamasında açılır.
 - Profilindeki hizmet yarıçapı ayarı eşleştirmede henüz dikkate alınmıyor.
-- Kaptanın seni doğrudan kiraladığı veya teklifle ulaştığı işlerde, maç sonu onayına rağmen kazancın "Çekilebilir" durumuna geçişi şu an takılabiliyor.
-- No-show itirazının sonucu şu an her zaman ekranına düşmeyebiliyor.
-- Paneldeki "%0 komisyon" duyurusu geçerli değil — komisyon her kazançta %10'dur.
-- **Menü**'deki **Destek** butonu şu an gerçek bir destek kanalına bağlanmıyor.
-- Maç detayındaki tesis özellikleri, mesafe ve yol tarifi bilgileri henüz gerçek veriye bağlı değil.
+- Telefon (push) bildirimleri platform genelinde henüz açık değildir; bildirimler uygulama içinde görünür.
 - Girilen resmi skoru sonradan düzeltmenin uygulama içinde bir yolu yok.

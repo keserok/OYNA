@@ -98,7 +98,7 @@ _Şekil: Menü — profil, ayarlar, destek ve çıkış._
 
 - **Profilim**: Profil düzenleme ekranını açar.
 - **Ayarlar**: Bildirim, gizlilik, görünüm, güvenlik ve rol seçenekleri.
-- **Destek**: Destek bölümü (bkz. Bilinen Sınırlamalar).
+- **Destek**: Ayarlar'daki destek bölümüne götürür (SSS, e-posta ile destek, hata bildirimi).
 - **Çıkış Yap**: Hesaptan çıkarsın.
 
 ## 4. İş Alma: 3 Yol
@@ -142,7 +142,7 @@ Bilmen gerekenler:
 
 - **500₺ teminat**: İş kabul edebilmek için hesabında en az 500₺ bakiye bulunmalı. Bu bakiye bloke edilmez; olası ceza tahsilatının güvencesidir. Bakiyen yetersizse kabul işlemi tamamlanmaz — önce cüzdanına yükleme yapman gerekir.
 - **Çakışan saat**: Aynı saat aralığında ikinci bir iş alamazsın; sistem çakışan kabulü engeller.
-- Kabul ettiğin iş bağlayıcıdır — uygulama içinden bırakma seçeneği yoktur (bkz. Bilinen Sınırlamalar).
+- Kabul ettiğin işi **İşi Bırak** düğmesiyle bırakabilirsin: maça 24 saatten fazla varsa cezasız, daha geç kalırsan ücretin %50'si kadar ceza kesilir (onay ekranında tutar gösterilir). Maç başladıktan sonra bırakılamaz.
 
 ## 6. Ücretini Belirle
 
@@ -214,7 +214,7 @@ Kabul ettiğin maça gitmezsen kaptan seni "gelmedi" (no-show) olarak bildirebil
 
 ### İtiraz hakkın: 48 saat
 
-Haksız yere bildirildiğini düşünüyorsan, bildirimden itibaren **48 saat** içinde iş kartındaki **İtiraz Et** düğmesine dokunarak itiraz edebilirsin. İtirazın kayda alınır ve kartta "İtirazın alındı" durumu görünür. 48 saat geçtikten sonra itiraz hakkın kapanır.
+Haksız yere bildirildiğini düşünüyorsan, bildirimden itibaren **48 saat** içinde iş kartındaki **İtiraz Et** düğmesine dokunarak itiraz edebilirsin. İtirazın kayda alınır ve kartta "İtirazın alındı" durumu görünür. OYNA yönetimi incelemesini bitirdiğinde sonucu bildirimle alırsın: itirazın haklı bulunursa kesilen ceza iade edilir ve ücretin cüzdanına işlenir. 48 saat geçtikten sonra itiraz hakkın kapanır.
 
 ## 11. Profil ve Ayarlar
 
@@ -288,16 +288,11 @@ Evet. Oyunculuğun her zaman açıktır; **Menü** → **Ayarlar**'daki rol değ
 
 ## Bilinen Sınırlamalar
 
-- **YOLA ÇIKTIM** ve **TESİSE VARDIM** düğmelerine basmak kaptana bildirim göndermez; tesiste iletişim için kaptanla doğrudan konuşman gerekir.
-- Maç sonunda takıma verdiğin 5 yıldızlı centilmenlik puanı şu an hiçbir yere kaydedilmez.
-- Teklif ekranındaki "Karşı Teklifin (Opsiyonel)" alanı kaptana iletilmez; ücret pazarlığı yoktur.
-- Panelde görebileceğin "%0 komisyon" duyurusu geçerli değildir; komisyon her zaman %10'dur.
-- **Ayarlar**'daki bildirim tercihleri kaydedilir ancak gelen bildirimleri şu an etkilemez.
-- Kabul ettiğin bir işi uygulama içinden bırakmanın bir yolu şu an yoktur.
-- Profilindeki maç sayısı, oynadığın maçlarla şu an artmaz.
-- **AKTİFLİK AYARLARI**'nda seçtiğin gün ve saatler, kaptanlara gösterilen öneri listelerine şu an güvenilir şekilde yansımayabilir.
-- Kaptanın seni doğrudan kiraladığı veya teklifle çağırdığı işlerde, maç sonu ödemesinin "Çekilebilir" duruma geçmesi gecikebilir.
-- No-show cezasına yaptığın itirazın sonucu şu an sana her zaman dönmeyebilir.
-- **Menü**'deki **Destek** düğmesi şu an gerçek bir destek kanalına bağlanmaz.
-- Maç detayındaki tesis özellikleri, mesafe bilgisi ve yol tarifi şu an gerçek verileri göstermeyebilir.
+- Maç sonunda takıma centilmenlik puanı verme özelliği yoktur (kaldırıldı); değerlendirme tek yönlüdür — takım seni puanlar.
+- Ücret pazarlığı yoktur: teklif ekranında ücret sabittir ve salt-okunur gösterilir.
+- Komisyon her kazançta **%10**'dur (bedele dahildir).
+- Profilinde "hazır fotoğraf" seçeneği yoktur; avatar olarak yalnız kendi çektiğin/yüklediğin fotoğraf kullanılır.
+- Maç detayında tesis özellikleri listesi ve mesafe bilgisi gösterilmez; yol tarifi sahanın konumuyla harita uygulamasında açılır (konum girilmemişse düğme pasiftir).
+- Telefon (push) bildirimleri platform genelinde henüz açık değildir; bildirimler uygulama içinde görünür.
+- Profilindeki **Çalışma Alanı (Yarıçap)** ayarı kaydedilir ancak eşleştirmede şu an dikkate alınmaz.
 - Profilindeki **Çalışma Alanı (Yarıçap)** ayarı kaydedilir ancak eşleştirmede şu an dikkate alınmaz.

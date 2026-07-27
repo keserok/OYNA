@@ -195,11 +195,12 @@ Hayır. Tek başına da maç bulup katılabilirsin; takımlar tamamen isteğe ba
 ## Bilinen Sınırlamalar
 
 - Cüzdandan para çekme şu an geçici olarak kapalı olabilir; açıldığında uygulama içinden duyurulur.
-- Maç bittikten sonra rakibi ve takım arkadaşlarını puanladığın değerlendirme ekranı şu an otomatik açılmıyor.
-- Rezervasyon QR biletini sahada okutan bir giriş sistemi yok; tesise adınla giriş yaparsın.
-- "Maçın Adamı" (MVP) seçimi şu an profilde görünmüyor.
+- Maç bittikten sonra **Maçlarım → Geçmiş** bölümünde çıkan "Maçı Değerlendir" kartıyla takım arkadaşlarını ve kaleci/hakemi puanlarsın; ayrıca bildirim de gelir.
+- Rezervasyon QR biletini sahada okutan bir turnike/giriş sistemi yok; bileti tesis görevlisine gösterirsin (bilete Maçlarım'daki rezervasyon kartındaki **Bilet** düğmesinden ulaşırsın).
+- "Maçın Adamı" (MVP) ayrı bir oyla seçilmez; maçın MVP'si verilen puanlardan hesaplanır ve profilinde sayaç olarak görünür.
 - Maçlarını ay görünümünde gösteren ayrı bir takvim ekranı yok; her şey **Maçlarım** listesindedir.
 - Hakemin girdiği maç skoru resmîdir; skora uygulama içinden itiraz edilemez.
-- Uygulama içi canlı destek veya sohbet hattı yok; destek yalnızca e-posta iledir.
+- Uygulama içinden **destek talebi** açıp yanıtları uygulama içinde görebilirsin; ayrıca e-posta kanalı da vardır. Anlık (canlı sohbet) destek yoktur.
+- Telefon (push) bildirimleri platform genelinde henüz açık değildir; bildirimler uygulama içinde görünür.
 - Maç kurarken katılımcılar için asgari puan barajı ayarlanamaz.
 - Uygulama şu an yalnızca Türkçe'dir.

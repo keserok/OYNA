@@ -521,12 +521,13 @@ Kadrodan biri ayrılınca yer otomatik olarak yedeklerden doldurulur; güvenilir
 
 ## Bilinen Sınırlamalar
 
-- Maç sonrası oyuncu değerlendirme ekranı şu an açılmıyor; maç bitince yıldızlama/puanlama yapılamıyor.
-- QR kodlu maç bileti ekranına şu an ulaşılamıyor.
-- "Maçın Adamı" (MVP) seçimi yapılmıyor ve profilde MVP rozeti görünmüyor.
+- Maç sonrası değerlendirme **Maçlarım → Geçmiş & İptaller** bölümündeki "Maçı Değerlendir" kartından açılır (maç bitince bildirim de gelir); değerlendirdiğin maçlarda kart görünmez.
+- QR kodlu bilete **Maçlarım → rezervasyon kartı → Bilet** düğmesinden ulaşırsın. Sahada okutan turnike yoktur; bileti görevliye gösterirsin.
+- "Maçın Adamı" (MVP) ayrı oyla seçilmez — maçta verilen puanların ortalamasından hesaplanır; profil kartında MVP sayın görünür.
 - Bakiye çekme özelliği zaman zaman geçici olarak kapalı olabilir.
-- Maçlar için takvim görünümü yok; maçların yalnız Maçlarım listesinde görünür.
+- Maçlar için ay/takvim görünümü yok; maçların yalnız Maçlarım listesinde görünür.
 - Otomatik dengeli takım kurma (kadroyu güce göre bölme) özelliği yok.
+- Kaptan seni kadrodan çıkarırsa ödediğin ücret iade kredisi olarak cüzdanına döner ve bildirim alırsın.
 - Maç kurarken katılımcılar için minimum puan barajı ayarlanamıyor.
 - Oyuncu kartı her hesapta otomatik açık değildir; etkinleştirilene kadar profilde görünmez.
 - "5+1 / 6+1" gibi kaleci ayrı gösterimi yok; formatlar kaleci dahil toplam oyuncu sayısıyla (ör. 7v7) yazılır.

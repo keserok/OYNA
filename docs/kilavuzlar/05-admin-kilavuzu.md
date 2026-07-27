@@ -50,7 +50,7 @@ _Şekil: Admin paneli giriş ekranı._
 - **Oturum güvenliği:** Hareketsizlikte (varsayılan **10 dakika**) ve toplamda **8 saatte** oturum otomatik kapanır; sekmeyi yenilemek süreyi sıfırlamaz.
 - "E-postayı bu cihazda hatırla" seçeneği yalnız e-postayı hatırlar, şifreyi değil.
 
-> **Önemli:** 2FA'yı zorunlu kılmadan önce telefon kaybı senaryosunu planla — kurtarma kodu mekanizması henüz yoktur; cihaz kaybında hesabın kilitlenebilir.
+> **Önemli:** 2FA'yı zorunlu kılmadan önce telefon kaybı senaryosunu planla — iki adımlı doğrulama kurulumunda **kurtarma kodları** üretilir ve tek sefer gösterilir — cihaz kaybında bu kodlarla girip yeniden kurulum yaparsın; kodun da yoksa bir SUPER_ADMIN hesabının doğrulamasını sıfırlayabilir.
 
 ---
 
@@ -338,13 +338,15 @@ Gönder'den önce **Önizle** tam olarak kaç kişiye gideceğini gösterir; ona
 ## Bilinen Sınırlamalar
 
 - Panelden gerçek banka havalesi yapılmaz; payout "Tamamla" yalnız kaydı kapatır (havale elle yapılır).
-- Kullanıcı bakiyesine doğrudan elle müdahale ekranı yoktur (360° cüzdan salt-okunur).
-- Yanlış tamamlanan payout'u geri alma ekranı yoktur.
-- Kullanıcıların uygulama içinden destek talebi açıp panelden takip edeceği bir destek modülü henüz yoktur.
-- Saha sahipleriyle panel üzerinden mesajlaşma yoktur; iletişim e-posta/WhatsApp ile yürür.
+- Yanlış tamamlanan payout **Geri Al** ile PENDING'e döndürülebilir (sebep zorunlu, denetim kaydına yazılır) — ama gerçekten havale yapıldıysa geri almayın; bu yalnız kayıt düzeltmesidir.
+- Kullanıcı bakiyesine elle müdahale, kullanıcı profili aynasındaki ledger'lı düzeltme ile yapılır (FINANCE yetkisi, ±50.000 ₺ sınırı, denetim kaydı).
+- **Destek Merkezi** hem oyuncu hem tesis kanallarını kapsar; kullanıcı uygulama içinden talep açar, panelden yanıtlarsınız.
+- Saha sahipleriyle serbest mesajlaşma yoktur; iletişim Destek Merkezi ve e-posta ile yürür.
 - Zamanlanmış (ileri tarihli) bakım modu yoktur; bakım anahtarı elle açılıp kapatılır.
-- Bazı finans sekmelerinde (Payout, Rapor, Sağlık, Go-Live) CSV indirme henüz kapalıdır.
-- 2FA cihaz kaybı için kurtarma kodu mekanizması henüz yoktur.
+- CSV indirme Cüzdan Ledger, Rezervasyon Ödemeleri, Owner Billing, **Payout Talepleri** ve **Ödeme Müdahale** sekmelerinde açıktır (Rapor sekmesinin kendi indirme düğmesi vardır); Sağlık ve Go-Live pano niteliğinde olduğu için CSV içermez. Payout CSV'sinde IBAN **maskeli** yazılır.
+- Panel 2FA'sı bugün **kapalıdır** (`admin_mfa_required`); açmadan önce en az bir SUPER_ADMIN kurulum yapıp kurtarma kodlarını indirmelidir.
+- **Hizmet İtirazları** kuyruğunda no-show/itiraz kayıtları için iki karar düğmesi vardır (Sağlayıcı Haklı / Cezayı Onayla); karar para hareketlerini ve taraf bildirimlerini otomatik yürütür.
+- Hizmet ödemeleri, sağlayıcı onayladıysa ve itiraz yoksa maç bitiminden **48 saat** sonra otomatik serbest bırakılır (saatlik görev).
 
 ---
 
