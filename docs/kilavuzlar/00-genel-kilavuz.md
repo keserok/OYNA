@@ -29,7 +29,8 @@ OYNA'da herkes bir "oyuncu" olarak başlar. İstersen kaleci, hakem veya saha sa
 
 ## 2. Başlarken
 
-![Giriş/Kayıt ekranı](gorseller/genel/01-giris-ekrani.png)
+<a href="gorseller/genel/01-giris-ekrani.png"><img src="gorseller/genel/01-giris-ekrani.png" alt="Giriş/Kayıt ekranı" width="260"></a>
+
 _Şekil: Giriş ve kayıt ekranı — tüm giriş yolları tek ekranda._
 
 OYNA'ya birkaç farklı yoldan girebilirsin:
@@ -60,7 +61,8 @@ Kaleci, hakem ve saha sahibi rolleri başvuruya tabidir; başvurular OYNA ekibi 
 
 ## 4. Alt menü: 5 sekme
 
-![Ana Sayfa ve alt menü](gorseller/genel/02-ana-sayfa-alt-menu.png)
+<a href="gorseller/genel/02-ana-sayfa-alt-menu.png"><img src="gorseller/genel/02-ana-sayfa-alt-menu.png" alt="Ana Sayfa ve alt menü" width="260"></a>
+
 _Şekil: Ana Sayfa ve alttaki 5 sekmeli menü._
 
 Uygulamanın altındaki menüde 5 sekme vardır:
@@ -75,7 +77,8 @@ Uygulamanın altındaki menüde 5 sekme vardır:
 
 ### 5.1 Maça katıl
 
-![Top Oyna maç listesi](gorseller/oyuncu/02-top-oyna.png)
+<a href="gorseller/oyuncu/02-top-oyna.png"><img src="gorseller/oyuncu/02-top-oyna.png" alt="Top Oyna maç listesi" width="260"></a>
+
 _Şekil: Top Oyna — açık maçlar ve filtreler._
 
 Adım adım:
@@ -100,7 +103,8 @@ Kişi başı ücret, saha ücretinden otomatik hesaplanır. Kadro, toplam kadron
 
 ### 5.3 Saha kirala
 
-![Saha Vitrini](gorseller/oyuncu/05-saha-vitrini.png)
+<a href="gorseller/oyuncu/05-saha-vitrini.png"><img src="gorseller/oyuncu/05-saha-vitrini.png" alt="Saha Vitrini" width="260"></a>
+
 _Şekil: Saha Vitrini — liste ve harita görünümü._
 
 1. Alt menüden **Sahalar** sekmesine gir.

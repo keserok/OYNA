@@ -70,7 +70,8 @@ Giriş ekranındaki **"Önce göz at"** ile kayıt olmadan uygulamayı gezebilir
 
 ## 3. Uygulamayı Tanıyalım
 
-![Ana Sayfa](gorseller/oyuncu/01-ana-sayfa.png)
+<a href="gorseller/oyuncu/01-ana-sayfa.png"><img src="gorseller/oyuncu/01-ana-sayfa.png" alt="Ana Sayfa" width="260"></a>
+
 _Şekil: Ana Sayfa — tüm akışlara açılan komuta merkezi._
 
 Alt menüde 5 sekme var:
@@ -98,7 +99,8 @@ Ana kartlar yukarıdan aşağıya:
 
 ## 4. Maça Katıl
 
-![Top Oyna maç keşfi](gorseller/oyuncu/02-top-oyna.png)
+<a href="gorseller/oyuncu/02-top-oyna.png"><img src="gorseller/oyuncu/02-top-oyna.png" alt="Top Oyna maç keşfi" width="260"></a>
+
 _Şekil: Top Oyna — açık maçları filtrele ve katıl._
 
 ### 4.1 Maç bul ve filtrele
@@ -122,7 +124,8 @@ Bir arkadaşın sana özel maç kodu veya slot devralma kodu gönderdiyse:
 
 ### 4.3 Maç Lobisi
 
-![Maç lobisi](gorseller/oyuncu/03-mac-lobisi.png)
+<a href="gorseller/oyuncu/03-mac-lobisi.png"><img src="gorseller/oyuncu/03-mac-lobisi.png" alt="Maç lobisi" width="260"></a>
+
 _Şekil: Maç Lobisi — kadro, saha ve katılım tek ekranda._
 
 Bir maç kartına dokununca **Maç Lobisi** açılır. Burada:
@@ -155,7 +158,8 @@ Görüntülediğin taraf doluysa **YEDEK OLARAK GİR** butonu çıkar. Yedekteys
 
 ### 4.7 Maçlarım
 
-![Maçlarım ajandası](gorseller/oyuncu/07-maclarim.png)
+<a href="gorseller/oyuncu/07-maclarim.png"><img src="gorseller/oyuncu/07-maclarim.png" alt="Maçlarım ajandası" width="260"></a>
+
 _Şekil: Maçlarım — maçlar ve rezervasyonlar tek kronolojik listede._
 
 **Maçlarım** ekranı maçlarını ve saha rezervasyonlarını tek ajandada toplar:
@@ -169,7 +173,8 @@ _Şekil: Maçlarım — maçlar ve rezervasyonlar tek kronolojik listede._
 
 Kaptanlık ayrı bir rol değildir: maçı kuran kişi o maçın kaptanıdır.
 
-![Maç Oluştur](gorseller/oyuncu/04-mac-olustur.png)
+<a href="gorseller/oyuncu/04-mac-olustur.png"><img src="gorseller/oyuncu/04-mac-olustur.png" alt="Maç Oluştur" width="260"></a>
+
 _Şekil: Maç Oluştur — format, saha, kadro ve ayarlar tek sayfada._
 
 ### 5.1 Adım adım: maç oluştur
@@ -232,7 +237,8 @@ Girilen skor kesindir; skora itiraz mekanizması yoktur.
 
 ## 6. Saha Kirala
 
-![Saha Vitrini](gorseller/oyuncu/05-saha-vitrini.png)
+<a href="gorseller/oyuncu/05-saha-vitrini.png"><img src="gorseller/oyuncu/05-saha-vitrini.png" alt="Saha Vitrini" width="260"></a>
+
 _Şekil: Saha Vitrini — liste ve harita görünümüyle saha keşfi._
 
 **Sahalar** sekmesinde **SAHA VİTRİNİ** açılır:
@@ -241,7 +247,8 @@ _Şekil: Saha Vitrini — liste ve harita görünümüyle saha keşfi._
 - Yıldız ikonuyla favorilerini ayır; filtrede ilçe, en yüksek fiyat, en düşük puan, saha tipi, olanaklar ve "sadece indirimliler" var.
 - "Saha veya bölge ara..." kutusuyla isimle ara.
 
-![Saha detayı](gorseller/oyuncu/06-saha-detay.png)
+<a href="gorseller/oyuncu/06-saha-detay.png"><img src="gorseller/oyuncu/06-saha-detay.png" alt="Saha detayı" width="260"></a>
+
 _Şekil: Saha detayı — saha seçimi, takvim ve saat slotları._
 
 ### 6.1 Adım adım: saha rezerve et
@@ -275,7 +282,8 @@ Tesis online rezervasyonu geçici kapattıysa "Online rezervasyon geçici olarak
 
 ## 7. Kaleci & Hakem Kiralama
 
-![Kaleci pazaryeri](gorseller/oyuncu/14-pazaryeri-kaleci.png)
+<a href="gorseller/oyuncu/14-pazaryeri-kaleci.png"><img src="gorseller/oyuncu/14-pazaryeri-kaleci.png" alt="Kaleci pazaryeri" width="260"></a>
+
 _Şekil: Kaleci pazaryeri — onaylı kaleciler puan, ücret ve mesafeyle listelenir._
 
 ### 7.1 Pazaryerinden kirala (3 adım)
@@ -318,7 +326,8 @@ Kart bilgilerin OYNA'da saklanmaz; ödemeler güvenli ödeme altyapısı (iyzico
 
 ### 8.2 Cüzdan
 
-![Cüzdan](gorseller/oyuncu/11-cuzdan.png)
+<a href="gorseller/oyuncu/11-cuzdan.png"><img src="gorseller/oyuncu/11-cuzdan.png" alt="Cüzdan" width="260"></a>
+
 _Şekil: Cüzdan — bakiye, kartlar ve işlem geçmişi._
 
 Cüzdana **Profil → Cüzdan** kısayolundan girersin. Üstte **Yüklenen Bakiye** ve ayrı bir çipte **İade Kredisi** görünür:
@@ -340,7 +349,8 @@ Yüklenen bakiyeni "Bakiyeni geri çek" bağlantısıyla, kazanç bakiyeni ise *
 
 ## 9. Sosyal
 
-![Sosyal ekranı](gorseller/oyuncu/08-sosyal.png)
+<a href="gorseller/oyuncu/08-sosyal.png"><img src="gorseller/oyuncu/08-sosyal.png" alt="Sosyal ekranı" width="260"></a>
+
 _Şekil: Sosyal — arkadaşlar ve takımlar tek merkezde._
 
 **Sosyal** sekmesinde iki üst sekme var: **Arkadaşlar** ve **Takımlar**.
@@ -380,7 +390,8 @@ Birleşik gelen kutusunda birebir sohbetler ve **takım sohbetleri** bir aradad�
 
 ## 10. Taktik Stüdyo
 
-![Taktik Stüdyo](gorseller/oyuncu/09-taktik-studyo.png)
+<a href="gorseller/oyuncu/09-taktik-studyo.png"><img src="gorseller/oyuncu/09-taktik-studyo.png" alt="Taktik Stüdyo" width="260"></a>
+
 _Şekil: Taktik Stüdyo — diziliş, koşu ve pas animasyonları._
 
 Ana Sayfa'daki **TAKTİK STÜDYO** kartından girersin (takım detayındaki Taktik sekmesinden de açılır):
@@ -395,7 +406,8 @@ Ana Sayfa'daki **TAKTİK STÜDYO** kartından girersin (takım detayındaki Takt
 
 ## 11. Profilim
 
-![Profil ekranı](gorseller/oyuncu/10-profil.png)
+<a href="gorseller/oyuncu/10-profil.png"><img src="gorseller/oyuncu/10-profil.png" alt="Profil ekranı" width="260"></a>
+
 _Şekil: Profil — oyuncu kartı, güven puanı ve maç geçmişi._
 
 ### 11.1 Oyuncu kartın ve seviyeler
@@ -420,7 +432,8 @@ Profilindeki **Güven Puanı** kartı 0–100 arası puanını gösterir; dokunu
 
 ## 12. Bildirimler
 
-![Bildirim merkezi](gorseller/oyuncu/12-bildirimler.png)
+<a href="gorseller/oyuncu/12-bildirimler.png"><img src="gorseller/oyuncu/12-bildirimler.png" alt="Bildirim merkezi" width="260"></a>
+
 _Şekil: Bildirim merkezi — kategorilere ayrılmış gelişmeler._
 
 Ana Sayfa'daki **zil ikonuna** dokununca bildirim merkezi açılır:
@@ -437,7 +450,8 @@ Bildirim tercihlerini **Ayarlar → Bildirimler**'den yönetirsin:
 
 ## 13. Ayarlar & Yasal
 
-![Ayarlar](gorseller/oyuncu/13-ayarlar.png)
+<a href="gorseller/oyuncu/13-ayarlar.png"><img src="gorseller/oyuncu/13-ayarlar.png" alt="Ayarlar" width="260"></a>
+
 _Şekil: Ayarlar — hesap, konum, bildirim ve yasal bölümler._
 
 Profil'in sağ üstündeki dişliden girersin:

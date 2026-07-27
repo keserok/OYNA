@@ -1,59 +1,96 @@
 # Kılavuz Ekran Görüntüleri — Çekim Aracı
 
-`docs/kilavuzlar/` altındaki kullanım kılavuzlarının ekran görüntülerini üretir.
-Kılavuz metinleri görsellere referans veriyor; bu klasör o görselleri **tekrar
-üretilebilir** şekilde çekmek içindir (elle çekim yok).
+`docs/kilavuzlar/` altındaki kullanım kılavuzlarının 49 ekran görüntüsünü
+**tekrar üretilebilir** şekilde çeker (elle çekim yok).
 
-## Ön koşul: ağ izni
+Çekim, canlı Supabase'e ihtiyaç duymadan **sandbox içinde kurulan yerel bir
+yığına** karşı yapılır. Böylece üretim verisi hiç kirletilmez, kılavuzlarda
+gerçek kullanıcı bilgisi görünmez ve ağ izni olmayan ortamlarda da çalışır.
 
-Çekim, uygulamayı gerçek Supabase'e karşı çalıştırır. Ortamın ağ izin listesinde
-şu host **bulunmalıdır**:
-
-```
-iikvzgyccvgcybzdfwlv.supabase.co
-```
-
-Kontrol:
+## Hızlı başlangıç
 
 ```bash
-curl -s --noproxy '*' https://iikvzgyccvgcybzdfwlv.supabase.co/auth/v1/health
-```
+# 1) Veritabanını sıfırdan kur (PostgreSQL + 330 migration + demo seed)
+bash scripts/kilavuz-gorselleri/local-stack/build-db.sh
 
-`{"date":...}` benzeri bir yanıt → izin var. `Host not in allowlist` → izin yok;
-ortam ayarlarından eklenmeli (Claude Code on the web: ortamın *Network access*
-bölümü). **Not:** ağ politikası konteyner başlarken uygulanır — izni yeni
-eklediyseniz mevcut oturumda etkisiz kalabilir, yeni oturum gerekir.
+# 2) Servisleri başlat (PostgREST 3001 + geçit 54321 + Vite 5199)
+bash scripts/kilavuz-gorselleri/local-stack/up.sh
 
-## Çalıştırma
+# 3) Görselleri çek
+node scripts/kilavuz-gorselleri/flows.mjs           # hepsi (49 kare)
+node scripts/kilavuz-gorselleri/flows.mjs oyuncu    # tek rol
 
-```bash
-# 1) Yerel Supabase köprüsü (yalnız gerekiyorsa; canlıya bağlanılıyorsa atlanır)
-node scripts/kilavuz-gorselleri/sb-shim.mjs &      # :54321
+# 4) Depoya uygun boyuta indir (2x → 1.5x, palet PNG; ~%75 küçülme)
+node scripts/kilavuz-gorselleri/optimize.mjs
 
-# 2) Uygulamalar
-npm run dev -- --port 5199 --strictPort &          # oyuncu/kaleci/hakem/saha
-npm run dev:admin &                                # admin paneli (:4005)
-
-# 3) Çekim (rol bazlı)
-node scripts/kilavuz-gorselleri/capture.mjs oyuncu
-node scripts/kilavuz-gorselleri/capture.mjs kaleci
-node scripts/kilavuz-gorselleri/capture.mjs hakem
-node scripts/kilavuz-gorselleri/capture.mjs saha
-OYNA_ADMIN_EMAIL=... OYNA_ADMIN_PASS=... \
-  node scripts/kilavuz-gorselleri/capture.mjs admin
+# 5) Durdur
+bash scripts/kilavuz-gorselleri/local-stack/up.sh down
 ```
 
 Çıktı: `docs/kilavuzlar/gorseller/<rol>/<sıra>-<ad>.png`
 Beklenen dosya listesi: `gorsel-manifest.txt` (49 görsel).
 
-- Mobil görünüm **390×844**, admin paneli **1440×900**, `deviceScaleFactor: 2`.
-- Chromium hazır kurulu (`/opt/pw-browsers/chromium`) — `playwright install` çalıştırmayın.
+## Yerel yığın nelerden oluşuyor
+
+| Parça | Ne işe yarıyor |
+|---|---|
+| PostgreSQL 16 | Sandbox'ta kurulu; `local-stack/build-db.sh` ayrı bir küme başlatır (:55432) |
+| `00-bootstrap.sql` | Supabase uyumluluk katmanı: roller, `auth`/`storage` şemaları, `auth.uid()`, `supabase_realtime` yayını, `pg_cron`/`pg_net`/`vault` sahteleri |
+| `patches/` | Depo migration'ı ile üretim şeması arasındaki sürüklenmeyi telafi eder (aşağıya bakın) |
+| `10-gorsel-verisi.sql` | Demo kaleci/hakem hesaplarına sağlayıcı rolü verir, bir SUPER_ADMIN tanımlar, boş ekranlara örnek veri koyar |
+| PostgREST 12.2.3 | `/rest/v1/*` — gerçek PostgREST, gerçek RLS |
+| `gateway.mjs` | GoTrue yerine küçük kimlik sunucusu (`/auth/v1/token`, `/user`, …) + `/storage/v1` yer tutucu görsel; JWT'yi PostgREST ile aynı sırla imzalar |
+
+PostgREST ikilisi `/opt/oyna-local/postgrest` altında beklenir; yoksa
+[GitHub release](https://github.com/PostgREST/postgrest/releases) sayfasından
+`postgrest-v12.2.3-linux-static-x64.tar.xz` indirilip oraya açılır.
+
+## ⚠️ Bilinen sürüklenme (önemli)
+
+Depodaki migration'lar üretim şemasını **sıfırdan üretemiyor**:
+
+| Tablo | Depo migration'ı | Üretim |
+|---|---|---|
+| `goalkeepers`, `referees` | `match_count` | `"matchCount"` |
+| `goalkeepers`, `referees` | `preferred_zones` | `"preferredZones"` |
+| `goalkeepers`, `referees` | `recent_awards` | `"recentAwards"` |
+| `goalkeepers`, `referees` | `is_elite` | `"isElite"` |
+
+Bu kolonlar üretimde depo dışında yeniden adlandırılmış; sonraki 14 migration
+camelCase adı kullandığı için temiz bir veritabanı depoyla ayağa kalkmıyor.
+`patches/20260530000000_service_integration.sql` bunu **yalnız yerel kopyada**
+telafi eder. Kalıcı çözüm depoya bir rename migration'ı eklemektir — bu
+Supabase↔GitHub entegrasyonunun önizleme dallarında neden `MIGRATIONS_FAILED`
+verdiğini de açıklıyor olabilir (önizleme veritabanları sıfırdan kurulur).
+
+Ayrıca `supabase/seeds/ordu_demo_seed.sql` güncel şemayla uyumsuz:
+`friendships.sender_id/receiver_id` artık `GENERATED ALWAYS` (requester_id /
+addressee_id takma adı) ve `oyna_id` yalnız küçük harf kabul ediyor.
+`build-db.sh` seed'i çalıştırırken bunları geçici kopyada düzeltir; depodaki
+dosyaya dokunmaz.
+
+## Canlıya karşı çekmek isterseniz
+
+Ortamın ağ izin listesinde `iikvzgyccvgcybzdfwlv.supabase.co` bulunmalıdır.
+Kontrol:
+
+```bash
+curl -s "$HTTPS_PROXY/__agentproxy/status"   # recentRelayFailures'a bakın
+```
+
+İzin varsa `sb-shim.mjs` köprüsünü başlatıp `OYNA_APP_URL` ile canlıya bakan
+bir Vite sunucusuna yönlendirin. **Not:** ağ politikası konteyner başlarken
+uygulanır; izni yeni eklediyseniz yeni bir oturum gerekir.
 
 ## Kurallar
 
-1. **Üretimde yazma yapılmaz.** Yalnız gezinme + ekran görüntüsü; onay/kaydet
-   butonlarına basılmaz, veri değiştirilmez.
-2. **Admin için geçici hesap** açılır (auth.users + admin_team_members
-   SUPER_ADMIN), iş biter bitmez **silinir**.
-3. Manifestte olup çekilemeyen bir görsel varsa, kılavuzdaki o referans satırı
+1. **Üretimde yazma yapılmaz.** Yerel yığın zaten üretime hiç bağlanmaz.
+2. Gezinme, kırılgan tıklama zincirleri yerine uygulamanın kendi store'u
+   üzerinden yapılır: `import('/store.ts')` → `setView(...)`.
+3. Admin akışı her karede sayfa başlığını doğrular; yanlış sayfa sessizce
+   geçemez.
+4. Türkçe **İ** (U+0130) JavaScript'in `/i/` bayrağıyla `i`ye katlanmaz —
+   `/giriş yap/i` deseni "GİRİŞ YAP" metnini bulamaz. Seçicilerde birebir
+   metin ya da `i` bayrağı olmayan regex kullanın.
+5. Manifestte olup çekilemeyen bir görsel varsa, kılavuzdaki o referans satırı
    kaldırılır — kırık görsel bağlantısı bırakılmaz.

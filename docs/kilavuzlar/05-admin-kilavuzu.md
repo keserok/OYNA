@@ -41,7 +41,8 @@ Panel, oyuncu uygulamasından tamamen ayrıdır; kendi adresi ve kendi girişi v
 
 ## 2. Panele Giriş
 
-![Admin giriş ekranı](gorseller/admin/01-giris.png)
+<a href="gorseller/admin/01-giris.png"><img src="gorseller/admin/01-giris.png" alt="Admin giriş ekranı" width="680"></a>
+
 _Şekil: Admin paneli giriş ekranı._
 
 - **Adres:** Panel ayrı bir sayfadadır: canlıda `/admin.html`, yerel geliştirmede `http://localhost:4005/admin.html` (`npm run dev:admin`).
@@ -77,14 +78,16 @@ Panelde beş rol vardır. Menünde bir modül görünmüyorsa, rolünün o modü
 
 ### 4.1 Genel Bakış
 
-![Genel Bakış](gorseller/admin/02-genel-bakis.png)
+<a href="gorseller/admin/02-genel-bakis.png"><img src="gorseller/admin/02-genel-bakis.png" alt="Genel Bakış" width="680"></a>
+
 _Şekil: Günün özeti — KPI kartları, gelir trendi ve bekleyen işler._
 
 Güne buradan başlarsın: gelir trendi grafiği, tamamlanan/toplam maç, aktif kaleci-hakem sayısı, banlı kullanıcı sayısı, **Operasyon Kuyruğu** özeti ve son maçlar listesi. Bakım modu açıksa üstte rozet görürsün. Son maçlardan birine tıklayınca doğrudan o maçın kokpiti açılır.
 
 ### 4.2 Komuta Merkezi
 
-![Komuta Merkezi](gorseller/admin/03-komuta-merkezi.png)
+<a href="gorseller/admin/03-komuta-merkezi.png"><img src="gorseller/admin/03-komuta-merkezi.png" alt="Komuta Merkezi" width="680"></a>
+
 _Şekil: Bekleyen kuyruklar tek ekranda._
 
 Bütün bekleyen işlerin canlı toplandığı ekran (yarım dakikada bir kendini yeniler, yeni kayıtlar anlık düşer):
@@ -103,7 +106,8 @@ Bütün bekleyen işlerin canlı toplandığı ekran (yarım dakikada bir kendin
 
 ### 5.1 Sahalar ve Kurulum Merkezi
 
-![Sahalar](gorseller/admin/06-sahalar.png)
+<a href="gorseller/admin/06-sahalar.png"><img src="gorseller/admin/06-sahalar.png" alt="Sahalar" width="680"></a>
+
 _Şekil: Tesis envanteri ve vitrin bayrakları._
 
 Tesis envanterini görür, durum filtreleriyle daraltırsın. Her tesis için dört **vitrin bayrağı** vardır: **Öne Çıkan ⭐ · Flash indirim · Müsaitlik · Yayında 👁**.
@@ -112,7 +116,8 @@ Tesis envanterini görür, durum filtreleriyle daraltırsın. Her tesis için d�
 
 ### 5.2 Kullanıcılar / Kaleciler / Hakemler
 
-![Kullanıcılar](gorseller/admin/04-kullanicilar.png)
+<a href="gorseller/admin/04-kullanicilar.png"><img src="gorseller/admin/04-kullanicilar.png" alt="Kullanıcılar" width="680"></a>
+
 _Şekil: Kullanıcı listesi ve işlem menüsü._
 
 Sunucu taraflı arama; **rol** (Oyuncu / Saha Sahibi / Kaleci / Hakem) ve **durum** (Aktif / Banlı) filtreleri; 50'şerlik sayfalama. Listede e-postalar maskeli görünür (KVKK) ve CSV çıktısında da maskeli kalır.
@@ -130,7 +135,8 @@ Satır işlemleri:
 
 ### 5.3 Doğrulama Merkezi
 
-![Doğrulama Merkezi](gorseller/admin/05-dogrulama-merkezi.png)
+<a href="gorseller/admin/05-dogrulama-merkezi.png"><img src="gorseller/admin/05-dogrulama-merkezi.png" alt="Doğrulama Merkezi" width="680"></a>
+
 _Şekil: Başvurular, kimlik doğrulamaları ve tesis onayları tek ekranda._
 
 Üç segment tek ekranda; rozetteki sayı toplam bekleyendir:
@@ -146,7 +152,8 @@ _Şekil: Başvurular, kimlik doğrulamaları ve tesis onayları tek ekranda._
 
 ### 5.5 Maçlar ve Maç Kontrol Kokpiti
 
-![Maçlar](gorseller/admin/07-maclar.png)
+<a href="gorseller/admin/07-maclar.png"><img src="gorseller/admin/07-maclar.png" alt="Maçlar" width="680"></a>
+
 _Şekil: Maç listesi ve kontrol kokpiti._
 
 Maç listesinden bir maça tıklayınca **Maç Kontrol Kokpiti** açılır — sorunlu bir maçta ihtiyacın olan her şey tek çekmecede:
@@ -177,7 +184,8 @@ Maçı **iptal + iade** tek akışta yapılır: sebep yazarsın, ödemeler otoma
 
 ## 7. Finans
 
-![Finans](gorseller/admin/08-finans.png)
+<a href="gorseller/admin/08-finans.png"><img src="gorseller/admin/08-finans.png" alt="Finans" width="680"></a>
+
 _Şekil: Finans merkezi — 8 sekme._
 
 Finans modülü **8 sekmeden** oluşur:
@@ -211,7 +219,8 @@ Talepler dört tipte gelir: **Saha Sahibi (2 haftalık) · Kaleci/Hakem (anında
 
 ### 7.3 Komisyon
 
-![Komisyon](gorseller/admin/09-komisyon.png)
+<a href="gorseller/admin/09-komisyon.png"><img src="gorseller/admin/09-komisyon.png" alt="Komisyon" width="680"></a>
+
 _Şekil: Komisyon yapılandırması._
 
 Komisyonun tek doğruluk kaynağı bu ekrandır; saha sahipleri komisyonu değiştiremez. Kapsamlar: **GLOBAL · PITCH (tek saha) · SERVICE_GK · SERVICE_REF · MATCH (tek maç)**. İki model vardır: **MODEL_A (kaporadan yüzde)** ve **MODEL_B (yüzde + markup)** — oran ve markup alanlarını doldurup aktif/pasif yaparsın. Dar kapsam genişi ezer (örneğin tek sahaya özel oran globalden önceliklidir).
@@ -222,7 +231,8 @@ Komisyonun tek doğruluk kaynağı bu ekrandır; saha sahipleri komisyonu deği�
 
 ### 8.1 Denetim Günlüğü
 
-![Denetim Günlüğü](gorseller/admin/12-denetim-gunlugu.png)
+<a href="gorseller/admin/12-denetim-gunlugu.png"><img src="gorseller/admin/12-denetim-gunlugu.png" alt="Denetim Günlüğü" width="680"></a>
+
 _Şekil: Değiştirilemez denetim kaydı._
 
 Her admin işlemi zaman, işlem, hedef, detay ve işlemi yapan bilgisiyle listelenir; **Diff** görünümü eski→yeni değerleri yan yana gösterir. **"Zinciri Doğrula"** butonu kayıtların el değmemişliğini kriptografik zincirle kontrol eder. Kayıtlar silinemez ve değiştirilemez.
@@ -235,7 +245,8 @@ Temel platform ayarları: **Ödeme Yöntemi** (Sadece Nakit / Tamamı Kart / **K
 
 ### 8.3 Sistem Parametreleri
 
-![Sistem Parametreleri](gorseller/admin/10-sistem-parametreleri.png)
+<a href="gorseller/admin/10-sistem-parametreleri.png"><img src="gorseller/admin/10-sistem-parametreleri.png" alt="Sistem Parametreleri" width="680"></a>
+
 _Şekil: İşletme kuralları ve Modül Anahtarları._
 
 Platformun tüm işletme kuralları kategorilere ayrılmış parametrelerdir (MAÇ, FAIRPLAY, REZERVASYON, HESAP, SİSTEM, ÖDEME, BİLDİRİM, GÜVENLİK, HİZMET, GENEL). Her parametrenin min/max sınırı vardır; değişiklikler anında uygulanır ve denetime yazılır. Sık kullanılan örnekler:
@@ -254,7 +265,8 @@ Aynı sayfadaki **Modül Anahtarları** bölümünden kapsam dışı modülleri 
 
 ### 8.4 Ekipler & Yetkiler
 
-![Ekipler & Yetkiler](gorseller/admin/11-yetkiler-acl.png)
+<a href="gorseller/admin/11-yetkiler-acl.png"><img src="gorseller/admin/11-yetkiler-acl.png" alt="Ekipler & Yetkiler" width="680"></a>
+
 _Şekil: Admin rolü atama._
 
 Kullanıcı ara → rol seç (**Süper Admin / Admin / Moderatör / Finans / Destek**) → **Ekle/Güncelle**. Platform admin yetkisi verme kutusu, hesabı tam admin yapar. **Yetkiyi Kaldır** aynı ekrandadır; güvenlik gereği kendi yetkini kaldıramazsın.
