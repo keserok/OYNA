@@ -422,6 +422,10 @@ interface AppState {
   removeUserNotification: (id: string) => void;
   isNotificationsOpen: boolean;
   setIsNotificationsOpen: (open: boolean) => void;
+  // Bir görünüm alt sayfa/modal açtığında alt barın yol vermesi için bayrak
+  // (ör. Maçlarım bilet alt sayfaları). Kapanınca/görünümden çıkınca sıfırlanır.
+  navOverlayOpen: boolean;
+  setNavOverlayOpen: (open: boolean) => void;
   // FAZ 7.5: Çoklu rol geçişi (rol değiştirici sheet)
   isRoleSwitcherOpen: boolean;
   // Misafir modu: oturum açmadan gezinme. Yazma aksiyonlarında kayıt kapısı açılır.
@@ -1120,6 +1124,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   userNotifications: [],
   isNotificationsOpen: false,
   setIsNotificationsOpen: (open) => set({ isNotificationsOpen: open }),
+  navOverlayOpen: false,
+  setNavOverlayOpen: (open) => set({ navOverlayOpen: open }),
   isRoleSwitcherOpen: false,
   setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
   isGuest: false,

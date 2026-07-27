@@ -222,7 +222,7 @@ interface MyMatchesHubProps {
 
 const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
   const reduceMotion = useReducedMotion();
-  const { setSelectedMatch, setMatchCreateSeed, navigateTo, applyMatchLocal } = useAppStore();
+  const { setSelectedMatch, setMatchCreateSeed, navigateTo, applyMatchLocal, setNavOverlayOpen } = useAppStore();
   const { items, past, counts, nextItem, bookingsLoading, bookingsError, refetchBookings, currentUserUid } = useMyAgenda();
 
   const [segment, setSegment] = useState<Segment>(
@@ -310,6 +310,14 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       setLeaving(false);
     }
   };
+
+  // ── Alt sayfa/onay açıkken alt bar yol verir; kapanınca ve görünümden
+  // çıkınca geri gelir (unmount temizliği güvence).
+  const overlayOpen = !!(sheet || cancelTarget || cancelResult || leaveTarget);
+  useEffect(() => {
+    setNavOverlayOpen(overlayOpen);
+    return () => setNavOverlayOpen(false);
+  }, [overlayOpen, setNavOverlayOpen]);
 
   // ── Rezervasyon aksiyonları (mevcut sözleşmeler) ──────────────────────────
   const handlePayDeposit = (b: MyBooking) => {
@@ -602,7 +610,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
         {sheetBooking && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-[3px] flex items-end"
+            className="fixed inset-0 z-[55] bg-black/70 backdrop-blur-[3px] flex items-end"
             onClick={() => setSheet(null)}
           >
             <motion.div
@@ -696,7 +704,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
         {sheetMatch && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-[3px] flex items-end"
+            className="fixed inset-0 z-[55] bg-black/70 backdrop-blur-[3px] flex items-end"
             onClick={() => setSheet(null)}
           >
             <motion.div

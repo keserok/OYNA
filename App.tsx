@@ -132,10 +132,15 @@ const App: React.FC = () => {
     addUserNotification,
     setNotificationPreferences,
     updateSingleNotificationPref,
+    navOverlayOpen,
   } = useAppStore();
 
-  // Görünüm değişince alt bar her zaman görünür başlasın
-  React.useEffect(() => { setNavHidden(false); }, [view]);
+  // Görünüm değişince alt bar her zaman görünür başlasın; kalmış overlay
+  // bayrağı da temizlensin (asıl temizlik görünümün kendi unmount'unda).
+  React.useEffect(() => {
+    setNavHidden(false);
+    useAppStore.getState().setNavOverlayOpen(false);
+  }, [view]);
 
   useEffect(() => {
     // Normal akış: her zaman SPLASH'ten başla, auth state'e göre yönlendir.
@@ -841,7 +846,7 @@ const App: React.FC = () => {
 
       <AnimatePresence>
         {showBottomNav && (
-          <BottomNav currentView={view} onNavigate={resetNavigation} hidden={navHidden} />
+          <BottomNav currentView={view} onNavigate={resetNavigation} hidden={navHidden || navOverlayOpen} />
         )}
       </AnimatePresence>
 
