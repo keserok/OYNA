@@ -537,6 +537,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const squadSize = inferSquadSize((match.slots || []).length);
   const totalSlots = (match.slots || []).length;
   const takenSlots = (match.slots || []).filter(s => s?.status === 'TAKEN').length;
+  const totalAway = (match.awaySlots || []).length;
+  const takenAway = (match.awaySlots || []).filter(s => s?.status === 'TAKEN').length;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -1890,8 +1892,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             >
               <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]'}`} />
               <p className="text-[13px] font-black text-white uppercase italic tracking-tight truncate leading-tight flex-1 min-w-0 text-left">
-                {match.homeTeamName || homeTeam?.name || 'TAKIM'}
+                {match.homeTeamName || homeTeam?.name || 'SİYAH'}
               </p>
+              <span className="text-[10px] font-black text-white/55 tabular-nums shrink-0">{takenSlots}/{totalSlots}</span>
               {homeTeam?.logo && (
                 <div className="w-7 h-7 rounded-lg shrink-0 overflow-hidden">
                   {homeTeam.logo.startsWith('http')
@@ -1923,10 +1926,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     : <span className="text-sm">{awayTeam.logo}</span>}
                 </div>
               )}
+              <span className="text-[10px] font-black text-white/55 tabular-nums shrink-0">{takenAway}/{totalAway}</span>
               <p className={`text-[13px] font-black uppercase italic tracking-tight truncate leading-tight flex-1 min-w-0 text-right ${
-                (match.awayTeamName || awayTeam?.name) ? 'text-white' : 'text-red-400'
+                (match.awayTeamName || awayTeam?.name) ? 'text-white' : 'text-red-300'
               }`}>
-                {match.awayTeamName || awayTeam?.name || 'TAKIM'}
+                {match.awayTeamName || awayTeam?.name || 'BEYAZ'}
               </p>
               <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]" />
             </button>
@@ -2153,8 +2157,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               }`} />
               <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
                 {pitchSide === 'home'
-                  ? `${match.homeTeamName || homeTeam?.name || 'TAKIM'} Kadrosu`
-                  : `${match.awayTeamName || awayTeam?.name || 'TAKIM'} Kadrosu`}
+                  ? `${match.homeTeamName || homeTeam?.name || 'SİYAH'} Kadrosu`
+                  : `${match.awayTeamName || awayTeam?.name || 'BEYAZ'} Kadrosu`}
               </p>
             </div>
             {selectedSlotIds.length > 0 && (

@@ -27,13 +27,17 @@ export function useMyMatches(): MyMatchesResult {
 
   const all = useMemo(() => {
     if (!currentUserUid) return [];
-    // Yalnızca KULLANICININ maçları: bir slotta oyuncu olduğu, kendi oluşturduğu
-    // (kaptan yönetimi — taslak/iptal dahil) VEYA yedek listesinde olduğu (B14)
-    // maçlar. Başkalarının taslak/iptal maçları listeye sızmaz (main düzeltmesi).
+    // Yalnızca KULLANICININ maçları: kurucu olduğu, bir slotta OTURDUĞU
+    // (occupant/player), slot SATIN ALDIĞI (purchasedBy — REZERVE dolduran
+    // alıcı ajandadan asla düşmez; tek lobi P4) veya yedekte olduğu maçlar.
+    const mine = (s: any) =>
+      s?.player?.id === currentUserUid ||
+      s?.occupant === currentUserUid ||
+      s?.purchasedBy === currentUserUid;
     return adminMatches.filter(m =>
       m.creatorId === currentUserUid ||
-      m.slots?.some(s => s.player?.id === currentUserUid) ||
-      m.awaySlots?.some(s => s.player?.id === currentUserUid) ||
+      m.slots?.some(mine) ||
+      m.awaySlots?.some(mine) ||
       m.reservePlayers?.some(p => p?.id === currentUserUid)
     );
   }, [adminMatches, currentUserUid]);
