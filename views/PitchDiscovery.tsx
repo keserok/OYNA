@@ -1002,7 +1002,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       title: selectedPitch.name,
       subtitle: `${selectedCourt.name} · ${selectedDateISO} · ${selectedSlot}`,
       details: [
-        { icon: 'court', text: selectedCourt.name },
+        // Kort adı + format aralığı rozeti ("6v6–8v8"); rozet null ise yalın ad.
+        { icon: 'court', text: [selectedCourt.name, formatCapacityRange(selectedCourt.minCapacity, selectedCourt.maxCapacity, selectedCourt.capacity)].filter(Boolean).join(' · ') },
         { icon: 'calendar', text: prettyDate },
         { icon: 'clock', text: selectedSlot },
       ],
@@ -1963,7 +1964,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <div className="px-6 py-4 pb-safe flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] font-black uppercase tracking-[0.08em] text-white/45 truncate">
-                    {selectedCourt?.name ?? (selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık')}
+                    {selectedCourt
+                      ? [selectedCourt.name, formatCapacityRange(selectedCourt.minCapacity, selectedCourt.maxCapacity, selectedCourt.capacity)].filter(Boolean).join(' · ')
+                      : (selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık')}
                     {' · '}{selectedDateObj.getDate()} {MONTHS_TR_SHORT[selectedDateObj.getMonth()]}
                     {selectedSlot ? ` · ${parseSlotLabel(selectedSlot).startTime}` : ''}
                     {!isSelectionMode ? ' · Kapora' : ''}

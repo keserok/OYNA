@@ -7,6 +7,7 @@ import { supabase } from '../../supabaseClient';
 import PhotoManager from '../../components/pitch-editor/PhotoManager';
 import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatures';
 import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
+import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
 
 // Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
@@ -594,6 +595,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         <p className="text-xs text-gray-300 font-medium">
                                             {pitch.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[pitch.surface ?? 'TURF'] ?? pitch.surface}
                                             {pitch.size ? ` • ${pitch.size}` : ''}
+                                            {(() => {
+                                                // Format aralığı rozeti — vitrindeki kort satırıyla aynı yardımcı
+                                                const r = formatCapacityRange(pitch.min_capacity, pitch.max_capacity, pitch.capacity);
+                                                return r ? ` • ${r}` : '';
+                                            })()}
                                             {pitch.price ? ` • ₺${pitch.price}/Saat` : ''}
                                         </p>
                                     </div>

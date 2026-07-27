@@ -1,12 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, UploadCloud, Loader2 } from 'lucide-react';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useAppStore } from '../../../store';
+import { supabase } from '../../../supabaseClient';
+import { allowedSquadSizesForCourts, formatCapacityRangeForCourts } from '../../../shared/pitchShowcaseMapper';
 import type { MatchListing } from '../../../types';
 
 const DIFFICULTIES = ['Rahat', 'Taktiksel', 'Ciddi'] as const;
 const STATUSES = ['DRAFT', 'ACTIVE', 'LIVE', 'COMPLETED', 'CANCELLED'] as const;
+// Saha seçilmemişken sunulan varsayılan liste; saha seçilince kortların
+// gerçek aralığından türetilen tam liste kullanılır.
+const BASE_FORMATS = ['5v5', '7v7', '8v8', '11v11'];
+
+interface CourtRangeRow { capacity: number | null; min_capacity: number | null; max_capacity: number | null }
 
 interface Props {
   open: boolean;
@@ -33,6 +40,44 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
     pitchId: '',
   });
   const { uploadImage, uploading, progress } = useImageUpload('matches');
+
+  // Seçili sahanın kortları → format aralığı kısıtı (admin store'daki
+  // adminPitches kort verisi taşımaz; tembel çekim gerekir).
+  const [pitchCourts, setPitchCourts] = useState<CourtRangeRow[]>([]);
+  useEffect(() => {
+    if (!open || !f.pitchId) { setPitchCourts([]); return; }
+    let alive = true;
+    void supabase
+      .from('courts')
+      .select('capacity, min_capacity, max_capacity')
+      .eq('pitch_id', f.pitchId)
+      .eq('is_active', true)
+      .then(({ data }) => { if (alive) setPitchCourts((data ?? []) as CourtRangeRow[]); });
+    return () => { alive = false; };
+  }, [open, f.pitchId]);
+
+  const courtRanges = useMemo(
+    () => pitchCourts.map((c) => ({ minCapacity: c.min_capacity, maxCapacity: c.max_capacity, capacity: c.capacity })),
+    [pitchCourts],
+  );
+  // Saha seçiliyse: en az bir kortun aralığına giren formatlar; değilse varsayılan 4'lü.
+  const formatOptions = useMemo(() => {
+    if (!f.pitchId || courtRanges.length === 0) return BASE_FORMATS;
+    return allowedSquadSizesForCourts(courtRanges).filter((s) => s !== '2v2');
+  }, [f.pitchId, courtRanges]);
+  const pitchRangeLabel = useMemo(
+    () => (courtRanges.length ? formatCapacityRangeForCourts(courtRanges) : null),
+    [courtRanges],
+  );
+
+  // Mevcut format kısıt dışında kaldıysa en yakın izinliye çek.
+  useEffect(() => {
+    if (!formatOptions.length || formatOptions.includes(f.format)) return;
+    const side = (v: string) => parseInt(v.split('v')[0], 10) || 7;
+    const nearest = [...formatOptions].sort((a, b) => Math.abs(side(a) - side(f.format)) - Math.abs(side(b) - side(f.format)))[0];
+    setF((prev) => ({ ...prev, format: nearest }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formatOptions]);
 
   useEffect(() => {
     if (!open) return;
@@ -158,9 +203,9 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
                   {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </Field>
-              <Field label="Format">
+              <Field label={`Format${pitchRangeLabel ? ` (saha: ${pitchRangeLabel})` : ''}`}>
                 <select value={f.format} onChange={(e) => setF({ ...f, format: e.target.value })} className={inputCls}>
-                  {['5v5', '7v7', '8v8', '11v11'].map((v) => <option key={v} value={v}>{v}</option>)}
+                  {formatOptions.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </Field>
             </div>

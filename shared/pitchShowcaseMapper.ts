@@ -123,16 +123,19 @@ export const formatCapacityRange = (
  * Kortun aralığına giren oynanabilir formatlar — maç oluşturma (oyuncu),
  * admin maç formu ve her kort seçicisi TEK bu yardımcıdan okur.
  * Kurallar: min+maks → [min,maks]; yalnız min → ≥min; yalnız maks → ≤maks;
- * aralık yok ama legacy capacity var → kort fiziksel sınırı olarak ≤capacity;
- * hiçbiri yok → tüm formatlar (kısıt bilinmiyor).
+ * açık aralık YOKSA → tüm formatlar (kısıt bilinmiyor).
+ * DİKKAT: legacy `capacity` KISIT SAYILMAZ — canlıda tüm eski kortlar
+ * varsayılan 14 ile duruyor; kısıt sayılsaydı her kortta 8v8+ yanlışlıkla
+ * engellenirdi. capacity yalnız rozet gösteriminde (formatCapacityRange)
+ * bilgi olarak kullanılır; sunucu tetikleyicisi de aynı kuralı uygular.
  */
 export const allowedSquadSizesForCourt = (
   min?: number | null,
   max?: number | null,
-  fallbackCapacity?: number | null,
+  _legacyCapacity?: number | null,
 ): SquadSize[] => {
   const lo = min ?? null;
-  const hi = max ?? (min ? null : (fallbackCapacity ?? null));
+  const hi = max ?? null;
   return SQUAD_SIZES.filter((s) => {
     const n = squadSizeToCount(s) * 2; // XvX → toplam oyuncu
     if (lo !== null && n < lo) return false;
@@ -148,6 +151,34 @@ export const isSquadSizeAllowedForCourt = (
   max?: number | null,
   fallbackCapacity?: number | null,
 ): boolean => allowedSquadSizesForCourt(min, max, fallbackCapacity).includes(size);
+
+/**
+ * Tesis düzeyinde (kort SEÇİLMEMİŞKEN) izinli formatlar: EN AZ BİR kortun
+ * aralığına sığan format oynanabilirdir — aralıkların ham birleşimi DEĞİL
+ * (örn. kortlar 6v6–8v8 ve 10v10–11v11 ise 9v9 HİÇBİR kortta oynanamaz).
+ * Kort listesi boşsa tüm formatlar (kısıt bilinmiyor).
+ */
+export const allowedSquadSizesForCourts = (
+  courts: Array<{ minCapacity?: number | null; maxCapacity?: number | null; capacity?: number | null }>,
+): SquadSize[] => {
+  if (!courts.length) return [...SQUAD_SIZES];
+  const union = new Set<SquadSize>();
+  for (const c of courts) {
+    for (const s of allowedSquadSizesForCourt(c.minCapacity, c.maxCapacity, c.capacity)) union.add(s);
+  }
+  return SQUAD_SIZES.filter((s) => union.has(s));
+};
+
+/** Tesis kortlarının toplu aralık rozeti (örn. "6v6–11v11"); kort yoksa null. */
+export const formatCapacityRangeForCourts = (
+  courts: Array<{ minCapacity?: number | null; maxCapacity?: number | null; capacity?: number | null }>,
+): string | null => {
+  const sizes = courts.length ? allowedSquadSizesForCourts(courts) : [];
+  if (!sizes.length || sizes.length === SQUAD_SIZES.length) return null; // kısıt yok → rozet gösterme
+  const lo = squadSizeToCount(sizes[0]) * 2;
+  const hi = squadSizeToCount(sizes[sizes.length - 1]) * 2;
+  return formatCapacityRange(lo, hi);
+};
 
 export const mapDbPitchToUiPitch = (
   row: DbPitchRow,
