@@ -45,9 +45,12 @@ const Studio = lazy(() => import('./views/Studio'));
 const WalletScreen = lazy(() => import('./views/WalletScreen'));
 // MatchLobby kaldırıldı — MatchJoin artık tek ekran
 // OpponentFinder (Rakip Bul haritası) kaldırıldı — rakip yalnız maç oluştur'dan davet edilir
-const MatchCalendar = lazy(() => import('./views/MatchCalendar'));
+// F4.2: MatchCalendar kaldırıldı — hiçbir navigasyon gitmiyordu; tüm işlevleri
+// MyMatchesHub + MatchDiscovery + Dashboard'da zaten var (içinde sahte pravatar
+// avatarları ve negatif sayaç kalıntısı da vardı).
 const AdminPanel = lazy(() => import('./views/AdminPanel'));
-const TeamBuilder = lazy(() => import('./views/TeamBuilder').then(module => ({ default: module.TeamBuilder })));
+// F4.2: TeamBuilder kaldırıldı — erişilemezdi; OVR-dengeleme çıktısı hiçbir
+// yere yazılmıyordu (salt-görsel hesap makinesi).
 const SocialView = lazy(() => import('./views/SocialView'));
 const FriendAddView = lazy(() => import('./views/social/FriendAddView'));
 const PostMatchEval = lazy(() => import('./views/PostMatchEval'));
@@ -668,10 +671,7 @@ const App: React.FC = () => {
           onCreateMatch={() => navigateTo('MATCH_CREATE')}
         />;
       case 'PAYMENT':
-        return <PaymentScreen
-          onBack={() => goBack('DASHBOARD')}
-          onViewTicket={() => resetNavigation('MATCH_TICKET')}
-        />;
+        return <PaymentScreen onBack={() => goBack('DASHBOARD')} />;
       case 'MY_TEAM':
         // Birleşik Takım Detayı — kimlik store.selectedTeamId ile taşınır (Spec §3.8)
         return <TeamDetailView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
@@ -705,8 +705,6 @@ const App: React.FC = () => {
         />;
       // MATCH_LOBBY kaldırıldı — tüm işlemler MatchJoin'de yapılıyor
       // OPPONENT_FINDER kaldırıldı — rakip yalnız maç oluştur'dan davet edilir
-      case 'MATCH_CALENDAR':
-        return <MatchCalendar onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DIARY_DETAIL':
         return <MatchDiaryDetail
           diaryId={selectedDiaryId}
@@ -731,9 +729,8 @@ const App: React.FC = () => {
           onJoin={() => resetNavigation('DASHBOARD')} // Kadro kaydından sonra Dashboard'a dön
         />;
       case 'MATCH_TICKET':
-        return <MatchTicket onBack={() => goBack('DASHBOARD')} />;
-      case 'TEAM_BUILDER':
-        return <TeamBuilder onBack={() => goBack('PROFILE')} />;
+        {/* F4.1: bilet artık Maçlarım'daki rezervasyon kartından açılıyor */}
+        return <MatchTicket onBack={() => goBack('MY_MATCHES')} />;
       case 'SOCIAL':
         return <SocialView onNavigate={(v) => navigateTo(v)} />;
       case 'FRIEND_ADD':

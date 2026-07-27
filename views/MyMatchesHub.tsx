@@ -269,6 +269,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
         onConvertToMatch={handleConvertToMatch}
         onDirections={handleDirections}
         onRebook={handleRebook}
+        onViewTicket={(bk) => { useAppStore.getState().setTicketBookingId(bk.id); navigateTo('MATCH_TICKET'); }}
       />
     );
   };

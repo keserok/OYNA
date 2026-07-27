@@ -25,7 +25,7 @@
 * **Airbnb Stili Fiyat Pinli Harita:** Leaflet entegrasyonuyla sahaları konumlarına ve fiyat etiketlerine göre haritada filtreleme ([PitchDiscovery.tsx](views/PitchDiscovery.tsx)).
 * **Dinamik Takvim & Rezervasyon:** Saha doluluk durumunun gerçek zamanlı izlenmesi ve rezervasyon isteklerinin onay akışı.
 * **Güvenli Ödeme Havuzu (Split Payment):** Maç kiralama bedelinin oyuncular arasında bölüştürülmesi. Kaptan garantörlüğü (`Safety Net`) ile rezervasyon güvencesi.
-* **QR Kodlu Dijital Bilet ([MatchTicket.tsx](views/MatchTicket.tsx)):** Ödeme sonrası oluşturulan, tesis girişinde okutulabilir dinamik QR kod.
+* **QR Kodlu Dijital Bilet ([MatchTicket.tsx](views/MatchTicket.tsx)):** Ödeme sonrası oluşturulan, tesiste rezervasyon kanıtı olarak gösterilen dijital kart (turnike/okuyucu entegrasyonu yoktur).
 
 ### 4. 💼 B2B Tesis Yönetim Paneli
 * **SaaS Altyapısı:** Saha sahiplerinin fiyatlandırma, doluluk, takvim rezervasyonları, tesis fotoğrafları ve menü ayarlarını doğrudan yönettiği gelişmiş yönetim portalı ([OwnerPanel.tsx](views/OwnerPanel.tsx)).
