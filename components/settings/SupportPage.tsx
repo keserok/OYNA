@@ -37,9 +37,21 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
     const [category, setCategory] = useState('GENERAL');
     const [body, setBody] = useState('');
     const [sending, setSending] = useState(false);
+    // Form/yanıt hataları KENDİ görünümlerinde gösterilir — loadError yalnız
+    // liste dalında render edildiğinden oraya yazılan oluşturma hatası
+    // kullanıcıya hiç görünmüyordu.
+    const [formError, setFormError] = useState<string | null>(null);
+    const [replyError, setReplyError] = useState<string | null>(null);
     // Dizide yanıt
     const [reply, setReply] = useState('');
     const threadEndRef = useRef<HTMLDivElement>(null);
+
+    // Sunucunun anlamlı Türkçe mesajlarını ("En fazla 5 açık talebiniz olabilir",
+    // hız limiti vb.) jenerik metinle ezme — varsa aynen göster.
+    const serverMessage = (err: unknown, fallback: string): string => {
+        const msg = (err as { message?: string })?.message;
+        return msg && msg !== 'UNAUTHORIZED' && !/^[A-Z0-9_]+$/.test(msg) ? msg : fallback;
+    };
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -70,6 +82,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
     const submitNew = async () => {
         if (subject.trim().length < 3 || body.trim().length < 10) return;
         setSending(true);
+        setFormError(null);
         try {
             const id = await createSupportTicket(subject, body, category, 'PLAYER');
             setSubject('');
@@ -80,7 +93,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
             setActiveId(id);
         } catch (err) {
             console.error('[Destek] Talep açılamadı:', err);
-            setLoadError('Talep oluşturulamadı. Lütfen tekrar dene.');
+            setFormError(serverMessage(err, 'Talep oluşturulamadı. Lütfen tekrar dene.'));
         } finally {
             setSending(false);
         }
@@ -89,12 +102,14 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
     const submitReply = async () => {
         if (!active || reply.trim().length === 0) return;
         setSending(true);
+        setReplyError(null);
         try {
             await addSupportMessage(active.id, reply);
             setReply('');
             await load();
         } catch (err) {
             console.error('[Destek] Yanıt gönderilemedi:', err);
+            setReplyError(serverMessage(err, 'Yanıt gönderilemedi. Lütfen tekrar dene.'));
         } finally {
             setSending(false);
         }
@@ -147,7 +162,13 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                             Bu talep kapatıldı. Yeni bir sorun için yeni talep açabilirsin.
                         </p>
                     ) : (
-                        <div className="flex items-end gap-2 sticky bottom-0 bg-[#0A0E14] pt-2">
+                        <div className="sticky bottom-0 bg-[#0A0E14] pt-2 space-y-2">
+                        {replyError && (
+                            <p className="text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-2.5">
+                                {replyError}
+                            </p>
+                        )}
+                        <div className="flex items-end gap-2">
                             <textarea
                                 value={reply}
                                 onChange={(e) => setReply(e.target.value)}
@@ -164,6 +185,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                             >
                                 {sending ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
                             </button>
+                        </div>
                         </div>
                     )}
                 </div>
@@ -210,6 +232,11 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                             className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none"
                         />
                     </div>
+                    {formError && (
+                        <p className="text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 leading-relaxed">
+                            {formError}
+                        </p>
+                    )}
                     <button
                         type="button"
                         disabled={sending || subject.trim().length < 3 || body.trim().length < 10}

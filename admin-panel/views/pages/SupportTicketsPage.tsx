@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminSearchBar } from '../components/AdminSearchBar';
+import { maskEmail } from '../../utils/pii';
 import {
   fetchSupportTicketsAdmin,
   fetchSupportTicketThreadAdmin,
@@ -58,6 +59,10 @@ export const SupportTicketsPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [thread, setThread] = useState<SupportTicketThread | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
+  // Yarış koruması: yanıt sonrası dizi tazelemesi, kullanıcı bu arada başka
+  // talebe geçtiyse ekrana basılmamalı (closure'daki selectedId bayat kalır).
+  const selectedIdRef = useRef<string | null>(null);
+  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
 
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState<'REPLY' | 'RESOLVE' | null>(null);
@@ -114,11 +119,13 @@ export const SupportTicketsPage: React.FC = () => {
 
   const changeStatus = async (status: SupportStatus) => {
     if (!thread || thread.status === status || statusSaving) return;
+    // Kimlik korumalı yama: RPC sürerken başka talep seçilirse onun dizisine yazma.
+    const ticketId = thread.id;
     setStatusSaving(status);
     try {
-      await setSupportTicketStatusAdmin(thread.id, status);
-      setThread((prev) => (prev ? { ...prev, status } : prev));
-      setRows((prev) => prev.map((r) => (r.id === thread.id ? { ...r, status } : r)));
+      await setSupportTicketStatusAdmin(ticketId, status);
+      setThread((prev) => (prev && prev.id === ticketId ? { ...prev, status } : prev));
+      setRows((prev) => prev.map((r) => (r.id === ticketId ? { ...r, status } : r)));
       success(`Durum güncellendi: ${STATUS_LABELS[status]}`);
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -129,15 +136,17 @@ export const SupportTicketsPage: React.FC = () => {
 
   const sendReply = async (resolve: boolean) => {
     const body = reply.trim();
-    if (!selectedId || !body || sending) return;
+    const ticketId = selectedId;
+    if (!ticketId || !body || sending) return;
     setSending(resolve ? 'RESOLVE' : 'REPLY');
     try {
       // Durum verilmezse sunucu PENDING'e çeker.
-      await replySupportTicketAdmin(selectedId, body, resolve ? 'RESOLVED' : undefined);
+      await replySupportTicketAdmin(ticketId, body, resolve ? 'RESOLVED' : undefined);
       success(resolve ? 'Yanıt gönderildi, talep çözüldü' : 'Yanıt gönderildi');
       setReply('');
-      const t = await fetchSupportTicketThreadAdmin(selectedId);
-      setThread(t);
+      const t = await fetchSupportTicketThreadAdmin(ticketId);
+      // Kullanıcı bu arada başka talebe geçtiyse bayat diziyi ekrana basma.
+      if (selectedIdRef.current === ticketId) setThread(t);
       await load({ silent: true });
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -246,8 +255,9 @@ export const SupportTicketsPage: React.FC = () => {
                       <StatusBadge tone={STATUS_TONES[t.status]}>{STATUS_LABELS[t.status]}</StatusBadge>
                     </div>
                   </div>
+                  {/* PII: e-posta maskeli (Karar #39) — tam değer gerekiyorsa Kullanıcı 360'taki audit'li "Göster" akışı kullanılır */}
                   <p className="text-[11px] text-gray-500 truncate pl-1.5 mt-0.5">
-                    {t.user_name ?? '—'}{t.user_email ? ` · ${t.user_email}` : ''}
+                    {t.user_name ?? '—'}{t.user_email ? ` · ${maskEmail(t.user_email)}` : ''}
                   </p>
                   {t.last_preview && (
                     <p className="text-xs text-gray-400 truncate pl-1.5 mt-1.5">{t.last_preview}</p>
@@ -287,7 +297,7 @@ export const SupportTicketsPage: React.FC = () => {
                       )}
                     </div>
                     <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                      {thread.user_name ?? '—'}{thread.user_email ? ` · ${thread.user_email}` : ''}
+                      {thread.user_name ?? '—'}{thread.user_email ? ` · ${maskEmail(thread.user_email)}` : ''}
                     </p>
                   </div>
                 </div>

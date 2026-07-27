@@ -287,20 +287,27 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
 
   // Lobi Aynası alan kaydı: tek alan → admin_update_match (audit'li) → yerel yama.
   // PRIVATE'a geçişte kod sunucuda üretilebilir → tam satırı yeniden çek.
-  const handleInfoSave = async (payload: Record<string, unknown>, patch: Partial<MatchListing>) => {
-    if (!local) return;
+  // Fonksiyonel setLocal ŞART: açılıştaki tam-satır hidrasyonu uçuştayken kayıt
+  // yapılırsa nesne-literal yama bayat closure ile hidrasyonu ezip kaporayı
+  // NONE, sohbeti boş gösteriyordu. Dönüş: başarıda true — düzenleyici yalnız
+  // başarıda kapanır (hatada taslak korunur).
+  const handleInfoSave = async (payload: Record<string, unknown>, patch: Partial<MatchListing>): Promise<boolean> => {
+    if (!local || busy) return false;
+    const matchIdAtSave = local.id;
     setBusy(true);
     try {
-      await updateMatchAdmin(local.id, payload);
-      setLocal({ ...local, ...patch });
+      await updateMatchAdmin(matchIdAtSave, payload);
+      setLocal((prev) => (prev && prev.id === matchIdAtSave ? { ...prev, ...patch } : prev));
       if (payload.visibility === 'PRIVATE' && !payload.private_code) {
-        const full = await adminGetMatchAdmin(local.id).catch(() => null);
+        const full = await adminGetMatchAdmin(matchIdAtSave).catch(() => null);
         if (full) setLocal((prev) => (prev && prev.id === full.id ? { ...prev, ...full } : prev));
       }
       success('Maç bilgisi güncellendi — lobide anında görünür');
       onUpdated();
+      return true;
     } catch (err) {
       toastError(toTurkishAdminError(err));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -340,7 +347,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     setBusy(true);
     try {
       const { recipients } = await emergencyCancelMatchAdmin(local.id, cancelReason.trim());
-      setLocal({ ...local, status: 'CANCELLED' });
+      // Fonksiyonel güncelleme: eşzamanlı hidrasyonun getirdiği alanlar ezilmesin
+      setLocal((prev) => (prev ? { ...prev, status: 'CANCELLED' } : prev));
       success(`Acil iptal tamam — ${recipients} oyuncuya bildirim gitti, iade süreci başlatıldı`);
       setCancelOpen(false);
       setCancelReason('');

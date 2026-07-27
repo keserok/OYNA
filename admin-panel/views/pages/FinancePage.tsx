@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable } from '../components/DataTable';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
@@ -74,15 +74,22 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
   const [withdrawalStatus, setWithdrawalStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING');
   const [withdrawalBusy, setWithdrawalBusy] = useState<string | null>(null);
+  // Yarış koruması: RPC sürerken filtre değişirse bayat yanıt en son yazılıp
+  // yanlış filtrenin satırlarını gösterebilirdi — yalnız en güncel istek yazar.
+  const withdrawalReqRef = useRef(0);
+  const withdrawalStatusRef = useRef(withdrawalStatus);
+  useEffect(() => { withdrawalStatusRef.current = withdrawalStatus; }, [withdrawalStatus]);
 
   const loadWithdrawals = useCallback(async (status: string) => {
+    const reqId = ++withdrawalReqRef.current;
     setWithdrawalsLoading(true);
     try {
-      setWithdrawals(await fetchWithdrawalRequestsAdmin(status, PAGE_SIZE));
+      const rows = await fetchWithdrawalRequestsAdmin(status, PAGE_SIZE);
+      if (withdrawalReqRef.current === reqId) setWithdrawals(rows);
     } catch (err) {
-      toastError(toTurkishAdminError(err));
+      if (withdrawalReqRef.current === reqId) toastError(toTurkishAdminError(err));
     } finally {
-      setWithdrawalsLoading(false);
+      if (withdrawalReqRef.current === reqId) setWithdrawalsLoading(false);
     }
   }, [toastError]);
 
@@ -103,7 +110,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     try {
       await processWithdrawalAdmin(r.id, approved, notes);
       success(approved ? 'Talep onaylandı; tesise bildirim gitti.' : 'Talep reddedildi; tesise bildirim gitti.');
-      await loadWithdrawals(withdrawalStatus);
+      // Ref'ten oku: RPC sürerken admin filtreyi değiştirdiyse GÜNCEL filtreyle tazele
+      await loadWithdrawals(withdrawalStatusRef.current);
     } catch (err) {
       toastError(toTurkishAdminError(err));
     } finally {
@@ -188,6 +196,19 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   }, [tab, query, loadIntents]);
 
   const fmtTry = (n: number | null | undefined) => `₺${Number(n ?? 0).toLocaleString('tr-TR')}`;
+
+  // Tesis sahibinin serbestçe yazdığı ham URL'yi (iban_photo_url) doğrulamadan
+  // <a href> yapmıyoruz: yalnız https + Supabase storage host'u tıklanabilir olur.
+  const safeStorageUrl = (raw: string | null): string | null => {
+    if (!raw) return null;
+    try {
+      const u = new URL(raw);
+      if (u.protocol !== 'https:' || !/\.supabase\.co$/.test(u.hostname)) return null;
+      return u.toString();
+    } catch {
+      return null;
+    }
+  };
 
   const runIntentAction = async (fn: () => Promise<void>, okMsg: string, id: string) => {
     setIntentBusy(id);
@@ -582,14 +603,19 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                 </div>
               ) },
               { header: 'Tutar', render: (r: WithdrawalRequestRow) => <span className="text-green-400 font-bold">₺{Number(r.amount).toLocaleString('tr')}</span> },
-              { header: 'IBAN', render: (r: WithdrawalRequestRow) => (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-mono text-gray-400">{r.iban || '—'}</span>
-                  {r.iban_photo_url && (
-                    <a href={r.iban_photo_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-400 hover:text-blue-300">IBAN belgesi ↗</a>
-                  )}
-                </div>
-              ) },
+              { header: 'IBAN', render: (r: WithdrawalRequestRow) => {
+                const doc = safeStorageUrl(r.iban_photo_url);
+                return (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-mono text-gray-400">{r.iban || '—'}</span>
+                    {doc ? (
+                      <a href={doc} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-400 hover:text-blue-300">IBAN belgesi ↗</a>
+                    ) : r.iban_photo_url ? (
+                      <span className="text-[10px] text-gray-600" title={r.iban_photo_url}>belge bağlantısı geçersiz</span>
+                    ) : null}
+                  </div>
+                );
+              } },
               { header: 'Durum', render: (r: WithdrawalRequestRow) => <span className="text-[11px] font-bold text-gray-300">{r.status}</span> },
               { header: 'İşlem', render: (r: WithdrawalRequestRow) => (
                 r.status === 'PENDING' ? (

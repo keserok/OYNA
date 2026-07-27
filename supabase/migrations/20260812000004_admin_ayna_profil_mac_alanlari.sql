@@ -68,11 +68,13 @@ BEGIN
     gender = CASE WHEN p_payload ? 'gender' THEN NULLIF(p_payload->>'gender','') ELSE gender END,
     play_style = CASE WHEN p_payload ? 'play_style' THEN NULLIF(p_payload->>'play_style','') ELSE play_style END,
     age_range = CASE WHEN p_payload ? 'age_range' THEN NULLIF(p_payload->>'age_range','') ELSE age_range END,
-    -- Güven puanı & beceri puanı DB ölçeği 0–5'e kırpılır (UI 0–100 → /20 gönderir)
+    -- Güven puanı 0–5'e kırpılır (UI 0–100 → /20 gönderir); beceri puanı
+    -- profiles_skill_rating_check kısıtı gereği 1–5'e kırpılır (taban 0 olsaydı
+    -- 0≤x<1 girişleri 23514 ile patlardı — canlı kısıt doğrulandı).
     trust_score = CASE WHEN p_payload ? 'trust_score'
       THEN LEAST(5, GREATEST(0, (p_payload->>'trust_score')::numeric)) ELSE trust_score END,
     skill_rating = CASE WHEN p_payload ? 'skill_rating'
-      THEN LEAST(5, GREATEST(0, (p_payload->>'skill_rating')::numeric)) ELSE skill_rating END,
+      THEN LEAST(5, GREATEST(1, (p_payload->>'skill_rating')::numeric)) ELSE skill_rating END,
     has_completed_onboarding = COALESCE((p_payload->>'has_completed_onboarding')::boolean, has_completed_onboarding),
     updated_at = NOW()
   WHERE id = p_user_id;

@@ -146,7 +146,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     const name = nameDraft.trim();
     setAdminSaving(true);
     try {
-      const skill = Math.max(0, Math.min(5, Number(skillDraft.replace(',', '.'))));
+      // DB kısıtı profiles_skill_rating_check: [1.0, 5.0] — taban 1'e kırpılır.
+      const skill = Math.max(1, Math.min(5, Number(skillDraft.replace(',', '.'))));
       await saveFields({
         ...(name && name !== (profile.full_name || '') ? { full_name: name } : {}),
         ...(trustDraft !== trustScoreTo100(profile.trustScore) ? { trust_score: trustDraft / 20 } : {}),
@@ -339,7 +340,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                 <p className="text-[9px] text-gray-600 mt-1">DB'de 0–5 saklanır (÷20). Master 3.4: güven 100'den başlar, yalnız düşer — artışı istisnai durumda kullanın.</p>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Beceri Puanı (kart OVR temeli, 0–5)</label>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Beceri Puanı (kart OVR temeli, 1–5)</label>
                 <input
                   value={skillDraft}
                   onChange={(e) => setSkillDraft(e.target.value)}
@@ -347,7 +348,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                   className="mt-1 w-28 h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-purple-500/40 focus:outline-none"
                   placeholder="örn. 3.8"
                 />
-                <p className="text-[9px] text-gray-600 mt-1">Kart görünümündeki OVR bu puandan türetilir (0–5 → 0–100). Hiç maçı yoksa kart "rookie" kalır.</p>
+                <p className="text-[9px] text-gray-600 mt-1">Kart görünümündeki OVR bu puandan türetilir (1–5 → 20–100). Hiç maçı yoksa kart "rookie" kalır.</p>
               </div>
             </div>
 

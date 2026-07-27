@@ -395,15 +395,18 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
     // kolon yazmaya çalışan sessiz no-op'tu; artık gerçek ops RPC'sine bağlı.
     const [ops, setOps] = useState<{ isAvailable: boolean; verificationStatus: string | null } | null>(null);
     const [opsDraft, setOpsDraft] = useState<boolean | null>(null); // istenen isAvailable
+    const [opsError, setOpsError] = useState<string | null>(null);
+    const [opsReloadKey, setOpsReloadKey] = useState(0); // Tekrar Dene sayacı
     useEffect(() => {
         let alive = true;
         setOps(null);
         setOpsDraft(null);
+        setOpsError(null);
         fetchProviderOpsAdmin(item.id, typeParam)
             .then((o) => { if (alive) { setOps({ isAvailable: o.isAvailable, verificationStatus: o.verificationStatus }); setOpsDraft(o.isAvailable); } })
-            .catch(() => { /* ops okunamazsa bölüm bilgilendirme moduna düşer */ });
+            .catch((err) => { if (alive) setOpsError(err instanceof Error ? err.message : 'Müsaitlik bilgisi okunamadı'); });
         return () => { alive = false; };
-    }, [item.id, typeParam]);
+    }, [item.id, typeParam, opsReloadKey]);
 
     const label = typeParam === 'GK' ? 'KALECİ' : 'HAKEM';
 
@@ -652,6 +655,13 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                     onChange={() => setOpsDraft((v) => (v === null ? v : !v))}
                                     danger
                                 />
+                            ) : opsError ? (
+                                <div className="flex items-center justify-between gap-2 p-3 bg-red-500/5 border border-red-500/20 rounded-2xl">
+                                    <p className="text-[10px] text-red-400 leading-relaxed min-w-0">Müsaitlik bilgisi okunamadı: {opsError}</p>
+                                    <button type="button" onClick={() => setOpsReloadKey((k) => k + 1)} className="shrink-0 text-[10px] font-black uppercase text-gray-300 border border-white/15 rounded-lg px-2.5 py-1.5 hover:text-white">
+                                        Tekrar Dene
+                                    </button>
+                                </div>
                             ) : (
                                 <p className="text-[10px] text-gray-600 px-1">Müsaitlik bilgisi yükleniyor…</p>
                             )}

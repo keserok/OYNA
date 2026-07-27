@@ -25,8 +25,9 @@ type FieldKey = 'title' | 'location' | 'date' | 'time' | 'price' | 'difficulty' 
 interface Props {
   match: MatchListing;
   busy: boolean;
-  /** payload → admin_update_match; localPatch → drawer'ın yerel listing'i. */
-  onSave: (payload: Record<string, unknown>, localPatch: Partial<MatchListing>) => Promise<void>;
+  /** payload → admin_update_match; localPatch → drawer'ın yerel listing'i.
+   *  false dönerse kayıt başarısızdır — düzenleyici kapanmaz, taslak korunur. */
+  onSave: (payload: Record<string, unknown>, localPatch: Partial<MatchListing>) => Promise<boolean | void>;
 }
 
 export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave }) => {
@@ -54,7 +55,8 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave }) => {
   };
 
   const save = async () => {
-    if (!active) return;
+    // busy kapısı: Kaydet düğmesi disabled ama Enter tuşu da buraya düşüyor.
+    if (!active || busy) return;
     let payload: Record<string, unknown> = {};
     let patch: Partial<MatchListing> = {};
     switch (active) {
@@ -109,8 +111,8 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave }) => {
         break;
       }
     }
-    await onSave(payload, patch);
-    setActive(null);
+    const ok = await onSave(payload, patch);
+    if (ok !== false) setActive(null); // hatada açık kal — taslak kaybolmasın
   };
 
   const chipBtn = 'transition-colors hover:text-white cursor-pointer disabled:cursor-default';
