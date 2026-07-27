@@ -33,7 +33,7 @@ vi.mock('framer-motion', () => {
 });
 
 vi.mock('../../../supabaseClient', () => {
-  const query: any = { select: vi.fn(() => query), eq: vi.fn(async () => ({ data: [], error: null })) };
+  const query: any = { select: vi.fn(() => query), update: vi.fn(() => query), eq: vi.fn(async () => ({ data: [], error: null })) };
   const channel: any = { on: vi.fn(() => channel), subscribe: vi.fn(() => channel) };
   return { supabase: { from: vi.fn(() => query), channel: vi.fn(() => channel), removeChannel: vi.fn() } };
 });
@@ -51,58 +51,55 @@ vi.mock('../../../services/socialService', () => ({ getFriends: vi.fn(async () =
 
 import Studio from '../../../views/Studio';
 
-// ─── İlk kullanım turu + örnek taktik ─────────────────────────────────────────
+// ─── İlk kullanım tanıtımı (tek sayfa, kullanıcı-başına) + örnek taktik ──────
+// 2026-07-23'te 3 adımlı tur, tek sayfalık kapsamlı araç tanıtımıyla
+// değiştirildi (demosuz; "Başla" ile kapanır, Yardım ile yeniden açılır).
 
 const renderStudio = () => render(<Studio onBack={vi.fn()} onNavigate={vi.fn()} />);
 
-describe('Studio — ilk kullanım turu', () => {
+describe('Studio — ilk kullanım tanıtımı', () => {
   beforeEach(() => {
-    localStorage.clear(); // ilk açılışı simüle et (tur gösterilmeli)
+    localStorage.clear(); // ilk açılışı simüle et (tanıtım gösterilmeli)
   });
 
-  it('ilk açılışta 3 adımlı tur gösterilir; Sonraki ile ilerler', async () => {
+  it('ilk açılışta tek sayfa tanıtım gösterilir; tüm araç satırları listelenir', async () => {
     renderStudio();
-    expect(await screen.findByText('Oyuncularını yerleştir')).toBeInTheDocument();
-    expect(screen.getByText('Adım 1/3')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Sonraki/ }));
-    expect(screen.getByText('Hareketleri çiz')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Sonraki/ }));
-    expect(screen.getByText('İzle ve paylaş')).toBeInTheDocument();
+    expect(await screen.findByText('Oyuncuları yerleştir')).toBeInTheDocument();
+    expect(screen.getByText('KOŞU çiz')).toBeInTheDocument();
+    expect(screen.getByText('PAS çiz — tek top, zincir')).toBeInTheDocument();
+    expect(screen.getByText('OYNAT / DURDUR')).toBeInTheDocument();
+    expect(screen.getByText('Tempo & taraf')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Başla' })).toBeInTheDocument();
   });
 
-  it('Atla turu kapatır ve bir daha açılmaz (localStorage)', async () => {
+  it('Başla tanıtımı kapatır ve bir daha otomatik açılmaz (localStorage)', async () => {
     const { unmount } = renderStudio();
-    await screen.findByText('Oyuncularını yerleştir');
-    fireEvent.click(screen.getByRole('button', { name: 'Atla' }));
-    expect(screen.queryByText('Oyuncularını yerleştir')).not.toBeInTheDocument();
+    await screen.findByText('Oyuncuları yerleştir');
+    fireEvent.click(screen.getByRole('button', { name: 'Başla' }));
+    expect(screen.queryByText('Oyuncuları yerleştir')).not.toBeInTheDocument();
     expect(localStorage.getItem('oyna_studio_onboarded_v1')).toBe('1');
 
-    // Yeniden mount: tur açılmaz
+    // Yeniden mount: tanıtım açılmaz
     unmount();
     renderStudio();
-    await waitFor(() => expect(screen.queryByText('Adım 1/3')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Oyuncuları yerleştir')).not.toBeInTheDocument());
   });
 
-  it('son adımda "Örnek yükle" örnek taktiği plana koyar', async () => {
+  it('tanıtım kapanınca boş tahta örnek taktik davet eder; tıklayınca plana koyar', async () => {
     renderStudio();
-    await screen.findByText('Oyuncularını yerleştir');
-    fireEvent.click(screen.getByRole('button', { name: /Sonraki/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Sonraki/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Örnek yükle/ }));
+    await screen.findByText('Oyuncuları yerleştir');
+    fireEvent.click(screen.getByRole('button', { name: 'Başla' }));
 
-    await waitFor(() => expect(screen.queryByText('İzle ve paylaş')).not.toBeInTheDocument());
-    // Örnek taktik plan sekmesinde görünür
-    expect(screen.getAllByText('Örnek Taktik').length).toBeGreaterThan(0);
+    fireEvent.click(await screen.findByText('Örnek taktiği yükle'));
+    await waitFor(() => expect(screen.getAllByText('Örnek Taktik').length).toBeGreaterThan(0));
   });
 
-  it('yardım (?) butonu turu yeniden açar', async () => {
+  it('Yardım butonu tanıtımı yeniden açar', async () => {
     localStorage.setItem('oyna_studio_onboarded_v1', '1'); // daha önce görülmüş
     renderStudio();
-    // Tur otomatik açılmaz
-    await waitFor(() => expect(screen.queryByText('Adım 1/3')).not.toBeInTheDocument());
+    // Tanıtım otomatik açılmaz
+    await waitFor(() => expect(screen.queryByText('Oyuncuları yerleştir')).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Yardım' }));
-    expect(await screen.findByText('Oyuncularını yerleştir')).toBeInTheDocument();
+    expect(await screen.findByText('Oyuncuları yerleştir')).toBeInTheDocument();
   });
 });
