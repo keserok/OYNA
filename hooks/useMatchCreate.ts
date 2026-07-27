@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Pitch, AppView, PositionSlot, Player, MatchListing } from '../types';
+import { Pitch, AppView, PositionSlot, Player, MatchListing, Court } from '../types';
+import { allowedSquadSizesForCourt, formatCapacityRange } from '../shared/pitchShowcaseMapper';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
@@ -90,6 +91,9 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
 
   const [myPlayers, setMyPlayers] = useState<Record<string, { id: string; name: string; avatar: string; status?: 'PENDING' | 'CONFIRMED' }>>({});
   const [selectedPitch, setSelectedPitch] = useState<Pitch | null>(null);
+  // Saha vitrininden seçilen KORT — format aralığı kısıtının kaynağı.
+  // Tohum/draft yollarında kort verisi yok → null kalır (kısıt uygulanamaz).
+  const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ date: string; time: string } | null>(null);
   
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
@@ -115,6 +119,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     if (matchCreateSeed.date && matchCreateSeed.time) {
       setSelectedTimeSlot({ date: matchCreateSeed.date, time: matchCreateSeed.time });
     }
+    setSelectedCourt(null); // tohum kort taşımaz — format kısıtı uygulanamaz
     setMatchCreateSeed(null); // tek seferlik; tekrar tetiklenmesin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchCreateSeed]);
@@ -134,6 +139,7 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
               type: 'OPEN', slots: [], features: []
           } as any);
           setSelectedTimeSlot({ date: draftMatch.date, time: draftMatch.time });
+          setSelectedCourt(null); // draft sahte pitch — kort verisi yok
           if (draftMatch.slots) {
               const playersRecord: Record<string, any> = {};
               draftMatch.slots.forEach(s => {
@@ -146,6 +152,39 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
 
   const perTeam = useMemo(() => parseInt(format.v.split('v')[0]) || 7, [format.v]);
   const isReady = !!(selectedPitch && selectedTimeSlot);
+
+  // ── Kort format aralığı kısıtı (courts.min_capacity/max_capacity) ──────────
+  // Kort seçiliyse yalnız aralığa giren formatlar seçilebilir; kortsuz yollarda
+  // (tohum/draft) helper tüm formatları döndürür → kısıt yok.
+  const allowedFormatValues = useMemo(() => {
+    const sizes: string[] = allowedSquadSizesForCourt(
+      selectedCourt?.minCapacity, selectedCourt?.maxCapacity, selectedCourt?.capacity,
+    );
+    return FORMATS.filter((f) => sizes.includes(f.v)).map((f) => f.v);
+  }, [selectedCourt]);
+
+  const courtRangeLabel = useMemo(
+    () => (selectedCourt
+      ? formatCapacityRange(selectedCourt.minCapacity, selectedCourt.maxCapacity, selectedCourt.capacity)
+      : null),
+    [selectedCourt],
+  );
+
+  // Kort değişince mevcut format aralık dışı kaldıysa EN YAKIN izinli formata çek
+  // (kullanıcı önce format seçip sonra saha/kort seçebiliyor — iki yönlü senkron).
+  useEffect(() => {
+    if (!selectedCourt || allowedFormatValues.includes(format.v)) return;
+    const candidates = FORMATS.filter((f) => allowedFormatValues.includes(f.v));
+    if (!candidates.length) return;
+    const nearest = candidates.reduce(
+      (best, f) => (Math.abs(f.players - format.players) < Math.abs(best.players - format.players) ? f : best),
+      candidates[0],
+    );
+    setFormat(nearest);
+    showToast(`Format ${nearest.label} yapıldı — ${selectedCourt.name} kortunda ${courtRangeLabel ?? 'bu aralık'} oynanabiliyor.`);
+    // format bilerek deps dışında: yalnız kort değişiminde otomatik düzeltilir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCourt, allowedFormatValues]);
 
   // Kanonik formasyon (utils/formations SSOT) — HER boyut kendi mantıklı temel
   // dizilişini alır (5v5 '1-2-1', 6v6 '2-2-1', 7v7 '2-3-1', 8v8 '3-3-1' ...).
@@ -368,6 +407,12 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
       return;
     }
 
+    // Kort aralığı son emniyeti — çipler zaten kısıtlı; bayat durum/yarışa karşı.
+    if (selectedCourt && !allowedFormatValues.includes(format.v)) {
+      showToast(`Bu kortta ${format.label} oynanamaz — kort aralığı: ${courtRangeLabel ?? 'belirtilmemiş'}.`);
+      return;
+    }
+
     // MOB-P1: yayın anında TAZE bakiye kontrolü — kapora karşılanamıyorsa maç
     // yaratılmaz; kullanıcı yükleme overlay'ine yönlendirilir (form korunur).
     if (matchDeposit > 0 && auth.currentUser) {
@@ -582,6 +627,8 @@ export const useMatchCreate = (onNavigate: (view: AppView) => void) => {
     deferredProviders, setDeferredProviders,
     myPlayers, setMyPlayers,
     selectedPitch, setSelectedPitch,
+    selectedCourt, setSelectedCourt,
+    allowedFormatValues, courtRangeLabel,
     selectedTimeSlot, setSelectedTimeSlot,
     orientation, setOrientation,
     customPositions, setCustomPositions,

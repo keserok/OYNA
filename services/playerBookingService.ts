@@ -30,7 +30,7 @@ export interface MyBooking {
   cancellation_reason: string | null;
   created_at: string;
   pitches: { name: string; district: string | null; image: string | null } | null;
-  courts: { name: string } | null;
+  courts: { name: string; capacity?: number | null; min_capacity?: number | null; max_capacity?: number | null } | null;
 }
 
 export interface CancelResult {
@@ -192,7 +192,7 @@ export async function createAppBooking(params: CreateBookingParams): Promise<Cre
 export async function fetchMyBookings(): Promise<MyBooking[]> {
   const { data, error } = await supabase
     .from('pitch_bookings')
-    .select('id, pitch_id, court_id, booking_date, start_time, end_time, status, source, price, deposit_amount, paid_amount, payment_status, cancellation_reason, created_at, pitches(name, district, image), courts(name)')
+    .select('id, pitch_id, court_id, booking_date, start_time, end_time, status, source, price, deposit_amount, paid_amount, payment_status, cancellation_reason, created_at, pitches(name, district, image), courts(name, capacity, min_capacity, max_capacity)')
     .order('booking_date', { ascending: false })
     .order('start_time', { ascending: false })
     .limit(50);

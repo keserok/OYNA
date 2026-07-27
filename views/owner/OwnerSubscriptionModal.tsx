@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Phone, RefreshCw } from 'lucide-react';
 import { addSubscription, toTurkishError } from '../../services/pitchOwnerService';
+import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import type { PitchCourt } from '../../types';
 import { addMonthsISO, resolveHourlyPrice, slotKeyToTime } from './ownerCalendarHelpers';
 
@@ -140,11 +141,15 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
                 onChange={(e) => handleCourtChange(e.target.value)}
                 className="bg-transparent w-full outline-none text-white font-bold appearance-none"
               >
-                {activeCourts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {activeCourts.map((c) => {
+                  // Kort format aralığı rozeti ("6v6–8v8") — null ise yalnız ad.
+                  const range = formatCapacityRange(c.min_capacity, c.max_capacity, c.capacity);
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{range ? ` (${range})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

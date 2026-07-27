@@ -107,6 +107,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     deferredProviders, setDeferredProviders,
     setMyPlayers,
     selectedPitch, setSelectedPitch,
+    selectedCourt, setSelectedCourt,
+    allowedFormatValues, courtRangeLabel,
     selectedTimeSlot, setSelectedTimeSlot,
     orientation,
     isDraftMode,
@@ -218,14 +220,25 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <div className="flex items-center gap-2">
             <span className="w-[54px] shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Format</span>
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 flex-1">
-              {FORMATS.map(f => (
-                <button key={f.v} onClick={() => setFormat(f)} disabled={isDraftMode}
-                  className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border disabled:opacity-40 ${
-                    format.v === f.v ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.3)]' : 'bg-white/[0.03] border-white/10 text-white/70'
-                  }`}>{f.v}</button>
-              ))}
+              {/* Kort seçiliyse yalnız aralığına giren formatlar seçilebilir
+                  (courts.min/max_capacity); dışındakiler kilitli görünür. */}
+              {FORMATS.map(f => {
+                const courtBlocked = !!selectedCourt && !allowedFormatValues.includes(f.v);
+                return (
+                  <button key={f.v} onClick={() => setFormat(f)} disabled={isDraftMode || courtBlocked}
+                    title={courtBlocked ? `${selectedCourt?.name} kortunda oynanamaz (${courtRangeLabel ?? 'aralık dışı'})` : undefined}
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border disabled:opacity-40 ${
+                      format.v === f.v ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.3)]' : 'bg-white/[0.03] border-white/10 text-white/70'
+                    } ${courtBlocked ? 'line-through' : ''}`}>{f.v}</button>
+                );
+              })}
             </div>
           </div>
+          {selectedCourt && courtRangeLabel && (
+            <p className="pl-[62px] text-[9px] text-white/35 -mt-1">
+              {selectedCourt.name}: bu kortta <span className="text-[#39FF14]/70 font-black">{courtRangeLabel}</span> oynanabilir
+            </p>
+          )}
           <div className="flex items-center gap-2">
             <span className="w-[54px] shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Görünür</span>
             <div className="flex gap-1.5">
@@ -325,8 +338,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <PitchDiscovery
               onBack={() => setActiveSheet('NONE')}
               isSelectionMode
-              onSelectTime={(pitch: any, _court: any, date: string, time: string) => {
+              onSelectTime={(pitch: any, court: any, date: string, time: string) => {
                 setSelectedPitch(pitch);
+                // Kort artık ATILMIYOR: format aralığı kısıtının kaynağı
+                setSelectedCourt(court ?? null);
                 // Saat, saha vitrininden SLOT ETİKETİ ("20:00 - 21:00") olarak
                 // gelir; sistem genelinde maç saati TEK başlangıç saatidir.
                 // Normalize etmeden saklamak sunucudaki ::time cast'ini patlatıp

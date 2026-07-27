@@ -28,9 +28,14 @@ interface Props {
   /** payload → admin_update_match; localPatch → drawer'ın yerel listing'i.
    *  false dönerse kayıt başarısızdır — düzenleyici kapanmaz, taslak korunur. */
   onSave: (payload: Record<string, unknown>, localPatch: Partial<MatchListing>) => Promise<boolean | void>;
+  /** Sahanın kortlarından türetilen izinli formatlar (drawer çeker);
+   *  boş/undefined → kısıt bilinmiyor, varsayılan liste sunulur. */
+  allowedFormats?: string[];
+  /** Saha format aralığı ipucu rozeti (örn. "6v6–8v8"). */
+  formatRangeHint?: string | null;
 }
 
-export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave }) => {
+export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowedFormats, formatRangeHint }) => {
   const [active, setActive] = useState<FieldKey | null>(null);
   const [draft, setDraft] = useState('');
   const [codeDraft, setCodeDraft] = useState('');
@@ -230,17 +235,23 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave }) => {
               ))}
             </div>
           ) : active === 'format' ? (
-            <div className="grid grid-cols-4 gap-1.5">
-              {['5v5', '7v7', '8v8', '11v11'].map((v) => (
-                <button
-                  key={v} type="button" onClick={() => setDraft(v)}
-                  className={`py-2 rounded-lg text-[10px] font-black uppercase border transition-all ${
-                    draft === v ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
+            <div className="space-y-2">
+              <div className="grid grid-cols-4 gap-1.5">
+                {/* Saha kort aralığı biliniyorsa yalnız izinli formatlar sunulur */}
+                {(allowedFormats?.length ? allowedFormats : ['5v5', '7v7', '8v8', '11v11']).map((v) => (
+                  <button
+                    key={v} type="button" onClick={() => setDraft(v)}
+                    className={`py-2 rounded-lg text-[10px] font-black uppercase border transition-all ${
+                      draft === v ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              {formatRangeHint && (
+                <p className="text-[10px] text-gray-500">Bu sahanın kortlarında <span className="text-[#39FF14]/80 font-black">{formatRangeHint}</span> oynanabilir.</p>
+              )}
             </div>
           ) : active === 'visibility' ? (
             <div className="space-y-2">
