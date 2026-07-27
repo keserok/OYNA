@@ -451,10 +451,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           >
             <div className="flex-1 overflow-y-auto flex flex-col relative pb-32">
               <div className="w-full h-64 relative shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1518605368461-1ee12522c070?auto=format&fit=crop&q=80"
-                  className="w-full h-full object-cover opacity-50"
-                />
+                {/* F3d: stok Unsplash hero kaldırıldı — davet gerçek maç görseli
+                    taşımıyor; nötr gradient zemin kullanılır. */}
+                <div className="w-full h-full bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-[#0A0E14]" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-[#0A0E14]/60 to-[#0A0E14]" />
                 <button
                   onClick={() => setSelectedInvite(null)}

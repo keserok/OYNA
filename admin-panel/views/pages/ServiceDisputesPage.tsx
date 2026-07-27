@@ -4,6 +4,7 @@ import { AdminSearchBar } from '../components/AdminSearchBar';
 import {
   fetchServiceDisputes,
   releaseServicePayout,
+  resolveNoShowDispute,
   toTurkishAdminError,
   type ServiceDisputeRow,
 } from '../../services/adminService';
@@ -27,6 +28,10 @@ export const ServiceDisputesPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [releaseTarget, setReleaseTarget] = useState<ServiceDisputeRow | null>(null);
+  // F1.4: no-show/itiraz kararı — uphold=true kaptan haklı (ceza kesinleşir),
+  // uphold=false sağlayıcı haklı (ceza iadesi + payout geri açılır).
+  const [resolveTarget, setResolveTarget] = useState<{ row: ServiceDisputeRow; uphold: boolean } | null>(null);
+  const [resolveNote, setResolveNote] = useState('');
   const { success, error: toastError } = useAdminToast();
 
   const load = useCallback(async () => {
@@ -51,6 +56,22 @@ export const ServiceDisputesPage: React.FC = () => {
       (r.provider_type ?? '').toLowerCase().includes(q),
     );
   }, [rows, query]);
+
+  const confirmResolve = async () => {
+    if (!resolveTarget) return;
+    setActioningId(resolveTarget.row.id);
+    try {
+      await resolveNoShowDispute(resolveTarget.row.id, resolveTarget.uphold, resolveNote || undefined);
+      success(resolveTarget.uphold ? 'Ceza kesinleşti — kaptan haklı bulundu' : 'İtiraz kabul edildi — sağlayıcı haklı bulundu');
+      setResolveTarget(null);
+      setResolveNote('');
+      await load();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setActioningId(null);
+    }
+  };
 
   const confirmRelease = async () => {
     if (!releaseTarget) return;
@@ -81,7 +102,10 @@ export const ServiceDisputesPage: React.FC = () => {
         <div className="bg-orange-500/5 border border-orange-500/15 rounded-xl px-4 py-3 mb-4 flex items-start gap-2">
           <ShieldAlert size={14} className="text-orange-400 shrink-0 mt-0.5" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            Sağlayıcı katılımını bildirdi, değerlendirme yapılmadı. İnceleme sonrası ödemeyi serbest bırakabilirsiniz.
+            İki tür kayıt: <span className="text-orange-300 font-bold">No-show / İtiraz</span> — kaptan gelmedi bildirdi
+            (sağlayıcı itiraz etmiş olabilir); kararı burada verin, para hareketleri ve bildirimler otomatik.
+            <span className="text-gray-300 font-bold"> Değerlendirme bekliyor</span> — sağlayıcı katılım bildirdi;
+            inceleme sonrası ödemeyi serbest bırakabilirsiniz.
           </p>
         </div>
         <AdminSearchBar value={query} onChange={setQuery} placeholder="Maç ID, sağlayıcı veya tür ara..." resultCount={filtered.length} totalCount={rows.length} className="mb-4" />
@@ -102,17 +126,48 @@ export const ServiceDisputesPage: React.FC = () => {
             { header: 'Bildirim', render: (r: ServiceDisputeRow) => (
               <span className="text-[11px] text-gray-400">{new Date(r.reported_at).toLocaleDateString('tr-TR')}</span>
             )},
-            { header: 'Durum', render: () => (
-              <StatusBadge tone="warning">İtiraz</StatusBadge>
+            { header: 'Durum', render: (r: ServiceDisputeRow) => (
+              r.status === 'DISPUTED' ? (
+                <div className="flex flex-col gap-0.5">
+                  <StatusBadge tone="danger">Sağlayıcı itiraz etti</StatusBadge>
+                  {r.dispute_deadline && <span className="text-[9px] text-gray-500">Son: {new Date(r.dispute_deadline).toLocaleString('tr-TR')}</span>}
+                </div>
+              ) : r.status === 'NOSHOW_REPORTED' ? (
+                <div className="flex flex-col gap-0.5">
+                  <StatusBadge tone="warning">No-show bildirildi</StatusBadge>
+                  {r.dispute_deadline && <span className="text-[9px] text-gray-500">İtiraz sonu: {new Date(r.dispute_deadline).toLocaleString('tr-TR')}</span>}
+                </div>
+              ) : (
+                <StatusBadge tone="neutral">Değerlendirme bekliyor</StatusBadge>
+              )
             )},
             { header: 'Aksiyon', render: (r: ServiceDisputeRow) => (
-              <button
-                onClick={() => setReleaseTarget(r)}
-                disabled={actioningId === r.id}
-                className="flex items-center gap-1 text-[10px] font-bold text-green-400 border border-green-500/30 px-2.5 py-1.5 rounded-lg hover:bg-green-500/10 disabled:opacity-50"
-              >
-                <Check size={12} /> Ödemeyi Serbest Bırak
-              </button>
+              (r.status === 'NOSHOW_REPORTED' || r.status === 'DISPUTED') ? (
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => { setResolveNote(''); setResolveTarget({ row: r, uphold: false }); }}
+                    disabled={actioningId === r.id}
+                    className="flex items-center gap-1 text-[10px] font-bold text-green-400 border border-green-500/30 px-2.5 py-1.5 rounded-lg hover:bg-green-500/10 disabled:opacity-50"
+                  >
+                    <Check size={12} /> Sağlayıcı Haklı
+                  </button>
+                  <button
+                    onClick={() => { setResolveNote(''); setResolveTarget({ row: r, uphold: true }); }}
+                    disabled={actioningId === r.id}
+                    className="flex items-center gap-1 text-[10px] font-bold text-red-400 border border-red-500/30 px-2.5 py-1.5 rounded-lg hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    <ShieldAlert size={12} /> Cezayı Onayla
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setReleaseTarget(r)}
+                  disabled={actioningId === r.id}
+                  className="flex items-center gap-1 text-[10px] font-bold text-green-400 border border-green-500/30 px-2.5 py-1.5 rounded-lg hover:bg-green-500/10 disabled:opacity-50"
+                >
+                  <Check size={12} /> Ödemeyi Serbest Bırak
+                </button>
+              )
             )},
           ]}
           data={filtered}
@@ -123,6 +178,48 @@ export const ServiceDisputesPage: React.FC = () => {
       </PageShell>
 
       <AnimatePresence>
+        {resolveTarget && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setResolveTarget(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-sm font-black text-white mb-1">
+                {resolveTarget.uphold ? 'Cezayı onayla (kaptan haklı)' : 'İtirazı kabul et (sağlayıcı haklı)'}
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                {resolveTarget.uphold ? (
+                  <>Ceza (₺{resolveTarget.row.penalty_amount ?? 0}) kesinleşecek, kayıt kapanacak (NOSHOW_FINALIZED).
+                  Her iki tarafa bildirim gider.</>
+                ) : (
+                  <>Sağlayıcıya kesilen ceza iade edilir, kaptanın no-show tazminatı ve ücret iadesi geri alınır,
+                  ₺{resolveTarget.row.provider_amount ?? resolveTarget.row.fee ?? 0} kazanç sağlayıcıya serbest bırakılır.
+                  Tüm hareketler denetim kaydına yazılır.</>
+                )}
+              </p>
+              <textarea
+                value={resolveNote}
+                onChange={(e) => setResolveNote(e.target.value)}
+                placeholder="Karar notu (taraflara giden bildirime eklenir, opsiyonel)"
+                rows={2}
+                className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-gray-600 mb-3"
+              />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setResolveTarget(null)} className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white rounded-xl border border-white/10">İptal</button>
+                <button
+                  onClick={() => void confirmResolve()}
+                  disabled={actioningId === resolveTarget.row.id}
+                  className={`px-4 py-2 text-xs font-black rounded-xl text-white disabled:opacity-50 ${resolveTarget.uphold ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}
+                >
+                  {resolveTarget.uphold ? 'Cezayı Onayla' : 'İtirazı Kabul Et'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
         {releaseTarget && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setReleaseTarget(null)}>
             <motion.div

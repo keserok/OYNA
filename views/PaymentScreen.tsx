@@ -51,7 +51,6 @@ const safeUuid = (): string => {
 
 interface PaymentScreenProps {
   onBack: () => void;
-  onViewTicket: () => void;
 }
 
 type Screen = 'PAY' | 'ADD_CARD' | 'PROCESSING' | 'SUCCESS';
@@ -122,7 +121,7 @@ const humanizePaymentError = (err: unknown): string => {
   return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
 };
 
-const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) => {
+const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const {
     paymentContext, setPaymentContext, setLastPaymentError,
     bookingPitch, bookingCourt, bookingDate, bookingSlot, bookingPrice, bookingDeposit,
@@ -624,7 +623,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onViewTicket }) =
         store.resetNavigation('MY_MATCHES');
         break;
       default:
-        onViewTicket();
+        // F4.1: bu dal ULAŞILAMAZDI (PaymentContextKind'in 4 üyesi de yukarıda) —
+        // bilete giden tek navigate burada saklıydı; bilet artık Maçlarım'daki
+        // rezervasyon kartından açılır. Güvenli varsayılan: Maçlarım.
+        store.resetNavigation('MY_MATCHES');
     }
   };
 

@@ -6,7 +6,7 @@ export interface ActionConfirmOptions {
     title: string;
     description: string;
     impactText?: string;
-    actionType: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE' | 'FORCE_REFUND' | 'FORCE_CAPTURE' | 'FORCE_VOID' | 'FORCE_CHARGEBACK' | 'SCORE_OVERRIDE' | 'PAYOUT';
+    actionType: 'PRICE_CHANGE' | 'GHOST_MODE' | 'BAN_USER' | 'SETTINGS_CHANGE' | 'FORCE_REFUND' | 'FORCE_CAPTURE' | 'FORCE_VOID' | 'FORCE_CHARGEBACK' | 'SCORE_OVERRIDE' | 'PAYOUT' | 'PAYOUT_REVERSE' | 'WALLET_ADJUST';
     targetId: string;
     targetName: string;
     /** Ayarlanırsa "yaz-onayla": kullanıcı bu ifadeyi yazmadan onay butonu açılmaz. */

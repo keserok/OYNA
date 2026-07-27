@@ -4,7 +4,7 @@ import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
   fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout, fetchPayoutIdentityChecks,
   fetchPaymentIntentsAdmin, forceCaptureIntentAdmin, forceVoidIntentAdmin, forceRefundIntentAdmin,
-  markChargebackAdmin, fetchWithdrawalRequestsAdmin, processWithdrawalAdmin,
+  markChargebackAdmin, fetchWithdrawalRequestsAdmin, processWithdrawalAdmin, reversePayout,
   type FinanceStats, type WalletLedgerRow, type BookingPaymentRow, type OwnerBillingEventRow,
   type PayoutRequestRow, type PaymentIntentRow, type PayoutIdentityCheck, type WithdrawalRequestRow,
 } from '../../services/adminService';
@@ -15,7 +15,7 @@ import { PaymentHealthPanel } from '../components/PaymentHealthPanel';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { useAdminToast } from '../context/AdminToastContext';
-import { downloadCsv } from '../../utils/exportCsv';
+import { downloadCsv, maskIban } from '../../utils/exportCsv';
 import { CreditCard, Download, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react';
 import type { AdminNavigateFn } from '../GodViewPanel';
 
@@ -272,6 +272,35 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     });
   };
 
+  // F5.3: reversePayout servis sarmalayıcısı vardı ama hiçbir UI çağırmıyordu —
+  // yanlış COMPLETED işaretlenen ödeme panelden geri alınamıyordu.
+  const askReversePayout = (r: PayoutRequestRow) => {
+    const reason = (window.prompt('Geri alma nedeni (zorunlu — denetim kaydına yazılır):') || '').trim();
+    if (!reason) { toastError('Sebep girilmeden geri alınamaz.'); return; }
+    const label = `${nameMap[r.user_id] || r.user_id.slice(0, 8)} • ₺${Number(r.net_amount ?? r.amount).toLocaleString('tr')}`;
+    setIntentConfirm({
+      title: 'Payout işaretini geri al',
+      description: 'COMPLETED işaretli ödeme PENDING durumuna döner; ilgili cüzdan hareketi de PENDING olur. Banka transferi gerçekten yapıldıysa GERİ ALMAYIN — bu yalnız kayıt düzeltmesidir.',
+      impactText: `Sebep: ${reason}`,
+      actionType: 'PAYOUT_REVERSE', targetId: r.id, targetName: label,
+      confirmPhrase: 'ONAYLA',
+      onConfirm: () => void (async () => {
+        setPayoutBusy(r.id);
+        try {
+          await reversePayout(r.id, reason);
+          success('Payout PENDING durumuna geri alındı');
+          setIntentConfirm(null);
+          await load();
+        } catch (err) {
+          toastError(toTurkishAdminError(err));
+        } finally {
+          setPayoutBusy(null);
+        }
+      })(),
+      onCancel: () => setIntentConfirm(null),
+    });
+  };
+
   const handlePayout = async (id: string, status: 'COMPLETED' | 'FAILED', row?: PayoutRequestRow) => {
     if (status === 'FAILED' && !window.confirm('Bu payout talebi reddedilsin mi? Rezerve tutar sahibe iade edilir.')) return;
     // [S2.1] Cüzdan çekiminde bankaya NET tutar gönderilir (brüt − kesinti) — admin'e vurgula.
@@ -329,6 +358,38 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
     ]));
   };
 
+  // F5.4: muhasebenin bankaya gönderdiği liste — IBAN maskeli (PII politikası).
+  const exportPayouts = () => {
+    downloadCsv('oyna-payouts.csv',
+      ['Tarih', 'Talep Eden', 'Tip', 'IBAN Sahibi', 'IBAN (maskeli)', 'Brüt', 'Kesinti', 'Net', 'Durum', 'Banka Ref'],
+      payouts.map((r) => [
+        new Date(r.created_at).toLocaleString('tr-TR'),
+        nameMap[r.user_id] || r.user_id,
+        PAYOUT_TYPE_LABELS[r.payout_type] ?? r.payout_type,
+        r.iban_holder_name || '',
+        maskIban(r.iban),
+        String(r.amount),
+        String(r.fee_amount ?? 0),
+        String(r.net_amount ?? r.amount),
+        r.status,
+        r.iyzico_payout_ref || '',
+      ]));
+  };
+
+  const exportIntents = () => {
+    downloadCsv('oyna-intents.csv',
+      ['Tarih', 'Kullanıcı', 'Bağlam', 'Tutar', 'Komisyon', 'Durum', 'Sağlayıcı Ref'],
+      intents.map((r) => [
+        new Date(r.created_at).toLocaleString('tr-TR'),
+        r.user_name || r.user_id || '',
+        r.related_entity_type || r.pitch_name || '',
+        String(r.amount),
+        String(r.commission_amount ?? 0),
+        r.status,
+        r.provider_ref || '',
+      ]));
+  };
+
   const tabs = useMemo(() => ([
     { id: 'ledger' as const, label: 'Cüzdan Ledger' },
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
@@ -353,8 +414,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         <div className="flex gap-2 flex-wrap">
           <button
             type="button"
-            onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'intents' || tab === 'payouts' || tab === 'withdrawals'}
+            onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : tab === 'payouts' ? exportPayouts : tab === 'intents' ? exportIntents : exportBilling}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || (tab === 'payouts' && payouts.length === 0) || (tab === 'intents' && intents.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'withdrawals'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -563,6 +624,20 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                     className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-40"
                   >
                     Reddet
+                  </button>
+                </div>
+              ) : r.status === 'COMPLETED' ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-600">{r.iyzico_payout_ref || '—'}</span>
+                  {/* F5.3: yanlış COMPLETED işaretlenen payout'u geri al —
+                      admin_reverse_payout (FINANCE + sebep zorunlu + audit) */}
+                  <button
+                    type="button"
+                    disabled={payoutBusy === r.id}
+                    onClick={() => askReversePayout(r)}
+                    className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 disabled:opacity-40"
+                  >
+                    Geri Al
                   </button>
                 </div>
               ) : <span className="text-[10px] text-gray-600">{r.iyzico_payout_ref || '—'}</span>

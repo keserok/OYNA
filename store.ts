@@ -471,6 +471,7 @@ interface AppState {
   unreadNotificationsCount: number;
   incrementUnreadNotifications: () => void;
   clearUnreadNotifications: () => void;
+  setUnreadNotificationsCount: (n: number) => void;
 
   // ─── Push Notification State ───────────────────────────────────
   pushToken: string | null;
@@ -1321,6 +1322,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   unreadNotificationsCount: 0,
   incrementUnreadNotifications: () => set((state) => ({ unreadNotificationsCount: state.unreadNotificationsCount + 1 })),
   clearUnreadNotifications: () => set({ unreadNotificationsCount: 0 }),
+  // F3f: DB'den gelen gerçek okunmamış sayısıyla tohumlama (App açılışı)
+  setUnreadNotificationsCount: (n) => set({ unreadNotificationsCount: Math.max(0, n) }),
 
   // ─── Push Notification State ───────────────────────────────────
   pushToken: null,

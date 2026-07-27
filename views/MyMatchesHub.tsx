@@ -16,6 +16,7 @@ import {
 } from '../services/playerBookingService';
 import { formatTRY } from '../utils/formatTRY';
 import { EmptyState } from '../components/common/StatusState';
+import { supabase } from '../supabaseClient';
 import SkeletonList from '../components/ui/SkeletonList';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
@@ -129,6 +130,19 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
   }, []);
 
   const [showPast, setShowPast] = useState(false);
+
+  // F2.1: "Maçı Değerlendir" CTA'sı — kullanıcının zaten puanladığı maçlarda
+  // gizlenir (player_ratings kendi satırları RLS ile okunabilir).
+  const [evaluatedMatchIds, setEvaluatedMatchIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentUserUid) { setEvaluatedMatchIds(new Set()); return; }
+    supabase.from('player_ratings').select('match_id').eq('rater_id', currentUserUid)
+      .then(({ data }) => {
+        if (!cancelled) setEvaluatedMatchIds(new Set((data ?? []).map((r: { match_id: string }) => r.match_id)));
+      });
+    return () => { cancelled = true; };
+  }, [currentUserUid]);
 
   // ── Rezervasyon iptali — iade önizlemesi SUNUCUDAN gelir, FE formül uydurmaz ──
   const [cancelTarget, setCancelTarget] = useState<MyBooking | null>(null);
@@ -255,6 +269,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
         onConvertToMatch={handleConvertToMatch}
         onDirections={handleDirections}
         onRebook={handleRebook}
+        onViewTicket={(bk) => { useAppStore.getState().setTicketBookingId(bk.id); navigateTo('MATCH_TICKET'); }}
       />
     );
   };
@@ -416,6 +431,20 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                           <div key={item.id}>
                             <ItemMetaRow item={item} />
                             {renderItemCard(item)}
+                            {/* F2.1: tamamlanan ve henüz puanlanmamış maç için değerlendirme girişi —
+                                PostMatchEval'a giden İLK gerçek navigasyon yolu (ekran repo tarihinde erişilemezdi) */}
+                            {item.kind === 'MATCH' && item.match.status === 'COMPLETED' && !evaluatedMatchIds.has(item.match.id) && (
+                              <button
+                                onClick={() => { setSelectedMatch(item.match); navigateTo('POST_MATCH_EVAL'); }}
+                                className="w-full mt-2 min-h-[44px] flex items-center justify-between px-4 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 text-left hover:bg-[#FACC15]/15 active:scale-[0.99] transition-all"
+                              >
+                                <span>
+                                  <span className="block text-[11px] font-black text-[#FACC15] uppercase tracking-wider">Maçı Değerlendir</span>
+                                  <span className="block text-[9px] text-white/40 font-bold">Takım arkadaşlarını ve kaleci/hakemi puanla</span>
+                                </span>
+                                <span className="text-[#FACC15] font-black">→</span>
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
-import { submitServiceRating } from '../services/serviceRequestService';
+import { submitServiceRating, getMatchServiceRequests, captainConfirmService } from '../services/serviceRequestService';
 import { getPendingScoreProposal, approveMatchScore, type ScoreProposal } from '../services/scoreService';
 import type { PositionSlot } from '../types';
 
@@ -176,7 +176,9 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [fairPlay, setFairPlay] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [playerRatings, setPlayerRatings] = useState<Record<string, number>>({});
-  const [motm, setMotm] = useState<string | null>(null);
+  // F2.2: MOTM seçimi kaldırıldı — ayrı oy saklanmaz; MVP, player_ratings
+  // ortalamasından TÜRETİLİR (match_motm görünümü + get_player_motm_count).
+  // Eski buton kullanıcıya seçim yaptırıp hiçbir yere yazmıyordu (sessiz kayıp).
   const [refRating, setRefRating] = useState(0);
   const [pitchRating, setPitchRating] = useState(0);
   const [showResult, setShowResult] = useState(false);
@@ -320,6 +322,25 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         console.warn(`[PostMatchEval] ${p.type} puanlaması kaydedilemedi:`, e);
       }
     }
+
+    // F1.1c: Kaptan değerlendirmeyi gönderdiğinde, bekleyen hizmet taleplerinin
+    // kaptan onayı da işlenir (iki-taraflı payout kapısının kaptan ayağı —
+    // ayrı butona gerek kalmadan "değerlendirme = katılım kanıtı" prensibi).
+    // Sunucu yetkiyi ayrıca doğrular (_hire_side_for); hata payout'u bloklamaz.
+    try {
+      const uid2 = auth.currentUser?.uid;
+      if (uid2 && selectedMatch.creatorId === uid2) {
+        const reqs = await getMatchServiceRequests(selectedMatch.id);
+        for (const r of reqs) {
+          if (r.status === 'CAPTURED' && !r.captainConfirmed && !r.payoutReleased) {
+            try { await captainConfirmService(r.id); }
+            catch (e) { console.warn('[PostMatchEval] kaptan hizmet onayı kaydedilemedi:', e); }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[PostMatchEval] hizmet onayı adımı atlandı:', e);
+    }
     setSubmitting(false);
     setShowResult(true);
   };
@@ -357,7 +378,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     }, 1200);
   };
 
-  const motmPlayer = PLAYERS.find(p => p.id === motm);
   const ratingValues: number[] = Object.values(playerRatings) as number[];
   const avgPlayerRating = ratingValues.length > 0
     ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
@@ -396,25 +416,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">DEĞERLENDİRME TAMAM!</h2>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Puanların veri merkezine başarıyla yüklendi.</p>
           </div>
-
-          {motmPlayer && (
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ delay: 0.3 }}
-              className="w-full bg-[#121620]/60 backdrop-blur-xl border border-[#FACC15]/30 rounded-[28px] p-5 text-center shadow-[0_0_25px_rgba(250,204,21,0.1)] relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/5 to-transparent pointer-events-none" />
-              <Crown size={22} className="text-[#FACC15] mx-auto mb-2 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
-              <p className="text-[9px] text-[#FACC15] font-black uppercase tracking-[0.25em] italic">MAÇIN ADAMI (MOTM)</p>
-              
-              <div className={`w-14 h-14 rounded-2xl mx-auto my-3.5 flex items-center justify-center font-black text-xl border ${getTierBadgeClass(motmPlayer.tier)}`}>
-                {motmPlayer.initials}
-              </div>
-              <p className="text-lg font-black text-white uppercase tracking-tight italic">{motmPlayer.name}</p>
-              <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black text-gray-400 mt-1 inline-block tracking-widest">{motmPlayer.pos}</span>
-            </motion.div>
-          )}
 
           <div className="grid grid-cols-2 gap-3 w-full">
             <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center">
@@ -664,7 +665,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             }
             const p = PLAYERS[playerCardIdx];
             if (!p) return null;
-            const isMotm = motm === p.id;
             const currentRating = playerRatings[p.id] ?? 0;
             const isLast = playerCardIdx === PLAYERS.length - 1;
             const advanceCard = () => {
@@ -695,7 +695,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 </div>
 
                 {/* Player card */}
-                <div className={`rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all ${isMotm ? 'border-[#FACC15] bg-gradient-to-br from-[#2c1d00]/40 to-[#121620]/80 shadow-[0_0_30px_rgba(250,204,21,0.12)]' : 'bg-[#121620]/70 border-white/8'}`}>
+                <div className="rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all bg-[#121620]/70 border-white/8">
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/6 rounded-full blur-2xl pointer-events-none" />
                   <div className="flex items-center gap-4">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-base border ${getTierBadgeClass(p.tier)}`}>
@@ -705,14 +705,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                       <p className="text-base font-black text-white uppercase tracking-tight italic">{p.name}</p>
                       <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black text-gray-400 tracking-wider uppercase">{p.pos}</span>
                     </div>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => { if (navigator.vibrate) navigator.vibrate(22); setMotm(isMotm ? null : p.id); }}
-                      className={`h-10 px-3.5 rounded-xl border text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${isMotm ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-white/5 border-white/10 text-gray-500'}`}
-                    >
-                      <Crown size={11} fill={isMotm ? 'black' : 'none'} className={isMotm ? 'text-black' : ''} />
-                      {isMotm ? 'MOTM' : 'MOTM'}
-                    </motion.button>
                   </div>
 
                   {/* Stars */}

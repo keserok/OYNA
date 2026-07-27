@@ -12,6 +12,7 @@ import { useAppStore } from '../store';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { APP_VERSION } from '../utils/appVersion';
 import DeleteAccountModal from '../components/common/DeleteAccountModal';
+import NotificationSettingsPage from '../components/settings/NotificationSettingsPage';
 import { showToast } from '../components/common/GlobalToast';
 
 const CONTACT_EMAIL = 'destek@oyna.app';
@@ -68,17 +69,18 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   const [openSection, setOpenSection] = useState<SectionKey>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  // Notification toggles
-  const [notifNewOffer, setNotifNewOffer] = useState(savedSettings.notifNewOffer ?? true);
-  const [notifReminder, setNotifReminder] = useState(savedSettings.notifReminder ?? true);
-  const [notifPayment, setNotifPayment] = useState(savedSettings.notifPayment ?? true);
-  const [notifMarketing, setNotifMarketing] = useState(savedSettings.notifMarketing ?? false);
-  const [notifWeekly, setNotifWeekly] = useState(savedSettings.notifWeekly ?? true);
+  // F3i: 5 bildirim toggle'ı kaldırıldı — goalkeepers/referees.settings JSONB'sine
+  // yazılıyordu ama GÖNDERİM tarafı (send-push) yalnız profiles.notification_
+  // preferences okur; yani hiçbir gönderici bu anahtarları okumuyordu (ölü depo).
+  // Sağlayıcı artık oyuncuyla AYNI çalışan tercih ekranını kullanır.
+  const [showNotifPage, setShowNotifPage] = useState(false);
 
   // Privacy
   const [showProfile, setShowProfile] = useState(savedSettings.showProfile ?? true);
   const [showRating, setShowRating] = useState(savedSettings.showRating ?? true);
-  const [hidePhone, setHidePhone] = useState(savedSettings.hidePhone ?? false);
+  // F3h: hidePhone kaldırıldı — telefon uygulamanın HİÇBİR yerinde kaptana/oyuncuya
+  // gösterilmiyor (tiplerde alan bile yok); ayar var olmayan bir sızıntıya karşı
+  // koruma vaat ediyordu.
   const [allowOffer, setAllowOffer] = useState(savedSettings.allowOffer ?? true);
 
   // Appearance
@@ -120,14 +122,8 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
   useEffect(() => {
     if (!me) return;
     const s = me.settings || {};
-    setNotifNewOffer(s.notifNewOffer ?? true);
-    setNotifReminder(s.notifReminder ?? true);
-    setNotifPayment(s.notifPayment ?? true);
-    setNotifMarketing(s.notifMarketing ?? false);
-    setNotifWeekly(s.notifWeekly ?? true);
     setShowProfile(s.showProfile ?? true);
     setShowRating(s.showRating ?? true);
-    setHidePhone(s.hidePhone ?? false);
     setAllowOffer(s.allowOffer ?? true);
     setDarkMode(s.darkMode ?? true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,25 +276,21 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           </motion.button>
         )}
 
-        {/* Bildirimler */}
-        <SectionCard
-          sectionKey="notifications"
-          icon={<Bell size={18} />}
-          title="Bildirimler"
-          subtitle="Teklif ve hatırlatma bildirimleri"
-          color="#f59e0b"
+        {/* Bildirimler — F3i: gerçek (gönderimin okuduğu) tercih ekranına gider */}
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowNotifPage(true)}
+          className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center gap-3 text-left hover:border-white/15 transition-all"
         >
-          <ToggleRow label="Yeni Teklif" desc="Kaptanlardan gelen tekliflerde bildir"
-            checked={notifNewOffer} onChange={() => persistToggle('notifNewOffer', notifNewOffer, setNotifNewOffer)} accentColor={accentColor} />
-          <ToggleRow label="Maç Hatırlatıcı" desc="Maçtan 2 saat önce bildir"
-            checked={notifReminder} onChange={() => persistToggle('notifReminder', notifReminder, setNotifReminder)} accentColor={accentColor} />
-          <ToggleRow label="Ödeme Bildirimi" desc="Para transferlerinde anında bildir"
-            checked={notifPayment} onChange={() => persistToggle('notifPayment', notifPayment, setNotifPayment)} accentColor={accentColor} />
-          <ToggleRow label="Haftalık Rapor" desc="Kazanç ve performans özeti"
-            checked={notifWeekly} onChange={() => persistToggle('notifWeekly', notifWeekly, setNotifWeekly)} accentColor={accentColor} />
-          <ToggleRow label="Kampanyalar" desc="Özel fırsatlar ve duyurular"
-            checked={notifMarketing} onChange={() => persistToggle('notifMarketing', notifMarketing, setNotifMarketing)} accentColor="#6b7280" />
-        </SectionCard>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#f59e0b20', color: '#f59e0b' }}>
+            <Bell size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Bildirim Tercihleri</p>
+            <p className="text-[11px] text-gray-500">Teklif, hatırlatma, ödeme ve kampanya bildirimlerini yönet</p>
+          </div>
+          <ChevronRight size={18} className="text-gray-500 shrink-0" />
+        </motion.button>
 
         {/* Gizlilik */}
         <SectionCard
@@ -312,8 +304,6 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
             checked={showProfile} onChange={() => persistToggle('showProfile', showProfile, setShowProfile)} accentColor={accentColor} />
           <ToggleRow label="Puan Görünsün" desc="Kapalıyken reyting puanın gizlenir"
             checked={showRating} onChange={() => persistToggle('showRating', showRating, setShowRating)} accentColor={accentColor} />
-          <ToggleRow label="Telefon Gizle" desc="Telefon numaranı kaptanlardan sakla"
-            checked={hidePhone} onChange={() => persistToggle('hidePhone', hidePhone, setHidePhone)} accentColor={accentColor} />
           <ToggleRow label="Direkt Teklif Al" desc="Kapalıyken kaptanlar sana doğrudan teklif gönderemez"
             checked={allowOffer} onChange={() => persistToggle('allowOffer', allowOffer, setAllowOffer)} accentColor={accentColor} />
         </SectionCard>
@@ -468,6 +458,10 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           OYNA © 2025 • Tüm hakları saklıdır
         </p>
       </div>
+
+      {/* F3i: gerçek bildirim tercihleri — profiles.notification_preferences'a
+          yazar; send-push ve owner/servis trigger'ları BU depoyu okur. */}
+      <NotificationSettingsPage open={showNotifPage} onClose={() => setShowNotifPage(false)} />
 
       {/* Hesap silme modal — tek kaynak, oyuncu ayarlarıyla aynı bileşen */}
       <AnimatePresence>
