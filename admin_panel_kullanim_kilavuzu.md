@@ -63,6 +63,7 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 2. **Tesis Düzenle:** Listeden tesise tıklayın → kalemi (✏️) seçin → değişiklikleri yapıp kaydedin.
 3. **Tesis Onayla / Reddet:** Saha sahibi kayıt yaptırdığında tesis "Onay Bekliyor" durumunda gelir → Siz onaylarsanız platforma girer, reddederseniz sahibine bildirim gider.
 4. **Vitrine Al / Çıkar:** Tesisi öne çıkarmak için yıldız (⭐) ikonuna tıklayın. Gizlemek için göz kapatma (👁️) ikonunu kullanın.
+5. **Vitrin Aynası (Saha Kurulum Merkezi → Vitrin sekmesi):** Oyuncunun Saha Keşfet'te gördüğü saha kartının CANLI birebir kopyası. Kartın üstünde "vitrinde görünüyor mu?" teşhisi (Onaylı ✓ / Tesis Açık ✓ / Yayında ✓ — biri kırmızıysa saha listelenmiyor demektir), altında ilgili düzenleme sekmelerine köprüler (fotoğraf/kimlik/olanak/kort/tarife). Kaydettiğiniz her değişikliğin oyuncuya nasıl göründüğünü tahmin etmeden görürsünüz.
 
 **Tesis onaylamak için adımlar:**
 1. Sol menüden **"Doğrulama Merkezi"** → **"Tesis Onayları"** sekmesine gelin
@@ -291,17 +292,13 @@ Admin paneli genel olarak son derece güçlü bir yapıya sahip olsa da, **kod b
 
 ---
 
-### ❌ Eksiklik 5: Maç İptal Etme Akışı Adminler İçin Karmaşık
-**Sorun:** Bir maçı admin olarak iptal etmek istediğinizde, Maçlar ekranından maça girip önce durumu bulmanız, ardından birden fazla işlem yapmanız gerekiyor. Tek tıkla "bu maçı iptal et + oyuncuları bildir + varsa iade yap" akışı yok.
-
-**Öneri:** Maç detay paneline **"Acil İptal"** butonu eklenmeli; bu buton tüm süreci (iptal → iade → bildirim) tek seferde başlatmalıdır.
+### ✅ Eksiklik 5 (ÇÖZÜLDÜ): Maç İptal Etme Akışı
+Maç kokpitindeki iptal modalına **"🚨 Acil İptal"** eklendi: tek adımda iptal + iade sürecini başlatma + tüm kadroya anlık bildirim; sebep zorunlu, denetime yazılır.
 
 ---
 
-### ❌ Eksiklik 6: Kullanıcı Bakiye Yönetimi Ekranı Yok
-**Sorun:** Bir oyuncuya bonus kredi yüklemek (promosyon, hata tazminatı vs.) veya fazla çekilen parayı geri almak için doğrudan bir arayüz yok. Şu an bu işlem sadece veritabanından yapılabiliyor.
-
-**Öneri:** Kullanıcı 360° profil ekranına "Bakiye Ayarla" butonu eklenmeli; admin bir miktar ve sebep yazıp onaylayabilmeli → işlem otomatik denetim günlüğüne yazılmalıdır.
+### ✅ Eksiklik 6 (ÇÖZÜLDÜ): Kullanıcı Bakiye Yönetimi
+Kullanıcı 360° → **Profil Aynası → Cüzdan** kısayolu: tutar (±) + zorunlu sebep girilir; işlem `wallet_transactions`'a ADMIN_ADJUST olarak işlenir (ledger bozulmaz), FINANCE yetkisi ister, denetim günlüğüne düşer.
 
 ---
 
