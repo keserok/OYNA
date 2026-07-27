@@ -11,6 +11,17 @@
 --      skala varsayarak 0.7/0.3 ağırlıklı skor üretir; 10'luk skill ile
 --      ratings_history enflasyona uğrardı.
 -- Bu üçü düzelmeden PostMatchEval erişilebilir yapılamaz (Faz 2 ön koşulu).
+--
+-- SÜRÜM NOTU (2026-07-27): Bu dosya önce 20260816000000 numarasıyla yazıldı;
+-- o sırada canlı ledger'daki en yüksek sürüm 20260815000000'dı. Aynı numarayı
+-- paralel bir çalışma (20260816000000_reconcile_profiles_roles_bypass) aldı ve
+-- canlıya uygulandı. Çakışma bırakılsaydı `db push` bu dosyayı "zaten uygulandı"
+-- sayıp SESSİZCE ATLAYACAK, CHECK düzeltmesi üretime hiç gitmeyecekti. Dosya bu
+-- yüzden boş bir numaraya (…012) taşındı — MIGRATION_PLAYBOOK'un 20260716000004
+-- için uyguladığı çözümün aynısı; dosya hiç uygulanmadığı için ledger sözleşmesi
+-- ihlal edilmez. Sıralama güvenli: constraint değişikliği diğer 11 migration'ın
+-- hiçbirine bağımlı değil ve …009'daki match_motm görünümü kolonlara bağlıdır,
+-- kısıtlara değil.
 
 -- 1) CHECK: 1..10
 ALTER TABLE public.player_ratings

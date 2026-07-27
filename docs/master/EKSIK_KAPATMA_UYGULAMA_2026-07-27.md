@@ -34,7 +34,7 @@
 ## Faz faz uygulananlar
 
 ### Faz 0 — Ön adımlar
-- `20260816000000` — `skill_score` CHECK 1→10, FK `individual_matches`→`matches`, rating trigger'ı 10'luk skalaya uyarlandı.
+- `20260816000012` — `skill_score` CHECK 1→10, FK `individual_matches`→`matches`, rating trigger'ı 10'luk skalaya uyarlandı. *(Önce …000 numarasıyla yazıldı; paralel bir çalışma aynı numarayı alıp canlıya uygulayınca sessiz atlanma riskine karşı boş numaraya taşındı.)*
 - Dürüstlük hotfix'leri: sahte WhatsApp hattı kaldırıldı · "KAPTANA BİLDİRİLDİ" yalanı düzeltildi · onboarding komisyon oranı gerçeğe çekildi.
 - `test:integration` script'i + CI işi (secret yoksa yeşil atlar).
 
@@ -74,6 +74,20 @@ Test: `tests/integration/f1_para_guvenligi.sql` (26 assert).
 - Saha sahibi Destek Merkezi hazır `support_tickets` altyapısına bağlandı (OWNER kanalı).
 - `20260816000011` — MFA kurtarma kodları (bcrypt hash, tek sefer gösterim), `admin_reset_mfa` (SUPER_ADMIN, self-reset yasak); **bayrak bilinçli olarak kapalı**.
 - Go-Live paneline cashout hazırlık kartı (durum, kesinti, bekleyen talep, kimlik uyuşmazlığı + açılış ön koşulları).
+
+## Merge öncesi doğrulama (2026-07-27)
+
+- **Sürüm çakışması giderildi:** `20260816000000` numarası canlıda
+  `reconcile_profiles_roles_bypass` tarafından kullanılıyordu; bu dosya
+  `20260816000012`'ye taşındı. Çakışma kalsaydı `db push` CHECK düzeltmesini
+  sessizce atlayacaktı.
+- **12 migration canlıda kuru teste tabi tutuldu:** her biri `BEGIN … ROLLBACK`
+  içinde gerçek şemaya uygulandı, altı parti de hatasız geçti ve sonrasında
+  veritabanında hiçbir kalıntı kalmadığı tek tek doğrulandı (live_status,
+  match_motm, mfa tablosu, CHECK, app_config anahtarları — hepsi eski hâlinde).
+- **Ön koşullar teyit edildi:** app_config kolonları, notification_templates
+  benzersizlik kısıtı, `require_admin_write`, sağlayıcı koruma trigger'ının
+  `matchCount`'u engellemediği ve `player_ratings`'in boş olduğu.
 
 ## Açık kalan / karar bekleyen
 - **`admin_mfa_required` bayrağı** — açmadan önce en az bir SUPER_ADMIN enroll olup kurtarma kodlarını indirmeli. Ayrıca `isAdminMfaRequired()` bugün *fail-open* (config okunamazsa MFA atlanır); bayrak açılırken bu davranış gözden geçirilmeli.
