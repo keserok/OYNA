@@ -15,6 +15,8 @@ import {
   withdrawProviderApplication,
   providerConfirmService,
   providerDisputeNoShow,
+  previewProviderCancel,
+  providerCancelAssignment,
 } from '../services/serviceRequestService';
 import { getMyMatchServiceOffers, respondMatchServiceOffer, MatchServiceOffer } from '../services/serviceOfferService';
 import {
@@ -220,6 +222,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   );
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  // F1.7: iş bırakma — önizleme sunucudan gelir (ceza SSOT), onay modalıyla.
+  const [cancelPreview, setCancelPreview] = useState<{ reqId: string; penalty: number; hoursLeft: number | null } | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   // Misafir/demo modu: finansal aksiyonlar (çekim, kart, kimlik, başvuru/teklif)
   // kilitli. RLS zaten oturum ister; kullanıcı kriptik RPC hatası yerine net bir
@@ -826,6 +831,41 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }
   };
 
+  // F1.7: İşi bırakma — önce sunucudan ceza önizlemesi, sonra onay modalı.
+  const handleOpenCancelPreview = async (requestId: string) => {
+      setCancellingId(requestId);
+      try {
+          const p = await previewProviderCancel(requestId);
+          if (!p.allowed) {
+              showActionError(p.message || 'Maç başladı — iş bırakılamaz.');
+              return;
+          }
+          setCancelPreview({ reqId: requestId, penalty: p.penalty, hoursLeft: p.hoursLeft });
+      } catch (err: any) {
+          showActionError(err?.message || 'İptal önizlemesi alınamadı.');
+      } finally {
+          setCancellingId(null);
+      }
+  };
+  const handleConfirmCancelAssignment = async () => {
+      if (!cancelPreview) return;
+      setCancellingId(cancelPreview.reqId);
+      try {
+          const r = await providerCancelAssignment(cancelPreview.reqId);
+          setCancelPreview(null);
+          showActionSuccess(r.penalty > 0
+              ? (r.penaltyCharged
+                  ? `İşi bıraktın — ${r.penalty}₺ geç iptal cezası kesildi.`
+                  : `İşi bıraktın — ${r.penalty}₺ ceza bakiyenden tahsil edilemedi, hesabına borç işlenebilir.`)
+              : 'İşi cezasız bıraktın. Kaptana haber verildi.');
+          await Promise.all([fetchIncomingRequests(), fetchEarnings()]);
+      } catch (err: any) {
+          showActionError(err?.message || 'İş bırakılamadı.');
+      } finally {
+          setCancellingId(null);
+      }
+  };
+
   // Maç sonu: sağlayıcı "maçı oynadım" onayı (iki-taraflı payout kapısı)
   const handleProviderConfirm = async (requestId: string) => {
       setConfirmingId(requestId);
@@ -1267,7 +1307,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   {req.status === 'CAPTURED' && !req.payoutReleased && (
                                     req.providerConfirmed ? (
                                       <div className="w-full mt-3 py-2 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
-                                          <Check size={13} /> Onayladın · Kaptan onayı bekleniyor
+                                          {/* F1.2: kaptan onaylamazsa maç bitişi+48s'te otomatik serbest bırakılır */}
+                                          <Check size={13} /> Onayladın · Kaptan onayı bekleniyor (48s içinde otomatik)
                                       </div>
                                     ) : (
                                       <button
@@ -1291,6 +1332,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           Sorun Bildir
                                       </button>
                                   )}
+                                  {/* F1.7: kabul edilmiş işi bırakma (maç başlamadıysa; ceza önizlemesi sunucudan) */}
+                                  <button
+                                      onClick={() => handleOpenCancelPreview(req.id)}
+                                      disabled={cancellingId === req.id}
+                                      className="w-full mt-2 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-[11px] font-black uppercase tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                  >
+                                      {cancellingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <X size={13} />}
+                                      İşi Bırak
+                                  </button>
                               </div>
                           ))}
                       </div>
@@ -2493,6 +2543,33 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* Post Match Report Modal (Two-way Rating) */}
       <AnimatePresence>
+        {/* F1.7: İş bırakma onay modalı — ceza tutarı sunucu önizlemesinden */}
+        {cancelPreview && (
+            <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" onClick={() => setCancelPreview(null)}>
+                <div className="bg-[#161B22] border border-white/10 rounded-[24px] p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-white font-black text-base mb-2">İşi bırakmak üzeresin</h3>
+                    <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                        {cancelPreview.penalty > 0 ? (
+                            <>Maça {cancelPreview.hoursLeft != null ? `${cancelPreview.hoursLeft} saat` : 'az süre'} kaldığı için{' '}
+                            <span className="text-red-400 font-black">{cancelPreview.penalty}₺ geç iptal cezası</span> kesilecek
+                            ve kaptana tazminat olarak aktarılacak. Kaptanın ödemesi iade edilir.</>
+                        ) : (
+                            <>Maça 24 saatten fazla var — <span className="text-green-400 font-black">ceza kesilmeyecek</span>.
+                            Kaptanın ödemesi iade edilir ve kendisine haber verilir.</>
+                        )}
+                    </p>
+                    <div className="flex gap-2">
+                        <button onClick={() => setCancelPreview(null)}
+                            className="flex-1 py-3 rounded-xl bg-white/5 text-white text-xs font-black uppercase">Vazgeç</button>
+                        <button onClick={handleConfirmCancelAssignment} disabled={cancellingId === cancelPreview.reqId}
+                            className="flex-1 py-3 rounded-xl bg-red-500 text-white text-xs font-black uppercase disabled:opacity-50">
+                            {cancelPreview.penalty > 0 ? `Bırak (${cancelPreview.penalty}₺ ceza)` : 'İşi Bırak'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {showPostMatchReport && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 

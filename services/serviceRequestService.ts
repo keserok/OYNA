@@ -307,6 +307,40 @@ export const cancelServiceRequest = async (requestId: string): Promise<void> => 
   if (error) throw new Error(parseRpcError(error.message) || 'Talep iptal edilemedi.');
 };
 
+/**
+ * F1.7 — Sağlayıcı iş bırakma ÖNİZLEMESİ (SSOT: ceza hesabı sunucuda).
+ * allowed=false → maç başlamış, bırakılamaz.
+ */
+export const previewProviderCancel = async (
+  requestId: string,
+): Promise<{ allowed: boolean; penalty: number; hoursLeft: number | null; feeTL: number; message?: string }> => {
+  const { data, error } = await supabase.rpc('preview_provider_cancel', { p_request_id: requestId });
+  if (error) throw new Error(parseRpcError(error.message) || 'İptal önizlemesi alınamadı.');
+  return {
+    allowed: !!data?.allowed,
+    penalty: Number(data?.penalty ?? 0),
+    hoursLeft: data?.hours_left == null ? null : Number(data.hours_left),
+    feeTL: Number(data?.fee ?? 0),
+    message: data?.message,
+  };
+};
+
+/**
+ * F1.7 — Sağlayıcı kabul edilmiş (ACCEPTED/CAPTURED) işi bırakır.
+ * >24s: cezasız; sonrası ücretin %'si kadar best-effort ceza. Kaptana iade +
+ * bildirim, maç kartındaki gk/hakem ataması temizliği sunucuda yapılır.
+ */
+export const providerCancelAssignment = async (
+  requestId: string,
+  reason?: string,
+): Promise<{ status: string; penalty: number; penaltyCharged: boolean }> => {
+  const { data, error } = await supabase.rpc('provider_cancel_assignment', {
+    p_request_id: requestId, p_reason: reason ?? null,
+  });
+  if (error) throw new Error(parseRpcError(error.message) || 'İş bırakılamadı.');
+  return { status: data?.status, penalty: Number(data?.penalty ?? 0), penaltyCharged: !!data?.penalty_charged };
+};
+
 /** Sağlayıcının gelen taleplerini getirir (ServiceDashboard). */
 export const getIncomingRequests = async (): Promise<ServiceRequest[]> => {
   const uid = auth.currentUser?.uid;
