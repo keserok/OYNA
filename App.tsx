@@ -749,7 +749,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE'].includes(view);
+  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE', 'MY_MATCHES'].includes(view);
 
   return (
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
