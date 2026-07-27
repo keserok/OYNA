@@ -102,17 +102,18 @@ export const formatCapacity = (capacity?: number): string | null => {
 };
 
 /**
- * Kortun oynanabilir format aralığı rozeti: min 12 & maks 16 → "6v6–8v8";
+ * Kortun oynanabilir format aralığı rozeti. min/max TAKIM BAŞI oyuncu tutar
+ * (DB modeli: min_capacity=6 → "6v6"): min 6 & maks 8 → "6v6–8v8";
  * min=maks → tek format ("7v7"); yalnız biri varsa "6v6+" / "≤8v8";
- * aralık yoksa legacy capacity'ye düşer. Vitrin kort satırları ve maç
- * oluşturma akışı TEK bu yardımcıdan okur.
+ * aralık yoksa legacy capacity'ye (TOPLAM oyuncu, 14 → "7v7") düşer.
+ * Vitrin kort satırları ve maç oluşturma akışı TEK bu yardımcıdan okur.
  */
 export const formatCapacityRange = (
   min?: number | null,
   max?: number | null,
   fallbackCapacity?: number | null,
 ): string | null => {
-  const f = (n: number) => formatCapacity(n);
+  const f = (n: number) => `${n}v${n}`;
   if (min && max) return min === max ? f(min) : `${f(min)}–${f(max)}`;
   if (min) return `${f(min)}+`;
   if (max) return `≤${f(max)}`;
@@ -122,12 +123,14 @@ export const formatCapacityRange = (
 /**
  * Kortun aralığına giren oynanabilir formatlar — maç oluşturma (oyuncu),
  * admin maç formu ve her kort seçicisi TEK bu yardımcıdan okur.
- * Kurallar: min+maks → [min,maks]; yalnız min → ≥min; yalnız maks → ≤maks;
- * açık aralık YOKSA → tüm formatlar (kısıt bilinmiyor).
- * DİKKAT: legacy `capacity` KISIT SAYILMAZ — canlıda tüm eski kortlar
- * varsayılan 14 ile duruyor; kısıt sayılsaydı her kortta 8v8+ yanlışlıkla
- * engellenirdi. capacity yalnız rozet gösteriminde (formatCapacityRange)
- * bilgi olarak kullanılır; sunucu tetikleyicisi de aynı kuralı uygular.
+ * Kurallar: min/max TAKIM BAŞI oyuncudur (min=6 → 6v6). min+maks → [min,maks];
+ * yalnız min → ≥min; yalnız maks → ≤maks; açık aralık YOKSA → tüm formatlar
+ * (kısıt bilinmiyor).
+ * DİKKAT: legacy `capacity` (TOPLAM oyuncu) KISIT SAYILMAZ — canlıda tüm eski
+ * kortlar varsayılan 14 ile duruyor; kısıt sayılsaydı her kortta 8v8+
+ * yanlışlıkla engellenirdi. capacity yalnız rozet gösteriminde
+ * (formatCapacityRange) bilgi olarak kullanılır; sunucu tetikleyicisi de
+ * aynı kuralı uygular.
  */
 export const allowedSquadSizesForCourt = (
   min?: number | null,
@@ -137,7 +140,7 @@ export const allowedSquadSizesForCourt = (
   const lo = min ?? null;
   const hi = max ?? null;
   return SQUAD_SIZES.filter((s) => {
-    const n = squadSizeToCount(s) * 2; // XvX → toplam oyuncu
+    const n = squadSizeToCount(s); // XvX → takım başı oyuncu
     if (lo !== null && n < lo) return false;
     if (hi !== null && n > hi) return false;
     return true;
@@ -175,8 +178,8 @@ export const formatCapacityRangeForCourts = (
 ): string | null => {
   const sizes = courts.length ? allowedSquadSizesForCourts(courts) : [];
   if (!sizes.length || sizes.length === SQUAD_SIZES.length) return null; // kısıt yok → rozet gösterme
-  const lo = squadSizeToCount(sizes[0]) * 2;
-  const hi = squadSizeToCount(sizes[sizes.length - 1]) * 2;
+  const lo = squadSizeToCount(sizes[0]);
+  const hi = squadSizeToCount(sizes[sizes.length - 1]);
   return formatCapacityRange(lo, hi);
 };
 

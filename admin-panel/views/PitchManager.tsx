@@ -10,15 +10,12 @@ import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
 import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
 
-// Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
-const CAPACITY_OPTIONS = [
-    { label: '5v5', value: 10 },
-    { label: '6v6', value: 12 },
-    { label: '7v7', value: 14 },
-    { label: '8v8', value: 16 },
-    { label: '9v9', value: 18 },
-    { label: '11v11', value: 22 },
-];
+// Format aralığı: min/max_capacity TAKIM BAŞI oyuncu tutar ("6v6" → 6).
+// DB CHECK kuralı 3–11 aralığını zorunlu kılar; rozetler formatCapacityRange ile üretilir.
+const CAPACITY_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => ({
+    label: `${n}v${n}`,
+    value: n,
+}));
 
 /** "30x50" → {w:'30', l:'50'} (Türkçe 'x'/'X'/'*' ayraçlarını hoş görür). */
 function parseSize(size?: string | null): { w: string; l: string } {
