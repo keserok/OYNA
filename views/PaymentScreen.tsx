@@ -212,15 +212,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     return () => { alive = false; };
   }, [setSavedCards]);
 
-  // Kart işlem bedeli oranını bir kez oku (SSOT: app_config.card_fee_pct).
-  // Okunamazsa 0 kalır — yani hata durumunda kullanıcıya bedel GÖSTERİLMEZ;
-  // ekranda olmayan bir tutar tahsil edilmesindense hiç gösterilmemesi yeğdir
-  // (sunucu yine de doğru tutarı çeker ve başarı ekranında gerçek rakam çıkar).
+  // Kart işlem bedeli oranı (SSOT: app_config.card_fee_pct). Cüzdan özetiyle
+  // AYNI ritimde tazelenir: kullanıcı üyelik kapısından geçtiğinde veya 3 dk'lık
+  // oturum tazelemesinde oran da yenilenir — misafirken okunamamış bir oran
+  // ekranda 0 kalıp sunucunun eklediği bedeli gizlemesin.
   useEffect(() => {
     let alive = true;
     getCardFeePct().then(pct => { if (alive) setCardFeePct(pct); }).catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [summary]);
 
   // S3 — kapora akışında tesis iptal/iade kademesini SUNUCUDAN çek (göster).
   useEffect(() => {

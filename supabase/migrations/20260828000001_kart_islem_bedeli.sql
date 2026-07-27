@@ -69,8 +69,12 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_card_fee_quote(numeric) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_card_fee_quote(numeric) TO authenticated;
+-- anon DA çağırabilir: kullanıcı üye olmadan ödeme ekranını görüyor (üyelik
+-- kapısı ödeme anında çıkıyor). Kota misafire kapalı olsaydı ekran bedeli
+-- göstermez ama sunucu eklerdi — ekrandaki tutar ile çekilen tutar ayrışırdı.
+-- Fonksiyon yalnız herkese açık bir ayar sayısını okur; kullanıcı verisi yok.
+REVOKE ALL ON FUNCTION public.get_card_fee_quote(numeric) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_card_fee_quote(numeric) TO authenticated, anon;
 
 -- ─── 4) Niyet üretimi: bedel karta eklenir, komisyon TABANDAN hesaplanır ────
 -- Değişen tek şey fiyat kırılımı; akış doğrulamaları (sahiplik, iptal, slot

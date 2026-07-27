@@ -1474,11 +1474,16 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
 // analiz edilebilmesi. Tam profesyonellik." → tesis sahibi kendi sahasının
 // gerçek uygulama tahsilatını gün-gün görebilir + CSV indirebilir.
 // ----------------------------------------------------------------------------
+// BİRİM: brüt = HİZMET tutarıdır; kartla ödemede kullanıcıdan alınan işlem
+// bedeli (PSP maliyeti) brüte DAHİL DEĞİLDİR — tesisin cirosu değildir, ayrı
+// 'card_fees' alanında bilgi olarak durur. Böylece her satırda
+// brüt = komisyon + saha payı özdeşliği korunur.
 export interface FinanceReportDay {
   day: string;          // YYYY-MM-DD
-  gross: number;        // brüt tahsilat
+  gross: number;        // brüt hizmet tahsilatı (kart işlem bedeli hariç)
   commission: number;   // OYNA komisyonu
   owner_net: number;    // sahaya kalan net
+  card_fees: number;    // kart işlem bedeli (geçiş kalemi, ciro değil)
   refunded: number;     // iade edilen
   count: number;        // ödeme adedi
 }
@@ -1491,6 +1496,7 @@ export interface OwnerFinanceReport {
     gross_captured: number;
     commission: number;
     owner_net: number;
+    card_fees: number;
     refunded: number;
     count: number;
   };

@@ -2549,7 +2549,14 @@ export async function fetchPaymentGoliveReadiness(): Promise<PaymentGoliveCheck[
 
 export interface ReconciliationSummary {
   from: string; to: string;
-  captured_count: number; gross_captured: number; total_commission: number; owner_share: number;
+  captured_count: number;
+  /** HİZMET brütü — kart işlem bedeli HARİÇ (gross = komisyon + saha payı). */
+  gross_captured: number;
+  /** Karta eklenen işlem bedeli toplamı (geçiş kalemi; ciro değildir). */
+  card_fees: number;
+  /** PSP'ye giden gerçek tahsilat: gross_captured + card_fees. */
+  charged_total: number;
+  total_commission: number; owner_share: number;
   refunded_count: number; refunded_sum: number; booking_payments: number;
   wallet_pending: number; wallet_completed: number; payout_requested: number; payout_completed: number;
 }
@@ -2567,9 +2574,12 @@ export async function fetchReconciliationSummary(from?: string, to?: string): Pr
 // ─── [S4] Tarih aralıklı + gün kırılımlı finans raporu (admin_finance_report) ─
 export interface FinanceReportDay {
   day: string;
+  /** HİZMET brütü — kart işlem bedeli hariç. */
   gross: number;
   commission: number;
   owner_share: number;
+  /** O günün kart işlem bedeli toplamı (geçiş kalemi). */
+  card_fees: number;
   refunded: number;
   topups: number;
   count: number;
@@ -2579,9 +2589,12 @@ export interface AdminFinanceReport {
   from: string;
   to: string;
   totals: {
+    /** HİZMET brütü — kart işlem bedeli hariç (gross = komisyon + saha payı). */
     gross_captured: number;
     commission: number;
     owner_share: number;
+    /** Karta eklenen işlem bedeli toplamı (geçiş kalemi; ciro değildir). */
+    card_fees: number;
     refunded: number;
     count: number;
   };
