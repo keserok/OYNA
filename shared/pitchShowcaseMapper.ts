@@ -6,6 +6,7 @@
  */
 import { Pitch, Court } from '../types';
 import { getAverageTariffPrice, mapDbTariffsToPitchTariffs } from '../services/tariffService';
+import { SQUAD_SIZES, squadSizeToCount, type SquadSize } from '../utils/formations';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
 export interface DbTariff {
@@ -117,6 +118,36 @@ export const formatCapacityRange = (
   if (max) return `≤${f(max)}`;
   return formatCapacity(fallbackCapacity ?? undefined);
 };
+
+/**
+ * Kortun aralığına giren oynanabilir formatlar — maç oluşturma (oyuncu),
+ * admin maç formu ve her kort seçicisi TEK bu yardımcıdan okur.
+ * Kurallar: min+maks → [min,maks]; yalnız min → ≥min; yalnız maks → ≤maks;
+ * aralık yok ama legacy capacity var → kort fiziksel sınırı olarak ≤capacity;
+ * hiçbiri yok → tüm formatlar (kısıt bilinmiyor).
+ */
+export const allowedSquadSizesForCourt = (
+  min?: number | null,
+  max?: number | null,
+  fallbackCapacity?: number | null,
+): SquadSize[] => {
+  const lo = min ?? null;
+  const hi = max ?? (min ? null : (fallbackCapacity ?? null));
+  return SQUAD_SIZES.filter((s) => {
+    const n = squadSizeToCount(s) * 2; // XvX → toplam oyuncu
+    if (lo !== null && n < lo) return false;
+    if (hi !== null && n > hi) return false;
+    return true;
+  });
+};
+
+/** Tek format uygunluk kontrolü (ör. maç kaydetmeden önce son doğrulama). */
+export const isSquadSizeAllowedForCourt = (
+  size: SquadSize,
+  min?: number | null,
+  max?: number | null,
+  fallbackCapacity?: number | null,
+): boolean => allowedSquadSizesForCourt(min, max, fallbackCapacity).includes(size);
 
 export const mapDbPitchToUiPitch = (
   row: DbPitchRow,
