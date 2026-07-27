@@ -73,7 +73,8 @@ Panelin altındaki menüde 5 sekme vardır: **Özet · Takvim · Ekip · Finans 
 
 ### 3.1 Özet
 
-![Özet sekmesi](gorseller/saha-sahibi/01-ozet.png)
+<a href="gorseller/saha-sahibi/01-ozet.png"><img src="gorseller/saha-sahibi/01-ozet.png" alt="Özet sekmesi" width="260"></a>
+
 _Şekil: Özet sekmesi — KPI kartları, hızlı işlemler ve bekleyen talepler._
 
 - **KPI kartları:** Bugünkü Ciro · Doluluk % · Onay Bekleyen · Onaylı Maç.
@@ -96,7 +97,8 @@ Para akışın. Detaylar 8. bölümde. Bu sekmeyi yalnız **Saha Sahibi** ve **M
 
 ### 3.5 Menü
 
-![Menü sekmesi](gorseller/saha-sahibi/05-menu.png)
+<a href="gorseller/saha-sahibi/05-menu.png"><img src="gorseller/saha-sahibi/05-menu.png" alt="Menü sekmesi" width="260"></a>
+
 _Şekil: Menü sekmesi — işletme yönetimi, finansal ayarlar ve uygulama tercihleri._
 
 | Grup | Öğeler | Kim görür |
@@ -110,14 +112,16 @@ _Şekil: Menü sekmesi — işletme yönetimi, finansal ayarlar ve uygulama terc
 
 ## 4. Takvim ve Rezervasyon Yönetimi
 
-![Takvim sekmesi](gorseller/saha-sahibi/02-takvim.png)
+<a href="gorseller/saha-sahibi/02-takvim.png"><img src="gorseller/saha-sahibi/02-takvim.png" alt="Takvim sekmesi" width="260"></a>
+
 _Şekil: Takvim — gün şeridi, kort seçici ve saat ızgarası._
 
 Takvimde üstte gün şeridi ve kort seçici, altta saat ızgarası bulunur. Aylık yoğunluk görünümüne geçebilir, geç saatleri görmek için tüm saatleri açabilirsin.
 
 ### 4.1 Uygulama taleplerini onayla / reddet
 
-![Bekleyen işlemler](gorseller/saha-sahibi/07-bekleyen-islemler.png)
+<a href="gorseller/saha-sahibi/07-bekleyen-islemler.png"><img src="gorseller/saha-sahibi/07-bekleyen-islemler.png" alt="Bekleyen işlemler" width="260"></a>
+
 _Şekil: Onay bekleyen rezervasyon talepleri ve Otomatik Onay anahtarı._
 
 Uygulamadan gelen her rezervasyon talebi "Onay Bekleyen Talepler" listesine anında düşer.
@@ -175,7 +179,8 @@ Takvimin abonman bölümünden:
 
 ## 5. Sahalarım (Kort Yönetimi)
 
-![Sahalarım ekranı](gorseller/saha-sahibi/06-sahalarim.png)
+<a href="gorseller/saha-sahibi/06-sahalarim.png"><img src="gorseller/saha-sahibi/06-sahalarim.png" alt="Sahalarım ekranı" width="260"></a>
+
 _Şekil: Sahalarım — kort listesi ve düzenleme._
 
 **Menü → Sahalarım**'dan kortlarını yönetirsin:
@@ -213,7 +218,8 @@ Bu kurallar hem oyuncunun kendi iptalinde hem de senin onaylı rezervasyonu ipta
 
 ## 7. Vitrin (Oyunculara Görünüşün)
 
-![Tesis ayarları](gorseller/saha-sahibi/08-tesis-ayarlari.png)
+<a href="gorseller/saha-sahibi/08-tesis-ayarlari.png"><img src="gorseller/saha-sahibi/08-tesis-ayarlari.png" alt="Tesis ayarları" width="260"></a>
+
 _Şekil: Tesis Ayarları — Genel, Olanaklar, Konum ve Vitrin sekmeleri._
 
 **Menü → Tesis Ayarları** ekranında dört sekme vardır: Genel · Olanaklar · Konum · **Vitrin**.
@@ -227,7 +233,8 @@ _Şekil: Tesis Ayarları — Genel, Olanaklar, Konum ve Vitrin sekmeleri._
 
 ## 8. Finans
 
-![Finans sekmesi](gorseller/saha-sahibi/04-finans.png)
+<a href="gorseller/saha-sahibi/04-finans.png"><img src="gorseller/saha-sahibi/04-finans.png" alt="Finans sekmesi" width="260"></a>
+
 _Şekil: Finans — dönem bakiyesi, OYNA kazançları ve sekmeler._
 
 Finans sekmesini yalnız **Saha Sahibi** ve **Müdür** görür. Üstteki ay seçiciyle dönemi değiştirir, sağ üstten **CSV** indirirsin (tahsilat + gider + bekleyen + veresiye tek dosyada).
@@ -242,7 +249,8 @@ Finans sekmesini yalnız **Saha Sahibi** ve **Müdür** görür. Üstteki ay se�
 
 ## 9. Ekibin: Roller ve Yetkiler
 
-![Ekip sekmesi](gorseller/saha-sahibi/03-ekip.png)
+<a href="gorseller/saha-sahibi/03-ekip.png"><img src="gorseller/saha-sahibi/03-ekip.png" alt="Ekip sekmesi" width="260"></a>
+
 _Şekil: Ekip sekmesi — Personel ve Görevler alt sekmeleri._
 
 Ekip sekmesinde iki alt sekme vardır: **Personel** ve **Görevler**.
@@ -279,7 +287,8 @@ Personel ekip listesini görebilir ama davet kodlarını göremez. Tüm para iş
 
 ### 9.3 Personel / müdür davet etme (adım adım)
 
-![Personel davet ekranı](gorseller/saha-sahibi/10-personel-davet.png)
+<a href="gorseller/saha-sahibi/10-personel-davet.png"><img src="gorseller/saha-sahibi/10-personel-davet.png" alt="Personel davet ekranı" width="260"></a>
+
 _Şekil: Davet akışı — 6 haneli kod ve paylaşım seçenekleri._
 
 **Senin tarafın (Saha Sahibi):**
@@ -319,7 +328,8 @@ Görev oluşturmayı Sahip ve Müdür yapar; tamamlandı işaretini görevi yapa
 
 ## 10. Maç Skoru Girme
 
-![Skor girme ekranı](gorseller/saha-sahibi/09-skor-gir.png)
+<a href="gorseller/saha-sahibi/09-skor-gir.png"><img src="gorseller/saha-sahibi/09-skor-gir.png" alt="Skor girme ekranı" width="260"></a>
+
 _Şekil: SKOR GİR ekranı — manuel liste veya maç koduyla skor girişi._
 
 Tesisinde oynanan OYNA maçlarının skorunu sen kaydedersin:

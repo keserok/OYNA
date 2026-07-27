@@ -30,7 +30,8 @@ Bu kılavuz seni sıfırdan alır: başvurudan onaya, ilk işini kabul etmekten 
 - Uygulamayı ilk kez açıyorsan: rol seçim ekranındaki **KALECİ** kartına dokun.
 - Zaten oyuncuysan: **Ayarlar** → **Sahada Rolün** bölümünden kaleci başvurusu yap.
 
-![Kaleci başvuru formu](gorseller/kaleci/07-basvuru-formu.png)
+<a href="gorseller/kaleci/07-basvuru-formu.png"><img src="gorseller/kaleci/07-basvuru-formu.png" alt="Kaleci başvuru formu" width="260"></a>
+
 _Şekil: Kaleci başvuru formu — kimlik fotoğrafı, boy, yaş ve bölge seçimi dahil tüm alanlar._
 
 ### Adım adım: başvuru formunu doldur
@@ -62,7 +63,8 @@ Kaleci paneli 4 sekmeden oluşur: **Ana Sayfa**, **Maç Bul**, **Cüzdan**, **Me
 
 ### Ana Sayfa
 
-![Kaleci paneli ana sayfa](gorseller/kaleci/01-panel-ana-sayfa.png)
+<a href="gorseller/kaleci/01-panel-ana-sayfa.png"><img src="gorseller/kaleci/01-panel-ana-sayfa.png" alt="Kaleci paneli ana sayfa" width="260"></a>
+
 _Şekil: Ana Sayfa — aktiflik anahtarı, kimlik kartı, gelen teklifler ve talepler._
 
 - **Aktiflik anahtarı**: **SİSTEMDE AKTİF** / **ŞU AN MEŞGUL** arasında geçiş yaparsın. Meşgulken kaptanların karşısına yeni iş için çıkmazsın.
@@ -75,7 +77,8 @@ _Şekil: Ana Sayfa — aktiflik anahtarı, kimlik kartı, gelen teklifler ve tal
 
 ### Maç Bul
 
-![Maç Bul sekmesi](gorseller/kaleci/02-mac-bul.png)
+<a href="gorseller/kaleci/02-mac-bul.png"><img src="gorseller/kaleci/02-mac-bul.png" alt="Maç Bul sekmesi" width="260"></a>
+
 _Şekil: Maç Bul — kaleci arayan açık maçlar ve bekleyen başvuruların._
 
 - **BEKLEYEN BAŞVURULARIM**: Başvurduğun ve kaptan yanıtı beklediğin maçlar. **Geri Çek** ile başvurunu iptal edebilirsin.
@@ -83,7 +86,8 @@ _Şekil: Maç Bul — kaleci arayan açık maçlar ve bekleyen başvuruların._
 
 ### Cüzdan
 
-![Cüzdan sekmesi](gorseller/kaleci/03-cuzdan.png)
+<a href="gorseller/kaleci/03-cuzdan.png"><img src="gorseller/kaleci/03-cuzdan.png" alt="Cüzdan sekmesi" width="260"></a>
+
 _Şekil: Cüzdan — toplam kazanç, çekilebilir bakiye ve ödeme yöntemleri._
 
 - **Toplam Kazanç**: Bugüne kadarki tüm kazancın.
@@ -93,7 +97,8 @@ _Şekil: Cüzdan — toplam kazanç, çekilebilir bakiye ve ödeme yöntemleri._
 
 ### Menü
 
-![Menü sekmesi](gorseller/kaleci/04-menu.png)
+<a href="gorseller/kaleci/04-menu.png"><img src="gorseller/kaleci/04-menu.png" alt="Menü sekmesi" width="260"></a>
+
 _Şekil: Menü — profil, ayarlar, destek ve çıkış._
 
 - **Profilim**: Profil düzenleme ekranını açar.
@@ -220,7 +225,8 @@ Haksız yere bildirildiğini düşünüyorsan, bildirimden itibaren **48 saat** 
 
 ### Profilim
 
-![Profil düzenleme ekranı](gorseller/kaleci/05-profil.png)
+<a href="gorseller/kaleci/05-profil.png"><img src="gorseller/kaleci/05-profil.png" alt="Profil düzenleme ekranı" width="260"></a>
+
 _Şekil: Profilim — fotoğraf, tanıtım, ücret, oyun tarzı ve çalışma alanı._
 
 **Menü** → **Profilim**'den şunları düzenlersin:
@@ -233,7 +239,8 @@ _Şekil: Profilim — fotoğraf, tanıtım, ücret, oyun tarzı ve çalışma al
 
 ### Aktiflik Ayarları
 
-![Aktiflik ayarları](gorseller/kaleci/06-aktiflik-ayarlari.png)
+<a href="gorseller/kaleci/06-aktiflik-ayarlari.png"><img src="gorseller/kaleci/06-aktiflik-ayarlari.png" alt="Aktiflik ayarları" width="260"></a>
+
 _Şekil: AKTİFLİK AYARLARI — gün ve saat seçimi._
 
 **AKTİFLİK AYARLARI** penceresinde hangi günler (Pzt–Paz) ve hangi saatlerde müsait olduğunu işaretleyebilirsin. Bu ayarlar profilinde saklanır; anlık müsaitliğini yönetmenin en kestirme yolu yine de **Ana Sayfa**'daki **SİSTEMDE AKTİF** / **ŞU AN MEŞGUL** anahtarıdır.

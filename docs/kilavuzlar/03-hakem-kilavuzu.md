@@ -35,7 +35,8 @@ Her maçta tek hakem olursun — kaleciden farklı olarak ev sahibi/deplasman ay
 
 ### 2.2 Başvuru formu
 
-![Hakem başvuru formu](gorseller/hakem/04-basvuru-formu.png)
+<a href="gorseller/hakem/04-basvuru-formu.png"><img src="gorseller/hakem/04-basvuru-formu.png" alt="Hakem başvuru formu" width="260"></a>
+
 _Şekil: Hakem başvuru formu — lisans seviyesi ve deneyim yılı hakemlere özeldir._
 
 Adım adım:
@@ -67,7 +68,8 @@ Lisans için belge yüklemen istenmez — yalnızca seviye seçimi ve kimlik fot
 
 ## 3. Hakem Panelini Tanıyalım
 
-![Hakem paneli ana sayfası](gorseller/hakem/01-panel-ana-sayfa.png)
+<a href="gorseller/hakem/01-panel-ana-sayfa.png"><img src="gorseller/hakem/01-panel-ana-sayfa.png" alt="Hakem paneli ana sayfası" width="260"></a>
+
 _Şekil: Hakem paneli Ana Sayfa — aktiflik, kimlik kartı, gelen teklif ve talepler._
 
 Panelin altında 4 sekme var: **Ana Sayfa · Maç Bul · Cüzdan · Menü**.
@@ -106,7 +108,8 @@ Talepler süresizce beklemez: maça 24 saatten fazla varsa 4 saat, daha az varsa
 
 ### 4.3 Yol 3 — Sen başvurursun (Maç Bul)
 
-![Maç Bul sekmesi](gorseller/hakem/02-mac-bul.png)
+<a href="gorseller/hakem/02-mac-bul.png"><img src="gorseller/hakem/02-mac-bul.png" alt="Maç Bul sekmesi" width="260"></a>
+
 _Şekil: Maç Bul — hakem arayan açık maçlar ve bekleyen başvuruların._
 
 1. **Maç Bul** sekmesini aç; **HAKEM ARAYAN MAÇLAR** listesinde çevrendeki açık maçları gör.
@@ -169,7 +172,8 @@ Dikkat etmen gerekenler:
 
 ### 6.2 Cüzdan sekmesi
 
-![Cüzdan sekmesi](gorseller/hakem/03-cuzdan.png)
+<a href="gorseller/hakem/03-cuzdan.png"><img src="gorseller/hakem/03-cuzdan.png" alt="Cüzdan sekmesi" width="260"></a>
+
 _Şekil: Cüzdan — toplam kazanç, çekilebilir bakiye ve işlem geçmişi._
 
 - **Toplam Kazanç** en üsttedir; altında **Çekilebilir** ve **Çekim Bekleyen** ayrımı gösterilir.
