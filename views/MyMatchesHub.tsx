@@ -54,8 +54,7 @@ const matchStats = (m: MyAgendaItem & { kind: 'MATCH' }) => {
   const all = [...(m.match.slots || []), ...(m.match.awaySlots || [])];
   const total = all.length;
   const taken = all.filter(s => s?.status === 'TAKEN').length;
-  const gkOpen = all.some(s => s?.status === 'OPEN' && String(s?.role || '').toUpperCase().startsWith('G'));
-  return { total, taken, open: total - taken, gkOpen };
+  return { total, taken, open: total - taken };
 };
 
 // ═════════════════ BİLET KARTI ═══════════════════════════════════════════════
@@ -85,9 +84,10 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
       statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
     } else if (m.status === 'COMPLETED') {
       statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-white/45"><CheckCircle2 size={11} />Oynandı</span>;
-    } else if (st.gkOpen) {
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#FACC15]"><AlertTriangle size={11} />Kaleci aranıyor</span>;
     } else {
+      // Kaleci uyarısı BİLEREK yok: boş kaleci slotu bir sorun değildir —
+      // profesyonel kaleci isteyen kaptan Kaleci Kiralama'dan teklif gönderir.
+      // Bu köşe her maçta aynı bilgiyi verir: kadro doluluğu.
       statusNode = <span className="font-numeric text-[9px] font-black uppercase tracking-[0.08em] text-white/45">{st.taken}/{st.total} oyuncu</span>;
     }
     time = m.time || '—';

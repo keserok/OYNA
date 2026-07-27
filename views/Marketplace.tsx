@@ -277,6 +277,17 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
             (m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status));
     }, [adminMatches]);
 
+    // Bakiye yetmediğinde sunucu Türkçe "Yetersiz bakiye…" hatası döndürür;
+    // bunu tanıyıp kullanıcıyı cüzdana yönlendiriyoruz (cüzdan-öncelikli sistem).
+    const isBalanceError = (msg: string) =>
+        /yetersiz bakiye|insufficient/i.test(msg);
+
+    const goToTopup = () => {
+        const store = useAppStore.getState();
+        store.setWalletInitialTab('TOPUP');
+        store.navigateTo('WALLET');
+    };
+
     const matchNeedsRole = useCallback((m: any) => (
         type === 'GK'
             ? m.missingPositions?.some((pos: any) => pos.role === 'GK' && pos.count > 0)
@@ -792,8 +803,19 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         </div>
 
                                         {hireError && (
-                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
                                                 <p className="text-[11px] font-bold text-red-400">{hireError}</p>
+                                                {/* Hizmet ücreti cüzdandan emanete alınır; bakiye yetmiyorsa
+                                                    kullanıcı burada tıkanıyordu — çıkış yolunu göster. */}
+                                                {isBalanceError(hireError) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={goToTopup}
+                                                        className="w-full h-10 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black uppercase tracking-wider active:scale-95 transition-transform"
+                                                    >
+                                                        Cüzdana Yükle
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
