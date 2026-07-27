@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest } from '../types';
+import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest, MatchListing } from '../types';
 import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import { formatTRYWithSymbol } from '../utils/formatTRY';
@@ -17,6 +17,7 @@ import {
   providerDisputeNoShow,
   previewProviderCancel,
   providerCancelAssignment,
+  setProviderLiveStatus,
 } from '../services/serviceRequestService';
 import { getMyMatchServiceOffers, respondMatchServiceOffer, MatchServiceOffer } from '../services/serviceOfferService';
 import {
@@ -50,7 +51,10 @@ interface ServiceDashboardProps {
   onLogout?: () => void;
 }
 
-type Tab = 'HOME' | 'JOBS' | 'PRICING' | 'WALLET' | 'MENU' | 'PROFILE_VIEW' | 'SETTINGS_VIEW';
+// F3a: 'PRICING' sekmesi kaldırıldı — görünüm hiçbir navigasyondan erişilemiyordu
+// ve içindeki "%0 komisyon" bandı gerçek dışıydı (oran %10). Ücret düzenleme
+// ServiceProfile'da canlı.
+type Tab = 'HOME' | 'JOBS' | 'WALLET' | 'MENU' | 'PROFILE_VIEW' | 'SETTINGS_VIEW';
 
 // Removed equipment mock data
 
@@ -69,13 +73,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [userProfile, setUserProfile] = useState<any>(null);
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<DirectOffer | null>(null);
-  const [selectedUpcomingJob, setSelectedUpcomingJob] = useState<JobListing | null>(null);
-  const [bidAmount, setBidAmount] = useState<number>(0);
+  // F3g: modal gerçekte MatchListing alır — eski JobListing tipi 'as any' ile
+  // bastırılmıştı; olmayan alanlar (distance/teamName) undefined basıyordu.
+  const [selectedUpcomingJob, setSelectedUpcomingJob] = useState<MatchListing | null>(null);
+  // F3b: bidAmount kaldırıldı — "Karşı Teklifin" alanı hiçbir payload'a girmiyordu
+  // ve ürün modeli pazarlıksız sabit ücret (Prensipler §4.3).
   const [showBidSuccess, setShowBidSuccess] = useState(false);
   
   // New States
-  const [showPriceModal, setShowPriceModal] = useState(false);
-  const [baseFee, setBaseFee] = useState(isRef ? 350 : 250);
+  // F3a: showPriceModal/baseFee kaldırıldı — erişilemez PRICING görünümüyle
+  // birlikte öldüler; ücret ServiceProfile'dan yönetiliyor.
   const [showOnlineSetupModal, setShowOnlineSetupModal] = useState(false);
   const DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
   const ALL_HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2,'0')}:00`);
@@ -308,7 +315,6 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 workingHours: me.workingHours || { activeDays: ['Bugün'], activeHours: '18:00 - 23:00' }
             });
             setIsAvailable(me.isAvailable ?? true);
-            setBaseFee(me.fee);
             if (me.workingHours) {
               setActiveDays(me.workingHours.activeDays || ['Bugün']);
               setActiveHours(me.workingHours.activeHours || '18:00 - 23:00');
@@ -658,20 +664,6 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }
   };
 
-  const handleUpdateFee = async (newFee: number) => {
-      const prevFee = baseFee;
-      setBaseFee(newFee);
-      if (userProfile && userProfile.id) {
-          try {
-              await updateOwnProvider(providerKind, { id: userProfile.id, fee: newFee });
-              showActionSuccess('Ücretin güncellendi.');
-          } catch (err: any) {
-              setBaseFee(prevFee);
-              showActionError(err?.message || 'Ücret kaydedilemedi.');
-          }
-      }
-  };
-
   const handleSaveOnlineSetup = async () => {
       setActiveDays(setupDays);
       const activeHoursStr = setupHours.length > 0 ? `${setupHours[0]} - ${setupHours[setupHours.length-1]}` : 'Belirsiz';
@@ -725,12 +717,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   const handleOpenBid = (job: any) => {
       setSelectedJob(job);
-      setBidAmount(0); // In real app, we might bid a custom amount
   };
 
   const handleOpenOffer = (offer: DirectOffer) => {
       setSelectedOffer(offer);
-      setBidAmount(offer.offerAmount);
   };
 
   const acceptOffer = async () => {
@@ -830,6 +820,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           showActionError(err?.message || 'Başvuru geri çekilemedi.');
       } finally {
           setWithdrawingId(null);
+      }
+  };
+
+  // F3c: canlı durum — sunucuya yazar (kaptana gerçek bildirim) + yerel rozet.
+  const handleLiveStatus = async (matchId: string, status: 'ON_THE_WAY' | 'ARRIVED') => {
+      const req = incomingRequests.find(r => r.matchId === matchId
+          && (r.status === 'ACCEPTED' || (r.status === 'CAPTURED' && !r.payoutReleased)));
+      try {
+          if (req) await setProviderLiveStatus(req.id, status);
+          setMatchLiveStatus(prev => ({ ...prev, [matchId]: status }));
+          if (req) {
+              showActionSuccess(status === 'ON_THE_WAY' ? 'Kaptana "yola çıktım" bildirildi.' : 'Kaptana "tesisteyim" bildirildi.');
+          } else {
+              showActionError('Bu maç için aktif talep bulunamadı — durum yalnız cihazında işaretlendi.');
+          }
+      } catch (err: any) {
+          showActionError(err?.message || 'Durum bildirilemedi.');
       }
   };
 
@@ -1566,7 +1573,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                 <span className="text-[10px] text-gray-400 font-bold">{myUpcomingMatches[0].location}</span>
                             </div>
                             <button 
-                              onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0] as any)}
+                              onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0])}
                               className={`text-[10px] font-black hover:text-white transition-colors ${isRef ? 'text-red-400' : 'text-green-400'}`}
                             >
                                 DETAYLAR
@@ -1578,9 +1585,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             {matchLiveStatus[myUpcomingMatches[0].id] === 'ARRIVED' ? (
                                 <div className="flex gap-2">
                                   <button disabled className="flex-1 py-2 rounded-xl bg-white/10 text-white/50 text-[10px] font-black uppercase flex items-center justify-center gap-1">
-                                    {/* F0 dürüstlük: durum yalnız bu cihazda tutuluyor; kaptana sinyal
-                                        gitmiyor (sunucu bağlantısı Faz 3c'de). Yalan beyan kaldırıldı. */}
-                                    <CheckCircle2 size={12} /> TESİSTEYİM — YALNIZ SANA GÖRÜNÜR
+                                    {/* F3c: durum artık sunucuya yazılıyor ve kaptana bildirim gidiyor. */}
+                                    <CheckCircle2 size={12} /> TESİSTEYİM ✓
                                   </button>
                                   <button
                                     onClick={() => {
@@ -1596,15 +1602,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   </button>
                                 </div>
                             ) : matchLiveStatus[myUpcomingMatches[0].id] === 'ON_THE_WAY' ? (
-                                <button 
-                                  onClick={() => setMatchLiveStatus(prev => ({ ...prev, [myUpcomingMatches[0].id]: 'ARRIVED' }))}
+                                <button
+                                  onClick={() => handleLiveStatus(myUpcomingMatches[0].id, 'ARRIVED')}
                                   className={`w-full py-2.5 rounded-xl text-white text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
                                 >
                                   <MapPin size={14} /> TESİSE VARDIM
                                 </button>
                             ) : (
-                                <button 
-                                  onClick={() => setMatchLiveStatus(prev => ({ ...prev, [myUpcomingMatches[0].id]: 'ON_THE_WAY' }))}
+                                <button
+                                  onClick={() => handleLiveStatus(myUpcomingMatches[0].id, 'ON_THE_WAY')}
                                   className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-xs font-black uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 hover:bg-blue-400 transition-colors"
                                 >
                                   <Navigation size={14} /> YOLA ÇIKTIM
@@ -1930,56 +1936,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </motion.div>
   );
 
-   const renderPricingView = () => (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-6 px-6 pt-6 pb-40"
-      >
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-br from-[#FACC15]/20 to-transparent p-8 rounded-[32px] border border-[#FACC15]/20 text-center relative overflow-hidden group"
-          >
-              <motion.div 
-                animate={{ 
-                    rotate: [0, 10, -10, 0],
-                    scale: [1, 1.1, 1, 1.1, 1]
-                }}
-                transition={{ duration: 5, repeat: Infinity }}
-                className="absolute -top-10 -left-10 w-32 h-32 bg-[#FACC15]/10 blur-3xl rounded-full"
-              />
-              <Tag size={48} className="text-[#FACC15] mx-auto mb-4 group-hover:scale-110 transition-transform" />
-              <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-wide">STANDART FİYATIN</h2>
-              <div className="flex items-center justify-center gap-2">
-                  <motion.span 
-                    key={baseFee}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-5xl font-black text-[#FACC15]"
-                  >
-                    {baseFee}₺
-                  </motion.span>
-                  <button onClick={() => setShowPriceModal(true)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors">
-                      <PlusCircle size={20} />
-                  </button>
-              </div>
-              <p className="text-gray-400 text-xs mt-4">Kaptanlar seni bu fiyattan kiralamak için teklif gönderecek.</p>
-          </motion.div>
-
-          <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-8 text-center">
-              <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles size={32} className="text-blue-400" />
-              </div>
-              <h3 className="text-xl font-black text-white mb-2">DAHA FAZLA KAZAN</h3>
-              <p className="text-gray-400 text-sm mb-6">%0 komisyon avantajıyla kazancını katla.</p>
-              <button 
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-900/20"
-              >
-                  DETAYLARI GÖR
-              </button>
-          </div>
-      </motion.div>
-  );
+  /* F3a: renderPricingView SİLİNDİ — hiçbir sekme/navigasyon bu görünüme
+     gitmiyordu (ölü kod) ve içindeki "%0 komisyon" bandı gerçek dışıydı
+     (SERVICE_GK/REF oranı %10, commission_config). Ücret ServiceProfile'da. */
 
   const renderMenuView = () => (
       <motion.div 
@@ -2007,10 +1966,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button onClick={() => alert('Destek ekibine bağlanılıyor...')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
+          {/* F3e: alert() yerine gerçek kanal — Ayarlar'daki çalışan Destek
+              bölümüne (SSS / Canlı Destek / Hata Bildir, mailto) yönlendirir. */}
+          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
               <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><MessageSquare size={20} /></div>
-                  <span className="font-bold text-white">Destek</span>
+                  <div className="text-left">
+                    <span className="font-bold text-white block">Destek</span>
+                    <span className="text-[10px] text-gray-500">SSS, canlı destek ve hata bildirimi</span>
+                  </div>
               </div>
               <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
           </button>
@@ -2067,7 +2031,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             className="p-2 bg-[#161B22] rounded-full text-gray-400 border border-white/5 relative hover:text-white transition-colors"
          >
              <Bell size={20} />
-             <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0A0E14]"></span>
+             {/* F3f: rozet artık koşullu — eskiden okunmamış bildirim olmasa da yanıyordu */}
+             {unreadNotificationsCount > 0 && (
+               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0A0E14]"></span>
+             )}
          </button>
       </header>
 
@@ -2171,17 +2138,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                            </div>
 
                            <div className="space-y-4">
+                               {/* F3b: "Karşı Teklifin" alanı kaldırıldı — değeri hiçbir payload'a
+                                   girmiyordu ve model pazarlıksız sabit ücret. Tutar salt-okunur. */}
                                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
-                                   <label className="text-xs text-gray-500 font-bold uppercase block mb-2">Karşı Teklifin (Opsiyonel)</label>
+                                   <label className="text-xs text-gray-500 font-bold uppercase block mb-2">Hizmet Ücreti</label>
                                    <div className="flex items-center gap-2">
                                        <span className="text-2xl font-black text-[#FACC15]">₺</span>
-                                       <input 
-                                        type="number" 
-                                        value={bidAmount} 
-                                        onChange={(e) => setBidAmount(parseInt(e.target.value) || 0)}
-                                        className="bg-transparent text-3xl font-black text-white outline-none w-full" 
-                                       />
+                                       <span className="text-3xl font-black text-white">
+                                           {selectedOffer ? selectedOffer.offerAmount : (selectedJob?.offeredFee ?? '—')}
+                                       </span>
                                    </div>
+                                   <p className="text-[10px] text-gray-500 font-bold mt-2">Sabit ücret · pazarlık yok · %10 platform komisyonu bedele dahildir</p>
                                </div>
 
                                <button 
@@ -2197,49 +2164,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </div>
       )}
 
-      {/* PRICE SETTING MODAL */}
-      {showPriceModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
-                  <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-black text-white uppercase tracking-wide">STANDART FİYAT</h3>
-                      <button onClick={() => setShowPriceModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
-                  </div>
-
-                  <div className="text-center py-8">
-                      <p className="text-gray-400 text-xs font-bold uppercase mb-2">Ortalama Saatlik Ücretin</p>
-                      <div className="flex items-center justify-center gap-1">
-                          <span className="text-4xl font-black text-[#FACC15]">₺</span>
-                          <input 
-                            type="number" 
-                            value={baseFee}
-                            onChange={(e) => setBaseFee(parseInt(e.target.value))}
-                            className="bg-transparent text-6xl font-black text-white w-40 text-center outline-none border-b-2 border-white/10 focus:border-[#FACC15] transition-colors"
-                          />
-                      </div>
-                      <p className="text-gray-500 text-xs mt-4 max-w-xs mx-auto">
-                          Bu fiyat, profilinde ve "Hemen Kirala" seçeneklerinde varsayılan olarak görünecektir.
-                      </p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3 mb-6">
-                      <button onClick={() => handleUpdateFee(200)} className="py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/5">200₺</button>
-                      <button onClick={() => handleUpdateFee(300)} className="py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/5">300₺</button>
-                      <button onClick={() => handleUpdateFee(400)} className="py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/5">400₺</button>
-                  </div>
-
-                  <button 
-                    onClick={() => {
-                        handleUpdateFee(baseFee);
-                        setShowPriceModal(false);
-                    }}
-                    className={`w-full py-4 text-white font-black text-lg rounded-2xl transition-colors shadow-lg ${isRef ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20' : 'bg-green-600 hover:bg-green-500 shadow-green-900/20'}`}
-                  >
-                      GÜNCELLE
-                  </button>
-              </div>
-          </div>
-      )}
+      {/* F3a: PRICE SETTING MODAL silindi — yalnız erişilemez PRICING
+          görünümünden açılıyordu; ücret düzenleme ServiceProfile'da. */}
 
       {/* UPCOMING MATCH DETAIL MODAL */}
       {selectedUpcomingJob && (
@@ -2254,11 +2180,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
                   
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar pb-10">
-                      {/* Match Info */}
+                      {/* F3g: modal gerçek MatchListing verisiyle çalışır. Eski sürümde
+                          "Mesafe: undefined" (tip uyumsuzluğu 'as any' ile bastırılmıştı),
+                          sabit uydurma "Tesis Özellikleri" ve gerçek kadroyla ilgisiz
+                          "Takım Dizilişi (2-3-1)" maketi vardı — üçü de kaldırıldı.
+                          Yol tarifi artık gerçekten açılır (adres sorgulu harita linki). */}
                       <div className="text-center">
-                          <h2 className="text-2xl font-black text-white mb-1">{selectedUpcomingJob.pitchName}</h2>
+                          <h2 className="text-2xl font-black text-white mb-1">{selectedUpcomingJob.title || 'Maç'}</h2>
                           <p className="text-gray-400 text-sm">{selectedUpcomingJob.date} • {selectedUpcomingJob.time}</p>
-                          <p className="text-[#FACC15] font-bold mt-2">{selectedUpcomingJob.teamName}</p>
                       </div>
 
                       {/* Location & Directions */}
@@ -2267,61 +2196,20 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400">
                                   <MapPin size={20} />
                               </div>
-                              <div>
-                                  <p className="text-sm font-bold text-white">{selectedUpcomingJob.location}</p>
-                                  <p className="text-[10px] text-gray-500">Mesafe: {selectedUpcomingJob.distance}</p>
-                              </div>
+                              <p className="text-sm font-bold text-white">{selectedUpcomingJob.location || 'Konum belirtilmemiş'}</p>
                           </div>
-                          <button onClick={() => alert('Harita uygulamasına yönlendiriliyor...')} className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-colors">
+                          {selectedUpcomingJob.location ? (
+                            <button
+                              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedUpcomingJob.location!)}`, '_blank', 'noopener')}
+                              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-colors"
+                            >
                               <Navigation size={16} /> YOL TARİFİ AL
-                          </button>
-                      </div>
-
-                      {/* Amenities */}
-                      <div>
-                          <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                              <Star size={14} className="text-[#FACC15]" /> Tesis Özellikleri
-                          </h4>
-                          <div className="flex flex-wrap gap-2">
-                              {['Ücretsiz Otopark', 'Sıcak Duş', 'Kafeterya', 'Kamera Kaydı', 'Yeni Zemin'].map(amenity => (
-                                  <span key={amenity} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-xs text-gray-300">
-                                      {amenity}
-                                  </span>
-                              ))}
-                          </div>
-                      </div>
-
-                      {/* Formation */}
-                      <div>
-                          <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                              <Users size={14} className="text-green-400" /> Takım Dizilişi (2-3-1)
-                          </h4>
-                          <div className="w-full aspect-[4/3] bg-[#1B4332] rounded-2xl border-2 border-white/10 relative overflow-hidden flex flex-col justify-between p-4">
-                              {/* Pitch Lines */}
-                              <div className="absolute top-1/2 left-0 w-full h-px bg-white/20"></div>
-                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white/20 rounded-full"></div>
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-12 border-b-2 border-l-2 border-r-2 border-white/20"></div>
-                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-12 border-t-2 border-l-2 border-r-2 border-white/20"></div>
-
-                              {/* Players */}
-                              {/* FW */}
-                              <div className="flex justify-center relative z-10"><div className="w-8 h-8 bg-white rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-bold text-black">FV</div></div>
-                              {/* MID */}
-                              <div className="flex justify-around px-8 relative z-10">
-                                  <div className="w-8 h-8 bg-white rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-bold text-black">OS</div>
-                                  <div className="w-8 h-8 bg-white rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-bold text-black">OS</div>
-                                  <div className="w-8 h-8 bg-white rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-bold text-black">OS</div>
-                              </div>
-                              {/* DEF */}
-                              <div className="flex justify-around px-16 relative z-10">
-                                  <div className="w-8 h-8 bg-white rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-bold text-black">DF</div>
-                                  <div className="w-8 h-8 bg-white rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-bold text-black">DF</div>
-                              </div>
-                              {/* GK */}
-                              <div className="flex justify-center relative z-10">
-                                  <div className="w-10 h-10 bg-[#FACC15] rounded-full border-2 border-[#161B22] flex items-center justify-center text-xs font-black text-black shadow-[0_0_15px_rgba(250,204,21,0.5)]">SEN</div>
-                              </div>
-                          </div>
+                            </button>
+                          ) : (
+                            <button disabled className="w-full py-3 bg-white/5 text-gray-500 rounded-xl font-black text-xs flex items-center justify-center gap-2">
+                              <Navigation size={16} /> KONUM GİRİLMEMİŞ
+                            </button>
+                          )}
                       </div>
                   </div>
               </div>
