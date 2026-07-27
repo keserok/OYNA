@@ -202,7 +202,7 @@ interface AppState {
   selectedGk: Goalkeeper | null;
   selectedRef: Referee | null;
   // FAZ 3: rezervasyon → maç çevirme tohumu (MatchCreate ön-doldurma)
-  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number } | null;
+  matchCreateSeed: { pitchId?: string; pitchName?: string; district?: string; date?: string; time?: string; price?: number; bookingId?: string; courtId?: string } | null;
   reliabilityScore: number;
   banExpiresAt: string | null;
   setReliabilityScore: (score: number) => void;

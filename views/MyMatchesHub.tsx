@@ -360,6 +360,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       date: b.booking_date,
       time: shortTime(b.start_time),
       price: b.price || 0,
+      // Atomik çevirme: saha/saat rezervasyondan kilitlenir, ikinci kapora alınmaz
+      bookingId: b.id,
+      courtId: b.court_id || undefined,
     });
     navigateTo('MATCH_CREATE');
   };

@@ -9,6 +9,16 @@ import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatur
 import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
 import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
 
+// Format aralığı: takım başına oyuncu (3..11) — kort maç formatı daraltmasını besler.
+const FORMAT_RANGE_OPTIONS = Array.from({ length: 9 }, (_, i) => i + 3); // 3v3..11v11
+
+// DB'de mevcut olup PitchCourt tipinde henüz tanımlı olmayan kort format alanları.
+type CourtFormatExtras = {
+    min_capacity?: number | null;
+    max_capacity?: number | null;
+    size_label?: string | null;
+};
+
 // Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
 const CAPACITY_OPTIONS = [
     { label: '5v5', value: 10 },
@@ -53,6 +63,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     showBack = true,
 }) => {
     const [editingPitch, setEditingPitch] = useState<PitchCourt | null>(null);
+    // Format aralığı + rozet — kort seçilen maçlarda format listesini daraltır.
+    const [editCaps, setEditCaps] = useState<{ min: number; max: number; sizeLabel: string }>({ min: 5, max: 7, sizeLabel: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const { confirm, confirmElement } = useConfirmSheet();
@@ -115,6 +127,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleEdit = (pitch: PitchCourt) => {
         if (readOnly) return;
         setEditingPitch({ ...pitch });
+        // Mevcut kortun format aralığı + rozetiyle doldur (yoksa varsayılan 5v5–7v7).
+        const ext = pitch as PitchCourt & CourtFormatExtras;
+        setEditCaps({
+            min: ext.min_capacity ?? 5,
+            max: ext.max_capacity ?? 7,
+            sizeLabel: ext.size_label ?? '',
+        });
         setSaveError(null);
     };
 
@@ -143,11 +162,17 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             locker_grade: null,
         };
         setEditingPitch(newPitch);
+        setEditCaps({ min: 5, max: 7, sizeLabel: '' }); // yeni kort varsayılanı
         setSaveError(null);
     };
 
     const handleSave = async () => {
         if (readOnly || !editingPitch || !facilityId) return;
+        // Doğrulama: en küçük format en büyük formatı aşamaz.
+        if (editCaps.min > editCaps.max) {
+            setSaveError('En küçük format, en büyük formattan büyük olamaz. Aralığı kontrol edin.');
+            return;
+        }
         setIsSaving(true);
         setSaveError(null);
         try {
@@ -162,6 +187,9 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     sort_order: editingPitch.sort_order,
                     price: editingPitch.price,
                     capacity: editingPitch.capacity,
+                    min_capacity: editCaps.min,
+                    max_capacity: editCaps.max,
+                    size_label: editCaps.sizeLabel.trim() || null,
                     images: editingPitch.images,
                     description: editingPitch.description,
                     features: normalizeCourtFeatures(editingPitch.features),
@@ -183,7 +211,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                 );
             } else {
                 const localId = editingPitch.id || Date.now().toString();
-                const saved = { ...editingPitch, id: localId };
+                const saved: PitchCourt & CourtFormatExtras = {
+                    ...editingPitch,
+                    id: localId,
+                    min_capacity: editCaps.min,
+                    max_capacity: editCaps.max,
+                    size_label: editCaps.sizeLabel.trim() || null,
+                };
                 const exists = pitches.find((p) => p.id === localId);
                 onUpdatePitches(
                     exists
@@ -330,6 +364,48 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 </select>
                             </div>
                         </div>
+
+                        {/* Format aralığı: maç oluştururken kort seçilince format listesi bu aralığa daralır */}
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase">En Küçük Format</label>
+                                <select
+                                    value={editCaps.min}
+                                    onChange={(e) => setEditCaps({ ...editCaps, min: Number(e.target.value) })}
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
+                                >
+                                    {FORMAT_RANGE_OPTIONS.map((n) => (
+                                        <option key={n} value={n}>{n}v{n}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase">En Büyük Format</label>
+                                <select
+                                    value={editCaps.max}
+                                    onChange={(e) => setEditCaps({ ...editCaps, max: Number(e.target.value) })}
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
+                                >
+                                    {FORMAT_RANGE_OPTIONS.map((n) => (
+                                        <option key={n} value={n}>{n}v{n}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase">Format Rozeti</label>
+                                <input
+                                    type="text"
+                                    maxLength={8}
+                                    value={editCaps.sizeLabel}
+                                    onChange={(e) => setEditCaps({ ...editCaps, sizeLabel: e.target.value })}
+                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors"
+                                    placeholder="7v7, Mini..."
+                                />
+                            </div>
+                        </div>
+                        {editCaps.min > editCaps.max && (
+                            <p className="text-[10px] text-red-400 font-bold">En küçük format, en büyük formattan büyük olamaz.</p>
+                        )}
 
                         {/* Saha bazlı özellikler (Karar #18) — oyuncu kartında rozet */}
                         <div className="space-y-2">

@@ -1945,7 +1945,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <MapPin size={9} className="text-[#39FF14] shrink-0" />
               <span className="truncate">
                 {match.location || 'Konum'}
-                {(match as { courtName?: string }).courtName ? ` · ${(match as { courtName?: string }).courtName}` : ''}
+                {(() => {
+                  // Konum zaten kort adıyla bitiyorsa tekrar ekleme ("1. Saha · 1. Saha")
+                  const cn = (match as { courtName?: string }).courtName;
+                  return cn && !(match.location || '').includes(cn) ? ` · ${cn}` : '';
+                })()}
               </span>
             </button>
             <div className="flex items-center gap-1 text-[10px] font-bold text-white/40 shrink-0">

@@ -1245,6 +1245,12 @@ export interface CourtInput {
   sort_order?: number;
   price?: number | null;
   capacity?: number | null;
+  /** En küçük format — takım başına oyuncu (3..11, ör. 5 → 5v5) */
+  min_capacity?: number | null;
+  /** En büyük format — takım başına oyuncu (3..11, ör. 7 → 7v7) */
+  max_capacity?: number | null;
+  /** Format rozeti — vitrin etiketi (maks 8 karakter, ör. '7v7', 'Mini') */
+  size_label?: string | null;
   images?: string[] | null;
   description?: string | null;
   features?: string[] | null;
@@ -1269,6 +1275,10 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       description: court.description ?? null,
       features: court.features ?? [],
     };
+    // Format aralığı + rozet: yalnız formda tanımlıysa gönder (undefined → dokunma).
+    if (court.min_capacity !== undefined) payload.min_capacity = court.min_capacity;
+    if (court.max_capacity !== undefined) payload.max_capacity = court.max_capacity;
+    if (court.size_label !== undefined) payload.size_label = court.size_label;
     // Kalite notları yalnız admin akışında payload'a girer (undefined → gönderilmez).
     // Sunucu trigger'ı (enforce_court_grade_review) admin-dışı değişikliği zaten geri alır.
     if (court.lighting_grade !== undefined) payload.lighting_grade = court.lighting_grade;
