@@ -1245,6 +1245,9 @@ export interface CourtInput {
   sort_order?: number;
   price?: number | null;
   capacity?: number | null;
+  /** Oynanabilir format aralığı (toplam oyuncu; 12→6v6). null → aralık temizlenir. */
+  min_capacity?: number | null;
+  max_capacity?: number | null;
   images?: string[] | null;
   description?: string | null;
   features?: string[] | null;
@@ -1269,6 +1272,9 @@ export async function upsertCourt(pitchId: string, court: CourtInput): Promise<P
       description: court.description ?? null,
       features: court.features ?? [],
     };
+    // Format aralığı: undefined → dokunma, null → temizle, sayı → yaz.
+    if (court.min_capacity !== undefined) payload.min_capacity = court.min_capacity;
+    if (court.max_capacity !== undefined) payload.max_capacity = court.max_capacity;
     // Kalite notları yalnız admin akışında payload'a girer (undefined → gönderilmez).
     // Sunucu trigger'ı (enforce_court_grade_review) admin-dışı değişikliği zaten geri alır.
     if (court.lighting_grade !== undefined) payload.lighting_grade = court.lighting_grade;

@@ -585,6 +585,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 }}
                 onGhost={(u) => { setUser360(null); handleImpersonateRequest(u.id); }}
                 onEdit={(u) => { setUser360(null); setEditUser(u); }}
+                onUpdated={() => void refresh()}
             />
         </PageShell>
     );

@@ -44,6 +44,12 @@ const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
   // Rezervasyon
   booking_confirmed: { icon: CheckCircle, color: '#22c55e' },
   booking_rejected: { icon: AlertTriangle, color: '#ef4444' },
+  // Destek (admin yanıtı → kullanıcı Ayarlar → Yardım Merkezi'nden okur)
+  support_reply: { icon: MessageCircle, color: '#22d3ee' },
+  // Hesap
+  account_deletion_cancelled: { icon: CheckCircle, color: '#22c55e' },
+  withdrawal_approved: { icon: DollarSign, color: '#22c55e' },
+  withdrawal_rejected: { icon: AlertTriangle, color: '#ef4444' },
   // Genel
   weekly_summary: { icon: Star, color: '#f59e0b' },
   promo_offers: { icon: Megaphone, color: '#f59e0b' },

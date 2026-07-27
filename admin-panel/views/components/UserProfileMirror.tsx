@@ -1,0 +1,471 @@
+/**
+ * KULLANICI PROFİLİ AYNASI — kullanıcının uygulamada gördüğü profil ekranının
+ * admin paneldeki CANLI ve DÜZENLENEBİLİR birebir kopyası.
+ *
+ * Aynılık garantisi: görsel bileşenler (ProfileHero, TrustScoreCard,
+ * ProfileShortcuts, MatchHistorySection, ProfileEditSheet) ve türetme mantığı
+ * (shared/profilePresentation) ana uygulamayla AYNI modüllerden gelir; veri da
+ * aynı okuyucudan (getFullUserProfile / getMatchHistory) çekilir — drift yok.
+ *
+ * Yazma yolu farklıdır: kullanıcı kendi satırını doğrudan günceller, admin ise
+ * audit'li admin_update_user_profile RPC'siyle yazar (her kayıt USER_UPDATE
+ * olarak denetim kaydına düşer). Bakiye düzeltmesi ledger'lı
+ * admin_adjust_wallet_balance RPC'sinden geçer (FINANCE yetkisi ister).
+ */
+import React, { useCallback, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Users, UserPlus, Wallet, X,
+} from 'lucide-react';
+import { supabase } from '../../../supabaseClient';
+import {
+  getFullUserProfile, getMatchHistory,
+  type MatchHistorySummary, type OynaUser,
+} from '../../../services/userService';
+import { fetchFriends } from '../../../services/friendService';
+import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../../../components/profile';
+import type { ShortcutItem } from '../../../components/profile';
+import { ProfileEditSheet, type ProfileEditValues } from '../../../components/profile/ProfileEditSheet';
+import {
+  buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition,
+  trustScoreTo100, winStats,
+} from '../../../shared/profilePresentation';
+import {
+  adjustWalletBalanceAdmin, setPlayerCardAdmin, updateUserAppProfileAdmin,
+  toTurkishAdminError,
+} from '../../services/adminService';
+import { useAdminToast } from '../context/AdminToastContext';
+
+interface Props {
+  userId: string;
+  /** Kayıt sonrası liste tazeleme (UsersPage). */
+  onUpdated?: () => void;
+}
+
+const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')} ₺`;
+
+/** Admin krom şeridi: uygulama UI'ından ayrışsın diye tek tip mor "yönet" düğmesi. */
+const AdminChip: React.FC<{ label: string; onClick: () => void; icon?: React.ReactNode }> = ({ label, onClick, icon }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-300 text-[9px] font-black uppercase tracking-wider hover:bg-purple-500/20 transition-colors shrink-0"
+  >
+    {icon ?? <Pencil size={10} />} {label}
+  </button>
+);
+
+export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
+  const { success, error: toastError } = useAdminToast();
+
+  const [profile, setProfile] = useState<OynaUser | null>(null);
+  const [history, setHistory] = useState<MatchHistorySummary[]>([]);
+  const [friendsCount, setFriendsCount] = useState<number | null>(null);
+  const [teamsCount, setTeamsCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Düzenleme yüzeyleri
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetSaving, setSheetSaving] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [trustDraft, setTrustDraft] = useState(100);
+  const [skillDraft, setSkillDraft] = useState('0');
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [walletAmount, setWalletAmount] = useState('');
+  const [walletReason, setWalletReason] = useState('');
+  const [walletBusy, setWalletBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      // Uygulamanın KENDİ okuyucuları — RLS admin'e tüm profilleri açar
+      // (profiles_select_own_or_admin). Sayaçlar en-iyi-çaba: biri düşerse ayna açılır.
+      const [profileData, historyData] = await Promise.all([
+        getFullUserProfile(userId),
+        getMatchHistory(userId).catch(() => [] as MatchHistorySummary[]),
+      ]);
+      if (!profileData) {
+        setLoadError('Profil yüklenemedi. RLS/yetki veya bağlantı sorunu olabilir.');
+        return;
+      }
+      setProfile(profileData);
+      setHistory(historyData);
+      setNameDraft(profileData.full_name || '');
+      setTrustDraft(trustScoreTo100(profileData.trustScore));
+      setSkillDraft(String(profileData.stats?.rating ?? 0));
+      const [friendsRes, teamsRes] = await Promise.allSettled([
+        fetchFriends(userId),
+        supabase.from('team_members').select('team_id', { count: 'exact', head: true }).eq('user_id', userId),
+      ]);
+      setFriendsCount(friendsRes.status === 'fulfilled' ? friendsRes.value.length : null);
+      setTeamsCount(teamsRes.status === 'fulfilled' && !teamsRes.value.error ? (teamsRes.value.count ?? 0) : null);
+    } catch (err) {
+      setLoadError(toTurkishAdminError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const saveFields = async (fields: Parameters<typeof updateUserAppProfileAdmin>[1], okMsg: string) => {
+    await updateUserAppProfileAdmin(userId, fields);
+    success(okMsg);
+    await load();
+    onUpdated?.();
+  };
+
+  // ProfileEditSheet kaydı — uygulamadaki updateProfileBasics ile aynı alan seti,
+  // ancak audit'li admin RPC üzerinden.
+  const handleSheetSave = async (v: ProfileEditValues) => {
+    setSheetSaving(true);
+    try {
+      await saveFields({
+        position: v.position,
+        bio: v.bio,
+        birthdate: v.birthdate || '',
+        gender: v.gender || '',
+        play_style: v.playStyle || '',
+        ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
+      }, 'Profil güncellendi (denetime yazıldı)');
+      setSheetOpen(false);
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setSheetSaving(false);
+    }
+  };
+
+  const handleAdminSave = async () => {
+    if (!profile) return;
+    const name = nameDraft.trim();
+    setAdminSaving(true);
+    try {
+      // DB kısıtı profiles_skill_rating_check: [1.0, 5.0] — taban 1'e kırpılır.
+      const skill = Math.max(1, Math.min(5, Number(skillDraft.replace(',', '.'))));
+      await saveFields({
+        ...(name && name !== (profile.full_name || '') ? { full_name: name } : {}),
+        ...(trustDraft !== trustScoreTo100(profile.trustScore) ? { trust_score: trustDraft / 20 } : {}),
+        ...(Number.isFinite(skill) && skill !== (profile.stats?.rating ?? 0) ? { skill_rating: skill } : {}),
+      }, 'Yönetici alanları kaydedildi');
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setAdminSaving(false);
+    }
+  };
+
+  const handleCard = async (active: boolean, tier: 'bronze' | 'silver' | 'gold') => {
+    setCardBusy(true);
+    try {
+      await setPlayerCardAdmin(userId, active, tier);
+      success(active ? `Premium kart aktif — ${tier.toUpperCase()}` : 'Premium kart kapatıldı');
+      await load();
+      onUpdated?.();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setCardBusy(false);
+    }
+  };
+
+  const handleWallet = async () => {
+    const amount = Number(walletAmount.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount === 0) { toastError('Geçerli bir tutar girin (± ₺).'); return; }
+    if (walletReason.trim().length < 3) { toastError('Sebep zorunlu (en az 3 karakter) — ledger açıklamasına yazılır.'); return; }
+    setWalletBusy(true);
+    try {
+      await adjustWalletBalanceAdmin(userId, amount, walletReason.trim());
+      success(`Bakiye ${amount > 0 ? '+' : ''}${fmtMoney(amount)} düzeltildi (ledger'a işlendi)`);
+      setWalletOpen(false);
+      setWalletAmount('');
+      setWalletReason('');
+      await load();
+      onUpdated?.();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setWalletBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="py-16 flex flex-col items-center gap-3 text-gray-500">
+        <Loader2 size={20} className="animate-spin" />
+        <p className="text-[11px]">Kullanıcının uygulama profili yükleniyor…</p>
+      </div>
+    );
+  }
+
+  if (loadError || !profile) {
+    return (
+      <div className="py-12 flex flex-col items-center gap-3 text-center px-6">
+        <ShieldAlert size={20} className="text-amber-400" />
+        <p className="text-[12px] text-gray-400 leading-relaxed">{loadError || 'Profil bulunamadı.'}</p>
+        <button type="button" onClick={() => void load()} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/15 text-[10px] font-black uppercase text-gray-300 hover:text-white">
+          <RefreshCw size={11} /> Yeniden Dene
+        </button>
+      </div>
+    );
+  }
+
+  const { total, wins, winRate } = winStats(history);
+  const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
+  const trustScore = trustScoreTo100(profile.trustScore);
+
+  const shortcuts: ShortcutItem[] = [
+    {
+      icon: <Wallet size={16} strokeWidth={2.3} />,
+      label: 'Cüzdan',
+      value: fmtMoney(profile.walletBalance ?? 0),
+      onClick: () => setWalletOpen(true),
+    },
+    {
+      icon: <Users size={16} strokeWidth={2.3} />,
+      label: 'Takımları',
+      value: teamsCount === null ? '—' : `${teamsCount} Takım`,
+    },
+    {
+      icon: <UserPlus size={16} strokeWidth={2.3} />,
+      label: 'Arkadaşları',
+      value: friendsCount === null ? '—' : `${friendsCount} Arkadaş`,
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {/* Ayna şeridi — bu bir uygulama ekranı, admin krom değil */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          <span className="text-[#39FF14] font-black">CANLI AYNA</span> — kullanıcı profilini uygulamada böyle görüyor.
+          Kalem simgeleri admin düzenlemesidir; her kayıt denetime düşer.
+        </p>
+        <button type="button" onClick={() => void load()} aria-label="Aynayı yenile" className="w-7 h-7 rounded-lg bg-white/5 text-gray-500 hover:text-white flex items-center justify-center shrink-0">
+          <RefreshCw size={12} />
+        </button>
+      </div>
+
+      {/* ═══ UYGULAMA TUVALİ — ProfileScreen gövdesinin birebir kopyası ═══ */}
+      <div className="relative mx-auto w-full max-w-[400px] rounded-[30px] border border-white/10 bg-bg-main px-4 py-5 overflow-hidden">
+        <div className="pf-ambient" />
+        <div className="relative z-10 space-y-3">
+          {/* Profil tamamlanmadı sinyali (uygulamadaki şeridin bilgilendirme hâli) */}
+          {profile.hasCompletedOnboarding === false && (
+            <div className="bg-[#FACC15]/[0.07] border border-[#FACC15]/30 rounded-2xl px-3.5 py-2.5">
+              <p className="text-[10px] font-black text-[#FACC15] uppercase tracking-wider">Profil tamamlanmadı</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Kullanıcı onboarding'i bitirmemiş — rozetler eksik görünebilir.</p>
+            </div>
+          )}
+
+          <ProfileHero
+            name={profile.full_name || 'Oyuncu'}
+            avatarUrl={profile.avatar_url}
+            verified={profile.verification_status === 'approved'}
+            position={formatPosition(profile.position)}
+            age={ageFromBirthdate(profile.birthdate)}
+            ageRange={profile.ageRange}
+            gender={profile.gender}
+            playStyle={profile.playStyle}
+            matches={total}
+            winRate={winRate}
+            mvp={null}
+            cardAvailable={!!profile.cardActive}
+            cardData={cardData}
+            cardBackMatches={history}
+            onEditAvatar={() => setSheetOpen(true)}
+          />
+
+          {/* Bio + Düzenle — uygulamayla birebir; buton admin adına kaydeder */}
+          <div className="flex items-center gap-3 px-1">
+            <p className={`flex-1 text-[12px] leading-relaxed ${profile.bio ? 'text-gray-400' : 'text-gray-600 italic'}`}>
+              {profile.bio || 'Henüz bir tanıtım eklenmemiş.'}
+            </p>
+            <button type="button" onClick={() => setSheetOpen(true)} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
+              <Pencil size={11} /> Düzenle
+            </button>
+          </div>
+
+          {/* Güven puanı + admin ayarı */}
+          <div>
+            <div className="flex justify-end mb-1">
+              <AdminChip label="Güven Puanını Ayarla" onClick={() => { setTrustDraft(trustScore); setAdminOpen(true); }} />
+            </div>
+            <TrustScoreCard score={trustScore} />
+          </div>
+
+          <ProfileShortcuts items={shortcuts} />
+
+          <MatchHistorySection matches={history} />
+        </div>
+      </div>
+
+      {/* ═══ YÖNETİCİ ALANLARI — uygulamada görünmeyen admin yüzeyi ═══ */}
+      <div className="bg-[#161B22]/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
+        <button type="button" onClick={() => setAdminOpen((o) => !o)} className="w-full flex items-center justify-between gap-2">
+          <p className="text-[10px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles size={12} /> Yönetici Alanları (kullanıcı görmez)
+          </p>
+          <span className="text-[10px] text-gray-500 font-black">{adminOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {adminOpen && (
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Ad Soyad (görünen isim)</label>
+                <input
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  className="mt-1 w-full h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white focus:border-purple-500/40 focus:outline-none"
+                  placeholder="Ad Soyad"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Güven Puanı</label>
+                  <span className={`text-xs font-black font-mono ${trustDraft >= 80 ? 'text-green-400' : trustDraft >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{trustDraft}/100</span>
+                </div>
+                <input
+                  type="range" min={0} max={100} step={1}
+                  value={trustDraft}
+                  onChange={(e) => setTrustDraft(Number(e.target.value))}
+                  className="mt-2 w-full accent-[#39FF14]"
+                />
+                <p className="text-[9px] text-gray-600 mt-1">DB'de 0–5 saklanır (÷20). Master 3.4: güven 100'den başlar, yalnız düşer — artışı istisnai durumda kullanın.</p>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Beceri Puanı (kart OVR temeli, 1–5)</label>
+                <input
+                  value={skillDraft}
+                  onChange={(e) => setSkillDraft(e.target.value)}
+                  inputMode="decimal"
+                  className="mt-1 w-28 h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-purple-500/40 focus:outline-none"
+                  placeholder="örn. 3.8"
+                />
+                <p className="text-[9px] text-gray-600 mt-1">Kart görünümündeki OVR bu puandan türetilir (1–5 → 20–100). Hiç maçı yoksa kart "rookie" kalır.</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={adminSaving}
+              onClick={() => void handleAdminSave()}
+              className="w-full h-11 rounded-xl bg-purple-500/15 border border-purple-500/40 text-purple-200 text-[11px] font-black uppercase tracking-widest hover:bg-purple-500/25 disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {adminSaving ? <Loader2 size={13} className="animate-spin" /> : null} Yönetici Alanlarını Kaydet
+            </button>
+
+            {/* Premium kart yönetimi (Q24) */}
+            <div className="border-t border-white/[0.06] pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Premium Kart (Q24)</p>
+                <button
+                  type="button"
+                  disabled={cardBusy}
+                  onClick={() => void handleCard(!profile.cardActive, (profile.cardTier || 'bronze'))}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-colors disabled:opacity-40 ${
+                    profile.cardActive
+                      ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
+                      : 'bg-white/5 border-white/15 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {profile.cardActive ? 'AKTİF — Kapat' : 'KAPALI — Aç'}
+                </button>
+              </div>
+              <div className="flex gap-1.5">
+                {(['bronze', 'silver', 'gold'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={cardBusy || !profile.cardActive}
+                    onClick={() => void handleCard(true, t)}
+                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase border transition-colors disabled:opacity-30 ${
+                      profile.cardTier === t
+                        ? t === 'gold'
+                          ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300'
+                          : t === 'silver'
+                          ? 'bg-gray-300/15 border-gray-300/40 text-gray-200'
+                          : 'bg-orange-500/15 border-orange-500/40 text-orange-300'
+                        : 'border-white/10 text-gray-500 hover:text-white'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] text-gray-600">Kart aktifken kullanıcı profilinde 👤/🎴 geçişi belirir — aynadaki hero'da birebir test edebilirsiniz.</p>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* ═══ TEK KAYNAK düzenleme alt sayfası — uygulamadakiyle aynı bileşen ═══ */}
+      <ProfileEditSheet
+        open={sheetOpen}
+        title={`Profili Düzenle — ${profile.full_name || 'Oyuncu'}`}
+        initial={{
+          position: profile.position || '',
+          bio: profile.bio || '',
+          birthdate: profile.birthdate || '',
+          gender: profile.gender || '',
+          playStyle: profile.playStyle || '',
+          avatarUrl: profile.avatar_url || '',
+        }}
+        saving={sheetSaving}
+        onSave={handleSheetSave}
+        onClose={() => setSheetOpen(false)}
+      />
+
+      {/* ═══ Ledger'lı bakiye düzeltme ═══ */}
+      {walletOpen && (
+        <div className="fixed inset-0 z-[260] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setWalletOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-[#161B22] border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-white uppercase flex items-center gap-2"><Wallet size={14} /> Bakiye Düzeltme</h3>
+              <button type="button" onClick={() => setWalletOpen(false)} className="w-7 h-7 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center"><X size={14} /></button>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Mevcut bakiye: <span className="font-black text-[#39FF14] font-mono">{fmtMoney(profile.walletBalance ?? 0)}</span>.
+              Düzeltme <span className="text-white font-bold">wallet_transactions</span>'a ADMIN_ADJUST olarak işlenir — profil bakiyesi elle ezilmez, finans raporları bozulmaz. FINANCE yetkisi gerekir.
+            </p>
+            <div className="flex gap-1.5">
+              {[100, 500, -100].map((v) => (
+                <button key={v} type="button" onClick={() => setWalletAmount(String(v))} className="flex-1 py-1.5 rounded-lg border border-white/10 text-[10px] font-black text-gray-300 hover:text-white">
+                  {v > 0 ? `+${v}` : v} ₺
+                </button>
+              ))}
+            </div>
+            <input
+              value={walletAmount}
+              onChange={(e) => setWalletAmount(e.target.value)}
+              inputMode="decimal"
+              placeholder="Tutar (örn. 250 veya -50)"
+              className="w-full h-11 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-[#39FF14]/40 focus:outline-none"
+            />
+            <textarea
+              value={walletReason}
+              onChange={(e) => setWalletReason(e.target.value)}
+              rows={2}
+              placeholder="Sebep (zorunlu — ledger açıklamasında görünür)…"
+              className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-[#39FF14]/40 focus:outline-none resize-none"
+            />
+            <button
+              type="button"
+              disabled={walletBusy}
+              onClick={() => void handleWallet()}
+              className="w-full h-11 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-black uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {walletBusy ? <Loader2 size={13} className="animate-spin" /> : null} Düzeltmeyi İşle
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

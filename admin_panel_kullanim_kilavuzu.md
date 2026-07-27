@@ -19,7 +19,8 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 | **Kullanıcılar** | Tüm oyuncular — ban, silme, profil görüntüleme | Şikayet/sorun olduğunda |
 | **Kaleciler** | Kaleci başvuruları, profil düzenleme | Haftalık |
 | **Hakemler** | Hakem başvuruları, profil düzenleme | Haftalık |
-| **Maçlar** | Tüm maçları görüntüle, iptal/düzenle | Sorun olduğunda |
+| **Maçlar** | Tüm maçları görüntüle, iptal/düzenle. Kokpitin "Kadro & Slot" sekmesinin tepesindeki **Lobi Aynası** oyuncu lobisiyle birebir aynıdır: başlık, konum, tarih, saat, ücret, zorluk, format, min. puan ve görünürlük (özel kod) öğesine tıklayıp yerinde düzenlenir — kayıt anında yayına geçer ve denetime düşer. Saha da (`shared/MatchPitch`) tüketiciyle aynıdır: slota tıkla → ata/çıkar/taşı. İptal modalında **🚨 Acil İptal**: tek adımda iptal + iade sürecini başlatma + tüm kadroya anlık bildirim. | Sorun olduğunda |
+| **Destek Merkezi** | Kullanıcı (Oyuncular) ve tesis (Tesisler) destek talepleri: mesaj dizisi, yanıt yazma (yanıt kullanıcıya uygulama bildirimi olarak düşer), durum yönetimi (Açık→Yanıtlandı→Çözüldü/Kapalı). Kullanıcılar talebi uygulamada Ayarlar → Yardım Merkezi'nden açar. Sidebar rozeti açık talep sayısını canlı gösterir. | Her gün |
 | **Doğrulama Merkezi** | Başvuru onay kuyruğu (kaleci, hakem, tesis) | Günlük |
 | **Finans** | Cüzdan hareketleri, ödemeler, para çekme talepleri | Günlük |
 | **Komisyon** | Platform komisyon oranlarını yönet | Ayda bir gözden geçir |
@@ -62,6 +63,8 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 2. **Tesis Düzenle:** Listeden tesise tıklayın → kalemi (✏️) seçin → değişiklikleri yapıp kaydedin.
 3. **Tesis Onayla / Reddet:** Saha sahibi kayıt yaptırdığında tesis "Onay Bekliyor" durumunda gelir → Siz onaylarsanız platforma girer, reddederseniz sahibine bildirim gider.
 4. **Vitrine Al / Çıkar:** Tesisi öne çıkarmak için yıldız (⭐) ikonuna tıklayın. Gizlemek için göz kapatma (👁️) ikonunu kullanın.
+5. **Kort Format Aralığı (Saha Kurulum Merkezi → Kortlar):** Her kort için minimum–maksimum "kaça kaç" ayarlanır (örn. Min 6v6 + Maks 8v8). Aynı ayar tesis sahibinin kendi panelindeki kort editöründe de var (ikisi aynı bileşen). Aralık, vitrinde kort satırında "6v6–8v8" rozeti olarak görünür; maç oluşturma akışı bu aralığı temel alacak.
+6. **Vitrin Aynası (Saha Kurulum Merkezi → Vitrin sekmesi):** Oyuncunun Saha Keşfet'te gördüğü saha kartının CANLI birebir kopyası. Kartın üstünde "vitrinde görünüyor mu?" teşhisi (Onaylı ✓ / Tesis Açık ✓ / Yayında ✓ — biri kırmızıysa saha listelenmiyor demektir), altında ilgili düzenleme sekmelerine köprüler (fotoğraf/kimlik/olanak/kort/tarife). Kaydettiğiniz her değişikliğin oyuncuya nasıl göründüğünü tahmin etmeden görürsünüz.
 
 **Tesis onaylamak için adımlar:**
 1. Sol menüden **"Doğrulama Merkezi"** → **"Tesis Onayları"** sekmesine gelin
@@ -81,6 +84,10 @@ Panele giriş yaptığınızda sol menüde şu bölümler görünür:
 - **Kullanıcıyı Banla:** Kötüye kullanım durumunda geçici ya da kalıcı ban (+ süre seçilir)
 - **Ban Kaldır:** Banlı kullanıcının itirazı kabul edilirse banlı kişiyi seçip ban kaldırılır
 - **"360° Görünüm":** Kullanıcının tüm geçmişi (maçlar, ödemeler, ban geçmişi, ihtilaflar) tek ekranda
+- **"Profil Aynası" (360 → Profil sekmesi):** Kullanıcının UYGULAMADA gördüğü profil ekranının birebir canlı kopyası — kimlik kartı, premium kart (🎴), güven puanı, kısayollar ve maç geçmişi aynı bileşenlerle çizilir. Fark: her alan admin için düzenlenebilir:
+  - **Düzenle** butonu uygulamadaki "Profili Düzenle" alt sayfasının TA KENDİSİNİ açar (pozisyon, doğum tarihi, cinsiyet, oyun stili, tanıtım, fotoğraf) — kayıt audit'li `admin_update_user_profile` RPC'sinden geçer
+  - **Yönetici Alanları** (mor bölüm): ad-soyad, güven puanı (0–100), beceri puanı (kart OVR temeli) ve premium kart aç/kapat + tier
+  - **Cüzdan kısayolu:** bakiye düzeltmesi artık **ledger'lıdır** — `wallet_transactions`'a ADMIN_ADJUST kaydı düşer, sebep zorunludur, FINANCE yetkisi ister (bakiye elle ezilmez, mutabakat bozulmaz)
 - **"Ghost Girişi":** Kullanıcının şikayetini anlamak için onun gözünden uygulamayı görmek (şifre gerekmez, sadece sebep yazılır; her ghost girişi denetim günlüğüne kaydedilir)
 - **Kullanıcı Sil (Anonimleştir):** KVKK gereği hesap anonim hale getirilebilir
 
@@ -286,17 +293,13 @@ Admin paneli genel olarak son derece güçlü bir yapıya sahip olsa da, **kod b
 
 ---
 
-### ❌ Eksiklik 5: Maç İptal Etme Akışı Adminler İçin Karmaşık
-**Sorun:** Bir maçı admin olarak iptal etmek istediğinizde, Maçlar ekranından maça girip önce durumu bulmanız, ardından birden fazla işlem yapmanız gerekiyor. Tek tıkla "bu maçı iptal et + oyuncuları bildir + varsa iade yap" akışı yok.
-
-**Öneri:** Maç detay paneline **"Acil İptal"** butonu eklenmeli; bu buton tüm süreci (iptal → iade → bildirim) tek seferde başlatmalıdır.
+### ✅ Eksiklik 5 (ÇÖZÜLDÜ): Maç İptal Etme Akışı
+Maç kokpitindeki iptal modalına **"🚨 Acil İptal"** eklendi: tek adımda iptal + iade sürecini başlatma + tüm kadroya anlık bildirim; sebep zorunlu, denetime yazılır.
 
 ---
 
-### ❌ Eksiklik 6: Kullanıcı Bakiye Yönetimi Ekranı Yok
-**Sorun:** Bir oyuncuya bonus kredi yüklemek (promosyon, hata tazminatı vs.) veya fazla çekilen parayı geri almak için doğrudan bir arayüz yok. Şu an bu işlem sadece veritabanından yapılabiliyor.
-
-**Öneri:** Kullanıcı 360° profil ekranına "Bakiye Ayarla" butonu eklenmeli; admin bir miktar ve sebep yazıp onaylayabilmeli → işlem otomatik denetim günlüğüne yazılmalıdır.
+### ✅ Eksiklik 6 (ÇÖZÜLDÜ): Kullanıcı Bakiye Yönetimi
+Kullanıcı 360° → **Profil Aynası → Cüzdan** kısayolu: tutar (±) + zorunlu sebep girilir; işlem `wallet_transactions`'a ADMIN_ADJUST olarak işlenir (ledger bozulmaz), FINANCE yetkisi ister, denetim günlüğüne düşer.
 
 ---
 

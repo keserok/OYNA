@@ -300,6 +300,9 @@ export interface MatchListing {
   courtName?: string; // Maçın oynandığı saha (court) adı — "Tesis · Saha"
   time: string;
   date: string;
+  /** Ham ISO tarih (YYYY-MM-DD) — `date` görsel etikete ("Bugün") çevrildiği
+   *  için düzenleme formları gerçek tarihi buradan okur. */
+  rawDate?: string;
   price: number;
   difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
   minRating: number;
@@ -370,8 +373,12 @@ export interface Court {
   surface?: string;
   /** Saha ölçüsü, ör. "30x50" (metre) */
   size?: string;
-  /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) */
+  /** Toplam oyuncu kapasitesi (ör. 14 → 7v7) — aralık verilmemişse tek format */
   capacity?: number;
+  /** Oynanabilir format aralığı (toplam oyuncu): min 12 & maks 16 → "6v6–8v8".
+   *  Maç oluşturma akışı bu aralığı temel alır. */
+  minCapacity?: number;
+  maxCapacity?: number;
   /** Tesis içi sıralama (owner panelindeki sıra ile aynı) */
   sortOrder?: number;
   price: number;
@@ -935,6 +942,9 @@ export interface PitchCourt {
   size?: string | null;
   price?: number | null;
   capacity?: number | null;
+  /** Oynanabilir format aralığı (toplam oyuncu; 12→6v6). NULL → yalnız capacity. */
+  min_capacity?: number | null;
+  max_capacity?: number | null;
   images?: string[] | null;
   description?: string | null;
   /** Saha bazlı özellik anahtarları (heating, tribune, camera...) */

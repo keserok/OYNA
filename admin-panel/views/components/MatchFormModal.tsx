@@ -40,7 +40,9 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
       setF({
         title: match.title,
         location: match.location,
-        rawDate: new Date().toISOString().slice(0, 10),
+        // Maçın GERÇEK tarihi (mapper rawDate taşır) — eskiden bugüne
+        // sıfırlanıyordu ve başlık düzeltmek maçın tarihini kaydırıyordu.
+        rawDate: match.rawDate || new Date().toISOString().slice(0, 10),
         time: match.time,
         price: String(match.price),
         difficulty: match.difficulty,

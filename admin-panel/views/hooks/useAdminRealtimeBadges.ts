@@ -16,6 +16,7 @@ const WATCHED_TABLES = [
   'match_disputes',
   'provider_applications',
   'provider_identities',
+  'support_tickets',
 ] as const;
 
 export function useAdminRealtimeBadges(

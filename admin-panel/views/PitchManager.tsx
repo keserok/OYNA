@@ -135,6 +135,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             sort_order: pitches.length,
             price: null,
             capacity: 14,
+            min_capacity: null,
+            max_capacity: null,
             images: [],
             description: '',
             features: [],
@@ -161,7 +163,10 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     is_active: editingPitch.is_active,
                     sort_order: editingPitch.sort_order,
                     price: editingPitch.price,
-                    capacity: editingPitch.capacity,
+                    // Aralık varken legacy capacity = maks format (eski görünümler tutarlı kalır)
+                    capacity: editingPitch.max_capacity ?? editingPitch.capacity,
+                    min_capacity: editingPitch.min_capacity ?? null,
+                    max_capacity: editingPitch.max_capacity ?? null,
                     images: editingPitch.images,
                     description: editingPitch.description,
                     features: normalizeCourtFeatures(editingPitch.features),
@@ -318,16 +323,52 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <p className="text-[10px] text-gray-600">Kaba fiyat. Saat/gün bazlı tarife: Fiyatlandırma Politikası.</p>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Kapasite (Format)</label>
-                                <select
-                                    value={editingPitch.capacity ?? 14}
-                                    onChange={(e) => setEditingPitch({ ...editingPitch, capacity: Number(e.target.value) })}
-                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
-                                >
-                                    {CAPACITY_OPTIONS.map((o) => (
-                                        <option key={o.value} value={o.value}>{o.label} ({o.value} oyuncu)</option>
-                                    ))}
-                                </select>
+                                <label className="text-xs font-bold text-gray-400 uppercase">Format Aralığı (kaça kaç)</label>
+                                {/* Min/Maks oynanabilir format — vitrinde kort satırında aralık
+                                    rozeti olur (6v6–8v8) ve maç oluşturma akışı bu aralığı temel
+                                    alır. Min > Maks seçilemez: diğer uç otomatik hizalanır. */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <select
+                                        value={editingPitch.min_capacity ?? ''}
+                                        onChange={(e) => {
+                                            const v = e.target.value ? Number(e.target.value) : null;
+                                            setEditingPitch({
+                                                ...editingPitch,
+                                                min_capacity: v,
+                                                max_capacity: v !== null && editingPitch.max_capacity != null && editingPitch.max_capacity < v
+                                                    ? v : editingPitch.max_capacity,
+                                            });
+                                        }}
+                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
+                                    >
+                                        <option value="">Min —</option>
+                                        {CAPACITY_OPTIONS.map((o) => (
+                                            <option key={o.value} value={o.value}>Min {o.label}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={editingPitch.max_capacity ?? ''}
+                                        onChange={(e) => {
+                                            const v = e.target.value ? Number(e.target.value) : null;
+                                            setEditingPitch({
+                                                ...editingPitch,
+                                                max_capacity: v,
+                                                min_capacity: v !== null && editingPitch.min_capacity != null && editingPitch.min_capacity > v
+                                                    ? v : editingPitch.min_capacity,
+                                            });
+                                        }}
+                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
+                                    >
+                                        <option value="">Maks —</option>
+                                        {CAPACITY_OPTIONS.map((o) => (
+                                            <option key={o.value} value={o.value}>Maks {o.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <p className="text-[10px] text-gray-600">
+                                    Örn. Min 6v6 + Maks 8v8 → vitrinde "6v6–8v8". Boş bırakılırsa tek format varsayılır
+                                    {editingPitch.capacity ? ` (${editingPitch.capacity / 2}v${editingPitch.capacity / 2})` : ''}.
+                                </p>
                             </div>
                         </div>
 
