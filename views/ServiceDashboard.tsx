@@ -1526,7 +1526,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             {matchLiveStatus[myUpcomingMatches[0].id] === 'ARRIVED' ? (
                                 <div className="flex gap-2">
                                   <button disabled className="flex-1 py-2 rounded-xl bg-white/10 text-white/50 text-[10px] font-black uppercase flex items-center justify-center gap-1">
-                                    <CheckCircle2 size={12} /> KAPTANA BİLDİRİLDİ
+                                    {/* F0 dürüstlük: durum yalnız bu cihazda tutuluyor; kaptana sinyal
+                                        gitmiyor (sunucu bağlantısı Faz 3c'de). Yalan beyan kaldırıldı. */}
+                                    <CheckCircle2 size={12} /> TESİSTEYİM — YALNIZ SANA GÖRÜNÜR
                                   </button>
                                   <button 
                                     onClick={() => setShowPostMatchReport(true)}

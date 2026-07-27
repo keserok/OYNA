@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, HelpCircle, Mail, MessageSquare } from 'lucide-react';
+import { ExternalLink, HelpCircle, Mail } from 'lucide-react';
 import { OwnerCenteredModal } from './OwnerModalFrame';
 
 interface Props {
@@ -26,22 +26,6 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => (
         <div className="flex-1">
           <h4 className="text-sm font-bold text-white">E-posta Desteği</h4>
           <p className="text-xs text-gray-500">{SUPPORT_EMAIL}</p>
-        </div>
-        <ExternalLink size={16} className="text-gray-500" />
-      </a>
-
-      <a
-        href="https://wa.me/905555555555"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-4 p-4 bg-[#0A0E14] border border-white/5 rounded-2xl hover:border-emerald-500/30 transition-colors"
-      >
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400">
-          <MessageSquare size={20} />
-        </div>
-        <div className="flex-1">
-          <h4 className="text-sm font-bold text-white">WhatsApp Hattı</h4>
-          <p className="text-xs text-gray-500">Hafta içi 09:00 – 18:00</p>
         </div>
         <ExternalLink size={16} className="text-gray-500" />
       </a>

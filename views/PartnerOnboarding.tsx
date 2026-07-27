@@ -255,9 +255,10 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   </div>
                   <div>
                       <h4 className="font-bold text-white text-sm">Şeffaf Gelir Modeli</h4>
-                      {/* OP-P2-13: uygulanmayan "%0 ilk 30 gün" vaadi kaldırıldı; gerçek model
-                          yazıldı. (%0 intro + otomatik payout ileride devreye girince metin güncellenir.) */}
-                      <p className="text-[10px] text-gray-400">Abonelik/sabit ücret yok — yalnız işlem başına %10 komisyon</p>
+                      {/* OP-P2-13 + F0: oranlar commission_config'ten (canlı teyit 2026-07-27):
+                          kapora (Model A) %15; sahibinin OYNA-organize maçında Model B %5 + %20 markup.
+                          Buradaki "%10" yanlıştı — kaleci/hakem hizmet oranıyla karışmış. */}
+                      <p className="text-[10px] text-gray-400">Abonelik/sabit ücret yok — kapora işlemlerinde %15 komisyon; OYNA-organize maçlarda %5 + fiyat farkı</p>
                   </div>
               </div>
 
