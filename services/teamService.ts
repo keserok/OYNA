@@ -348,53 +348,7 @@ export const computeTeamStats = (matches: TeamMatchRow[], teamWins: number, team
   };
 };
 
-export const getFriendsWithStats = async (userId: string): Promise<(Player & { overall: number })[]> => {
-  const { data: rows, error: fErr } = await supabase
-    .from('friendships')
-    .select('sender_id, receiver_id')
-    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-    .eq('status', 'ACCEPTED');
-
-  if (fErr) {
-    console.error('[teamService] Arkadaşlar çekilemedi:', fErr.message);
-    return [];
-  }
-
-  const friendIds = (rows || [])
-    .map(r => (r.sender_id === userId ? r.receiver_id : r.sender_id))
-    .filter(Boolean);
-
-  if (friendIds.length === 0) return [];
-
-  const { data: profiles, error: pErr } = await supabase
-    .from('public_profiles')
-    // E4: `stats` kolonu public_profiles view'inde YOK → eski select 400
-    // veriyor, fonksiyon hep [] dönüyordu (takım kurma arkadaşsız!). Gerçek
-    // kolonlar: skill_rating (0-5) + match_count.
-    .select('id, full_name, avatar_url, skill_rating, match_count')
-    .in('id', friendIds);
-
-  if (pErr) {
-    console.error('[teamService] Arkadaş profilleri çekilemedi:', pErr.message);
-    return [];
-  }
-
-  return (profiles || []).map((p: any) => {
-    // Gerçek yetenek puanı (0-5). Eskiden default 5 → herkes OVR 100 →
-    // "Akıllı Dengeleme" anlamsızdı.
-    const rating = typeof p.skill_rating === 'number' ? p.skill_rating : 0;
-    const matchCount = Number(p.match_count ?? 0);
-    return {
-      id: p.id as string,
-      name: (p.full_name as string) || 'Oyuncu',
-      avatar: (p.avatar_url as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`,
-      rating,
-      matchCount,
-      isRookie: matchCount <= 0,
-      position: 'OYUNCU',
-      x: 0,
-      y: 0,
-      overall: Math.round(rating * 20),
-    };
-  });
-};
+// F4.2: getFriendsWithStats kaldırıldı — tek tüketicisi silinen TeamBuilder
+// ekranıydı (erişilemez OVR-dengeleme maketi). Gelecekte MatchCreate'e gerçek
+// bir dengeleme özelliği gelirse public_profiles(skill_rating, match_count)
+// üzerinden yeniden yazılır.
