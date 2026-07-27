@@ -6,6 +6,8 @@ import {
   enrollAdminTotp,
   verifyAdminTotp,
   unenrollAdminTotp,
+  generateMfaRecoveryCodes,
+  consumeMfaRecoveryCode,
   type AdminSession,
 } from '../services/adminService';
 
@@ -36,6 +38,13 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
   const [secret, setSecret] = useState<string | null>(null);
   const [activeFactorId, setActiveFactorId] = useState<string | null>(factorId ?? null);
   const [copied, setCopied] = useState(false);
+  // F5.6: kurtarma kodları — enroll sonrası TEK SEFER gösterilir; challenge'da
+  // cihaz kaybı için "kurtarma kodu kullan" yolu açılır.
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [recoveryAck, setRecoveryAck] = useState(false);
+  const [useRecovery, setUseRecovery] = useState(false);
+  const [recoveryInput, setRecoveryInput] = useState('');
+  const [recoveryDone, setRecoveryDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // StrictMode çift mount'ta tekrar enroll edilmesini engelle.
   const enrollStarted = useRef(false);
@@ -84,6 +93,15 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
     setErr(null);
     try {
       await verifyAdminTotp(targetFactor, cleaned);
+      // F5.6: yeni kurulumda kurtarma kodlarını üret ve TEK SEFER göster.
+      if (mode === 'enroll') {
+        try {
+          const codes = await generateMfaRecoveryCodes(8);
+          if (codes.length > 0) { setRecoveryCodes(codes); setLoading(false); return; }
+        } catch (e) {
+          console.warn('[MFA] kurtarma kodları üretilemedi:', e);
+        }
+      }
       onVerified(session);
     } catch (error) {
       setErr(error instanceof Error ? error.message : 'Kod hatalı, tekrar dene.');
@@ -101,6 +119,34 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
       await unenrollAdminTotp(activeFactorId);
     }
     onCancel();
+  };
+
+  // F5.6: cihaz kaybı — kurtarma kodu doğrulanınca TOTP faktörü silinir,
+  // kullanıcı yeniden kurulum yapar (Supabase'de kod doğrudan aal2 vermez).
+  const submitRecovery = async () => {
+    const val = recoveryInput.trim();
+    if (val.length < 6) { setErr('Kurtarma kodunu eksiksiz gir.'); return; }
+    setLoading(true);
+    setErr(null);
+    try {
+      await consumeMfaRecoveryCode(val);
+      const target = activeFactorId ?? factorId;
+      if (target) await unenrollAdminTotp(target);
+      setRecoveryDone(true);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : 'Kurtarma kodu doğrulanamadı.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyRecoveryCodes = async () => {
+    if (!recoveryCodes) return;
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join('\n'));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* clipboard opsiyonel */ }
   };
 
   const copySecret = async () => {
@@ -146,7 +192,64 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
           </motion.div>
         )}
 
-        {mode === 'enroll' && (
+        {/* F5.6: kurtarma kodları — kurulum sonrası TEK SEFER gösterilir */}
+        {recoveryCodes && (
+          <div className="space-y-4">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+              <p className="text-xs text-amber-200 leading-relaxed">
+                <b>Kurtarma kodlarını şimdi kaydet.</b> Telefonunu kaybedersen panele yalnız bu
+                kodlarla girebilirsin. Her kod bir kez kullanılır ve bu ekran bir daha gösterilmez.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {recoveryCodes.map((c) => (
+                <code key={c} className="text-[12px] font-mono text-gray-100 bg-black/50 border-2 border-white/10 rounded-xl px-3 py-2 text-center select-all">
+                  {c}
+                </code>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyRecoveryCodes()}
+              className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl border-2 border-white/10 bg-black/50 text-gray-300 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+            >
+              {copied ? <><Check size={14} className="text-green-400" /> Kopyalandı</> : <><Copy size={14} /> Kodları kopyala</>}
+            </button>
+            <label className="flex items-start gap-2 text-[11px] text-gray-400 cursor-pointer">
+              <input type="checkbox" checked={recoveryAck} onChange={(e) => setRecoveryAck(e.target.checked)} className="mt-0.5" />
+              <span>Kodları güvenli bir yere kaydettim.</span>
+            </label>
+            <button
+              type="button"
+              disabled={!recoveryAck}
+              onClick={() => onVerified(session)}
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase disabled:opacity-50"
+            >
+              Panele Gir
+            </button>
+          </div>
+        )}
+
+        {/* F5.6: kurtarma kodu kullanıldı — yeniden kurulum gerekir */}
+        {!recoveryCodes && recoveryDone && (
+          <div className="space-y-4">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4">
+              <p className="text-xs text-green-200 leading-relaxed">
+                Kurtarma kodu doğrulandı ve eski cihaz kaydı silindi. Şimdi giriş ekranına dönüp
+                yeniden giriş yap; iki adımlı doğrulamayı yeni cihazınla kuracaksın.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase"
+            >
+              Giriş ekranına dön
+            </button>
+          </div>
+        )}
+
+        {!recoveryCodes && !recoveryDone && mode === 'enroll' && (
           <div className="mb-5">
             <p className="text-[11px] text-gray-400 leading-relaxed mb-4">
               Google Authenticator, Authy veya benzeri bir uygulamayı aç ve aşağıdaki QR kodunu
@@ -188,6 +291,38 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
           </div>
         )}
 
+        {/* F5.6: challenge modunda kurtarma kodu girişi */}
+        {!recoveryCodes && !recoveryDone && useRecovery && (
+          <div className="space-y-4">
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Telefonuna erişemiyorsan kurulum sırasında kaydettiğin kurtarma kodlarından birini gir.
+              Kod doğrulanınca eski cihaz kaydı silinir ve yeniden kurulum yaparsın.
+            </p>
+            <input
+              value={recoveryInput}
+              onChange={(e) => { setErr(null); setRecoveryInput(e.target.value.toUpperCase()); }}
+              placeholder="XXXXX-XXXXX"
+              className="w-full h-14 bg-black/50 border-2 border-white/10 rounded-2xl px-4 text-white font-mono text-lg tracking-widest text-center focus:outline-none focus:border-red-500/50"
+            />
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void submitRecovery()}
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? <><Spinner size={16} color="#ffffff" glow={false} /> Doğrulanıyor…</> : <>Kurtarma kodunu doğrula</>}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setUseRecovery(false); setErr(null); }}
+              className="w-full text-[11px] text-gray-500 hover:text-gray-300"
+            >
+              Authenticator koduna dön
+            </button>
+          </div>
+        )}
+
+        {!recoveryCodes && !recoveryDone && !useRecovery && (
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label htmlFor="mfa-code" className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">
@@ -229,8 +364,20 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
               <>Doğrula <ShieldCheck size={16} /></>
             )}
           </button>
-        </form>
 
+          {mode === 'challenge' && (
+            <button
+              type="button"
+              onClick={() => { setUseRecovery(true); setErr(null); }}
+              className="w-full text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Telefonuma erişemiyorum — kurtarma kodu kullan
+            </button>
+          )}
+        </form>
+        )}
+
+        {!recoveryCodes && !recoveryDone && (
         <button
           type="button"
           onClick={() => void handleCancel()}
@@ -238,6 +385,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
         >
           <ArrowLeft size={13} /> Giriş ekranına dön
         </button>
+        )}
 
         <p className="text-center text-[10px] text-gray-600 font-mono mt-8 uppercase tracking-widest">
           Supabase Auth • TOTP • aal2

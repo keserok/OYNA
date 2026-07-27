@@ -259,6 +259,38 @@ export async function verifyAdminTotp(factorId: string, code: string): Promise<v
 }
 
 /** Kayıtlı (örn. yarım kalmış) bir faktörü siler — kurulum iptali için. */
+/**
+ * F5.6 — MFA kurtarma kodları.
+ * generate: düz metin kodlar YALNIZ BİR KEZ döner (sunucuda hash saklanır).
+ * consume: cihaz kaybında kodu doğrular ve TOTP faktörünü sıfırlamayı
+ *          yetkilendirir; kullanıcı yeniden enroll olur.
+ */
+export async function generateMfaRecoveryCodes(count = 8): Promise<string[]> {
+  const { data, error } = await supabase.rpc('admin_mfa_generate_recovery_codes', { p_count: count });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as string[];
+}
+
+export async function consumeMfaRecoveryCode(code: string): Promise<{ remaining: number }> {
+  const { data, error } = await supabase.rpc('admin_mfa_consume_recovery_code', { p_code: code });
+  if (error) throw new Error(error.message);
+  return { remaining: Number((data as { remaining?: number } | null)?.remaining ?? 0) };
+}
+
+export async function fetchMfaRecoveryStatus(): Promise<{ remaining: number; generatedAt: string | null }> {
+  const { data, error } = await supabase.rpc('admin_mfa_recovery_status');
+  if (error) throw new Error(error.message);
+  const d = (data ?? {}) as { remaining?: number; generated_at?: string | null };
+  return { remaining: Number(d.remaining ?? 0), generatedAt: d.generated_at ?? null };
+}
+
+/** SUPER_ADMIN başka bir admin'in MFA faktörünü sıfırlar (self-reset yasak). */
+export async function resetAdminMfa(userId: string): Promise<{ factorsRemoved: number }> {
+  const { data, error } = await supabase.rpc('admin_reset_mfa', { p_user_id: userId });
+  if (error) throw new Error(error.message);
+  return { factorsRemoved: Number((data as { factors_removed?: number } | null)?.factors_removed ?? 0) };
+}
+
 export async function unenrollAdminTotp(factorId: string): Promise<void> {
   await supabase.auth.mfa.unenroll({ factorId }).catch(() => undefined);
 }
