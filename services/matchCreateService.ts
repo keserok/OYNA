@@ -214,15 +214,49 @@ export async function createMatchAtomic(params: AtomicCreateParams): Promise<Ato
 }
 
 // ── Kadro daveti (bildirim; slotlar satın almayla dolar) ────────────────────
+// Davet gerekçesi sunucuda: arkadaşlık VEYA ortak takım üyeliği. Tanışıklığı
+// olmayan kişiler sessizce atlanır ve 'skipped' ile bildirilir.
 
-export async function inviteFriendsToMatch(matchId: string, friendIds: string[]): Promise<number> {
-  if (friendIds.length === 0) return 0;
+export async function inviteFriendsToMatch(
+  matchId: string,
+  friendIds: string[],
+): Promise<{ sent: number; skipped: number }> {
+  if (friendIds.length === 0) return { sent: 0, skipped: 0 };
   const { data, error } = await supabase.rpc('invite_friends_to_match', {
     p_match_id: matchId,
     p_friend_ids: friendIds,
   });
   if (error) throw error;
-  return Number(data ?? 0);
+  const r = (data ?? {}) as { sent?: number; skipped?: number };
+  return { sent: Number(r.sent ?? 0), skipped: Number(r.skipped ?? 0) };
+}
+
+// ── Kaleci / hakem: rezerve edilebilir GERÇEK sağlayıcılar ──────────────────
+// Kapı get_available_provider_ids ile aynı (onaylı + müsait). Seçim yayın
+// anında create_match_atomic'e taşınır; teklifler kapora bloke edilince gider.
+
+export interface BookableProvider {
+  id: string;
+  name: string;
+  avatar: string | null;
+  rating: number;
+  fee: number;
+  isElite: boolean;
+  zone: string | null;
+}
+
+export async function listBookableProviders(type: 'GK' | 'REF'): Promise<BookableProvider[]> {
+  const { data, error } = await supabase.rpc('list_bookable_providers', { p_type: type });
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map(r => ({
+    id: String(r.id),
+    name: String(r.name ?? 'Sağlayıcı'),
+    avatar: r.avatar ? String(r.avatar) : null,
+    rating: Number(r.rating ?? 0),
+    fee: Number(r.fee ?? 0),
+    isElite: !!r.is_elite,
+    zone: r.zone ? String(r.zone) : null,
+  }));
 }
 
 // ── Bölgede saha yok: talep sinyali ─────────────────────────────────────────

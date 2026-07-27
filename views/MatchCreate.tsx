@@ -9,8 +9,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, ChevronRight, Search, Check, MapPin, Bell, Plus, X,
-  ArrowRight, Copy, Share2, Lock, Sparkles, ShieldCheck, Users,
-  Info, ChevronDown, Undo2,
+  ArrowRight, Copy, Share2, Lock, Sparkles, ShieldCheck, Users, Shield, Scale,
+  Info, ChevronDown, Undo2, Star, Zap,
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
@@ -18,12 +18,14 @@ import { showToast } from '../components/common/GlobalToast';
 import { Spinner } from '../components/ui/Spinner';
 import {
   fetchCreateFacilities, getCourtDayQuote, createMatchAtomic, inviteFriendsToMatch,
-  parseCreateMatchError, recordDemandSignal,
+  parseCreateMatchError, recordDemandSignal, listBookableProviders,
   type CreateFacility, type CreateCourt, type DayQuote, type AtomicCreateResult,
+  type BookableProvider,
 } from '../services/matchCreateService';
 import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate } from '../services/playerBookingService';
 import { getWalletSummary, type WalletSummary } from '../services/walletService';
 import { getFriends, type FriendRow } from '../services/socialService';
+import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 
@@ -56,7 +58,15 @@ function buzz(pattern: number | number[]) {
 const trLower = (s: string) => s.toLocaleLowerCase('tr-TR');
 const fmtTL = (n: number) => Math.round(n).toLocaleString('tr-TR');
 
-type SheetKind = 'ADV' | 'FRIENDS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
+type SheetKind = 'ADV' | 'FRIENDS' | 'PROVIDERS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
+
+/** Kadroya çağrılan kişi — arkadaş listesinden ya da takım kadrosundan gelir. */
+interface InvitedPerson {
+  id: string;
+  name: string;
+  meta: string;
+  source: 'FRIEND' | 'TEAM';
+}
 
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const {
@@ -95,12 +105,21 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [age, setAge] = useState('Tümü');
   const [title, setTitle] = useState('');
   const [teamInvite, setTeamInvite] = useState(false); // rakip tarafı ben davet edeceğim → kodla kapalı
-  const [services, setServices] = useState<string[]>([]); // 'GK' | 'REF'
-  const [invited, setInvited] = useState<FriendRow[]>([]);
+  const [invited, setInvited] = useState<InvitedPerson[]>([]);
   const [friends, setFriends] = useState<FriendRow[] | null>(null);
+  const [teams, setTeams] = useState<MyTeamRow[] | null>(null);
+  const [squadTab, setSquadTab] = useState<'FRIENDS' | 'TEAMS'>('FRIENDS');
+  const [openTeamId, setOpenTeamId] = useState<string | null>(null);
+  const [teamSquads, setTeamSquads] = useState<Record<string, InvitedPerson[]>>({});
+  const [squadLoading, setSquadLoading] = useState(false);
   const [friendQ, setFriendQ] = useState('');
+
+  // Kaleci / hakem: GERÇEK sağlayıcı seçimi (onaylı + müsait olanlar).
+  // providerIds boş + all=true → sunucu otomatik en uygun sağlayıcıyı seçer.
+  const [offers, setOffers] = useState<{ type: 'GK' | 'REF'; providerIds: string[]; all: boolean }[]>([]);
+  const [providers, setProviders] = useState<Record<'GK' | 'REF', BookableProvider[] | null>>({ GK: null, REF: null });
+  const [providerTab, setProviderTab] = useState<'GK' | 'REF'>('GK');
   const [priceOpen, setPriceOpen] = useState(false);
-  const [svcOpen, setSvcOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetKind>(null);
 
   // ── Yayın durumu ──────────────────────────────────────────────────────────
@@ -364,15 +383,20 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         gender,
         ageGroup: age,
         difficulty: mental,
-        deferredProviders: services.map(t => ({ type: t })),
+        // Seçili sağlayıcılara teklif; 'Tümüne gönder'de providerIds boş kalır
+        // ve sunucu en uygun sağlayıcıyı kendisi seçer.
+        deferredProviders: offers.map(o => ({ type: o.type, providerIds: o.all ? [] : o.providerIds })),
         seedBookingId: seeded ? seed?.bookingId : null,
       });
       setPubStep(3);
       buzz([18, 40, 30]);
 
-      // Davetler (arkadaşlık kapılı; başarısızlık yayını bozmaz)
+      // Davetler (arkadaş VEYA takım arkadaşı; başarısızlık yayını bozmaz)
       if (invited.length > 0) {
-        inviteFriendsToMatch(res.matchId, invited.map(f => f.friend_id))
+        inviteFriendsToMatch(res.matchId, invited.map(p => p.id))
+          .then(({ skipped }) => {
+            if (skipped > 0) showToast(`${skipped} kişiye davet gönderilemedi (tanışıklık gerekli).`, 'error');
+          })
           .catch(() => showToast('Bazı davetler gönderilemedi.', 'error'));
       }
       // Maçı yerel akışa işle + seed'i temizle + cüzdanı tazele
@@ -424,7 +448,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamInvite, visibility, seeded, selCourtId, dateISO, selTime, format, title, gender, age,
-      mental, services, seed?.bookingId, invited, deposit, spendable, firstFree]);
+      mental, offers, seed?.bookingId, invited, deposit, spendable, firstFree]);
   publishRef.current = publish;
 
   // ── Kaydır → yayınla (pointer takibi pencerede) ───────────────────────────
@@ -466,11 +490,93 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     dragRef.current = { left: rect.left + 5, max: rect.width - 59 };
   };
 
-  // ── Arkadaş listesi (sheet açılınca) ─────────────────────────────────────
+  // ── Kadro: arkadaşlar + takımlar (sheet açılınca, gerçek servislerden) ───
   useEffect(() => {
-    if (sheet !== 'FRIENDS' || friends !== null) return;
-    getFriends().then(setFriends).catch(() => setFriends([]));
-  }, [sheet, friends]);
+    if (sheet !== 'FRIENDS') return;
+    if (friends === null) getFriends().then(setFriends).catch(() => setFriends([]));
+    if (teams === null) getMyTeams().then(setTeams).catch(() => setTeams([]));
+  }, [sheet, friends, teams]);
+
+  // Takım kadrosu ilk açılışta çekilir, sonra önbellekten
+  const toggleTeam = useCallback(async (teamId: string) => {
+    buzz(10);
+    if (openTeamId === teamId) { setOpenTeamId(null); return; }
+    setOpenTeamId(teamId);
+    if (teamSquads[teamId]) return;
+    setSquadLoading(true);
+    try {
+      const rows = await getTeamSquad(teamId);
+      setTeamSquads(prev => ({
+        ...prev,
+        [teamId]: rows
+          .filter(r => r.user_id !== uid)
+          .map(r => ({
+            id: r.user_id,
+            name: r.full_name || 'Oyuncu',
+            meta: [r.pos, r.jersey_number ? `#${r.jersey_number}` : null].filter(Boolean).join(' · ') || 'Takım arkadaşı',
+            source: 'TEAM' as const,
+          })),
+      }));
+    } catch {
+      showToast('Takım kadrosu yüklenemedi.', 'error');
+      setTeamSquads(prev => ({ ...prev, [teamId]: [] }));
+    } finally {
+      setSquadLoading(false);
+    }
+  }, [openTeamId, teamSquads, uid]);
+
+  // ── Sağlayıcılar (kaleci/hakem sheet'i açılınca) ─────────────────────────
+  useEffect(() => {
+    if (sheet !== 'PROVIDERS') return;
+    (['GK', 'REF'] as const).forEach(t => {
+      if (providers[t] !== null) return;
+      listBookableProviders(t)
+        .then(list => setProviders(prev => ({ ...prev, [t]: list })))
+        .catch(() => setProviders(prev => ({ ...prev, [t]: [] })));
+    });
+  }, [sheet, providers]);
+
+  const toggleInvite = (p: InvitedPerson) => {
+    buzz(10);
+    setInvited(prev => prev.some(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]);
+  };
+
+  const offerOf = (t: 'GK' | 'REF') => offers.find(o => o.type === t);
+  const offerCount = (t: 'GK' | 'REF') => {
+    const o = offerOf(t);
+    return o ? (o.all ? 1 : o.providerIds.length) : 0;
+  };
+  const toggleProvider = (t: 'GK' | 'REF', id: string) => {
+    buzz(10);
+    setOffers(prev => {
+      const cur = prev.find(o => o.type === t);
+      if (!cur) return [...prev, { type: t, providerIds: [id], all: false }];
+      if (cur.all) return prev.map(o => o.type === t ? { ...o, all: false, providerIds: [id] } : o);
+      const has = cur.providerIds.includes(id);
+      const next = has ? cur.providerIds.filter(x => x !== id) : [...cur.providerIds, id];
+      return next.length === 0 ? prev.filter(o => o.type !== t) : prev.map(o => o.type === t ? { ...o, providerIds: next } : o);
+    });
+  };
+  const toggleProviderAll = (t: 'GK' | 'REF') => {
+    buzz(10);
+    setOffers(prev => {
+      const cur = prev.find(o => o.type === t);
+      if (cur?.all) return prev.filter(o => o.type !== t);
+      const others = prev.filter(o => o.type !== t);
+      return [...others, { type: t, providerIds: [], all: true }];
+    });
+  };
+  // Seçilen sağlayıcıların toplam ücreti (bilgi amaçlı; tahsil onaydan sonra)
+  const offerFeeText = useMemo(() => {
+    let sum = 0; let unknown = false;
+    for (const o of offers) {
+      const list = providers[o.type];
+      if (o.all || !list) { unknown = true; continue; }
+      for (const id of o.providerIds) sum += list.find(p => p.id === id)?.fee ?? 0;
+    }
+    if (sum === 0 && unknown) return 'Ücret sağlayıcı onayında netleşir';
+    return `Toplam ${fmtTL(sum)}₺${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
+  }, [offers, providers]);
 
   // Cüzdan overlay'i doğrudan YÜKLEME sekmesinde açılsın
   useEffect(() => {
@@ -766,7 +872,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 {c.sizeLabel && <span className="shrink-0 text-[8.5px] font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 bg-white/[0.06] text-white/50">{c.sizeLabel.slice(0, 8)}</span>}
                               </div>
                               <p className="mt-1 text-[10px] font-bold text-white/40">
-                                {c.minCapacity}v{c.minCapacity} – {c.maxCapacity}v{c.maxCapacity} · {c.minCapacity * 2}–{c.maxCapacity * 2} kişi
+                                {c.minCapacity === c.maxCapacity
+                                  ? `${c.minCapacity}v${c.minCapacity}`
+                                  : `${c.minCapacity}v${c.minCapacity} – ${c.maxCapacity}v${c.maxCapacity}`}
                               </p>
                             </div>
                             {c.basePrice > 0 && (
@@ -917,9 +1025,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#39FF14] flex items-center justify-center text-xs font-black">
                     {(currentUserProfile?.name ?? 'S').charAt(0).toUpperCase()}
                   </div>
-                  {invited.slice(0, 3).map(f => (
-                    <div key={f.friend_id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-black text-white/80">
-                      {(f.full_name ?? '?').charAt(0).toUpperCase()}
+                  {invited.slice(0, 3).map(p => (
+                    <div key={p.id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-black text-white/80">
+                      {p.name.charAt(0).toUpperCase()}
                     </div>
                   ))}
                   <div className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-white/[0.04] border-2 border-white/[0.16] flex items-center justify-center text-white/50">
@@ -927,7 +1035,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 ml-1">
-                  <p className="text-xs font-black">{invited.length > 0 ? `Sen + ${invited.length} arkadaş çağrıldı` : 'Kadroya kimseyi çağırmadın'}</p>
+                  <p className="text-xs font-black">{invited.length > 0 ? `Sen + ${invited.length} kişi çağrıldı` : 'Kadroya kimseyi çağırmadın'}</p>
                   <p className="mt-0.5 text-[10.5px] font-bold text-white/[0.42]">
                     {(teamInvite || visibility === 'PRIVATE')
                       ? `Kalan ${Math.max(0, per * 2 - 1 - invited.length)} kişi sadece kodla katılabilir`
@@ -938,39 +1046,25 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               </button>
             </section>
 
-            {/* Kaleci / hakem */}
+            {/* Kaleci / hakem — gerçek sağlayıcı seçimi */}
             <section className="flex flex-col gap-2.5">
-              <button onClick={() => { buzz(8); setSvcOpen(v => !v); }}
+              <button onClick={() => { buzz(8); setSheet('PROVIDERS'); }}
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
                 <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center bg-white/5 text-white/55"><ShieldCheck size={16} /></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black">{services.length > 0 ? `${services.length} hizmet eklendi` : 'Kaleci veya hakem lazım mı?'}</p>
-                  <p className={`mt-0.5 text-[10.5px] font-bold ${services.length > 0 ? 'text-[#39FF14]' : 'text-white/[0.42]'}`}>
-                    {services.length > 0 ? 'Maç kurulunca teklif gider, onaylanınca tahsil edilir' : "Opsiyonel · ücret maç kurulduktan sonra escrow'a alınır"}
+                  <p className="text-xs font-black">
+                    {offers.length > 0
+                      ? [offerCount('GK') ? `${offerOf('GK')?.all ? 'Tüm kaleciler' : `${offerCount('GK')} kaleci`}` : null,
+                         offerCount('REF') ? `${offerOf('REF')?.all ? 'Tüm hakemler' : `${offerCount('REF')} hakem`}` : null]
+                        .filter(Boolean).join(' + ') + ' seçildi'
+                      : 'Kaleci veya hakem lazım mı?'}
+                  </p>
+                  <p className={`mt-0.5 text-[10.5px] font-bold ${offers.length > 0 ? 'text-[#39FF14]' : 'text-white/[0.42]'}`}>
+                    {offers.length > 0 ? offerFeeText : "Opsiyonel · teklif maç kurulunca gider, ilk kabul eden alır"}
                   </p>
                 </div>
-                <ChevronDown size={15} className={`text-white/25 shrink-0 transition-transform ${svcOpen ? 'rotate-180' : ''}`} />
+                <ChevronRight size={15} className="text-white/25 shrink-0" />
               </button>
-              <AnimatePresence>
-                {svcOpen && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <div className="flex gap-2.5">
-                      {([['GK', 'Kaleci', 'ort. 250₺'], ['REF', 'Hakem', 'ort. 300₺']] as const).map(([id, label, fee]) => {
-                        const on = services.includes(id);
-                        return (
-                          <button key={id}
-                            onClick={() => { buzz(10); setServices(prev => on ? prev.filter(x => x !== id) : [...prev, id]); }}
-                            className={`flex-1 flex flex-col items-start gap-1 p-3.5 rounded-2xl border text-left min-h-[64px] transition-colors ${chip(on)}`}>
-                            <span className="text-xs font-black">{label}</span>
-                            <span className="font-numeric text-[10px] font-extrabold text-white/45">{fee}</span>
-                            <span className="text-[9px] font-bold text-white/[0.32]">{on ? 'Eklendi ✓' : 'Ekle'}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </section>
 
             {/* Gerisi profilinden */}
@@ -1035,18 +1129,71 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               ))}
             </div>
           ) : canPublish ? (
-            <div ref={trackRef} className="relative h-16 rounded-[20px] overflow-hidden bg-[#39FF14]/[0.08] border border-[#39FF14]/[0.28]">
-              <div className="absolute left-0 top-0 bottom-0 bg-[#39FF14]/[0.16]" style={{ width: `${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 59)) + 59}px` }} />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-[12.5px] font-black uppercase tracking-[0.11em] text-[#39FF14]" style={{ opacity: Math.max(0, 1 - slide * 2.2) }}>
+            /* Kaydır → yayınla: dolum ilerledikçe parlayan ray, ışıltı taraması,
+               yaklaştıkça beliren "BIRAK" ipucu ve eşiğe varınca doygunlaşan tutamak. */
+            <div ref={trackRef}
+              className="relative h-[68px] rounded-[22px] overflow-hidden border transition-colors duration-200"
+              style={{
+                background: 'linear-gradient(180deg, rgba(57,255,20,0.10), rgba(57,255,20,0.05))',
+                borderColor: slide >= 0.88 ? 'rgba(57,255,20,0.85)' : 'rgba(57,255,20,0.28)',
+                boxShadow: slide >= 0.88 ? '0 0 34px rgba(57,255,20,0.30)' : 'none',
+              }}>
+              {/* Dolum */}
+              <div className="absolute left-0 top-0 bottom-0 transition-[background] duration-200"
+                style={{
+                  width: `${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63)) + 63}px`,
+                  background: slide >= 0.88
+                    ? 'linear-gradient(90deg, rgba(57,255,20,0.30), rgba(57,255,20,0.42))'
+                    : 'linear-gradient(90deg, rgba(57,255,20,0.10), rgba(57,255,20,0.22))',
+                }} />
+              {/* Işıltı taraması — boştayken hafifçe akar, sürüklerken durur */}
+              {slide < 0.02 && (
+                <motion.div aria-hidden
+                  className="absolute inset-y-0 w-24 pointer-events-none"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(57,255,20,0.16), transparent)' }}
+                  animate={{ x: ['-20%', '460%'] }}
+                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.7 }} />
+              )}
+              {/* Yön okları — tutamağın gideceği yolu gösterir */}
+              <div className="absolute inset-y-0 right-6 flex items-center gap-1 pointer-events-none"
+                style={{ opacity: Math.max(0, 0.5 - slide * 1.4) }}>
+                {[0, 1, 2].map(i => (
+                  <motion.span key={i} className="text-[#39FF14]"
+                    animate={{ opacity: [0.25, 1, 0.25] }}
+                    transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.18 }}>
+                    <ChevronRight size={14} strokeWidth={3} />
+                  </motion.span>
+                ))}
+              </div>
+              {/* Metin */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-16">
+                <span className="text-[12.5px] font-black uppercase tracking-[0.11em] text-[#39FF14] text-center"
+                  style={{ opacity: Math.max(0, 1 - slide * 2.4) }}>
                   Kaydır → yayınla{deposit ? ' & kapora' : ''}
                 </span>
+                <span className="absolute text-[12.5px] font-black uppercase tracking-[0.14em] text-[#39FF14]"
+                  style={{ opacity: slide >= 0.88 ? 1 : 0, transition: 'opacity .15s' }}>
+                  Bırak ve yayınla
+                </span>
               </div>
-              <div onPointerDown={onThumbDown}
-                className="absolute top-[5px] left-[5px] w-[54px] h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] flex items-center justify-center cursor-grab shadow-[0_0_22px_rgba(57,255,20,0.35)]"
-                style={{ transform: `translateX(${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 59))}px)`, touchAction: 'none' }}>
-                <ArrowRight size={22} strokeWidth={2.6} />
-              </div>
+              {/* Tutamak */}
+              <motion.div onPointerDown={onThumbDown}
+                className="absolute top-[6px] left-[6px] w-[56px] h-[56px] rounded-[18px] flex items-center justify-center cursor-grab active:cursor-grabbing"
+                style={{
+                  transform: `translateX(${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63))}px)`,
+                  touchAction: 'none',
+                  background: slide >= 0.88
+                    ? 'linear-gradient(135deg, #7CFF5C, #39FF14)'
+                    : 'linear-gradient(135deg, #39FF14, #2BD10F)',
+                  color: '#0A0E14',
+                  boxShadow: slide >= 0.88
+                    ? '0 0 30px rgba(57,255,20,0.65), inset 0 1px 0 rgba(255,255,255,0.45)'
+                    : '0 6px 18px rgba(0,0,0,0.35), 0 0 20px rgba(57,255,20,0.30), inset 0 1px 0 rgba(255,255,255,0.35)',
+                }}
+                animate={slide < 0.02 ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                transition={slide < 0.02 ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.15 }}>
+                <ArrowRight size={23} strokeWidth={2.8} />
+              </motion.div>
             </div>
           ) : (
             <div className="h-16 rounded-[20px] border border-white/[0.07] bg-white/[0.02] flex items-center justify-center">
@@ -1182,13 +1329,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
               </div>
             </header>
-            {friends === null ? (
+            {friends === null || teams === null ? (
               <div className="flex-1 flex items-center justify-center"><Spinner /></div>
-            ) : friends.length === 0 ? (
+            ) : friends.length === 0 && teams.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
                 <div className="w-[78px] h-[78px] rounded-full border border-dashed border-white/[0.16] flex items-center justify-center text-white/30"><Users size={30} /></div>
                 <div>
-                  <p className="text-[17px] font-black">Henüz arkadaşın yok</p>
+                  <p className="text-[17px] font-black">Henüz arkadaşın ya da takımın yok</p>
                   <p className="mt-2 text-[12.5px] leading-relaxed text-white/45">Sorun değil — maçı şimdi kur, boş kontenjanlar Top Oyna vitrininde yayınlansın. Yayın sonrası bağlantıyı paylaşarak da çağırabilirsin.</p>
                 </div>
                 <button onClick={() => setSheet(null)}
@@ -1198,35 +1345,115 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               </div>
             ) : (
               <>
-                <div className="shrink-0 px-5 pt-4 pb-3">
-                  <input value={friendQ} onChange={e => setFriendQ(e.target.value)} placeholder="Arkadaş ara…"
-                    className="w-full rounded-[14px] bg-white/[0.03] border border-white/10 px-4 py-3 text-sm font-semibold outline-none placeholder:text-white/[0.28]" />
+                {/* Sekmeler: gerçek arkadaş listesi ve gerçek takım kadroları */}
+                <div className="shrink-0 px-5 pt-4 pb-3 flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    {([['FRIENDS', `Arkadaşlar${friends.length ? ` · ${friends.length}` : ''}`],
+                       ['TEAMS', `Takımlarım${teams.length ? ` · ${teams.length}` : ''}`]] as const).map(([id, label]) => (
+                      <button key={id} onClick={() => { buzz(8); setSquadTab(id); }}
+                        className={`flex-1 h-[38px] rounded-xl text-[11px] font-black uppercase tracking-[0.06em] border transition-colors ${
+                          squadTab === id ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]' : 'bg-white/[0.03] border-white/10 text-white/60'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {squadTab === 'FRIENDS' && friends.length > 0 && (
+                    <input value={friendQ} onChange={e => setFriendQ(e.target.value)} placeholder="Arkadaş ara…"
+                      className="w-full rounded-[14px] bg-white/[0.03] border border-white/10 px-4 py-3 text-sm font-semibold outline-none placeholder:text-white/[0.28]" />
+                  )}
                 </div>
+
                 <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pb-4 flex flex-col gap-2">
-                  {friends
-                    .filter(f => !friendQ.trim() || trLower(f.full_name ?? '').includes(trLower(friendQ.trim())))
-                    .map(f => {
-                      const on = invited.some(x => x.friend_id === f.friend_id);
+                  {squadTab === 'FRIENDS' ? (
+                    friends.length === 0 ? (
+                      <p className="text-center text-[12.5px] text-white/40 py-10 leading-relaxed">
+                        Arkadaş listen boş. Takımlarım sekmesinden takım arkadaşlarını çağırabilirsin.
+                      </p>
+                    ) : friends
+                      .filter(f => !friendQ.trim() || trLower(f.full_name ?? '').includes(trLower(friendQ.trim())))
+                      .map(f => {
+                        const on = invited.some(x => x.id === f.friend_id);
+                        return (
+                          <button key={f.friend_id}
+                            onClick={() => toggleInvite({
+                              id: f.friend_id,
+                              name: f.full_name || 'Oyuncu',
+                              meta: [f.pos, f.matches_together ? `${f.matches_together} ortak maç` : null].filter(Boolean).join(' · ') || 'Arkadaş',
+                              source: 'FRIEND',
+                            })}
+                            className={`flex items-center gap-3 p-3 rounded-2xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.025] border-white/[0.07]'}`}>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-black shrink-0 overflow-hidden">
+                              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : (f.full_name ?? '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13.5px] font-extrabold truncate">{f.full_name}</p>
+                              <p className="mt-0.5 text-[10.5px] font-bold text-white/40">
+                                {[f.pos, f.matches_together ? `${f.matches_together} ortak maç` : null].filter(Boolean).join(' · ') || 'Arkadaş'}
+                              </p>
+                            </div>
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
+                              {on && <Check size={12} strokeWidth={3.5} className="text-[#0A0E14]" />}
+                            </span>
+                          </button>
+                        );
+                      })
+                  ) : (
+                    teams.length === 0 ? (
+                      <p className="text-center text-[12.5px] text-white/40 py-10 leading-relaxed">
+                        Henüz bir takımda değilsin. Sosyal sekmesinden takım kurabilir ya da katılabilirsin.
+                      </p>
+                    ) : teams.map(t => {
+                      const open = openTeamId === t.team_id;
+                      const squad = teamSquads[t.team_id];
+                      const picked = (squad ?? []).filter(m => invited.some(x => x.id === m.id)).length;
                       return (
-                        <button key={f.friend_id}
-                          onClick={() => { buzz(10); setInvited(prev => on ? prev.filter(x => x.friend_id !== f.friend_id) : [...prev, f]); }}
-                          className={`flex items-center gap-3 p-3 rounded-2xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.025] border-white/[0.07]'}`}>
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-black shrink-0">
-                            {(f.full_name ?? '?').charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13.5px] font-extrabold truncate">{f.full_name}</p>
-                            <p className="mt-0.5 text-[10.5px] font-bold text-white/40">
-                              {[f.pos, f.matches_together ? `${f.matches_together} ortak maç` : null].filter(Boolean).join(' · ') || 'Arkadaş'}
-                            </p>
-                          </div>
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
-                            {on && <Check size={12} strokeWidth={3.5} className="text-[#0A0E14]" />}
-                          </span>
-                        </button>
+                        <div key={t.team_id} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+                          <button onClick={() => void toggleTeam(t.team_id)}
+                            className="w-full flex items-center gap-3 p-3 text-left">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 border border-white/10"
+                              style={{ background: `linear-gradient(135deg, ${t.color1 || '#1e2532'}, ${t.color2 || '#11151c'})` }}>
+                              {(t.short_name || t.name || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13.5px] font-extrabold truncate">{t.name}</p>
+                              <p className="mt-0.5 text-[10.5px] font-bold text-white/40">
+                                {t.member_count} üye{t.format ? ` · ${t.format}` : ''}{picked > 0 ? ` · ${picked} seçili` : ''}
+                              </p>
+                            </div>
+                            <ChevronDown size={16} className={`text-white/30 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                          </button>
+                          {open && (
+                            <div className="px-3 pb-3 flex flex-col gap-2">
+                              {squad === undefined ? (
+                                <div className="py-4 flex justify-center">{squadLoading ? <Spinner size={20} /> : null}</div>
+                              ) : squad.length === 0 ? (
+                                <p className="text-[11.5px] text-white/35 py-3 text-center">Bu takımda çağırabileceğin başka üye yok.</p>
+                              ) : squad.map(m => {
+                                const on = invited.some(x => x.id === m.id);
+                                return (
+                                  <button key={m.id} onClick={() => toggleInvite(m)}
+                                    className={`flex items-center gap-3 p-2.5 rounded-xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.03] border-white/[0.06]'}`}>
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-xs font-black shrink-0">
+                                      {m.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[12.5px] font-bold truncate">{m.name}</p>
+                                      <p className="text-[10px] font-bold text-white/35">{m.meta}</p>
+                                    </div>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'}`}>
+                                      {on && <Check size={10} strokeWidth={3.5} className="text-[#0A0E14]" />}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       );
-                    })}
+                    })
+                  )}
                 </div>
+
                 <div className="shrink-0 px-5 pt-3.5 pb-safe border-t border-white/5 bg-[#0A0E14]">
                   <button onClick={() => setSheet(null)}
                     className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform">
@@ -1236,6 +1463,124 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
               </>
             )}
+          </motion.div>
+        )}
+
+        {/* ── Kaleci & Hakem: gerçek sağlayıcılar (onaylı + müsait) ── */}
+        {sheet === 'PROVIDERS' && (
+          <motion.div key="providers" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
+            <header className="shrink-0 pt-safe border-b border-white/5">
+              <div className="px-5 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kaleci &amp; Hakem</h2>
+                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: providerTab === 'GK' ? '#39FF14' : '#FACC15' }}>
+                    Çoklu teklif · ilk kabul eden alır
+                  </p>
+                </div>
+                <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
+              </div>
+              <div className="px-5 pb-4">
+                <div className="bg-[#161B22] p-1.5 rounded-2xl flex border border-white/5">
+                  {([['GK', 'Kaleci', Shield, '#39FF14'], ['REF', 'Hakem', Scale, '#FACC15']] as const).map(([id, label, Icon, color]) => {
+                    const on = providerTab === id;
+                    const n = offerCount(id);
+                    return (
+                      <button key={id} onClick={() => { buzz(8); setProviderTab(id); }}
+                        className={`flex-1 py-2.5 text-[11px] font-black rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-gray-500'}`}
+                        style={on ? { background: color } : {}}>
+                        <Icon size={14} /> {label.toUpperCase()}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </header>
+
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pt-4 pb-4 flex flex-col gap-2.5">
+              {(() => {
+                const accent = providerTab === 'GK' ? '#39FF14' : '#FACC15';
+                const list = providers[providerTab];
+                const cur = offerOf(providerTab);
+                const all = !!cur?.all;
+                return (
+                  <>
+                    <button onClick={() => toggleProviderAll(providerTab)}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border transition-all"
+                      style={all ? { background: `${accent}14`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${accent}1f`, color: accent }}>
+                          <Users size={18} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-black uppercase italic">Tümüne Gönder</p>
+                          <p className="text-[10px] text-white/45">Uygun tüm {providerTab === 'GK' ? 'kalecilere' : 'hakemlere'} teklif</p>
+                        </div>
+                      </div>
+                      <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                        style={all ? { background: accent, borderColor: accent, color: '#0A0E14' } : { borderColor: 'rgba(255,255,255,0.25)' }}>
+                        {all && <Check size={14} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    {list === null ? (
+                      <div className="py-10 flex justify-center"><Spinner /></div>
+                    ) : list.length === 0 ? (
+                      <p className="text-center text-[12.5px] text-white/40 py-10 leading-relaxed">
+                        Şu an müsait {providerTab === 'GK' ? 'kaleci' : 'hakem'} yok. "Tümüne Gönder" seçersen uygun biri çıktığında teklif iletilir.
+                      </p>
+                    ) : (
+                      <div className={`flex flex-col gap-2.5 transition-opacity ${all ? 'opacity-40 pointer-events-none' : ''}`}>
+                        {list.map(p => {
+                          const on = !all && !!cur?.providerIds.includes(p.id);
+                          return (
+                            <button key={p.id} onClick={() => toggleProvider(providerTab, p.id)}
+                              className="w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.99]"
+                              style={on ? { background: `${accent}12`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-base font-black">
+                                {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : p.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm font-bold truncate">{p.name}</span>
+                                  {p.isElite && <Zap size={12} className="text-[#FACC15] shrink-0" />}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-white/45">
+                                  <span className="flex items-center gap-1"><Star size={11} className="fill-white/60 text-white/60" />{p.rating.toFixed(1)}</span>
+                                  {p.zone && <><span className="text-white/20">·</span><span className="truncate capitalize">{p.zone}</span></>}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="font-numeric text-sm font-black" style={{ color: accent }}>{fmtTL(p.fee)}₺</div>
+                                <div className="text-[8px] font-bold uppercase text-white/30 tracking-widest">bedel</div>
+                              </div>
+                              <span className="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center"
+                                style={on ? { background: accent, borderColor: accent, color: '#0A0E14' } : { borderColor: 'rgba(255,255,255,0.2)' }}>
+                                {on && <Check size={14} strokeWidth={3} />}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="shrink-0 px-5 pt-3.5 pb-safe border-t border-white/5 bg-[#0A0E14]">
+              {offers.length > 0 && (
+                <p className="mb-2 text-center text-[10px] font-bold text-white/45">
+                  Teklifler maçı yayınlayıp kaporayı bloke ettiğinde gönderilir.
+                </p>
+              )}
+              <button onClick={() => setSheet(null)}
+                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                <Zap size={16} />{offers.length > 0 ? 'Seçimi Onayla' : 'Hizmet Ekleme'}
+              </button>
+              <p className="mt-2 mb-1 text-center text-[10px] font-bold text-white/30">{offerFeeText}</p>
+            </div>
           </motion.div>
         )}
 
