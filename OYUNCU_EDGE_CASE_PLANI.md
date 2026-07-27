@@ -74,6 +74,7 @@ Görünüşte tamam ama **sahte veri** ile çalışan yüzeyler — en tehlikeli
 - **Dijital Bilet** her zaman "ONAYLANDI" + sabit sahte QR + `OYNA-8293-TX` (`MatchTicket.tsx:51,96,101`), ödeme durumundan bağımsız.
 - **Maç Sonu Değerlendirme** sabit **5-3** skoru + işlevsiz Onayla/İtiraz (`PostMatchEval.tsx:410,422`).
 - **Maç Takvimim** tümüyle mock, dokununca `null` lobiye (boş ekran) düşüyor (`MatchCalendar.tsx`).
+  > **GÜNCELLEME (2026-07-27):** `MatchCalendar.tsx` **silindi** — ekran hiçbir navigasyondan erişilemiyordu ve tüm işlevleri Maçlarım/Keşif/Ana Sayfa'da mevcuttu. KN-6 maddesi kapsam dışı kaldı.
 - **Taktik tahtası** varsayılan sahte kadro ("Volkan Demirel" vb.) (`TeamLineupBoard.tsx:71-89`).
 - **Keşif fiyatları** dizindeksinden uyduruluyor (`MatchDiscovery.tsx:166`); **eksik pozisyonlar** her maçta sabit "1 STP / 1 ORT" (`useMatchCreate.ts:409`).
 **Çözüm yaklaşımı:** Her birini gerçek veriye bağla veya gerçekleşene kadar dürüst boş/iskelet durumu göster. Sahte veri → prod'da **asla**.

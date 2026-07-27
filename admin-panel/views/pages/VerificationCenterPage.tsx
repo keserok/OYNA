@@ -4,6 +4,7 @@ import { PageShell } from '../components/PageShell';
 import { PendingVerificationsTab } from '../PendingVerificationsTab';
 import { ProviderIdentitiesTab } from '../ProviderIdentitiesTab';
 import OwnerModerationTab from '../OwnerModerationTab';
+import { MODERATION_QUEUE_HINT } from './ModerationPage';
 
 type VerificationSegment = 'pending' | 'identity' | 'facility';
 
@@ -18,7 +19,8 @@ interface SegmentDef {
 const SEGMENTS: SegmentDef[] = [
   { key: 'pending', label: 'Kaleci/Hakem Başvuruları', icon: <Clock size={14} />, hasBadge: true },
   { key: 'identity', label: 'Kimlik Doğrulama', icon: <UserCheck size={14} />, hasBadge: true },
-  { key: 'facility', label: 'Tesis Onayları', icon: <Building2 size={14} />, hasBadge: false },
+  // F5.5: mükerrer "Tesis Onayları" sidebar öğesi kaldırıldı; rozeti buraya taşındı.
+  { key: 'facility', label: 'Tesis Onayları', icon: <Building2 size={14} />, hasBadge: true },
 ];
 
 interface VerificationCenterPageProps {
@@ -36,19 +38,21 @@ export const VerificationCenterPage: React.FC<VerificationCenterPageProps> = ({ 
   const [refreshToken, setRefreshToken] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [identityCount, setIdentityCount] = useState(0);
+  const [facilityCount, setFacilityCount] = useState(0);
 
-  // Toplam (başvuru + kimlik) bekleyen sayısını üst kabuğa bildir.
+  // Toplam (başvuru + kimlik + tesis) bekleyen sayısını üst kabuğa bildir.
+  // F5.5: tesis onayları artık yalnız bu ekranda; sayısı toplam rozete dahil.
   useEffect(() => {
-    onBadgeCount?.(pendingCount + identityCount);
-  }, [pendingCount, identityCount, onBadgeCount]);
+    onBadgeCount?.(pendingCount + identityCount + facilityCount);
+  }, [pendingCount, identityCount, facilityCount, onBadgeCount]);
 
   const counts: Record<VerificationSegment, number | null> = {
     pending: pendingCount,
     identity: identityCount,
-    facility: null,
+    facility: facilityCount,
   };
 
-  const totalBadge = pendingCount + identityCount;
+  const totalBadge = pendingCount + identityCount + facilityCount;
 
   const refresh = useCallback(() => {
     setRefreshToken((k) => k + 1);
@@ -123,9 +127,9 @@ export const VerificationCenterPage: React.FC<VerificationCenterPageProps> = ({ 
       </div>
       <div className={active === 'facility' ? '' : 'hidden'}>
         <div className="flex items-center gap-2 mb-3 text-[11px] text-gray-500">
-          <Building2 size={14} /> Owner panelinden gelen tesis onay kuyruğu · Para çekme talepleri için Finans → Payout Talepleri
+          <Building2 size={14} /> {MODERATION_QUEUE_HINT}
         </div>
-        <OwnerModerationTab />
+        <OwnerModerationTab onBadgeCount={setFacilityCount} />
       </div>
     </PageShell>
   );

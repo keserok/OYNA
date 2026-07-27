@@ -30,7 +30,7 @@ Bu klasörler, uygulamanın çalışması için gereken ön yüz (frontend) bile
     *   [matchService.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/services/matchService.ts), [pitchService.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/services/pitchService.ts), [userService.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/services/userService.ts): Maç, tesis ve kullanıcı verilerini çeken sorgu motorlarıdır.
 *   **`utils/`**: Matematiksel ve mantıksal yardımcı araçlar.
     *   [geo.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/utils/geo.ts): Haversine mesafe hesabı, Geohash kodlama ve komşu grid koordinat bulma motorudur.
-    *   [reputationEngine.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/utils/reputationEngine.ts), [gameRules.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/utils/gameRules.ts), [justice.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/utils/justice.ts): Puanlama, kart cezaları ve sportmenlik mantığını barındırır.
+    *   [reputationEngine.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/utils/reputationEngine.ts), [justice.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/utils/justice.ts): Puanlama, kart cezaları ve sportmenlik mantığını barındırır.
 *   **`hooks/`**: React custom hookları.
     *   [useImageUpload.ts](file:///Users/kerem/Desktop/Oyna_App_Kaynak%20Back%20Anti%20kopyas%C4%B1/hooks/useImageUpload.ts): Supabase Storage veya yerel depolama için görsel yükleme yönetimi.
 

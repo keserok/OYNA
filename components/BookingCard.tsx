@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Calendar, Clock, MapPin, CheckCircle2, XCircle, Hourglass,
-  CreditCard, Navigation, Repeat, Swords, Loader2,
+  CreditCard, Navigation, Repeat, Swords, Loader2, QrCode,
 } from 'lucide-react';
 import type { MyBooking } from '../services/playerBookingService';
 import { canCancel, shortTime } from '../services/playerBookingService';
@@ -33,11 +33,14 @@ interface BookingCardProps {
   onConvertToMatch: (b: MyBooking) => void;
   onDirections: (b: MyBooking) => void;
   onRebook: () => void;
+  /** F4.1: QR bilet ekranına giriş — ekran + QR üretimi hazırdı ama hiçbir
+   * karttan erişilemiyordu (tek navigate, ulaşılamaz bir default dalındaydı). */
+  onViewTicket?: (b: MyBooking) => void;
   payingId?: string | null;
 }
 
 export const BookingCard: React.FC<BookingCardProps> = ({
-  booking: b, onPayDeposit, onCancel, onConvertToMatch, onDirections, onRebook, payingId = null,
+  booking: b, onPayDeposit, onCancel, onConvertToMatch, onDirections, onRebook, onViewTicket, payingId = null,
 }) => {
   const meta = STATUS_META[b.status] ?? STATUS_META.PENDING;
   const StatusIcon = meta.icon;
@@ -132,7 +135,16 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       )}
 
       {/* İkincil aksiyonlar: maça çevir · yol tarifi · tekrar rezerve (≥44px hücreler) */}
-      <div className={`border-t border-white/5 px-3 py-2.5 grid gap-1.5 ${isCancelled ? 'grid-cols-2' : 'grid-cols-3'}`}>
+      <div className={`border-t border-white/5 px-3 py-2.5 grid gap-1.5 ${isCancelled ? 'grid-cols-2' : (onViewTicket ? 'grid-cols-4' : 'grid-cols-3')}`}>
+        {!isCancelled && onViewTicket && (
+          <button
+            onClick={() => onViewTicket(b)}
+            className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 text-[#FACC15] hover:bg-[#FACC15]/12 active:scale-95 transition-all"
+          >
+            <QrCode size={15} />
+            <span className="text-[8px] font-black uppercase tracking-wider">Bilet</span>
+          </button>
+        )}
         {!isCancelled && (
           <button
             onClick={() => onConvertToMatch(b)}

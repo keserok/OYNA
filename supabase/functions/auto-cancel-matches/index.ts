@@ -9,7 +9,7 @@
 // ve yeniden render osilasyonu yaratıyordu. Maç iptali + iade bir SUNUCU
 // sorumluluğudur; bu fonksiyon tek otoriter yerdir.
 //
-// Kural (utils/gameRules.ts → check90MinAutoCancel ile aynı):
+// Kural (TEK KAYNAK BU DOSYADIR — eski utils/gameRules.ts kopyası silindi):
 //   • Maç başlangıcına 90 dk veya daha az kaldıysa (henüz başlamamışsa) VE
 //   • dolu (TAKEN) slot sayısı toplam slotun %70'inin (ceil) altındaysa
 //   → maç otomatik iptal edilir.
@@ -38,9 +38,9 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false } },
 )
 
-// utils/gameRules.ts ile birebir aynı eşik: kadro %70'in altındaysa iptal aday.
+// Eşik: kadro %70'in altındaysa iptal aday (kuralın tek kaynağı bu dosya).
 const FILL_THRESHOLD = 0.7
-// 90 dakika penceresi (utils/gameRules.ts: diffMinutes > 0 && diffMinutes <= 90).
+// 90 dakika penceresi (0 < kalan ≤ 90 dk).
 const WINDOW_MINUTES = 90
 
 interface MatchRow {
@@ -59,8 +59,7 @@ interface Slot {
   player?: { id?: string } | null
 }
 
-// check90MinAutoCancel kadro sayımının SQL/JS karşılığı: TAKEN slotları say,
-// toplam slotu al, eşiği ceil(total * 0.7) olarak uygula.
+// Kadro sayımı: TAKEN slotları say, toplam slotu al, eşiği ceil(total*0.7) uygula.
 function isUnderFilled(row: MatchRow): boolean {
   const home = Array.isArray(row.slots) ? (row.slots as Slot[]) : []
   const away = Array.isArray(row.awaySlots) ? (row.awaySlots as Slot[]) : []

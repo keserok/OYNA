@@ -29,7 +29,9 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   {
     key: 'STAFF',
     label: 'Kadro Bildirimleri',
-    description: 'Kaleci ve hakem başvuruları',
+    // F3i: aynı anahtarlar sağlayıcı (kaleci/hakem) tarafını da kapsar —
+    // ServiceSettings artık bu ekranı kullanıyor.
+    description: 'Kaleci/hakem başvuruları ve talep sonuçları',
     preferences: ['gk_accepted', 'gk_rejected', 'ref_accepted', 'ref_rejected'],
   },
   {

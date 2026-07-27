@@ -1,0 +1,36 @@
+# SQL entegrasyon testleri (tests/integration/*.sql) — para/maç akışlarının
+# gerçek Postgres fonksiyonları üzerinde doğrulanması.
+#
+# SUPABASE_TEST_DB_URL secret'ı tanımlı değilse iş YEŞİL kalır ve notice düşer
+# (testler atlanır) — böylece secret eklenene kadar CI kırılmaz. Secret bir
+# test/branch veritabanına işaret etmelidir; testler BEGIN…ROLLBACK ile izole
+# olsa da üretim bağlantısı verilmemelidir.
+name: SQL Entegrasyon Testleri
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sql-integration:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secret kontrolü
+        id: gate
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::SUPABASE_TEST_DB_URL tanımlı değil — SQL entegrasyon testleri atlandı. Secret'ı ekleyince bu iş gerçek doğrulama yapar."
+          fi
+
+      - name: psql kur
+        if: steps.gate.outputs.skip != 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Entegrasyon testlerini çalıştır
+        if: steps.gate.outputs.skip != 'true'
+        run: bash tests/integration/run.sh

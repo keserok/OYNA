@@ -15,15 +15,18 @@ export function mapAdminPitchRowToUi(row: AdminPitchRow): Pitch {
     ratingCount: 0,
     googleRating: Number(row.google_rating ?? 0),
     googleReviews: Number(row.google_review_count ?? 0),
-    pricePerPerson: Math.round(Number(row.price_per_match ?? 0) / 14) || 200,
+    // F3d/F3g: sahte varsayılanlar kaldırıldı — fiyat hesaplanamıyorsa 0 (uydurma
+    // 200 değil), görselsiz sahada stok foto yerine boş (SafeImage gradient basar),
+    // ölçülmemiş kalite skorları 80 gibi gösterilmez.
+    pricePerPerson: Math.round(Number(row.price_per_match ?? 0) / 14) || 0,
     totalPrice: Number(row.price_per_match ?? 0),
-    image: row.image || 'https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=800&q=80',
+    image: row.image || '',
     images: row.image ? [row.image] : [],
     amenities: [],
-    lighting: 80,
-    grassQuality: 80,
-    lockerRoomQuality: 80,
-    goalQuality: 80,
+    lighting: 0,
+    grassQuality: 0,
+    lockerRoomQuality: 0,
+    goalQuality: 0,
     occupancy: 0,
     // Koordinat yoksa sahte Ordu-merkez varsayılanı basma → undefined (yalancı pin yok).
     coordinates:

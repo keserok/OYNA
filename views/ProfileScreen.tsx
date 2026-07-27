@@ -3,6 +3,7 @@ import { UserRole, AppView } from '../types';
 import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
+import { supabase } from '../supabaseClient';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
 import { fetchFriends } from '../services/friendService';
 import { getMyTeams } from '../services/teamSocialService';
@@ -29,6 +30,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     const { setMyRoles, setSocialTarget } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
+    // F2.2: MVP artık player_ratings ortalamasından TÜRETİLİYOR (match_motm
+    // görünümü); sayaç SECURITY DEFINER RPC'den okunur (RLS düz sorguya kapalı).
+    const [motmCount, setMotmCount] = useState<number | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        const uid = auth.currentUser?.uid;
+        if (!uid) { setMotmCount(null); return; }
+        supabase.rpc('get_player_motm_count', { p_user_id: uid }).then(({ data, error }) => {
+            if (!cancelled && !error) setMotmCount(Number(data ?? 0));
+        });
+        return () => { cancelled = true; };
+    }, []);
     const [matchHistory, setMatchHistory] = useState<MatchHistorySummary[]>([]);
     const [teamsCount, setTeamsCount] = useState(0);
     const [friendsCount, setFriendsCount] = useState(0);
@@ -244,7 +257,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     playStyle={profile?.playStyle}
                     matches={total}
                     winRate={winRate}
-                    mvp={null /* MVP oylaması kayıt altına alınınca bağlanacak */}
+                    mvp={motmCount}
                     cardAvailable={!!profile?.cardActive}
                     cardData={cardData}
                     cardBackMatches={matchHistory}
